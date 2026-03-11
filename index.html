@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1929,25 +1930,96 @@ function toEnergyLanguage(text) {
 }
 
 // 메인 진입점 — 외부에서 호출
+// ── NASA JPL 프록시 URL (Vercel 배포 후 아래 URL로 교체) ──────
+// 배포 전: VSOP87 내장 계산 사용
+// 배포 후: 'https://cgo-fuli-nasa-proxy.vercel.app/api/planets' 로 교체
+var CGO_NASA_PROXY_URL = 'https://cgo-fuli-nasa-proxy.vercel.app/api/planets';
+var _nasaProxyEnabled  = true;   // true=Vercel 프록시, false=VSOP87 내장
+
 function loadNASARealtimePlanets() {
+  if(_nasaProxyEnabled && CGO_NASA_PROXY_URL) {
+    // ── Vercel 프록시 → NASA JPL 실시간 ────────────────────
+    _setNASAStatus('loading');
+    // signal 없이 fetch — Promise.race로 12초 타임아웃 처리
+    var _fetchPromise = fetch(CGO_NASA_PROXY_URL);
+    var _timeoutPromise = new Promise(function(_, reject){
+      setTimeout(function(){ reject(new Error('timeout')); }, 12000);
+    });
+    Promise.race([_fetchPromise, _timeoutPromise])
+      .then(function(r){ return r.json(); })
+      .then(function(json){
+        if(!json.ok || !json.planets) throw new Error('invalid response');
+        // 데이터 형식을 기존 _nasaPlanets 와 동일하게 맞춤
+        var data = json.planets;
+        data._moonPhase = json.moon_phase;
+        data._source    = json.source;
+        data._jd        = json.jd;
+        data._ts        = json.timestamp;
+        window._nasaPlanets = data;
+        _applyNASAData(data, json);
+        _setNASAStatus('live', json.source, json.jd);
+        console.log('[CGo-Fuli] NASA JPL 실시간 데이터 수신 ✅', json.source, 'JPL:', json.jpl_count||'?');
+      })
+      .catch(function(err){
+        console.warn('[CGo-Fuli] 프록시 실패 → VSOP87 폴백:', err.message);
+        _loadVSOP87Fallback();
+      });
+  } else {
+    _loadVSOP87Fallback();
+  }
+}
+
+// VSOP87 내장 계산 (폴백)
+function _loadVSOP87Fallback() {
   try {
     var data = getNASAPlanetData();
-    injectNASADataToUI(data);
-    updateTransitSectionWithNASA(data);
-    updateNASAMiniBar(data);        // 대시보드 상단 미니바
-    updateFortuneNasaPanel(data);   // 오늘의 운세 패널
-    if(typeof injectNASAToCards==='function') setTimeout(injectNASAToCards, 100); // 18개 카드 전체 연동
-    // 날짜 카드 업데이트
-    var _now = new Date();
-    var _dl = document.getElementById('cosmicDateLabel');
-    var _ds = document.getElementById('cosmicDateSub');
-    if(_dl) _dl.textContent = _now.toLocaleDateString('ko-KR',{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 기준 실시간 계산';
-    if(_ds) _ds.textContent = 'NASA JPL VSOP87 · Julian Date ' + (_now.getTime()/86400000+2440587.5).toFixed(2);
-    return data;
+    data._source = 'VSOP87';
+    _applyNASAData(data, null);
+    _setNASAStatus('vsop');
   } catch(e) {
-    console.warn('NASA planet calc error:', e);
-    return null;
+    console.warn('NASA calc error:', e);
   }
+}
+
+// 공통 UI 적용 함수
+function _applyNASAData(data, json) {
+  window._nasaPlanets = data;
+  injectNASADataToUI(data);
+  updateTransitSectionWithNASA(data);
+  updateNASAMiniBar(data);
+  updateFortuneNasaPanel(data);
+  if(typeof updateCosmicPlanetGrid==='function') updateCosmicPlanetGrid(data);
+  if(typeof injectNASAToCards==='function') setTimeout(injectNASAToCards, 100);
+  // 달 위상 적용
+  if(json && json.moon_phase) {
+    window._moonPhase = json.moon_phase;
+    var mph = document.getElementById('moonPhaseDisplay');
+    if(mph) mph.textContent = json.moon_phase.name;
+  }
+  // 날짜 카드
+  var _now = new Date();
+  var _dl = document.getElementById('cosmicDateLabel');
+  var _ds = document.getElementById('cosmicDateSub');
+  if(_dl) _dl.textContent = _now.toLocaleDateString('ko-KR',{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 기준';
+  if(_ds) _ds.textContent = (data._source==='NASA_JPL_Horizons'?'🛰️ NASA JPL Horizons 실시간':'⚙️ VSOP87 내장 계산') + ' · JD ' + (data._jd||(_now.getTime()/86400000+2440587.5).toFixed(2));
+}
+
+// 상태 표시 업데이트
+function _setNASAStatus(state, source, jd) {
+  var bar = document.getElementById('nasaStatusBar');
+  if(!bar) return;
+  var configs = {
+    loading: {color:'rgba(251,191,36,0.15)', border:'rgba(251,191,36,0.3)', text:'🛰️ NASA JPL Horizons 연결 중...', tc:'#fbbf24'},
+    live:    {color:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.35)',
+              text:'✅ ' + (source||'NASA JPL') + ' 실시간 데이터 수신 완료 · JD '+(jd||''), tc:'#34d399'},
+    vsop:    {color:'rgba(99,130,201,0.12)', border:'rgba(99,130,201,0.25)', text:'⚙️ VSOP87 내장 계산 (오차 ±1~2°)', tc:'#94a3b8'},
+  };
+  var c = configs[state]||configs.vsop;
+  bar.style.background = c.color;
+  bar.style.border = '1px solid ' + c.border;
+  bar.style.color = c.tc;
+  bar.textContent = c.text;
+  bar.style.display = 'block';
 }
 
 // 대시보드 상단 미니바 업데이트
@@ -2163,6 +2235,7 @@ function updateTransitSectionWithNASA(planets) {
           <span style="width:6px;height:6px;background:#34d399;border-radius:50%;box-shadow:0 0 5px #34d399;animation:pulse 2s infinite;display:inline-block"></span>
           <span style="font-size:9px;color:#34d399;font-weight:700;letter-spacing:.06em;white-space:nowrap">NASA JPL</span>
         </span>
+        <div id="nasaStatusBar" style="display:none;font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;margin-bottom:6px;letter-spacing:.04em;transition:all .5s"></div>
         <div id="nasaMiniPlanets" style="display:flex;gap:5px;align-items:center;overflow:hidden">
           <span style="font-size:10px;color:var(--text-3)">계산 중...</span>
         </div>
@@ -17237,98 +17310,274 @@ function receiveCosmicOrder() {
   var r = window.calcResult;
   var p = window._nasaPlanets;
   var now = new Date();
+  var hv = (window._HV && window._HV.scores) ? window._HV.scores : [];
 
-  // Step 1: NASA 트랜짓 분석
-  var marsSign = p.mars.zodiac.sign;
-  var jupSign  = p.jupiter.zodiac.sign;
-  var satSign  = p.saturn.zodiac.sign;
-  var mercRetro = p.mercury.retro;
-  var step1Msg = '현재 하늘의 ' + (p.mars.body.sym) + ' 화성이 <strong style="color:#f87171">' + marsSign + '</strong>에서 ' +
-    (p.mars.retro ? '역행하며 에너지를 내면으로 집중시키고 있습니다. ' : '순행하며 강력한 행동 에너지를 방사하고 있습니다. ') +
-    '목성(' + jupSign + ')은 당신의 ' + (r.wz ? r.wz.name : '') + ' 에너지와 공명하여 ' +
-    (p.jupiter.retro ? '내면의 확장을 요구합니다.' : '외향적 기회의 문을 열고 있습니다.') +
-    (mercRetro ? ' ⚠️ 수성 역행 중 — 말과 계약보다 행동으로 증명하는 날입니다.' : '');
-
-  // Step 2: 기문둔갑 방위
-  var dirs = ['동','남','서','북','동남','동북','서남','서북'];
-  var gates = ['생문(生門) — 새로운 시작의 문','휴문(休門) — 재충전의 문','개문(開門) — 돌파구의 문','경문(景門) — 성과의 문'];
-  var seedVal = now.getHours() + now.getDate() + (r.lifeNum||5);
-  var goodDir = dirs[seedVal % 8];
-  var badDir  = dirs[(seedVal+4) % 8];
-  var goodGate = gates[seedVal % 4];
-  var step2Msg = '기문둔갑 시공간 분석 결과, 지금 <strong style="color:#34d399">' + goodDir + '쪽</strong>에 <strong style="color:var(--gold)">' + goodGate + '</strong>이 열려 있습니다. ' +
-    '반면 <strong style="color:#f87171">' + badDir + '쪽</strong>은 구설수·방해 에너지가 흐르니 중요한 미팅은 피하세요.';
-
-  // Step 3: 실시간 명령
-  var commands = [
-    '정적을 깨고 귀인을 대면하라',
-    '새로운 연결이 황금을 가져온다',
-    '지금 이 순간이 전환점이다',
-    '움직이는 자에게 우주가 응답한다',
-    '침묵보다 행동이 답이다',
-    '오늘 씨앗을 심으면 내일 열매가 된다',
+  // ── 18대 역학 점수 수집 ───────────────────────────────────
+  var R18_NAMES = [
+    '호흡리듬(생체)','표정에너지','자세균형','손금','설진',
+    '피부빛','눈에너지','사주팔자','자미두수','기문둔갑',
+    '구성학','주역64괘','수비학','성명학','서양점성술',
+    'NASA행성','카발라','타로×달위상'
   ];
-  var todayCmd = commands[(r.y + r.m + r.d + now.getDate()) % commands.length];
+  var r18valid = hv.filter(function(v){ return v > 0; });
+  var r18avg   = r18valid.length ? Math.round(r18valid.reduce(function(a,b){return a+b;},0)/r18valid.length) : 75;
+  // 상위 3개 역학 찾기
+  var r18top = R18_NAMES.map(function(nm,i){ return {nm:nm, sc:hv[i]||0}; })
+    .filter(function(x){ return x.sc > 0; })
+    .sort(function(a,b){ return b.sc-a.sc; })
+    .slice(0,3);
+  // 약한 역학 찾기
+  var r18weak = R18_NAMES.map(function(nm,i){ return {nm:nm, sc:hv[i]||0}; })
+    .filter(function(x){ return x.sc > 0; })
+    .sort(function(a,b){ return a.sc-b.sc; })
+    .slice(0,2);
 
-  // 에너지 지수
-  var energyScore = Math.min(99, 72 + (r.lifeNum||5)*2 + (p.jupiter.retro?-5:5) + (mercRetro?-8:3));
+  // ── 정밀 시드 (시간+날짜+생년+오행+18대 평균 모두 혼합) ──
+  var oh = r.domOh || '목';
+  var ohIdx = {목:0,화:1,토:2,금:3,수:4}[oh]||0;
+  var lifeNum = r.lifeNum || 5;
+  var _seed = (r.y||1990)*7 + (r.m||1)*31 + (r.d||1)*17
+    + now.getDate()*13 + now.getMonth()*11
+    + now.getHours()*997 + Math.floor(now.getMinutes()/10)*101
+    + ohIdx*53 + lifeNum*29 + r18avg*7;
+  function _rng(s){ return ((s*1103515245+12345)&0x7fffffff); }
+  var _s = _rng(_seed);
 
-  // 칙령 번호
+  // ── NASA 행성 분석 (전체 8행성 활용) ────────────────────────
+  var marsSign  = p.mars.zodiac.sign;
+  var jupSign   = p.jupiter.zodiac.sign;
+  var satSign   = p.saturn.zodiac.sign;
+  var mercRetro = p.mercury && p.mercury.retro;
+  var venSign   = p.venus ? p.venus.zodiac.sign : '';
+  var sunSign   = p.sun   ? p.sun.zodiac.sign   : '';
+  var moonSign  = p.moon  ? p.moon.zodiac.sign  : '';
+  var satRetro  = p.saturn && p.saturn.retro;
+  var jupRetro  = p.jupiter && p.jupiter.retro;
+  var marsRetro = p.mars && p.mars.retro;
+
+  // 행성 에너지 상태 종합
+  var planetPower = [];
+  if(!jupRetro)  planetPower.push('목성(' + jupSign + ') 순행 — 확장·기회·귀인 에너지 최대');
+  else           planetPower.push('목성(' + jupSign + ') 역행 — 내면 성장·자기 계발의 시기');
+  if(!satRetro)  planetPower.push('토성(' + satSign + ') 순행 — 구조·책임·장기 계획 지지');
+  else           planetPower.push('토성(' + satSign + ') 역행 — 과거 정리·재점검 필요');
+  if(!marsRetro) planetPower.push('화성(' + marsSign + ') 순행 — 행동력·의지력 상승');
+  else           planetPower.push('화성(' + marsSign + ') 역행 — 충동 자제, 내공 축적');
+  if(mercRetro)  planetPower.push('⚠️ 수성 역행 — 말·계약·서명보다 행동이 답');
+  if(venSign)    planetPower.push('금성(' + venSign + ') — 인간관계·재물·미적 감각 활성');
+
+  var step1Msg =
+    '<div style="margin-bottom:8px"><strong style="color:#38bdf8">📡 실시간 행성 에너지 보고</strong></div>'
+    + '<div style="display:flex;flex-direction:column;gap:4px">'
+    + planetPower.slice(0,4).map(function(pp){
+        return '<div style="font-size:11px;color:var(--text-2);padding:4px 8px;background:rgba(56,189,248,0.05);border-radius:6px;border-left:2px solid rgba(56,189,248,0.3)">• ' + pp + '</div>';
+      }).join('')
+    + '</div>'
+    + (moonSign ? '<div style="margin-top:8px;font-size:11px;color:#a78bfa">🌙 달자리 ' + moonSign + ' — ' + (r.wz ? r.wz.name : '') + '님과의 감성 공명 활성화</div>' : '')
+    + (sunSign  ? '<div style="font-size:11px;color:#fbbf24;margin-top:4px">☀️ 태양 ' + sunSign + ' — 오늘의 핵심 의식 에너지 방위</div>' : '');
+
+  // ── 기문둔갑 방위 (시간·오행·생명수·18대 평균 연동) ─────────
+  var dirs   = ['동','남','서','북','동남','동북','서남','서북'];
+  var dirChi = ['震','離','兌','坎','巽','艮','坤','乾'];
+  var dirEmoji = ['🌅','🔥','🌆','💧','🌿','⛰️','🌾','⚔️'];
+  var gates  = ['생문(生門)','휴문(休門)','개문(開門)','경문(景門)','상문(傷門)','두문(杜門)','경문(驚門)','사문(死門)'];
+  var gateDesc = ['새 시작·창업·만남의 문. 귀인이 기다린다','재충전·휴식·내공 쌓기의 문. 지금은 조용히 준비할 때','돌파구·해결의 문. 막힌 것이 뚫린다','성과·결실·인정받는 문. 발표·시험에 최적','활동·이동의 문. 변화가 기회다','집중·수비의 문. 지키는 것이 이기는 것','각성·반전의 문. 놀라운 소식이 온다','정리·마무리의 문. 비워야 채워진다'];
+  // 시진 인덱스 (2시간 단위) → 길문 결정
+  var sjIdx   = Math.floor(now.getHours()/2);
+  // 오행별 길방위 기본
+  var ohGoodBase = {목:0,화:1,토:7,금:2,수:3}[oh]||0;
+  // 시진+오행+생명수 혼합
+  _s = _rng(_s + sjIdx*997 + ohIdx*53 + lifeNum*31);
+  var goodDirIdx = (ohGoodBase + Math.floor(_s % 3)) % 8;
+  var badDirIdx  = (goodDirIdx + 4) % 8;
+  var goodGateIdx = (sjIdx + ohIdx + lifeNum) % 8;
+
+  var goodDir  = dirs[goodDirIdx];
+  var goodChi  = dirChi[goodDirIdx];
+  var goodEmoji = dirEmoji[goodDirIdx];
+  var badDir   = dirs[badDirIdx];
+  var goodGate = gates[goodGateIdx];
+  var goodGateDesc = gateDesc[goodGateIdx];
+
+  // ── 18대 역학별 오늘의 메시지 (상위 역학 3개 활용) ──────────
+  var R18_MSGS = {
+    '호흡리듬(생체)': function(sc,oh){ return '생체 호흡 리듬 ' + sc + '점 — ' + (sc>=80?'폐기(肺氣) 충만, 활동 최적':'호흡 조절 필요, 복식호흡 5분 권장'); },
+    '표정에너지':   function(sc,oh){ return '안면 에너지장 ' + sc + '점 — ' + (sc>=80?'관록궁(官祿宮) 활성, 타인에게 긍정 인상':'귀인궁 보강 필요, 미소 에너지 의식'); },
+    '자세균형':     function(sc,oh){ return '자세 균형 지수 ' + sc + '점 — ' + (sc>=80?'척추 에너지 정렬, 집중력 상승':'신체 정렬 보강, 등 스트레칭 권장'); },
+    '손금':         function(sc,oh){ return '손금 생명선 에너지 ' + sc + '점 — ' + (sc>=80?'재물선·두뇌선 공명, 결단력 UP':'감정선 보강 필요, 손바닥 자극 운동'); },
+    '설진':         function(sc,oh){ return '혀 진단 지수 ' + sc + '점 — ' + (sc>=80?'소화기 기운 양호, 오행 흡수 최적':'비위(脾胃) 보강, 따뜻한 음식 권장'); },
+    '피부빛':       function(sc,oh){ return '피부 광채 지수 ' + sc + '점 — ' + (sc>=80?'천격(天格) 혈류 활성, 기운 외향':'간 기운 보강 필요, 수분 보충 권장'); },
+    '눈에너지':     function(sc,oh){ return '안구 에너지 ' + sc + '점 — ' + (sc>=80?'간담(肝膽) 기운 충만, 통찰력 UP':'안신(眼神) 보강, 눈 운동·휴식 권장'); },
+    '사주팔자':     function(sc,oh){ return '사주 ILI ' + sc + '점 — ' + (sc>=80?'일간 오행 ' + oh + ' 에너지 강력 발현, 귀인 만남 길':'일간 에너지 보강 필요, 오행 음식 섭취'); },
+    '자미두수':     function(sc,oh){ return '자미 명궁 ' + sc + '점 — ' + (sc>=80?'재백궁(財帛宮) 활성, 재물 기운 상승':'관록궁 보강 필요, 북쪽 방위 보완'); },
+    '기문둔갑':     function(sc,oh){ return '기문 에너지장 ' + sc + '점 — ' + (sc>=80?goodGate + ' 개문, 최길 방위 ' + goodDir + '쪽':'흉문 주의, ' + badDir + '쪽 이동 자제'); },
+    '구성학':       function(sc,oh){ return '구성 본명성 ' + sc + '점 — ' + (sc>=80?'길성(吉星) 활성, 8방위 중 ' + goodDir + '쪽 황금 방위':'중궁 보강, 명상·정중앙 방위 활용'); },
+    '주역64괘':     function(sc,oh){ return '주역 괘상 ' + sc + '점 — ' + (sc>=80?'길괘(吉卦) 발현, 시의적절한 움직임':'중평괘, 636Hz 자연 공명 음악 청취 권장'); },
+    '수비학':       function(sc,oh){ var ln = r.lifeNum||5; return '생명수 ' + ln + '번 에너지 ' + sc + '점 — ' + (sc>=80?ln+'수 공명 최고조, 528Hz 청취':'수 진동 보강, 21분 힐링 음악 처방'); },
+    '성명학':       function(sc,oh){ return '성명 획수 에너지 ' + sc + '점 — ' + (sc>=80?'이름 파동과 사주 오행 완전 공명':'획수 보완 필요, 사인 스타일 조정 고려'); },
+    '서양점성술':   function(sc,oh){ return '태양궁 에너지 ' + sc + '점 — ' + (sc>=80?'출생 하우스와 현재 트랜짓 조화, 귀인운':'역행 행성 영향, 내면 정렬 주력'); },
+    'NASA행성':     function(sc,oh){ return 'NASA 트랜짓 ' + sc + '점 — ' + (jupRetro?'목성 역행, 내면 확장 에너지':jupSign + '의 목성이 귀인 에너지 최대 지원'); },
+    '카발라':       function(sc,oh){ return '카발라 세피라 ' + sc + '점 — ' + (sc>=80?'생명나무 재물 경로(헤세드) 활성':'티파렛-헤세드 경로 강화, 황금 색상 의식'); },
+    '타로×달위상':  function(sc,oh){ return '타로 달위상 ' + sc + '점 — ' + (sc>=80?'현재 달 위상과 타로 대비극 공명, 직관력 UP':'달 에너지 역류, 직관보다 논리로 결정'); }
+  };
+
+  // ── 오행별 맞춤 칙령 명령 (시간+날짜+18대 연동, 36개) ────────
+  var CMD_BY_OH = {
+    목: ['새싹이 바위를 뚫듯, 지금 첫 발을 내딛어라','봄바람이 씨앗에 속삭이듯, 당신의 아이디어를 행동으로 옮겨라','뿌리 깊은 나무가 폭풍에 버티듯, 지금 기반을 다져라','간담(肝膽) 기운이 눈에 빛나는 날, 통찰로 선점하라','동쪽 목기(木氣)가 최고조, 창조적 도전이 결실을 맺는다','성장의 에너지가 흐른다. 새로운 시작을 두려워 말라'],
+    화: ['불꽃이 하늘을 향하듯, 당신의 열정을 세상에 보여라','태양이 중천에 떴다, 지금 이 순간이 황금의 절정이다','심장 화기(火氣)가 충만, 인연의 문이 열리고 있다','밝게 타오르는 자에게 귀인이 모인다, 먼저 연락하라','남쪽 화기(火氣) 극성, 명예와 인정이 찾아오는 타이밍','열정이 운명을 바꾼다. 지금 당신이 주인공이다'],
+    토: ['대지의 중심이 흔들리지 않듯, 신뢰가 황금을 만든다','흙이 모든 것을 품듯, 오늘은 받아들이고 축적하라','비위(脾胃) 토기(土氣) 충만, 재물이 자연스럽게 쌓인다','중앙에 서는 자가 천하를 얻는다. 포용이 전략이다','안정 속에 기회가 숨어있다. 내실을 다지는 날','신뢰의 씨앗을 심어라. 흙이 이를 황금으로 키운다'],
+    금: ['칼날이 벼려지듯, 지금의 집중이 성과를 만든다','가을 수확의 에너지, 그동안의 노력이 결실을 맺는다','폐기(肺氣) 금기(金氣) 활성, 결단이 운명을 바꾼다','정밀함이 곧 권위다. 디테일에서 차이가 난다','서쪽 금기(金氣) 충만, 재물과 명예가 동시에 온다','날카로운 통찰이 기회를 포착한다. 지금 결정하라'],
+    수: ['깊은 강물이 배를 띄우듯, 지혜가 길을 만든다','물처럼 낮은 곳에서 높은 곳으로 흐르는 것이 운명이다','신장 수기(水氣) 충만, 지혜와 직관이 최고조','겨울 수렴의 에너지, 지금 씨앗을 내면에 심어라','북쪽 수기(水氣) 극성, 깊이 생각하는 자가 이긴다','물이 어떤 그릇에도 담기듯, 유연함이 돌파구다']
+  };
+  _s = _rng(_s * 31337 + now.getMinutes()*127);
+  var cmdList = CMD_BY_OH[oh] || CMD_BY_OH['목'];
+  var todayCmd = cmdList[Math.abs(_s) % cmdList.length];
+
+  // ── 에너지 지수 (18대 역학 평균 반영) ─────────────────────
+  var energyScore = Math.min(99, Math.max(65,
+    r18avg
+    + (jupRetro?-4:5)
+    + (mercRetro?-7:3)
+    + (satRetro?-3:2)
+    + (lifeNum >= 3 && lifeNum <= 7 ? 3 : 0)
+  ));
+
+  // ── 칙령 번호 ───────────────────────────────────────────────
   var dateStr = now.getFullYear() + ('0'+(now.getMonth()+1)).slice(-2) + ('0'+now.getDate()).slice(-2);
   var orderNo = '제 ' + dateStr + '-' + String(_cosmicOrderNo).padStart(4,'0') + '호';
   _cosmicOrderNo++;
   localStorage.setItem('cosmicOrderNo', _cosmicOrderNo);
 
-  // DOM 업데이트
-  document.getElementById('decreeNo').textContent = '[ ' + orderNo + ' 우주 칙령 ]  Transit Accuracy ' + energyScore + '.9%';
-  document.getElementById('decreeTitle').innerHTML = '명령: "' + todayCmd + '"';
+  // ── Step 2 메시지 (기문+구성+오행 통합) ─────────────────────
+  var step2Msg =
+    '<div style="margin-bottom:6px"><strong style="color:#34d399">⛩️ 기문둔갑 × 구성학 방위 분석</strong></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">'
+    + '<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:8px;padding:8px">'
+    +   '<div style="font-size:9px;color:#34d399;margin-bottom:3px">✅ 최길 방위</div>'
+    +   '<div style="font-size:16px;font-weight:700;color:#e2e8f0">' + goodEmoji + ' ' + goodDir + '쪽 <span style="font-size:11px;color:#a78bfa">(' + goodChi + ')</span></div>'
+    +   '<div style="font-size:10px;color:#34d399;margin-top:2px">' + goodGate + '</div>'
+    +   '<div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.5">' + goodGateDesc + '</div>'
+    + '</div>'
+    + '<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:8px">'
+    +   '<div style="font-size:9px;color:#f87171;margin-bottom:3px">⛔ 주의 방위</div>'
+    +   '<div style="font-size:16px;font-weight:700;color:#f87171">' + badDir + '쪽</div>'
+    +   '<div style="font-size:10px;color:var(--text-3);margin-top:4px;line-height:1.5">오행 상극 에너지 충돌<br>중요 결정·미팅 자제</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--text-2);line-height:1.7;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px">'
+    + '오행 <strong style="color:var(--gold)">' + oh + '(木 → 震·巽)</strong> 기운과 현재 시진(時辰) ' + sjIdx*2 + '~' + (sjIdx*2+2) + '시 에너지가 맞물려 <strong>' + goodDir + '쪽</strong>에 ' + goodGate + '이 열렸습니다.'
+    + '</div>';
 
-  // 3단계 스텝
+  // ── Step 3: 18대 역학 통합 행동 처방 ────────────────────────
+  var topR18Str = r18top.length ?
+    r18top.map(function(x){ return '<span style="color:#fbbf24">' + x.nm + '(' + x.sc + '점)</span>'; }).join(' · ') :
+    '18대 역학 (스캔 후 정밀 분석 가능)';
+  var weakR18Str = r18weak.length ?
+    r18weak.map(function(x){ return x.nm + '(' + x.sc + '점)'; }).join(' · ') :
+    '';
+
+  // 18대 역학 상위 항목별 메시지 생성
+  var r18detailHtml = '';
+  if(r18top.length) {
+    r18detailHtml = '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">';
+    r18top.forEach(function(x){
+      var msgFn = R18_MSGS[x.nm];
+      var msg = msgFn ? msgFn(x.sc, oh) : x.nm + ' ' + x.sc + '점';
+      r18detailHtml += '<div style="font-size:11px;color:var(--text-2);padding:4px 8px;background:rgba(212,168,67,0.05);border-radius:6px;border-left:2px solid rgba(212,168,67,0.4)">🔸 ' + msg + '</div>';
+    });
+    if(weakR18Str) {
+      r18detailHtml += '<div style="font-size:10px;color:rgba(248,113,113,0.7);padding:4px 8px;background:rgba(248,113,113,0.04);border-radius:6px;border-left:2px solid rgba(248,113,113,0.3)">⚠️ 보강 역학: ' + weakR18Str + ' — 해당 역학 강화 음악 처방 권장</div>';
+    }
+    r18detailHtml += '</div>';
+  }
+
+  var step3Msg =
+    '<div style="margin-bottom:6px"><strong style="color:var(--gold)">🔮 18대 역학 통합 행동 처방</strong></div>'
+    + '<div style="font-size:11px;color:var(--text-2);line-height:1.8;margin-bottom:6px">'
+    + '현재 최강 역학: ' + topR18Str + '<br>'
+    + '이 에너지를 최대한 활용하려면 지금 즉시 <strong style="color:var(--gold)">' + goodDir + '쪽</strong>에서 행동을 개시하십시오.'
+    + '</div>'
+    + r18detailHtml
+    + '<div style="margin-top:8px;padding:8px;background:linear-gradient(135deg,rgba(212,168,67,0.08),rgba(56,189,248,0.05));border-radius:8px;border:1px solid rgba(212,168,67,0.2)">'
+    + '<div style="font-size:10px;color:var(--gold);margin-bottom:4px">✨ 오늘의 황금 행동 3가지</div>'
+    + '<div style="font-size:11px;color:var(--text-2);line-height:2">'
+    + '① <strong>' + goodDir + '쪽</strong>을 향해 앉거나 이동하며 오늘 가장 중요한 결정을 내리십시오<br>'
+    + '② ' + (r18top[0] ? r18top[0].nm + ' ' + r18top[0].sc + '점 강점을 살려 ' : '') + '지금 떠오르는 첫 번째 아이디어를 즉시 실행하십시오<br>'
+    + '③ ' + (jupRetro ? '목성 역행기, 내면의 소리에 귀 기울이며 장기 비전을 재정립하십시오' : '목성 순행 에너지로 새로운 인연·협력에 적극 나서십시오')
+    + '</div>'
+    + '</div>';
+
+  // ── DOM 업데이트 ─────────────────────────────────────────────
+  document.getElementById('decreeNo').textContent = '[ ' + orderNo + ' 우주 칙령 ]  18역학 정확도 ' + energyScore + '.9%';
+  document.getElementById('decreeTitle').innerHTML = '명령: &ldquo;' + todayCmd + '&rdquo;';
+
   var stepsHtml = [
-    {icon:'🛰️', label:'Step 1 — NASA WHY (하늘의 근거)', color:'#38bdf8', msg: step1Msg},
-    {icon:'🗺️', label:'Step 2 — 기문 WHERE (지상의 전략)', color:'#34d399', msg: step2Msg},
-    {icon:'⚡', label:'Step 3 — ACTION (지금 바로)', color:'var(--gold)', msg:
-      '지금 즉시 <strong style="color:var(--gold)">' + goodDir + '쪽 방향</strong>으로 이동하거나 그 방향에 앉으십시오. ' +
-      '그곳에서 떠오르는 첫 번째 아이디어를 기록하십시오. ' +
-      '이것은 18대 역학이 설계한 <strong style="color:var(--gold)">' + r.name + '님 오늘 최고 효율의 루트</strong>입니다.'},
+    {icon:'🛰️', label:'Step 1 — NASA 하늘의 근거 (8행성 분석)', color:'#38bdf8', msg: step1Msg},
+    {icon:'🗺️', label:'Step 2 — 기문 WHERE (방위·문(門) 전략)', color:'#34d399', msg: step2Msg},
+    {icon:'⚡', label:'Step 3 — ACTION (18대 역학 통합 처방)', color:'var(--gold)', msg: step3Msg},
   ].map(function(s){
-    return '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border-left:3px solid '+s.color+';border-radius:0 8px 8px 0">'
-      +'<div style="font-size:10px;color:'+s.color+';font-weight:700;margin-bottom:4px">'+s.icon+' '+s.label+'</div>'
+    return '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border-left:3px solid '+s.color+';border-radius:0 8px 8px 0;margin-bottom:6px">'
+      +'<div style="font-size:10px;color:'+s.color+';font-weight:700;margin-bottom:6px">'+s.icon+' '+s.label+'</div>'
       +'<div style="font-size:12px;color:var(--text-2);line-height:1.7">'+s.msg+'</div>'
     +'</div>';
   }).join('');
   document.getElementById('decreeSteps').innerHTML = stepsHtml;
 
-  // 미션
+  // ── 미션 (매번 다르게) ───────────────────────────────────────
+  var missionActions = [
+    [goodDir + '쪽을 향해 앉아 3분간 깊게 호흡하며 오늘의 핵심 목표를 마음속으로 선언하십시오.',
+     '지금 바로 ' + (r18top[0]?r18top[0].nm:'역학') + ' 에너지가 가장 강한 이 순간, 가장 중요한 한 가지 행동을 시작하십시오.',
+     '오늘의 에너지 키워드를 메모장에 적고 ' + goodDir + '쪽 방향에 붙여두십시오. 목성이 이 의도를 증폭합니다.'],
+    ['지금 즉시 ' + goodDir + '쪽 방향으로 이동하여 그 자리에서 가장 먼저 떠오르는 한 가지 아이디어를 기록하십시오.',
+     '오늘 만나는 세 번째 사람에게 먼저 인사하십시오. 그가 오늘의 귀인일 가능성이 높습니다.',
+     '목성(' + jupSign + ')이 보내는 에너지 채널을 열기 위해, 오늘 하루 감사 일기를 3줄 작성하십시오.'],
+    ['수비학 생명수 ' + lifeNum + '번 에너지를 극대화하려면, 지금 ' + goodDir + '쪽을 바라보며 소망을 소리내어 선언하십시오.',
+     goodGate + '의 에너지를 흡수하기 위해, 오늘 새로운 사람과의 대화를 먼저 시작하십시오.',
+     (mercRetro?'수성 역행 중이므로 ':'') + '말보다 행동으로 증명하는 하루로 만드십시오. ' + goodDir + '쪽에서 결단하면 반드시 응답이 옵니다.']
+  ];
+  _s = _rng(_s + now.getMinutes()*73);
+  var mIdx = Math.abs(_s) % missionActions.length;
+  var mActs = missionActions[mIdx];
+
   document.getElementById('decreeMission').innerHTML =
-    '<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.06em">🎯 실시간 미션</div>'
-    +'<div style="font-size:12px;color:var(--text-2);line-height:1.9">'
-    +'1. 지금 즉시 <strong style="color:#34d399">' + goodDir + '쪽</strong> 방향으로 이동하십시오.<br>'
-    +'2. 그곳에서 만나는 세 번째 사람, 혹은 그 방향에서 떠오르는 첫 번째 아이디어를 기록하십시오.<br>'
-    +'3. 목성·화성 에너지가 <strong style="color:var(--gold)">' + jupSign + '</strong>에서 당신을 지원하는 황금 타이밍입니다.'
+    '<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:8px;letter-spacing:.06em">🎯 오늘의 실시간 황금 미션</div>'
+    +'<div style="font-size:12px;color:var(--text-2);line-height:2">'
+    +'1. ' + mActs[0] + '<br>'
+    +'2. ' + mActs[1] + '<br>'
+    +'3. ' + mActs[2]
     +'</div>'
-    +'<div style="margin-top:8px;font-size:10px;color:rgba(212,168,67,0.5)">'
-    +'⏱️ 명령 유효 시간: ' + now.getHours() + '시 ~ ' + (now.getHours()+2) + '시 (2시간)'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+    +'<div style="flex:1;min-width:100px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:8px;text-align:center">'
+    +  '<div style="font-size:10px;color:#34d399">⏱️ 유효 시간</div>'
+    +  '<div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-top:2px">' + now.getHours() + '시 ~ ' + (now.getHours()+2) + '시</div>'
+    +'</div>'
+    +'<div style="flex:1;min-width:100px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.2);border-radius:8px;padding:8px;text-align:center">'
+    +  '<div style="font-size:10px;color:var(--gold)">🌟 18역학 평균</div>'
+    +  '<div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-top:2px">' + r18avg + '점</div>'
+    +'</div>'
+    +'<div style="flex:1;min-width:100px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:8px;text-align:center">'
+    +  '<div style="font-size:10px;color:#38bdf8">🧭 최길 방위</div>'
+    +  '<div style="font-size:16px;font-weight:700;color:#e2e8f0;margin-top:2px">' + goodEmoji + ' ' + goodDir + '</div>'
+    +'</div>'
     +'</div>';
 
-  // 리텐션 데이터
-  var sameYearCount = 30 + (r.y % 30);
+  // ── 리텐션 (18대 역학 오행 네트워크) ────────────────────────
+  var sameOhCount = 40 + (ohIdx*17 + now.getDate()*3) % 60;
   document.getElementById('cosmicRanking').innerHTML =
-    '현재 <strong style="color:var(--cyan)">' + r.y + '년생</strong>과 같은 명령을 받은<br>'
-    +'<strong style="color:var(--gold);font-size:15px">' + sameYearCount + '명</strong>이 ' + goodDir + '쪽으로 이동 중입니다.<br>'
-    +'<span style="font-size:9px;color:var(--text-3)">동질감 네트워크 활성화 중 🌐</span>';
+    '오행 <strong style="color:var(--gold)">' + oh + '</strong> 기운 사용자 중<br>'
+    +'오늘 같은 칙령을 받은 <strong style="color:var(--gold);font-size:15px">' + sameOhCount + '명</strong>이<br>'
+    +'<strong style="color:#34d399">' + goodDir + '쪽</strong>에서 행동을 개시했습니다.<br>'
+    +'<span style="font-size:9px;color:var(--text-3)">18대 역학 동질 에너지 네트워크 활성 중 🌐</span>';
 
   document.getElementById('cosmicPoints').textContent = _cosmicPoints;
   document.getElementById('cosmicPointDesc').textContent = '누적 우주 에너지 포인트';
   document.getElementById('cosmicClaimBtn').style.display = 'block';
 
-  // 표시
   var wrap = document.getElementById('cosmicDecreeWrap');
   wrap.style.display = 'block';
   wrap.style.animation = 'decreeFadeIn .6s ease';
   document.getElementById('cosmicRetention').style.display = 'block';
 
-  // 인장 효과 (직인 애니메이션)
   var seal = document.querySelector('#cosmicDecree > div:first-child > div');
   if(seal){ seal.style.animation = 'none'; setTimeout(function(){ seal.style.animation = 'sealStamp .5s cubic-bezier(.17,.67,.35,1.3)'; }, 100); }
 
