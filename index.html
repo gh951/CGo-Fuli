@@ -21237,49 +21237,67 @@ function sptAskAI(userText, isAuto) {
   var needSearch = /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|챔피언|득점|실점|이겼|졌|비겼|선수|감독|창단|언제|몇년/.test(userText);
 
   if (needSearch) {
-    // ── Groq 검색 전용 프롬프트 호울 ────────────────────
-    var searchSystemPrompt =
-      '당신은 스포츠 통계·전적 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
-      '## 핵심 규칙\n' +
-      '1. 아는 사실은 구체적 수치·날짜·스코어와 함께 정확히 답변하세요\n' +
-      '2. 모르는 최신 정보(2024년 이후)는 "최근 데이터는 확인이 어렵습니다" 로 명확히 구분\n' +
-      '3. "일반적으로", "상당히", "더 많은" 같은 모호한 표현 금지 — 반드시 수치 제시\n' +
-      '4. 예시 형식(지켜야 함):\n' +
-      '   폴 통산 전적: A팀 X승 X무 X패 / B팀 X승 X무 X패\n' +
-      '   폴 주요 경기:\n' +
-      '   • YYYY.MM.DD — [대회명] 팀A X-X 팀B\n' +
-      '   • YYYY.MM.DD — [대회명] 팀A X-X 팀B\n' +
-      '   ⚡ CGO 역학 분석: [오행 에너지 관점]\n' +
-      '5. Wood, Fire 등 영어 오행 표현 금지 → 목(木), 화(火) 등 한글로\n' +
-      '6. 베팅·도박 표현 절대 금지\n\n' +
-      '사용자 오행: ' + myOh + ' / 이름: ' + myName;
+    // ── Vercel 프록시 → 실제 웹검색 ──────────────────────
+    var proxyUrl = 'https://c-go-fuli.vercel.app/api/search';
 
-    var searchMessages = [{role:'system', content: searchSystemPrompt}];
-    _sptHistory.slice(0,-1).forEach(function(h){ searchMessages.push({role:h.role, content:h.content}); });
-    searchMessages.push({role:'user', content:
-      userText + '\n\n' +
-      '[지시] 위 질문에 대해 알고 있는 구체적인 전적·날짜·스코어를 모두 포함해서 답변하세요. ' +
-      '모호한 표현 없이 수치 중심으로 답변하고, 모르는 부분은 "확인 불가" 로 명시하세요.'
-    });
-
-    fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
-        messages: searchMessages,
-        max_tokens: 1500,
-        temperature: 0.2,
-        stream: false
-      })
+    fetch(proxyUrl, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: userText})
     })
     .then(function(r){ return r.json(); })
+    .then(function(searchData) {
+      var searchResult = (searchData && searchData.results) || '';
+      var source = (searchData && searchData.source) || '';
+
+      // 검색 결과를 포함한 전용 메시지 구성
+      var augMessages = [{role:'system', content:
+        '당신은 스포츠 통계·전적 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+        '## 핵심 규칙\n' +
+        '1. 아래 [검색 결과]에 나온 수치·날짜·스코어를 최우선으로 활용하세요\n' +
+        '2. 검색 결과가 있으면 반드시 구체적 스코어·날짜·대회명을 포함해 답변하세요\n' +
+        '3. 모호한 표현("일반적으로", "상당히") 절대 금지 — 수치로 말하세요\n' +
+        '4. 답변 형식:\n' +
+        '   📋 통산 전적: A팀 X승 X무 X패 / B팀 X승 X무 X패\n' +
+        '   📅 주요 경기:\n' +
+        '   - YYYY.MM.DD: [대회명] 팀A X-X 팀B\n' +
+        '   ⚡ 역학 에너지: [오행 관점 한 줄]\n' +
+        '5. 한국어로만, Wood/Fire 등 영어 오행 금지\n' +
+        '6. 베팅·도박 표현 절대 금지\n\n' +
+        '사용자 오행: ' + myOh + ' / 이름: ' + myName
+      }];
+
+      _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
+
+      var userContent = userText;
+      if (searchResult && searchResult.length > 20) {
+        userContent = userText
+          + '\n\n[🔍 검색 결과 (' + source + ')]\n' + searchResult
+          + '\n\n위 검색 결과를 바탕으로 구체적 수치와 날짜를 포함해 답변하세요.';
+      } else {
+        userContent = userText
+          + '\n\n[검색 결과 없음 — 알고 있는 사실을 구체적 수치 중심으로 답변하고, 모르면 "확인 불가"라고 명시하세요]';
+      }
+      augMessages.push({role:'user', content: userContent});
+
+      return fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: augMessages,
+          max_tokens: 1500,
+          temperature: 0.15,
+          stream: false
+        })
+      }).then(function(r){ return r.json(); });
+    })
     .then(function(data) {
       sptRemoveTyping();
       var text = '';
       try { text = data.choices[0].message.content; } catch(e){}
-      if (!text) text = '데이터를 찾지 못했어요. 다시 질문해 주세요.';
-      text = text.replace(/[぀-ゟ゠-ヿ]+/g,'').replace(/[؀-ۿ]+/g,'');
+      if (!text) text = '검색 결과를 가져오지 못했어요. 다시 질문해 주세요.';
+      text = text.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g,'').replace(/[\u0600-\u06FF]+/g,'');
       sptAddBubble('ai', text);
       _sptHistory.push({role:'assistant', content:text});
       if (sendBtn) sendBtn.disabled = false;
