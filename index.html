@@ -4520,6 +4520,23 @@ var fcSystems = {
           </div>
         </div>
 
+        <!-- 📅 오늘 경기 직접 추가 (관리자) -->
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:4px;letter-spacing:.06em;">📅 오늘 경기 추가</div>
+          <div style="font-size:10px;color:#64748b;margin-bottom:10px;">실제 경기 일정을 직접 입력하면 공명 분석에 반영됩니다</div>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:end;margin-bottom:8px;">
+            <input id="spt-add-a" placeholder="홈팀 (예: 인터밀란)" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12px;outline:none;box-sizing:border-box;">
+            <div style="font-size:13px;color:#475569;font-weight:700;text-align:center;">VS</div>
+            <input id="spt-add-b" placeholder="원정팀 (예: 아틀레티코)" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12px;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+            <input id="spt-add-league" placeholder="리그 (UCL)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12px;outline:none;">
+            <input id="spt-add-time" type="time" style="background:rgba(255,255,255,0.05);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12px;outline:none;color-scheme:dark;">
+            <button onclick="sptAdminAddMatchUI()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;padding:8px;">+ 추가</button>
+          </div>
+          <button onclick="sptAdminClearMatches()" style="width:100%;padding:6px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:11px;cursor:pointer;">🗑 오늘 입력 경기 초기화</button>
+        </div>
+
         <!-- 직접 분석 입력 -->
         <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:16px;">
           <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:12px;letter-spacing:.06em;">🔍 경기 직접 분석</div>
@@ -20956,72 +20973,126 @@ function sptLeagueToType(league) {
 
 // ── 오늘 경기 동적 로딩 (TheSportsDB) ───────────────────
 function sptLoadTodayMatches(callback) {
-  var PROXY = 'https://c-go-fuli.vercel.app/api/matches';
 
-  // 날짜 시드 폴백 DB (매일 자동 로테이션)
-  // ── 실제 UCL/주요 경기 일정 기반 폴백 DB (KST 기준) ──
-  // UCL 주요 경기: UTC 18:00=KST 03:00 / UTC 20:45=KST 05:45
-  var ALL_SOCCER = [
-    // UCL 16강 (2026 시즌)
+  // ── localStorage 저장 경기 확인 (관리자 입력) ──────────
+  function getAdminMatches() {
+    try {
+      var saved = localStorage.getItem('cgo_admin_matches');
+      if (!saved) return null;
+      var parsed = JSON.parse(saved);
+      var today = new Date().toISOString().slice(0,10);
+      if (parsed.date !== today) return null;
+      return parsed.matches || null;
+    } catch(e) { return null; }
+  }
+
+  // 관리자 입력 경기 있으면 최우선 사용
+  var adminMatches = getAdminMatches();
+  if (adminMatches && adminMatches.length > 0) {
+    SPT_MATCH_DB.soccer = adminMatches.map(function(m) {
+      return {a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
+              aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
+    });
+    console.log('[CGo-Fuli] 관리자 입력 경기 사용:', adminMatches.length + '개');
+    if (callback) callback(true, '관리자입력');
+    return;
+  }
+
+  // ── 날짜 시드 폴백 (매일 다른 조합) ──────────────────────
+  // 주의: 아래는 실제 경기가 없을 때 보여주는 예시 경기입니다
+  // 실제 오늘 경기는 하단 "📅 오늘 경기 추가" 버튼으로 직접 입력하세요!
+  var FALLBACK_POOL = [
     {a:'레버쿠젠', b:'아스널', league:'UCL', time:'05:00', aOh:'목', bOh:'목'},
     {a:'레알 마드리드', b:'맨시티', league:'UCL', time:'05:00', aOh:'금', bOh:'수'},
     {a:'바르셀로나', b:'도르트문트', league:'UCL', time:'05:00', aOh:'화', bOh:'화'},
     {a:'바이에른', b:'PSG', league:'UCL', time:'05:00', aOh:'금', bOh:'화'},
     {a:'인터밀란', b:'아틀레티코', league:'UCL', time:'05:00', aOh:'수', bOh:'토'},
-    {a:'파리 생제르맹', b:'리버풀', league:'UCL', time:'05:00', aOh:'화', bOh:'화'},
     {a:'첼시', b:'포르투', league:'UEL', time:'05:00', aOh:'금', bOh:'수'},
-    {a:'맨유', b:'레알 소시에다드', league:'UEL', time:'05:00', aOh:'토', bOh:'화'},
-    // EPL (KST: 평일 04:00, 주말 22:00/00:30/03:00)
     {a:'맨체스터 시티', b:'아스널', league:'EPL', time:'04:00', aOh:'수', bOh:'목'},
     {a:'리버풀', b:'맨유', league:'EPL', time:'04:00', aOh:'화', bOh:'토'},
-    {a:'첼시', b:'토트넘', league:'EPL', time:'22:00', aOh:'금', bOh:'수'},
-    {a:'아스널', b:'리버풀', league:'EPL', time:'00:30', aOh:'목', bOh:'화'},
-    {a:'맨유', b:'맨시티', league:'EPL', time:'22:00', aOh:'토', bOh:'수'},
-    {a:'토트넘', b:'첼시', league:'EPL', time:'04:00', aOh:'수', bOh:'금'},
-    // 라리가 (KST: 토 04:15, 일 02:00/04:00)
     {a:'레알 마드리드', b:'바르셀로나', league:'라리가', time:'04:15', aOh:'금', bOh:'화'},
-    {a:'아틀레티코', b:'레알 마드리드', league:'라리가', time:'02:00', aOh:'토', bOh:'금'},
-    {a:'바르셀로나', b:'세비야', league:'라리가', time:'04:15', aOh:'화', bOh:'화'},
-    // 분데스 (KST: 토 00:30, 일 00:30)
     {a:'바이에른', b:'도르트문트', league:'분데스', time:'00:30', aOh:'금', bOh:'화'},
-    {a:'레버쿠젠', b:'바이에른', league:'분데스', time:'00:30', aOh:'목', bOh:'금'},
-    // K리그 (KST 저녁)
     {a:'전북 현대', b:'울산 HD', league:'K리그1', time:'19:00', aOh:'목', bOh:'화'},
     {a:'인천 유나이티드', b:'수원 삼성', league:'K리그1', time:'18:30', aOh:'수', bOh:'금'},
+    {a:'파리 생제르맹', b:'리버풀', league:'UCL', time:'05:00', aOh:'화', bOh:'화'},
+    {a:'맨유', b:'레알 소시에다드', league:'UEL', time:'05:00', aOh:'토', bOh:'화'},
     {a:'서울 FC', b:'포항 스틸러스', league:'K리그1', time:'19:00', aOh:'화', bOh:'금'},
-    {a:'울산 HD', b:'전북 현대', league:'K리그1', time:'14:00', aOh:'화', bOh:'목'},
+    {a:'아스널', b:'리버풀', league:'EPL', time:'00:30', aOh:'목', bOh:'화'},
   ];
 
   var today = new Date();
   var seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
+  var picked = [], seen = {};
+  // 오늘 날짜 시드로 6개 선택 (매일 다른 조합)
+  for (var i = 0; i < FALLBACK_POOL.length && picked.length < 6; i++) {
+    var item = FALLBACK_POOL[(seed * 3 + i * 7) % FALLBACK_POOL.length];
+    var k = item.a + item.b;
+    if (!seen[k]) { seen[k] = true; picked.push(item); }
+  }
+  SPT_MATCH_DB.soccer = picked;
+  console.log('[CGo-Fuli] 날짜 시드 폴백 (시드:' + seed + ')');
 
-  function applyFallback() {
-    var picked = [];
-    var seen = {};
-    for (var i=0; i<ALL_SOCCER.length && picked.length<6; i++) {
-      var item = ALL_SOCCER[(seed*3 + i*7) % ALL_SOCCER.length];
-      var k = item.a + item.b;
-      if (!seen[k]) { seen[k]=true; picked.push(item); }
+  // 상단에 안내 메시지 표시
+  var listEl = document.getElementById('spt-matches-list');
+  if (listEl) {
+    var notice = document.getElementById('spt-live-notice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'spt-live-notice';
+      notice.style.cssText = 'background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#fbbf24;line-height:1.6;';
+      notice.innerHTML = '⚠️ <b>예시 경기</b>가 표시 중입니다.<br>실제 오늘 경기는 하단 <b>📅 오늘 경기 추가</b>에서 직접 입력하세요!';
+      listEl.parentNode.insertBefore(notice, listEl);
     }
-    SPT_MATCH_DB.soccer = picked;
-    console.log('[CGo-Fuli] 폴백 DB (시드:' + seed + ')');
-    if (callback) callback(false);
   }
 
-  fetch(PROXY)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var matches = data.matches || [];
-      if (matches.length === 0) { applyFallback(); return; }
-      SPT_MATCH_DB.soccer = matches.map(function(m) {
-        return {a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
-                aOh:sptGetOh(m.a), bOh:sptGetOh(m.b), dateStr:m.date||''};
-      });
-      console.log('[CGo-Fuli] 실시간 ' + data.count + '경기 로딩 (' + data.date + ')');
-      if (callback) callback(true, data.date);
-    })
-    .catch(function() { applyFallback(); });
+  if (callback) callback(false);
 }
+
+function sptAdminAddMatch(a, b, league, time) {
+  if (!a || !b) return false;
+  var today = new Date().toISOString().slice(0,10);
+  var existing = [];
+  try {
+    var saved = localStorage.getItem('cgo_admin_matches');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed.date === today) existing = parsed.matches || [];
+    }
+  } catch(e) {}
+  existing.push({a:a, b:b, league:league||'기타', time:time||'—'});
+  localStorage.setItem('cgo_admin_matches', JSON.stringify({date:today, matches:existing}));
+  // DB 즉시 반영
+  SPT_MATCH_DB.soccer = existing.map(function(m) {
+    return {a:m.a, b:m.b, league:m.league, time:m.time,
+            aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
+  });
+  sptRenderMatches(_sptCurrentTab);
+  sptUpdateMyEnergy();
+  return true;
+}
+
+function sptAdminAddMatchUI() {
+  var a = (document.getElementById('spt-add-a')||{}).value || '';
+  var b = (document.getElementById('spt-add-b')||{}).value || '';
+  var league = (document.getElementById('spt-add-league')||{}).value || '기타';
+  var timeEl = document.getElementById('spt-add-time');
+  var time = timeEl ? timeEl.value : '—';
+  if (!a.trim() || !b.trim()) { alert('홈팀과 원정팀을 입력해 주세요!'); return; }
+  sptAdminAddMatch(a.trim(), b.trim(), league.trim()||'기타', time||'—');
+  // 입력 초기화
+  ['spt-add-a','spt-add-b','spt-add-league'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value='';
+  });
+  if(timeEl) timeEl.value='';
+  // 알림
+  sptAddBubble('ai', '✅ ' + a + ' vs ' + b + ' (' + league + ' ' + time + ') 추가됐습니다! 공명 점수가 업데이트됐어요 ⚡');
+}
+
+function sptAdminClearMatches() {
+  localStorage.removeItem('cgo_admin_matches');
+  sptLoadTodayMatches(function(){ sptRenderMatches(_sptCurrentTab); sptUpdateMyEnergy(); });
+}
+
 var _sptHistory = [];
 var _sptAnalyzed = null; // 마지막 분석 경기
 
