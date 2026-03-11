@@ -1,79 +1,59 @@
-// CGo-Fuli × 오늘의 경기 프록시 v2
-// Vercel 서버사이드 → TheSportsDB API (CORS 없음)
+// CGo-Fuli × 오늘의 경기 프록시 v3
+// football-data.org 무료 API (CORS 없음, 키 불필요 기본tier)
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 's-maxage=900'); // 15분 캐시
+  res.setHeader('Cache-Control', 's-maxage=1800');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // KST 기준 오늘 날짜 (UTC+9)
+  // KST 기준 오늘
   const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const todayKST = nowKST.toISOString().slice(0, 10);
-
-  const tomorrow = new Date(nowKST);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowKST = tomorrow.toISOString().slice(0, 10);
-
-  const yesterday = new Date(nowKST);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKST = yesterday.toISOString().slice(0, 10);
-
-  // 어제~내일 3일치 조회 (경기 없는 날 대비)
-  const dates = [yesterdayKST, todayKST, tomorrowKST];
+  const tomorrowKST = new Date(nowKST.getTime() + 86400000).toISOString().slice(0, 10);
 
   const leagueKoMap = {
-    'UEFA Champions League': 'UCL',
-    'UEFA Europa League': 'UEL',
-    'UEFA Conference League': 'UECL',
-    'English Premier League': 'EPL',
-    'Spanish La Liga': '라리가',
-    'German Bundesliga': '분데스',
-    'Italian Serie A': '세리에A',
-    'French Ligue 1': '리그앙',
-    'Dutch Eredivisie': '에레디',
-    'K League 1': 'K리그1',
-    'K League 2': 'K리그2',
-    'Scottish Premiership': '스코틀랜드',
-    'Portuguese Primeira Liga': '프리메이라',
+    'CL':  'UCL',   'EL': 'UEL',   'EC': 'UECL',
+    'PL':  'EPL',   'PD': '라리가', 'BL1': '분데스',
+    'SA':  '세리에A','FL1': '리그앙','DED': '에레디',
+    'PPL': '프리메이라', 'CLI': '코파리베르타',
   };
 
-  const keepKeywords = [
-    'Champions', 'Europa', 'Conference',
-    'Premier League', 'La Liga', 'Bundesliga',
-    'Serie A', 'Ligue 1', 'K League', 'Eredivisie', 'Primeira', 'Scottish'
-  ];
+  // football-data.org 무료 API (경기 날짜 범위 조회)
+  const API_KEY = ''; // 무료 tier: 키 없이도 일부 가능, 있으면 더 좋음
+  const headers = API_KEY ? { 'X-Auth-Token': API_KEY } : {};
 
   try {
-    const results = await Promise.all(
-      dates.map(d =>
-        fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&s=Soccer`)
-          .then(r => r.json())
-          .catch(() => ({ events: [] }))
-      )
+    // 오늘~내일 UEFA/주요리그 경기 조회
+    const url = `https://api.football-data.org/v4/matches?dateFrom=${todayKST}&dateTo=${tomorrowKST}`;
+    const r = await fetch(url, { headers });
+    const data = await r.json();
+
+    const allMatches = data.matches || [];
+
+    // 주요 리그만 필터
+    const keepCodes = ['CL','EL','EC','PL','PD','BL1','SA','FL1'];
+    const filtered = allMatches.filter(m =>
+      keepCodes.includes(m.competition?.code)
     );
 
-    const all = results.flatMap(r => r.events || []);
-
-    const filtered = all.filter(e =>
-      keepKeywords.some(k => (e.strLeague || '').includes(k))
-    );
-
-    // 오늘 KST 기준으로 아직 안 끝난 경기 우선 정렬
-    const matches = filtered.slice(0, 16).map(e => {
+    const matches = filtered.slice(0, 16).map(m => {
+      // UTC → KST
       let timeStr = '—';
-      if (e.strTime && e.strTime.length >= 5) {
-        const hh = (parseInt(e.strTime.slice(0, 2), 10) + 9) % 24;
-        const mm = e.strTime.slice(3, 5);
-        timeStr = `${String(hh).padStart(2, '0')}:${mm}`;
+      if (m.utcDate) {
+        const d = new Date(m.utcDate);
+        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        const hh = String(kst.getUTCHours()).padStart(2, '0');
+        const mm = String(kst.getUTCMinutes()).padStart(2, '0');
+        timeStr = `${hh}:${mm}`;
       }
-      const leagueKo = leagueKoMap[e.strLeague] || e.strLeague || '';
+      const leagueKo = leagueKoMap[m.competition?.code] || m.competition?.name || '';
       return {
-        a: e.strHomeTeam || '',
-        b: e.strAwayTeam || '',
+        a: m.homeTeam?.shortName || m.homeTeam?.name || '',
+        b: m.awayTeam?.shortName || m.awayTeam?.name || '',
         league: leagueKo,
         time: timeStr,
-        date: e.dateEvent || todayKST,
+        date: m.utcDate ? new Date(new Date(m.utcDate).getTime() + 9*3600000).toISOString().slice(0,10) : todayKST,
       };
     });
 
@@ -81,8 +61,7 @@ export default async function handler(req, res) {
       matches,
       date: todayKST,
       count: matches.length,
-      source: 'thesportsdb',
-      queried: dates,
+      source: 'football-data.org',
     });
 
   } catch (e) {
