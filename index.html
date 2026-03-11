@@ -7394,6 +7394,9 @@ var _CITIES = [
   // 군산시 전 동·읍면 (전미동 포함)
   {n:'전미동',lat:35.9489,lng:126.7122},
   {n:'군산 전미동',lat:35.9489,lng:126.7122},
+  {n:'전주 전미동',lat:35.8960,lng:127.1390},
+  {n:'전주시 전미동',lat:35.8960,lng:127.1390},
+  {n:'전미동(전주)',lat:35.8960,lng:127.1390},
   {n:'군산 미장동',lat:35.9612,lng:126.7289},{n:'군산 조촌동',lat:35.9872,lng:126.7319},
   {n:'군산 수송동',lat:35.9774,lng:126.7474},{n:'군산 나운1동',lat:35.9550,lng:126.7100},
   {n:'군산 나운2동',lat:35.9600,lng:126.7200},{n:'군산 나운3동',lat:35.9650,lng:126.7300},
@@ -15067,6 +15070,219 @@ function _bsFsStop(){
 </script>
 
 <script>
+// ══════════════════════════════════════════════════════════════
+// CGo-Fuli 스마트 뒤로가기 시스템 v1.0
+// history.pushState로 가상 히스토리 → popstate 가로채기
+// ══════════════════════════════════════════════════════════════
+
+var _cgPageHistory = ['dashboard'];  // 방문 페이지 스택
+var _cgCurrent     = 'dashboard';
+
+var _cgPageLabels = {
+  dashboard:'🏠 대시보드', scan:'🔬 생체 스캔', family:'👨‍👩‍👧 가족 관리',
+  algo:'🩺 건강 예측', report:'📜 분석 리포트', gmd:'📸 풍수 카메라',
+  naming:'✍️ 작명 서비스', consult:'🔮 1대1 상담', lotto:'🎰 행운 번호',
+  sports:'⚽ 스포츠 궁합', stock:'📈 주식 예측', shop:'🛍️ 오행 쇼핑',
+  profile:'👤 프로필'
+};
+
+// 페이지 이동 시 히스토리 기록
+function _cgRecordPage(pageId) {
+  if (_cgCurrent === pageId) return;
+  _cgPageHistory.push(pageId);
+  if (_cgPageHistory.length > 20) _cgPageHistory.shift();
+  _cgCurrent = pageId;
+  // 가상 히스토리 항목 추가 (뒤로가기 버튼 활성화)
+  _cgHistoryPush(pageId);
+}
+
+// 기존 nav 클릭에 히스토리 기록 연동
+(function(){
+  var origNavClick = document.querySelectorAll('.nav-btn[data-page]');
+  origNavClick.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      _cgRecordPage(this.getAttribute('data-page'));
+    });
+  });
+  // showPage, cgoSoftGo도 감싸기
+  var _origSoftGo = window.cgoSoftGo;
+  window.cgoSoftGo = function(pageId){
+    _cgRecordPage(pageId);
+    if (_origSoftGo) _origSoftGo(pageId);
+  };
+})();
+
+// ── popstate: 뒤로가기 버튼 감지 ─────────────────────────────
+window.addEventListener('popstate', function(e) {
+  // 전체화면 스캔 중이면 닫기
+  var fs = document.getElementById('bsFullWrap');
+  if (fs && fs.style.display !== 'none') {
+    bsCloseFullscreen();
+    _cgHistoryPush(_cgCurrent);
+    return;
+  }
+  // 카드가 열려있으면 닫기
+  var bc = document.getElementById('cgBackCard');
+  var mc = document.getElementById('cgMenuCard');
+  if (bc && bc.style.display !== 'none') { cgCloseBackCard(); _cgHistoryPush(_cgCurrent); return; }
+  if (mc && mc.style.display !== 'none') { cgCloseMenuCard(); _cgHistoryPush(_cgCurrent); return; }
+  // 대시보드에서 뒤로가기 → 종료 카드
+  if (_cgCurrent === 'dashboard' || _cgPageHistory.length <= 1) {
+    cgShowBackCard();
+    _cgHistoryPush(_cgCurrent);
+    return;
+  }
+  // 이전 페이지로 이동
+  _cgPageHistory.pop();
+  var prev = _cgPageHistory[_cgPageHistory.length - 1] || 'dashboard';
+  _cgCurrent = prev;
+  _cgNavigateTo(prev);
+  _cgHistoryPush(prev);
+});
+
+// history API 안전 래퍼 (iframe/보안 환경 대응)
+function _cgHistoryPush(pageId) {
+  try { history.pushState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
+}
+function _cgHistoryReplace(pageId) {
+  try { history.replaceState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
+}
+
+// 최초 진입 시 히스토리 항목 추가
+_cgHistoryReplace('dashboard');
+_cgHistoryPush('dashboard');
+
+// ── 뒤로가기 카드 제어 ────────────────────────────────────────
+function cgShowBackCard() {
+  var prev = _cgPageHistory.length > 1
+    ? _cgPageHistory[_cgPageHistory.length - 2]
+    : 'dashboard';
+  var prevLabel = _cgPageLabels[prev] || prev;
+  var curLabel  = _cgPageLabels[_cgCurrent] || _cgCurrent;
+
+  var sub = document.getElementById('cgBackCardSub');
+  if (sub) sub.textContent = '현재: ' + (curLabel || _cgCurrent);
+  var pl = document.getElementById('cgBackPrevLabel');
+  if (pl) pl.textContent = prevLabel;
+
+  var card = document.getElementById('cgBackCard');
+  if (card) card.style.display = 'flex';
+}
+
+function cgCloseBackCard() {
+  var card = document.getElementById('cgBackCard');
+  if (card) card.style.display = 'none';
+}
+
+function cgBackToPrev() {
+  cgCloseBackCard();
+  if (_cgPageHistory.length > 1) {
+    _cgPageHistory.pop();
+    var prev = _cgPageHistory[_cgPageHistory.length - 1] || 'dashboard';
+    _cgCurrent = prev;
+    _cgNavigateTo(prev);
+    _cgHistoryPush(prev);
+  } else {
+    _cgNavigateTo('dashboard');
+  }
+}
+
+function cgBackToMenu() {
+  cgCloseBackCard();
+  cgShowMenuCard();
+}
+
+function cgBackToExit() {
+  cgCloseBackCard();
+  // 종료 확인
+  var ok = confirm('CGo-Fuli를 종료할까요?\n\n(브라우저 탭이 닫힙니다)');
+  if (ok) {
+    try { window.close(); } catch(e) {}
+    // window.close() 안 되면 빈 페이지로
+    setTimeout(function(){ window.location.href = 'about:blank'; }, 200);
+  }
+}
+
+// ── 페이지 목차 카드 ──────────────────────────────────────────
+function cgShowMenuCard() {
+  // 그리드 생성
+  var grid = document.getElementById('cgMenuGrid');
+  if (grid) {
+    grid.innerHTML = Object.keys(_cgPageLabels).map(function(k){
+      var isCurrent = (k === _cgCurrent);
+      return '<button onclick="cgMenuGo(\''+k+'\')" style="'
+        + 'padding:12px 10px;border-radius:12px;cursor:pointer;text-align:center;'
+        + 'background:' + (isCurrent ? 'rgba(212,168,67,.15)' : 'rgba(255,255,255,.04)') + ';'
+        + 'border:1px solid ' + (isCurrent ? 'rgba(212,168,67,.4)' : 'rgba(255,255,255,.08)') + ';'
+        + 'display:flex;flex-direction:column;align-items:center;gap:4px">'
+        + '<span style="font-size:20px">' + _cgPageLabels[k].slice(0,2) + '</span>'
+        + '<span style="font-size:11px;font-weight:600;color:' + (isCurrent ? '#d4a843' : '#94a3b8') + '">'
+        + _cgPageLabels[k].slice(2).trim() + '</span>'
+        + (isCurrent ? '<span style="font-size:9px;color:#d4a843">● 현재</span>' : '')
+        + '</button>';
+    }).join('');
+  }
+  var card = document.getElementById('cgMenuCard');
+  if (card) card.style.display = 'flex';
+}
+
+function cgCloseMenuCard() {
+  var card = document.getElementById('cgMenuCard');
+  if (card) card.style.display = 'none';
+}
+
+function cgMenuGo(pageId) {
+  cgCloseMenuCard();
+  cgCloseBackCard();
+  _cgRecordPage(pageId);
+  _cgNavigateTo(pageId);
+}
+
+// ── 실제 페이지 이동 ──────────────────────────────────────────
+function _cgNavigateTo(pageId) {
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.querySelector('[data-page="'+pageId+'"]');
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  var pg = document.getElementById('page-'+pageId);
+  if (pg) pg.classList.add('active');
+
+  // 제목 처리
+  var nb  = document.getElementById('nasaMiniBar');
+  var ptx = document.getElementById('pageTitleText');
+  if (pageId === 'dashboard') {
+    if (nb)  nb.style.display  = 'flex';
+    if (ptx) { ptx.style.display = 'none'; ptx.textContent = ''; }
+  } else {
+    if (nb)  nb.style.display = 'none';
+    if (ptx) { ptx.style.display = 'block'; ptx.textContent = _cgPageLabels[pageId] || pageId; }
+  }
+  if (pageId === 'family') { if(typeof renderFamily==='function') renderFamily(); }
+  if (pageId === 'scan')   { if(typeof drawRPPG==='function') drawRPPG(); }
+  if (pageId === 'shop')   { if(typeof shopInit==='function')  shopInit(); }
+  if (pageId === 'gmd')    { setTimeout(function(){ if(typeof fcSwitchMode==='function') fcSwitchMode('camera'); },300); }
+  else { if(typeof fcStopCamera==='function') fcStopCamera(); }
+
+  // 맨 위로 스크롤
+  window.scrollTo(0, 0);
+  var main = document.getElementById('mainContent');
+  if (main) main.scrollTop = 0;
+}
+
+// 배경 탭으로 카드 닫기 (null 안전)
+(function(){
+  function _bind(){
+    var bc=document.getElementById('cgBackCard');
+    var mc=document.getElementById('cgMenuCard');
+    if(bc) bc.addEventListener('click',function(e){if(e.target===this)cgCloseBackCard();});
+    if(mc) mc.addEventListener('click',function(e){if(e.target===this)cgCloseMenuCard();});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_bind);
+  else _bind();
+})();
+</script>
+
+<script>
 // ════════════════════════════════════════
 //  회사·브랜드 작명 AI — 6가지 역학 융합
 // ════════════════════════════════════════
@@ -18775,6 +18991,7 @@ function _matchChosung(query, target) {
 // ── 동명 중복 지자체 구분 DB ────────────────────────────────
 // 같은 이름의 동/읍/면이 여러 지역에 있을 때 지자체명으로 구분
 var _DONG_AMBIGUOUS = {
+  '전미동':  ['군산 전미동','전주 전미동'],
   '신사동':  ['강남구 신사동','마포구 신사동'],
   '중앙동':  ['군산 중앙동','춘천 중앙동','원주 중앙동','강릉 중앙동','속초 중앙동'],
   '성내동':  ['강동구 성내동','고창 성내면'],
@@ -18807,10 +19024,21 @@ function _parseContext(query) {
     '춘천','원주','강릉','속초','동해','태백','삼척','제주','서귀포'];
   var foundCity = '';
   var foundDong = q;
-  CITIES_KR.forEach(function(c) {
-    if (q.indexOf(c) === 0 && q.length > c.length) {
-      foundCity = c;
-      foundDong = q.slice(c.length).trim();
+  // "전주시 전미동" → "전주시"도 "전주"로 인식
+  var qNorm = q.replace(/시\s/,'시 ').replace(/군\s/,'군 ');
+  CITIES_KR.forEach(function(city) {
+    // 정확 매칭: "전주 " 또는 "전주시 "
+    var patterns = [city + ' ', city + '시 ', city + '군 ', city + '구 '];
+    patterns.forEach(function(pat) {
+      if (q.indexOf(pat) === 0) {
+        foundCity = city;
+        foundDong = q.slice(pat.length).trim();
+      }
+    });
+    // 공백 없이 붙은 경우: "전주전미동"
+    if (!foundCity && q.indexOf(city) === 0 && q.length > city.length) {
+      foundCity = city;
+      foundDong = q.slice(city.length).trim();
     }
   });
   return { city: foundCity, dong: foundDong, raw: q };
@@ -18881,20 +19109,51 @@ function ipAutoSuggest(val, type) {
   var v = val.trim();
   if (v.length < 1) { drop.style.display='none'; return; }
 
+  // ── 현재 검색어 스냅샷 저장 (비동기 응답 시 비교용) ──────
+  drop._lastQuery = v;
+
   // ── 즉시: 내장DB 초성 검색 (0ms 반응) ──────────────────
   var localResults = _ipSearchLocal(v);
   if (localResults.length) _ipRenderDrop(localResults, type, drop);
 
-  // ── 비동기: OSM Nominatim (400ms 딜레이, 네트워크) ──────
+  // ── OSM 호출 여부 판단 ───────────────────────────────────
+  // 아래 조건 중 하나라도 해당하면 OSM 호출 완전 차단
+  var ctx2 = _parseContext(v);
+  var skipOSM = false;
+
+  // 조건1: 지자체 + 동 조합 입력 ("전주 전미동", "군산 전미동" 등)
+  if (ctx2.city !== '') skipOSM = true;
+
+  // 조건2: 내장DB에 높은 점수(직접 매칭) 결과가 있음
+  if (localResults.length > 0 && localResults[0].score >= 80) skipOSM = true;
+
+  // 조건3: 쿼리가 동/읍/면/리 로 끝남 → 내장DB로 충분
+  if (/[동읍면리]$/.test(v)) skipOSM = true;
+
+  // 조건4: 내장DB 결과가 3개 이상 → 충분한 결과
+  if (localResults.length >= 3) skipOSM = true;
+
+  if (skipOSM) {
+    clearTimeout(window._ipSuggestTimer);
+    return;
+  }
+
+  // ── 비동기: OSM Nominatim (내장DB 결과 없을 때만) ────────
   clearTimeout(window._ipSuggestTimer);
   window._ipSuggestTimer = setTimeout(function(){
+    // 검색어가 바뀌었으면 무시
+    if (drop._lastQuery !== v) return;
+
     var url = 'https://nominatim.openstreetmap.org/search'
       + '?q=' + encodeURIComponent(v)
-      + '&format=json&addressdetails=1&limit=10&accept-language=ko&countrycodes=kr';
+      + '&format=json&addressdetails=1&limit=8&accept-language=ko&countrycodes=kr';
     fetch(url, { headers:{'User-Agent':'CGo-Fuli/1.0'} })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (!data || !data.length) return; // 내장DB 결과 유지
+      // 응답 받은 시점에 검색어가 바뀌었으면 무시 (핵심!)
+      if (drop._lastQuery !== v) return;
+      if (!data || !data.length) return;
+
       var seen = {};
       var osmItems = data.map(function(d){
         var a = d.address || {};
@@ -18905,7 +19164,7 @@ function ipAutoSuggest(val, type) {
         var addr  = [city, state].filter(Boolean).join(' ');
         var isDong = !!(a.quarter||a.suburb||a.neighbourhood||a.village||a.hamlet);
         return { n:nm.trim(), addr:addr, lat:parseFloat(d.lat), lng:parseFloat(d.lon),
-                 isDong:isDong, score:60, isDup:false, fromOSM:true };
+                 isDong:isDong, score:40, isDup:false, fromOSM:true };
       }).filter(function(d){
         if (!d.n || isNaN(d.lat)) return false;
         if (seen[d.n]) return false;
@@ -18913,16 +19172,20 @@ function ipAutoSuggest(val, type) {
       });
       if (!osmItems.length) return;
 
-      // 내장DB + OSM 병합 (내장DB 우선, OSM 보완)
-      var merged = localResults.slice();
-      var localNames = localResults.map(function(r){ return r.n; });
+      // 내장DB 결과가 다시 생겼으면 OSM 무시
+      var freshLocal = _ipSearchLocal(v);
+      if (freshLocal.length >= 2) return;
+
+      // 내장DB + OSM 병합 (내장DB 완전 우선)
+      var merged = freshLocal.slice();
+      var localNames = freshLocal.map(function(r){ return r.n; });
       osmItems.forEach(function(o){
         if (localNames.indexOf(o.n) === -1) merged.push(o);
       });
-      _ipRenderDrop(merged.slice(0,15), type, drop);
+      _ipRenderDrop(merged.slice(0,12), type, drop);
     })
     .catch(function(){}); // 실패해도 내장DB 결과 유지
-  }, 400);
+  }, 600);
 }
 
 // ── 드롭다운 렌더링 (동명 지자체 배지 포함) ─────────────────
@@ -21295,6 +21558,110 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 })();
 </script>
+
+<!-- ══ 뒤로가기 확인 카드 ══════════════════════════════════ -->
+<div id="cgBackCard" style="display:none;position:fixed;inset:0;z-index:99999;
+  background:rgba(2,8,23,.88);backdrop-filter:blur(8px);
+  align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:480px;background:#0d1526;
+    border-radius:22px 22px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);
+    box-shadow:0 -8px 40px rgba(0,0,0,.6);animation:slideUpCard .25s ease">
+
+    <!-- 핸들 -->
+    <div style="text-align:center;padding:12px 0 4px">
+      <div style="width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto"></div>
+    </div>
+
+    <!-- 제목 -->
+    <div style="padding:14px 24px 6px;text-align:center">
+      <div style="font-size:28px;margin-bottom:6px">🔮</div>
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9">어디로 이동할까요?</div>
+      <div id="cgBackCardSub" style="font-size:12px;color:#64748b;margin-top:4px">현재 페이지에서 이동합니다</div>
+    </div>
+
+    <!-- 버튼 목록 -->
+    <div style="padding:12px 20px;display:flex;flex-direction:column;gap:10px">
+
+      <!-- 이전 페이지로 -->
+      <button onclick="cgBackToPrev()"
+        style="width:100%;padding:14px 20px;background:rgba(56,189,248,.1);
+        border:1px solid rgba(56,189,248,.25);border-radius:14px;
+        display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left">
+        <span style="font-size:22px">◀</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#38bdf8">이전 페이지로</div>
+          <div id="cgBackPrevLabel" style="font-size:11px;color:#64748b;margin-top:2px">대시보드</div>
+        </div>
+      </button>
+
+      <!-- 페이지 목차 -->
+      <button onclick="cgBackToMenu()"
+        style="width:100%;padding:14px 20px;background:rgba(212,168,67,.1);
+        border:1px solid rgba(212,168,67,.25);border-radius:14px;
+        display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left">
+        <span style="font-size:22px">🗂️</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#d4a843">페이지 목차</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">전체 메뉴에서 선택</div>
+        </div>
+      </button>
+
+      <!-- 앱 완전 종료 -->
+      <button onclick="cgBackToExit()"
+        style="width:100%;padding:14px 20px;background:rgba(248,113,113,.08);
+        border:1px solid rgba(248,113,113,.2);border-radius:14px;
+        display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left">
+        <span style="font-size:22px">⏻</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#f87171">앱 완전 종료</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">브라우저 탭을 닫습니다</div>
+        </div>
+      </button>
+
+    </div>
+
+    <!-- 취소 -->
+    <div style="padding:4px 20px 16px">
+      <button onclick="cgCloseBackCard()"
+        style="width:100%;padding:12px;background:rgba(255,255,255,.05);
+        border:1px solid rgba(255,255,255,.08);border-radius:12px;
+        color:#64748b;font-size:13px;font-weight:600;cursor:pointer">
+        취소 (계속 이용)
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- 페이지 목차 카드 -->
+<div id="cgMenuCard" style="display:none;position:fixed;inset:0;z-index:99999;
+  background:rgba(2,8,23,.88);backdrop-filter:blur(8px);
+  align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:480px;background:#0d1526;
+    border-radius:22px 22px 0 0;padding:0 0 env(safe-area-inset-bottom,20px);
+    box-shadow:0 -8px 40px rgba(0,0,0,.6);animation:slideUpCard .25s ease;max-height:85vh;overflow-y:auto">
+
+    <div style="text-align:center;padding:12px 0 4px">
+      <div style="width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto"></div>
+    </div>
+    <div style="padding:12px 24px 10px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:15px;font-weight:700;color:#f1f5f9">🗂️ 페이지 목차</div>
+      <button onclick="cgCloseMenuCard()" style="padding:4px 12px;background:rgba(255,255,255,.06);
+        border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#64748b;font-size:12px;cursor:pointer">✕</button>
+    </div>
+
+    <div style="padding:0 16px 8px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="cgMenuGrid">
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes slideUpCard {
+  from { transform:translateY(100%); opacity:0; }
+  to   { transform:translateY(0);    opacity:1; }
+}
+</style>
 
 <!-- ══ 전체화면 스캔 오버레이 (모바일 최적화) ══════════════ -->
 <div id="bsFullWrap" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column">
