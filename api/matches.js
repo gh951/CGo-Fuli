@@ -1,63 +1,71 @@
-// CGo-Fuli × 오늘의 경기 프록시
-// Vercel 서버사이드 → TheSportsDB API 호출 (CORS 없음)
-// 배포 위치: /api/matches.js
+// CGo-Fuli × 오늘의 경기 프록시 v2
+// Vercel 서버사이드 → TheSportsDB API (CORS 없음)
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 's-maxage=1800'); // 30분 캐시
+  res.setHeader('Cache-Control', 's-maxage=900'); // 15분 캐시
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // KST 기준 오늘 날짜 (UTC+9)
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const todayKST = nowKST.toISOString().slice(0, 10);
 
-  const fmt = d => d.toISOString().slice(0, 10);
+  const tomorrow = new Date(nowKST);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKST = tomorrow.toISOString().slice(0, 10);
+
+  const yesterday = new Date(nowKST);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKST = yesterday.toISOString().slice(0, 10);
+
+  // 어제~내일 3일치 조회 (경기 없는 날 대비)
+  const dates = [yesterdayKST, todayKST, tomorrowKST];
+
+  const leagueKoMap = {
+    'UEFA Champions League': 'UCL',
+    'UEFA Europa League': 'UEL',
+    'UEFA Conference League': 'UECL',
+    'English Premier League': 'EPL',
+    'Spanish La Liga': '라리가',
+    'German Bundesliga': '분데스',
+    'Italian Serie A': '세리에A',
+    'French Ligue 1': '리그앙',
+    'Dutch Eredivisie': '에레디',
+    'K League 1': 'K리그1',
+    'K League 2': 'K리그2',
+    'Scottish Premiership': '스코틀랜드',
+    'Portuguese Primeira Liga': '프리메이라',
+  };
+
+  const keepKeywords = [
+    'Champions', 'Europa', 'Conference',
+    'Premier League', 'La Liga', 'Bundesliga',
+    'Serie A', 'Ligue 1', 'K League', 'Eredivisie', 'Primeira', 'Scottish'
+  ];
 
   try {
-    // 오늘 + 내일 Soccer 경기 동시 조회
-    const [r1, r2] = await Promise.all([
-      fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${fmt(today)}&s=Soccer`),
-      fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${fmt(tomorrow)}&s=Soccer`),
-    ]);
-    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
-
-    const all = [...(d1.events || []), ...(d2.events || [])];
-
-    // 유럽·한국 주요 리그 필터
-    const keepLeagues = [
-      'UEFA Champions League', 'UEFA Europa League', 'UEFA Conference League',
-      'English Premier League', 'Spanish La Liga', 'German Bundesliga',
-      'Italian Serie A', 'French Ligue 1', 'Dutch Eredivisie',
-      'K League 1', 'K League 2', 'Portuguese Primeira Liga', 'Scottish Premiership',
-    ];
-    const leagueKoMap = {
-      'UEFA Champions League': 'UCL',
-      'UEFA Europa League': 'UEL',
-      'UEFA Conference League': 'UECL',
-      'English Premier League': 'EPL',
-      'Spanish La Liga': '라리가',
-      'German Bundesliga': '분데스',
-      'Italian Serie A': '세리에A',
-      'French Ligue 1': '리그앙',
-      'Dutch Eredivisie': '에레디',
-      'K League 1': 'K리그1',
-      'K League 2': 'K리그2',
-      'Portuguese Primeira Liga': '프리메이라',
-      'Scottish Premiership': '스코틀랜드',
-    };
-
-    const filtered = all.filter(e =>
-      keepLeagues.some(l => (e.strLeague || '').includes(l.split(' ')[0]))
+    const results = await Promise.all(
+      dates.map(d =>
+        fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${d}&s=Soccer`)
+          .then(r => r.json())
+          .catch(() => ({ events: [] }))
+      )
     );
 
+    const all = results.flatMap(r => r.events || []);
+
+    const filtered = all.filter(e =>
+      keepKeywords.some(k => (e.strLeague || '').includes(k))
+    );
+
+    // 오늘 KST 기준으로 아직 안 끝난 경기 우선 정렬
     const matches = filtered.slice(0, 16).map(e => {
-      // UTC → KST
       let timeStr = '—';
       if (e.strTime && e.strTime.length >= 5) {
-        const hh = (parseInt(e.strTime.slice(0,2), 10) + 9) % 24;
+        const hh = (parseInt(e.strTime.slice(0, 2), 10) + 9) % 24;
         const mm = e.strTime.slice(3, 5);
-        timeStr = `${String(hh).padStart(2,'0')}:${mm}`;
+        timeStr = `${String(hh).padStart(2, '0')}:${mm}`;
       }
       const leagueKo = leagueKoMap[e.strLeague] || e.strLeague || '';
       return {
@@ -65,14 +73,25 @@ export default async function handler(req, res) {
         b: e.strAwayTeam || '',
         league: leagueKo,
         time: timeStr,
-        date: e.dateEvent || fmt(today),
-        idEvent: e.idEvent || '',
+        date: e.dateEvent || todayKST,
       };
     });
 
-    return res.status(200).json({ matches, date: fmt(today), count: matches.length, source: 'thesportsdb' });
+    return res.status(200).json({
+      matches,
+      date: todayKST,
+      count: matches.length,
+      source: 'thesportsdb',
+      queried: dates,
+    });
 
   } catch (e) {
-    return res.status(200).json({ matches: [], date: fmt(today), count: 0, source: 'error', error: e.message });
+    return res.status(200).json({
+      matches: [],
+      date: todayKST,
+      count: 0,
+      source: 'error',
+      error: e.message
+    });
   }
 }
