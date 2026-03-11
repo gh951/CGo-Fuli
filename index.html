@@ -21237,8 +21237,27 @@ function sptAskAI(userText, isAuto) {
   var needSearch = /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|챔피언|득점|실점|이겼|졌|비겼|선수|감독|창단|언제|몇년/.test(userText);
 
   if (needSearch) {
-    // ── Vercel 프록시 → 실제 웹검색 ──────────────────────
+    // ══ CGO-FULI 3단계 스포츠 데이터 엔진 ══════════════════
+    // 1단계: Vercel 프록시 → Wikipedia 한/영 검색
+    // 2단계: 검색 결과 유의성 판단 (데이터 완결성 체크)
+    // 3단계: 데이터 결핍 시 → "결핍의 분석" 모드 자동 전환
+    //        (감독 생년월일 역학 + NASA 행성 상성 + 팀 창단일 오행)
+    // ══════════════════════════════════════════════════════
+
     var proxyUrl = 'https://c-go-fuli.vercel.app/api/search';
+
+    // NASA 행성 데이터 수집
+    var np2 = window._nasaPlanets || {};
+    var planetStr = '';
+    if (np2.jupiter) planetStr += '목성(' + (np2.jupiter.sign||'') + ') ';
+    if (np2.mars)    planetStr += '화성(' + (np2.mars.sign||'') + (np2.mars.retro?'역행':'') + ') ';
+    if (np2.saturn)  planetStr += '토성(' + (np2.saturn.sign||'') + (np2.saturn.retro?'역행':'') + ') ';
+    if (np2.venus)   planetStr += '금성(' + (np2.venus.sign||'') + ') ';
+    var moonPhaseNow = '';
+    try {
+      var phIdx2 = Math.floor((Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/86400000)%30)/3.75)%8;
+      moonPhaseNow = ['신월','초승','상현','보름','보름','하현','하현','그믐'][phIdx2];
+    } catch(e){}
 
     fetch(proxyUrl, {
       method: 'POST',
@@ -21250,35 +21269,119 @@ function sptAskAI(userText, isAuto) {
       var searchResult = (searchData && searchData.results) || '';
       var source = (searchData && searchData.source) || '';
 
-      // 검색 결과를 포함한 전용 메시지 구성
-      var augMessages = [{role:'system', content:
-        '당신은 스포츠 통계·전적 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
-        '## 핵심 규칙\n' +
-        '1. 아래 [검색 결과]에 나온 수치·날짜·스코어를 최우선으로 활용하세요\n' +
-        '2. 검색 결과가 있으면 반드시 구체적 스코어·날짜·대회명을 포함해 답변하세요\n' +
-        '3. 모호한 표현("일반적으로", "상당히") 절대 금지 — 수치로 말하세요\n' +
-        '4. 답변 형식:\n' +
-        '   📋 통산 전적: A팀 X승 X무 X패 / B팀 X승 X무 X패\n' +
-        '   📅 주요 경기:\n' +
-        '   - YYYY.MM.DD: [대회명] 팀A X-X 팀B\n' +
-        '   ⚡ 역학 에너지: [오행 관점 한 줄]\n' +
-        '5. 한국어로만, Wood/Fire 등 영어 오행 금지\n' +
-        '6. 베팅·도박 표현 절대 금지\n\n' +
-        '사용자 오행: ' + myOh + ' / 이름: ' + myName
-      }];
+      // ── 2단계: 데이터 완결성(Input_Data_Integrity) 체크 ──
+      // 스코어 패턴(숫자-숫자) 또는 날짜 패턴 포함 여부로 유의성 판단
+      var hasConcreteData = /\d-\d|\d{4}\.\d{2}|\d승|\d무|\d패|UCL|UEFA|Champion/i.test(searchResult);
 
-      _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
+      var augSystem, augUserContent;
 
-      var userContent = userText;
-      if (searchResult && searchResult.length > 20) {
-        userContent = userText
-          + '\n\n[🔍 검색 결과 (' + source + ')]\n' + searchResult
-          + '\n\n위 검색 결과를 바탕으로 구체적 수치와 날짜를 포함해 답변하세요.';
+      if (hasConcreteData) {
+        // ── [모드 A] 데이터 있음 → 통계 중심 답변 ──────────
+        augSystem =
+          '당신은 스포츠 통계 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          '## 규칙\n' +
+          '1. 검색 결과의 구체적 수치·날짜·스코어를 최우선 활용\n' +
+          '2. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
+          '3. 답변 형식:\n' +
+          '   \uD83D\uDCCB 공식 통산 전적: A팀 X승 X무 X패\n' +
+          '   \uD83D\uDCC5 맞대결 기록:\n' +
+          '   - YYYY.MM.DD [대회] 팀A X-X 팀B\n' +
+          '   \u26A1 에너지 분석: [역학 관점 한 줄]\n' +
+          '4. 한국어만, 베팅 금지\n' +
+          '사용자 오행: ' + myOh;
+
+        augUserContent = userText
+          + '\n\n[\uD83D\uDD0D 검색 결과]\n' + searchResult
+          + '\n\n위 결과를 바탕으로 전적·스코어·날짜 포함 답변하세요.';
+
       } else {
-        userContent = userText
-          + '\n\n[검색 결과 없음 — 알고 있는 사실을 구체적 수치 중심으로 답변하고, 모르면 "확인 불가"라고 명시하세요]';
+        // ── [모드 B] 데이터 결핍 → CGO "결핍의 분석" 자동 전환 ──
+        // 두 팀의 감독 생년월일 내장 DB
+        var managerDB = {
+          '레버쿠젠':  {name:'샤비 알론소',  birth:'1981-11-25', oh:'금(金)', num: 7},
+          '아스날':    {name:'미켈 아르테타', birth:'1982-03-26', oh:'수(水)', num: 5},
+          '맨유':      {name:'루벤 아모림',   birth:'1985-01-30', oh:'목(木)', num: 3},
+          '맨체스터 유나이티드': {name:'루벤 아모림', birth:'1985-01-30', oh:'목(木)', num: 3},
+          '맨시티':    {name:'펩 과르디올라', birth:'1971-01-18', oh:'토(土)', num: 2},
+          '맨체스터 시티': {name:'펩 과르디올라', birth:'1971-01-18', oh:'토(土)', num: 2},
+          '리버풀':    {name:'아르네 슬롯',   birth:'1978-09-22', oh:'화(火)', num: 9},
+          '첼시':      {name:'엔초 마레스카', birth:'1980-02-10', oh:'금(金)', num: 4},
+          '바르셀로나':{name:'한시 플릭',     birth:'1965-02-11', oh:'목(木)', num: 6},
+          '레알마드리드':{name:'카를로 안첼로티',birth:'1959-06-10',oh:'화(火)',num: 8},
+          '레알 마드리드':{name:'카를로 안첼로티',birth:'1959-06-10',oh:'화(火)',num: 8},
+          '바이에른':  {name:'뱅상 콩파니',   birth:'1986-04-10', oh:'목(木)', num: 5},
+          '바이에른 뮌헨':{name:'뱅상 콩파니', birth:'1986-04-10', oh:'목(木)', num: 5},
+          '도르트문트':{name:'니코 코바치',   birth:'1971-09-15', oh:'토(土)', num: 6},
+        };
+
+        // 질문에서 팀명 추출
+        var teamKeys = Object.keys(managerDB);
+        var foundManagers = [];
+        teamKeys.forEach(function(t){
+          if (userText.indexOf(t) !== -1) foundManagers.push({team: t, info: managerDB[t]});
+        });
+
+        // 팀 창단일 오행 DB
+        var teamFoundedDB = {
+          '레버쿠젠': {year:1904, oh:'목(木)', desc:'1904년 창단, 갑진년(甲辰) 목기운'},
+          '아스날':   {year:1886, oh:'화(火)', desc:'1886년 창단, 병술년(丙戌) 화기운'},
+          '맨유':     {year:1878, oh:'토(土)', desc:'1878년 창단, 무인년(戊寅) 토기운'},
+          '리버풀':   {year:1892, oh:'수(水)', desc:'1892년 창단, 임진년(壬辰) 수기운'},
+          '바르셀로나':{year:1899, oh:'토(土)', desc:'1899년 창단, 기해년(己亥) 토기운'},
+          '레알마드리드':{year:1902, oh:'수(水)', desc:'1902년 창단, 임인년(壬寅) 수기운'},
+          '레알 마드리드':{year:1902, oh:'수(水)', desc:'1902년 창단, 임인년(壬寅) 수기운'},
+        };
+
+        var foundedStr = '';
+        teamKeys.forEach(function(t){
+          if (userText.indexOf(t) !== -1 && teamFoundedDB[t]) {
+            foundedStr += '\n- ' + t + ': ' + teamFoundedDB[t].desc + ', 창단 오행=' + teamFoundedDB[t].oh;
+          }
+        });
+
+        var managerStr = '';
+        if (foundManagers.length >= 2) {
+          managerStr = foundManagers.map(function(m){
+            return m.team + ' 감독 ' + m.info.name + '(생년월일 ' + m.info.birth + ', 오행 ' + m.info.oh + ', 생명수 ' + m.info.num + ')';
+          }).join(' vs ');
+        } else if (foundManagers.length === 1) {
+          managerStr = foundManagers[0].team + ' 감독 ' + foundManagers[0].info.name
+            + '(오행 ' + foundManagers[0].info.oh + ', 생명수 ' + foundManagers[0].info.num + ')';
+        }
+
+        augSystem =
+          '당신은 CGO-FULI의 스포츠 역학 분석 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          '## CGO "결핍의 분석" 모드 — 공식 전적 데이터 부재 시 자동 전환\n\n' +
+          '### 이 모드의 철학\n' +
+          '데이터 결핍(Data Void) 자체를 분석 변수로 활용합니다.\n' +
+          '"두 팀이 20년간 만나지 않았다" = 에너지 축적과 미지의 상성을 예측할 수 있는 최적 조건\n\n' +
+          '### 답변 구조 (반드시 이 순서로)\n' +
+          '1. 공식 전적 현황 (있는 것만 사실대로)\n' +
+          '2. "전적 공백의 의미" — 두 팀이 왜 자주 못 만났는지 리그/대회 구조 설명\n' +
+          '3. 감독 생년월일 역학 궁합 분석 (아래 데이터 활용)\n' +
+          '4. 팀 창단일 오행 상성 분석\n' +
+          '5. NASA 실시간 행성 배치로 보는 오늘의 에너지 우세\n' +
+          '6. 종합 CGO 상성 예측 (점수 포함)\n\n' +
+          '### 입력 데이터\n' +
+          (managerStr ? '- 감독 역학: ' + managerStr + '\n' : '') +
+          (foundedStr ? '- 창단 오행:' + foundedStr + '\n' : '') +
+          '- NASA 실시간 행성: ' + (planetStr || '데이터 로딩 중') + '\n' +
+          '- 달 위상: ' + (moonPhaseNow || '미상') + '\n' +
+          '- 사용자 오행: ' + myOh + ' / 이름: ' + myName + '\n\n' +
+          '### 규칙\n' +
+          '- 모호한 표현 금지, 역학 수치 구체적으로 제시\n' +
+          '- 베팅·도박 표현 절대 금지\n' +
+          '- 한국어만 사용, Wood/Fire 등 영어 오행 금지';
+
+        augUserContent = userText
+          + '\n\n[데이터 완결성 체크 결과: 공식 전적 데이터 불충분]\n'
+          + '[CGO 결핍의 분석 모드 자동 전환 — 감독 역학·창단 오행·NASA 행성으로 상성 예측]\n'
+          + '위 시스템 데이터를 활용해 CGO 결핍의 분석 답변을 작성하세요.';
       }
-      augMessages.push({role:'user', content: userContent});
+
+      var augMessages = [{role:'system', content: augSystem}];
+      _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
+      augMessages.push({role:'user', content: augUserContent});
 
       return fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -21286,8 +21389,8 @@ function sptAskAI(userText, isAuto) {
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
           messages: augMessages,
-          max_tokens: 1500,
-          temperature: 0.15,
+          max_tokens: 1800,
+          temperature: 0.3,
           stream: false
         })
       }).then(function(r){ return r.json(); });
@@ -21296,7 +21399,7 @@ function sptAskAI(userText, isAuto) {
       sptRemoveTyping();
       var text = '';
       try { text = data.choices[0].message.content; } catch(e){}
-      if (!text) text = '검색 결과를 가져오지 못했어요. 다시 질문해 주세요.';
+      if (!text) text = '분석을 완료하지 못했어요. 다시 질문해 주세요.';
       text = text.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g,'').replace(/[\u0600-\u06FF]+/g,'');
       sptAddBubble('ai', text);
       _sptHistory.push({role:'assistant', content:text});
