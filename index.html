@@ -1961,7 +1961,6 @@ function loadNASARealtimePlanets() {
         console.log('[CGo-Fuli] NASA JPL 실시간 데이터 수신 ✅', json.source, 'JPL:', json.jpl_count||'?');
       })
       .catch(function(err){
-        console.warn('[CGo-Fuli] 프록시 실패 → VSOP87 폴백:', err.message);
         _loadVSOP87Fallback();
       });
   } else {
@@ -2294,15 +2293,15 @@ function updateTransitSectionWithNASA(planets) {
             </select>
           </div>
           <div class="ip-group" style="position:relative">
-            <div class="ip-label" style="display:flex;align-items:center;gap:5px">
-              🗺️ 출생지 <span style="font-size:9px;color:rgba(56,189,248,.7);font-weight:600">상승궁·하우스 계산</span>
+            <div class="ip-label" style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-wrap:nowrap">
+              🗺️ 출생지 <span style="font-size:9px;color:rgba(56,189,248,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 좌표</span>
             </div>
             <div style="position:relative">
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
-                  <input type="text" id="ipBirthPlace" class="ip-field" placeholder="도시명 입력 (예: 서울, Tokyo, New York...)" autocomplete="off"
+                  <input type="text" id="ipBirthPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 강남구 역삼동, 군산 나운동, Tokyo...)" autocomplete="off"
                     oninput="ipAutoSuggest(this.value,'birth')"
-                    onblur="setTimeout(function(){var d=document.getElementById('ipBirthDrop');if(d)d.style.display='none';},200)"
+                    onblur="setTimeout(function(){var d=document.getElementById('ipBirthDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                   >
                   <span id="ipBirthClear" onclick="ipClearPlace('birth')" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#a8bccf;font-size:14px;line-height:1">✕</span>
@@ -2315,15 +2314,15 @@ function updateTransitSectionWithNASA(planets) {
             <input type="hidden" id="ipBirthLng" value="">
           </div>
           <div class="ip-group" style="position:relative">
-            <div class="ip-label" style="display:flex;align-items:center;gap:5px">
-              📍 현재 거주지 <span style="font-size:9px;color:rgba(52,211,153,.7);font-weight:600">풍수·방위 계산</span>
+            <div class="ip-label" style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-wrap:nowrap">
+              📍 현재 거주지 <span style="font-size:9px;color:rgba(52,211,153,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 방위</span>
             </div>
             <div style="position:relative">
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
-                  <input type="text" id="ipCurPlace" class="ip-field" placeholder="도시명 입력 (예: 서울, 부산, London...)" autocomplete="off"
+                  <input type="text" id="ipCurPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 분당구 정자동, 군산 수송동, London...)" autocomplete="off"
                     oninput="ipAutoSuggest(this.value,'cur')"
-                    onblur="setTimeout(function(){var d=document.getElementById('ipCurDrop');if(d)d.style.display='none';},200)"
+                    onblur="setTimeout(function(){var d=document.getElementById('ipCurDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                   >
                   <span id="ipCurClear" onclick="ipClearPlace('cur')" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#a8bccf;font-size:14px;line-height:1">✕</span>
@@ -2783,6 +2782,10 @@ BAI = α·HRV + β·FCI
           border:none;border-radius:10px;color:#020817;font-weight:700;font-size:13px;cursor:pointer">
           ⚡ 스캔 시작
         </button>
+        <button onclick="bsFullscreen()" title="전체화면 스캔"
+          style="padding:12px 14px;background:rgba(56,189,248,.12);
+          border:1px solid rgba(56,189,248,.3);border-radius:10px;
+          color:#38bdf8;font-size:16px;cursor:pointer" title="모바일 전체화면">⛶</button>
         <button onclick="bsReset()"
           style="padding:12px 16px;background:rgba(255,255,255,.06);
           border:1px solid rgba(255,255,255,.1);border-radius:10px;
@@ -7191,6 +7194,333 @@ var _CITIES = [
   {n:'Singapore',lat:1.3521,lng:103.8198},{n:'Bangkok',lat:13.7563,lng:100.5018},
   {n:'Dubai',lat:25.2048,lng:55.2708},{n:'Hong Kong',lat:22.3193,lng:114.1694},
   {n:'Toronto',lat:43.6532,lng:-79.3832},{n:'Vancouver',lat:49.2827,lng:-123.1207},
+
+  // ── 서울 동(洞) 단위 ──────────────────────────────────────
+  // 강남구
+  {n:'강남구 역삼동',lat:37.5005,lng:127.0363},{n:'강남구 삼성동',lat:37.5140,lng:127.0575},
+  {n:'강남구 청담동',lat:37.5249,lng:127.0533},{n:'강남구 압구정동',lat:37.5268,lng:127.0284},
+  {n:'강남구 대치동',lat:37.4940,lng:127.0618},{n:'강남구 개포동',lat:37.4804,lng:127.0477},
+  {n:'강남구 도곡동',lat:37.4892,lng:127.0423},{n:'강남구 논현동',lat:37.5117,lng:127.0259},
+  {n:'강남구 신사동',lat:37.5229,lng:127.0195},{n:'강남구 세곡동',lat:37.4648,lng:127.1000},
+  // 서초구
+  {n:'서초구 서초동',lat:37.4924,lng:127.0078},{n:'서초구 반포동',lat:37.5046,lng:126.9970},
+  {n:'서초구 잠원동',lat:37.5153,lng:126.9988},{n:'서초구 방배동',lat:37.4831,lng:126.9918},
+  {n:'서초구 양재동',lat:37.4681,lng:127.0342},{n:'서초구 우면동',lat:37.4677,lng:127.0113},
+  // 송파구
+  {n:'송파구 잠실동',lat:37.5116,lng:127.0966},{n:'송파구 가락동',lat:37.4953,lng:127.1179},
+  {n:'송파구 문정동',lat:37.4850,lng:127.1232},{n:'송파구 위례',lat:37.4752,lng:127.1440},
+  {n:'송파구 방이동',lat:37.5133,lng:127.1221},{n:'송파구 오금동',lat:37.5020,lng:127.1290},
+  // 마포구
+  {n:'마포구 홍대',lat:37.5563,lng:126.9236},{n:'마포구 합정동',lat:37.5493,lng:126.9138},
+  {n:'마포구 상암동',lat:37.5794,lng:126.8867},{n:'마포구 망원동',lat:37.5559,lng:126.9100},
+  {n:'마포구 연남동',lat:37.5615,lng:126.9230},
+  // 용산구
+  {n:'용산구 이태원동',lat:37.5344,lng:126.9940},{n:'용산구 한남동',lat:37.5360,lng:127.0046},
+  {n:'용산구 이촌동',lat:37.5213,lng:126.9689},{n:'용산구 후암동',lat:37.5426,lng:126.9790},
+  // 종로구·중구
+  {n:'종로구 인사동',lat:37.5744,lng:126.9855},{n:'종로구 혜화동',lat:37.5824,lng:127.0017},
+  {n:'종로구 창신동',lat:37.5782,lng:127.0097},{n:'중구 명동',lat:37.5636,lng:126.9851},
+  {n:'중구 을지로',lat:37.5660,lng:126.9920},{n:'중구 충무로',lat:37.5613,lng:126.9933},
+  // 강동·강서
+  {n:'강동구 천호동',lat:37.5387,lng:127.1238},{n:'강동구 고덕동',lat:37.5527,lng:127.1549},
+  {n:'강동구 명일동',lat:37.5484,lng:127.1390},{n:'강서구 화곡동',lat:37.5471,lng:126.8476},
+  {n:'강서구 마곡동',lat:37.5601,lng:126.8339},{n:'강서구 발산동',lat:37.5593,lng:126.8434},
+  // 노원·도봉
+  {n:'노원구 상계동',lat:37.6559,lng:127.0647},{n:'노원구 중계동',lat:37.6333,lng:127.0680},
+  {n:'노원구 월계동',lat:37.6233,lng:127.0602},{n:'도봉구 쌍문동',lat:37.6523,lng:127.0317},
+  {n:'도봉구 방학동',lat:37.6700,lng:127.0400},
+  // 성남 분당
+  {n:'분당구 서현동',lat:37.3841,lng:127.1215},{n:'분당구 정자동',lat:37.3612,lng:127.1164},
+  {n:'분당구 판교',lat:37.3952,lng:127.1113},{n:'분당구 야탑동',lat:37.4103,lng:127.1274},
+  {n:'분당구 수내동',lat:37.3763,lng:127.1120},{n:'분당구 이매동',lat:37.4012,lng:127.1305},
+  {n:'분당구 미금동',lat:37.3717,lng:127.1158},
+
+  // ── 경기 주요 동/읍 ────────────────────────────────────────
+  {n:'수원 영통동',lat:37.2559,lng:127.0574},{n:'수원 인계동',lat:37.2647,lng:127.0205},
+  {n:'수원 권선동',lat:37.2540,lng:126.9974},{n:'수원 팔달구',lat:37.2815,lng:127.0175},
+  {n:'고양 일산동구',lat:37.6742,lng:126.7727},{n:'고양 일산서구',lat:37.6757,lng:126.7318},
+  {n:'고양 덕양구',lat:37.6343,lng:126.8302},{n:'화성 동탄',lat:37.2004,lng:127.0746},
+  {n:'화성 병점',lat:37.1961,lng:127.0365},{n:'평택 고덕',lat:36.9681,lng:127.1286},
+  {n:'안산 상록구',lat:37.3219,lng:126.8309},{n:'안산 단원구',lat:37.3223,lng:126.8200},
+  {n:'의정부 민락동',lat:37.7382,lng:127.0338},{n:'남양주 다산동',lat:37.5937,lng:127.2060},
+  {n:'남양주 별내',lat:37.6536,lng:127.1693},{n:'하남 미사',lat:37.5501,lng:127.1964},
+
+  // ── 인천 동 단위 ───────────────────────────────────────────
+  {n:'인천 연수구 송도',lat:37.3826,lng:126.6558},{n:'인천 연수구 옥련동',lat:37.4009,lng:126.6760},
+  {n:'인천 남동구 구월동',lat:37.4493,lng:126.7315},{n:'인천 부평구',lat:37.5078,lng:126.7220},
+  {n:'인천 계양구',lat:37.5367,lng:126.7378},{n:'인천 서구 청라',lat:37.5369,lng:126.6476},
+  {n:'인천 중구 차이나타운',lat:37.4763,lng:126.6170},
+
+  // ── 대구 동 단위 ───────────────────────────────────────────
+  {n:'대구 수성구 범어동',lat:35.8583,lng:128.6306},{n:'대구 수성구 황금동',lat:35.8522,lng:128.6202},
+  {n:'대구 달서구 성당동',lat:35.8379,lng:128.5537},{n:'대구 달서구 월성동',lat:35.8131,lng:128.5189},
+  {n:'대구 북구 침산동',lat:35.9032,lng:128.5844},{n:'대구 중구 동성로',lat:35.8681,lng:128.5981},
+
+  // ── 부산 동 단위 ───────────────────────────────────────────
+  {n:'부산 해운대구 우동',lat:35.1631,lng:129.1635},{n:'부산 해운대구 좌동',lat:35.1799,lng:129.1888},
+  {n:'부산 해운대구 재송동',lat:35.1888,lng:129.1134},{n:'부산 수영구 광안동',lat:35.1535,lng:129.1186},
+  {n:'부산 남구 대연동',lat:35.1363,lng:129.0843},{n:'부산 동래구',lat:35.2044,lng:129.0847},
+  {n:'부산 사하구 하단동',lat:35.1042,lng:128.9743},{n:'부산 강서구 명지동',lat:35.0956,lng:128.9437},
+  {n:'부산 기장군 일광',lat:35.2447,lng:129.2224},
+
+  // ── 전주 동 단위 ───────────────────────────────────────────
+  {n:'전주 효자동',lat:35.8023,lng:127.1056},{n:'전주 평화동',lat:35.8401,lng:127.1215},
+  {n:'전주 인후동',lat:35.8389,lng:127.1474},{n:'전주 삼천동',lat:35.7908,lng:127.0964},
+  {n:'전주 송천동',lat:35.8638,lng:127.1136},{n:'전주 중화산동',lat:35.8130,lng:127.1153},
+  {n:'전주 서신동',lat:35.8273,lng:127.0873},{n:'전주 덕진동',lat:35.8560,lng:127.1344},
+  {n:'전주 팔복동',lat:35.8731,lng:127.0859},{n:'전주 우아동',lat:35.8735,lng:127.1516},
+  {n:'전주 혁신도시',lat:35.8086,lng:127.0479},
+
+  // ── 군산 동/읍 단위 ────────────────────────────────────────
+  {n:'군산 나운동',lat:35.9550,lng:126.7199},{n:'군산 수송동',lat:35.9774,lng:126.7474},
+  {n:'군산 조촌동',lat:35.9872,lng:126.7319},{n:'군산 미룡동',lat:35.9980,lng:126.7101},
+  {n:'군산 구암동',lat:35.9655,lng:126.7082},{n:'군산 문화동',lat:35.9684,lng:126.7342},
+  {n:'군산 비응도동',lat:35.9219,lng:126.6358},{n:'군산 오식도동',lat:35.9393,lng:126.6724},
+  {n:'옥구읍',lat:35.9219,lng:126.8088},{n:'옥산면',lat:35.9967,lng:126.8250},
+  {n:'회현면(군산)',lat:35.9300,lng:126.7700},{n:'임피면',lat:35.9619,lng:126.8494},
+  {n:'서수면',lat:35.9900,lng:126.9100},{n:'대야면',lat:35.9533,lng:126.8917},
+  {n:'개정면',lat:35.9817,lng:126.8658},{n:'나포면',lat:36.0200,lng:126.8644},
+  {n:'성산면(군산)',lat:35.9550,lng:126.9342},{n:'소룡동',lat:35.9489,lng:126.7122},
+  {n:'신풍동(군산)',lat:35.9668,lng:126.7389},{n:'둔율동',lat:35.9608,lng:126.7247},
+  {n:'월명동',lat:35.9682,lng:126.7160},{n:'중앙로(군산)',lat:35.9685,lng:126.7361},
+
+  // ── 익산·정읍·남원 동 단위 ────────────────────────────────
+  {n:'익산 영등동',lat:35.9563,lng:126.9531},{n:'익산 모현동',lat:35.9310,lng:126.9510},
+  {n:'익산 어양동',lat:35.9742,lng:126.9800},{n:'익산 팔봉동',lat:35.9411,lng:126.9310},
+  {n:'정읍 상동',lat:35.5691,lng:126.8485},{n:'정읍 연지동',lat:35.5619,lng:126.8510},
+  {n:'남원 도통동',lat:35.4167,lng:127.3900},
+
+  // ── 광주 동 단위 ───────────────────────────────────────────
+  {n:'광주 수완동',lat:35.1854,lng:126.8177},{n:'광주 상무동',lat:35.1536,lng:126.8517},
+  {n:'광주 첨단동',lat:35.2197,lng:126.8481},{n:'광주 봉선동',lat:35.1265,lng:126.9015},
+  {n:'광주 계림동',lat:35.1600,lng:126.9239},
+
+  // ── 대전 동 단위 ───────────────────────────────────────────
+  {n:'대전 둔산동',lat:36.3512,lng:127.3785},{n:'대전 유성구 노은동',lat:36.4032,lng:127.3363},
+  {n:'대전 유성구 봉명동',lat:36.3666,lng:127.3467},{n:'대전 서구 탄방동',lat:36.3378,lng:127.3706},
+
+  // ── 청주·충주 동 단위 ──────────────────────────────────────
+  {n:'청주 흥덕구 복대동',lat:36.6384,lng:127.4638},{n:'청주 상당구 용암동',lat:36.6237,lng:127.5192},
+  {n:'청주 서원구 사창동',lat:36.6273,lng:127.4731},{n:'충주 연수동',lat:36.9910,lng:127.9259},
+
+  // ── 천안·아산 동 단위 ──────────────────────────────────────
+  {n:'천안 불당동',lat:36.8300,lng:127.1100},{n:'천안 두정동',lat:36.8412,lng:127.1363},
+  {n:'천안 신불당',lat:36.8142,lng:127.1200},{n:'아산 배방읍',lat:36.8027,lng:127.0740},
+  {n:'아산 탕정면',lat:36.7683,lng:127.0600},
+
+  // ══ 충남 전 시군구 읍면동 ══════════════════════════════════
+  // 청양군
+  {n:'청양군',lat:36.4590,lng:126.8020},
+  {n:'청양읍',lat:36.4590,lng:126.8020},{n:'운곡면',lat:36.5200,lng:126.7700},
+  {n:'대치면',lat:36.4900,lng:126.8700},{n:'정산면',lat:36.4300,lng:126.8500},
+  {n:'목면',lat:36.3900,lng:126.7900},{n:'청남면',lat:36.3600,lng:126.8200},
+  {n:'장평면',lat:36.4100,lng:126.7400},{n:'남양면',lat:36.4500,lng:126.7000},
+  {n:'화성면(청양)',lat:36.5000,lng:126.7200},{n:'비봉면',lat:36.5400,lng:126.8100},
+
+  // 보령시
+  {n:'보령시',lat:36.3333,lng:126.6129},
+  {n:'보령 대천동',lat:36.3500,lng:126.6100},{n:'보령 신흑동',lat:36.3319,lng:126.5972},
+  {n:'웅천읍',lat:36.2900,lng:126.5600},{n:'주포면',lat:36.3900,lng:126.5900},
+  {n:'오천면',lat:36.2700,lng:126.4900},{n:'천북면',lat:36.4200,lng:126.6300},
+  {n:'청소면',lat:36.4500,lng:126.6800},{n:'청라면(보령)',lat:36.3700,lng:126.7200},
+  {n:'남포면',lat:36.3100,lng:126.5900},{n:'주산면',lat:36.3400,lng:126.6700},
+  {n:'성주면',lat:36.3100,lng:126.6400},{n:'미산면',lat:36.2600,lng:126.6200},
+
+  // 서천군
+  {n:'서천군',lat:36.0800,lng:126.6916},
+  {n:'서천읍',lat:36.0800,lng:126.6900},{n:'장항읍',lat:36.0000,lng:126.6700},
+  {n:'마서면',lat:36.1200,lng:126.7200},{n:'화양면',lat:36.1600,lng:126.7500},
+  {n:'기산면',lat:36.1300,lng:126.8000},{n:'한산면',lat:36.1700,lng:126.8200},
+  {n:'시초면',lat:36.2100,lng:126.7800},{n:'문산면(서천)',lat:36.1000,lng:126.7000},
+  {n:'판교면',lat:36.0500,lng:126.7300},{n:'종천면',lat:36.0300,lng:126.7800},
+  {n:'비인면',lat:36.0000,lng:126.6000},{n:'서면(서천)',lat:36.0700,lng:126.5700},
+
+  // 부여군
+  {n:'부여군',lat:36.2750,lng:126.9100},
+  {n:'부여읍',lat:36.2750,lng:126.9100},{n:'규암면',lat:36.2900,lng:126.8800},
+  {n:'은산면',lat:36.3100,lng:126.9700},{n:'외산면',lat:36.2200,lng:126.9800},
+  {n:'내산면',lat:36.1900,lng:126.9400},{n:'구룡면',lat:36.2000,lng:126.8700},
+  {n:'홍산면',lat:36.2300,lng:126.8400},{n:'옥산면(부여)',lat:36.2700,lng:126.8200},
+  {n:'충화면',lat:36.3200,lng:126.9200},{n:'양화면',lat:36.3400,lng:126.8600},
+  {n:'임천면',lat:36.2300,lng:126.9600},{n:'장암면',lat:36.1700,lng:126.9100},
+  {n:'세도면',lat:36.2000,lng:127.0200},{n:'남면(부여)',lat:36.1600,lng:126.9500},
+  {n:'초촌면',lat:36.3000,lng:127.0100},
+
+  // 예산군
+  {n:'예산군',lat:36.6820,lng:126.8499},
+  {n:'예산읍',lat:36.6820,lng:126.8499},{n:'삽교읍',lat:36.7300,lng:126.8000},
+  {n:'대술면',lat:36.7500,lng:126.9200},{n:'신양면',lat:36.6200,lng:126.9100},
+  {n:'광시면',lat:36.6000,lng:126.8600},{n:'대흥면',lat:36.6400,lng:126.8900},
+  {n:'응봉면',lat:36.7100,lng:126.7600},{n:'덕산면',lat:36.6600,lng:126.6800},
+  {n:'봉산면(예산)',lat:36.7800,lng:126.8400},{n:'고덕면',lat:36.7900,lng:126.8900},
+  {n:'신암면',lat:36.7400,lng:126.8600},{n:'오가면',lat:36.7000,lng:126.7200},
+
+  // 홍성군
+  {n:'홍성군',lat:36.6012,lng:126.6601},
+  {n:'홍성읍',lat:36.6012,lng:126.6601},{n:'광천읍',lat:36.5100,lng:126.6100},
+  {n:'홍북읍',lat:36.6400,lng:126.6700},{n:'갈산면',lat:36.6600,lng:126.5800},
+  {n:'구항면',lat:36.5700,lng:126.7100},{n:'금마면',lat:36.5400,lng:126.6800},
+  {n:'홍동면',lat:36.5700,lng:126.6100},{n:'장곡면',lat:36.5100,lng:126.7200},
+  {n:'은하면',lat:36.6300,lng:126.5400},{n:'서부면(홍성)',lat:36.5900,lng:126.5200},
+  {n:'결성면',lat:36.5500,lng:126.5800},{n:'남장면',lat:36.5200,lng:126.6500},
+
+  // 태안군
+  {n:'태안군',lat:36.7456,lng:126.2978},
+  {n:'태안읍',lat:36.7456,lng:126.2978},{n:'안면읍',lat:36.5200,lng:126.3700},
+  {n:'고남면',lat:36.4500,lng:126.3300},{n:'남면(태안)',lat:36.6000,lng:126.2500},
+  {n:'근흥면',lat:36.6500,lng:126.1900},{n:'소원면',lat:36.7900,lng:126.1600},
+  {n:'원북면',lat:36.8300,lng:126.2700},{n:'이원면',lat:36.8700,lng:126.3300},
+
+  // 당진시
+  {n:'당진시',lat:36.8895,lng:126.6458},
+  {n:'당진읍',lat:36.8895,lng:126.6458},{n:'합덕읍',lat:36.8200,lng:126.7500},
+  {n:'송악읍',lat:36.8700,lng:126.5700},{n:'고대면',lat:36.9400,lng:126.5800},
+  {n:'석문면',lat:37.0000,lng:126.5800},{n:'대호지면',lat:36.9300,lng:126.6400},
+  {n:'정미면',lat:36.8600,lng:126.7100},{n:'면천면',lat:36.8100,lng:126.6900},
+  {n:'순성면',lat:36.8400,lng:126.6100},{n:'우강면',lat:36.8000,lng:126.8100},
+  {n:'신평면',lat:36.9100,lng:126.7000},{n:'송산면(당진)',lat:36.9600,lng:126.6200},
+
+  // ══ 전북 전 시군구 읍면동 ══════════════════════════════════
+  // 전주시 전 동
+  {n:'전주 효천동',lat:35.7841,lng:127.1024},{n:'전주 완산동',lat:35.8019,lng:127.1285},
+  {n:'전주 동산동',lat:35.8205,lng:127.1445},{n:'전주 진북동',lat:35.8431,lng:127.1272},
+  {n:'전주 금암동',lat:35.8517,lng:127.1391},{n:'전주 호성동',lat:35.8648,lng:127.1541},
+  {n:'전주 아중동',lat:35.8719,lng:127.1710},{n:'전주 만성동',lat:35.8231,lng:127.0754},
+  {n:'전주 신촌동',lat:35.8328,lng:127.0896},{n:'전주 반월동',lat:35.8159,lng:127.0823},
+  {n:'전주 태평동',lat:35.8052,lng:127.1203},{n:'전주 노송동',lat:35.8131,lng:127.1395},
+  {n:'전주 경원동',lat:35.8175,lng:127.1470},{n:'전주 고사동',lat:35.8239,lng:127.1483},
+  {n:'전주 중화산동',lat:35.8130,lng:127.1153},{n:'전주 서신동',lat:35.8273,lng:127.0873},
+
+  // 군산시 전 동·읍면 (전미동 포함)
+  {n:'전미동',lat:35.9489,lng:126.7122},
+  {n:'군산 전미동',lat:35.9489,lng:126.7122},
+  {n:'군산 미장동',lat:35.9612,lng:126.7289},{n:'군산 조촌동',lat:35.9872,lng:126.7319},
+  {n:'군산 수송동',lat:35.9774,lng:126.7474},{n:'군산 나운1동',lat:35.9550,lng:126.7100},
+  {n:'군산 나운2동',lat:35.9600,lng:126.7200},{n:'군산 나운3동',lat:35.9650,lng:126.7300},
+  {n:'군산 소룡동',lat:35.9489,lng:126.7122},{n:'군산 신관동',lat:35.9600,lng:126.6950},
+  {n:'군산 구암동',lat:35.9655,lng:126.7082},{n:'군산 개정동',lat:35.9700,lng:126.7050},
+  {n:'군산 중앙동',lat:35.9685,lng:126.7361},{n:'군산 월명동',lat:35.9682,lng:126.7160},
+  {n:'군산 신풍동',lat:35.9668,lng:126.7389},{n:'군산 둔율동',lat:35.9608,lng:126.7247},
+  {n:'군산 명산동',lat:35.9640,lng:126.7200},{n:'군산 장미동',lat:35.9620,lng:126.7180},
+  {n:'군산 영화동',lat:35.9660,lng:126.7280},{n:'군산 금동',lat:35.9670,lng:126.7310},
+  {n:'군산 대명동',lat:35.9650,lng:126.7330},{n:'군산 죽성동',lat:35.9680,lng:126.7350},
+  {n:'군산 경장동',lat:35.9720,lng:126.7400},{n:'군산 지곡동',lat:35.9750,lng:126.7450},
+  {n:'군산 오룡동',lat:35.9800,lng:126.7500},{n:'군산 산북동',lat:35.9850,lng:126.7550},
+  {n:'군산 사정동',lat:35.9900,lng:126.7600},{n:'군산 내흥동',lat:36.0000,lng:126.7200},
+  {n:'군산 삼학동',lat:35.9630,lng:126.7160},{n:'군산 개복동',lat:35.9645,lng:126.7195},
+  {n:'군산 신창동',lat:35.9580,lng:126.7050},{n:'군산 해신동',lat:35.9560,lng:126.6980},
+  {n:'군산 조촌동',lat:35.9872,lng:126.7319},
+  {n:'옥구읍',lat:35.9219,lng:126.8088},{n:'옥산면',lat:35.9967,lng:126.8250},
+  {n:'회현면',lat:35.9300,lng:126.7700},{n:'임피면',lat:35.9619,lng:126.8494},
+  {n:'서수면',lat:35.9900,lng:126.9100},{n:'대야면',lat:35.9533,lng:126.8917},
+  {n:'개정면',lat:35.9817,lng:126.8658},{n:'나포면',lat:36.0200,lng:126.8644},
+  {n:'성산면',lat:35.9550,lng:126.9342},{n:'미성동',lat:35.9500,lng:126.7000},
+  {n:'비응도동',lat:35.9219,lng:126.6358},{n:'오식도동',lat:35.9393,lng:126.6724},
+
+  // 완주군 전 읍면
+  {n:'완주군',lat:35.9050,lng:127.1620},
+  {n:'삼례읍',lat:35.9250,lng:127.0814},{n:'봉동읍',lat:35.9022,lng:127.1157},
+  {n:'용진읍',lat:35.9350,lng:127.1450},{n:'고산면',lat:35.9833,lng:127.2667},
+  {n:'비봉면(완주)',lat:35.9500,lng:126.9700},{n:'운주면',lat:36.0736,lng:127.1936},
+  {n:'화산면',lat:36.0289,lng:127.2478},{n:'동상면',lat:35.9300,lng:127.3200},
+  {n:'경천면',lat:35.9100,lng:127.2900},{n:'소양면',lat:35.8936,lng:127.2303},
+  {n:'구이면',lat:35.7600,lng:127.0900},{n:'상관면',lat:35.7400,lng:127.1600},
+  {n:'이서면',lat:35.8517,lng:127.0419},
+
+  // 고창군
+  {n:'고창군',lat:35.4344,lng:126.7022},
+  {n:'고창읍',lat:35.4344,lng:126.7022},{n:'흥덕면',lat:35.5100,lng:126.6700},
+  {n:'성내면',lat:35.4800,lng:126.7700},{n:'신림면(고창)',lat:35.4400,lng:126.8200},
+  {n:'부안면(고창)',lat:35.4000,lng:126.7200},{n:'무장면',lat:35.4700,lng:126.6400},
+  {n:'공음면',lat:35.3900,lng:126.6600},{n:'상하면',lat:35.3700,lng:126.6200},
+  {n:'해리면',lat:35.4100,lng:126.5900},{n:'심원면',lat:35.4500,lng:126.5600},
+  {n:'아산면(고창)',lat:35.5200,lng:126.7400},{n:'대산면(고창)',lat:35.5500,lng:126.7700},
+  {n:'성송면',lat:35.5300,lng:126.8100},{n:'대덕면(고창)',lat:35.5000,lng:126.8500},
+
+  // 부안군
+  {n:'부안군',lat:35.7317,lng:126.7330},
+  {n:'부안읍',lat:35.7317,lng:126.7330},{n:'줄포면',lat:35.6500,lng:126.7000},
+  {n:'보안면',lat:35.6900,lng:126.7700},{n:'주산면(부안)',lat:35.7700,lng:126.7800},
+  {n:'동진면',lat:35.7100,lng:126.8200},{n:'행안면',lat:35.7500,lng:126.7000},
+  {n:'계화면',lat:35.8100,lng:126.6400},{n:'상서면',lat:35.7600,lng:126.6600},
+  {n:'하서면',lat:35.7900,lng:126.6200},{n:'진서면',lat:35.6200,lng:126.6700},
+  {n:'위도면',lat:35.6100,lng:126.3000},
+
+  // 순창군
+  {n:'순창군',lat:35.3748,lng:127.1378},
+  {n:'순창읍',lat:35.3748,lng:127.1378},{n:'인계면',lat:35.4100,lng:127.0900},
+  {n:'동계면',lat:35.4500,lng:127.1700},{n:'적성면',lat:35.4300,lng:127.2300},
+  {n:'유등면',lat:35.3400,lng:127.1700},{n:'풍산면',lat:35.3100,lng:127.1200},
+  {n:'금과면',lat:35.3500,lng:127.0600},{n:'팔덕면',lat:35.3900,lng:127.0400},
+  {n:'쌍치면',lat:35.4700,lng:127.0800},{n:'복흥면',lat:35.5000,lng:127.1300},
+  {n:'구림면(순창)',lat:35.3200,lng:127.0000},{n:'함양면(순창)',lat:35.2900,lng:127.0600},
+
+  // 진안군
+  {n:'진안군',lat:35.7914,lng:127.4247},
+  {n:'진안읍',lat:35.7914,lng:127.4247},{n:'용담면',lat:35.8900,lng:127.5100},
+  {n:'안천면',lat:35.9400,lng:127.4900},{n:'동향면',lat:35.8600,lng:127.5700},
+  {n:'상전면',lat:35.8200,lng:127.5400},{n:'백운면',lat:35.7400,lng:127.5100},
+  {n:'성수면',lat:35.7100,lng:127.4000},{n:'마령면',lat:35.7300,lng:127.3400},
+  {n:'부귀면',lat:35.8100,lng:127.3700},{n:'정천면',lat:35.8500,lng:127.3200},
+  {n:'주천면',lat:35.8100,lng:127.5500},
+
+  // 무주군
+  {n:'무주군',lat:36.0075,lng:127.6611},
+  {n:'무주읍',lat:36.0075,lng:127.6611},{n:'무풍면',lat:36.0800,lng:127.7700},
+  {n:'설천면',lat:35.9400,lng:127.6400},{n:'적상면',lat:36.0400,lng:127.6100},
+  {n:'안성면(무주)',lat:35.9700,lng:127.5800},{n:'부남면',lat:36.0900,lng:127.5700},
+
+  // 장수군
+  {n:'장수군',lat:35.6476,lng:127.5206},
+  {n:'장수읍',lat:35.6476,lng:127.5206},{n:'산서면',lat:35.6900,lng:127.4400},
+  {n:'번암면',lat:35.5800,lng:127.5100},{n:'장계면',lat:35.7200,lng:127.5800},
+  {n:'천천면',lat:35.7600,lng:127.5100},{n:'계남면',lat:35.7000,lng:127.6200},
+  {n:'계북면',lat:35.7400,lng:127.6900},
+
+  // 임실군
+  {n:'임실군',lat:35.6177,lng:127.2891},
+  {n:'임실읍',lat:35.6177,lng:127.2891},{n:'청웅면',lat:35.6700,lng:127.2400},
+  {n:'운암면',lat:35.6900,lng:127.3500},{n:'신평면(임실)',lat:35.5900,lng:127.3200},
+  {n:'성수면(임실)',lat:35.6400,lng:127.3800},{n:'오수면',lat:35.5500,lng:127.3500},
+  {n:'신덕면',lat:35.5800,lng:127.2600},{n:'강진면(임실)',lat:35.5600,lng:127.2000},
+  {n:'덕치면',lat:35.6800,lng:127.1800},{n:'지사면',lat:35.5300,lng:127.2600},
+
+  // ══ 경기 추가 읍면동 ══════════════════════════════════════
+  {n:'수원 장안구',lat:37.2995,lng:127.0088},{n:'수원 팔달구',lat:37.2815,lng:127.0175},
+  {n:'수원 권선구',lat:37.2516,lng:126.9957},{n:'수원 정자동(수원)',lat:37.2636,lng:127.0286},
+  {n:'용인 기흥구',lat:37.2743,lng:127.1154},{n:'용인 수지구',lat:37.3209,lng:127.0964},
+  {n:'용인 처인구',lat:37.2338,lng:127.1994},{n:'광교',lat:37.2889,lng:127.0478},
+  {n:'동탄1',lat:37.2107,lng:127.0789},{n:'동탄2',lat:37.1870,lng:127.0743},
+  {n:'김포 장기동',lat:37.6150,lng:126.7158},{n:'김포 구래동',lat:37.6278,lng:126.7203},
+  {n:'파주 운정',lat:37.7100,lng:126.7534},{n:'파주 금촌동',lat:37.7600,lng:126.7800},
+  {n:'양주 덕계동',lat:37.7855,lng:127.0456},{n:'의정부 가능동',lat:37.7382,lng:127.0338},
+  {n:'구리 인창동',lat:37.5943,lng:127.1298},{n:'하남 풍산동',lat:37.5394,lng:127.2148},
+
+  // ══ 강원도 읍면동 ══════════════════════════════════════════
+  {n:'춘천 후평동',lat:37.8813,lng:127.7298},{n:'춘천 석사동',lat:37.8900,lng:127.7200},
+  {n:'춘천 퇴계동',lat:37.8700,lng:127.7100},{n:'원주 무실동',lat:37.3422,lng:127.9200},
+  {n:'원주 단계동',lat:37.3500,lng:127.9300},{n:'원주 반곡동',lat:37.3300,lng:127.9400},
+  {n:'강릉 포남동',lat:37.7519,lng:128.8761},{n:'강릉 교동',lat:37.7550,lng:128.8800},
+  {n:'속초 조양동',lat:38.2048,lng:128.5912},{n:'속초 중앙동',lat:38.2100,lng:128.5900},
+  {n:'동해 천곡동',lat:37.5247,lng:129.1142},{n:'태백 황지동',lat:37.1637,lng:128.9864},
+  {n:'삼척 성내동',lat:37.4499,lng:129.1650},{n:'홍천읍',lat:37.6942,lng:127.8886},
+  {n:'횡성읍',lat:37.4919,lng:127.9842},{n:'영월읍',lat:37.1838,lng:128.4618},
+  {n:'평창읍',lat:37.3706,lng:128.3912},{n:'정선읍',lat:37.3800,lng:128.6600},
+  {n:'철원읍',lat:38.1469,lng:127.3136},{n:'화천읍',lat:38.1061,lng:127.7081},
+  {n:'양구읍',lat:38.1060,lng:127.9900},{n:'인제읍',lat:38.0693,lng:128.1706},
+  {n:'고성읍(강원)',lat:38.3800,lng:128.4700},{n:'양양읍',lat:38.0761,lng:128.6182},
+
+  // ══ 제주 읍면동 ════════════════════════════════════════════
+  {n:'제주시 연동',lat:33.4890,lng:126.4983},{n:'제주시 노형동',lat:33.4890,lng:126.4623},
+  {n:'제주시 이도동',lat:33.5013,lng:126.5233},{n:'제주시 삼도동',lat:33.5100,lng:126.5150},
+  {n:'제주시 건입동',lat:33.5218,lng:126.5423},{n:'제주시 화북동',lat:33.5181,lng:126.5690},
+  {n:'제주시 애월읍',lat:33.4624,lng:126.3299},{n:'제주시 구좌읍',lat:33.5500,lng:126.8300},
+  {n:'제주시 조천읍',lat:33.5400,lng:126.6400},{n:'제주시 한림읍',lat:33.4100,lng:126.2700},
+  {n:'제주시 한경면',lat:33.3300,lng:126.1900},{n:'제주시 추자면',lat:33.9600,lng:126.3000},
+  {n:'서귀포시 중문동',lat:33.2500,lng:126.4100},{n:'서귀포시 대정읍',lat:33.2300,lng:126.1700},
+  {n:'서귀포시 남원읍',lat:33.2900,lng:126.7100},{n:'서귀포시 성산읍',lat:33.4400,lng:126.9200},
+  {n:'서귀포시 표선면',lat:33.3200,lng:126.8400},{n:'서귀포시 안덕면',lat:33.2800,lng:126.3300},
+  {n:'서귀포시 효돈동',lat:33.3000,lng:126.6100},{n:'서귀포시 강정동',lat:33.2700,lng:126.4800},
 ];
 // ── select 방식 도시 선택 ──────────────────────────────────
 function ipInitCitySelect(){
@@ -14436,6 +14766,307 @@ function bsReset(){
 </script>
 
 <script>
+// ══════════════════════════════════════════════════════════════
+// 전체화면 스캔 + MediaPipe 실제 얼굴/손 랜드마크 추적 v1.0
+// ══════════════════════════════════════════════════════════════
+
+var BsFs = {
+  step:'face', running:false, sec:0, tId:null,
+  stream:null, mpFace:null, mpHands:null, mpReady:false,
+  results:{face:null,palm:null,tongue:null}
+};
+
+function bsFullscreen(){
+  var wrap=document.getElementById('bsFullWrap');
+  if(!wrap) return;
+  wrap.style.display='flex';
+  BsFs.step='face'; BsFs.running=false; BsFs.sec=0;
+  _bsFsUpdateUI();
+  _bsFsStartCamera().then(function(){ _bsFsLoadMediaPipe(); });
+}
+
+function bsCloseFullscreen(){
+  _bsFsStop();
+  var wrap=document.getElementById('bsFullWrap');
+  if(wrap) wrap.style.display='none';
+}
+
+function _bsFsStartCamera(){
+  var front = (BsFs.step !== 'palm');
+  var con={video:{facingMode:front?'user':'environment',width:{ideal:1280},height:{ideal:720}}};
+  return navigator.mediaDevices.getUserMedia(con)
+  .then(function(s){
+    BsFs.stream=s;
+    var v=document.getElementById('bsFsVideo');
+    if(v){v.srcObject=s;v.play();}
+    _bsFsResizeCanvas();
+  }).catch(function(){
+    return navigator.mediaDevices.getUserMedia({video:true}).then(function(s){
+      BsFs.stream=s;
+      var v=document.getElementById('bsFsVideo');
+      if(v){v.srcObject=s;v.play();}
+    }).catch(function(){
+      var ld=document.getElementById('bsFsLoading');
+      if(ld){ld.innerHTML='<div style="color:#f87171;font-size:14px">카메라 접근 실패<br><span style="font-size:11px;color:rgba(255,255,255,.5)">브라우저 카메라 권한을 허용해주세요</span></div>';}
+    });
+  });
+}
+
+function _bsFsResizeCanvas(){
+  var cv=document.getElementById('bsFsCanvas');
+  if(!cv) return;
+  cv.width=window.innerWidth*(window.devicePixelRatio||1);
+  cv.height=window.innerHeight*(window.devicePixelRatio||1);
+}
+
+function _bsFsLoadMediaPipe(){
+  function loadScript(src,cb,errCb){
+    var s=document.createElement('script');
+    s.src=src; s.crossOrigin='anonymous';
+    s.onload=cb; s.onerror=errCb;
+    document.head.appendChild(s);
+  }
+  loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js',
+    function(){
+      loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js',
+        function(){ _bsFsInitMediaPipe(); },
+        function(){ _bsFsFallbackMode(); });
+    },
+    function(){ _bsFsFallbackMode(); }
+  );
+}
+
+function _bsFsInitMediaPipe(){
+  try{
+    BsFs.mpFace=new FaceMesh({locateFile:function(f){
+      return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f;
+    }});
+    BsFs.mpFace.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
+    BsFs.mpFace.onResults(function(r){ _bsFsDrawFaceLandmarks(r); });
+
+    BsFs.mpHands=new Hands({locateFile:function(f){
+      return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f;
+    }});
+    BsFs.mpHands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.6,minTrackingConfidence:.6});
+    BsFs.mpHands.onResults(function(r){ _bsFsDrawHandLandmarks(r); });
+
+    BsFs.mpReady=true;
+    var ld=document.getElementById('bsFsLoading'); if(ld) ld.style.display='none';
+    _bsFsVideoLoop();
+  }catch(e){ _bsFsFallbackMode(); }
+}
+
+function _bsFsFallbackMode(){
+  var ld=document.getElementById('bsFsLoading'); if(ld) ld.style.display='none';
+  BsFs.mpReady=false;
+  BsFs._simLoop=setInterval(function(){
+    if(!BsFs.running) return;
+    var cv=document.getElementById('bsFsCanvas'); if(!cv) return;
+    if(BsFs.step==='palm') bsDrawPalm(2); else bsDraw(2);
+  },48);
+}
+
+function _bsFsVideoLoop(){
+  var v=document.getElementById('bsFsVideo');
+  if(!v||!BsFs.mpReady) return;
+  function loop(){
+    var wrap=document.getElementById('bsFullWrap');
+    if(!wrap||wrap.style.display==='none') return;
+    if(v.readyState>=2){
+      if(BsFs.step==='palm'){ BsFs.mpHands&&BsFs.mpHands.send({image:v}).catch(function(){}); }
+      else{ BsFs.mpFace&&BsFs.mpFace.send({image:v}).catch(function(){}); }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function _bsFsDrawFaceLandmarks(results){
+  var cv=document.getElementById('bsFsCanvas');
+  if(!cv) return;
+  var ctx=cv.getContext('2d');
+  var W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length) return;
+  var lms=results.multiFaceLandmarks[0];
+
+  function conn(indices,color,width){
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash([]);
+    ctx.beginPath();
+    indices.forEach(function(i,j){
+      if(!lms[i]) return;
+      var x=lms[i].x*W, y=lms[i].y*H;
+      j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  // 얼굴 윤곽
+  conn([10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,10],'rgba(56,189,248,.25)',1.2);
+  // 눈
+  conn([33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,33],'rgba(56,189,248,.8)',1.8);
+  conn([362,382,381,380,374,373,390,249,263,466,388,387,386,385,384,398,362],'rgba(56,189,248,.8)',1.8);
+  // 눈썹
+  conn([70,63,105,66,107,55,65,52,53,46],'rgba(212,168,67,.6)',1.4);
+  conn([300,293,334,296,336,285,295,282,283,276],'rgba(212,168,67,.6)',1.4);
+  // 코
+  conn([1,2,98,327,4,275,440,344,278],'rgba(212,168,67,.5)',1.2);
+  // 입
+  conn([61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146,61],'rgba(240,100,150,.8)',1.8);
+  conn([78,191,80,81,82,13,312,311,310,415,308,324,318,402,317,14,87,178,88,95,78],'rgba(240,100,150,.5)',1.2);
+
+  // 핵심 포인트
+  var pts=[
+    {i:468,c:'rgba(56,189,248,.95)',r:4},  // 왼눈동자
+    {i:473,c:'rgba(56,189,248,.95)',r:4},  // 오른눈동자
+    {i:4,  c:'rgba(212,168,67,.9)',r:4.5}, // 코끝
+    {i:48, c:'rgba(212,168,67,.7)',r:3},   // 콧방울L
+    {i:278,c:'rgba(212,168,67,.7)',r:3},   // 콧방울R
+    {i:61, c:'rgba(240,100,150,.9)',r:3.5},{i:291,c:'rgba(240,100,150,.9)',r:3.5}, // 입꼬리
+    {i:0,  c:'rgba(240,100,150,.9)',r:3.5},{i:17, c:'rgba(240,100,150,.9)',r:3.5}, // 입중앙
+    {i:159,c:'rgba(56,189,248,.7)',r:2.5},{i:145,c:'rgba(56,189,248,.7)',r:2.5},
+    {i:386,c:'rgba(56,189,248,.7)',r:2.5},{i:374,c:'rgba(56,189,248,.7)',r:2.5},
+  ];
+  pts.forEach(function(kp){
+    if(!lms[kp.i]) return;
+    var x=lms[kp.i].x*W, y=lms[kp.i].y*H;
+    ctx.beginPath(); ctx.arc(x,y,kp.r+4,0,Math.PI*2);
+    ctx.fillStyle=kp.c.replace(/[0-9.]+\)$/,'0.15)'); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,kp.r,0,Math.PI*2);
+    ctx.fillStyle=kp.c; ctx.fill();
+  });
+
+  // rPPG 혈색 영역
+  if(BsFs.running){
+    var t2=Date.now()/1000, pulse=Math.sin(t2*(BS.bpm||72)/10)*.5+.5;
+    [[10,0.12],[234,0.09],[454,0.09]].forEach(function(p){
+      if(!lms[p[0]]) return;
+      var gx=lms[p[0]].x*W, gy=lms[p[0]].y*H;
+      var gr=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.12);
+      gr.addColorStop(0,'rgba(248,113,113,'+(p[1]+pulse*0.1)+')');
+      gr.addColorStop(1,'transparent');
+      ctx.fillStyle=gr;
+      ctx.beginPath(); ctx.ellipse(gx,gy,W*0.12,H*0.09,0,0,Math.PI*2); ctx.fill();
+    });
+  }
+}
+
+function _bsFsDrawHandLandmarks(results){
+  var cv=document.getElementById('bsFsCanvas');
+  if(!cv) return;
+  var ctx=cv.getContext('2d');
+  var W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(!results.multiHandLandmarks||!results.multiHandLandmarks.length) return;
+  var lms=results.multiHandLandmarks[0];
+
+  function conn(idxs,color,w,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=w;
+    ctx.setLineDash(dash||[]);
+    ctx.beginPath();
+    idxs.forEach(function(i,j){
+      if(!lms[i]) return;
+      var x=lms[i].x*W, y=lms[i].y*H;
+      j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 손가락
+  [[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]].forEach(function(f,fi){
+    var cs=['rgba(212,168,67,.7)','rgba(56,189,248,.7)','rgba(52,211,153,.7)','rgba(244,114,182,.7)','rgba(248,113,113,.7)'];
+    conn(f,cs[fi],2.0);
+  });
+  // 손금선 (점선)
+  conn([2,1,0],'rgba(244,114,182,.9)',2,[4,3]);   // 생명선
+  conn([17,14,11,8],'rgba(56,189,248,.9)',2,[4,3]); // 감정선
+  conn([2,9,10],'rgba(212,168,67,.9)',2,[4,3]);     // 두뇌선
+
+  // 21개 점
+  lms.forEach(function(lm,i){
+    var x=lm.x*W, y=lm.y*H;
+    var big=[0,5,9,13,17].indexOf(i)>-1;
+    var r=big?5.5:3.5;
+    var colors=['rgba(212,168,67,.95)','rgba(56,189,248,.95)','rgba(52,211,153,.95)','rgba(244,114,182,.95)','rgba(248,113,113,.95)'];
+    var ci=i<5?0:i<9?1:i<13?2:i<17?3:4;
+    ctx.beginPath(); ctx.arc(x,y,r+4,0,Math.PI*2);
+    ctx.fillStyle=colors[ci].replace(/[0-9.]+\)$/,'0.15)'); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=colors[ci]; ctx.fill();
+  });
+}
+
+function _bsFsUpdateUI(){
+  var cfg={
+    face:  {badge:'👤 얼굴 스캔',bc:'rgba(56,189,248,.2)',  lbl:'얼굴을 타원 안에 맞춰주세요', sub:'눈·코·입이 잘 보이도록, 전면 카메라'},
+    palm:  {badge:'✋ 손금 스캔',bc:'rgba(244,114,182,.2)',lbl:'손바닥을 카메라에 펼쳐주세요', sub:'후면 카메라, 30cm 거리'},
+    tongue:{badge:'👅 혀 스캔',  bc:'rgba(248,113,113,.2)',lbl:'혀를 카메라에 내밀어주세요',  sub:'밝은 곳에서 입을 크게 벌리세요'},
+    done:  {badge:'✅ 스캔 완료',bc:'rgba(52,211,153,.2)', lbl:'전체 스캔 완료!',              sub:'창을 닫고 결과를 확인하세요'},
+  };
+  var c=cfg[BsFs.step]||cfg.face;
+  var sb=document.getElementById('bsFsStepBadge');
+  if(sb){sb.textContent=c.badge; sb.style.background=c.bc;}
+  var lb=document.getElementById('bsFsGuideLbl'); if(lb) lb.textContent=c.lbl;
+  var su=document.getElementById('bsFsGuideSub'); if(su) su.textContent=c.sub;
+  ['face','palm','tongue'].forEach(function(k){
+    var g=document.getElementById('bsFsGuide_'+k);
+    if(g) g.style.display=(k===BsFs.step)?'block':'none';
+  });
+  var startBtn=document.getElementById('bsFsStartBtn');
+  if(startBtn){
+    var labels={face:'⚡ 얼굴 스캔 시작',palm:'⚡ 손금 스캔 시작',tongue:'⚡ 혀 스캔 시작',done:'📊 결과 보기'};
+    startBtn.textContent=labels[BsFs.step]||'⚡ 스캔 시작';
+    startBtn.disabled=false; startBtn.style.opacity='1';
+    if(BsFs.step==='done') startBtn.onclick=function(){bsCloseFullscreen();};
+    else startBtn.onclick=function(){bsFsDoStart();};
+  }
+}
+
+function bsFsDoStart(){
+  if(BsFs.running) return;
+  BsFs.running=true; BsFs.sec=0;
+  var TOTAL=15;
+  BS.mode=BsFs.step; if(!BS.on) bsStart();
+  var tmr=document.getElementById('bsFsTimer');
+  var prg=document.getElementById('bsFsProgress');
+  var sb=document.getElementById('bsFsStartBtn');
+  if(sb){sb.disabled=true;sb.style.opacity='.5';sb.textContent='스캔 중...';}
+  BsFs.tId=setInterval(function(){
+    BsFs.sec++;
+    if(tmr) tmr.textContent=(TOTAL-BsFs.sec);
+    if(prg) prg.style.width=(BsFs.sec/TOTAL*100)+'%';
+    if(BsFs.sec>=TOTAL){
+      clearInterval(BsFs.tId); BsFs.running=false;
+      BsFs.results[BsFs.step]=true;
+      var next={face:'palm',palm:'tongue',tongue:'done'};
+      BsFs.step=next[BsFs.step]||'done';
+      if(prg) prg.style.width='0%';
+      if(tmr) tmr.textContent='';
+      _bsFsUpdateUI();
+      if(BsFs.step!=='done') _bsFsNextCamera();
+    }
+  },1000);
+}
+
+function _bsFsNextCamera(){
+  _bsFsStopStream();
+  _bsFsStartCamera().then(function(){ if(BsFs.mpReady) _bsFsVideoLoop(); });
+}
+
+function _bsFsStopStream(){
+  if(BsFs.stream){BsFs.stream.getTracks().forEach(function(t){t.stop();});BsFs.stream=null;}
+}
+
+function _bsFsStop(){
+  clearInterval(BsFs.tId);
+  if(BsFs._simLoop) clearInterval(BsFs._simLoop);
+  BsFs.running=false; _bsFsStopStream();
+  if(BsFs.mpFace) try{BsFs.mpFace.close();}catch(e){}
+  if(BsFs.mpHands) try{BsFs.mpHands.close();}catch(e){}
+  BsFs.mpFace=null; BsFs.mpHands=null; BsFs.mpReady=false;
+}
+</script>
+
+<script>
 // ════════════════════════════════════════
 //  회사·브랜드 작명 AI — 6가지 역학 융합
 // ════════════════════════════════════════
@@ -18120,102 +18751,279 @@ document.addEventListener('DOMContentLoaded', function(){
 
 /* ── 자동완성 엔진 (단순·확실 버전) ── */
 
+// ═══════════════════════════════════════════════════════════
+// CGo-Fuli 주소 검색 엔진 v3.0
+// ① 초성 검색  ② 동명 지자체 구분  ③ Datalist 비동기  ④ OSM 폴백
+// ═══════════════════════════════════════════════════════════
+
+// ── 초성 테이블 ──────────────────────────────────────────────
+var _CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function _getChosung(str) {
+  return str.split('').map(function(ch) {
+    var code = ch.charCodeAt(0) - 0xAC00;
+    if (code < 0 || code > 11171) return ch;
+    return _CHOSUNG[Math.floor(code / 588)];
+  }).join('');
+}
+function _matchChosung(query, target) {
+  // 쿼리가 초성만으로 구성됐는지 체크
+  var isAllChosung = query.split('').every(function(c){ return _CHOSUNG.indexOf(c) > -1; });
+  if (!isAllChosung) return target.toLowerCase().indexOf(query.toLowerCase()) > -1;
+  return _getChosung(target).indexOf(query) > -1;
+}
+
+// ── 동명 중복 지자체 구분 DB ────────────────────────────────
+// 같은 이름의 동/읍/면이 여러 지역에 있을 때 지자체명으로 구분
+var _DONG_AMBIGUOUS = {
+  '신사동':  ['강남구 신사동','마포구 신사동'],
+  '중앙동':  ['군산 중앙동','춘천 중앙동','원주 중앙동','강릉 중앙동','속초 중앙동'],
+  '성내동':  ['강동구 성내동','고창 성내면'],
+  '남면':    ['태안 남면','부여 남면(부여)','서천 서면(서천)'],
+  '서면':    ['울산 서면','창원 서면'],
+  '동면':    ['창원 동면','진주 동면'],
+  '대야면':  ['군산 대야면','시흥 대야동'],
+  '회현면':  ['군산 회현면','서울 회현동'],
+  '성산면':  ['군산 성산면','창원 성산구'],
+  '남양면':  ['화성 남양읍','청양 남양면'],
+  '광시면':  ['예산 광시면'],
+  '고산면':  ['완주 고산면','홍성 고산'],
+  '안성면':  ['무주 안성면','죽산면'],
+  '신평면':  ['임실 신평면','당진 신평면'],
+  '강진면':  ['임실 강진면','전남 강진군'],
+  '구림면':  ['순창 구림면','영암 군서면'],
+};
+
+// ── 지자체 컨텍스트 분석 ────────────────────────────────────
+// "군산 전미동" 입력 시 지자체(군산)를 먼저 파악해서 해당 동만 우선 표시
+function _parseContext(query) {
+  var q = query.trim();
+  // 지자체명 앞부분 분리 시도 (예: "군산 전미" → {city:"군산", dong:"전미"})
+  var CITIES_KR = ['서울','부산','인천','대구','광주','대전','울산','세종',
+    '수원','고양','성남','용인','부천','안산','화성','남양주','김포','파주',
+    '의정부','군산','전주','익산','정읍','남원','김제','완주','고창','부안',
+    '순창','진안','무주','장수','임실','청주','충주','제천','천안','아산',
+    '당진','보령','서산','논산','홍성','예산','청양','부여','태안','서천',
+    '포항','경주','구미','안동','경산','창원','진주','김해','거제','양산',
+    '춘천','원주','강릉','속초','동해','태백','삼척','제주','서귀포'];
+  var foundCity = '';
+  var foundDong = q;
+  CITIES_KR.forEach(function(c) {
+    if (q.indexOf(c) === 0 && q.length > c.length) {
+      foundCity = c;
+      foundDong = q.slice(c.length).trim();
+    }
+  });
+  return { city: foundCity, dong: foundDong, raw: q };
+}
+
+// ── 내장DB 초성+동명지자체 통합 검색 ───────────────────────
+function _ipSearchLocal(query) {
+  if (typeof _CITIES === 'undefined') return [];
+  var ctx = _parseContext(query);
+  var q   = ctx.dong || ctx.raw;
+  var results = [];
+  var seen = {};
+
+  _CITIES.forEach(function(c) {
+    var score = 0;
+    var matched = false;
+    var displayCity = ''; // 동명 지자체 구분용
+
+    // ① 지자체 컨텍스트 매칭 (최고 우선순위)
+    if (ctx.city && c.n.toLowerCase().indexOf(ctx.city.toLowerCase()) > -1) {
+      if (_matchChosung(q, c.n)) { score = 100; matched = true; }
+    }
+    // ② 초성/일반 매칭
+    if (!matched && _matchChosung(query, c.n)) {
+      score = c.n.toLowerCase().indexOf(query.toLowerCase()) === 0 ? 80 : 50;
+      matched = true;
+    }
+
+    if (!matched) return;
+    if (seen[c.n + '|' + c.lat]) return;
+    seen[c.n + '|' + c.lat] = true;
+
+    // ③ 동명 중복 지자체 구분 라벨 생성
+    var isDup = false;
+    Object.keys(_DONG_AMBIGUOUS).forEach(function(k) {
+      if (c.n.indexOf(k) > -1 || k === c.n) isDup = true;
+    });
+
+    // 지자체명 추출 (예: "군산 전미동" → "군산")
+    var parts = c.n.match(/^([가-힣]+[시군구]|서울|부산|인천|대구|광주|대전|울산|세종|군산|전주|익산|정읍|청주|천안|창원|수원|고양|성남)\s(.+)$/);
+    if (parts) displayCity = parts[1];
+    else if (isDup) {
+      // 괄호 안 지자체명 추출
+      var m = c.n.match(/\(([^)]+)\)/);
+      if (m) displayCity = m[1];
+    }
+
+    var isDong = c.n.indexOf('동')>-1||c.n.indexOf('읍')>-1||c.n.indexOf('면')>-1||c.n.indexOf('리')>-1;
+    results.push({
+      n: c.n,
+      addr: displayCity,
+      lat: c.lat,
+      lng: c.lng,
+      isDong: isDong,
+      score: score,
+      isDup: isDup
+    });
+  });
+
+  results.sort(function(a,b){ return b.score - a.score; });
+  return results.slice(0, 15);
+}
+
+// ── 메인 자동완성 함수 ───────────────────────────────────────
 function ipAutoSuggest(val, type) {
   var drop = document.getElementById(type==='birth' ? 'ipBirthDrop' : 'ipCurDrop');
-  var cl   = document.getElementById(type==='birth' ? 'ipBirthClear' : 'ipCurClear');
-  if(!drop) return;
-  if(cl) cl.style.display = val ? 'inline' : 'none';
+  if (!drop) return;
+  var v = val.trim();
+  if (v.length < 1) { drop.style.display='none'; return; }
 
-  var v = (val||'').trim().toLowerCase();
-  if(!v) { drop.style.display='none'; return; }
+  // ── 즉시: 내장DB 초성 검색 (0ms 반응) ──────────────────
+  var localResults = _ipSearchLocal(v);
+  if (localResults.length) _ipRenderDrop(localResults, type, drop);
 
-  // 지역명 검색 (충남, 경기 등)
-  var regionCities = [];
-  if(typeof _REGION_MAP !== 'undefined') {
-    Object.keys(_REGION_MAP).forEach(function(region){
-      if(region.indexOf(v) >= 0 || v.indexOf(region) >= 0) {
-        _REGION_MAP[region].forEach(function(cityName){
-          var found = _CITIES.filter(function(c){ return c.n === cityName; });
-          regionCities = regionCities.concat(found);
-        });
-      }
-    });
-  }
-  var directMatch = _CITIES.filter(function(c){ return c.n.toLowerCase().indexOf(v)===0; });
-  var partialMatch = _CITIES.filter(function(c){ return c.n.toLowerCase().indexOf(v)>0; });
-  // 중복 제거
-  var seen = {};
-  var results = directMatch.concat(regionCities).concat(partialMatch).filter(function(c){
-    if(seen[c.n]) return false; seen[c.n]=true; return true;
-  }).slice(0, 50);
+  // ── 비동기: OSM Nominatim (400ms 딜레이, 네트워크) ──────
+  clearTimeout(window._ipSuggestTimer);
+  window._ipSuggestTimer = setTimeout(function(){
+    var url = 'https://nominatim.openstreetmap.org/search'
+      + '?q=' + encodeURIComponent(v)
+      + '&format=json&addressdetails=1&limit=10&accept-language=ko&countrycodes=kr';
+    fetch(url, { headers:{'User-Agent':'CGo-Fuli/1.0'} })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data || !data.length) return; // 내장DB 결과 유지
+      var seen = {};
+      var osmItems = data.map(function(d){
+        var a = d.address || {};
+        var nm = a.quarter||a.suburb||a.neighbourhood||a.village||a.hamlet
+               ||a.town||a.city_district||a.city||d.display_name.split(',')[0];
+        var city  = a.city||a.county||a.city_district||'';
+        var state = a.state||'';
+        var addr  = [city, state].filter(Boolean).join(' ');
+        var isDong = !!(a.quarter||a.suburb||a.neighbourhood||a.village||a.hamlet);
+        return { n:nm.trim(), addr:addr, lat:parseFloat(d.lat), lng:parseFloat(d.lon),
+                 isDong:isDong, score:60, isDup:false, fromOSM:true };
+      }).filter(function(d){
+        if (!d.n || isNaN(d.lat)) return false;
+        if (seen[d.n]) return false;
+        seen[d.n] = true; return true;
+      });
+      if (!osmItems.length) return;
 
+      // 내장DB + OSM 병합 (내장DB 우선, OSM 보완)
+      var merged = localResults.slice();
+      var localNames = localResults.map(function(r){ return r.n; });
+      osmItems.forEach(function(o){
+        if (localNames.indexOf(o.n) === -1) merged.push(o);
+      });
+      _ipRenderDrop(merged.slice(0,15), type, drop);
+    })
+    .catch(function(){}); // 실패해도 내장DB 결과 유지
+  }, 400);
+}
+
+// ── 드롭다운 렌더링 (동명 지자체 배지 포함) ─────────────────
+function _ipRenderDrop(items, type, drop) {
+  if (!items.length) { drop.style.display='none'; return; }
   drop.innerHTML = '';
-  if(!results.length) {
-    drop.innerHTML = '<div style="padding:12px 16px;color:#a8bccf;font-size:12px">검색 결과 없음</div>';
-    drop.style.display = 'block';
-    return;
-  }
-
-  results.forEach(function(c) {
+  items.forEach(function(c) {
     var row = document.createElement('div');
-    row.style.cssText = 'padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;display:flex;align-items:center;gap:10px';
-    row.innerHTML = '<span style="font-size:13px">📍</span>'
-      + '<span style="font-size:14px;font-weight:700;color:#f1f5f9;flex:1">' + c.n + '</span>'
-      + '<span style="font-size:10px;color:#a0afc0">' + c.lat.toFixed(2) + '°N ' + c.lng.toFixed(2) + '°E</span>';
-    row.onmouseover = function(){ this.style.background='rgba(56,189,248,.1)'; };
+    row.style.cssText = 'padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;transition:background .1s';
+
+    // 동 단위 정밀 배지
+    var precBadge = c.isDong
+      ? '<span style="font-size:9px;background:rgba(52,211,153,.15);color:#34d399;border-radius:4px;padding:1px 5px;margin-left:4px">동 단위 ✓</span>'
+      : '';
+    // OSM 출처 배지
+    var osmBadge = c.fromOSM
+      ? '<span style="font-size:9px;background:rgba(56,189,248,.1);color:#38bdf8;border-radius:4px;padding:1px 4px;margin-left:3px">OSM</span>'
+      : '';
+    // 동명 중복 → 지자체 구분 배지 (핵심!)
+    var cityBadge = c.addr
+      ? '<span style="font-size:10px;color:#94a3b8;margin-left:5px;font-weight:400">[' + c.addr + ']</span>'
+      : '';
+    // 중복 경고 배지
+    var dupBadge = c.isDup
+      ? '<span style="font-size:9px;background:rgba(251,191,36,.1);color:#fbbf24;border-radius:4px;padding:1px 4px;margin-left:3px">동명 다수</span>'
+      : '';
+
+    var coord = '<span style="font-size:9px;color:rgba(148,163,184,.4);flex-shrink:0">'
+              + c.lat.toFixed(4)+'°N '+c.lng.toFixed(4)+'°E</span>';
+
+    row.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'
+      + '<span style="font-size:13px;font-weight:700;color:#f1f5f9;flex:1;min-width:0">'
+      + c.n + cityBadge + precBadge + osmBadge + dupBadge + '</span>'
+      + coord + '</div>';
+
+    row.onmouseover = function(){ this.style.background='rgba(56,189,248,.08)'; };
     row.onmouseout  = function(){ this.style.background=''; };
-    // 클로저로 값 고정
     (function(city, t){
-      row.onmousedown = function(e) {
-        e.preventDefault();
+      // PC 클릭
+      row.onclick = function(e){
+        e.preventDefault(); e.stopPropagation();
         ipSaveCity(t, city.n, city.lat, city.lng);
       };
+      // 모바일 터치
+      row.addEventListener('touchend', function(e){
+        e.preventDefault(); e.stopPropagation();
+        ipSaveCity(t, city.n, city.lat, city.lng);
+      }, {passive: false});
+      // 포인터 이벤트 (터치+펜+마우스 통합)
+      row.addEventListener('pointerdown', function(e){
+        e.preventDefault(); e.stopPropagation();
+        ipSaveCity(t, city.n, city.lat, city.lng);
+      }, {passive: false});
     })(c, type);
     drop.appendChild(row);
   });
   drop.style.display = 'block';
 }
 
+// ── 폴백 함수 (하위호환 유지) ─────────────────────────────
+function _ipSuggestFallback(v, type, drop) {
+  var r = _ipSearchLocal(v);
+  if (r.length) _ipRenderDrop(r, type, drop);
+  else drop.style.display = 'none';
+}
+
 function ipSaveCity(type, name, lat, lng) {
   lat = parseFloat(lat);
   lng = parseFloat(lng);
-  // 도시명 정제: "덕진구(전주)" → "전주", "해운대(부산)" → "부산" 등
-  var shortName = name.replace(/^.*?\(([^)]+)\).*$/, '$1') || name;
-  // 괄호 없는 이름은 그대로 (서울, 군산 등)
-  if(shortName === name && name.indexOf('(') === -1) shortName = name;
+  if (isNaN(lat) || isNaN(lng)) return;
 
-  // hidden input 직접 저장 — 가장 확실
-  if(type === 'birth') {
+  if (type === 'birth') {
     document.getElementById('ipBirthLat').value = lat;
     document.getElementById('ipBirthLng').value = lng;
-    var displayName = shortName + ' (' + lat.toFixed(2) + '°N ' + lng.toFixed(2) + '°E)';
-    document.getElementById('ipBirthPlace').value = displayName;
+    document.getElementById('ipBirthPlace').value = name + ' (' + lat.toFixed(3) + '°N ' + lng.toFixed(3) + '°E)';
     window._selectedBirthLat = lat;
     window._selectedBirthLng = lng;
-    window._selectedBirthName = name;  // 원본 이름 보관
   } else {
     document.getElementById('ipCurLat').value = lat;
     document.getElementById('ipCurLng').value = lng;
-    document.getElementById('ipCurPlace').value = shortName + ' (' + lat.toFixed(2) + '°N ' + lng.toFixed(2) + '°E)';
+    document.getElementById('ipCurPlace').value = name + ' (' + lat.toFixed(3) + '°N ' + lng.toFixed(3) + '°E)';
     window._selectedCurLat = lat;
     window._selectedCurLng = lng;
   }
 
   // 드롭다운 닫기
-  document.getElementById(type==='birth' ? 'ipBirthDrop' : 'ipCurDrop').style.display = 'none';
-  var cl = document.getElementById(type==='birth' ? 'ipBirthClear' : 'ipCurClear');
-  if(cl) cl.style.display = 'inline-block';
+  var dropId = type === 'birth' ? 'ipBirthDrop' : 'ipCurDrop';
+  var drop = document.getElementById(dropId);
+  if (drop) drop.style.display = 'none';
 
-  // 시각 피드백
-  var inp = document.getElementById(type==='birth' ? 'ipBirthPlace' : 'ipCurPlace');
-  if(inp) {
+  // X 버튼 표시
+  var cl = document.getElementById(type === 'birth' ? 'ipBirthClear' : 'ipCurClear');
+  if (cl) cl.style.display = 'inline-block';
+
+  // 초록 테두리 피드백
+  var inp = document.getElementById(type === 'birth' ? 'ipBirthPlace' : 'ipCurPlace');
+  if (inp) {
     inp.style.borderColor = '#34d399';
     inp.style.boxShadow = '0 0 0 2px rgba(52,211,153,.25)';
     setTimeout(function(){ inp.style.borderColor=''; inp.style.boxShadow=''; }, 1500);
   }
-
-  console.log('✅ 저장완료 ['+type+']', name, lat, lng,
-    '| hidden:', document.getElementById(type==='birth'?'ipBirthLat':'ipCurLat').value);
 }
 
 function ipPickCity(type, name, lat, lng) { ipSaveCity(type, name, lat, lng); }
@@ -20487,5 +21295,80 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 })();
 </script>
+
+<!-- ══ 전체화면 스캔 오버레이 (모바일 최적화) ══════════════ -->
+<div id="bsFullWrap" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column">
+  <!-- 상단 헤더 -->
+  <div id="bsFsHeader" style="position:absolute;top:0;left:0;right:0;z-index:10;
+    padding:12px 16px;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent);
+    display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="bsFsStepBadge" style="font-size:12px;font-weight:700;padding:4px 12px;
+        border-radius:20px;background:rgba(56,189,248,.2);border:1px solid rgba(56,189,248,.4);color:#38bdf8">
+        👤 얼굴 스캔
+      </div>
+      <div id="bsFsTimer" style="font-size:20px;font-weight:700;color:#d4a843;font-family:'Orbitron',sans-serif"></div>
+    </div>
+    <button onclick="bsCloseFullscreen()" style="padding:6px 14px;background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-size:13px;cursor:pointer">✕ 닫기</button>
+  </div>
+
+  <!-- 카메라 + 캔버스 -->
+  <video id="bsFsVideo" autoplay playsinline muted
+    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9"></video>
+  <canvas id="bsFsCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+
+  <!-- 가이드 프레임 오버레이 -->
+  <div id="bsFsGuide" style="position:absolute;inset:0;pointer-events:none">
+    <!-- 얼굴 가이드 타원 -->
+    <div id="bsFsGuide_face" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);
+      width:min(55vw,220px);height:min(72vw,290px);
+      border:2.5px solid rgba(56,189,248,.7);border-radius:50%;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+    <!-- 손금 가이드 박스 -->
+    <div id="bsFsGuide_palm" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+      width:min(70vw,280px);height:min(70vw,280px);
+      border:2.5px solid rgba(244,114,182,.7);border-radius:18px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+    <!-- 혀 가이드 타원 -->
+    <div id="bsFsGuide_tongue" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+      width:min(60vw,240px);height:min(40vw,160px);
+      border:2.5px solid rgba(248,113,113,.7);border-radius:50%;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>
+  </div>
+
+  <!-- 안내 텍스트 -->
+  <div id="bsFsGuideText" style="position:absolute;top:50%;left:50%;transform:translate(-50%,calc(-50% + min(40vw,160px)));
+    text-align:center;pointer-events:none;padding-top:16px">
+    <div id="bsFsGuideLbl" style="font-size:15px;font-weight:700;color:#fff;
+      text-shadow:0 2px 8px rgba(0,0,0,.8)">얼굴을 타원 안에 맞춰주세요</div>
+    <div id="bsFsGuideSub" style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px">눈·코·입이 잘 보이도록</div>
+  </div>
+
+  <!-- 스캔 진행 바 -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.1)">
+    <div id="bsFsProgress" style="height:100%;width:0%;background:linear-gradient(90deg,#d4a843,#38bdf8);transition:width .9s linear"></div>
+  </div>
+
+  <!-- 하단 버튼 -->
+  <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:14px">
+    <button id="bsFsStartBtn" onclick="bsFsDoStart()"
+      style="padding:14px 40px;background:linear-gradient(135deg,#d4a843,#fbbf24);
+      border:none;border-radius:14px;color:#020817;font-weight:800;font-size:15px;cursor:pointer;
+      box-shadow:0 4px 20px rgba(212,168,67,.4)">⚡ 스캔 시작</button>
+    <button onclick="bsFsNextStep()" id="bsFsNextBtn" style="display:none;
+      padding:14px 32px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);
+      border-radius:14px;color:#34d399;font-weight:700;font-size:14px;cursor:pointer">다음 단계 →</button>
+  </div>
+
+  <!-- MediaPipe 로딩 표시 -->
+  <div id="bsFsLoading" style="position:absolute;inset:0;background:rgba(0,0,0,.85);
+    display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="font-size:32px;margin-bottom:12px">🤖</div>
+    <div style="color:#38bdf8;font-size:14px;font-weight:700">AI 얼굴 추적 엔진 로딩 중...</div>
+    <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:6px">MediaPipe FaceMesh + Hands</div>
+  </div>
+</div>
+
 </body>
 </html>
