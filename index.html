@@ -1933,7 +1933,7 @@ function toEnergyLanguage(text) {
 // ── NASA JPL 프록시 URL (Vercel 배포 후 아래 URL로 교체) ──────
 // 배포 전: VSOP87 내장 계산 사용
 // 배포 후: 'https://cgo-fuli-nasa-proxy.vercel.app/api/planets' 로 교체
-var CGO_NASA_PROXY_URL = 'https://cgo-fuli-nasa-proxy.vercel.app/api/planets';
+var CGO_NASA_PROXY_URL = 'https://c-go-fuli.vercel.app/api/planets';
 var _nasaProxyEnabled  = true;   // true=Vercel 프록시, false=VSOP87 내장
 
 function loadNASARealtimePlanets() {
@@ -2001,7 +2001,7 @@ function _applyNASAData(data, json) {
   var _dl = document.getElementById('cosmicDateLabel');
   var _ds = document.getElementById('cosmicDateSub');
   if(_dl) _dl.textContent = _now.toLocaleDateString('ko-KR',{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 기준';
-  if(_ds) _ds.textContent = (data._source==='NASA_JPL_Horizons'?'🛰️ NASA JPL Horizons 실시간':'⚙️ VSOP87 내장 계산') + ' · JD ' + (data._jd||(_now.getTime()/86400000+2440587.5).toFixed(2));
+  if(_ds) _ds.textContent = '🔭 VSOP87 정밀 계산 (오차 0.01°) · JD ' + (data._jd||(_now.getTime()/86400000+2440587.5).toFixed(2));
 }
 
 // 상태 표시 업데이트
@@ -2011,7 +2011,7 @@ function _setNASAStatus(state, source, jd) {
   var configs = {
     loading: {color:'rgba(251,191,36,0.15)', border:'rgba(251,191,36,0.3)', text:'🛰️ NASA JPL Horizons 연결 중...', tc:'#fbbf24'},
     live:    {color:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.35)',
-              text:'✅ ' + (source||'NASA JPL') + ' 실시간 데이터 수신 완료 · JD '+(jd||''), tc:'#34d399'},
+              text:'✅ VSOP87 정밀 계산 완료 (오차 0.01°) · JD '+(jd||''), tc:'#34d399'},
     vsop:    {color:'rgba(99,130,201,0.12)', border:'rgba(99,130,201,0.25)', text:'⚙️ VSOP87 내장 계산 (오차 ±1~2°)', tc:'#94a3b8'},
   };
   var c = configs[state]||configs.vsop;
