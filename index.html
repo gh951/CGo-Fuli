@@ -20894,6 +20894,143 @@ var SPT_MATCH_DB = {
 
 // ── 현재 탭 ─────────────────────────────────────────────
 var _sptCurrentTab = 'all';
+
+// ── 팀 오행 매핑 DB ──────────────────────────────────────
+var SPT_TEAM_OH = {
+  // 축구
+  '레알 마드리드':'금','Real Madrid':'금','바르셀로나':'화','Barcelona':'화',
+  '맨체스터 시티':'수','Manchester City':'수','Man City':'수',
+  '아스널':'목','Arsenal':'목',
+  '리버풀':'화','Liverpool':'화',
+  '첼시':'금','Chelsea':'금',
+  '토트넘':'수','Tottenham':'수','Tottenham Hotspur':'수',
+  '맨체스터 유나이티드':'토','Manchester United':'토','Man Utd':'토',
+  '레버쿠젠':'목','Bayer Leverkusen':'목','Leverkusen':'목',
+  '바이에른':'금','Bayern Munich':'금','Bayern':'금',
+  '도르트문트':'화','Borussia Dortmund':'화','Dortmund':'화',
+  'PSG':'화','Paris Saint-Germain':'화','Paris SG':'화',
+  '인터밀란':'수','Inter Milan':'수','Inter':'수',
+  'AC밀란':'화','AC Milan':'화',
+  '유벤투스':'금','Juventus':'금',
+  '아틀레티코':'토','Atletico Madrid':'토',
+  '전북 현대':'목','울산 HD':'화','울산':'화',
+  '수원 삼성':'금','인천 유나이티드':'수',
+  '포르투':'수','FC Porto':'수',
+  '아약스':'화','Ajax':'화',
+  '셀틱':'목','Celtic':'목',
+  '스포르팅':'화','Sporting CP':'화',
+  'FK 보되/글림트':'목','FK Bodø/Glimt':'목',
+  // 야구
+  'LG 트윈스':'화','두산 베어스':'목','삼성 라이온즈':'금',
+  'KT 위즈':'수','SSG 랜더스':'토','한화 이글스':'화',
+  '뉴욕 양키스':'수','보스턴 레드삭스':'화',
+  // 농구
+  'LA 레이커스':'화','골든스테이트':'금','원주 DB':'목','서울 SK':'수',
+};
+
+function sptGetOh(teamName) {
+  if (!teamName) return '토';
+  // 직접 매핑
+  if (SPT_TEAM_OH[teamName]) return SPT_TEAM_OH[teamName];
+  // 부분 매핑
+  var keys = Object.keys(SPT_TEAM_OH);
+  for (var i=0; i<keys.length; i++) {
+    if (teamName.indexOf(keys[i]) !== -1 || keys[i].indexOf(teamName) !== -1) {
+      return SPT_TEAM_OH[keys[i]];
+    }
+  }
+  // 팀명 첫 글자 기반 기본값
+  var code = teamName.charCodeAt(0) % 5;
+  return ['목','화','토','금','수'][code];
+}
+
+function sptLeagueToType(league) {
+  if (!league) return 'soccer';
+  var l = league.toLowerCase();
+  if (l.indexOf('baseball') !== -1 || l.indexOf('kbo') !== -1 || l.indexOf('mlb') !== -1) return 'baseball';
+  if (l.indexOf('basketball') !== -1 || l.indexOf('nba') !== -1 || l.indexOf('kbl') !== -1) return 'basketball';
+  if (l.indexOf('volleyball') !== -1 || l.indexOf('배구') !== -1) return 'volleyball';
+  if (l.indexOf('tennis') !== -1 || l.indexOf('atp') !== -1 || l.indexOf('wta') !== -1) return 'tennis';
+  return 'soccer';
+}
+
+// ── 오늘 경기 동적 로딩 (TheSportsDB) ───────────────────
+function sptLoadTodayMatches(callback) {
+  var today = new Date();
+  var todayStr = today.toISOString().slice(0, 10);
+
+  // 오늘 + 내일 날짜 조회 (KST 기준 늦은밤 경기 포함)
+  var tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  var urls = [
+    'https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=' + todayStr + '&s=Soccer',
+    'https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=' + tomorrowStr + '&s=Soccer',
+  ];
+
+  Promise.all(urls.map(function(u) {
+    return fetch(u).then(function(r){ return r.json(); }).catch(function(){ return {events:[]}; });
+  })).then(function(results) {
+    var allEvents = [];
+    results.forEach(function(r){ if(r.events) allEvents = allEvents.concat(r.events); });
+
+    // 유럽·한국 주요 리그 필터
+    var keepLeagues = ['Champions','Europa','Premier League','La Liga','Bundesliga',
+      'Serie A','Ligue 1','UEFA','K League','Eredivisie','Primeira Liga','Scottish'];
+    var filtered = allEvents.filter(function(e){
+      var lg = e.strLeague || '';
+      return keepLeagues.some(function(k){ return lg.indexOf(k) !== -1; });
+    });
+
+    if (filtered.length === 0) {
+      // 경기 없으면 하드코딩 유지
+      if (callback) callback(false);
+      return;
+    }
+
+    // TheSportsDB → SPT_MATCH_DB 형식으로 변환
+    var newSoccer = [];
+    filtered.slice(0, 12).forEach(function(e) {
+      // UTC 시간 → KST 변환
+      var timeStr = '—';
+      if (e.strTime && e.strTime.length >= 5) {
+        var hh = parseInt(e.strTime.slice(0,2), 10);
+        var mm = e.strTime.slice(3,5);
+        var kst = (hh + 9) % 24;
+        timeStr = (kst < 10 ? '0' : '') + kst + ':' + mm;
+      }
+      // 리그명 한국어 변환
+      var lgMap = {
+        'UEFA Champions League': 'UCL', 'UEFA Europa League': 'UEL',
+        'English Premier League': 'EPL', 'Spanish La Liga': '라리가',
+        'German Bundesliga': '분데스', 'Italian Serie A': '세리에A',
+        'French Ligue 1': '리그앙', 'K League 1': 'K리그1', 'K League 2': 'K리그2',
+      };
+      var leagueKo = lgMap[e.strLeague] || e.strLeague || '';
+      // 팀명 간략화
+      var aName = e.strHomeTeam || '';
+      var bName = e.strAwayTeam || '';
+      newSoccer.push({
+        a: aName, b: bName,
+        league: leagueKo,
+        time: timeStr,
+        aOh: sptGetOh(aName),
+        bOh: sptGetOh(bName),
+        dateStr: e.dateEvent || todayStr,
+      });
+    });
+
+    // DB 업데이트
+    SPT_MATCH_DB.soccer = newSoccer;
+    console.log('[CGo-Fuli] 오늘 경기 ' + newSoccer.length + '개 로딩 완료');
+    if (callback) callback(true);
+
+  }).catch(function(err) {
+    console.warn('[CGo-Fuli] 경기 로딩 실패, 기본 DB 사용:', err);
+    if (callback) callback(false);
+  });
+}
 var _sptHistory = [];
 var _sptAnalyzed = null; // 마지막 분석 경기
 
@@ -21234,15 +21371,178 @@ function sptAskAI(userText, isAuto) {
   }
 
   // ── 검색 필요 여부 판단 키워드 ─────────────────────────
-  var needSearch = /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|챔피언|득점|실점|이겼|졌|비겼|선수|감독|창단|언제|몇년|일정|오늘 경기|내일|이번주|다음주|몇시|킥오프/.test(userText);
+  // 경기 일정 질문 여부 (별도 플래그)
+  // ══ 경기 일정 질문 감지 ══════════════════════════════════
+  var isScheduleQ = /일정|오늘 경기|내일 경기|내일|이번주|다음주|몇시|킥오프|경기가 있|경기 있|경기는|경기 언제|오늘은|챔피언|챔피언스|챔피온|유로파|프리미어|라리가|분데스|세리에/.test(userText);
+  var needSearch  = isScheduleQ || /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|득점|실점|이겼|졌|비겼|선수|감독|창단|몇년/.test(userText);
 
-  if (needSearch) {
-    // ══ CGO-FULI 3단계 스포츠 데이터 엔진 ══════════════════
-    // 1단계: Vercel 프록시 → Wikipedia 한/영 검색
-    // 2단계: 검색 결과 유의성 판단 (데이터 완결성 체크)
-    // 3단계: 데이터 결핍 시 → "결핍의 분석" 모드 자동 전환
-    //        (감독 생년월일 역학 + NASA 행성 상성 + 팀 창단일 오행)
-    // ══════════════════════════════════════════════════════
+  // ══ 경기 일정 질문 → 직접 TheSportsDB 호출 후 답변 ══
+  if (isScheduleQ) {
+    // 날짜 범위 계산
+    var today2 = new Date();
+    var dates2 = [];
+    var daysAhead = (userText.indexOf('이번주')!==-1||userText.indexOf('다음주')!==-1) ? 7 : 3;
+    for (var di=0; di<daysAhead; di++) {
+      var dd = new Date(today2); dd.setDate(dd.getDate()+di);
+      dates2.push(dd.toISOString().slice(0,10));
+    }
+
+    // TheSportsDB - Soccer 일정 조회 (무료, CORS 허용)
+    var fetchPromises2 = dates2.map(function(d){
+      return fetch('https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d='+d+'&s=Soccer')
+        .then(function(r){ return r.json(); })
+        .catch(function(){ return {events:[]}; });
+    });
+
+    sptAddTyping();
+    Promise.all(fetchPromises2).then(function(results2) {
+      var allEvents2 = [];
+      results2.forEach(function(r){ if(r.events) allEvents2 = allEvents2.concat(r.events); });
+
+      // 유럽 주요 리그만 필터
+      var euroKeywords = ['Champions','Europa','Premier League','La Liga','Bundesliga',
+        'Serie A','Ligue 1','UEFA','Eredivisie','Primeira'];
+      var filtered2 = allEvents2.filter(function(e){
+        var lg = e.strLeague||'';
+        return euroKeywords.some(function(k){ return lg.indexOf(k)!==-1; });
+      });
+
+      // 사용자가 특정 리그 언급했으면 추가 필터
+      var leagueKeyFilter = '';
+      if (/챔피언스|챔피온|UCL|Champions/i.test(userText)) leagueKeyFilter = 'Champions';
+      else if (/유로파/i.test(userText)) leagueKeyFilter = 'Europa';
+      else if (/프리미어|EPL/i.test(userText)) leagueKeyFilter = 'Premier';
+      else if (/라리가/i.test(userText)) leagueKeyFilter = 'La Liga';
+      else if (/분데스/i.test(userText)) leagueKeyFilter = 'Bundesliga';
+      else if (/세리에/i.test(userText)) leagueKeyFilter = 'Serie';
+
+      if (leagueKeyFilter) {
+        filtered2 = filtered2.filter(function(e){
+          return (e.strLeague||'').indexOf(leagueKeyFilter)!==-1;
+        });
+      }
+
+      sptRemoveTyping();
+
+      if (filtered2.length === 0) {
+        // 경기 없음 - 안내 메시지
+        sptAddBubble('ai',
+          '📅 조회 기간(' + dates2[0] + ' ~ ' + dates2[dates2.length-1] + ') 내\n' +
+          (leagueKeyFilter||'유럽 주요 리그') + ' 경기가 없거나 아직 일정이 등록되지 않았습니다.\n\n' +
+          '더 자세한 일정은 아래에서 확인하세요:\n' +
+          '• UEFA 공식: https://www.uefa.com/uefachampionsleague\n' +
+          '• 네이버 스포츠: https://sports.naver.com/wfootball\n' +
+          '• 다음 스포츠: https://sports.daum.net/worldsoccer'
+        );
+      } else {
+        // 날짜별 그룹핑
+        var byDate2 = {};
+        filtered2.sort(function(a,b){ return (a.dateEvent+a.strTime)>(b.dateEvent+b.strTime)?1:-1; });
+        filtered2.slice(0,20).forEach(function(e){
+          var d2 = e.dateEvent||'날짜미정';
+          if (!byDate2[d2]) byDate2[d2] = [];
+          // UTC→KST 변환
+          var timeStr2 = '시간미정';
+          if (e.strTime && e.strTime.length>=5) {
+            var hh2 = parseInt(e.strTime.slice(0,2),10);
+            var mm2 = e.strTime.slice(3,5);
+            var kst2 = (hh2+9)%24;
+            timeStr2 = (kst2<10?'0':'')+kst2+':'+mm2+' KST';
+          }
+          byDate2[d2].push('  ' + e.strHomeTeam + ' vs ' + e.strAwayTeam
+            + '  ' + timeStr2
+            + (e.strLeague ? '  ['+e.strLeague+']' : ''));
+        });
+
+        var msg2 = '📅 ' + (leagueKeyFilter ? leagueKeyFilter+' ' : '유럽 주요 ') + '경기 일정\n\n';
+        var dowArr2 = ['일','월','화','수','목','금','토'];
+        Object.keys(byDate2).sort().forEach(function(date2){
+          var dt2 = new Date(date2+'T12:00:00');
+          var dow2 = dowArr2[dt2.getDay()];
+          // 오늘/내일 표시
+          var label2 = '';
+          var todayStr2 = today2.toISOString().slice(0,10);
+          var tomorrowStr2 = new Date(today2.getTime()+86400000).toISOString().slice(0,10);
+          if (date2===todayStr2) label2 = ' (오늘)';
+          else if (date2===tomorrowStr2) label2 = ' (내일)';
+          msg2 += '【' + date2 + ' ' + dow2 + '요일' + label2 + '】\n';
+          msg2 += byDate2[date2].join('\n') + '\n\n';
+        });
+
+        // ── CGO 역학 분석을 Groq AI로 생성 ──────────────────
+        var np3 = window._nasaPlanets || {};
+        var todayOh = myOh || '목';
+        var planetStr3 = '';
+        if (np3.jupiter) planetStr3 += '목성(' + (np3.jupiter.sign||'') + ') ';
+        if (np3.mars)    planetStr3 += '화성(' + (np3.mars.sign||'') + (np3.mars.retro?'역행':'') + ') ';
+        if (np3.saturn)  planetStr3 += '토성(' + (np3.saturn.sign||'') + (np3.saturn.retro?'역행':'') + ') ';
+        if (np3.venus)   planetStr3 += '금성(' + (np3.venus.sign||'') + ') ';
+
+        // 경기 목록 추출 (역학 분석용)
+        var matchList3 = [];
+        Object.keys(byDate2).sort().forEach(function(d3){
+          byDate2[d3].forEach(function(m3){ matchList3.push(m3.trim()); });
+        });
+
+        // Groq에 역학 분석 요청
+        var _sys3 = 'CGO-FULI 스포츠 역학 분석 AI. 한국어로만 답변.';
+        _sys3 += '\n각 경기 분석 형식:';
+        _sys3 += '\n[팀A vs 팀B]';
+        _sys3 += '\n오행: 두 팀 오행 충돌/조화';
+        _sys3 += '\n행성: 오늘 행성 영향';
+        _sys3 += '\n공명: 사용자(' + todayOh + ')와 공명하는 팀';
+        _sys3 += '\nNASA 행성: ' + (planetStr3||'없음');
+        _sys3 += '\n사용자 오행: ' + todayOh;
+        _sys3 += '\n영어 오행(Wood/Fire 등) 금지, 베팅 금지';
+        var _user3 = '오늘 경기:\n' + matchList3.slice(0,5).join('\n');
+        _user3 += '\n\n위 경기들 CGO 역학 분석해주세요.';
+        var schedMsg3 = [
+          {role:'system', content: _sys3},
+          {role:'user',   content: _user3}
+        ];
+
+        fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+          body:JSON.stringify({model:'llama-3.3-70b-versatile', messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
+        })
+        .then(function(r3){ return r3.json(); })
+        .then(function(d3){
+          var analysis3 = '';
+          try { analysis3 = d3.choices[0].message.content; } catch(e3){}
+          analysis3 = analysis3.replace(/[぀-ゟ゠-ヿ]+/g,'').replace(/[؀-ۿ]+/g,'');
+          var finalMsg3 = msg2.trim() + '\n\n' + (analysis3 || '⚡ CGO 역학: 오늘 ' + todayOh + ' 에너지로 관전하세요!');
+          sptAddBubble('ai', finalMsg3);
+          _sptHistory.push({role:'assistant', content:finalMsg3});
+          if (sendBtn) sendBtn.disabled = false;
+        })
+        .catch(function(){
+          // Groq 실패시 간단 역학만
+          var fallMsg3 = msg2.trim() + '\n⚡ CGO 역학: 오늘 ' + todayOh + ' 오행 에너지 기준 ';
+          if (np3.mars && np3.mars.retro) fallMsg3 += '화성 역행 중 — 주요 경기 변수 주의 🔴';
+          else if (np3.jupiter) fallMsg3 += '목성 기운이 공격력을 높이는 날 ✨';
+          else fallMsg3 += '경기 에너지 활발한 날 ⚽';
+          sptAddBubble('ai', fallMsg3);
+          _sptHistory.push({role:'assistant', content:fallMsg3});
+          if (sendBtn) sendBtn.disabled = false;
+        });
+      }
+      // sendBtn은 Groq 콜백 내에서 처리
+    }).catch(function(){
+      sptRemoveTyping();
+      sptAddBubble('ai',
+        '일정 데이터를 가져오지 못했습니다.\n\n' +
+        '아래에서 직접 확인해 주세요:\n' +
+        '• 네이버 스포츠: https://sports.naver.com/wfootball\n' +
+        '• 다음 스포츠: https://sports.daum.net/worldsoccer\n' +
+        '• UEFA 공식: https://www.uefa.com/uefachampionsleague'
+      );
+      if (sendBtn) sendBtn.disabled = false;
+    });
+    return; // 이후 코드 실행 안 함
+
+  } else if (needSearch) {
+    // ══ 전적/역사 질문 → Vercel 프록시 + Wikipedia 검색 ══
 
     var proxyUrl = 'https://c-go-fuli.vercel.app/api/search';
 
@@ -21257,7 +21557,7 @@ function sptAskAI(userText, isAuto) {
     try {
       var phIdx2 = Math.floor((Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/86400000)%30)/3.75)%8;
       moonPhaseNow = ['신월','초승','상현','보름','보름','하현','하현','그믐'][phIdx2];
-    } catch(e){}
+    } catch(e2){}
 
     fetch(proxyUrl, {
       method: 'POST',
@@ -21267,117 +21567,90 @@ function sptAskAI(userText, isAuto) {
     .then(function(r){ return r.json(); })
     .then(function(searchData) {
       var searchResult = (searchData && searchData.results) || '';
-      var source = (searchData && searchData.source) || '';
 
-      // ── 2단계: 데이터 완결성(Input_Data_Integrity) 체크 ──
-      // 스코어 패턴(숫자-숫자) 또는 날짜 패턴 포함 여부로 유의성 판단
-      var hasConcreteData = /\d-\d|\d{4}\.\d{2}|\d승|\d무|\d패|UCL|UEFA|Champion/i.test(searchResult);
+      var hasConcreteData = /\d-\d|\d{4}\.\d{2}|\d승|\d무|\d패|UCL|UEFA|Champion|vs |KST|\d:\d\d/i.test(searchResult);
 
       var augSystem, augUserContent;
 
       if (hasConcreteData) {
-        // ── [모드 A] 데이터 있음 → 통계/일정 중심 답변 ─────
         augSystem =
-          '당신은 스포츠 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          '당신은 스포츠 통계 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
           '## 규칙\n' +
-          '1. [검색 결과]의 경기 일정·스코어·날짜·팀명을 그대로 정확히 전달\n' +
-          '2. 경기 일정 질문이면: 날짜별로 정리하고 KST 시간 포함\n' +
-          '3. 전적 질문이면: 스코어·날짜·대회명 포함\n' +
-          '4. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
-          '5. 경기 일정 답변 형식:\n' +
-          '   📅 [날짜 (요일)]\n' +
-          '   - 홈팀 vs 원정팀  HH:MM KST\n' +
-          '   ⚡ 주목 경기: [역학 에너지 관점 한 줄]\n' +
-          '6. 한국어만, 베팅 금지\n' +
+          '1. [검색 결과]의 스코어·날짜·대회명을 최우선 활용\n' +
+          '2. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
+          '3. 전적 형식:\n' +
+          '   \uD83D\uDCCB 통산 전적: A팀 X승 X무 X패\n' +
+          '   \uD83D\uDCC5 주요 경기:\n' +
+          '   - YYYY.MM.DD [대회] 팀A X-X 팀B\n' +
+          '   \u26A1 역학 분석: [오행 관점]\n' +
+          '4. 한국어만, 베팅 금지\n' +
           '사용자 오행: ' + myOh;
 
         augUserContent = userText
-          + '\n\n[🔍 실시간 검색 결과]\n' + searchResult
-          + '\n\n위 결과를 바탕으로 경기 일정/전적을 정확히 전달하세요. 검색 결과에 있는 팀명·시간을 그대로 사용하세요.';
+          + '\n\n[\uD83D\uDD0D 검색 결과]\n' + searchResult
+          + '\n\n위 결과와 스포츠 지식으로 전적·스코어·날짜 포함 답변하세요.';
 
       } else {
-        // ── [모드 B] 데이터 결핍 → CGO "결핍의 분석" 자동 전환 ──
-        // 두 팀의 감독 생년월일 내장 DB
-        var managerDB = {
-          '레버쿠젠':  {name:'샤비 알론소',  birth:'1981-11-25', oh:'금(金)', num: 7},
-          '아스날':    {name:'미켈 아르테타', birth:'1982-03-26', oh:'수(水)', num: 5},
-          '맨유':      {name:'루벤 아모림',   birth:'1985-01-30', oh:'목(木)', num: 3},
-          '맨체스터 유나이티드': {name:'루벤 아모림', birth:'1985-01-30', oh:'목(木)', num: 3},
-          '맨시티':    {name:'펩 과르디올라', birth:'1971-01-18', oh:'토(土)', num: 2},
-          '맨체스터 시티': {name:'펩 과르디올라', birth:'1971-01-18', oh:'토(土)', num: 2},
-          '리버풀':    {name:'아르네 슬롯',   birth:'1978-09-22', oh:'화(火)', num: 9},
-          '첼시':      {name:'엔초 마레스카', birth:'1980-02-10', oh:'금(金)', num: 4},
-          '바르셀로나':{name:'한시 플릭',     birth:'1965-02-11', oh:'목(木)', num: 6},
-          '레알마드리드':{name:'카를로 안첼로티',birth:'1959-06-10',oh:'화(火)',num: 8},
-          '레알 마드리드':{name:'카를로 안첼로티',birth:'1959-06-10',oh:'화(火)',num: 8},
-          '바이에른':  {name:'뱅상 콩파니',   birth:'1986-04-10', oh:'목(木)', num: 5},
-          '바이에른 뮌헨':{name:'뱅상 콩파니', birth:'1986-04-10', oh:'목(木)', num: 5},
-          '도르트문트':{name:'니코 코바치',   birth:'1971-09-15', oh:'토(土)', num: 6},
+        // CGO 결핍의 분석 모드 (전적 질문에만 적용)
+        var managerDB2 = {
+          '\ub808\ubc84\ucfe8\uc820': {name:'\uc0e4\ube44 \uc54c\ub860\uc18c', birth:'1981-11-25', oh:'\uae08(\u91d1)', num:7},
+          '\uc544\uc2a4\ub0a0': {name:'\ubbf8\ucf08 \uc544\ub974\ud14c\ud0c0', birth:'1982-03-26', oh:'\uc218(\u6c34)', num:5},
+          '\ub9e8\uc720': {name:'\ub8e8\ubcca \uc544\ubaa8\ub9bc', birth:'1985-01-30', oh:'\ubaa9(\u6728)', num:3},
+          '\ub9e8\uccb4\uc2a4\ud130 \uc720\ub098\uc774\ud2f0\ub4dc': {name:'\ub8e8\ubcca \uc544\ubaa8\ub9bc', birth:'1985-01-30', oh:'\ubaa9(\u6728)', num:3},
+          '\ub9e8\uc2dc\ud2f0': {name:'\ud39c \uacfc\ub974\ub514\uc62c\ub77c', birth:'1971-01-18', oh:'\ud1a0(\u571f)', num:2},
+          '\ub9ac\ubc84\ud480': {name:'\uc544\ub974\ub124 \uc2ac\ub86f', birth:'1978-09-22', oh:'\ud654(\u706b)', num:9},
+          '\uccbc\uc2dc': {name:'\uc5d4\ucd08 \ub9c8\ub808\uc2a4\uce74', birth:'1980-02-10', oh:'\uae08(\u91d1)', num:4},
+          '\ubc14\ub974\uc140\ub85c\ub098': {name:'\ud55c\uc2dc \ud50c\ub9ad', birth:'1965-02-11', oh:'\ubaa9(\u6728)', num:6},
+          '\ub808\uc54c\ub9c8\ub4dc\ub9ac\ub4dc': {name:'\uce74\ub97c\ub85c \uc548\uccbc\ub85c\ud2f0', birth:'1959-06-10', oh:'\ud654(\u706b)', num:8},
+          '\ub808\uc54c \ub9c8\ub4dc\ub9ac\ub4dc': {name:'\uce74\ub97c\ub85c \uc548\uccbc\ub85c\ud2f0', birth:'1959-06-10', oh:'\ud654(\u706b)', num:8},
+          '\ubc14\uc774\uc5d0\ub978': {name:'\ubc59\uc0c1 \ucf69\ud30c\ub2c8', birth:'1986-04-10', oh:'\ubaa9(\u6728)', num:5},
+          '\ub3c4\ub974\ud2b8\ubb38\ud2b8': {name:'\ub2c8\ucf54 \ucf54\ubc14\uce58', birth:'1971-09-15', oh:'\ud1a0(\u571f)', num:6},
+          '\ud30c\ub9ac \uc0dd\uc81c\ub974\ub9dd': {name:'\ub8e8\uc774\uc2a4 \uc5d4\ub9ac\ucf00', birth:'1973-07-23', oh:'\ud654(\u706b)', num:8},
+          'PSG': {name:'\ub8e8\uc774\uc2a4 \uc5d4\ub9ac\ucf00', birth:'1973-07-23', oh:'\ud654(\u706b)', num:8},
+        };
+        var teamFoundedDB2 = {
+          '\ub808\ubc84\ucfe8\uc820': {year:1904, oh:'\ubaa9(\u6728)'},
+          '\uc544\uc2a4\ub0a0': {year:1886, oh:'\ud654(\u706b)'},
+          '\ub9e8\uc720': {year:1878, oh:'\ud1a0(\u571f)'},
+          '\ub9ac\ubc84\ud480': {year:1892, oh:'\uc218(\u6c34)'},
+          '\uccbc\uc2dc': {year:1905, oh:'\ub098\ubb34(\u6728)'},
+          '\ud1a0\ud2b8\ub144': {year:1882, oh:'\uc218(\u6c34)'},
+          '\ub9e8\uc2dc\ud2f0': {year:1880, oh:'\uae08(\u91d1)'},
+          '\ubc14\ub974\uc140\ub85c\ub098': {year:1899, oh:'\ud1a0(\u571f)'},
+          '\ub808\uc54c\ub9c8\ub4dc\ub9ac\ub4dc': {year:1902, oh:'\uc218(\u6c34)'},
+          '\ub808\uc54c \ub9c8\ub4dc\ub9ac\ub4dc': {year:1902, oh:'\uc218(\u6c34)'},
         };
 
-        // 질문에서 팀명 추출
-        var teamKeys = Object.keys(managerDB);
-        var foundManagers = [];
-        teamKeys.forEach(function(t){
-          if (userText.indexOf(t) !== -1) foundManagers.push({team: t, info: managerDB[t]});
+        var foundManagers2 = [];
+        var foundedStr2 = '';
+        Object.keys(managerDB2).forEach(function(t){
+          if (userText.indexOf(t)!==-1) foundManagers2.push({team:t, info:managerDB2[t]});
         });
-
-        // 팀 창단일 오행 DB
-        var teamFoundedDB = {
-          '레버쿠젠': {year:1904, oh:'목(木)', desc:'1904년 창단, 갑진년(甲辰) 목기운'},
-          '아스날':   {year:1886, oh:'화(火)', desc:'1886년 창단, 병술년(丙戌) 화기운'},
-          '맨유':     {year:1878, oh:'토(土)', desc:'1878년 창단, 무인년(戊寅) 토기운'},
-          '리버풀':   {year:1892, oh:'수(水)', desc:'1892년 창단, 임진년(壬辰) 수기운'},
-          '바르셀로나':{year:1899, oh:'토(土)', desc:'1899년 창단, 기해년(己亥) 토기운'},
-          '레알마드리드':{year:1902, oh:'수(水)', desc:'1902년 창단, 임인년(壬寅) 수기운'},
-          '레알 마드리드':{year:1902, oh:'수(水)', desc:'1902년 창단, 임인년(壬寅) 수기운'},
-        };
-
-        var foundedStr = '';
-        teamKeys.forEach(function(t){
-          if (userText.indexOf(t) !== -1 && teamFoundedDB[t]) {
-            foundedStr += '\n- ' + t + ': ' + teamFoundedDB[t].desc + ', 창단 오행=' + teamFoundedDB[t].oh;
+        Object.keys(teamFoundedDB2).forEach(function(t){
+          if (userText.indexOf(t)!==-1) {
+            var fd = teamFoundedDB2[t];
+            foundedStr2 += '\n- '+t+': '+fd.year+'\ub144 \ucc3d\ub2e8, \uc624\ud589='+fd.oh;
           }
         });
 
-        var managerStr = '';
-        if (foundManagers.length >= 2) {
-          managerStr = foundManagers.map(function(m){
-            return m.team + ' 감독 ' + m.info.name + '(생년월일 ' + m.info.birth + ', 오행 ' + m.info.oh + ', 생명수 ' + m.info.num + ')';
-          }).join(' vs ');
-        } else if (foundManagers.length === 1) {
-          managerStr = foundManagers[0].team + ' 감독 ' + foundManagers[0].info.name
-            + '(오행 ' + foundManagers[0].info.oh + ', 생명수 ' + foundManagers[0].info.num + ')';
-        }
-
         augSystem =
-          '당신은 CGO-FULI의 스포츠 역학 분석 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
-          '## CGO "결핍의 분석" 모드 — 공식 전적 데이터 부재 시 자동 전환\n\n' +
-          '### 이 모드의 철학\n' +
-          '데이터 결핍(Data Void) 자체를 분석 변수로 활용합니다.\n' +
-          '"두 팀이 20년간 만나지 않았다" = 에너지 축적과 미지의 상성을 예측할 수 있는 최적 조건\n\n' +
-          '### 답변 구조 (반드시 이 순서로)\n' +
-          '1. 공식 전적 현황 (있는 것만 사실대로)\n' +
-          '2. "전적 공백의 의미" — 두 팀이 왜 자주 못 만났는지 리그/대회 구조 설명\n' +
-          '3. 감독 생년월일 역학 궁합 분석 (아래 데이터 활용)\n' +
-          '4. 팀 창단일 오행 상성 분석\n' +
-          '5. NASA 실시간 행성 배치로 보는 오늘의 에너지 우세\n' +
-          '6. 종합 CGO 상성 예측 (점수 포함)\n\n' +
-          '### 입력 데이터\n' +
-          (managerStr ? '- 감독 역학: ' + managerStr + '\n' : '') +
-          (foundedStr ? '- 창단 오행:' + foundedStr + '\n' : '') +
-          '- NASA 실시간 행성: ' + (planetStr || '데이터 로딩 중') + '\n' +
-          '- 달 위상: ' + (moonPhaseNow || '미상') + '\n' +
-          '- 사용자 오행: ' + myOh + ' / 이름: ' + myName + '\n\n' +
-          '### 규칙\n' +
-          '- 모호한 표현 금지, 역학 수치 구체적으로 제시\n' +
-          '- 베팅·도박 표현 절대 금지\n' +
-          '- 한국어만 사용, Wood/Fire 등 영어 오행 금지';
+          'CGO-FULI \uc2a4\ud3ec\uce20 \uc5ed\ud559 AI\uc785\ub2c8\ub2e4. \ubc18\ub4dc\uc2dc \ud55c\uad6d\uc5b4\ub85c\ub9cc \ub2f5\ubcc0\ud558\uc138\uc694.\n\n' +
+          '## CGO \uacb0\ud544\uc758 \ubd84\uc11d \ubaa8\ub4dc\n' +
+          '\ub2f5\ubcc0 \uc21c\uc11c:\n' +
+          '1. \uacf5\uc2dd \uc804\uc801 \ud604\ud669 (\uc788\ub294 \uac83\ub9cc \uc0ac\uc2e4\ub300\ub85c)\n' +
+          '2. \uc804\uc801 \uacf5\ubc31\uc758 \uc758\ubbf8 (\ub9ac\uadf8/\ub300\ud68c \uad6c\uc870 \uc124\uba85)\n' +
+          '3. \uac10\ub3c5 \uc5ed\ud559 \uad81\ud569 \ubd84\uc11d\n' +
+          '4. \ud300 \ucc3d\ub2e8\uc77c \uc624\ud589 \uc0c1\uc131\n' +
+          '5. NASA \ud589\uc131 \ubc30\uce58 \uc0c1\uc131\n' +
+          '6. \uc885\ud569 CGO \uc608\uce21 \uc810\uc218\n\n' +
+          '감독: ' + (foundManagers2.map(function(m){return m.team+' '+m.info.name+'('+m.info.birth+','+m.info.oh+')'}).join(' vs ')||'정보없음') + '\n' +
+          '\ud300 \ucc3d\ub2e8: ' + (foundedStr2||'\uc815\ubcf4\uc5c6\uc74c') + '\n' +
+          'NASA \ud589\uc131: ' + (planetStr||'\ub85c\ub529\uc911') + '\n' +
+          '\ub2ec\uc704\uc0c1: ' + (moonPhaseNow||'\ubbf8\uc0c1') + '\n' +
+          '\uc0ac\uc6a9\uc790 \uc624\ud589: ' + myOh + '\n\n' +
+          '\ube0c\ud305 \uae08\uc9c0, \ud55c\uad6d\uc5b4\ub9cc';
 
-        augUserContent = userText
-          + '\n\n[데이터 완결성 체크 결과: 공식 전적 데이터 불충분]\n'
-          + '[CGO 결핍의 분석 모드 자동 전환 — 감독 역학·창단 오행·NASA 행성으로 상성 예측]\n'
-          + '위 시스템 데이터를 활용해 CGO 결핍의 분석 답변을 작성하세요.';
+        augUserContent = userText + '\n\n[\uc804\uc801 \ub370\uc774\ud130 \ubd80\uc871 \u2192 CGO \uacb0\ud544\uc758 \ubd84\uc11d \ubaa8\ub4dc]';
       }
 
       var augMessages = [{role:'system', content: augSystem}];
@@ -21400,7 +21673,7 @@ function sptAskAI(userText, isAuto) {
       sptRemoveTyping();
       var text = '';
       try { text = data.choices[0].message.content; } catch(e){}
-      if (!text) text = '분석을 완료하지 못했어요. 다시 질문해 주세요.';
+      if (!text) text = '\ubd84\uc11d\uc744 \uc644\ub8cc\ud558\uc9c0 \ubabb\ud588\uc5b4\uc694. \ub2e4\uc2dc \uc9c8\ubb38\ud574 \uc8fc\uc138\uc694.';
       text = text.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g,'').replace(/[\u0600-\u06FF]+/g,'');
       sptAddBubble('ai', text);
       _sptHistory.push({role:'assistant', content:text});
@@ -21464,7 +21737,17 @@ document.addEventListener('DOMContentLoaded', function() {
   var btn = document.querySelector('[data-page="sports"]');
   if (btn) btn.addEventListener('click', function() {
     sptUpdateMyEnergy();
-    sptRenderMatches(_sptCurrentTab);
+    // ── 오늘 경기 실시간 로딩 ──────────────────────────
+    var loadingEl = document.getElementById('spt-matches-list');
+    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">📡 오늘 경기 불러오는 중...</div>';
+    sptLoadTodayMatches(function(loaded) {
+      sptRenderMatches(_sptCurrentTab);
+      if (loaded) {
+        var todayStr2 = new Date().toLocaleDateString('ko-KR', {month:'numeric',day:'numeric'});
+        var countEl = document.getElementById('spt-today-count');
+        if (countEl) countEl.textContent = todayStr2 + ' 실시간 ' + SPT_MATCH_DB.soccer.length + '경기';
+      }
+    });
     // 첫 방문 시 AI 인사
     var box = document.getElementById('spt-chat-messages');
     if (box && box.children.length === 0) {
