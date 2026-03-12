@@ -20875,6 +20875,29 @@ var SPT_OH = {
   수: {color:'#60a5fa', bg:'rgba(96,165,250,0.12)', sport:'수영·조정', planet:'수성', en:'Water'}
 };
 
+
+// ── 팀 로고 캐시 (TheSportsDB) ────────────────────────────
+var _sptLogoCache = {};
+function sptGetCachedLogo(teamName) {
+  return _sptLogoCache[teamName] || '';
+}
+function sptPreloadLogos(matches) {
+  matches.forEach(function(m) {
+    [m.a, m.b].forEach(function(name) {
+      if (name && !_sptLogoCache[name] && !m.aLogo && !m.bLogo) {
+        fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(name))
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+            var team = d.teams && d.teams[0];
+            if (team && team.strTeamBadge) {
+              _sptLogoCache[name] = team.strTeamBadge;
+            }
+          }).catch(function(){});
+      }
+    });
+  });
+}
+
 // ── 오늘의 경기 DB (오행·역학 기반 자동 생성) ───────────
 var SPT_MATCH_DB = {
   soccer: [
@@ -20994,6 +21017,7 @@ function sptLoadTodayMatches(callback) {
               aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
     });
     console.log('[CGo-Fuli] 관리자 입력 경기 사용:', adminMatches.length + '개');
+    sptPreloadLogos(SPT_MATCH_DB.soccer);
     if (callback) callback(true, '관리자입력');
     return;
   }
@@ -21166,12 +21190,27 @@ function sptRenderMatches(tab) {
     html += '</div>';
     // VS 행
     html += '<div class="spt-vs">';
-    html += '<div class="spt-team">';
+    // 팀 로고 (API-Football + TheSportsDB)
+    var logoA = m.aLogo || sptGetCachedLogo(m.a);
+    var logoB = m.bLogo || sptGetCachedLogo(m.b);
+    var logoHtmlA = logoA ? ('<img src="'+logoA+'" width="32" height="32" style="object-fit:contain;margin-bottom:4px;display:block;margin:0 auto 4px;">') : ('<div style="width:32px;height:32px;border-radius:50%;background:'+ohA.bg+';display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto 4px;">⚽</div>');
+    var logoHtmlB = logoB ? ('<img src="'+logoB+'" width="32" height="32" style="object-fit:contain;margin-bottom:4px;display:block;margin:0 auto 4px;">') : ('<div style="width:32px;height:32px;border-radius:50%;background:'+ohB.bg+';display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto 4px;">⚽</div>');
+    // 실시간 스코어
+    var scoreHtml = '';
+    if (m.status && m.status !== 'NS' && m.aGoals !== null && m.bGoals !== null) {
+      var statusLabel = m.status === 'FT' ? '종료' : m.status === '1H' ? '전반' : m.status === 'HT' ? '하프타임' : m.status === '2H' ? '후반' : m.status;
+      scoreHtml = '<div style="font-size:18px;font-weight:900;color:#34d399;margin:4px 0;">'+m.aGoals+' - '+m.bGoals+'</div><div style="font-size:9px;color:#6ee7b7;">'+statusLabel+'</div>';
+    }
+    html += '<div class="spt-team" style="text-align:center;">';
+    html += logoHtmlA;
     html += '<div class="spt-team-name">'+m.a+'</div>';
     html += '<div class="spt-team-oh" style="background:'+ohA.bg+';color:'+ohA.color+';">'+m.aOh+' 오행</div>';
     html += '<div class="spt-team-stat">데이터 '+dataA+'%</div></div>';
-    html += '<div class="spt-vs-badge">VS</div>';
-    html += '<div class="spt-team">';
+    html += '<div class="spt-vs-badge" style="display:flex;flex-direction:column;align-items:center;">';
+    html += scoreHtml || '<span>VS</span>';
+    html += '</div>';
+    html += '<div class="spt-team" style="text-align:center;">';
+    html += logoHtmlB;
     html += '<div class="spt-team-name">'+m.b+'</div>';
     html += '<div class="spt-team-oh" style="background:'+ohB.bg+';color:'+ohB.color+';">'+m.bOh+' 오행</div>';
     html += '<div class="spt-team-stat">데이터 '+(100-dataA)+'%</div></div>';
