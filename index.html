@@ -5690,6 +5690,20 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 
 // ══ 글로벌 타임존 자동 최적화 ══
 // 브라우저 로컬 타임존 자동 감지 → 모든 날짜/시간 계산에 사용
+// ══ Groq 키 강제 갱신 (구 키 자동 제거) ══
+(function(){
+  var NEW_KEY = 'Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE=';
+  var decoded = '';
+  try { decoded = atob(NEW_KEY); } catch(e){}
+  var saved = localStorage.getItem('cgo_gemini_key') || '';
+  // 저장된 키가 새 키와 다르면 강제 교체
+  if (saved !== decoded) {
+    localStorage.removeItem('cgo_gemini_key');
+  }
+  // window 전역 키 항상 새 키로 설정
+  window.CG_GEMINI_KEY = decoded;
+})();
+
 var CGO_TZ = {
   offset: -(new Date().getTimezoneOffset()), // 분 단위 UTC 오프셋
   name: (function(){
@@ -19749,7 +19763,7 @@ function cgSend() {
 function cgCallClaude(userText, sendBtn) {
 
   // 키 로딩 — 3단계 폴백
-  var _BUILTIN = 'Z3NrX2pmM1FIdlFaVjJjck1YaXM5cVYxV0dkeWIzRllselk4MnpNbVY3NXV2WExvUWIzZmZsQ0o=';
+  var _BUILTIN = 'Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE=';
   if (!window.CG_GEMINI_KEY || window.CG_GEMINI_KEY.trim() === '') {
     // 1) localStorage
     var _saved = localStorage.getItem('cgo_gemini_key');
@@ -19880,7 +19894,7 @@ function cgCallClaude(userText, sendBtn) {
   messages.push({role:'user', content:userText});
 
   // ── Groq API 호출 (OpenAI 호환, 완전 무료) ──
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('https://c-go-fuli.vercel.app/api/groq', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -20032,7 +20046,7 @@ function cgCloseApiKeyModal() {
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; }
   else {
-    try { window.CG_GEMINI_KEY = atob('Z3NrX2pmM1FIdlFaVjJjck1YaXM5cVYxV0dkeWIzRllselk4MnpNbVY3NXV2WExvUWIzZmZsQ0o='); } catch(e){}
+    try { window.CG_GEMINI_KEY = atob('Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE='); } catch(e){}
   }
   document.addEventListener('DOMContentLoaded', function(){
     var kb = document.getElementById('cg-key-btn');
@@ -20214,7 +20228,7 @@ function cgEnterSend(e) {
   try { saved = localStorage.getItem('cgo_gemini_key') || ''; } catch(e){}
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; return; }
-  try { window.CG_GEMINI_KEY = atob('Z3NrX2pmM1FIdlFaVjJjck1YaXM5cVYxV0dkeWIzRllselk4MnpNbVY3NXV2WExvUWIzZmZsQ0o='); } catch(e){}
+  try { window.CG_GEMINI_KEY = atob('Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE='); } catch(e){}
 })();
 
 // ── 페이지 진입 감지 → cgInit 호출 ───────────────────────
@@ -20400,7 +20414,7 @@ function stkAISearch(companyName) {
     + '설립일은 법인 설립 또는 공식 창업일 기준. 정확히 모르면 연도만이라도 YYYY-01-01로.'
     + '반드시 JSON 하나만, 마크다운 없이.';
 
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('https://c-go-fuli.vercel.app/api/groq', {
     method: 'POST',
     headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
     body: JSON.stringify({
@@ -20911,7 +20925,7 @@ function runStockAnalysis() {
       var btn = document.getElementById('stk-analyze-btn');
       if (btn) { btn.disabled=true; btn.textContent='🤖 검색 중...'; }
       var prompt = '기업명: "'+searchVal+'"\nJSON만 답하세요: {"name":"","ticker":"","founded":"YYYY-MM-DD","country":"ISO2","sector":"한국어업종"}\n마크다운 없이 JSON만.';
-      fetch('https://api.groq.com/openai/v1/chat/completions',{
+      fetch('https://c-go-fuli.vercel.app/api/groq',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
         body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:150,temperature:0.1})
@@ -21815,7 +21829,7 @@ function sptAskAI(userText, isAuto) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2pmM1FIdlFaVjJjck1YaXM5cVYxV0dkeWIzRllselk4MnpNbVY3NXV2WExvUWIzZmZsQ0o='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   // ── 검색 필요 여부 판단 키워드 ─────────────────────────
@@ -21949,7 +21963,7 @@ function sptAskAI(userText, isAuto) {
           {role:'user',   content: _user3}
         ];
 
-        fetch('https://api.groq.com/openai/v1/chat/completions', {
+        fetch('https://c-go-fuli.vercel.app/api/groq', {
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
           body:JSON.stringify({model:'llama-3.3-70b-versatile', messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
@@ -22105,7 +22119,7 @@ function sptAskAI(userText, isAuto) {
       _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
       augMessages.push({role:'user', content: augUserContent});
 
-      return fetch('https://api.groq.com/openai/v1/chat/completions', {
+      return fetch('https://c-go-fuli.vercel.app/api/groq', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
         body: JSON.stringify({
@@ -22137,7 +22151,7 @@ function sptAskAI(userText, isAuto) {
 }
 
 function _sptFallbackAnswer(messages, apiKey, sendBtn) {
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('https://c-go-fuli.vercel.app/api/groq', {
     method: 'POST',
     headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
     body: JSON.stringify({model:'llama-3.3-70b-versatile', messages:messages, max_tokens:1200, temperature:0.75, stream:false})
@@ -22464,10 +22478,10 @@ function stkAiCallApi(userText) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2pmM1FIdlFaVjJjck1YaXM5cVYxV0dkeWIzRllselk4MnpNbVY3NXV2WExvUWIzZmZsQ0o='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrXzBoSFgxc0lRQThHTzNucjZNR0h2V0dkeWIzRllUQkdkU0RGall1bWNkdnZJbnpVUEhQZlE='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('https://c-go-fuli.vercel.app/api/groq', {
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
     body:JSON.stringify({model:'llama-3.3-70b-versatile', messages:messages, max_tokens:500, temperature:0.75, stream:false})
