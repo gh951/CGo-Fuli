@@ -6315,7 +6315,41 @@ function hltRunAnalysis(){
 }
 
 function _hvShowResult(seed,oh,sd){
-  var doneArr=_HV.scores.filter(function(v){return v>0;});var rawTotal=doneArr.length>0?Math.round(doneArr.reduce(function(a,b){return a+b;},0)/doneArr.length):0;
+  // ══ 18대 역학 시스템 NASA 연동성 가중치 (제미나이 설계) ══
+  // 행성트랜짓15 + 자미두수12 + 기문둔갑12 + 구성학10 + 주역10 + 태을신수8 + 사주8
+  // + 전체차트6 + 태양궁4 + 하우스4 + 합성차트3 + 카발라2 + 풍수2 + 육임1 + 수비학1 + 성명학1 + 관상손금1 + 타로0.5
+  var ILI_WEIGHTS = [
+    6,   // [0]  호흡(HRV) — 생체 직결
+    8,   // [1]  오장육부 — 체력 에너지
+    4,   // [2]  체온 — 활성도
+    1,   // [3]  관상 — 안면 에너지
+    1,   // [4]  손금 — 생명선
+    8,   // [5]  오행(사주명리) — NASA 오행 밀도 보정
+    12,  // [6]  자미두수 — 성좌 배치 기반
+    12,  // [7]  기문둔갑 — 전리층/지자기 보정
+    10,  // [8]  구성학 — 자전축/태양 고도각
+    10,  // [9]  주역 — 우주 변화 패턴
+    1,   // [10] 수비학 — 숫자 파동
+    1,   // [11] 성명학 — 음성 파동
+    15,  // [12] 달자리(행성 트랜짓) — 실시간 NASA 직결 ★최고★
+    4,   // [13] 점성술(태양궁) — 태양 활동 주기
+    8,   // [14] 태을신수 — 거대 행성 주기
+    2,   // [15] 카발라 — 진동수
+    0.5, // [16] 타로×달위상 — 심리 직관
+    6,   // [17] 자미두수궁위 — 하우스/합성차트 통합
+  ];
+  var weightedSum = 0, weightTotal = 0;
+  _HV.scores.forEach(function(sc, i) {
+    if (sc > 0 && ILI_WEIGHTS[i]) {
+      weightedSum += sc * ILI_WEIGHTS[i];
+      weightTotal += ILI_WEIGHTS[i];
+    }
+  });
+  var rawTotal = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
+  if (rawTotal === 0) {
+    var doneArr=_HV.scores.filter(function(v){return v>0;});
+    rawTotal=doneArr.length>0?Math.round(doneArr.reduce(function(a,b){return a+b;},0)/doneArr.length):0;
+  }
   // 생체 에너지 스캔 ILI 연동: bsFIli 점수가 있으면 총점에 5% 반영
   var bsIliEl = document.getElementById('bsFIli');
   var bsIliVal = bsIliEl ? parseInt(bsIliEl.textContent) : 0;
@@ -21558,7 +21592,13 @@ var _sptAnalyzed = null; // 마지막 분석 경기
 
 // ── 공명 점수 계산 ───────────────────────────────────────
 function sptCalcResonance(myOh, teamOh, ili, matchHour) {
-  // ══ 1. 오행 상생/상극 기반 점수 (기초) ══
+  // ══════════════════════════════════════════════════════
+  // CGO-FULI SRI(스포츠 공명 지수) 엔진 v3.0
+  // 제미나이 설계 × 7대 핵심 엔진 가중치 (100점 만점)
+  // 행성트랜짓25 + 기문둔갑18 + 자미두수15 + 구성학14 + 주역12 + 사주8 + 태을신수8 = 100
+  // ══════════════════════════════════════════════════════
+
+  // ── 오행 상생/상극 기반 (기초 베이스) ──
   var ohRel = {
     목:{생:['수'],극:['금'],피:['화'],설:['토']},
     화:{생:['목'],극:['수'],피:['토'],설:['금']},
@@ -21568,97 +21608,109 @@ function sptCalcResonance(myOh, teamOh, ili, matchHour) {
   };
   var rel = ohRel[myOh] || {생:[],극:[],피:[],설:[]};
   var base = 50;
-  if (rel['생'].indexOf(teamOh) >= 0) base += 20;      // 상생: 내가 생함
-  else if (rel['극'].indexOf(teamOh) >= 0) base += 10; // 상극: 내가 제압
-  else if (rel['피'].indexOf(teamOh) >= 0) base -= 8;  // 피극: 상대가 나를 극
-  else if (rel['설'].indexOf(teamOh) >= 0) base += 5;  // 설기: 에너지 흐름
-  else if (teamOh === myOh) base += 14;                // 비화: 동행
+  if (rel['생'].indexOf(teamOh) >= 0) base += 18;
+  else if (rel['극'].indexOf(teamOh) >= 0) base += 9;
+  else if (rel['피'].indexOf(teamOh) >= 0) base -= 8;
+  else if (rel['설'].indexOf(teamOh) >= 0) base += 4;
+  else if (teamOh === myOh) base += 12;
 
-  // ══ 2. ILI 18개 엔진 종합 반영 ══
   var scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
-  var engBonus = 0;
-
-  // 엔진 1: 호흡(HRV) — 경기 집중도
-  if (scores[0]) engBonus += (scores[0] - 65) * 0.08;
-  // 엔진 2: 오장육부 — 체력 에너지
-  if (scores[1]) engBonus += (scores[1] - 65) * 0.07;
-  // 엔진 3: 체온 — 활성도
-  if (scores[2]) engBonus += (scores[2] - 65) * 0.05;
-  // 엔진 4: 관상 — 시각적 에너지장
-  if (scores[3]) engBonus += (scores[3] - 65) * 0.04;
-  // 엔진 5: 손금 — 생명력
-  if (scores[4]) engBonus += (scores[4] - 65) * 0.04;
-  // 엔진 6: 오행 — 핵심 오행 에너지 (가중치 높음)
-  if (scores[5]) engBonus += (scores[5] - 65) * 0.12;
-  // 엔진 7: 자미두수 — 운명성
-  if (scores[6]) engBonus += (scores[6] - 65) * 0.08;
-  // 엔진 8: 기문둔갑 — 방위/시간 에너지
-  if (scores[7]) engBonus += (scores[7] - 65) * 0.08;
-  // 엔진 9: 구성학 — 공간 에너지
-  if (scores[8]) engBonus += (scores[8] - 65) * 0.05;
-  // 엔진 11: 수비학 — 숫자 공명
-  // 엔진 10: 주역(易經) — 변화 에너지
-  if (scores[9]) engBonus += (scores[9] - 65) * 0.05;   // 인덱스9 = 엔진10
-  if (scores[10]) engBonus += (scores[10] - 65) * 0.05;
-  // 엔진 12: 성명학 — 이름 에너지
-  if (scores[11]) engBonus += (scores[11] - 65) * 0.04;
-  // 엔진 13: 달자리 — 감정/직관
-  if (scores[12]) engBonus += (scores[12] - 65) * 0.07;
-  // 엔진 14: 점성술 — 행성 에너지
-  if (scores[13]) engBonus += (scores[13] - 65) * 0.06;
-  // 엔진 15: 주역 — 변화 괘상
-  if (scores[14]) engBonus += (scores[14] - 65) * 0.05;
-  // 엔진 16: 카발라 — 세피로트 생명나무
-  if (scores[15]) engBonus += (scores[15] - 65) * 0.04;
-  // 엔진 17: 타로×달위상 — 상징 에너지
-  if (scores[16]) engBonus += (scores[16] - 65) * 0.05;
-  // 엔진 18: 자미두수 궁위 — 심층 운명
-  if (scores[17]) engBonus += (scores[17] - 65) * 0.06;
-
-  // ══ 3. NASA 행성 에너지 반영 ══
-  var nasaBonus = 0;
   var np = window._nasaPlanets || {};
   var h = parseInt(matchHour) || 12;
-  // 화성(활동) — 경기 시간대 각도 공명
+
+  // ══ 7대 핵심 엔진 가중치 적용 (총 100점 기준) ══
+
+  // 1위. 행성 트랜짓 (NASA 직결) — 가중치 25%
+  // 실시간 행성 좌표 기반 경기 타이밍 결정
+  var w1_transit = 0;
   if (np.mars) {
-    var marsLon = np.mars.lon || 0;
-    var marsSync = Math.cos((marsLon - h * 15) * Math.PI / 180);
-    nasaBonus += marsSync * 4; // ±4점
+    var marsSync = Math.cos((( np.mars.lon||0) - h * 15) * Math.PI / 180);
+    w1_transit += marsSync * 8;  // 화성: 활동/승부 에너지 ±8
   }
-  // 목성(확장) — 긍정 에너지
-  if (np.jupiter) {
-    nasaBonus += np.jupiter.retro ? -3 : 3;
-  }
-  // 수성 역행 — 판단력 저하
-  if (np.mercury && np.mercury.retro) nasaBonus -= 3;
-  // 토성(제약) — 경직
-  if (np.saturn && np.saturn.retro) nasaBonus -= 2;
-  // 달 위상 보정
+  if (np.jupiter) w1_transit += np.jupiter.retro ? -5 : 6;  // 목성: 행운 에너지
+  if (np.mercury) w1_transit += np.mercury.retro ? -5 : 3;  // 수성: 판단력
+  if (np.venus)   w1_transit += np.venus.retro   ? -3 : 2;  // 금성: 조화
+  if (np.saturn)  w1_transit += np.saturn.retro  ? -4 : 1;  // 토성: 구조
   if (np.moon) {
-    var moonLon = np.moon.lon || 0;
-    var moonPhase = moonLon % 30; // 0~29
-    var moonBonus = moonPhase < 15 ? 2 : -1; // 상현 상승 / 하현 하강
-    nasaBonus += moonBonus;
+    var mPhase = (np.moon.lon||0) % 30;
+    w1_transit += mPhase < 15 ? 3 : -2; // 달 상현↑ / 하현↓
   }
+  if (np.sun) {
+    // 태양 황경 × 경기 시간 공명
+    var sunSync = Math.sin(((np.sun.lon||0) + h * 15) * Math.PI / 180);
+    w1_transit += sunSync * 3;
+  }
+  w1_transit = Math.round(w1_transit * 0.25); // 25% 가중
 
-  // ══ 4. 경기 시간 에너지 (십이지 시간) ══
-  var shichen = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
-  var shiOh   = ['수','토','목','목','토','화','화','토','금','금','토','수'];
-  var shiIdx  = Math.floor(((h + 1) % 24) / 2) % 12;
-  var shiOhVal = shiOh[shiIdx];
-  var timeBonus = 0;
-  if (shiOhVal === myOh) timeBonus += 5;          // 내 오행 시간대
-  else if (rel['생'].indexOf(shiOhVal) >= 0) timeBonus += 3;
-  else if (rel['피'].indexOf(shiOhVal) >= 0) timeBonus -= 3;
+  // 2위. 기문둔갑 — 가중치 18%
+  // 경기 시간/방위 에너지 × 사용자 에너지
+  var w2_gimon = 0;
+  if (scores[7]) w2_gimon += (scores[7] - 65) * 0.18; // 기문둔갑 엔진 직접 반영
+  var shiOh2 = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+  var shiIdx2 = Math.floor(((h + 1) % 24) / 2) % 12;
+  var shiV = shiOh2[shiIdx2];
+  if (shiV === myOh) w2_gimon += 6;
+  else if (rel['생'].indexOf(shiV) >= 0) w2_gimon += 4;
+  else if (rel['피'].indexOf(shiV) >= 0) w2_gimon -= 4;
+  w2_gimon = Math.round(w2_gimon * 0.18);
 
-  // ══ 5. cosmoSyncWarning 반영 ══
+  // 3위. 자미두수 — 가중치 15%
+  // 개인 명반 × 오늘 에너지
+  var w3_ziwei = 0;
+  if (scores[6])  w3_ziwei += (scores[6] - 65)  * 0.15; // 자미두수
+  if (scores[17]) w3_ziwei += (scores[17] - 65) * 0.08; // 자미두수 궁위
+  w3_ziwei = Math.round(w3_ziwei * 0.15);
+
+  // 4위. 구성학 — 가중치 14%
+  // 태양 고도각 × 초단위 타이밍
+  var w4_kusei = 0;
+  if (scores[8]) w4_kusei += (scores[8] - 65) * 0.14; // 구성학
+  if (np.sun) {
+    // 태양 고도 기반 시간 에너지
+    var sunH = Math.sin((h / 24) * Math.PI * 2);
+    w4_kusei += sunH * 3;
+  }
+  w4_kusei = Math.round(w4_kusei * 0.14);
+
+  // 5위. 주역 — 가중치 12%
+  // 변화 패턴 × 현재 상황 길흉
+  var w5_juyeok = 0;
+  if (scores[9])  w5_juyeok += (scores[9] - 65)  * 0.12; // 주역
+  if (scores[14]) w5_juyeok += (scores[14] - 65) * 0.06;
+  w5_juyeok = Math.round(w5_juyeok * 0.12);
+
+  // 6위. 사주명리(오행) — 가중치 8%
+  // 기본 오행 에너지 균형
+  var w6_saju = 0;
+  if (scores[5]) w6_saju += (scores[5] - 65) * 0.08; // 오행 엔진
+  if (scores[0]) w6_saju += (scores[0] - 65) * 0.04; // HRV(생체)
+  if (scores[1]) w6_saju += (scores[1] - 65) * 0.04; // 오장육부
+  w6_saju = Math.round(w6_saju * 0.08);
+
+  // 7위. 태을신수 — 가중치 8%
+  // 거대 행성 주기 × 거시적 흐름
+  var w7_taeul = 0;
+  if (np.jupiter && np.saturn) {
+    // 목성-토성 각도 (대합/삼합 확인)
+    var jsDiff = Math.abs((np.jupiter.lon||0) - (np.saturn.lon||0)) % 360;
+    if (jsDiff > 180) jsDiff = 360 - jsDiff;
+    if (jsDiff < 30) w7_taeul += 6;       // 합: 강한 에너지
+    else if (jsDiff > 150) w7_taeul -= 4; // 충: 불안정
+    else if (Math.abs(jsDiff - 120) < 20) w7_taeul += 4; // 삼합: 조화
+  }
+  if (scores[12]) w7_taeul += (scores[12] - 65) * 0.05; // 달자리
+  w7_taeul = Math.round(w7_taeul * 0.08);
+
+  // ══ cosmoSyncWarning 반영 ══
   var cosmoAdj = 0;
   if (typeof cosmoSyncWarning === 'function') {
     try { cosmoAdj = cosmoSyncWarning().adj || 0; } catch(e) {}
   }
 
-  // ══ 최종 합산 (55:45 = 역학:데이터) ══
-  var total = base + Math.round(engBonus) + Math.round(nasaBonus) + timeBonus + Math.round(cosmoAdj * 0.3);
+  // ══ 최종 SRI 합산 ══
+  // 오행 베이스(50%) + 7대 엔진(50%) 가중 평균
+  var engineTotal = w1_transit + w2_gimon + w3_ziwei + w4_kusei + w5_juyeok + w6_saju + w7_taeul;
+  var total = base + engineTotal + Math.round(cosmoAdj * 0.3);
   return Math.min(95, Math.max(30, total));
 }
 
