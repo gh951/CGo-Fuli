@@ -2918,6 +2918,57 @@ BAI = α·HRV + β·FCI
       padding:12px;background:rgba(212,168,67,.05);border-radius:10px"></div>
   </div>
 
+  <!-- 🎛️ 내 상태 커스텀 입력 (개인화) -->
+  <div id="customStatePanel" style="background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(59,130,246,.04));border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:18px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#34d399;letter-spacing:.06em;">🎛️ 내 상태 직접 입력</div>
+        <div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:2px;">스캔 없이 수동으로 입력하면 18개 엔진에 즉시 반영됩니다</div>
+      </div>
+      <button onclick="toggleCustomState()" style="font-size:10px;color:#34d399;background:none;border:1px solid rgba(16,185,129,.3);border-radius:8px;cursor:pointer;padding:4px 10px;">펼치기 ▾</button>
+    </div>
+    <div id="customStateBody" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">💓 HRV (심박변이도, ms)</div>
+          <input id="cst-hrv" type="number" min="0" max="150" placeholder="예: 55" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">😴 수면 (시간)</div>
+          <input id="cst-sleep" type="number" min="0" max="12" step="0.5" placeholder="예: 7.5" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">⚡ 현재 에너지 (1~10)</div>
+          <input id="cst-energy" type="number" min="1" max="10" placeholder="예: 7" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">😌 스트레스 (1~10)</div>
+          <input id="cst-stress" type="number" min="1" max="10" placeholder="예: 3" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">🌡️ 체온 (°C)</div>
+          <input id="cst-temp" type="number" min="35" max="42" step="0.1" placeholder="예: 36.5" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">🏃 운동 여부</div>
+          <select id="cst-exercise" style="width:100%;background:rgba(30,30,50,.9);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;">
+            <option value="">선택</option>
+            <option value="3">했음 (30분 이상)</option>
+            <option value="1">가볍게 했음</option>
+            <option value="0">안 했음</option>
+            <option value="-2">피로 누적</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;">📝 오늘의 컨디션 메모</div>
+        <textarea id="cst-memo" placeholder="예: 어제 늦게 잤음, 두통 있음, 기분 좋음..." rows="2" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12px;outline:none;resize:none;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif;"></textarea>
+      </div>
+      <button onclick="applyCustomState()" style="width:100%;padding:11px;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:.04em;">⚡ 18개 엔진에 즉시 반영</button>
+      <div id="cst-result" style="margin-top:8px;font-size:11px;color:#6ee7b7;text-align:center;display:none;"></div>
+    </div>
+  </div>
+
   <!-- 📊 전문가 리포트 -->
   <div id="expertReportPanel" style="background:linear-gradient(135deg,rgba(99,130,201,.07),rgba(212,168,67,.04));border:1px solid rgba(99,130,201,.25);border-radius:16px;padding:18px;margin-bottom:14px;display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -3211,6 +3262,14 @@ BAI = α·HRV + β·FCI
     </div>
   </div>
 <div class="page" id="page-report">
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <button onclick="cgoPrintReport()" style="flex:1;min-width:140px;padding:12px 16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:12px;color:#020817;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Noto Sans KR',sans-serif;">
+          🖨️ PDF 저장 / 인쇄
+        </button>
+        <button onclick="cgoCopyReport()" style="flex:1;min-width:140px;padding:12px 16px;background:rgba(99,130,201,.15);border:1px solid rgba(99,130,201,.3);border-radius:12px;color:#a5b4fc;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Noto Sans KR',sans-serif;">
+          📋 텍스트 복사
+        </button>
+      </div>
       <div id="reportContainer">
         <div class="report-wait">
           <div class="report-wait-icon">📜</div>
@@ -5525,6 +5584,95 @@ var HDB = {
 };
 
 // ── 내부 상태 ────────────────────────────────────────────
+
+// ══ 내 상태 커스텀 입력 함수 ══
+function toggleCustomState() {
+  var body = document.getElementById('customStateBody');
+  var btn = body ? body.previousElementSibling.querySelector('button') : null;
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '펼치기 ▾' : '접기 ▴';
+}
+
+function applyCustomState() {
+  var hrv     = parseFloat(document.getElementById('cst-hrv')?.value) || 0;
+  var sleep   = parseFloat(document.getElementById('cst-sleep')?.value) || 0;
+  var energy  = parseFloat(document.getElementById('cst-energy')?.value) || 0;
+  var stress  = parseFloat(document.getElementById('cst-stress')?.value) || 0;
+  var temp    = parseFloat(document.getElementById('cst-temp')?.value) || 0;
+  var exercise= parseFloat(document.getElementById('cst-exercise')?.value) || 0;
+  var memo    = document.getElementById('cst-memo')?.value || '';
+
+  // appState.bio 에 반영
+  if (!window.appState) window.appState = {};
+  if (!window.appState.bio) window.appState.bio = {};
+  if (hrv > 0)    window.appState.bio.hrv  = hrv;
+  if (temp > 0)   window.appState.bio.temp = temp;
+
+  // _HV 엔진에 직접 반영
+  // 엔진 1: 호흡(HRV) — hrv 기반
+  if (hrv > 0) {
+    var hrvScore = hrv >= 60 ? Math.min(95, 65 + (hrv-60)*0.5) : Math.max(35, 50 + (hrv-40));
+    _hvset(1, Math.round(hrvScore), 'HRV ' + hrv + 'ms — 커스텀 입력', true);
+    window._HV.bDone = true;
+  }
+  // 엔진 3: 체온
+  if (temp > 0) {
+    var tmpScore = temp >= 36 && temp <= 37 ? 80 : temp < 36 ? 55 : temp > 37.5 ? 50 : 70;
+    _hvset(3, tmpScore, '체온 ' + temp + '°C — 커스텀 입력', true);
+    window._HV.tmpDone = true;
+  }
+  // 에너지·스트레스로 엔진 2(오장육부) 보정
+  if (energy > 0 || stress > 0) {
+    var bioScore = 65;
+    if (energy > 0) bioScore += (energy - 5) * 3;   // 5 기준 ±15
+    if (stress > 0) bioScore -= (stress - 3) * 2;   // 3 기준 ±14
+    if (sleep > 0)  bioScore += (sleep - 6) * 2;    // 6시간 기준
+    bioScore += exercise;
+    bioScore = Math.min(95, Math.max(35, Math.round(bioScore)));
+    _hvset(2, bioScore, '컨디션 ' + bioScore + '점 — 커스텀 입력', true);
+  }
+
+  // ILI 재계산 트리거
+  if (typeof calcFullILI === 'function') {
+    setTimeout(calcFullILI, 100);
+  } else {
+    // bsFIli 직접 업데이트 추정
+    var iliEl = document.getElementById('bsFIli');
+    if (iliEl) {
+      var cur = parseInt(iliEl.textContent) || 70;
+      var adj = 0;
+      if (hrv >= 60) adj += 3; else if (hrv > 0 && hrv < 40) adj -= 5;
+      if (energy >= 7) adj += 2; else if (energy > 0 && energy < 4) adj -= 3;
+      if (stress >= 8) adj -= 4; else if (stress > 0 && stress <= 3) adj += 2;
+      var newILI = Math.min(99, Math.max(30, cur + adj));
+      iliEl.textContent = newILI;
+    }
+  }
+
+  // 스포츠 공명 재계산
+  if (typeof sptRenderMatches === 'function') {
+    setTimeout(function(){ sptRenderMatches(window._sptCurrentTab || 'all'); }, 200);
+  }
+
+  // 메모 저장
+  if (memo) localStorage.setItem('cgo_custom_memo', JSON.stringify({date: new Date().toISOString().slice(0,10), memo: memo}));
+
+  // 결과 표시
+  var res = document.getElementById('cst-result');
+  if (res) {
+    res.style.display = 'block';
+    var parts = [];
+    if (hrv > 0) parts.push('HRV ' + hrv + 'ms');
+    if (energy > 0) parts.push('에너지 ' + energy + '/10');
+    if (stress > 0) parts.push('스트레스 ' + stress + '/10');
+    if (temp > 0) parts.push('체온 ' + temp + '°C');
+    res.textContent = '✅ ' + parts.join(' · ') + ' → 18개 엔진 반영 완료!';
+    setTimeout(function(){ res.style.display='none'; }, 3000);
+  }
+}
+
 var _HV = {
   bDone:false, tDone:false, tmpDone:false, visDone:false,
   bScore:0, tScore:0, tmpScore:0, v4:0, v5:0,
@@ -5539,6 +5687,37 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 /* ══ 동적 통합 시드 (시시각각 변화) ══
    구성: 날짜(일) + 시간(분) + 생체(BAI) + NASA행성각도 + 출생데이터
    → 같은 날도 생체 스캔하면, 시간이 지나면, 행성이 움직이면 달라짐 */
+
+// ══ 글로벌 타임존 자동 최적화 ══
+// 브라우저 로컬 타임존 자동 감지 → 모든 날짜/시간 계산에 사용
+var CGO_TZ = {
+  offset: -(new Date().getTimezoneOffset()), // 분 단위 UTC 오프셋
+  name: (function(){
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e){ return 'UTC'; }
+  })(),
+  // 로컬 기준 오늘 날짜 문자열 (YYYY-MM-DD)
+  todayStr: function() {
+    var d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  },
+  // UTC 시간 → 로컬 시간 HH:MM 변환
+  utcToLocal: function(utcStr) {
+    if (!utcStr) return '—';
+    try {
+      var d = new Date(utcStr);
+      return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    } catch(e) { return '—'; }
+  },
+  // 로컬 날짜 포맷 (사용자 언어 자동)
+  fmt: function(date, opts) {
+    try {
+      var lang = navigator.language || 'ko-KR';
+      return date.toLocaleDateString(lang, opts);
+    } catch(e) { return date.toLocaleDateString('ko-KR', opts); }
+  }
+};
+console.log('[CGo-Fuli] 타임존 감지:', CGO_TZ.name, 'UTC'+( CGO_TZ.offset>=0?'+':'')+Math.round(CGO_TZ.offset/60));
+
 function getDynamicSeed(){
   var now = new Date();
   // 1. 시간 기반: 날짜 + 시 + 분(10분 단위)
@@ -20996,7 +21175,8 @@ function sptLeagueToType(league) {
 
 // ── 오늘 경기 동적 로딩 (TheSportsDB) ───────────────────
 function sptLoadTodayMatches(callback) {
-  var PROXY = 'https://c-go-fuli.vercel.app/api/matches';
+  var _tzParam = encodeURIComponent(CGO_TZ.name || 'Asia/Seoul');
+  var PROXY = 'https://c-go-fuli.vercel.app/api/matches?tz=' + _tzParam;
 
   // 관리자 직접 입력 경기 확인
   function getAdminMatches() {
@@ -21164,6 +21344,8 @@ function sptCalcResonance(myOh, teamOh, ili, matchHour) {
   // 엔진 9: 구성학 — 공간 에너지
   if (scores[8]) engBonus += (scores[8] - 65) * 0.05;
   // 엔진 11: 수비학 — 숫자 공명
+  // 엔진 10: 주역(易經) — 변화 에너지
+  if (scores[9]) engBonus += (scores[9] - 65) * 0.05;   // 인덱스9 = 엔진10
   if (scores[10]) engBonus += (scores[10] - 65) * 0.05;
   // 엔진 12: 성명학 — 이름 에너지
   if (scores[11]) engBonus += (scores[11] - 65) * 0.04;
@@ -21269,9 +21451,17 @@ function sptRenderMatches(tab) {
     var ohA = SPT_OH[m.aOh] || SPT_OH['목'];
     var ohB = SPT_OH[m.bOh] || SPT_OH['화'];
     var resonanceLabel = resA >= 80 ? '🔥 강한 공명' : resA >= 70 ? '✨ 공명 우세' : resA >= 60 ? '〰️ 보통 공명' : '❄️ 낮은 공명';
-    top3.push({idx:idx, match:m, resA:resA, totalA:totalA, totalB:totalB, stars:stars, icon:sportIcon[m.type]||'🏅'});
+    // ── TOP3: 종료(FT)·부전승(AWD) 제외, 미시작(NS)/진행중만 포함 ──
+    var st = m.status || 'NS';
+    var isOver = (st === 'FT' || st === 'AET' || st === 'PEN' || st === 'AWD' || st === 'WO');
+    if (!isOver) {
+      top3.push({idx:idx, match:m, resA:resA, totalA:totalA, totalB:totalB, stars:stars, icon:sportIcon[m.type]||'🏅'});
+    }
 
-    html += '<div class="spt-match-card" id="spt-card-'+idx+'" onclick="sptSelectMatch('+idx+')">';
+    // 종료 경기는 카드 반투명 처리
+    var isOverCard = (m.status === 'FT' || m.status === 'AET' || m.status === 'PEN');
+    var cardStyle = isOverCard ? ' style="opacity:0.5;"' : '';
+    html += '<div class="spt-match-card" id="spt-card-'+idx+'"'+cardStyle+' onclick="sptSelectMatch('+idx+')">';
     html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">';
     html += '<span style="font-size:14px;">'+(sportIcon[m.type]||'🏅')+'</span>';
     html += '<span style="font-size:10px;color:#a0afc0;font-weight:600;">'+m.league+'</span>';
@@ -21354,7 +21544,11 @@ function sptRenderTop3(items) {
     html += '<div style="font-size:10px;color:#a0afc0;">'+item.stars+'</div>';
     html += '</div></div>';
   });
-  el.innerHTML = html;
+  if (items.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px;">⏳ 오늘 예정된 경기가 없거나<br>모든 경기가 종료되었습니다</div>';
+  } else {
+    el.innerHTML = html;
+  }
 }
 
 // ── 탭 전환 ─────────────────────────────────────────────
@@ -21562,9 +21756,17 @@ function sptAskAI(userText, isAuto) {
     '## ⚙️ 18개 역학 엔진 실시간 수치 (CGO 독자 알고리즘)\n' + _engSummary + '\n\n' +
     '## 🪐 NASA JPL 실시간 행성 위치\n' + _nasaSummary + _cosmoWarn + '\n\n' +
 
-    '## ★ 언어 규칙 (최우선) ★\n' +
-    '- 반드시 100% 한국어로만 답변하세요\n' +
-    '- Wood, Fire 같은 영어 오행 표현 금지 → 목(木), 화(火) 등 한글로\n\n' +
+    '## ★ 언어 규칙 (절대 최우선 — 위반 불가) ★\n' +
+    '- 반드시 100% 순수 한국어로만 답변하세요\n' +
+    '- 중국어(真是, 令人 등), 일본어, 영어, 프랑스어 등 외국어 단어 절대 금지\n' +
+    '- Wood, Fire 같은 영어 오행 표현 금지 → 목(木), 화(火) 등 한글로\n' +
+    '- 외국어가 나오려는 순간 즉시 한국어로 교체하세요\n' +
+    '- 인사말은 항상 한국어로: "또 봐요" 대신 "다음에 또 질문해 주세요!" 등\n\n' +
+    '## ★ CGO-FULI 정체성 규칙 ★\n' +
+    '- 당신은 승패 예측 AI가 아닙니다. "내 에너지와 어느 팀이 공명하는가"를 분석하는 AI입니다\n' +
+    '- 예측이 실제 결과와 다를 수 있음을 항상 자연스럽게 안내하세요\n' +
+    '- "에너지 공명" 관점으로 분석하되, 베팅·도박 표현은 절대 금지\n' +
+    '- 대화 종료 인사 금지 — "또 봐요", "그럼 안녕히" 등 마무리 인사 하지 마세요\n\n' +
 
     '## 답변 방침\n' +
     '1. 사용자의 모든 질문에 성실하게 답변하세요. "해당 경기를 선택하세요" 같은 회피 답변 절대 금지.\n' +
@@ -22617,6 +22819,95 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:6px">MediaPipe FaceMesh + Hands</div>
   </div>
 </div>
+
+
+<script>
+// ══ 공명 리포트 PDF 자동 생성 ══
+function cgoPrintReport() {
+  var container = document.getElementById('reportContainer');
+  if (!container || container.querySelector('.report-wait')) {
+    alert('먼저 대시보드에서 계산을 완료해 주세요!');
+    return;
+  }
+  // 인쇄용 스타일 적용
+  var r = window.calcResult || {};
+  var name = r.name || '사용자';
+  var today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+  var ili = document.getElementById('bsFIli')?.textContent || '--';
+
+  var printWin = window.open('', '_blank', 'width=800,height=1000');
+  printWin.document.write(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>CGO-FULI 공명 리포트 — ${name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR',sans-serif; background:#fff; color:#111; padding:40px; }
+  .header { text-align:center; border-bottom:3px solid #d4a843; padding-bottom:24px; margin-bottom:28px; }
+  .logo { font-size:28px; font-weight:900; color:#d4a843; letter-spacing:.1em; }
+  .subtitle { font-size:13px; color:#666; margin-top:6px; }
+  .name-row { font-size:20px; font-weight:800; margin-top:12px; }
+  .ili-box { display:inline-block; background:#fffbeb; border:2px solid #d4a843; border-radius:12px; padding:12px 28px; margin-top:12px; }
+  .ili-num { font-size:48px; font-weight:900; color:#d4a843; }
+  .ili-label { font-size:11px; color:#999; }
+  .section { margin-bottom:24px; }
+  .sec-title { font-size:14px; font-weight:800; color:#333; border-left:4px solid #d4a843; padding-left:10px; margin-bottom:12px; }
+  .content { font-size:13px; line-height:1.8; color:#444; }
+  .footer { text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid #eee; font-size:11px; color:#999; }
+  @media print { body { padding:20px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">⚡ CGO-FULI</div>
+  <div class="subtitle">생체-우주 동기화 공명 분석 리포트</div>
+  <div class="name-row">📋 ${name}님의 에너지 리포트</div>
+  <div class="ili-box">
+    <div class="ili-num">${ili}</div>
+    <div class="ili-label">통합 라이프 인덱스 (ILI)</div>
+  </div>
+  <div style="font-size:11px;color:#999;margin-top:10px;">발행일: ${today} · 18개 역학 엔진 종합</div>
+</div>
+<div class="section">
+  <div class="sec-title">🔮 역학 종합 분석</div>
+  <div class="content">${container.innerText.slice(0, 2000)}</div>
+</div>
+<div class="footer">
+  ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
+  본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
+</div>
+</body>
+</html>`);
+  printWin.document.close();
+  setTimeout(function(){ printWin.print(); }, 800);
+}
+
+function cgoCopyReport() {
+  var container = document.getElementById('reportContainer');
+  if (!container || container.querySelector('.report-wait')) {
+    alert('먼저 대시보드에서 계산을 완료해 주세요!');
+    return;
+  }
+  var r = window.calcResult || {};
+  var name = r.name || '사용자';
+  var today = new Date().toLocaleDateString('ko-KR');
+  var ili = document.getElementById('bsFIli')?.textContent || '--';
+  var text = '⚡ CGO-FULI 공명 리포트\n'
+    + '━━━━━━━━━━━━━━━━━━━━\n'
+    + name + '님 · ILI ' + ili + '점\n'
+    + today + ' 기준\n'
+    + '━━━━━━━━━━━━━━━━━━━━\n'
+    + container.innerText.slice(0, 1500);
+  navigator.clipboard.writeText(text).then(function(){
+    alert('📋 리포트가 클립보드에 복사되었습니다!');
+  }).catch(function(){
+    alert('복사 실패 — 브라우저 권한을 확인해 주세요.');
+  });
+}
+</script>
 
 </body>
 </html>
