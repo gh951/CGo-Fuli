@@ -20996,8 +20996,9 @@ function sptLeagueToType(league) {
 
 // ── 오늘 경기 동적 로딩 (TheSportsDB) ───────────────────
 function sptLoadTodayMatches(callback) {
+  var PROXY = 'https://c-go-fuli.vercel.app/api/matches';
 
-  // ── localStorage 저장 경기 확인 (관리자 입력) ──────────
+  // 관리자 직접 입력 경기 확인
   function getAdminMatches() {
     try {
       var saved = localStorage.getItem('cgo_admin_matches');
@@ -21009,22 +21010,18 @@ function sptLoadTodayMatches(callback) {
     } catch(e) { return null; }
   }
 
-  // 관리자 입력 경기 있으면 최우선 사용
   var adminMatches = getAdminMatches();
   if (adminMatches && adminMatches.length > 0) {
     SPT_MATCH_DB.soccer = adminMatches.map(function(m) {
       return {a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
               aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
     });
-    console.log('[CGo-Fuli] 관리자 입력 경기 사용:', adminMatches.length + '개');
     sptPreloadLogos(SPT_MATCH_DB.soccer);
     if (callback) callback(true, '관리자입력');
     return;
   }
 
-  // ── 날짜 시드 폴백 (매일 다른 조합) ──────────────────────
-  // 주의: 아래는 실제 경기가 없을 때 보여주는 예시 경기입니다
-  // 실제 오늘 경기는 하단 "📅 오늘 경기 추가" 버튼으로 직접 입력하세요!
+  // 날짜 시드 폴백
   var FALLBACK_POOL = [
     {a:'레버쿠젠', b:'아스널', league:'UCL', time:'05:00', aOh:'목', bOh:'목'},
     {a:'레알 마드리드', b:'맨시티', league:'UCL', time:'05:00', aOh:'금', bOh:'수'},
@@ -21038,38 +21035,44 @@ function sptLoadTodayMatches(callback) {
     {a:'바이에른', b:'도르트문트', league:'분데스', time:'00:30', aOh:'금', bOh:'화'},
     {a:'전북 현대', b:'울산 HD', league:'K리그1', time:'19:00', aOh:'목', bOh:'화'},
     {a:'인천 유나이티드', b:'수원 삼성', league:'K리그1', time:'18:30', aOh:'수', bOh:'금'},
-    {a:'파리 생제르맹', b:'리버풀', league:'UCL', time:'05:00', aOh:'화', bOh:'화'},
-    {a:'맨유', b:'레알 소시에다드', league:'UEL', time:'05:00', aOh:'토', bOh:'화'},
-    {a:'서울 FC', b:'포항 스틸러스', league:'K리그1', time:'19:00', aOh:'화', bOh:'금'},
-    {a:'아스널', b:'리버풀', league:'EPL', time:'00:30', aOh:'목', bOh:'화'},
   ];
 
   var today = new Date();
   var seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
-  var picked = [], seen = {};
-  // 오늘 날짜 시드로 6개 선택 (매일 다른 조합)
-  for (var i = 0; i < FALLBACK_POOL.length && picked.length < 6; i++) {
-    var item = FALLBACK_POOL[(seed * 3 + i * 7) % FALLBACK_POOL.length];
-    var k = item.a + item.b;
-    if (!seen[k]) { seen[k] = true; picked.push(item); }
-  }
-  SPT_MATCH_DB.soccer = picked;
-  console.log('[CGo-Fuli] 날짜 시드 폴백 (시드:' + seed + ')');
 
-  // 상단에 안내 메시지 표시
-  var listEl = document.getElementById('spt-matches-list');
-  if (listEl) {
-    var notice = document.getElementById('spt-live-notice');
-    if (!notice) {
-      notice = document.createElement('div');
-      notice.id = 'spt-live-notice';
-      notice.style.cssText = 'background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#fbbf24;line-height:1.6;';
-      notice.innerHTML = '⚠️ <b>예시 경기</b>가 표시 중입니다.<br>실제 오늘 경기는 하단 <b>📅 오늘 경기 추가</b>에서 직접 입력하세요!';
-      listEl.parentNode.insertBefore(notice, listEl);
+  function applyFallback() {
+    var picked = [], seen = {};
+    for (var i=0; i<FALLBACK_POOL.length && picked.length<6; i++) {
+      var item = FALLBACK_POOL[(seed*3 + i*7) % FALLBACK_POOL.length];
+      var k = item.a+item.b;
+      if (!seen[k]) { seen[k]=true; picked.push(item); }
     }
+    SPT_MATCH_DB.soccer = picked;
+    sptPreloadLogos(picked);
+    if (callback) callback(false);
   }
 
-  if (callback) callback(false);
+  // Vercel 프록시 (API-Football 실시간)
+  fetch(PROXY)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var matches = data.matches || [];
+      if (matches.length === 0) { applyFallback(); return; }
+      SPT_MATCH_DB.soccer = matches.map(function(m) {
+        // 로고 캐시 저장
+        if (m.aLogo) _sptLogoCache[m.a] = m.aLogo;
+        if (m.bLogo) _sptLogoCache[m.b] = m.bLogo;
+        return {
+          a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
+          aOh:sptGetOh(m.a), bOh:sptGetOh(m.b), dateStr:m.date||'',
+          aLogo:m.aLogo||'', bLogo:m.bLogo||'',
+          aGoals:m.aGoals, bGoals:m.bGoals, status:m.status||'NS'
+        };
+      });
+      console.log('[CGo-Fuli] API-Football 실시간 ' + matches.length + '경기 ✅');
+      if (callback) callback(true, data.date);
+    })
+    .catch(function() { applyFallback(); });
 }
 
 function sptAdminAddMatch(a, b, league, time) {
@@ -21122,20 +21125,106 @@ var _sptAnalyzed = null; // 마지막 분석 경기
 
 // ── 공명 점수 계산 ───────────────────────────────────────
 function sptCalcResonance(myOh, teamOh, ili, matchHour) {
-  // 오행 상생/상극 관계
-  var birth = {목:{생:['수'],극:['금']}, 화:{생:['목'],극:['수']}, 토:{생:['화'],극:['목']}, 금:{생:['토'],극:['화']}, 수:{생:['금'],극:['토']}};
-  var rel = birth[myOh] || {생:[],극:[]};
-  var baseScore = 50;
-  if (rel['생'] && rel['생'].indexOf(teamOh) >= 0) baseScore += 18; // 상생
-  else if (rel['극'] && rel['극'].indexOf(teamOh) >= 0) baseScore += 8; // 상극(지배)
-  else if (teamOh === myOh) baseScore += 12; // 동행
-  else baseScore -= 5;
-  // ILI 보정
-  var iliBonus = Math.round((ili - 65) * 0.15);
-  // 시간 에너지 보정
+  // ══ 1. 오행 상생/상극 기반 점수 (기초) ══
+  var ohRel = {
+    목:{생:['수'],극:['금'],피:['화'],설:['토']},
+    화:{생:['목'],극:['수'],피:['토'],설:['금']},
+    토:{생:['화'],극:['목'],피:['금'],설:['수']},
+    금:{생:['토'],극:['화'],피:['수'],설:['목']},
+    수:{생:['금'],극:['토'],피:['목'],설:['화']}
+  };
+  var rel = ohRel[myOh] || {생:[],극:[],피:[],설:[]};
+  var base = 50;
+  if (rel['생'].indexOf(teamOh) >= 0) base += 20;      // 상생: 내가 생함
+  else if (rel['극'].indexOf(teamOh) >= 0) base += 10; // 상극: 내가 제압
+  else if (rel['피'].indexOf(teamOh) >= 0) base -= 8;  // 피극: 상대가 나를 극
+  else if (rel['설'].indexOf(teamOh) >= 0) base += 5;  // 설기: 에너지 흐름
+  else if (teamOh === myOh) base += 14;                // 비화: 동행
+
+  // ══ 2. ILI 18개 엔진 종합 반영 ══
+  var scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
+  var engBonus = 0;
+
+  // 엔진 1: 호흡(HRV) — 경기 집중도
+  if (scores[0]) engBonus += (scores[0] - 65) * 0.08;
+  // 엔진 2: 오장육부 — 체력 에너지
+  if (scores[1]) engBonus += (scores[1] - 65) * 0.07;
+  // 엔진 3: 체온 — 활성도
+  if (scores[2]) engBonus += (scores[2] - 65) * 0.05;
+  // 엔진 4: 관상 — 시각적 에너지장
+  if (scores[3]) engBonus += (scores[3] - 65) * 0.04;
+  // 엔진 5: 손금 — 생명력
+  if (scores[4]) engBonus += (scores[4] - 65) * 0.04;
+  // 엔진 6: 오행 — 핵심 오행 에너지 (가중치 높음)
+  if (scores[5]) engBonus += (scores[5] - 65) * 0.12;
+  // 엔진 7: 자미두수 — 운명성
+  if (scores[6]) engBonus += (scores[6] - 65) * 0.08;
+  // 엔진 8: 기문둔갑 — 방위/시간 에너지
+  if (scores[7]) engBonus += (scores[7] - 65) * 0.08;
+  // 엔진 9: 구성학 — 공간 에너지
+  if (scores[8]) engBonus += (scores[8] - 65) * 0.05;
+  // 엔진 11: 수비학 — 숫자 공명
+  if (scores[10]) engBonus += (scores[10] - 65) * 0.05;
+  // 엔진 12: 성명학 — 이름 에너지
+  if (scores[11]) engBonus += (scores[11] - 65) * 0.04;
+  // 엔진 13: 달자리 — 감정/직관
+  if (scores[12]) engBonus += (scores[12] - 65) * 0.07;
+  // 엔진 14: 점성술 — 행성 에너지
+  if (scores[13]) engBonus += (scores[13] - 65) * 0.06;
+  // 엔진 15: 주역 — 변화 괘상
+  if (scores[14]) engBonus += (scores[14] - 65) * 0.05;
+  // 엔진 16: 카발라 — 세피로트 생명나무
+  if (scores[15]) engBonus += (scores[15] - 65) * 0.04;
+  // 엔진 17: 타로×달위상 — 상징 에너지
+  if (scores[16]) engBonus += (scores[16] - 65) * 0.05;
+  // 엔진 18: 자미두수 궁위 — 심층 운명
+  if (scores[17]) engBonus += (scores[17] - 65) * 0.06;
+
+  // ══ 3. NASA 행성 에너지 반영 ══
+  var nasaBonus = 0;
+  var np = window._nasaPlanets || {};
   var h = parseInt(matchHour) || 12;
-  var timeBonus = Math.round(Math.sin(h / 24 * Math.PI * 2 + 1) * 6);
-  return Math.min(95, Math.max(35, baseScore + iliBonus + timeBonus));
+  // 화성(활동) — 경기 시간대 각도 공명
+  if (np.mars) {
+    var marsLon = np.mars.lon || 0;
+    var marsSync = Math.cos((marsLon - h * 15) * Math.PI / 180);
+    nasaBonus += marsSync * 4; // ±4점
+  }
+  // 목성(확장) — 긍정 에너지
+  if (np.jupiter) {
+    nasaBonus += np.jupiter.retro ? -3 : 3;
+  }
+  // 수성 역행 — 판단력 저하
+  if (np.mercury && np.mercury.retro) nasaBonus -= 3;
+  // 토성(제약) — 경직
+  if (np.saturn && np.saturn.retro) nasaBonus -= 2;
+  // 달 위상 보정
+  if (np.moon) {
+    var moonLon = np.moon.lon || 0;
+    var moonPhase = moonLon % 30; // 0~29
+    var moonBonus = moonPhase < 15 ? 2 : -1; // 상현 상승 / 하현 하강
+    nasaBonus += moonBonus;
+  }
+
+  // ══ 4. 경기 시간 에너지 (십이지 시간) ══
+  var shichen = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+  var shiOh   = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+  var shiIdx  = Math.floor(((h + 1) % 24) / 2) % 12;
+  var shiOhVal = shiOh[shiIdx];
+  var timeBonus = 0;
+  if (shiOhVal === myOh) timeBonus += 5;          // 내 오행 시간대
+  else if (rel['생'].indexOf(shiOhVal) >= 0) timeBonus += 3;
+  else if (rel['피'].indexOf(shiOhVal) >= 0) timeBonus -= 3;
+
+  // ══ 5. cosmoSyncWarning 반영 ══
+  var cosmoAdj = 0;
+  if (typeof cosmoSyncWarning === 'function') {
+    try { cosmoAdj = cosmoSyncWarning().adj || 0; } catch(e) {}
+  }
+
+  // ══ 최종 합산 (55:45 = 역학:데이터) ══
+  var total = base + Math.round(engBonus) + Math.round(nasaBonus) + timeBonus + Math.round(cosmoAdj * 0.3);
+  return Math.min(95, Math.max(30, total));
 }
 
 // ── 데이터 승률 계산 (의사난수) ──────────────────────────
@@ -21437,9 +21526,41 @@ function sptAskAI(userText, isAuto) {
   var nowD2 = new Date();
   var sptDateStr = nowD2.getFullYear()+'년 '+(nowD2.getMonth()+1)+'월 '+nowD2.getDate()+'일';
 
+  // ── 18개 엔진 데이터 수집 ──────────────────────────────
+  var _scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
+  var _engNames = ['호흡(HRV)','오장육부','체온','관상','손금','오행','자미두수','기문둔갑','구성학','_','수비학','성명학','달자리','점성술','주역','카발라','타로×달위상','자미두수궁위'];
+  var _engLines = [];
+  _scores.forEach(function(sc, i) {
+    if (sc > 0 && _engNames[i] && _engNames[i] !== '_') {
+      var lv = sc >= 80 ? '🔴 강' : sc >= 65 ? '🟡 중' : '🔵 약';
+      _engLines.push('  · ' + _engNames[i] + ': ' + sc + '점 ' + lv);
+    }
+  });
+  var _engSummary = _engLines.length > 0 ? _engLines.join('\n') : '  · (엔진 데이터 로딩 중)';
+
+  // NASA 행성 데이터
+  var _np = window._nasaPlanets || {};
+  var _nasaLines = [];
+  var _pnames = {sun:'☀️태양',moon:'🌙달',mars:'♂화성',venus:'♀금성',mercury:'☿수성',jupiter:'♃목성',saturn:'♄토성'};
+  Object.keys(_pnames).forEach(function(k) {
+    if (_np[k]) {
+      var retro = _np[k].retro ? ' Rx역행⚠️' : '';
+      _nasaLines.push('  · ' + _pnames[k] + ': ' + Math.round(_np[k].lon||0) + '°' + retro);
+    }
+  });
+  var _nasaSummary = _nasaLines.length > 0 ? _nasaLines.join('\n') : '  · (NASA 데이터 로딩 중)';
+
+  // cosmoSync 경고
+  var _cosmoWarn = '';
+  if (typeof cosmoSyncWarning === 'function') {
+    try { var _cw = cosmoSyncWarning(); if (_cw.warning) _cosmoWarn = '\n⚠️ 우주-생체 경고: ' + _cw.warning; } catch(e) {}
+  }
+
   var systemPrompt =
     '당신은 CGO-FULI 스포츠 에너지 분석 AI입니다. 이름은 "스포츠 에너지 AI"입니다.\n' +
     '사용자 정보: 이름=' + myName + ', 지배오행=' + myOh + ', 에너지 지수(ILI)=' + ili + ', 오늘=' + sptDateStr + '\n\n' +
+    '## ⚙️ 18개 역학 엔진 실시간 수치 (CGO 독자 알고리즘)\n' + _engSummary + '\n\n' +
+    '## 🪐 NASA JPL 실시간 행성 위치\n' + _nasaSummary + _cosmoWarn + '\n\n' +
 
     '## ★ 언어 규칙 (최우선) ★\n' +
     '- 반드시 100% 한국어로만 답변하세요\n' +
