@@ -1958,7 +1958,7 @@ function loadNASARealtimePlanets() {
         window._nasaPlanets = data;
         _applyNASAData(data, json);
         _setNASAStatus('live', json.source, json.jd);
-        console.log('[CGo-Fuli] NASA JPL 실시간 데이터 수신 ✅', json.source, 'JPL:', json.jpl_count||'?');
+        
       })
       .catch(function(err){
         _loadVSOP87Fallback();
@@ -5716,7 +5716,7 @@ var CGO_TZ = {
     } catch(e) { return date.toLocaleDateString('ko-KR', opts); }
   }
 };
-console.log('[CGo-Fuli] 타임존 감지:', CGO_TZ.name, 'UTC'+( CGO_TZ.offset>=0?'+':'')+Math.round(CGO_TZ.offset/60));
+// 타임존 감지 완료 (로그 제거됨)
 
 function getDynamicSeed(){
   var now = new Date();
@@ -19748,11 +19748,23 @@ function cgSend() {
 // ── Claude API 호출 (스트리밍) ──────────────────────────
 function cgCallClaude(userText, sendBtn) {
 
-  // 키 없으면 내장키 자동 복원
-  if (!window.CG_GEMINI_KEY) {
-    try { window.CG_GEMINI_KEY = atob('Z3NrX3doR09TTXk2Yk9GMXYzV2pHc1IzV0dkeWIzRllvcWJGZlRRS3FJa3FUdXlydUFhNFVIdmQ='); } catch(e){}
+  // 키 로딩 — 3단계 폴백
+  var _BUILTIN = 'Z3NrX3doR09TTXk2Yk9GMXYzV2pHc1IzV0dkeWIzRllvcWJGZlRRS3FJa3FUdXlydUFhNFVIdmQ=';
+  if (!window.CG_GEMINI_KEY || window.CG_GEMINI_KEY.trim() === '') {
+    // 1) localStorage
+    var _saved = localStorage.getItem('cgo_gemini_key');
+    if (_saved && _saved.trim()) {
+      window.CG_GEMINI_KEY = _saved.trim();
+    } else {
+      // 2) 내장 키
+      try { window.CG_GEMINI_KEY = atob(_BUILTIN); } catch(e){}
+    }
   }
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
+  // 3) apiKey 여전히 없으면 강제 복원
+  if (!apiKey) {
+    try { apiKey = atob(_BUILTIN); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+  }
 
   // ── 역학 데이터 수집 ──
   var r         = window.calcResult || {};
@@ -19935,8 +19947,20 @@ function cgCallClaude(userText, sendBtn) {
   })
   .catch(function(err) {
     cgRemoveTyping();
-    cgAddBubble('ai', '죄송해요, 잠시 연결이 원활하지 않아요 😅\n잠깐 후 다시 말씀해 주세요.', null);
+    var errMsg = (err && err.message) ? err.message : '';
+    var userMsg = '죄송해요, 잠시 연결이 원활하지 않아요 😅\n잠깐 후 다시 말씀해 주세요.';
+    if (errMsg.indexOf('401') >= 0 || errMsg.indexOf('invalid_api_key') >= 0) {
+      userMsg = '🔑 API 키 인증 오류입니다.\n설정(🔑)에서 새 Groq 키를 입력해 주세요.';
+      window.CG_GEMINI_KEY = '';
+      localStorage.removeItem('cgo_gemini_key');
+    } else if (errMsg.indexOf('429') >= 0 || errMsg.indexOf('rate') >= 0) {
+      userMsg = '⏳ 요청이 너무 많아요. 잠깐(30초) 후 다시 시도해 주세요!';
+    } else if (errMsg.indexOf('503') >= 0 || errMsg.indexOf('502') >= 0) {
+      userMsg = '🔧 Groq 서버가 잠시 점검 중이에요. 1~2분 후 다시 시도해 주세요.';
+    }
+    cgAddBubble('ai', userMsg, null);
     if (sendBtn) sendBtn.disabled = false;
+    console.error('[CGo-FULI] 상담 AI 오류:', errMsg);
   });
 }
 
@@ -21249,7 +21273,7 @@ function sptLoadTodayMatches(callback) {
           aGoals:m.aGoals, bGoals:m.bGoals, status:m.status||'NS'
         };
       });
-      console.log('[CGo-Fuli] API-Football 실시간 ' + matches.length + '경기 ✅');
+      
       if (callback) callback(true, data.date);
     })
     .catch(function() { applyFallback(); });
