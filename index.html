@@ -2800,10 +2800,7 @@ BAI = α·HRV + β·FCI
           border:none;border-radius:10px;color:#020817;font-weight:700;font-size:13px;cursor:pointer">
           ⚡ 스캔 시작
         </button>
-        <button onclick="bsFullscreen()" title="전체화면 스캔"
-          style="padding:12px 14px;background:rgba(56,189,248,.12);
-          border:1px solid rgba(56,189,248,.3);border-radius:10px;
-          color:#38bdf8;font-size:16px;cursor:pointer" title="모바일 전체화면">⛶</button>
+
         <button onclick="bsReset()"
           style="padding:12px 16px;background:rgba(255,255,255,.06);
           border:1px solid rgba(255,255,255,.1);border-radius:10px;
@@ -14955,6 +14952,148 @@ var BS_LM = [
 ];
 
 /* ── 캔버스 렌더링 ── */
+// ── 소형 캔버스 전용 경량 MediaPipe 시작 ──────────────────────
+function _bsStartSmallMediaPipe(videoEl){
+  // 이미 실행 중이면 스킵
+  if(BS._mpRunning) return;
+  BS._mpRunning = true;
+
+  // FaceMesh / Hands CDN
+  var baseUrl = 'https://cdn.jsdelivr.net/npm/@mediapipe/';
+  function loadScript(src, cb){
+    var s=document.createElement('script'); s.src=src; s.onload=cb; document.head.appendChild(s);
+  }
+
+  if(BS.mode === 'palm'){
+    // 손 추적
+    loadScript(baseUrl+'hands/hands.js', function(){
+      try{
+        var hands = new Hands({locateFile:function(f){ return baseUrl+'hands/'+f; }});
+        hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:.6,minTrackingConfidence:.5});
+        hands.onResults(function(r){
+          if(r.multiHandLandmarks&&r.multiHandLandmarks.length) _bsDrawSmallHand(r.multiHandLandmarks[0]);
+        });
+        BS._mpHands = hands;
+        (function loop(){
+          if(!BS.on||!videoEl||videoEl.readyState<2){ BS._mpRunning=false; return; }
+          hands.send({image:videoEl}).catch(function(){});
+          requestAnimationFrame(loop);
+        })();
+      }catch(e){ BS._mpRunning=false; }
+    });
+  } else {
+    // 얼굴 추적 (face + tongue 공통)
+    loadScript(baseUrl+'face_mesh/face_mesh.js', function(){
+      try{
+        var fm = new FaceMesh({locateFile:function(f){ return baseUrl+'face_mesh/'+f; }});
+        fm.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
+        fm.onResults(function(r){
+          if(r.multiFaceLandmarks&&r.multiFaceLandmarks.length){
+            BS._faceLms = r.multiFaceLandmarks[0];
+            if(BS.mode==='tongue') bsDrawTongue(2);
+            else _bsDrawSmallFace(BS._faceLms);
+          }
+        });
+        BS._mpFace = fm;
+        (function loop(){
+          if(!BS.on||!videoEl||videoEl.readyState<2){ BS._mpRunning=false; return; }
+          fm.send({image:videoEl}).catch(function(){});
+          requestAnimationFrame(loop);
+        })();
+      }catch(e){ BS._mpRunning=false; }
+    });
+  }
+}
+
+// ── 소형 캔버스: 실시간 얼굴 랜드마크 렌더링 ──────────────────
+function _bsDrawSmallFace(lms){
+  var cv=bsE('bsCanvas'); if(!cv) return;
+  if(!cv._ready){ var rect=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1; cv.width=Math.round(rect.width*dpr)||480; cv.height=Math.round(rect.height*dpr)||360; cv._ready=true; }
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  // 격자
+  ctx.strokeStyle='rgba(212,168,67,.10)'; ctx.lineWidth=.6;
+  for(var x=0;x<W;x+=W/14){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(var y=0;y<H;y+=H/10){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  function conn(idxs,color,w,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=w; ctx.setLineDash(dash||[]);
+    ctx.beginPath();
+    idxs.forEach(function(i,j){
+      if(!lms[i]) return;
+      var x=lms[i].x*W, y=lms[i].y*H;
+      j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 얼굴 윤곽 (점선)
+  conn([10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,10],'rgba(56,189,248,.30)',1.0,[4,3]);
+  // 눈 (실선)
+  conn([33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246,33],'rgba(56,189,248,.85)',1.5);
+  conn([362,382,381,380,374,373,390,249,263,466,388,387,386,385,384,398,362],'rgba(56,189,248,.85)',1.5);
+  // 눈썹 (점선)
+  conn([70,63,105,66,107,55,65,52,53,46],'rgba(212,168,67,.65)',1.2,[3,2]);
+  conn([300,293,334,296,336,285,295,282,283,276],'rgba(212,168,67,.65)',1.2,[3,2]);
+  // 코
+  conn([1,2,98,327,4,275,440,344,278],'rgba(212,168,67,.55)',1.0);
+  // 입
+  conn([61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146,61],'rgba(240,100,150,.85)',1.5);
+  // 핵심 점
+  [[468,'rgba(56,189,248,.95)',3.5],[473,'rgba(56,189,248,.95)',3.5],[4,'rgba(212,168,67,.9)',3.5],[61,'rgba(240,100,150,.9)',3],[291,'rgba(240,100,150,.9)',3]].forEach(function(kp){
+    if(!lms[kp[0]]) return;
+    var x=lms[kp[0]].x*W, y=lms[kp[0]].y*H;
+    ctx.beginPath(); ctx.arc(x,y,kp[2]+3,0,Math.PI*2); ctx.fillStyle=kp[1].replace(/[0-9.]+\)$/,'0.15)'); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,kp[2],0,Math.PI*2); ctx.fillStyle=kp[1]; ctx.fill();
+  });
+  // rPPG 혈색
+  var t2=Date.now()/1000, pulse=Math.sin(t2*(BS.bpm||72)/10)*.5+.5;
+  [[10,0.10],[234,0.08],[454,0.08]].forEach(function(p){
+    if(!lms[p[0]]) return;
+    var gx=lms[p[0]].x*W, gy=lms[p[0]].y*H;
+    var gr=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.10);
+    gr.addColorStop(0,'rgba(248,113,113,'+(p[1]+pulse*0.08)+')');
+    gr.addColorStop(1,'transparent');
+    ctx.fillStyle=gr; ctx.beginPath(); ctx.ellipse(gx,gy,W*0.10,H*0.08,0,0,Math.PI*2); ctx.fill();
+  });
+}
+
+// ── 소형 캔버스: 실시간 손 랜드마크 렌더링 ──────────────────
+function _bsDrawSmallHand(lms){
+  var cv=bsE('bsCanvas'); if(!cv) return;
+  if(!cv._ready){ var rect=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1; cv.width=Math.round(rect.width*dpr)||480; cv.height=Math.round(rect.height*dpr)||360; cv._ready=true; }
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  // 격자
+  ctx.strokeStyle='rgba(244,114,182,.08)'; ctx.lineWidth=.6;
+  for(var x=0;x<W;x+=W/14){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(var y=0;y<H;y+=H/10){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  function conn(idxs,color,w,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=w; ctx.setLineDash(dash||[]);
+    ctx.beginPath();
+    idxs.forEach(function(i,j){
+      if(!lms[i]) return;
+      var x=lms[i].x*W, y=lms[i].y*H;
+      j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 손가락 연결선
+  var fcs=['rgba(212,168,67,.7)','rgba(56,189,248,.7)','rgba(52,211,153,.7)','rgba(244,114,182,.7)','rgba(248,113,113,.7)'];
+  [[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]].forEach(function(f,fi){ conn(f,fcs[fi],1.8); });
+  // 손금선 (점선 강조)
+  conn([2,1,0],'rgba(244,114,182,.95)',2.0,[5,3]);
+  conn([17,14,11,8],'rgba(56,189,248,.95)',2.0,[5,3]);
+  conn([2,9,10],'rgba(212,168,67,.95)',2.0,[5,3]);
+  // 21개 점
+  var pcs=['rgba(212,168,67,.95)','rgba(56,189,248,.95)','rgba(52,211,153,.95)','rgba(244,114,182,.95)','rgba(248,113,113,.95)'];
+  lms.forEach(function(lm,i){
+    var x=lm.x*W, y=lm.y*H;
+    var big=[0,5,9,13,17].indexOf(i)>-1, r=big?4.5:2.8;
+    var ci=i<5?0:i<9?1:i<13?2:i<17?3:4;
+    ctx.beginPath(); ctx.arc(x,y,r+3,0,Math.PI*2); ctx.fillStyle=pcs[ci].replace(/[0-9.]+\)$/,'0.15)'); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=pcs[ci]; ctx.fill();
+  });
+}
+
 function bsDraw(phase){
   var cv = bsE('bsCanvas');
   if(!cv) return;
@@ -14976,7 +15115,10 @@ function bsDraw(phase){
   for(var x=0;x<W;x+=W/14){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
   for(var y=0;y<H;y+=H/10){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
 
-  if(phase < 2) return;  // 2단계부터 랜드마크 (즉시 표시로 변경됨)
+  // 실시간 MediaPipe 랜드마크 있으면 사용
+  if(BS._faceLms){ _bsDrawSmallFace(BS._faceLms); return; }
+
+  if(phase < 2) return;  // 2단계부터 고정 랜드마크
 
   var t = Date.now()/1000;
   var bpm = BS.bpm || 72;
@@ -15061,6 +15203,25 @@ function bsDrawTongue(phase){
 
   var cx=W*.5, cy=H*.54, rw=W*.3, rh=H*.16;
 
+  // 실시간 얼굴 랜드마크 있으면 입 위치 실시간 추적
+  if(BS._faceLms){
+    var lms=BS._faceLms;
+    // 입 중심 실시간 추적
+    if(lms[0]&&lms[17]){
+      cx = ((lms[61].x+lms[291].x)/2)*W;
+      cy = ((lms[0].y+lms[17].y)/2)*H;
+      rw = Math.abs(lms[291].x-lms[61].x)*W*0.55;
+      rh = Math.abs(lms[17].y-lms[0].y)*H*0.9+H*0.06;
+    }
+    // 입 윤곽 실시간 (점선)
+    ctx.beginPath(); ctx.strokeStyle='rgba(248,113,113,.6)'; ctx.lineWidth=1.8; ctx.setLineDash([5,3]);
+    [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146,61].forEach(function(i,j){
+      if(!lms[i]) return;
+      var x=lms[i].x*W, y=lms[i].y*H;
+      j===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }); ctx.stroke(); ctx.setLineDash([]);
+  }
+
   if(phase===1 || phase===2){
     // 입 윤곽 가이드
     ctx.beginPath();
@@ -15139,6 +15300,9 @@ function bsDrawPalm(phase){
   for(var x=0;x<W;x+=W/14){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
   for(var y=0;y<H;y+=H/10){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
 
+  // 실시간 MediaPipe 손 랜드마크 있으면 사용
+  if(BS._handLms){ _bsDrawSmallHand(BS._handLms); return; }
+
   if(phase < 2) return;
 
   var t = Date.now()/1000;
@@ -15208,6 +15372,8 @@ function bsDrawPalm(phase){
 function bsStart(){
   if(BS.on) return;
   BS.on=true; BS.sec=0;
+  // 이전 랜드마크 초기화
+  BS._faceLms=null; BS._handLms=null;
 
   // 목표값 랜덤 설정
   BS.bpm = bsI(68,80); BS.hrv = bsI(40,62);
@@ -15223,10 +15389,17 @@ function bsStart(){
   if(badge){ badge.style.background='rgba(52,211,153,.15)'; badge.style.color='#34d399'; badge.textContent='● 스캔 중'; }
   if(bsE('bsHrStatus')) bsE('bsHrStatus').textContent='● 측정 중';
 
-  // 카메라 → 전체화면으로 자동 전환
-  bsFullscreen();
-  // 스크롤 방지
-  document.body.style.overflow = 'hidden';
+  // 소형 카메라 직접 시작 (전체화면 없음)
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({video:{facingMode: BS.mode==='palm'?'environment':'user'}})
+      .then(function(s){
+        BS._stream = s;
+        var v=bsE('bsVideo');
+        if(v){ v.srcObject=s; v.style.display='block'; v.play(); }
+        // 소형 캔버스에 MediaPipe 연결
+        _bsStartSmallMediaPipe(v);
+      }).catch(function(){});
+  }
 
   // 캔버스 루프
   BS.cId = setInterval(function(){ if(BS.mode==='tongue') bsDrawTongue(2); else if(BS.mode==='palm') bsDrawPalm(2); else bsDraw(2); }, 48);
@@ -15649,6 +15822,10 @@ function bsLotto(ili){
 function bsReset(){
   clearInterval(BS.tId); clearInterval(BS.hId); clearInterval(BS.cId);
   BS.on=false; BS.sec=0; BS.faceData=null; BS.palmData=null;
+  BS._faceLms=null; BS._handLms=null; BS._mpRunning=false;
+  // 카메라 스트림 정리
+  if(BS._stream){ BS._stream.getTracks().forEach(function(t){t.stop();}); BS._stream=null; }
+  var v=bsE('bsVideo'); if(v){ v.srcObject=null; v.style.display='none'; }
   bsInitWave();
 
   bsSetMode('face');
@@ -15736,8 +15913,14 @@ function bsCloseFullscreen(){
   var wrap=document.getElementById('bsFullWrap');
   if(wrap) wrap.style.display='none';
   document.body.style.overflow = '';
+  if(document.exitFullscreen){document.exitFullscreen().catch(function(){});}
+  else if(document.webkitExitFullscreen){document.webkitExitFullscreen();}
   // 스캔 상태 리셋
   BS.on = false;
+  BS._faceLms=null; BS._handLms=null; BS._mpRunning=false;
+  // 소형 카메라 스트림 정리
+  if(BS._stream){ BS._stream.getTracks().forEach(function(t){t.stop();}); BS._stream=null; }
+  var v=bsE('bsVideo'); if(v){ v.srcObject=null; v.style.display='none'; }
   var btn=bsE('bsBtn');
   if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='⚡ 스캔 시작';}
 }
@@ -15840,6 +16023,9 @@ function _bsFsDrawFaceLandmarks(results){
   ctx.clearRect(0,0,W,H);
   if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length) return;
   var lms=results.multiFaceLandmarks[0];
+  // 소형 캔버스(bsCanvas)에도 실시간 랜드마크 저장 & 렌더링
+  BS._faceLms = lms;
+  _bsDrawSmallFace(lms);
 
   function conn(indices,color,width){
     ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash([]);
@@ -15910,6 +16096,9 @@ function _bsFsDrawHandLandmarks(results){
   ctx.clearRect(0,0,W,H);
   if(!results.multiHandLandmarks||!results.multiHandLandmarks.length) return;
   var lms=results.multiHandLandmarks[0];
+  // 소형 캔버스에도 실시간 손 랜드마크 저장 & 렌더링
+  BS._handLms = lms;
+  _bsDrawSmallHand(lms);
 
   function conn(idxs,color,w,dash){
     ctx.strokeStyle=color; ctx.lineWidth=w;
@@ -24249,10 +24438,6 @@ function starLaunchNavi(){
   if(_starState.naviUsed>=lim.navi){alert('오늘 네비 사용 한도를 초과했습니다.\n⭐ 별 플랜으로 업그레이드하면 60분/일 사용 가능합니다!');return;}
   var view=document.getElementById('star-navi-view');if(view)view.style.display='block';
   document.body.style.overflow='hidden';
-  // 전체화면 요청
-  var naviEl=document.getElementById('star-navi-view');
-  if(naviEl&&naviEl.requestFullscreen){naviEl.requestFullscreen().catch(function(){});}
-  else if(naviEl&&naviEl.webkitRequestFullscreen){naviEl.webkitRequestFullscreen();}
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
     .then(function(stream){_starState.naviStream=stream;var v=document.getElementById('star-navi-video');if(v)v.srcObject=stream;starStartCompass();starStartNaviTimer();})
     .catch(function(){starStartCompass();starStartNaviTimer();});
@@ -24313,8 +24498,6 @@ function starStopNavi(){
   if(_starState.compassWatcher){window.removeEventListener('deviceorientationabsolute',_starState.compassWatcher,true);window.removeEventListener('deviceorientation',_starState.compassWatcher,true);_starState.compassWatcher=null;}
   var view=document.getElementById('star-navi-view');if(view)view.style.display='none';
   document.body.style.overflow='';
-  if(document.exitFullscreen){document.exitFullscreen().catch(function(){});}
-  else if(document.webkitExitFullscreen){document.webkitExitFullscreen();}
   starRenderUI();
 }
 function starLaunchCam(){
@@ -24322,9 +24505,6 @@ function starLaunchCam(){
   if(_starState.objUsed>=lim.obj){alert('오늘 사물 분석 한도를 초과했습니다.\n⭐ 별 플랜으로 업그레이드하면 50회/일 가능합니다!');return;}
   var view=document.getElementById('star-cam-view');if(view)view.style.display='block';
   document.body.style.overflow='hidden';
-  // 카메라 뷰 전체화면
-  if(view&&view.requestFullscreen){view.requestFullscreen().catch(function(){});}
-  else if(view&&view.webkitRequestFullscreen){view.webkitRequestFullscreen();}
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
     .then(function(stream){_starState.camStream=stream;var v=document.getElementById('star-cam-video');if(v)v.srcObject=stream;})
     .catch(function(){alert('카메라 권한이 필요합니다.');var view=document.getElementById('star-cam-view');if(view)view.style.display='none';document.body.style.overflow='';});
@@ -24403,8 +24583,6 @@ function starStopCam(){
   if(_starState.camStream){_starState.camStream.getTracks().forEach(function(t){t.stop();});_starState.camStream=null;}
   var view=document.getElementById('star-cam-view');if(view)view.style.display='none';
   document.body.style.overflow='';
-  if(document.exitFullscreen){document.exitFullscreen().catch(function(){});}
-  else if(document.webkitExitFullscreen){document.webkitExitFullscreen();}
 }
 document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
