@@ -602,7 +602,7 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR',sa
 
 /* 로또 볼 */
 .lotto-balls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;justify-content:center}
-.lotto-ball{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);box-shadow:0 3px 10px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .2s;cursor:default;position:relative}
+.lotto-ball{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);box-shadow:0 3px 10px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .2s;cursor:default;position:relative}
 .lotto-ball:hover{transform:scale(1.12) translateY(-2px)}
 .lotto-ball::after{content:'';position:absolute;top:6px;left:8px;width:12px;height:8px;background:rgba(255,255,255,0.7);border-radius:50%;transform:rotate(-30deg)}
 .lotto-ball.bonus{border:2px dashed rgba(255,255,255,.6);background:linear-gradient(135deg,#6366f1,#8b5cf6)!important}
@@ -2230,11 +2230,12 @@ function updateTransitSectionWithNASA(planets) {
     <button class="nav-btn" data-page="report" title="정밀 분석 리포트">📜</button>
     <button class="nav-btn" data-page="gmd" title="풍수 카메라">📸</button>
     <button class="nav-btn" data-page="naming" title="작명 서비스">✍️</button>
+    <button class="nav-btn" data-page="star" title="⭐ 별 충전소" style="position:relative;">⭐<span style="position:absolute;top:1px;right:1px;font-size:7px;color:#fbbf24;font-weight:900;">FREE</span></button>
     <button class="nav-btn" data-page="consult" title="1대1 고민 상담">🔮</button>
     <button class="nav-btn" data-page="lotto" title="행운 번호 추출기">🎰</button>
     <button class="nav-btn" data-page="sports" title="스포츠 에너지 궁합">⚽</button>
     <button class="nav-btn" data-page="stock" title="주식 에너지 예측">📈</button>
-    <button class="nav-btn" data-page="vip" title="💎 VVIP 프리미엄" style="position:relative;background:linear-gradient(135deg,rgba(212,168,67,0.3),rgba(180,140,50,0.2));border:1px solid rgba(212,168,67,0.5);">💎<span style="position:absolute;top:1px;right:1px;font-size:7px;color:#d4a843;font-weight:900;">VIP</span></button>
+    <button id="vip-nav-btn" class="nav-btn vip-nav" title="💎 VVIP 프리미엄" style="position:relative;background:linear-gradient(135deg,rgba(212,168,67,0.3),rgba(180,140,50,0.2));border:1px solid rgba(212,168,67,0.5);">💎<span style="position:absolute;top:1px;right:1px;font-size:7px;color:#d4a843;font-weight:900;">VIP</span></button>
     <button class="nav-btn" data-page="shop" title="오행 맞춤 쇼핑" style="position:relative">🛍️<span style="position:absolute;top:2px;right:2px;width:6px;height:6px;background:#f87171;border-radius:50%;"></span></button>
   </nav>
   <button class="nav-btn" data-page="profile" title="프로필" style="margin-top:auto">👤</button>
@@ -3958,6 +3959,225 @@ var fcSystems = {
 
 
     <!-- ══ 작명 서비스 ══ -->
+
+<!-- ===================== ⭐ 별 충전소 페이지 ===================== -->
+<div class="page" id="page-star">
+<div style="padding:16px;max-width:480px;margin:0 auto;">
+
+  <!-- 헤더 -->
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:48px;margin-bottom:8px;animation:vipPulse 2s ease-in-out infinite;display:inline-block;">⭐</div>
+    <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:#fbbf24;letter-spacing:.1em;">별 충전소</div>
+    <div style="font-size:11px;color:rgba(251,191,36,0.7);margin-top:4px;">CGO-FULI 에너지 화폐 시스템</div>
+  </div>
+
+  <!-- 현재 보유 별 -->
+  <div style="background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06));border:1px solid rgba(251,191,36,0.4);border-radius:16px;padding:18px;text-align:center;margin-bottom:16px;">
+    <div style="font-size:11px;color:rgba(251,191,36,0.7);margin-bottom:6px;letter-spacing:.08em;">현재 보유 별</div>
+    <div style="font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#fbbf24;" id="star-count">0</div>
+    <div style="font-size:10px;color:rgba(251,191,36,0.5);margin-top:4px;" id="star-plan-label">무료 플랜</div>
+    <!-- 일일 사용 현황 -->
+    <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;">
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--text-3);">도보 네비</div>
+        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-navi-left">10분 남음</div>
+      </div>
+      <div style="width:1px;background:rgba(251,191,36,0.2);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--text-3);">인상 분석</div>
+        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-face-left">2회 남음</div>
+      </div>
+      <div style="width:1px;background:rgba(251,191,36,0.2);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--text-3);">사물 분석</div>
+        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-obj-left">3회 남음</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 플랜 선택 -->
+  <div style="font-size:11px;color:rgba(251,191,36,0.7);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">📋 플랜 선택</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+    <!-- 무료 플랜 -->
+    <div id="plan-free" onclick="starSelectPlan('free')" style="border:2px solid rgba(251,191,36,0.5);border-radius:14px;padding:14px;cursor:pointer;transition:all .3s;background:rgba(251,191,36,0.05);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">🆓</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;">무료 플랜</div>
+            <div style="font-size:10px;color:var(--text-3);">매일 자동 충전</div>
+          </div>
+        </div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#34d399;">0원</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#e2e8f0;">10분/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#e2e8f0;">2회/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#e2e8f0;">3회/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">📊 분석 결과 <b style="color:#e2e8f0;">%표시</b></div>
+      </div>
+    </div>
+
+    <!-- 별 플랜 -->
+    <div id="plan-star" onclick="starSelectPlan('star')" style="border:2px solid rgba(251,191,36,0.2);border-radius:14px;padding:14px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:8px;right:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;font-size:9px;font-weight:900;padding:2px 8px;border-radius:10px;">POPULAR</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">⭐</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#fbbf24;">별 플랜</div>
+            <div style="font-size:10px;color:var(--text-3);">월정액 구독</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#fbbf24;">4,900원</div>
+          <div style="font-size:9px;color:var(--text-3);text-align:right;">/월</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#fbbf24;">60분/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#fbbf24;">30회/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#fbbf24;">50회/일</b></div>
+        <div style="font-size:10px;color:var(--text-3);">📊 분석 결과 <b style="color:#fbbf24;">%상세표시</b></div>
+      </div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(251,191,36,0.15);">
+        <div style="font-size:10px;color:rgba(251,191,36,0.8);">✦ AI 언어 분석 답변 포함 &nbsp;✦ 우선 서버 접속</div>
+      </div>
+    </div>
+
+    <!-- VVIP 플랜 -->
+    <div id="plan-vip" onclick="starSelectPlan('vip')" style="border:2px solid rgba(212,168,67,0.2);border-radius:14px;padding:14px;cursor:pointer;transition:all .3s;background:rgba(212,168,67,0.04);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">💎</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#d4a843;">VVIP 프리미엄</div>
+            <div style="font-size:10px;color:var(--text-3);">단건 구매</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#d4a843;">50,000원</div>
+          <div style="font-size:9px;color:var(--text-3);text-align:right;">/회</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:var(--text-3);">💎 18대 역학 <b style="color:#d4a843;">심층분석</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기능 미리보기 -->
+  <div style="font-size:11px;color:rgba(251,191,36,0.7);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">🔭 별 기능 미리보기</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+
+    <!-- 도보 네비 -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">🗺️</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;">방위 에너지 도보 네비</div>
+            <div style="font-size:10px;color:var(--text-3);">기문둔갑 × GPS × 나침반 AR</div>
+          </div>
+        </div>
+        <button onclick="starLaunchNavi()" style="padding:5px 12px;border-radius:20px;background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(16,185,129,0.1));border:1px solid rgba(52,211,153,0.4);color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">▶ 시작</button>
+      </div>
+      <!-- AR 뷰 미리보기 -->
+      <div id="star-navi-view" style="display:none;background:#000;border-radius:10px;overflow:hidden;position:relative;height:200px;">
+        <video id="star-navi-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;opacity:0.8;"></video>
+        <canvas id="star-navi-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);border-radius:20px;padding:4px 12px;">
+          <div style="font-size:11px;color:#34d399;text-align:center;" id="star-navi-info">나침반 초기화 중...</div>
+        </div>
+        <button onclick="starStopNavi()" style="position:absolute;top:8px;right:8px;background:rgba(248,113,113,0.8);border:none;border-radius:20px;color:#fff;font-size:10px;padding:3px 10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">■ 종료</button>
+      </div>
+    </div>
+
+    <!-- 인상+사물 분석 -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">📸</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#e2e8f0;">에너지 사진 분석</div>
+            <div style="font-size:10px;color:var(--text-3);">인상·사물·색상 → 오행 에너지 %</div>
+          </div>
+        </div>
+        <button onclick="starLaunchCam()" style="padding:5px 12px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,0.2),rgba(124,58,237,0.1));border:1px solid rgba(167,139,250,0.4);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">📷 촬영</button>
+      </div>
+      <div id="star-cam-view" style="display:none;">
+        <!-- 안내 문구 -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:8px 10px;background:rgba(167,139,250,0.1);border-radius:8px;border:1px solid rgba(167,139,250,0.2);">
+          <span style="font-size:14px;">💡</span>
+          <span style="font-size:10px;color:rgba(226,232,240,0.8);line-height:1.5;">분석할 <b style="color:#a78bfa;">사물·옷·가구·얼굴</b> 을<br>아래 <b style="color:#fbbf24;">노란 네모칸</b> 안에 맞춰 주세요!</span>
+        </div>
+        <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;height:260px;margin-bottom:8px;">
+          <video id="star-cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+          <canvas id="star-cam-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+          <!-- 가이드 네모칸 -->
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:65%;height:70%;border:2.5px dashed rgba(251,191,36,0.85);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,0.25);pointer-events:none;">
+            <!-- 모서리 강조 -->
+            <div style="position:absolute;top:-3px;left:-3px;width:18px;height:18px;border-top:4px solid #fbbf24;border-left:4px solid #fbbf24;border-radius:4px 0 0 0;"></div>
+            <div style="position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-top:4px solid #fbbf24;border-right:4px solid #fbbf24;border-radius:0 4px 0 0;"></div>
+            <div style="position:absolute;bottom:-3px;left:-3px;width:18px;height:18px;border-bottom:4px solid #fbbf24;border-left:4px solid #fbbf24;border-radius:0 0 0 4px;"></div>
+            <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-bottom:4px solid #fbbf24;border-right:4px solid #fbbf24;border-radius:0 0 4px 0;"></div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+              <div style="font-size:10px;color:rgba(251,191,36,0.7);background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:10px;">여기에 맞춰주세요</div>
+            </div>
+          </div>
+          <button onclick="starSnapPhoto()" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:3px solid #fff;cursor:pointer;font-size:22px;box-shadow:0 2px 12px rgba(167,139,250,0.5);">📸</button>
+          <button onclick="starStopCam()" style="position:absolute;top:8px;right:8px;background:rgba(248,113,113,0.8);border:none;border-radius:20px;color:#fff;font-size:10px;padding:3px 10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">■ 닫기</button>
+        </div>
+      </div>
+      <!-- 분석 결과 -->
+      <div id="star-cam-result" style="display:none;background:var(--bg-panel);border-radius:12px;padding:14px;margin-top:8px;">
+        <!-- 결과 헤더 -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span style="font-size:16px;">⚡</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#a78bfa;">에너지 분석 결과</div>
+            <div style="font-size:10px;color:var(--text-3);">오행(五行) 에너지 비율</div>
+          </div>
+        </div>
+        <!-- 오행 설명 한 줄 -->
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(248,113,113,0.15);color:#f87171;">🔴화=불·열정</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(52,211,153,0.15);color:#34d399;">🟢목=나무·성장</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(96,165,250,0.15);color:#60a5fa;">🔵수=물·지혜</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(167,139,250,0.15);color:#a78bfa;">🟣금=쇠·결단</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(251,191,36,0.15);color:#fbbf24;">🟡토=흙·안정</span>
+        </div>
+        <!-- 게이지 바 -->
+        <div id="star-oh-bars" style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;"></div>
+        <!-- 쉬운 설명 카드 -->
+        <div id="star-cam-comment" style="border-radius:10px;border:1px solid rgba(167,139,250,0.2);background:rgba(167,139,250,0.05);padding:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 구독 버튼 -->
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+    <button onclick="starSubscribe('star')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;color:#000;font-size:14px;font-weight:900;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:.05em;">⭐ 별 플랜 구독 — 월 4,900원</button>
+    <button onclick="starSubscribe('vip')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#d4a843,#a07830);border:none;color:#000;font-size:14px;font-weight:900;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:.05em;">💎 VVIP 프리미엄 — 50,000원</button>
+  </div>
+
+  <!-- 안내 -->
+  <div style="text-align:center;padding:10px;border:1px solid rgba(251,191,36,0.15);border-radius:10px;background:rgba(251,191,36,0.03);">
+    <div style="font-size:10px;color:rgba(251,191,36,0.5);line-height:1.7;">
+      ✦ 모든 분석은 역학 참고자료입니다<br>
+      ✦ 온디바이스 AI 기반 — 개인정보 서버 전송 없음<br>
+      ✦ 별 기능은 GPS·카메라 권한이 필요합니다
+    </div>
+  </div>
+
+</div>
+</div>
+<!-- /page-star -->
+
     <div class="page" id="page-naming">
       <div class="naming-wrap">
 
@@ -5148,17 +5368,33 @@ var fcSystems = {
       <!-- 서비스 미리보기 -->
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;text-align:left;">
         <div style="font-size:10px;color:rgba(212,168,67,0.6);letter-spacing:.08em;margin-bottom:4px;">💎 VVIP 전용 서비스</div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border:1px solid rgba(212,168,67,0.15);">
-          <span style="font-size:14px;">📈</span><span style="font-size:11px;color:#e2e8f0;">퀀텀 주식 — 운명적 매수 타이밍 분석</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(52,211,153,0.07);border-radius:10px;border:1px solid rgba(52,211,153,0.25);">
+          <span style="font-size:20px;flex-shrink:0;">📈</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#34d399;">퀀텀 주식</div>
+            <div style="font-size:10px;color:rgba(226,232,240,0.75);line-height:1.5;margin-top:2px;">내 에너지 심층 분석<br>전 세계 약 22,000개 중 최고 궁합 5개 추천</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border:1px solid rgba(212,168,67,0.15);">
-          <span style="font-size:14px;">🎰</span><span style="font-size:11px;color:#e2e8f0;">공명 로또 — 18대 역학 정밀 번호 산출</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(212,168,67,0.07);border-radius:10px;border:1px solid rgba(212,168,67,0.25);">
+          <span style="font-size:20px;flex-shrink:0;">🎰</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#d4a843;">공명 숫자</div>
+            <div style="font-size:10px;color:rgba(226,232,240,0.75);line-height:1.5;margin-top:2px;">18대 역학 정밀 번호 산출</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border:1px solid rgba(212,168,67,0.15);">
-          <span style="font-size:14px;">⚽</span><span style="font-size:11px;color:#e2e8f0;">SRI 프로 — 선수 상성 심층 분석</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(167,139,250,0.07);border-radius:10px;border:1px solid rgba(167,139,250,0.25);">
+          <span style="font-size:20px;flex-shrink:0;">⚽</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#a78bfa;">SRI 프로</div>
+            <div style="font-size:10px;color:rgba(226,232,240,0.75);line-height:1.5;margin-top:2px;">선수 상성 심층 분석</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,168,67,0.05);border-radius:8px;border:1px solid rgba(212,168,67,0.15);">
-          <span style="font-size:14px;">🔮</span><span style="font-size:11px;color:#e2e8f0;">AI 마스터 — 18엔진 Chain of Thought 상담</span>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(248,113,113,0.07);border-radius:10px;border:1px solid rgba(248,113,113,0.25);">
+          <span style="font-size:20px;flex-shrink:0;">🔮</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#f87171;">AI 마스터</div>
+            <div style="font-size:10px;color:rgba(226,232,240,0.75);line-height:1.5;margin-top:2px;">18엔진 과학적 추론<br>심층 상담</div>
+          </div>
         </div>
       </div>
     </div>
@@ -13742,7 +13978,7 @@ function cgoSoftGo(pageId) {
 }
 // ══ /소프트 안내 시스템 ══════════════════════════════════════
 
-var pageTitles={dashboard:'',scan:'실시간 생체 스캔',family:'가족 ILI 관리',algo:'🩺 AI 통합 건강 예측',report:'정밀 분석 리포트',profile:'프로필·설정',gmd:'📸 풍수 카메라',fengcam:'📸 풍수 카메라',naming:'✍️ 작명 서비스',consult:'🔮 1대1 고민 상담',lotto:'🎰 행운 번호',sports:'⚽ 스포츠 에너지 궁합',stock:'📈 주식 에너지 예측',shop:'🛍️ 오행 맞춤 쇼핑',vip:'💎 VVIP 프리미엄 분석'};
+var pageTitles={dashboard:'',scan:'실시간 생체 스캔',family:'가족 ILI 관리',algo:'🩺 AI 통합 건강 예측',report:'정밀 분석 리포트',profile:'프로필·설정',gmd:'📸 풍수 카메라',fengcam:'📸 풍수 카메라',naming:'✍️ 작명 서비스',consult:'🔮 1대1 고민 상담',lotto:'🎰 행운 번호',sports:'⚽ 스포츠 에너지 궁합',stock:'📈 주식 에너지 예측',shop:'🛍️ 오행 맞춤 쇼핑',vip:'💎 VVIP 프리미엄 분석',star:'⭐ 별 충전소'};
 document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
   btn.addEventListener('click',function(){
     var page=this.getAttribute('data-page');
@@ -23356,66 +23592,44 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:6px">MediaPipe FaceMesh + Hands</div>
   </div>
 </div>
-
-
 <script>
-// ══ 공명 리포트 PDF 자동 생성 ══
-function cgoPrintReport() {
-  var container = document.getElementById('reportContainer');
-  if (!container || container.querySelector('.report-wait')) {
-    alert('먼저 대시보드에서 계산을 완료해 주세요!');
-    return;
+// VIP 버튼 직접 이벤트 등록 (페이지 완전 로드 후)
+document.addEventListener('DOMContentLoaded', function() {
+  var vipBtn = document.getElementById('vip-nav-btn');
+  if (vipBtn) {
+    vipBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      // 모든 페이지 숨기기
+      document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+      // VIP 페이지 표시
+      var vp = document.getElementById('page-vip');
+      if (vp) vp.classList.add('active');
+      // 네비 active 처리
+      document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+      vipBtn.classList.add('active');
+      // 타이틀 변경
+      var ptxt = document.getElementById('pageTitleText');
+      if (ptxt) { ptxt.style.display='block'; ptxt.textContent='💎 VVIP 프리미엄'; }
+      var nasa = document.getElementById('nasaMiniBar');
+      if (nasa) nasa.style.display='none';
+      // 잠금화면 초기화
+      var lock = document.getElementById('vip-lock-screen');
+      var main = document.getElementById('vip-main-screen');
+      if (lock) lock.style.display = 'flex';
+      if (main) main.style.display = 'none';
+      window._vipPw = '';
+      if (typeof vipUpdateDots === 'function') vipUpdateDots();
+      var msg = document.getElementById('vip-lock-msg');
+      if (msg) msg.textContent = '';
+    });
   }
-  // 인쇄용 스타일 적용
-  var r = window.calcResult || {};
-  var name = r.name || '사용자';
-  var today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
-  var ili = document.getElementById('bsFIli')?.textContent || '--';
+});
+</script>
 
-  var printWin = window.open('', '_blank', 'width=800,height=1000');
-  printWin.document.write(`
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>CGO-FULI 공명 리포트 — ${name}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Noto Sans KR',sans-serif; background:#fff; color:#111; padding:40px; }
-  .header { text-align:center; border-bottom:3px solid #d4a843; padding-bottom:24px; margin-bottom:28px; }
-  .logo { font-size:28px; font-weight:900; color:#d4a843; letter-spacing:.1em; }
-  .subtitle { font-size:13px; color:#666; margin-top:6px; }
-  .name-row { font-size:20px; font-weight:800; margin-top:12px; }
-  .ili-box { display:inline-block; background:#fffbeb; border:2px solid #d4a843; border-radius:12px; padding:12px 28px; margin-top:12px; }
-  .ili-num { font-size:48px; font-weight:900; color:#d4a843; }
-  .ili-label { font-size:11px; color:#999; }
-  .section { margin-bottom:24px; }
-  .sec-title { font-size:14px; font-weight:800; color:#333; border-left:4px solid #d4a843; padding-left:10px; margin-bottom:12px; }
-  .content { font-size:13px; line-height:1.8; color:#444; }
-  .footer { text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid #eee; font-size:11px; color:#999; }
-  @media print { body { padding:20px; } }
-</style>
-</head>
-<body>
-<div class="header">
-  <div class="logo">⚡ CGO-FULI</div>
-  <div class="subtitle">생체-우주 동기화 공명 분석 리포트</div>
-  <div class="name-row">📋 ${name}님의 에너지 리포트</div>
-  <div class="ili-box">
-    <div class="ili-num">${ili}</div>
-    <div class="ili-label">통합 라이프 인덱스 (ILI)</div>
-  </div>
-  <div style="font-size:11px;color:#999;margin-top:10px;">발행일: ${today} · 18개 역학 엔진 종합</div>
-</div>
-<div class="section">
-  <div class="sec-title">🔮 역학 종합 분석</div>
-  <div class="content">${container.innerText.slice(0, 2000)}</div>
-</div>
-<div class="footer">
-  ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
-  본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
-</div>
+
+
+
 <script>
 // ════════════════════════════════════════════════
 // 💎 VVIP 프리미엄 시스템
@@ -23589,7 +23803,7 @@ function vipRenderStock() {
         +'<span style="font-size:11px;color:#e2e8f0;flex:1;">'+s.name+'</span>'
         +'<div style="width:80px;height:5px;background:var(--bg-panel);border-radius:3px;overflow:hidden;">'
         +'<div style="width:'+score+'%;height:100%;background:'+s.color+';border-radius:3px;transition:width 1s;"></div></div>'
-        +'<span style="font-family:'Orbitron',monospace;font-size:11px;color:'+s.color+';font-weight:700;">'+score+'</span>'
+        +'<span style="font-family:Orbitron,monospace;font-size:11px;color:'+s.color+';font-weight:700;">'+score+'</span>'
         +(isTop?'<span style="font-size:9px;color:#34d399;">★</span>':'')
         +'</div>';
     }).join('');
@@ -23630,7 +23844,7 @@ function vipRenderStock() {
         +'<div style="font-size:12px;font-weight:700;color:#e2e8f0;">'+p.name+'</div>'
         +'<div style="font-size:10px;color:var(--text-3);">'+p.reason+'</div>'
         +'</div>'
-        +'<span style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:'+p.color+';">'+p.score+'</span>'
+        +'<span style="font-family:Orbitron,monospace;font-size:13px;font-weight:700;color:'+p.color+';">'+p.score+'</span>'
         +'</div>';
     }).join('');
   }
@@ -23758,7 +23972,7 @@ function vipRenderSports() {
     var totalSRI = Math.round(engines.reduce(function(sum, e){ return sum + e.score * e.w / 100; }, 0));
     var marsState = (np.mars && np.mars.retro) ? '⚠️ 화성 역행 — 예상 밖 결과 주의' : '✅ 화성 순행 — 강팀 에너지 우세';
     bestEl.innerHTML =
-      '<div style="font-size:12px;margin-bottom:6px;">종합 SRI 지수: <b style="color:#a78bfa;font-family:'Orbitron',monospace;">'+totalSRI+'</b></div>'
+      '<div style="font-size:12px;margin-bottom:6px;">종합 SRI 지수: <b style="color:#a78bfa;font-family:Orbitron,monospace;">'+totalSRI+'</b></div>'
       +'<div style="font-size:11px;color:#cbd5e1;line-height:1.7;">'
       +marsState+'<br>'
       +'내 오행('+myOh+')과 가장 공명하는 경기를 아래 AI 채팅에서 확인하세요.'
@@ -23884,7 +24098,261 @@ function vipAskAI(userText) {
   });
 }
 // ════ VVIP 끝 ════
-<\/script>
+</script>
+
+
+<script>
+// ════════════════════════════════════════════════════════
+// ⭐ 별 충전소 시스템 v1.0
+// ════════════════════════════════════════════════════════
+var _starState={plan:'free',naviUsed:0,faceUsed:0,objUsed:0,lastReset:'',naviStream:null,camStream:null,naviTimer:null,compassWatcher:null};
+var STAR_LIMITS={free:{navi:600,face:2,obj:3},star:{navi:3600,face:30,obj:50},vip:{navi:99999,face:999,obj:999}};
+
+function starInit(){
+  var today=new Date().toDateString();
+  var saved=JSON.parse(localStorage.getItem('_starState')||'{}');
+  if(saved.lastReset!==today){_starState.naviUsed=0;_starState.faceUsed=0;_starState.objUsed=0;_starState.lastReset=today;}
+  else{_starState.naviUsed=saved.naviUsed||0;_starState.faceUsed=saved.faceUsed||0;_starState.objUsed=saved.objUsed||0;}
+  _starState.plan=saved.plan||'free';
+  starRenderUI();
+}
+function starSave(){localStorage.setItem('_starState',JSON.stringify({plan:_starState.plan,naviUsed:_starState.naviUsed,faceUsed:_starState.faceUsed,objUsed:_starState.objUsed,lastReset:_starState.lastReset}));}
+function starRenderUI(){
+  var lim=STAR_LIMITS[_starState.plan];
+  var naviLeft=Math.max(0,Math.floor((lim.navi-_starState.naviUsed)/60));
+  var faceLeft=Math.max(0,lim.face-_starState.faceUsed);
+  var objLeft=Math.max(0,lim.obj-_starState.objUsed);
+  var el=document.getElementById('star-navi-left');if(el)el.textContent=naviLeft+'분 남음';
+  el=document.getElementById('star-face-left');if(el)el.textContent=faceLeft+'회 남음';
+  el=document.getElementById('star-obj-left');if(el)el.textContent=objLeft+'회 남음';
+  el=document.getElementById('star-plan-label');if(el)el.textContent={free:'무료 플랜',star:'⭐ 별 플랜',vip:'💎 VVIP'}[_starState.plan];
+  ['free','star','vip'].forEach(function(p){
+    var card=document.getElementById('plan-'+p);if(!card)return;
+    if(p===_starState.plan){card.style.borderColor=p==='vip'?'rgba(212,168,67,0.8)':'rgba(251,191,36,0.8)';card.style.background=p==='vip'?'rgba(212,168,67,0.1)':'rgba(251,191,36,0.08)';}
+    else{card.style.borderColor=p==='vip'?'rgba(212,168,67,0.2)':'rgba(251,191,36,0.15)';card.style.background='transparent';}
+  });
+}
+function starSelectPlan(plan){
+  _starState.plan=plan;starSave();starRenderUI();
+  var msg={free:'무료 플랜 선택됨',star:'⭐ 별 플랜 선택됨 — 결제 후 활성화됩니다',vip:'💎 VVIP 선택됨 — 결제 후 활성화됩니다'};
+  alert(msg[plan]);
+}
+function starSubscribe(plan){alert((plan==='vip'?'💎 VVIP 프리미엄 50,000원':'⭐ 별 플랜 4,900원/월')+'\n\n결제 시스템 준비 중입니다!\n카카오페이·토스·신용카드 지원 예정 😊');}
+
+function starLaunchNavi(){
+  var lim=STAR_LIMITS[_starState.plan];
+  if(_starState.naviUsed>=lim.navi){alert('오늘 네비 사용 한도를 초과했습니다.\n⭐ 별 플랜으로 업그레이드하면 60분/일 사용 가능합니다!');return;}
+  var view=document.getElementById('star-navi-view');if(view)view.style.display='block';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+    .then(function(stream){_starState.naviStream=stream;var v=document.getElementById('star-navi-video');if(v)v.srcObject=stream;starStartCompass();starStartNaviTimer();})
+    .catch(function(){starStartCompass();starStartNaviTimer();});
+}
+function starStartNaviTimer(){
+  _starState.naviTimer=setInterval(function(){
+    _starState.naviUsed++;starSave();
+    var lim=STAR_LIMITS[_starState.plan];
+    if(_starState.naviUsed>=lim.navi){starStopNavi();alert('네비 사용 시간이 종료되었습니다.');}
+    starRenderUI();
+  },1000);
+}
+function starStartCompass(){
+  var myOh=(window.calcResult&&window.calcResult.domOh)||'목';
+  var np=window._nasaPlanets||{};
+  var ohDir={목:90,화:180,토:45,금:270,수:0};
+  var luckyDeg=ohDir[myOh]||0;
+  if(np.jupiter&&!np.jupiter.retro)luckyDeg=(luckyDeg+15)%360;
+  if(np.mars&&np.mars.retro)luckyDeg=(luckyDeg-10+360)%360;
+  var infoEl=document.getElementById('star-navi-info');
+  var canvas=document.getElementById('star-navi-canvas');
+  function drawArrow(heading){
+    if(!canvas)return;
+    var ctx=canvas.getContext('2d');
+    var w=canvas.offsetWidth||320,h=canvas.offsetHeight||200;
+    canvas.width=w;canvas.height=h;ctx.clearRect(0,0,w,h);
+    var diff=((luckyDeg-heading)+360)%360;
+    var prob=Math.round(100-Math.min(diff,360-diff)/180*60);
+    var angle=diff*Math.PI/180;
+    var cx=w/2,cy=h/2,len=60;
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+    ctx.strokeStyle=prob>70?'#34d399':'#fbbf24';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(0,len/2);ctx.lineTo(0,-len);ctx.stroke();
+    ctx.fillStyle=prob>70?'#34d399':'#fbbf24';
+    ctx.beginPath();ctx.moveTo(0,-len-12);ctx.lineTo(-8,-len+5);ctx.lineTo(8,-len+5);ctx.closePath();ctx.fill();
+    ctx.restore();
+    ctx.fillStyle=prob>70?'rgba(52,211,153,0.9)':'rgba(251,191,36,0.9)';
+    ctx.font='bold 14px monospace';ctx.textAlign='center';
+    ctx.fillText(prob+'%',cx,cy+30);
+    var dirName=['북','북동','동','남동','남','남서','서','북서'];
+    var dirIdx=Math.round(((luckyDeg-heading+360)%360)/45)%8;
+    if(infoEl)infoEl.textContent=dirName[dirIdx]+'방향 — 인연 만남 확률 '+prob+'% | '+myOh+'행 길방';
+  }
+  function listenCompass(){
+    _starState.compassWatcher=function(e){var h=e.webkitCompassHeading||(e.alpha?360-e.alpha:0);drawArrow(h);};
+    window.addEventListener('deviceorientationabsolute',_starState.compassWatcher,true);
+    window.addEventListener('deviceorientation',_starState.compassWatcher,true);
+    drawArrow(0);
+    if(infoEl)infoEl.textContent=myOh+'행 길방 감지 중... (폰을 수평으로)';
+  }
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(function(r){if(r==='granted')listenCompass();});
+  }else{listenCompass();}
+}
+function starStopNavi(){
+  clearInterval(_starState.naviTimer);
+  if(_starState.naviStream){_starState.naviStream.getTracks().forEach(function(t){t.stop();});_starState.naviStream=null;}
+  if(_starState.compassWatcher){window.removeEventListener('deviceorientationabsolute',_starState.compassWatcher,true);window.removeEventListener('deviceorientation',_starState.compassWatcher,true);_starState.compassWatcher=null;}
+  var view=document.getElementById('star-navi-view');if(view)view.style.display='none';
+  starRenderUI();
+}
+function starLaunchCam(){
+  var lim=STAR_LIMITS[_starState.plan];
+  if(_starState.objUsed>=lim.obj){alert('오늘 사물 분석 한도를 초과했습니다.\n⭐ 별 플랜으로 업그레이드하면 50회/일 가능합니다!');return;}
+  var view=document.getElementById('star-cam-view');if(view)view.style.display='block';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+    .then(function(stream){_starState.camStream=stream;var v=document.getElementById('star-cam-video');if(v)v.srcObject=stream;})
+    .catch(function(){alert('카메라 권한이 필요합니다.');var view=document.getElementById('star-cam-view');if(view)view.style.display='none';});
+}
+function starSnapPhoto(){
+  var video=document.getElementById('star-cam-video');
+  var canvas=document.getElementById('star-cam-canvas');
+  if(!video||!canvas)return;
+  canvas.width=video.videoWidth||320;canvas.height=video.videoHeight||240;
+  var ctx=canvas.getContext('2d');ctx.drawImage(video,0,0);
+  var imgData=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  var r=0,g=0,b=0,count=0;
+  for(var i=0;i<imgData.length;i+=16){r+=imgData[i];g+=imgData[i+1];b+=imgData[i+2];count++;}
+  r=Math.round(r/count);g=Math.round(g/count);b=Math.round(b/count);
+  var total=r+g+b||1;
+  var fire=Math.round((r/total)*100);
+  var wood=Math.round((g/total)*60);
+  var water=Math.round((b/total)*80);
+  var brightness=Math.round((r+g+b)/765*100);
+  var metal=Math.round((1-Math.abs(r-g)/255)*40);
+  var earth=Math.max(0,100-fire-wood-water-metal);
+  var ohs=[{name:'화(火)',val:fire,color:'#f87171'},{name:'목(木)',val:wood,color:'#34d399'},{name:'수(水)',val:water,color:'#60a5fa'},{name:'금(金)',val:metal,color:'#a78bfa'},{name:'토(土)',val:earth,color:'#fbbf24'}];
+  ohs.sort(function(a,b){return b.val-a.val;});
+  var dominant=ohs[0];
+  var barsEl=document.getElementById('star-oh-bars');
+  if(barsEl){barsEl.innerHTML=ohs.map(function(o){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><span style="font-size:10px;color:'+o.color+';width:36px;">'+o.name+'</span><div style="flex:1;height:6px;background:var(--bg-panel);border-radius:3px;overflow:hidden;"><div style="width:'+o.val+'%;height:100%;background:'+o.color+';border-radius:3px;"></div></div><span style="font-size:10px;color:'+o.color+';font-weight:700;width:28px;">'+o.val+'%</span></div>';}).join('');}
+  var myOh=(window.calcResult&&window.calcResult.domOh)||'목';
+  var compat=dominant.name.charAt(0)===myOh?'최상 궁합 ✨':'보완 관계 🔄';
+  var comment=document.getElementById('star-cam-comment');
+  // 오행 이름 쉬운 설명
+  var ohDesc={
+    '화':'🔴 화(火) — 불의 에너지예요! 열정적이고 활발한 기운이 강해요.',
+    '목':'🟢 목(木) — 나무의 에너지예요! 성장하고 도전하는 기운이 넘쳐요.',
+    '수':'🔵 수(水) — 물의 에너지예요! 지혜롭고 유연한 기운이 가득해요.',
+    '금':'🟣 금(金) — 쇠의 에너지예요! 결단력 있고 단단한 기운이 있어요.',
+    '토':'🟡 토(土) — 흙의 에너지예요! 안정적이고 포근한 기운이 느껴져요.'
+  };
+  var myOhDesc={
+    '화':'🔴 화(火)','목':'🟢 목(木)','수':'🔵 수(水)','금':'🟣 금(金)','토':'🟡 토(土)'
+  };
+  // 궁합 설명
+  var compatMap={
+    '화목':'🌿 아주 잘 맞아요! 나무(목)가 불(화)에 힘을 줘요.',
+    '화토':'🤝 서로 도와줘요! 불(화)이 흙(토)을 더 단단하게 해줘요.',
+    '목수':'💧 아주 잘 맞아요! 물(수)이 나무(목)를 쑥쑥 자라게 해줘요.',
+    '금토':'💛 서로 도와줘요! 흙(토)이 쇠(금)를 만들어줘요.',
+    '수금':'🌙 아주 잘 맞아요! 쇠(금)에서 물(수)이 나와요.',
+    '화금':'⚡ 서로 반대예요! 쇠(금)가 불(화)을 이겨요.',
+    '목토':'🌱 서로 반대예요! 나무(목)가 흙(토)의 기운을 약하게 해요.',
+    '수화':'🌊 서로 반대예요! 물(수)이 불(화)을 꺼요.',
+    '토수':'🏔 서로 반대예요! 흙(토)이 물(수)의 흐름을 막아요.',
+    '금화':'🔥 서로 반대예요! 불(화)이 쇠(금)를 녹여요.'
+  };
+  var domKey=dominant.name.charAt(0).toLowerCase();
+  var myKey=myOh.charAt(0).toLowerCase();
+  var compatKey=(dominant.name.charAt(0)+myOh).replace(/[()]/g,'');
+  var compatTxt=compatMap[dominant.name.charAt(0)+myOh]||compatMap[myOh+dominant.name.charAt(0)]||(dominant.name.charAt(0)===myOh?'⭐ 완벽 일치! 나와 똑같은 에너지예요!':'🔄 서로 다른 에너지로 균형을 이뤄요.');
+  var brightTxt=brightness>75?'☀️ 매우 밝아요 — 양(陽·빛)의 기운이 넘쳐요. 활동적인 날 잘 어울려요!':brightness>50?'🌤 밝은 편이에요 — 양(陽)의 기운이 조금 더 강해요.':brightness>30?'🌙 조금 어둡네요 — 음(陰·그늘)의 기운이 강해요. 차분하고 집중하기 좋아요.':'🌑 어두운 편이에요 — 음(陰)의 기운이 매우 강해요. 조용하고 깊은 에너지예요.';
+  if(comment)comment.innerHTML=''
+    +'<div style="margin-bottom:8px;">'
+    +'<div style="font-size:11px;font-weight:700;color:'+dominant.color+';margin-bottom:3px;">📊 가장 강한 에너지: '+dominant.name+' '+dominant.val+'%</div>'
+    +'<div style="font-size:11px;color:#e2e8f0;line-height:1.6;">'+(ohDesc[dominant.name.charAt(0)]||'')+'</div>'
+    +'</div>'
+    +'<div style="margin-bottom:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);">'
+    +'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:3px;">🌟 내 오행('+myOh+')과의 관계</div>'
+    +'<div style="font-size:11px;color:#e2e8f0;line-height:1.6;">'+compatTxt+'</div>'
+    +'</div>'
+    +'<div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);">'
+    +'<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:3px;">💡 밝기 지수: '+brightness+'%</div>'
+    +'<div style="font-size:11px;color:#e2e8f0;line-height:1.6;">'+brightTxt+'</div>'
+    +'</div>';
+  var result=document.getElementById('star-cam-result');if(result)result.style.display='block';
+  _starState.objUsed++;_starState.faceUsed++;starSave();starRenderUI();
+}
+function starStopCam(){
+  if(_starState.camStream){_starState.camStream.getTracks().forEach(function(t){t.stop();});_starState.camStream=null;}
+  var view=document.getElementById('star-cam-view');if(view)view.style.display='none';
+}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
+    btn.addEventListener('click',function(){if(btn.getAttribute('data-page')==='star')setTimeout(starInit,100);});
+  });
+  starInit();
+});
+// ════ 별 충전소 끝 ════
+</script>
+
+<script>
+// ══ 공명 리포트 PDF 자동 생성 ══
+function cgoPrintReport() {
+  var container = document.getElementById('reportContainer');
+  if (!container || container.querySelector('.report-wait')) {
+    alert('먼저 대시보드에서 계산을 완료해 주세요!');
+    return;
+  }
+  // 인쇄용 스타일 적용
+  var r = window.calcResult || {};
+  var name = r.name || '사용자';
+  var today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+  var ili = document.getElementById('bsFIli')?.textContent || '--';
+
+  var printWin = window.open('', '_blank', 'width=800,height=1000');
+  printWin.document.write(`
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>CGO-FULI 공명 리포트 — ${name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR',sans-serif; background:#fff; color:#111; padding:40px; }
+  .header { text-align:center; border-bottom:3px solid #d4a843; padding-bottom:24px; margin-bottom:28px; }
+  .logo { font-size:28px; font-weight:900; color:#d4a843; letter-spacing:.1em; }
+  .subtitle { font-size:13px; color:#666; margin-top:6px; }
+  .name-row { font-size:20px; font-weight:800; margin-top:12px; }
+  .ili-box { display:inline-block; background:#fffbeb; border:2px solid #d4a843; border-radius:12px; padding:12px 28px; margin-top:12px; }
+  .ili-num { font-size:48px; font-weight:900; color:#d4a843; }
+  .ili-label { font-size:11px; color:#999; }
+  .section { margin-bottom:24px; }
+  .sec-title { font-size:14px; font-weight:800; color:#333; border-left:4px solid #d4a843; padding-left:10px; margin-bottom:12px; }
+  .content { font-size:13px; line-height:1.8; color:#444; }
+  .footer { text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid #eee; font-size:11px; color:#999; }
+  @media print { body { padding:20px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">⚡ CGO-FULI</div>
+  <div class="subtitle">생체-우주 동기화 공명 분석 리포트</div>
+  <div class="name-row">📋 ${name}님의 에너지 리포트</div>
+  <div class="ili-box">
+    <div class="ili-num">${ili}</div>
+    <div class="ili-label">통합 라이프 인덱스 (ILI)</div>
+  </div>
+  <div style="font-size:11px;color:#999;margin-top:10px;">발행일: ${today} · 18개 역학 엔진 종합</div>
+</div>
+<div class="section">
+  <div class="sec-title">🔮 역학 종합 분석</div>
+  <div class="content">${container.innerText.slice(0, 2000)}</div>
+</div>
+<div class="footer">
+  ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
+  본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
+</div><\/script>
 </body>
 </html>`);
   printWin.document.close();
