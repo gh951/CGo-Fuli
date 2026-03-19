@@ -12223,6 +12223,9 @@ function bioSkinScan(type) {
   var statusEl = document.getElementById('bioSkin-' + type + '-status');
   var resultEl = document.getElementById('bioSkinResult');
 
+  // 대시보드에서 출발한 스캔임을 기록
+  window._scanFromDashboard = type;
+
   // 스캔 페이지로 이동 후 해당 탭 자동 선택
   if (typeof goScan === 'function') goScan();
   setTimeout(function() {
@@ -12395,6 +12398,22 @@ function calcAstro() {
   if(!curLat||isNaN(curLat)){if(curPlace&&typeof _CITIES!=='undefined'){var _cm=_CITIES.filter(function(c){return c.n.toLowerCase().indexOf(curPlace.toLowerCase())>=0;});if(_cm.length){curLat=_cm[0].lat;curLng=_cm[0].lng;}}}
   if(!curLat||isNaN(curLat)){curLat=birthLat;curLng=birthLng;}
   if(!bStr){ alert('생년월일을 입력해주세요'); return; }
+
+  // ── 관상·손금·혀 스캔 여부 확인 → 미완료 시 경고 ──
+  var _fDone = _bioSkinData && _bioSkinData.face;
+  var _pDone = _bioSkinData && _bioSkinData.palm;
+  var _tDone = _bioSkinData && _bioSkinData.tongue;
+  if (!_fDone || !_pDone || !_tDone) {
+    var _missing = [];
+    if (!_fDone) _missing.push('🧖 관상');
+    if (!_pDone) _missing.push('✋ 손금');
+    if (!_tDone) _missing.push('👅 혀');
+    var _msg = '⚠️ 생체 스캔이 완료되지 않았습니다!\n\n'
+      + '미완료 항목: ' + _missing.join(', ') + '\n\n'
+      + '관상·손금·혀를 먼저 분석하고\n자동 계산을 클릭해주세요.\n\n'
+      + '(계속 진행하려면 확인을 누르세요)';
+    if (!confirm(_msg)) return;
+  }
 
   var parts = bStr.split('-').map(Number);
   var y=parts[0], m=parts[1], d=parts[2];
@@ -14667,6 +14686,20 @@ function refreshData(){
   else drawTrend();
 }
 
+
+// 대시보드로 자동 복귀 (스캔 완료 후)
+function _returnToDashboard(delayMs) {
+  setTimeout(function(){
+    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+    var dashBtn = document.querySelector('[data-page="dashboard"]');
+    if(dashBtn) dashBtn.classList.add('active');
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    var dash = document.getElementById('page-dashboard');
+    if(dash) dash.classList.add('active');
+    var _sTxt=document.getElementById('pageTitleText'); if(_sTxt) _sTxt.style.display='none';
+    window._scanFromDashboard = null;
+  }, delayMs || 1500);
+}
 function goScan(){
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
   document.querySelector('[data-page="scan"]').classList.add('active');
@@ -16098,6 +16131,9 @@ function bsFinish(){
       var badge = bsE('bsBadge');
       if(badge){ badge.textContent='👤 얼굴 완료'; badge.style.background='rgba(56,189,248,.15)'; badge.style.color='#38bdf8'; }
 
+      // 대시보드에서 출발한 경우 자동 복귀
+      if(window._scanFromDashboard === 'face') _returnToDashboard(1500);
+
       // 버튼을 "✋ 손금 스캔 시작"으로 전환
       var btn = bsE('bsBtn');
       if(btn){
@@ -16168,6 +16204,9 @@ function bsFinish(){
 
       var badge2 = bsE('bsBadge');
       if(badge2){ badge2.textContent='✋ 손금 완료'; badge2.style.background='rgba(244,114,182,.15)'; badge2.style.color='#f472b6'; }
+
+      // 대시보드에서 출발한 경우 자동 복귀
+      if(window._scanFromDashboard === 'palm') _returnToDashboard(1500);
 
       // STEP4 손금박스 자동 업데이트
       setTimeout(function(){
@@ -16308,6 +16347,9 @@ function bsFinish(){
       var df3 = bsE('bsDoneFace'); if(df3) df3.style.display='none';
       var dp3 = bsE('bsDonePalm'); if(dp3) dp3.style.display='none';
       var dt3 = bsE('bsDoneTongue'); if(dt3) dt3.style.display='flex';
+
+      // 대시보드에서 출발한 경우 자동 복귀
+      if(window._scanFromDashboard === 'tongue') _returnToDashboard(1500);
 
       var badge3 = bsE('bsBadge');
       if(badge3){ badge3.textContent='🎯 분석 완료'; badge3.style.background='rgba(212,168,67,.15)'; badge3.style.color='#d4a843'; }
