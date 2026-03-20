@@ -19,7 +19,7 @@
   --sidebar-w:72px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow:hidden}
+body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','Noto Sans SC','Noto Sans JP',sans-serif;min-height:100vh;overflow:hidden}
 .stars{position:fixed;inset:0;pointer-events:none;z-index:0}
 .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--d,3s) ease-in-out infinite var(--delay,0s)}
 @keyframes twinkle{0%,100%{opacity:0.2}50%{opacity:0.8}}
@@ -1753,22 +1753,38 @@ input[type=number]::-webkit-outer-spin-button {
    ============================================================ */
 
 // 황도 12궁 배열
-var ZODIAC_SIGNS_EN = ['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리',
-                       '천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+var ZODIAC_SIGNS_KO = ['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+var ZODIAC_SIGNS_EN_LIST = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+var ZODIAC_SIGNS_ZH_LIST = ['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
+var ZODIAC_SIGNS_JA_LIST = ['牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座','天秤座','蠍座','射手座','山羊座','水瓶座','魚座'];
+var ZODIAC_SIGNS_EN = ZODIAC_SIGNS_KO; // 현재 언어에 따라 동적 변경
+function _updateZodiacLang(lang) {
+  if(lang==='en') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_EN_LIST;
+  else if(lang==='zh') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_ZH_LIST;
+  else if(lang==='ja') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_JA_LIST;
+  else ZODIAC_SIGNS_EN = ZODIAC_SIGNS_KO;
+}
 var ZODIAC_SYMBOLS  = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 
 // 행성 ID (JPL Horizons 코드)
 var JPL_BODIES = {
-  sun    : {id:'10',   sym:'☀',  name:'태양',   color:'#fbbf24', en:'Sun'},
-  moon   : {id:'301',  sym:'🌙', name:'달',      color:'#94a3b8', en:'Moon'},
-  mercury: {id:'199',  sym:'☿',  name:'수성',   color:'#6ee7b7', en:'Mercury'},
-  venus  : {id:'299',  sym:'♀',  name:'금성',   color:'#f9a8d4', en:'Venus'},
-  mars   : {id:'499',  sym:'♂',  name:'화성',   color:'#f87171', en:'Mars'},
-  jupiter: {id:'599',  sym:'♃',  name:'목성',   color:'#fbbf24', en:'Jupiter'},
-  saturn : {id:'699',  sym:'♄',  name:'토성',   color:'#94a3b8', en:'Saturn'},
-  uranus : {id:'799',  sym:'♅',  name:'천왕성', color:'#38bdf8', en:'Uranus'},
-  neptune: {id:'899',  sym:'♆',  name:'해왕성', color:'#818cf8', en:'Neptune'}
+  sun    : {id:'10',   sym:'☀',  name:'태양',   color:'#fbbf24', en:'Sun',     zh:'太阳',   ja:'太陽'},
+  moon   : {id:'301',  sym:'🌙', name:'달',      color:'#94a3b8', en:'Moon',    zh:'月亮',   ja:'月'},
+  mercury: {id:'199',  sym:'☿',  name:'수성',   color:'#6ee7b7', en:'Mercury', zh:'水星',   ja:'水星'},
+  venus  : {id:'299',  sym:'♀',  name:'금성',   color:'#f9a8d4', en:'Venus',   zh:'金星',   ja:'金星'},
+  mars   : {id:'499',  sym:'♂',  name:'화성',   color:'#f87171', en:'Mars',    zh:'火星',   ja:'火星'},
+  jupiter: {id:'599',  sym:'♃',  name:'목성',   color:'#fbbf24', en:'Jupiter', zh:'木星',   ja:'木星'},
+  saturn : {id:'699',  sym:'♄',  name:'토성',   color:'#94a3b8', en:'Saturn',  zh:'土星',   ja:'土星'},
+  uranus : {id:'799',  sym:'♅',  name:'천왕성', color:'#38bdf8', en:'Uranus',  zh:'天王星', ja:'天王星'},
+  neptune: {id:'899',  sym:'♆',  name:'해왕성', color:'#818cf8', en:'Neptune', zh:'海王星', ja:'海王星'}
 };
+
+// 현재 언어에 맞는 행성 이름 반환
+function _planetName(body) {
+  var lang = window._LANG || 'ko';
+  if (lang === 'ko') return body.name;
+  return body[lang] || body.en || body.name;
+}
 
 // 황도 경도 → 별자리 변환
 function eclLonToZodiac(lon) {
@@ -2046,6 +2062,13 @@ function _applyNASAData(data, json) {
   updateFortuneNasaPanel(data);
   if(typeof updateCosmicPlanetGrid==='function') updateCosmicPlanetGrid(data);
   if(typeof injectNASAToCards==='function') setTimeout(injectNASAToCards, 100);
+  // NASA 데이터 적용 후 번역 재실행 (행성명·별자리 등 동적 생성 텍스트)
+  if(window._LANG && window._LANG !== 'ko') {
+    setTimeout(function(){
+      var _p=_I18N[window._LANG];
+      if(_p && typeof _cgoAiTranslate==='function') _cgoAiTranslate(window._LANG, _p);
+    }, 1200);
+  }
   // 달 위상 적용
   if(json && json.moon_phase) {
     window._moonPhase = json.moon_phase;
@@ -2056,8 +2079,22 @@ function _applyNASAData(data, json) {
   var _now = new Date();
   var _dl = document.getElementById('cosmicDateLabel');
   var _ds = document.getElementById('cosmicDateSub');
-  if(_dl) _dl.textContent = _now.toLocaleDateString('ko-KR',{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 기준';
-  if(_ds) _ds.textContent = '🔭 NASA 인공위성 정밀 계산 (오차 0.01°) · JD ' + (data._jd||(_now.getTime()/86400000+2440587.5).toFixed(2));
+  if(_dl) {
+    var _lang = window._LANG || 'ko';
+    var _loc = {ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP'}[_lang] || 'ko-KR';
+    var _sfx = {ko:' 기준',en:' - As of',zh:' 基准',ja:' 基準'}[_lang] || ' 기준';
+    _dl.textContent = _now.toLocaleDateString(_loc,{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString(_loc,{hour:'2-digit',minute:'2-digit'}) + _sfx;
+  }
+  if(_ds) {
+    var _jdVal = data._jd||(_now.getTime()/86400000+2440587.5).toFixed(2);
+    var _satTxt = {
+      ko:'🔭 NASA 인공위성 정밀 계산 (오차 0.01°) · JD ',
+      en:'🔭 NASA satellite precise calculation (error 0.01°) · JD ',
+      zh:'🔭 NASA卫星精密计算（误差0.01°）· JD ',
+      ja:'🔭 NASA衛星精密計算（誤差0.01°）· JD '
+    };
+    _ds.textContent = (_satTxt[window._LANG||'ko']||_satTxt.ko) + _jdVal;
+  }
 }
 
 // 상태 표시 업데이트
@@ -2067,7 +2104,7 @@ function _setNASAStatus(state, source, jd) {
   var configs = {
     loading: {color:'rgba(251,191,36,0.15)', border:'rgba(251,191,36,0.3)', text:'🛰️ NASA JPL Horizons 연결 중...', tc:'#fbbf24'},
     live:    {color:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.35)',
-              text:'✅ NASA 인공위성 정밀 계산 완료 (오차 0.01°) · JD '+(jd||''), tc:'#34d399'},
+              text:(function(){var t={ko:'✅ NASA 인공위성 정밀 계산 완료 (오차 0.01°) · JD ',en:'✅ NASA satellite precise calculation complete (error 0.01°) · JD ',zh:'✅ NASA卫星精密计算完成（误差0.01°）· JD ',ja:'✅ NASA衛星精密計算完了（誤差0.01°）· JD '};return (t[window._LANG||'ko']||t.ko)+(jd||'');})(), tc:'#34d399'},
     vsop:    {color:'rgba(99,130,201,0.12)', border:'rgba(99,130,201,0.25)', text:'⚙️ NASA 인공위성 내장 계산 (오차 ±1~2°)', tc:'#94a3b8'},
   };
   var c = configs[state]||configs.vsop;
@@ -2291,7 +2328,7 @@ function updateTransitSectionWithNASA(planets) {
       <div id="nasaMiniBar" style="display:flex;align-items:center;gap:6px;overflow:hidden;flex:1">
         <span style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <span style="width:6px;height:6px;background:#34d399;border-radius:50%;box-shadow:0 0 5px #34d399;animation:pulse 2s infinite;display:inline-block"></span>
-          <span style="font-size:9px;color:#34d399;font-weight:700;letter-spacing:.06em;white-space:nowrap">NASA JPL</span>
+          <span style="font-size:9px;color:#34d399;font-weight:700;letter-spacing:.06em;white-space:nowrap" data-i18n="nasaLive">NASA JPL</span>
         </span>
         <div id="nasaStatusBar" style="display:none;font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;margin-bottom:6px;letter-spacing:.04em;transition:all .5s"></div>
         <div id="nasaMiniPlanets" style="display:flex;gap:5px;align-items:center;overflow:hidden">
@@ -2301,6 +2338,15 @@ function updateTransitSectionWithNASA(planets) {
     </div>
     <div class="topbar-date" id="topDate"></div>
     <div class="topbar-right">
+      <!-- 언어 선택 -->
+      <div id="langSelector" style="position:relative;display:inline-block">
+        <button onclick="toggleLangMenu()" id="langBtn" style="display:flex;align-items:center;gap:5px;padding:4px 9px;background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.25);border-radius:8px;color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s" title="언어 선택">
+          <span id="langFlag">🇰🇷</span>
+          <span id="langCode" style="font-size:10px">KO</span>
+          <span style="font-size:8px;opacity:.5">▾</span>
+        </button>
+
+      </div>
       <button class="icon-btn" onclick="refreshData()" title="새로고침">↻</button>
       <div class="user-chip" onclick="showPage('profile')" style="cursor:pointer;transition:all .2s" title="프로필 보기">
         <div class="user-av" id="topAvatar">이</div>
@@ -2318,25 +2364,25 @@ function updateTransitSectionWithNASA(planets) {
       <!-- ✦ NASA·생체·역학 융합 소개 배너 -->
       <div style="background:#ffffff;border:2px solid #1a1a2e;border-radius:14px;padding:16px 20px;margin-bottom:14px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.18);">
         <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.7;letter-spacing:0.01em;">
-          🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된<br>
-          <span style="color:#1d4ed8;">18개 역학 엔진</span>을 융합하여
-          <span style="color:#b45309;">당신만의 인생 지수</span>를 계산합니다.
+          <span data-i18n="banner1">🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된</span><br>
+          <span style="color:#1d4ed8;" data-i18n="banner2">18개 역학 엔진</span><span data-i18n="banner3">을 융합하여</span>
+          <span style="color:#b45309;" data-i18n="banner4">당신만의 인생 지수</span><span data-i18n="banner5">를 계산합니다.</span>
         </div>
       </div>
 
       <div class="input-panel">
-        <div class="ip-title">📋 정보 입력 — 이름·생년월일만 넣으면 모든 게 자동으로 계산돼요!</div>
+        <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 이름·생년월일만 넣으면 모든 게 자동으로 계산돼요!</div>
         <div class="ip-form">
           <div class="ip-group">
-            <div class="ip-label">이름 (성명)</div>
-            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원">
+            <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
+            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name">
           </div>
           <div class="ip-group">
             <div class="ip-label" style="display:flex;align-items:center;justify-content:space-between">
-              <span>생년월일</span>
+              <span data-i18n="lbl_birth_label">생년월일</span>
               <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:11px;font-weight:700">
-                <button id="btnSolar" onclick="ipSetCalType('solar')" style="padding:3px 10px;border:none;cursor:pointer;background:var(--gold);color:var(--bg-deep);transition:all .2s">양력</button>
-                <button id="btnLunar" onclick="ipSetCalType('lunar')" style="padding:3px 10px;border:none;cursor:pointer;background:transparent;color:var(--text-2);transition:all .2s">음력</button>
+                <button id="btnSolar" onclick="ipSetCalType('solar')" style="padding:3px 10px;border:none;cursor:pointer;background:var(--gold);color:var(--bg-deep);transition:all .2s" data-i18n="btnSolar">양력</button>
+                <button id="btnLunar" onclick="ipSetCalType('lunar')" style="padding:3px 10px;border:none;cursor:pointer;background:transparent;color:var(--text-2);transition:all .2s" data-i18n="btnLunar">음력</button>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:80px 54px 54px;gap:5px">
@@ -2350,19 +2396,19 @@ function updateTransitSectionWithNASA(planets) {
             <input type="hidden" id="ipCalType" value="solar">
           </div>
           <div class="ip-group">
-            <div class="ip-label">출생 시간</div>
+            <div class="ip-label" data-i18n="labelTime">출생 시간</div>
             <input class="ip-field" id="ipTime" type="time">
           </div>
           <div class="ip-group">
-            <div class="ip-label">성별</div>
+            <div class="ip-label" data-i18n="labelGender">성별</div>
             <select class="ip-field" id="ipGender">
-              <option value="M">남성 (男)</option>
-              <option value="F">여성 (女)</option>
+              <option value="M" data-i18n="optMale">남성 (男)</option>
+              <option value="F" data-i18n="optFemale">여성 (女)</option>
             </select>
           </div>
           <div class="ip-group" style="position:relative">
             <div class="ip-label" style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-wrap:nowrap">
-              🗺️ 출생지 <span style="font-size:9px;color:rgba(56,189,248,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 좌표</span>
+              🗺️ <span data-i18n="lbl_birth_place">출생지</span> <span data-i18n="lbl_birth_hint" style="font-size:9px;color:rgba(56,189,248,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 좌표</span>
             </div>
             <div style="position:relative">
               <div style="display:flex;gap:6px;align-items:center">
@@ -2383,7 +2429,7 @@ function updateTransitSectionWithNASA(planets) {
           </div>
           <div class="ip-group" style="position:relative">
             <div class="ip-label" style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-wrap:nowrap">
-              📍 현재 거주지 <span style="font-size:9px;color:rgba(52,211,153,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 방위</span>
+              📍 <span data-i18n="lbl_cur_place">현재 거주지</span> <span data-i18n="lbl_cur_hint" style="font-size:9px;color:rgba(52,211,153,.7);font-weight:600;white-space:nowrap">동 단위 → 정밀 방위</span>
             </div>
             <div style="position:relative">
               <div style="display:flex;gap:6px;align-items:center">
@@ -2401,40 +2447,40 @@ function updateTransitSectionWithNASA(planets) {
             <input type="hidden" id="ipCurLat" value="">
             <input type="hidden" id="ipCurLng" value="">
             <div style="margin-top:4px">
-              <button onclick="ipGetMyLocation()" style="padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">📡 현재 위치 자동</button>
+              <button onclick="ipGetMyLocation()" style="padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit" data-i18n="auto_loc">📡 현재 위치 자동</button>
             </div>
           </div>
         </div>
         <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
         <div style="margin:14px 0 10px;">
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
-            🧬 생체 스킨 분석 <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
-            <span style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">18개 엔진 즉시 반영</span>
+            <span data-i18n="bioScan">🧬 생체 스킨 분석</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
+            <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">18개 엔진 즉시 반영</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
 
             <!-- 관상 스캔 -->
             <div onclick="bioSkinScan('face')" style="background:rgba(99,130,201,0.08);border:1px solid rgba(99,130,201,0.25);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(99,130,201,0.6)';this.style.background='rgba(99,130,201,0.15)'" onmouseout="this.style.borderColor='rgba(99,130,201,0.25)';this.style.background='rgba(99,130,201,0.08)'">
               <div style="font-size:26px;margin-bottom:5px;">🧖</div>
-              <div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:3px;">관상</div>
-              <div style="font-size:9px;color:var(--text-3);line-height:1.4;">안면 기색·형태<br>FCI·FMA 분석</div>
-              <div id="bioSkin-face-status" style="font-size:9px;margin-top:6px;color:#64748b;">📷 탭하여 스캔</div>
+              <div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:3px;" data-i18n="lbl_face">관상</div>
+              <div style="font-size:9px;color:var(--text-3);line-height:1.4;" data-i18n-html="face_sub">안면 기색·형태<br>FCI·FMA 분석</div>
+              <div id="bioSkin-face-status" style="font-size:9px;margin-top:6px;color:#64748b;" data-i18n="lbl_tap_scan">📷 탭하여 스캔</div>
             </div>
 
             <!-- 손금 스캔 -->
             <div onclick="bioSkinScan('palm')" style="background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.25);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(212,168,67,0.6)';this.style.background='rgba(212,168,67,0.15)'" onmouseout="this.style.borderColor='rgba(212,168,67,0.25)';this.style.background='rgba(212,168,67,0.08)'">
               <div style="font-size:26px;margin-bottom:5px;">✋</div>
-              <div style="font-size:11px;font-weight:700;color:#fcd34d;margin-bottom:3px;">손금</div>
-              <div style="font-size:9px;color:var(--text-3);line-height:1.4;">생명선·두뇌선<br>BLI·HRV 분석</div>
-              <div id="bioSkin-palm-status" style="font-size:9px;margin-top:6px;color:#64748b;">✋ 탭하여 스캔</div>
+              <div style="font-size:11px;font-weight:700;color:#fcd34d;margin-bottom:3px;" data-i18n="lbl_palm">손금</div>
+              <div style="font-size:9px;color:var(--text-3);line-height:1.4;" data-i18n-html="palm_sub">생명선·두뇌선<br>BLI·HRV 분석</div>
+              <div id="bioSkin-palm-status" style="font-size:9px;margin-top:6px;color:#64748b;" data-i18n="lbl_tap_scan">✋ 탭하여 스캔</div>
             </div>
 
             <!-- 혀 스캔 -->
             <div onclick="bioSkinScan('tongue')" style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(248,113,113,0.6)';this.style.background='rgba(248,113,113,0.15)'" onmouseout="this.style.borderColor='rgba(248,113,113,0.25)';this.style.background='rgba(248,113,113,0.08)'">
               <div style="font-size:26px;margin-bottom:5px;">👅</div>
-              <div style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:3px;">혀</div>
-              <div style="font-size:9px;color:var(--text-3);line-height:1.4;">설색·설태·혈색<br>오장 에너지 분석</div>
-              <div id="bioSkin-tongue-status" style="font-size:9px;margin-top:6px;color:#64748b;">👅 탭하여 스캔</div>
+              <div style="font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:3px;" data-i18n="lbl_tongue">혀</div>
+              <div style="font-size:9px;color:var(--text-3);line-height:1.4;" data-i18n-html="tongue_sub">설색·설태·혈색<br>오장 에너지 분석</div>
+              <div id="bioSkin-tongue-status" style="font-size:9px;margin-top:6px;color:#64748b;" data-i18n="lbl_tap_scan">👅 탭하여 스캔</div>
             </div>
 
           </div>
@@ -2445,22 +2491,22 @@ function updateTransitSectionWithNASA(planets) {
         <!-- ✦ MBTI 성격 유형 — 19번째 역학 엔진 연동 -->
         <div id="mbtiSection" style="margin:14px 0 10px;">
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
-            🧠 MBTI 성격 유형
+            🧠 <span data-i18n="mbtiLabel">MBTI 성격 유형</span>
             <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
-            <span style="font-size:9px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#a855f7;padding:2px 7px;border-radius:8px;">19번째 역학 보정</span>
+            <span style="font-size:9px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#a855f7;padding:2px 7px;border-radius:8px;" data-i18n="mbti_19th">19번째 역학 보정</span>
           </div>
 
           <!-- STEP 1: 아는지 모르는지 선택 -->
           <div id="mbtiStep1" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
             <div onclick="mbtiGo('know')" style="background:rgba(168,85,247,.08);border:2px solid rgba(168,85,247,.3);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(168,85,247,.7)';this.style.background='rgba(168,85,247,.15)'" onmouseout="this.style.borderColor='rgba(168,85,247,.3)';this.style.background='rgba(168,85,247,.08)'">
               <div style="font-size:26px;margin-bottom:6px;">🙋</div>
-              <div style="font-size:12px;font-weight:800;color:#c4b5fd;margin-bottom:3px;">내 MBTI 알아요</div>
-              <div style="font-size:10px;color:var(--text-3);">직접 선택 → 즉시 적용</div>
+              <div style="font-size:12px;font-weight:800;color:#c4b5fd;margin-bottom:3px;" data-i18n="mbti_know">내 MBTI 알아요</div>
+              <div style="font-size:10px;color:var(--text-3);" data-i18n="mbti_direct">직접 선택 → 즉시 적용</div>
             </div>
             <div onclick="mbtiGo('test')" style="background:rgba(56,189,248,.08);border:2px solid rgba(56,189,248,.3);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(56,189,248,.7)';this.style.background='rgba(56,189,248,.15)'" onmouseout="this.style.borderColor='rgba(56,189,248,.3)';this.style.background='rgba(56,189,248,.08)'">
               <div style="font-size:26px;margin-bottom:6px;">🤔</div>
-              <div style="font-size:12px;font-weight:800;color:#7dd3fc;margin-bottom:3px;">내 MBTI 몰라요</div>
-              <div style="font-size:10px;color:var(--text-3);">검사로 찾기</div>
+              <div style="font-size:12px;font-weight:800;color:#7dd3fc;margin-bottom:3px;" data-i18n="mbti_dontknow">내 MBTI 몰라요</div>
+              <div style="font-size:10px;color:var(--text-3);" data-i18n="mbti_test">검사로 찾기</div>
             </div>
           </div>
 
@@ -2555,7 +2601,7 @@ function updateTransitSectionWithNASA(planets) {
           <div class="fortune-top" style="flex-wrap:wrap;gap:10px">
             <div class="fortune-icon">🔮</div>
             <div style="flex:1;min-width:160px">
-              <div class="fortune-ttl" id="fortuneTtl">오늘 내 에너지는 어떤가요?</div>
+              <div class="fortune-ttl" id="fortuneTtl" data-i18n="fortune_ttl">오늘 내 에너지는 어떤가요?</div>
               <div class="fortune-date" id="fortuneDate">자동 계산 후 표시됩니다</div>
             </div>
             <div id="fortuneDatePicker" style="display:none;width:100%;margin-top:10px">
@@ -2589,7 +2635,7 @@ function updateTransitSectionWithNASA(planets) {
         <div style="position:relative;z-index:2;padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(212,168,67,0.12)">
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 7px #34d399;animation:pulse 2s infinite;flex-shrink:0"></div>
-            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em">COSMIC ORDER</span>
+            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">COSMIC ORDER</span>
           </div>
           <span id="cosmicTime" style="font-size:11px;color:#e2e8f0;font-weight:600;font-variant-numeric:tabular-nums"></span>
         </div>
@@ -2598,13 +2644,13 @@ function updateTransitSectionWithNASA(planets) {
         <div style="position:relative;z-index:2;margin:10px 16px 0;padding:8px 14px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.22);border-radius:10px;display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow:hidden;white-space:nowrap">
           <span style="font-size:15px;flex-shrink:0;margin-right:8px">🛰️</span>
           <span style="font-size:13px;color:#ffffff;font-weight:800;flex-shrink:0;margin-right:4px">NASA</span>
-          <span style="font-size:11px;color:#e2e8f0;font-weight:500;flex-shrink:0;margin-right:10px">( 미 항공 우주국 )</span>
+          <span style="font-size:11px;color:#e2e8f0;font-weight:500;flex-shrink:0;margin-right:10px" data-i18n="nasa_full">( 미 항공 우주국 )</span>
           <span style="width:1px;height:14px;background:rgba(255,255,255,0.25);flex-shrink:0;margin-right:10px"></span>
-          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0;margin-right:6px">실시간 행성 항로</span>
+          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0;margin-right:6px" data-i18n="cosmic_subtitle">실시간 행성 항로</span>
           <span style="font-size:12px;color:rgba(255,255,255,0.75);flex-shrink:0;margin-right:6px">/</span>
-          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0">시간</span>
+          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0" data-i18n="word_time">시간</span>
           <div style="flex:1;min-width:8px"></div>
-          <span style="font-size:9px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.35);border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0">● LIVE</span>
+          <span style="font-size:9px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.35);border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0" data-i18n="lbl_live">● LIVE</span>
         </div>
 
         <!-- ③ 날짜/시간 카드 -->
@@ -2632,7 +2678,7 @@ function updateTransitSectionWithNASA(planets) {
 
             <!-- 행성 그리드 -->
             <div style="flex:1;min-width:0">
-              <div style="font-size:10px;color:#e2e8f0;font-weight:700;margin-bottom:6px">🌌 지금 하늘의 상태</div>
+              <div style="font-size:10px;color:#e2e8f0;font-weight:700;margin-bottom:6px" data-i18n="cosmic_sky">🌌 지금 하늘의 상태</div>
               <div id="cosmicPlanetGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
                 <div style="padding:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:7px;text-align:center;color:var(--text-3);font-size:10px;grid-column:1/-1">✨ 계산 버튼을 누르면 나와요</div>
               </div>
@@ -2642,8 +2688,8 @@ function updateTransitSectionWithNASA(planets) {
           <!-- ⑤ 수신 버튼 -->
           <div style="text-align:center;margin:14px 0 10px">
             <button id="cosmicReceiveBtn" onclick="receiveCosmicOrder()" style="position:relative;padding:12px 32px;background:linear-gradient(135deg,#b8860b,var(--gold),#f0c060);border:none;border-radius:12px;color:#030818;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:.08em;box-shadow:0 0 28px rgba(212,168,67,0.4);transition:all .3s;overflow:hidden;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 36px rgba(212,168,67,0.6)'" onmouseout="this.style.transform='';this.style.boxShadow='0 0 28px rgba(212,168,67,0.4)'">
-              <span style="position:relative;z-index:1">🚨 지금 내 행운 신호 받기!</span>
-              <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8">NASA + 18대 역학 × 실시간 분석</span>
+              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">🚨 지금 내 행운 신호 받기!</span>
+              <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8" data-i18n="cosmic_btn_sub">NASA + 18대 역학 × 실시간 분석</span>
               <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 2.5s infinite"></div>
             </button>
           </div>
@@ -6389,8 +6435,8 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 // ══ Groq 키 자동 로테이션 (한도 초과시 다음 키로 자동 전환) ══
 (function(){
   var KEY_POOL = [
-    'Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y=',
-    'Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y=',
+    'Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=',
+    'Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=',
   ];
   window._CGO_KEY_POOL = KEY_POOL;
   var idx = parseInt(localStorage.getItem('cgo_key_idx') || '0');
@@ -8215,6 +8261,656 @@ function showSijinDetail(idx, energy) {
   document.getElementById('fpBody').innerHTML=bHtml;
   document.getElementById('fortunePopupOverlay').classList.add('show');
 }
+
+
+// ══════════════════════════════════════════════════════════
+// 🌐 CGO-FULI 다국어 시스템 v1.0 (KO/EN/ZH/JA)
+// ══════════════════════════════════════════════════════════
+var _LANG = 'ko';
+
+var _I18N = {
+  ko: {
+    flag:'🇰🇷', code:'KO',
+    calcBtn:'⚡ 자동 계산',
+    calcSync:'전체 동기화',
+    fortuneWait:'✨ 위에 정보 입력 후 "자동 계산" 버튼을 누르면 오늘의 운세를 알 수 있어요!',
+    fortuneDateDefault:'자동 계산 후 표시됩니다',
+    cosmicSub:'⚡ 자동 계산 후 표시',
+    name_label:'이름', birth_label:'생년월일', time_label:'출생시간', gender_label:'성별',
+    birth_place:'출생지', cur_place:'현재 거주지',
+    male:'남성', female:'여성',
+    auto_loc:'📡 현재 위치 자동',
+    section_dash:'대시보드',
+    section_scan:'실시간 생체 에너지 스캔',
+    section_algo:'🩺 AI 통합 건강 예측',
+    section_report:'정밀 분석 리포트',
+    section_consult:'🔮 1대1 고민 상담',
+    section_sports:'⚽ 스포츠 에너지 궁합',
+    section_stock:'📈 주식 에너지 예측',
+    section_music:'🎵 나의 주파수 음악',
+    grade_sp:'최상위 에너지', grade_a:'우수 에너지', grade_b:'안정 에너지', grade_c:'보통 에너지',
+    algo18_title:'🔯 18대 역학 × NASA 실시간 분석',
+    today_fortune:'오늘의 운수',
+    lucky_num:'행운 숫자', lucky_color:'행운 색상', lucky_dir:'행운 방향', lucky_time:'행운 시간',
+    sijin_title:'⏰ 시진별 운세',
+    sijin_detail_rec:'✅ 이 시간 추천', sijin_detail_warn:'❌ 피해야 할 것',
+    surname_good:'✅ 만나면 에너지 오르는 성씨', surname_warn:'⚠️ 주의 성씨', surname_same:'💡 같은 오행 성씨',
+    avoid_action:'피할 행동', avoid_color:'피할 색', avoid_dir:'피할 방향',
+    nasa_realtime:'🛰️ NASA JPL · 오늘의 행성 에너지',
+    scan_start:'⚡ 스캔 시작', scan_face:'👤 얼굴 스캔', scan_palm:'✋ 손금 스캔', scan_tongue:'👅 혀 스캔',
+    mbti_19th:'🧠 MBTI 19번째 역학',
+    ph_year:'년도', ph_month:'월', ph_day:'일',
+    ph_birth_place:'동/읍/면까지 입력 (예: 강남구 역삼동, 군산 나운동, Tokyo...)',
+    ph_cur_place:'동/읍/면까지 입력 (예: 분당구 정자동, 군산 수송동, London...)',
+    ph_name:'예: 이주원',
+    lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀', lbl_tap_scan:'탭하여 스캔', mbtiLabel:'MBTI 성격 유형', mbti_19th:'19번째 역학 보정', labelName:'이름 (성명)', labelTime:'출생 시간', labelGender:'성별', ipTitle:'📋 정보 입력 — 이름·생년월일만 넣으면 모든 게 자동으로 계산돼요!',
+    btn_18engine:'18개 엔진 즉시 반영',
+    lbl_bioskin:'생체 스킨 분석',
+    lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀',
+    lbl_tap_scan:'탭하여 스캔',
+    lbl_birth_label:'생년월일', lbl_solar:'양력', lbl_lunar:'음력',
+    lbl_birth_place:'출생지', lbl_birth_hint:'동 단위 → 정밀 좌표', lbl_cur_place:'현재 거주지', lbl_cur_hint:'동 단위 → 정밀 방위',
+    banner1:'🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된', banner2:'18개 역학 엔진', banner3:'을 융합하여', banner4:'당신만의 인생 지수', banner5:'를 계산합니다.',
+    btnSolar:'양력', btnLunar:'음력', optMale:'남성 (男)', optFemale:'여성 (女)', auto_loc:'📡 현재 위치 자동',
+    nasaLive:'NASA JPL', bioScan:'🧬 생체 스킨 분석', btn_18engine:'18개 엔진 즉시 반영',
+    fortune_ttl:'오늘 내 에너지는 어떤가요?',
+    mbti_know:'내 MBTI 알아요', mbti_dontknow:'내 MBTI 몰라요',
+    mbti_direct:'직접 선택 → 즉시 적용', mbti_test:'검사로 찾기',
+    cosmic_subtitle:'실시간 행성 항로', cosmic_sky:'🌌 지금 하늘의 상태',
+    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
+    nasa_full:'( 미 항공 우주국 )', nasa_subtitle:'실시간 행성 항로 / 시간',
+    word_time:'시간', lbl_live:'● LIVE',
+    cosmic_btn:'🚨 지금 내 행운 신호 받기!', cosmic_btn_sub:'NASA + 18대 역학 × 실시간 분석',
+    cosmic_gear_default:'사주&행성<br>맞물림',
+    face_sub:'안면 기색·형태<br>FCI·FMA 분석', palm_sub:'생명선·두뇌선<br>BLI·HRV 분석', tongue_sub:'설색·설태·혈색<br>오장 에너지 분석',
+  },
+  en: {
+    flag:'🇺🇸', code:'EN',
+    calcBtn:'⚡ Calculate',
+    calcSync:'Sync All',
+    fortuneWait:'✨ Enter your info above and press "Calculate" to see your fortune!',
+    fortuneDateDefault:'Shown after calculation',
+    cosmicSub:'⚡ Shown after calculation',
+    name_label:'Name', birth_label:'Birth Date', time_label:'Birth Time', gender_label:'Gender',
+    birth_place:'Birthplace', cur_place:'Current Location',
+    male:'Male', female:'Female',
+    auto_loc:'📡 Auto Location',
+    section_dash:'Dashboard',
+    section_scan:'Real-time Bio Energy Scan',
+    section_algo:'🩺 AI Health Prediction',
+    section_report:'Precision Analysis Report',
+    section_consult:'🔮 1-on-1 Consultation',
+    section_sports:'⚽ Sports Energy Match',
+    section_stock:'📈 Stock Energy Forecast',
+    section_music:'🎵 My Frequency Music',
+    grade_sp:'Peak Energy', grade_a:'Excellent Energy', grade_b:'Stable Energy', grade_c:'Normal Energy',
+    algo18_title:'🔯 20 Astrology Engines × NASA Live',
+    today_fortune:"Today's Fortune",
+    lucky_num:'Lucky Number', lucky_color:'Lucky Color', lucky_dir:'Lucky Direction', lucky_time:'Lucky Hour',
+    sijin_title:'⏰ Hourly Fortune (12 Shichen)',
+    sijin_detail_rec:'✅ Recommended Now', sijin_detail_warn:'❌ Avoid Now',
+    surname_good:'✅ Good Energy Surnames', surname_warn:'⚠️ Caution Surnames', surname_same:'💡 Same Element Surnames',
+    avoid_action:'Avoid Action', avoid_color:'Avoid Color', avoid_dir:'Avoid Direction',
+    nasa_realtime:'🛰️ NASA JPL · Planetary Energy Today',
+    scan_start:'⚡ Start Scan', scan_face:'👤 Face Scan', scan_palm:'✋ Palm Scan', scan_tongue:'👅 Tongue Scan',
+    mbti_19th:'🧠 MBTI 19th Engine',
+    ph_year:'Year', ph_month:'Month', ph_day:'Day',
+    ph_birth_place:'Enter town/district (e.g. Gangnam-gu, Tokyo, London...)',
+    ph_cur_place:'Enter current location (e.g. Bundang-gu, London...)',
+    ph_name:'e.g. John Smith',
+    lbl_face:'Face', lbl_palm:'Palm', lbl_tongue:'Tongue', lbl_tap_scan:'Tap to Scan', mbtiLabel:'MBTI Personality', mbti_19th:'19th Engine Boost', labelName:'Name', labelTime:'Birth Time', labelGender:'Gender', ipTitle:'📋 Enter Info — Name & Birthday is all you need!',
+    btn_18engine:'Sync 18 Engines',
+    lbl_bioskin:'BIO SKIN ANALYSIS',
+    lbl_face:'Face', lbl_palm:'Palm', lbl_tongue:'Tongue',
+    lbl_tap_scan:'Tap to Scan',
+    lbl_birth_label:'Birth Date', lbl_solar:'Solar', lbl_lunar:'Lunar',
+    lbl_birth_place:'Birthplace', lbl_birth_hint:'Town/District → GPS Coords', lbl_cur_place:'Current Location', lbl_cur_hint:'Town/District → Direction',
+    banner1:'🛸 NASA real-time space data, biosignals, and', banner2:'20 Astrology Engines', banner3:' fused to create', banner4:'your personal Life Index', banner5:'.',
+    btnSolar:'Solar', btnLunar:'Lunar', optMale:'Male', optFemale:'Female', auto_loc:'📡 My Location',
+    nasaLive:'NASA JPL Live', bioScan:'🧬 BIO SKIN ANALYSIS', btn_18engine:'Sync 20 Engines',
+    fortune_ttl:"What's my energy today?",
+    mbti_know:'I know my MBTI', mbti_dontknow:"I don't know my MBTI",
+    mbti_direct:'Select directly → Apply now', mbti_test:'Find by test',
+    cosmic_subtitle:'Real-time Planetary Path', cosmic_sky:'🌌 Sky Status Now',
+    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
+    nasa_full:'( NASA )', nasa_subtitle:'Real-time Planetary Path / Time',
+    word_time:'Time', lbl_live:'● LIVE',
+    cosmic_btn:'🚨 Get My Lucky Signal Now!', cosmic_btn_sub:'NASA + 20 Engines × Live Analysis',
+    cosmic_gear_default:'Birth Chart &amp;<br>Planets Aligned',
+    face_sub:'Face color·shape<br>FCI·FMA analysis', palm_sub:'Life line·brain line<br>BLI·HRV analysis', tongue_sub:'Skin color·texture·blood color<br>Organ energy analysis',
+  },
+  zh: {
+    flag:'🇨🇳', code:'ZH',
+    calcBtn:'⚡ 自动计算',
+    calcSync:'全部同步',
+    fortuneWait:'✨ 请在上方输入信息，点击"自动计算"查看今日运势！',
+    fortuneDateDefault:'计算后显示',
+    cosmicSub:'⚡ 计算后显示',
+    name_label:'姓名', birth_label:'出生日期', time_label:'出生时间', gender_label:'性别',
+    birth_place:'出生地', cur_place:'现居地',
+    male:'男性', female:'女性',
+    auto_loc:'📡 自动定位',
+    section_dash:'仪表盘',
+    section_scan:'实时生体能量扫描',
+    section_algo:'🩺 AI健康预测',
+    section_report:'精密分析报告',
+    section_consult:'🔮 一对一咨询',
+    section_sports:'⚽ 运动能量匹配',
+    section_stock:'📈 股票能量预测',
+    section_music:'🎵 我的频率音乐',
+    grade_sp:'最优能量', grade_a:'优秀能量', grade_b:'稳定能量', grade_c:'普通能量',
+    algo18_title:'🔯 20大命理 × NASA实时分析',
+    today_fortune:'今日运势',
+    lucky_num:'幸运数字', lucky_color:'幸运颜色', lucky_dir:'幸运方位', lucky_time:'幸运时辰',
+    sijin_title:'⏰ 时辰运势 (十二时辰)',
+    sijin_detail_rec:'✅ 此时推荐', sijin_detail_warn:'❌ 此时避免',
+    surname_good:'✅ 相生姓氏', surname_warn:'⚠️ 注意姓氏', surname_same:'💡 同五行姓氏',
+    avoid_action:'避免行动', avoid_color:'避免颜色', avoid_dir:'避免方位',
+    nasa_realtime:'🛰️ NASA JPL · 今日行星能量',
+    scan_start:'⚡ 开始扫描', scan_face:'👤 面相扫描', scan_palm:'✋ 手相扫描', scan_tongue:'👅 舌诊扫描',
+    mbti_19th:'🧠 MBTI第19引擎',
+    ph_year:'年', ph_month:'月', ph_day:'日',
+    ph_birth_place:'输入出生地 (例：北京朝阳区、上海、Tokyo...)',
+    ph_cur_place:'输入现居地 (例：北京海淀区、Shanghai、London...)',
+    ph_name:'例：张伟',
+    lbl_face:'面相', lbl_palm:'手相', lbl_tongue:'舌诊', lbl_tap_scan:'点击扫描', mbtiLabel:'MBTI性格类型', mbti_19th:'第19引擎加成', labelName:'姓名', labelTime:'出生时间', labelGender:'性别', ipTitle:'📋 输入信息 — 只需姓名和生日即可！',
+    btn_18engine:'同步18引擎',
+    lbl_bioskin:'生体皮肤分析',
+    lbl_face:'面相', lbl_palm:'手相', lbl_tongue:'舌诊',
+    lbl_tap_scan:'点击扫描',
+    lbl_birth_label:'出生日期', lbl_solar:'阳历', lbl_lunar:'阴历',
+    lbl_birth_place:'出生地', lbl_birth_hint:'区/镇 → 精确坐标', lbl_cur_place:'现居地', lbl_cur_hint:'区/镇 → 精确方位',
+    banner1:'🛸 NASA实时宇宙数据与生体信号，以及数字化的', banner2:'20大星学引擎', banner3:'融合计算', banner4:'您专属的人生指数', banner5:'。',
+    btnSolar:'阳历', btnLunar:'阴历', optMale:'男性', optFemale:'女性', auto_loc:'📡 自动定位',
+    nasaLive:'NASA JPL实时', bioScan:'🧬 生体皮肤分析', btn_18engine:'同步20引擎',
+    fortune_ttl:'今天我的能量如何？',
+    mbti_know:'我知道我的MBTI', mbti_dontknow:'我不知道我的MBTI',
+    mbti_direct:'直接选择 → 立即应用', mbti_test:'通过测试查找',
+    cosmic_subtitle:'实时行星轨迹', cosmic_sky:'🌌 当前星空状态',
+    lbl_live:'直播', cosmic_order:'宇宙命令',
+    nasa_full:'（美国航空航天局）', nasa_subtitle:'实时行星轨道 / 时间',
+    word_time:'时间', lbl_live:'● 直播',
+    cosmic_btn:'🚨 立即获取我的幸运信号！', cosmic_btn_sub:'NASA + 20大命理 × 实时分析',
+    cosmic_gear_default:'命盘与行星<br>共鸣共振',
+    face_sub:'面色·面形<br>FCI·FMA分析', palm_sub:'生命线·智慧线<br>BLI·HRV分析', tongue_sub:'舌色·舌苔·血色<br>脏腑能量分析',
+  },
+  ja: {
+    flag:'🇯🇵', code:'JA',
+    calcBtn:'⚡ 自動計算',
+    calcSync:'全同期',
+    fortuneWait:'✨ 上に情報を入力して「自動計算」を押すと今日の運勢がわかります！',
+    fortuneDateDefault:'計算後に表示',
+    cosmicSub:'⚡ 計算後に表示',
+    name_label:'お名前', birth_label:'生年月日', time_label:'出生時間', gender_label:'性別',
+    birth_place:'出生地', cur_place:'現在地',
+    male:'男性', female:'女性',
+    auto_loc:'📡 現在地自動取得',
+    section_dash:'ダッシュボード',
+    section_scan:'リアルタイム生体エネルギースキャン',
+    section_algo:'🩺 AI健康予測',
+    section_report:'精密分析レポート',
+    section_consult:'🔮 1対1相談',
+    section_sports:'⚽ スポーツエネルギー相性',
+    section_stock:'📈 株式エネルギー予測',
+    section_music:'🎵 マイフリクエンシー音楽',
+    grade_sp:'最高エネルギー', grade_a:'優秀エネルギー', grade_b:'安定エネルギー', grade_c:'通常エネルギー',
+    algo18_title:'🔯 20大命術 × NASAリアルタイム分析',
+    today_fortune:'今日の運勢',
+    lucky_num:'ラッキーナンバー', lucky_color:'ラッキーカラー', lucky_dir:'ラッキー方位', lucky_time:'ラッキータイム',
+    sijin_title:'⏰ 時辰別運勢 (十二時辰)',
+    sijin_detail_rec:'✅ この時間のおすすめ', sijin_detail_warn:'❌ 避けること',
+    surname_good:'✅ 相生の姓', surname_warn:'⚠️ 注意の姓', surname_same:'💡 同五行の姓',
+    avoid_action:'避ける行動', avoid_color:'避ける色', avoid_dir:'避ける方位',
+    nasa_realtime:'🛰️ NASA JPL · 今日の惑星エネルギー',
+    scan_start:'⚡ スキャン開始', scan_face:'👤 顔相スキャン', scan_palm:'✋ 手相スキャン', scan_tongue:'👅 舌診スキャン',
+    mbti_19th:'🧠 MBTI第19エンジン',
+    ph_year:'年', ph_month:'月', ph_day:'日',
+    ph_birth_place:'市区町村まで入力 (例：渋谷区、大阪市、Seoul...)',
+    ph_cur_place:'現在地を入力 (例：新宿区、横浜市、London...)',
+    ph_name:'例：田中太郎',
+    lbl_face:'顔相', lbl_palm:'手相', lbl_tongue:'舌診', lbl_tap_scan:'タップしてスキャン', mbtiLabel:'MBTI性格タイプ', mbti_19th:'第19エンジン補正', labelName:'氏名', labelTime:'出生時間', labelGender:'性別', ipTitle:'📋 情報入力 — 名前と生年月日だけでOK！',
+    btn_18engine:'18エンジン同期',
+    lbl_bioskin:'生体スキン分析',
+    lbl_face:'顔相', lbl_palm:'手相', lbl_tongue:'舌診',
+    lbl_tap_scan:'タップしてスキャン',
+    lbl_birth_label:'生年月日', lbl_solar:'新暦', lbl_lunar:'旧暦',
+    lbl_birth_place:'出生地', lbl_birth_hint:'市区町村 → 精密座標', lbl_cur_place:'現在地', lbl_cur_hint:'市区町村 → 精密方位',
+    banner1:'🛸 NASAリアルタイム宇宙データと生体信号、そして数値化された', banner2:'20大星術エンジン', banner3:'を融合して', banner4:'あなただけの人生指数', banner5:'を計算します。',
+    btnSolar:'新暦', btnLunar:'旧暦', optMale:'男性', optFemale:'女性', auto_loc:'📡 現在地自動',
+    nasaLive:'NASA JPLリアルタイム', bioScan:'🧬 生体スキン分析', btn_18engine:'20エンジン同期',
+    fortune_ttl:'今日の私のエネルギーは？',
+    mbti_know:'MBTIを知っています', mbti_dontknow:'MBTIを知りません',
+    mbti_direct:'直接選択 → すぐ適用', mbti_test:'テストで調べる',
+    cosmic_subtitle:'リアルタイム惑星軌道', cosmic_sky:'🌌 現在の天空状態',
+    lbl_live:'ライブ', cosmic_order:'コズミックオーダー',
+    nasa_full:'（米航空宇宙局）', nasa_subtitle:'リアルタイム惑星軌道 / 時刻',
+    auto_loc:'📡 現在地自動',
+    word_time:'時刻', lbl_live:'● ライブ',
+    cosmic_btn:'🚨 今すぐ幸運シグナルを受け取る！', cosmic_btn_sub:'NASA + 20大星術 × リアルタイム分析',
+    cosmic_gear_default:'命式と惑星が<br>共鳴します',
+    face_sub:'顔色·顔形<br>FCI·FMA分析', palm_sub:'生命線·頭脳線<br>BLI·HRV分析', tongue_sub:'舌色·舌苔·血色<br>臓腑エネルギー分析',
+  }
+};
+
+// 현재 언어 텍스트 가져오기
+function _t(key) {
+  return (_I18N[_LANG] && _I18N[_LANG][key]) || (_I18N['ko'][key]) || key;
+}
+
+// 언어 메뉴 토글
+function toggleLangMenu() {
+  var m = document.getElementById('langMenu');
+  if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+  // 외부 클릭 시 닫기
+  setTimeout(function(){
+    document.addEventListener('click', function _cls(e){
+      if(!document.getElementById('langSelector').contains(e.target)){
+        var mm=document.getElementById('langMenu');
+        if(mm) mm.style.display='none';
+      }
+      document.removeEventListener('click', _cls);
+    });
+  }, 10);
+}
+
+// 언어 변경
+function setLang(lang) {
+  _LANG = lang;
+  var p = _I18N[lang] || _I18N['ko'];
+
+  // 1. 플래그·코드 업데이트
+  var flagEl=document.getElementById('langFlag'); if(flagEl) flagEl.textContent=p.flag;
+  var codeEl=document.getElementById('langCode'); if(codeEl) codeEl.textContent=p.code;
+  var mEl=document.getElementById('langMenu'); if(mEl) mEl.style.display='none';
+  // 현재 선택 언어 하이라이트
+  ['ko','en','zh','ja'].forEach(function(l){
+    var opt=document.getElementById('langOpt-'+l);
+    if(!opt) return;
+    opt.style.background = l===lang ? 'rgba(212,168,67,.18)' : '';
+    opt.style.color = l===lang ? '#d4a843' : '';
+  });
+
+  // 2. 계산 버튼
+  var cb=document.getElementById('calcBtn');
+  if(cb) cb.innerHTML=p.calcBtn+'<span style="position:absolute;top:-9px;right:-6px;background:#34d399;color:#082011;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.04em;white-space:nowrap">'+p.calcSync+'</span>';
+
+  // 3. fortune 텍스트
+  var fw=document.querySelector('.fortune-wait'); if(fw) fw.textContent=p.fortuneWait;
+  var fd=document.getElementById('fortuneDate'); if(fd&&/자동|Shown|显示|表示/.test(fd.textContent)) fd.textContent=p.fortuneDateDefault;
+  var cs=document.getElementById('cosmicDateSub'); if(cs&&/자동|Shown|显示|表示|表示/.test(cs.textContent)) cs.textContent=p.cosmicSub;
+  // 운세 제목 직접 교체
+  var ftl=document.getElementById('fortuneTtl'); if(ftl&&p.fortune_ttl) ftl.textContent=p.fortune_ttl;
+  // cosmicGearDesc innerHTML 교체
+  var cgd=document.getElementById('cosmicGearDesc');
+  if(cgd && p.cosmic_gear_default) cgd.innerHTML=p.cosmic_gear_default;
+  // data-i18n 일괄 교체 (textContent)
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var k=el.getAttribute('data-i18n');
+    if(p[k]!==undefined) el.textContent=p[k];
+  });
+  // data-i18n-html 일괄 교체 (innerHTML — <br> 등 태그 포함)
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+    var k=el.getAttribute('data-i18n-html');
+    if(p[k]!==undefined) el.innerHTML=p[k];
+  });
+
+
+  // 4. data-i18n 속성 일괄 교체 (_I18N 팩 기준)
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var k=el.getAttribute('data-i18n');
+    if(p[k] !== undefined) el.textContent=p[k];
+  });
+
+  // 5. placeholder 직접 교체
+  try {
+    var els = {
+      ipBirthY: p.ph_year, ipBirthM: p.ph_month, ipBirthD: p.ph_day,
+      ipBirthPlace: p.ph_birth_place, ipCurPlace: p.ph_cur_place, ipName: p.ph_name
+    };
+    Object.keys(els).forEach(function(id){
+      var el=document.getElementById(id); if(el&&els[id]) el.placeholder=els[id];
+    });
+    // data-i18n-ph 일괄
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el){
+      var k=el.getAttribute('data-i18n-ph'); if(p[k]) el.placeholder=p[k];
+    });
+    // 버튼·셀렉트
+    var s=document.getElementById('btnSolar'); if(s) s.textContent=p.lbl_solar||p.btnSolar||'양력';
+    var l=document.getElementById('btnLunar'); if(l) l.textContent=p.lbl_lunar||p.btnLunar||'음력';
+    var g=document.getElementById('ipGender');
+    if(g){ if(g.options[0]) g.options[0].text=p.male||'남성 (男)'; if(g.options[1]) g.options[1].text=p.female||'여성 (女)'; }
+  } catch(e){}
+
+  // 6. 페이지 타이틀 매핑
+  window._pageTitleI18N={dashboard:p.section_dash,scan:p.section_scan,algo:p.section_algo,report:p.section_report,consult:p.section_consult,sports:p.section_sports,stock:p.section_stock};
+  _applyLangLocalization(lang);
+
+  // 7. localStorage 저장
+  try { localStorage.setItem('cgo_lang', lang); } catch(e){}
+
+  // 8. 한국어면 원본 복원, 외국어면 AI 번역
+  if (lang === 'ko') {
+    _cgoRestoreTexts();
+    try {
+      ['ipBirthY','ipBirthM','ipBirthD'].forEach(function(id,i){
+        var el=document.getElementById(id); if(el) el.placeholder=['년도','월','일'][i];
+      });
+      var bp=document.getElementById('ipBirthPlace'); if(bp) bp.placeholder='동/읍/면까지 입력 (예: 강남구 역삼동, 군산 나운동, Tokyo...)';
+      var cp=document.getElementById('ipCurPlace'); if(cp) cp.placeholder='동/읍/면까지 입력 (예: 분당구 정자동, 군산 수송동, London...)';
+      var nm=document.getElementById('ipName'); if(nm) nm.placeholder='예: 이주원';
+      var sb=document.getElementById('btnSolar'); if(sb) sb.textContent='양력';
+      var lb=document.getElementById('btnLunar'); if(lb) lb.textContent='음력';
+      var gs=document.getElementById('ipGender');
+      if(gs){ if(gs.options[0]) gs.options[0].text='남성 (男)'; if(gs.options[1]) gs.options[1].text='여성 (女)'; }
+    } catch(e){}
+  } else {
+    // AI 번역 실행
+    setTimeout(function(){ _cgoAiTranslate(lang, p); }, 100);
+  }
+  // 별자리 이름 언어 업데이트
+  if(typeof _updateZodiacLang==='function') _updateZodiacLang(lang);
+  // 행성 그리드 재렌더 (이미 데이터 있으면)
+  if(window._nasaPlanets && typeof updateCosmicPlanetGrid==='function') {
+    setTimeout(function(){ updateCosmicPlanetGrid(window._nasaPlanets); }, 50);
+  }
+  // 위성 계산 텍스트 즉시 업데이트
+  var _dsEl = document.getElementById('cosmicDateSub2') || document.querySelector('[id*="DateSub"]');
+  var _ds2 = document.querySelector('.cosmic-date-text') || document.getElementById('cosmicDateDetail');
+  // NASA 계산 완료 배너 업데이트
+  var _nasaBanner = document.getElementById('nasaStatusBar');
+  if(_nasaBanner && _nasaBanner.textContent && _nasaBanner.textContent.indexOf('JD')>0) {
+    var _satTxt2={ko:'✅ NASA 인공위성 정밀 계산 완료 (오차 0.01°)',en:'✅ NASA satellite calculation complete (error 0.01°)',zh:'✅ NASA卫星精密计算完成（误差0.01°）',ja:'✅ NASA衛星精密計算完了（誤差0.01°）'};
+    var _jdPart = _nasaBanner.textContent.match(/JD\s*[\d.]+/);
+    if(_jdPart) _nasaBanner.textContent = (_satTxt2[lang]||_satTxt2.ko) + ' · ' + _jdPart[0];
+  }
+  console.log('🌐 언어:', lang);
+}
+
+// ── 원본 텍스트 스냅샷 ─────────────────────────────────────────
+var _cgoOrigSnap = null;
+
+function _cgoSaveSnap() {
+  // 이미 저장됐으면 건너뜀 (한국어 원본 보존)
+  if (_cgoOrigSnap) return;
+  _cgoOrigSnap = [];
+  // 전체 body에서 저장 (원본 한국어 보존용)
+  var skip = {SCRIPT:1,STYLE:1,NOSCRIPT:1,CANVAS:1,SVG:1,INPUT:1,TEXTAREA:1,CODE:1};
+  function walk(node) {
+    if (node.nodeType === 3) {
+      var t = node.nodeValue.trim();
+      if (t.length >= 2 && /[가-힣]/.test(t)) _cgoOrigSnap.push({node:node, text:node.nodeValue});
+    } else if (node.nodeType === 1 && !skip[node.tagName]) {
+      for (var i=0; i<node.childNodes.length; i++) walk(node.childNodes[i]);
+    }
+  }
+  walk(document.body);
+}
+
+function _cgoRestoreTexts() {
+  if (!_cgoOrigSnap) return;
+  _cgoOrigSnap.forEach(function(item){ item.node.nodeValue = item.text; });
+}
+
+// ── 번역 대상 텍스트 노드 수집 ────────────────────────────────
+function _cgoGetNodes(rootEl) {
+  var skip = {SCRIPT:1,STYLE:1,NOSCRIPT:1,CANVAS:1,SVG:1,INPUT:1,TEXTAREA:1,CODE:1};
+  var result = [];
+  var root = rootEl || (function(){
+    var active = document.querySelector('.page.active');
+    return active || document.body;
+  })();
+  function walk(node) {
+    if (node.nodeType === 3) {
+      var t = node.nodeValue.trim();
+      // 한글 포함, 2자 이상, data-i18n 이미 처리된 노드 제외
+      if (t.length >= 2 && /[가-힣]/.test(t)) {
+        // data-i18n 또는 data-i18n-html 있으면 이미 정적 처리됨 → 건너뜀
+        var par = node.parentElement;
+        if (par && (par.getAttribute('data-i18n') || par.getAttribute('data-i18n-html'))) return;
+        result.push(node);
+      }
+    } else if (node.nodeType === 1 && !skip[node.tagName]) {
+      // 숨겨진 .page 제외 (단, 팝업은 포함)
+      if (node.classList && node.classList.contains('page') && !node.classList.contains('active')) return;
+      for (var i=0; i<node.childNodes.length; i++) walk(node.childNodes[i]);
+    }
+  }
+  walk(root);
+  // 팝업도 포함 (열려있으면)
+  var popup = document.getElementById('fpBody');
+  if (popup && popup.children.length > 0 && root !== popup) walk(popup);
+  return result;
+}
+
+// ── Groq AI 번역 엔진 ─────────────────────────────────────────
+function _cgoAiTranslate(lang, pack) {
+  // 1. 원본 한국어 스냅샷 저장 (최초 1회)
+  _cgoSaveSnap();
+
+  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese'};
+  var tgtLang = langNames[lang] || 'English';
+
+  // 2. 현재 활성 페이지 노드만 수집
+  var nodes = _cgoGetNodes();
+  if (!nodes.length) { console.log('번역할 노드 없음'); return; }
+  console.log('[번역] 노드수:', nodes.length, '→', tgtLang);
+
+  // 3. 로딩 배지
+  var badge = document.getElementById('_cgoTransBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = '_cgoTransBadge';
+    badge.style.cssText = 'position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(212,168,67,.95);color:#030818;font-size:11px;font-weight:800;padding:5px 16px;border-radius:20px;z-index:99999;letter-spacing:.04em;box-shadow:0 2px 12px rgba(0,0,0,.4)';
+    document.body.appendChild(badge);
+  }
+  badge.textContent = (pack.flag||'🌐') + ' 번역 중... 0%';
+  badge.style.display = 'block';
+
+  var apiKey = (window.CG_GEMINI_KEY||'').trim();
+  if (!apiKey) { try { apiKey=atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA='); }catch(e){} }
+
+  // 4. 배치 분할 (60개씩)
+  var batchSize = 60;
+  var batches = [];
+  for (var i=0; i<nodes.length; i+=batchSize) batches.push(nodes.slice(i,i+batchSize));
+  var done = 0;
+  var total = batches.length;
+
+  function doNextBatch(bi) {
+    if (bi >= total) return;
+    // 언어가 바뀌었으면 중단
+    if (window._LANG !== lang) { badge.style.display='none'; return; }
+
+    var batch = batches[bi];
+    var texts = batch.map(function(n){ return n.nodeValue.trim(); });
+
+    var sysMsg = 'You are a professional Korean UI translator. Task: translate Korean text to ' + tgtLang + '. Rules: 1) Return ONLY a JSON array. 2) Same number of elements as input. 3) Keep emojis, numbers, symbols, brand names (NASA, CGO-FULI, ILI, HRV, FCI, MBTI) unchanged. 4) Short UI text only - be concise.';
+    var userMsg = JSON.stringify(texts);
+
+    // 번역 캐시 확인 (동일 텍스트 재번역 방지)
+    var _tCacheKey = lang + '_' + userMsg.substring(0,50);
+    if (!window._transCache) window._transCache = {};
+    if (window._transCache[_tCacheKey]) {
+      try {
+        var _cached = window._transCache[_tCacheKey];
+        batch.forEach(function(node,i){ if(_cached[i]&&_cached[i].trim()) node.nodeValue=_cached[i]; });
+      } catch(e){}
+      done++;
+      badge.textContent=(pack.flag||'🌐')+' '+Math.round(done/total*100)+'%';
+      if(done>=total){badge.textContent=(pack.flag||'🌐')+' ✓ 완료';setTimeout(function(){badge.style.display='none';},1500);}
+      else doNextBatch(bi+1);
+      return;
+    }
+    fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[
+          {role:'system', content:sysMsg},
+          {role:'user', content:userMsg}
+        ],
+        max_tokens:2048,
+        temperature:0.1,
+        stream:false
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (window._LANG !== lang) { badge.style.display='none'; return; }
+      try {
+        var raw = ((data.choices||[])[0]||{}).message && data.choices[0].message.content || '';
+        raw = raw.trim().replace(/^```[a-zA-Z]*/,'').replace(/```$/,'').trim();
+        // JSON 배열 추출
+        var m = raw.match(/(\[[\s\S]*\])/);
+        if (!m) throw new Error('no array: ' + raw.substring(0,100));
+        var arr = JSON.parse(m[1]);
+        if (!Array.isArray(arr)) throw new Error('not array');
+        // 번역 결과 캐시 저장
+        window._transCache[_tCacheKey] = arr;
+        batch.forEach(function(node,i){
+          var v = arr[i];
+          if (v && typeof v === 'string' && v.trim() && v !== node.nodeValue) {
+            node.nodeValue = v;
+          }
+        });
+      } catch(e){
+        console.warn('[번역] 배치'+bi+' 파싱 오류:', e.message);
+      }
+      done++;
+      badge.textContent = (pack.flag||'🌐') + ' ' + Math.round(done/total*100) + '%';
+      if (done >= total) {
+        badge.textContent = (pack.flag||'🌐') + ' ✓ 완료';
+        setTimeout(function(){ badge.style.display='none'; }, 2000);
+      } else {
+        doNextBatch(bi+1);
+      }
+    })
+    .catch(function(){ done++; if(done>=total){badge.style.display='none';}else doNextBatch(bi+1); });
+  }
+
+  doNextBatch(0);
+}
+
+// 특정 루트 엘리먼트만 번역 (페이지 전환용)
+function _cgoAiTranslatePage(lang, pack, rootEl) {
+  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese'};
+  var tgtLang = langNames[lang]||'English';
+  var nodes = _cgoGetNodes(rootEl);
+  if (!nodes.length) return;
+
+  var apiKey=(window.CG_GEMINI_KEY||'').trim();
+  if(!apiKey){try{apiKey=atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=');}catch(e){}}
+
+  var batchSize=60, batches=[], i;
+  for(i=0;i<nodes.length;i+=batchSize) batches.push(nodes.slice(i,i+batchSize));
+
+  function doBatch(bi){
+    if(bi>=batches.length||window._LANG!==lang) return;
+    var batch=batches[bi];
+    var texts=batch.map(function(n){return n.nodeValue.trim();});
+    var sysMsg='Translate Korean UI text to '+tgtLang+'. Return ONLY a JSON array. Same count. Keep brand names/emojis/numbers unchanged.';
+    fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sysMsg},{role:'user',content:JSON.stringify(texts)}],max_tokens:2048,temperature:0.1,stream:false})
+    })
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(window._LANG!==lang) return;
+      try{
+        var raw=((data.choices||[])[0]||{message:{content:''}}).message.content.trim();
+        raw=raw.replace(/^```[a-zA-Z]*/,'').replace(/```$/,'').trim();
+        var m=raw.match(/(\[[\s\S]*\])/);
+        if(!m) return;
+        var arr=JSON.parse(m[1]);
+        batch.forEach(function(node,i){if(arr[i]&&arr[i].trim()) node.nodeValue=arr[i];});
+      }catch(e){}
+      doBatch(bi+1);
+    })
+    .catch(function(){doBatch(bi+1);});
+  }
+  doBatch(0);
+}
+
+// 문화권별 역학 강조
+function _applyLangLocalization(lang) {
+  var eastLangs = ['ko','zh','ja'];
+  var isEast = eastLangs.indexOf(lang) >= 0;
+  // 동양권: 사주·자미두수 카드 강조 (금색 테두리)
+  document.querySelectorAll('[data-algo-key]').forEach(function(el){
+    var key = el.getAttribute('data-algo-key');
+    if(isEast && (key==='saju'||key==='jami'||key==='gimon')){
+      el.style.border = '1px solid rgba(212,168,67,.5)';
+      el.style.background = 'rgba(212,168,67,.06)';
+    } else {
+      el.style.border = '';
+      el.style.background = '';
+    }
+  });
+}
+
+// 저장된 언어 자동 로드
+(function(){
+  try {
+    var saved = localStorage.getItem('cgo_lang');
+    if(saved && _I18N[saved]) {
+      setTimeout(function(){ setLang(saved); }, 300);
+    }
+  } catch(e){}
+})();
+
+// ── 팝업 변경 감지 → 자동 번역 ────────────────────────────
+(function(){
+  function _watchEl(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    new MutationObserver(function(mutations){
+      // 실제 내용이 추가됐을 때만 번역
+      var hasContent = mutations.some(function(m){ return m.addedNodes.length > 0; });
+      if (!hasContent) return;
+      if (window._LANG && window._LANG !== 'ko') {
+        clearTimeout(window._cgoPopupTransTimer);
+        window._cgoPopupTransTimer = setTimeout(function(){
+          var p = _I18N[window._LANG];
+          if (p && typeof _cgoAiTranslate==='function') {
+            // 팝업 루트만 번역 (빠르게)
+            _cgoAiTranslatePage(window._LANG, p, el);
+          }
+        }, 200);
+      }
+    }).observe(el, {childList:true, subtree:true, characterData:false});
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // 주요 팝업 컨테이너 모두 감시
+    ['fpBody','fortunePopup','hvDetailBox','sijinDetailBox',
+     'algoDetailBox','reportContainer','consultChat',
+     'bioSkin-face-status','bioSkin-palm-status','bioSkin-tongue-status',
+     'bioSkinResult','syncBanner'].forEach(_watchEl);
+    
+    // display 변경도 감시 (hidden→visible)
+    var popupIds = ['fortunePopupOverlay','sijinPopupOverlay','algoPopup','hvDetailOverlay','cosmicOrderSection'];
+    popupIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      new MutationObserver(function(mutations){
+        mutations.forEach(function(m){
+          if (m.type==='attributes' && m.attributeName==='style') {
+            var vis = el.style.display !== 'none' && el.style.visibility !== 'hidden';
+            if (vis && window._LANG && window._LANG !== 'ko') {
+              clearTimeout(window._cgoPopupTransTimer);
+              window._cgoPopupTransTimer = setTimeout(function(){
+                var p = _I18N[window._LANG];
+                if (p && typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG, p, el);
+              }, 250);
+            }
+          }
+        });
+      }).observe(el, {attributes:true, attributeFilter:['style']});
+    });
+  });
+})();
 
 function closeFortunePopup(e) {
   if(!e || e.target===document.getElementById('fortunePopupOverlay')) {
@@ -13121,22 +13817,41 @@ function calcAstro() {
   // ILI 가중 통합 공식
   // ILI = Σ(Wi × Si) / ΣWi  +  BAI 보정(±5)
   //
-  // 4분면 가중치 설계 (8.txt 기반):
-  //   기반(Foundation)  사주·자미·주역       → 35%
-  //   운용(Operation)   기문·육임·트랜짓      → 20%
-  //   조화(Harmony)     점성·수비·카발라      → 25%
-  //   실시간(Realtime)  관상·손금·(바이오)    → 20%
+  // 20대 역학 가중치 설계 v2.0 (이주원×Claude 2026):
+  //   핵심천문  행성트랜짓·자미·기문·베딕통합  → 46pt
+  //   역학기반  주역·태을·사주                 → 24pt
+  //   서양역학  전체차트·하우스·합성·점성       → 11pt
+  //   환경기운  풍수·카발라·수비·성명·육임      →  7pt
+  //   생체실시간 관상·손금                     → 11pt
+  //   심리보정  타로+MBTI                      →  1pt
   // ============================================================
+  // ═══ 20대 역학 가중치 v2.0 (이주원×Claude 재설계) ═══
+  // 베딕 점성술(9) → S03(태양궁+베딕 통합=10)
+  // MBTI/NPTI(0.5) → S16(타로+MBTI 통합=1)
+  // 총 100점 완전 재배분
   var _IW=[
-    {s:S01,w:16},{s:S02,w:10},{s:S03,w:7},{s:S04,w:6},
-    {s:S05,w:6}, {s:S06,w:4}, {s:S07,w:4},{s:S08,w:7},
-    {s:S09,w:3}, {s:S10,w:4}, {s:S11,w:4},{s:S12,w:3},
-    {s:S13,w:4}, {s:S14,w:2}, {s:S15,w:4},{s:S16,w:2},
-    {s:S17,w:7}, {s:S18,w:7}
+    {s:S01,w:8},  // 사주명리     8pt  (우주 오행 에너지 밀도 보정)
+    {s:S02,w:11}, // 자미두수     11pt (실제 성좌 광도·배치 기반)
+    {s:S03,w:10}, // 태양궁+베딕  10pt (태양궁4+베딕9→통합, 항성황도 NASA 정합)
+    {s:S04,w:5},  // 전체 차트    5pt  (탄생 시점 천문 좌표)
+    {s:S05,w:11}, // 기문둔갑     11pt (전리층·지자기 시공간 전략)
+    {s:S06,w:14}, // 행성 트랜짓  14pt (실시간 행성 좌표 직결 — 최고 가중치)
+    {s:S07,w:1},  // 육임신살     1pt  (사건 발생 시점 기운 측정)
+    {s:S08,w:1},  // 서양 수비학  1pt  (숫자 파동 데이터)
+    {s:S09,w:2},  // 풍수지리     2pt  (지자기 기반 환경 최적화)
+    {s:S10,w:2},  // 카발라       2pt  (수치적 진동수·에너지 배치)
+    {s:S11,w:1},  // 성명학       1pt  (음성 파동 수리적 조화)
+    {s:S12,w:3},  // 하우스 시스템 3pt (지구 자전 공간 에너지 분할)
+    {s:S13,w:7},  // 태을신수     7pt  (거대 행성 주기 거시 흐름)
+    {s:S14,w:3},  // 합성 차트    3pt  (인물 간 전자기 간섭 궁합)
+    {s:S15,w:9},  // 주역         9pt  (우주 변화 패턴 디지털화)
+    {s:S16,w:1},  // 타로+MBTI   1pt  (심리 직관+성격 에너지 보정)
+    {s:S17,w:6},  // 관상(생체)   6pt  (신체 발현 에너지장)
+    {s:S18,w:5}   // 손금(생체)   5pt  (생명선 에너지장)
   ];
-  // 생체 스캔 확인 시 실시간 가중치 증폭
-  if(_hvF>0) _IW[16].w=11;
-  if(_hvP>0) _IW[17].w=11;
+  // 생체 스캔 완료 시 실시간 가중치 증폭 (관상+6→10, 손금+5→9)
+  if(_hvF>0) _IW[16].w=10;
+  if(_hvP>0) _IW[17].w=9;
 
   var _wTot=_IW.reduce(function(s,e){return s+e.w;},0);
   var _wSum=_IW.reduce(function(s,e){return s+e.w*e.s;},0);
@@ -13239,13 +13954,24 @@ function calcAstro() {
 
   // 버튼 피드백
   var btn=document.getElementById('calcBtn');
-  btn.textContent='✓ 계산 완료!';
+  btn.textContent=(_t&&typeof _t==='function')?_t('calcDone'):'✓ 계산 완료!';
   btn.style.background='linear-gradient(135deg,var(--green),#16a34a)';
   setTimeout(function(){
     btn.textContent='⚡ 자동 계산';
     btn.style.background='linear-gradient(135deg,var(--gold),#e8bc4a)';
   },2500);
   syncAllPages(calcResult);
+  // 언어가 한국어가 아니면 계산 완료 후 다단계 번역
+  if (window._LANG && window._LANG !== 'ko') {
+    var _cLang = window._LANG;
+    var _cPack = _I18N[_cLang];
+    if (_cPack && typeof _cgoAiTranslate === 'function') {
+      // 1차: 800ms 후 첫 번역 (빠른 정적 업데이트)
+      setTimeout(function(){ _cgoAiTranslate(_cLang, _cPack); }, 800);
+      // 2차: 3초 후 재번역 (syncAllPages로 생성된 동적 텍스트)
+      setTimeout(function(){ _cgoAiTranslate(_cLang, _cPack); }, 3000);
+    }
+  }
 
   // 🛰️ NASA JPL 실시간 행성 데이터 계산 및 주입
   setTimeout(function(){
@@ -15359,10 +16085,236 @@ function cgoSoftGo(pageId) {
     if (nb) nb.style.display = 'flex';
     if (pt) { pt.style.display = 'none'; pt.textContent = ''; }
   }
+  // 외국어 선택 상태면 새 페이지도 번역
+  if (window._LANG && window._LANG !== 'ko') {
+    setTimeout(function(){
+      var p2 = _I18N[window._LANG];
+      if (p2 && typeof _cgoAiTranslate === 'function') _cgoAiTranslate(window._LANG, p2);
+    }, 500);
+  }
+  // 페이지 이동 후 번역 (정적팩 즉시 + AI 전체 번역)
+  if (window._LANG && window._LANG !== 'ko') {
+    var _tLang = window._LANG;
+    var _p3 = _I18N[_tLang];
+    if (_p3) {
+      // 정적 data-i18n 즉시 교체
+      document.querySelectorAll('[data-i18n]').forEach(function(el){
+        var k=el.getAttribute('data-i18n'); if(_p3[k]!==undefined) el.textContent=_p3[k];
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+        var k=el.getAttribute('data-i18n-html'); if(_p3[k]!==undefined) el.innerHTML=_p3[k];
+      });
+      // AI 번역으로 동적 생성 텍스트 처리
+      setTimeout(function(){
+        if (typeof _cgoAiTranslate === 'function') _cgoAiTranslate(_tLang, _p3);
+      }, 700);
+    }
+  }
 }
 // ══ /소프트 안내 시스템 ══════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════
+// 🌍 CGO-FULI 다국어 시스템 v1.0
+// 지원: 🇰🇷한국어 🇺🇸English 🇨🇳中文 🇯🇵日本語
+// ════════════════════════════════════════════════════════
+var _LANG_PACK = {
+  ko: {
+    appName: 'CGO-FULI',
+    calcBtn: '⚡ 자동 계산',
+    calcDone: '✓ 계산 완료!',
+    scanWarn: '⚠️ 생체 스캔이 완료되지 않았습니다!\n\n관상·손금·혀를 먼저 분석하고\n자동 계산을 클릭해주세요.\n\n(계속 진행하려면 확인을 누르세요)',
+    birthPlaceholder: '년도',
+    pages: {
+      dashboard:'', scan:'실시간 생체 스캔', family:'가족 ILI 관리',
+      algo:'🩺 AI 통합 건강 예측', report:'정밀 분석 리포트', profile:'프로필·설정',
+      gmd:'📸 풍수 카메라', naming:'✍️ 작명 서비스', consult:'🔮 1대1 고민 상담',
+      lotto:'🎰 행운 번호', sports:'⚽ 스포츠 에너지 궁합',
+      stock:'📈 주식 에너지 예측', shop:'🛍️ 오행 맞춤 쇼핑',
+      vip:'💎 VVIP 프리미엄 분석', star:'⭐ 별 충전소'
+    },
+    nav: {
+      dashboard:'대시보드', scan:'생체 스캔', family:'가족 관리',
+      algo:'건강 예측', report:'분석 리포트', consult:'AI 상담',
+      sports:'스포츠', stock:'주식', lotto:'행운번호'
+    },
+    ili: '통합 라이프 인덱스', grade: '등급', energy: '에너지',
+    fortune: '오늘의 운수', bioScan: '생체 스킨 분석',
+    face: '관상', palm: '손금', tongue: '혀',
+    algo18: '18대 역학 × NASA 실시간 분석',
+    nasaLive: 'NASA JPL 실시간',
+    mbtiLabel: 'MBTI 성격 유형',
+    calcHint: '전체 동기화',
+    greeting: '님의 오늘 에너지',
+    banner1:'🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된',
+    banner2:'18개 역학 엔진', banner3:'을 융합하여',
+    banner4:'당신만의 인생 지수', banner5:'를 계산합니다.',
+    ipTitle:'📋 정보 입력 — 이름·생년월일만 넣으면 모든 게 자동으로 계산돼요!',
+    labelName:'이름 (성명)', labelTime:'출생 시간', labelGender:'성별',
+    optMale:'남성 (男)', optFemale:'여성 (女)',
+    btnSolar:'양력', btnLunar:'음력', btnMyLoc:'📡 현재 위치 자동',
+    fortuneWait:'✨ 위에 정보 입력 후 "자동 계산" 버튼을 누르면 오늘의 운세를 알 수 있어요!'
+  },
+  en: {
+    appName: 'CGO-FULI',
+    calcBtn: '⚡ Auto Analysis',
+    calcDone: '✓ Analysis Done!',
+    scanWarn: '⚠️ Bio scan not completed!\n\nPlease scan Face·Palm·Tongue first,\nthen click Auto Analysis.\n\n(Press OK to proceed anyway)',
+    birthPlaceholder: 'Year',
+    pages: {
+      dashboard:'', scan:'Live Bio Scan', family:'Family ILI',
+      algo:'🩺 AI Health Forecast', report:'Detailed Report', profile:'Profile·Settings',
+      gmd:'📸 Feng Shui Cam', naming:'✍️ Name Analysis', consult:'🔮 AI Consultation',
+      lotto:'🎰 Lucky Numbers', sports:'⚽ Sports Energy',
+      stock:'📈 Stock Energy', shop:'🛍️ Five Elements Shop',
+      vip:'💎 VVIP Premium', star:'⭐ Star Station'
+    },
+    nav: {
+      dashboard:'Dashboard', scan:'Bio Scan', family:'Family',
+      algo:'Health AI', report:'Report', consult:'AI Chat',
+      sports:'Sports', stock:'Stocks', lotto:'Lucky No.'
+    },
+    ili: 'Integrated Life Index', grade: 'Grade', energy: 'Energy',
+    fortune: "Today's Fortune", bioScan: 'Bio Skin Analysis',
+    face: 'Face', palm: 'Palm', tongue: 'Tongue',
+    algo18: '20 Astro Engines × NASA Real-time',
+    nasaLive: 'NASA JPL Live',
+    mbtiLabel: 'MBTI Personality',
+    calcHint: 'Full Sync',
+    greeting: "'s energy today",
+    banner1:'🛸 NASA real-time space data, biosignals, and',
+    banner2:'20 Astrology Engines', banner3:' fused to create',
+    banner4:'your personal Life Index', banner5:'.',
+    ipTitle:'📋 Enter Info — Name & Birthday is all you need!',
+    labelName:'Name', labelTime:'Birth Time', labelGender:'Gender',
+    optMale:'Male', optFemale:'Female',
+    btnSolar:'Solar', btnLunar:'Lunar', btnMyLoc:'📡 My Location',
+    fortuneWait:'✨ Enter your info and click Auto Analysis to see today\'s fortune!'
+  },
+  zh: {
+    appName: 'CGO-FULI',
+    calcBtn: '⚡ 自动分析',
+    calcDone: '✓ 分析完成!',
+    scanWarn: '⚠️ 生体扫描未完成！\n\n请先完成面相·手相·舌诊，\n再点击自动分析。\n\n(点击确定继续)',
+    birthPlaceholder: '年',
+    pages: {
+      dashboard:'', scan:'实时生体扫描', family:'家族ILI管理',
+      algo:'🩺 AI健康预测', report:'精密分析报告', profile:'个人设置',
+      gmd:'📸 风水相机', naming:'✍️ 起名服务', consult:'🔮 AI咨询',
+      lotto:'🎰 幸运数字', sports:'⚽ 运动能量',
+      stock:'📈 股票能量', shop:'🛍️ 五行购物',
+      vip:'💎 VVIP高级分析', star:'⭐ 星能充值'
+    },
+    nav: {
+      dashboard:'仪表盘', scan:'生体扫描', family:'家族管理',
+      algo:'健康AI', report:'分析报告', consult:'AI咨询',
+      sports:'运动', stock:'股票', lotto:'幸运号'
+    },
+    ili: '综合生命指数', grade: '等级', energy: '能量',
+    fortune: '今日运势', bioScan: '生体皮肤分析',
+    face: '面相', palm: '手相', tongue: '舌诊',
+    algo18: '20大星学 × NASA实时分析',
+    nasaLive: 'NASA JPL实时',
+    mbtiLabel: 'MBTI性格类型',
+    calcHint: '全同步',
+    greeting: '的今日能量',
+    banner1:'🛸 NASA实时宇宙数据与生体信号，以及数字化的',
+    banner2:'20大星学引擎', banner3:'融合计算',
+    banner4:'您专属的人生指数', banner5:'。',
+    ipTitle:'📋 输入信息 — 只需姓名和生日即可自动计算！',
+    labelName:'姓名', labelTime:'出生时间', labelGender:'性别',
+    optMale:'男性', optFemale:'女性',
+    btnSolar:'阳历', btnLunar:'阴历', btnMyLoc:'📡 自动定位',
+    fortuneWait:'✨ 输入信息后点击「自动分析」即可查看今日运势！'
+  },
+  ja: {
+    appName: 'CGO-FULI',
+    calcBtn: '⚡ 自動分析',
+    calcDone: '✓ 分析完了!',
+    scanWarn: '⚠️ 生体スキャン未完了！\n\n顔相·手相·舌診を先に完了してから\n自動分析をクリックしてください。\n\n(OKを押して続行)',
+    birthPlaceholder: '年',
+    pages: {
+      dashboard:'', scan:'リアルタイム生体スキャン', family:'ファミリーILI',
+      algo:'🩺 AI健康予測', report:'詳細分析レポート', profile:'プロフィール',
+      gmd:'📸 風水カメラ', naming:'✍️ 命名サービス', consult:'🔮 AI相談',
+      lotto:'🎰 ラッキーナンバー', sports:'⚽ スポーツエネルギー',
+      stock:'📈 株式エネルギー', shop:'🛍️ 五行ショップ',
+      vip:'💎 VVIPプレミアム', star:'⭐ スターステーション'
+    },
+    nav: {
+      dashboard:'ダッシュボード', scan:'生体スキャン', family:'ファミリー',
+      algo:'健康AI', report:'レポート', consult:'AI相談',
+      sports:'スポーツ', stock:'株式', lotto:'ラッキー'
+    },
+    ili: '統合ライフインデックス', grade: 'グレード', energy: 'エネルギー',
+    fortune: '今日の運勢', bioScan: '生体スキン分析',
+    face: '顔相', palm: '手相', tongue: '舌診',
+    algo18: '20大星術 × NASAリアルタイム分析',
+    nasaLive: 'NASA JPLリアルタイム',
+    mbtiLabel: 'MBTI性格タイプ',
+    calcHint: '全同期',
+    greeting: 'さんの今日のエネルギー',
+    banner1:'🛸 NASAリアルタイム宇宙データと生体信号、そして数値化された',
+    banner2:'20大星術エンジン', banner3:'を融合して',
+    banner4:'あなただけの人生指数', banner5:'を計算します。',
+    ipTitle:'📋 情報入力 — 名前と生年月日だけで自動計算！',
+    labelName:'氏名', labelTime:'出生時間', labelGender:'性別',
+    optMale:'男性', optFemale:'女性',
+    btnSolar:'新暦', btnLunar:'旧暦', btnMyLoc:'📡 現在地自動',
+    fortuneWait:'✨ 情報を入力して「自動分析」を押すと今日の運勢が表示されます！'
+  }
+};
+
+// 현재 언어
+window._cgoLang = localStorage.getItem('cgo_lang') || 'ko';
+
+// 언어팩 현재 값 가져오기
+function _t(key, subkey) {
+  var lp = _LANG_PACK[window._cgoLang] || _LANG_PACK['ko'];
+  if (subkey) return (lp[key] && lp[key][subkey]) || (_LANG_PACK['ko'][key] && _LANG_PACK['ko'][key][subkey]) || key;
+  return lp[key] || _LANG_PACK['ko'][key] || key;
+}
+
+// 언어 메뉴 토글
+// [중복 toggleLangMenu/setLang 제거됨]
+
+// 국가별 역학 강조 순서
+function _applyLangEmphasis(lang) {
+  // DOM 이동 없이 — 언어별 강조 색상만 적용
+  try {
+    var eastHdr = document.querySelector('#section18algo [style*="a78bfa"]');
+    var westHdr = document.querySelector('#section18algo [style*="fbbf24"]');
+    if (lang === 'en') {
+      // 영어권: 서양 역학 헤더 금색 강조
+      if (westHdr) westHdr.style.color = '#d4a843';
+      if (eastHdr) eastHdr.style.color = 'rgba(167,139,250,.6)';
+    } else {
+      // 동양권: 동양 역학 헤더 강조 (기본)
+      if (eastHdr) eastHdr.style.color = '#a78bfa';
+      if (westHdr) westHdr.style.color = 'rgba(251,191,36,.8)';
+    }
+  } catch(e) {}
+}
+
+// 초기 언어 적용 (페이지 로드 시)
+document.addEventListener('DOMContentLoaded', function(){
+  var saved = localStorage.getItem('cgo_lang') || 'ko';
+  if (saved !== 'ko') setLang(saved);
+  else {
+    // 브라우저 언어 자동 감지
+    var bl = (navigator.language || '').toLowerCase();
+    if (bl.startsWith('en')) setLang('en');
+    else if (bl.startsWith('zh')) setLang('zh');
+    else if (bl.startsWith('ja')) setLang('ja');
+  }
+});
+
 var pageTitles={dashboard:'',scan:'실시간 생체 스캔',family:'가족 ILI 관리',algo:'🩺 AI 통합 건강 예측',report:'정밀 분석 리포트',profile:'프로필·설정',gmd:'📸 풍수 카메라',fengcam:'📸 풍수 카메라',naming:'✍️ 작명 서비스',consult:'🔮 1대1 고민 상담',lotto:'🎰 행운 번호',sports:'⚽ 스포츠 에너지 궁합',stock:'📈 주식 에너지 예측',shop:'🛍️ 오행 맞춤 쇼핑',vip:'💎 VVIP 프리미엄 분석',star:'⭐ 별 충전소'};
+// i18n 페이지 타이틀 오버라이드
+function getPageTitle(pageId) {
+  if(window._pageTitleI18N && window._pageTitleI18N[pageId]) return window._pageTitleI18N[pageId];
+  return pageTitles[pageId] || '';
+}
 document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
   btn.addEventListener('click',function(){
     var page=this.getAttribute('data-page');
@@ -17400,12 +18352,20 @@ function _cgRecordPage(pageId) {
   _cgHistoryPush(pageId);
 }
 
-// 기존 nav 클릭에 히스토리 기록 연동
+// 기존 nav 클릭에 히스토리 기록 + 번역 연동
 (function(){
   var origNavClick = document.querySelectorAll('.nav-btn[data-page]');
   origNavClick.forEach(function(btn){
     btn.addEventListener('click', function(){
-      _cgRecordPage(this.getAttribute('data-page'));
+      var _pg = this.getAttribute('data-page');
+      _cgRecordPage(_pg);
+      // 언어가 한국어가 아니면 해당 페이지 번역
+      if (window._LANG && window._LANG !== 'ko') {
+        var _p4 = _I18N[window._LANG];
+        if (_p4 && typeof _cgoAiTranslate === 'function') {
+          setTimeout(function(){ _cgoAiTranslate(window._LANG, _p4); }, 700);
+        }
+      }
     });
   });
   // showPage, cgoSoftGo도 감싸기
@@ -19721,7 +20681,7 @@ function syncAllPages(r){
 var ALGO18_EAST = [
   {key:'saju',   s18key:'s01', name:'사주명리', icon:'☯️', color:'#d4a843', bg:'rgba(212,168,67,.12)', desc:'천간지지 오행 균형 분석'},
   {key:'jami',   s18key:'s02', name:'자미두수', icon:'★',  color:'#38bdf8', bg:'rgba(56,189,248,.12)',  desc:'12궁·18주성 운명 흐름'},
-  {key:'ast',    s18key:'s03', name:'서양 점성술',icon:'♈',color:'#fbbf24', bg:'rgba(251,191,36,.12)', desc:'황도·하우스·애스펙트 분석'},
+  {key:'ast',    s18key:'s03', name:'점성술+베딕', icon:'♈',color:'#fbbf24', bg:'rgba(251,191,36,.12)', desc:'태양궁·베딕(항성황도) 통합 분석'},
   {key:'chart',  s18key:'s04', name:'전체차트', icon:'🪐', color:'#818cf8', bg:'rgba(99,130,201,.12)',  desc:'출생 별자리 배치 전체 분석'},
   {key:'gimon',  s18key:'s05', name:'기문둔갑', icon:'🧭', color:'#fbbf24', bg:'rgba(251,191,36,.12)',  desc:'9궁 방위 시간대별 길흉'},
   {key:'transit',s18key:'s06', name:'행성 트랜짓',icon:'🪐',color:'#818cf8',bg:'rgba(99,130,201,.10)', desc:'목성·토성·화성 실시간 운동'},
@@ -19739,7 +20699,7 @@ var ALGO18_WEST = [
   {key:'taeul',  s18key:'s13', name:'태을신수', icon:'🌀', color:'#f87171', bg:'rgba(248,113,113,.12)', desc:'72년 주기 우주 에너지 분석'},
   {key:'synastry',s18key:'s14',name:'합성 차트', icon:'💑', color:'#f87171', bg:'rgba(248,113,113,.10)', desc:'금성·화성 조화·궁합 에너지'},
   {key:'solar',  s18key:'s15', name:'태양궁점성', icon:'☀️', color:'#fbbf24', bg:'rgba(251,191,36,.12)', desc:'태양 궁위 핵심 자아 에너지'},
-  {key:'tarot',  s18key:'s16', name:'타로×달위상', icon:'🎴', color:'#818cf8', bg:'rgba(99,130,201,.12)',  desc:'달 위상·타로 원형 공명'},
+  {key:'tarot',  s18key:'s16', name:'타로×MBTI',   icon:'🎴', color:'#818cf8', bg:'rgba(99,130,201,.12)',  desc:'달위상·타로·MBTI 성격 에너지 보정'},
   {key:'nasa',   s18key:'s17', name:'NASA 행성 흐름',icon:'🛰️',color:'#34d399',bg:'rgba(52,211,153,.12)',desc:'NASA JPL 실시간 행성 연동'},
   {key:'kusei',  s18key:'s18', name:'구성학',   icon:'🔢', color:'#34d399', bg:'rgba(52,211,153,.12)',  desc:'1~9성 공간 에너지 패턴'},
 ];
@@ -21078,7 +22038,10 @@ function updateCosmicTime() {
   var el = document.getElementById('cosmicTime');
   if(!el) return;
   var now = new Date();
-  el.textContent = now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var lang = window._LANG || 'ko';
+  var locales = {ko:'ko-KR', en:'en-US', zh:'zh-CN', ja:'ja-JP'};
+  var locale = locales[lang] || 'ko-KR';
+  el.textContent = now.toLocaleTimeString(locale, {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
 
 // 행성 그리드 업데이트 (calcAstro 후 호출)
@@ -21088,12 +22051,23 @@ function updateCosmicPlanetGrid(planets) {
   var show = ['sun','moon','mercury','venus','mars','jupiter','saturn','uranus'];
   el.innerHTML = show.map(function(k){
     var p = planets[k];
-    var retro = p.retro ? '<span style="color:#f87171;font-size:8px"> ℛ역행</span>' : '';
+    var _retroTxt = {ko:'역행',en:'Rx',zh:'逆行',ja:'逆行'};
+    var retro = p.retro ? '<span style="color:#f87171;font-size:8px"> ℛ'+(_retroTxt[window._LANG||'ko']||'Rx')+'</span>' : '';
     return '<div style="padding:6px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:7px;display:flex;align-items:center;gap:6px">'
       +'<span style="font-size:14px">'+p.body.sym+'</span>'
       +'<div style="min-width:0;flex:1">'
-        +'<div style="font-size:9px;color:'+p.body.color+';font-weight:700;white-space:nowrap">'+p.body.name+retro+'</div>'
-        +'<div style="font-size:10px;color:var(--text-1);font-weight:600">'+p.zodiac.sym+' '+p.zodiac.sign+'</div>'
+        +'<div style="font-size:9px;color:'+p.body.color+';font-weight:700;white-space:nowrap">'+_planetName(p.body)+retro+'</div>'
+        +'<div style="font-size:10px;color:var(--text-1);font-weight:600">'+p.zodiac.sym+' '+(function(){
+          var lang=window._LANG||'ko';
+          if(lang==='ko') return p.zodiac.sign;
+          var koList=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+          var enList=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+          var zhList=['白羊座','金牛座','双子座','巨蟹座','狮子座','处女座','天秤座','天蝎座','射手座','摩羯座','水瓶座','双鱼座'];
+          var jaList=['牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座','天秤座','蠍座','射手座','山羊座','水瓶座','魚座'];
+          var lists={en:enList,zh:zhList,ja:jaList};
+          var idx=koList.indexOf(p.zodiac.sign);
+          return idx>=0&&lists[lang]?lists[lang][idx]:p.zodiac.sign;
+        }())+'</div>'
       +'</div>'
     +'</div>';
   }).join('');
@@ -21102,8 +22076,9 @@ function updateCosmicPlanetGrid(planets) {
   if(window.calcResult){
     var r = window.calcResult;
     document.getElementById('cosmicZodiacSym').textContent = r.wz ? r.wz.sym : '☯';
-    document.getElementById('cosmicZodiacName').textContent = r.wz ? r.wz.name : '운명의 중심';
-    document.getElementById('cosmicGearDesc').innerHTML = (r.name||'') + '님의 사주와<br>행성이 맞물립니다';
+    var _ctrTxt={ko:'운명의 중심',en:'Destiny',zh:'命运中心',ja:'運命の中心'}; document.getElementById('cosmicZodiacName').textContent = r.wz ? r.wz.name : (_ctrTxt[window._LANG||'ko']||'운명의 중심');
+    var _gearTxt={ko:'님의 사주와<br>행성이 맞물립니다',en:"'s destiny<br>aligned with planets",zh:'的命盘与<br>行星共鸣',ja:'さんの命式と<br>惑星が共鳴'};
+    document.getElementById('cosmicGearDesc').innerHTML = (r.name||'') + (_gearTxt[window._LANG||'ko']||_gearTxt['ko']);
   }
 }
 
@@ -22440,7 +23415,7 @@ function cgSend() {
 function cgCallClaude(userText, sendBtn) {
 
   // 키 로딩 — 3단계 폴백
-  var _BUILTIN = 'Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y=';
+  var _BUILTIN = 'Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=';
   if (!window.CG_GEMINI_KEY || window.CG_GEMINI_KEY.trim() === '') {
     // 1) localStorage
     var _saved = localStorage.getItem('cgo_gemini_key');
@@ -22747,7 +23722,7 @@ function cgCloseApiKeyModal() {
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; }
   else {
-    try { window.CG_GEMINI_KEY = atob('Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y='); } catch(e){}
+    try { window.CG_GEMINI_KEY = atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA='); } catch(e){}
   }
   document.addEventListener('DOMContentLoaded', function(){
     var kb = document.getElementById('cg-key-btn');
@@ -22929,7 +23904,7 @@ function cgEnterSend(e) {
   try { saved = localStorage.getItem('cgo_gemini_key') || ''; } catch(e){}
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; return; }
-  try { window.CG_GEMINI_KEY = atob('Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y='); } catch(e){}
+  try { window.CG_GEMINI_KEY = atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA='); } catch(e){}
 })();
 
 // ── 페이지 진입 감지 → cgInit 호출 + 키 상태 체크 ──────
@@ -24719,7 +25694,7 @@ function sptAskAI(userText, isAuto) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   // ── 검색 필요 여부 판단 키워드 ─────────────────────────
@@ -24741,6 +25716,12 @@ function sptAskAI(userText, isAuto) {
 
     // TheSportsDB - Soccer 일정 조회 (무료, CORS 허용)
     var fetchPromises2 = dates2.map(function(d){
+      // 5분 캐싱 (API 호출 절약)
+      var _cacheKey = 'sportsdb_' + d;
+      var _cached = window._sportCache && window._sportCache[_cacheKey];
+      if (_cached && (Date.now() - _cached.ts) < 300000) {
+        return Promise.resolve({ok:true, json:function(){return Promise.resolve(_cached.data);}});
+      }
       return fetch('https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d='+d+'&s=Soccer')
         .then(function(r){ return r.json(); })
         .catch(function(){ return {events:[]}; });
@@ -25368,7 +26349,7 @@ function stkAiCallApi(userText) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2tmWnlhUnBoNjRXTThVaXFRaTBFV0dkeWIzRllDU0dJaGRhWkI4MlluS3g3bVY3dDZFR1Y='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -26514,6 +27495,7 @@ function cgoPrintReport() {
   ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
   본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
 </div><\/script>
+
 </body>
 </html>`);
   printWin.document.close();
@@ -26544,5 +27526,12 @@ function cgoCopyReport() {
 }
 </script>
 
+
+<div id="langMenu" style="display:none;position:fixed;top:56px;right:12px;background:var(--bg-card);border:1px solid rgba(212,168,67,.4);border-radius:14px;padding:8px;min-width:160px;z-index:2147483647;box-shadow:0 12px 40px rgba(0,0,0,.95)">
+  <div onclick="setLang('ko')" class="lang-opt" id="langOpt-ko" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇰🇷</span> <span>한국어</span></div>
+  <div onclick="setLang('en')" class="lang-opt" id="langOpt-en" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇺🇸</span> <span>English</span></div>
+  <div onclick="setLang('zh')" class="lang-opt" id="langOpt-zh" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇨🇳</span> <span>中文</span></div>
+  <div onclick="setLang('ja')" class="lang-opt" id="langOpt-ja" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇯🇵</span> <span>日本語</span></div>
+</div>
 </body>
 </html>
