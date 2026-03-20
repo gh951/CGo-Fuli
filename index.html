@@ -4,7 +4,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover">
 <title>GO Future — ILI 라이프 인덱스</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Serif+Display&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
@@ -58,7 +58,31 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{height:56px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid var(--border);background:rgba(6,13,26,0.8);backdrop-filter:blur(8px);flex-shrink:0}
 .topbar-title{font-family:'DM Serif Display',serif;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-date{font-size:11px;color:var(--text-3)}@media(max-width:480px){.topbar-date{display:none}}
+.topbar-date{font-size:11px;color:var(--text-3)}/* ── 모바일 팝업 가독성 개선 ── */
+@media(max-width:600px){
+  .fortune-popup { max-height:95vh; border-radius:18px 18px 0 0; }
+  .fortune-popup-body { padding:14px 16px; gap:12px; }
+  .fortune-popup-header { padding:14px 16px 12px; }
+  .fp-advice { font-size:13px !important; line-height:2 !important; padding:14px; }
+  .fp-section { padding:12px 14px; }
+  .fp-section-title { font-size:12px !important; }
+  .fp-bar-label { font-size:12px !important; }
+  .fp-tag { font-size:11px !important; padding:4px 10px !important; }
+  /* 시진 팝업 */
+  .sijin-popup, [id*="sijinDetail"], [id*="detailBox"] { font-size:13px !important; }
+  /* 역학 팝업 */
+  .hv-detail, [class*="detail-box"] { font-size:13px !important; padding:16px !important; }
+  /* 전체 팝업 오버레이 */
+  [id*="Overlay"], [id*="overlay"] { 
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 팝업 내부 텍스트 전반 */
+  [id*="fpBody"] *, [id*="PopupBody"] *, [class*="popup-body"] * {
+    font-size: max(12px, 0.85em) !important;
+    line-height: 1.8 !important;
+  }
+}
+@media(max-width:480px){.topbar-date{display:none}}
 .topbar-right{display:flex;align-items:center;gap:8px}
 .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-size:16px;transition:all .2s}
 .icon-btn:hover{border-color:var(--gold-dim);color:var(--gold)}
@@ -728,9 +752,9 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* 모바일 최적화 → 하단 통합 미디어쿼리에서 처리 */
 /* ════ 운수 상세 팝업 ════ */
-.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;pointer-events:none}
+.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;pointer-events:none;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .fortune-popup-overlay.show{opacity:1;pointer-events:all}
-.fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 40px}
+.fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 40px}
 .fortune-popup-overlay.show .fortune-popup{transform:translateY(0)}
 .fortune-popup-header{position:sticky;top:0;background:var(--bg-card);border-bottom:1px solid var(--border);padding:16px 20px 14px;display:flex;align-items:center;gap:12px;z-index:1}
 .fortune-popup-icon{font-size:28px;width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(56,189,248,.1));display:flex;align-items:center;justify-content:center}
@@ -738,12 +762,12 @@ input[type=number]::-webkit-outer-spin-button {
 .fortune-popup-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
 .fp-score-ring{display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-panel);border-radius:14px;border:1px solid var(--border)}
 .fp-section{background:var(--bg-panel);border-radius:12px;padding:14px 16px;border:1px solid var(--border)}
-.fp-section-title{font-size:11px;letter-spacing:.08em;color:var(--text-3);margin-bottom:10px;text-transform:uppercase}
+.fp-section-title{font-size:12px;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px;text-transform:uppercase}
 .fp-bar-row{display:grid;grid-template-columns:90px 1fr 36px;gap:8px;align-items:center;margin-bottom:7px}
-.fp-bar-label{font-size:11px;color:var(--text-2)}
+.fp-bar-label{font-size:12px;color:var(--text-2)}
 .fp-bar-track{height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
 .fp-bar-fill{height:100%;border-radius:3px;transition:width 1.4s ease}
-.fp-advice{background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--text-2);line-height:1.9}
+.fp-advice{background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--text-2);line-height:2}
 .fp-advice strong{color:var(--gold)}
 .fp-tag{display:inline-block;font-size:10px;padding:3px 9px;border-radius:6px;margin:2px;font-weight:600}
 .fortune-cat:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(212,168,67,.15)}
