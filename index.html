@@ -1790,7 +1790,7 @@ var ZODIAC_SIGNS_ZH_LIST = ['白羊座','金牛座','双子座','巨蟹座','狮
 var ZODIAC_SIGNS_JA_LIST = ['牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座','天秤座','蠍座','射手座','山羊座','水瓶座','魚座'];
 var ZODIAC_SIGNS_EN = ZODIAC_SIGNS_KO; // 현재 언어에 따라 동적 변경
 function _updateZodiacLang(lang) {
-  if(lang==='en') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_EN_LIST;
+  if(lang==='en'||lang==='ru'||lang==='hi'||lang==='es'||lang==='de'||lang==='fr'||lang==='pt'||lang==='vi'||lang==='th'||lang==='id') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_EN_LIST;
   else if(lang==='zh') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_ZH_LIST;
   else if(lang==='ja') ZODIAC_SIGNS_EN = ZODIAC_SIGNS_JA_LIST;
   else ZODIAC_SIGNS_EN = ZODIAC_SIGNS_KO;
@@ -2112,8 +2112,8 @@ function _applyNASAData(data, json) {
   var _ds = document.getElementById('cosmicDateSub');
   if(_dl) {
     var _lang = window._LANG || 'ko';
-    var _loc = {ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP'}[_lang] || 'ko-KR';
-    var _sfx = {ko:' 기준',en:' - As of',zh:' 基准',ja:' 基準'}[_lang] || ' 기준';
+    var _loc = {ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP',ru:'ru-RU',hi:'hi-IN',es:'es-ES',de:'de-DE',fr:'fr-FR',pt:'pt-BR',vi:'vi-VN',th:'th-TH',id:'id-ID'}[_lang] || 'ko-KR';
+    var _sfx = {ko:' 기준',en:' - As of',zh:' 基准',ja:' 基準',ru:' По состоянию',hi:' के अनुसार',es:' A partir de',de:' Stand',fr:' À partir de',pt:' A partir de',vi:' Tính đến',th:' ณ วันที่',id:' Per'}[_lang] || ' 기준';
     _dl.textContent = _now.toLocaleDateString(_loc,{month:'long',day:'numeric'}) + ' ' + _now.toLocaleTimeString(_loc,{hour:'2-digit',minute:'2-digit'}) + _sfx;
   }
   if(_ds) {
@@ -3479,7 +3479,7 @@ function updateTransitSectionWithNASA(planets) {
         <div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:12px">🔮 종합 건강 예측</div>
         <div id="hlt-prescription"></div>
       </div>
-      <button onclick="hltReset()" style="width:100%;margin-top:14px;padding:12px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.2);border-radius:12px;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.03em">↺ 다시 측정하기</button>
+      
     </div>
 
     <!-- ══ 카드 팝업 ══ -->
@@ -5073,6 +5073,10 @@ var fcSystems = {
           <div style="font-size:18px;font-weight:800;color:#f0e6c8;margin-bottom:6px;font-family:'DM Serif Display',serif;">스포츠 에너지 궁합</div>
           <div style="font-size:12px;color:#a0afc0;line-height:1.7;">나의 사주·오행·행성 에너지와 오늘 경기의 공명 지수를 분석합니다<br>
           <span style="font-size:10px;color:#6ee7b7;">※ 본 분석은 역학·에너지 정보 제공 서비스이며, 베팅·도박과 무관합니다</span></div>
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
+            <span id="spt-api-status" style="font-size:11px;padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;color:#34d399;font-weight:600;">⏳ 경기 로딩 중...</span>
+            <button onclick="sptForceReload()" style="font-size:11px;padding:4px 12px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.35);border-radius:10px;color:#fbbf24;font-weight:700;cursor:pointer;font-family:inherit;">🔄 새로고침</button>
+          </div>
         </div>
 
         <!-- 내 오늘 에너지 요약 -->
@@ -5093,7 +5097,7 @@ var fcSystems = {
           <button class="spt-tab" onclick="sptSwitchTab('baseball',this)">⚾ 야구</button>
           <button class="spt-tab" onclick="sptSwitchTab('basketball',this)">🏀 농구</button>
           <button class="spt-tab" onclick="sptSwitchTab('volleyball',this)">🏐 배구</button>
-          <button class="spt-tab" onclick="sptSwitchTab('tennis',this)">🎾 테니스</button>
+
           <button class="spt-tab" onclick="sptSwitchTab('etc',this)">🏊 기타</button>
         </div>
 
@@ -5107,7 +5111,7 @@ var fcSystems = {
         <div>
           <div style="font-size:11px;letter-spacing:.1em;color:#a0afc0;font-weight:600;margin-bottom:10px;text-transform:uppercase;">📅 오늘의 경기 에너지 분석</div>
           <div id="spt-match-list" style="display:flex;flex-direction:column;gap:10px;">
-            <div style="font-size:12px;color:#a0afc0;text-align:center;padding:20px;">⏳ 경기 에너지 로딩 중...</div>
+            <div id="spt-loading-msg" style="font-size:12px;color:#a0afc0;text-align:center;padding:20px;">📡 API-Sports에서 오늘 경기 로딩 중...</div>
           </div>
         </div>
 
@@ -5150,7 +5154,7 @@ var fcSystems = {
                 <option value="baseball">⚾ 야구</option>
                 <option value="basketball">🏀 농구</option>
                 <option value="volleyball">🏐 배구</option>
-                <option value="tennis">🎾 테니스</option>
+
                 <option value="etc">🏊 기타</option>
               </select>
             </div>
@@ -5314,8 +5318,8 @@ var fcSystems = {
             </div>
           </div>
           <div id="stk-live-sectors" style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;"></div>
-          <div style="font-size:10px;color:var(--text-3);margin-bottom:7px;letter-spacing:.06em;">⚡ 나의 사주 궁합 실시간 TOP 5</div>
-          <div id="stk-live-stocks" style="display:flex;flex-direction:column;gap:5px;"></div>
+          <div style="font-size:10px;color:var(--text-3);margin-bottom:7px;letter-spacing:.06em;">⚡ 나의 사주 궁합 실시간 TOP 30</div>
+          <div id="stk-live-stocks" style="display:flex;flex-direction:column;gap:5px;max-height:600px;overflow-y:auto;"></div>
         </div>
 
         <!-- 대기 화면 -->
@@ -8523,6 +8527,422 @@ var _I18N = {
   }
 };
 
+// ── 9개 추가 언어 팩 ──
+_I18N.ru = {
+  flag:'🇷🇺', code:'RU',
+  calcBtn:'⚡ Авто анализ', calcSync:'Синхронизация',
+  fortuneWait:'✨ Введите информацию выше и нажмите «Авто анализ»!',
+  fortuneDateDefault:'Показано после расчёта', cosmicSub:'⚡ После расчёта',
+  male:'Мужчина', female:'Женщина', auto_loc:'📡 Моё местоположение',
+  section_dash:'Дашборд', section_scan:'Биосканирование', section_algo:'🩺 AI Здоровье',
+  section_report:'Отчёт', section_consult:'🔮 Консультация', section_sports:'⚽ Спорт',
+  section_stock:'📈 Акции',
+  banner1:'🛸 Данные NASA в реальном времени, биосигналы и', banner2:'20 Астро-движков',
+  banner3:' объединены для', banner4:'вашего личного Индекса Жизни', banner5:'.',
+  fortune_ttl:'Какова моя энергия сегодня?',
+  mbti_know:'Я знаю свой MBTI', mbti_dontknow:'Не знаю MBTI',
+  mbti_direct:'Выбрать → Применить', mbti_test:'Найти через тест',
+  lbl_face:'Физиогномика', lbl_palm:'Хиромантия', lbl_tongue:'Диагностика языка',
+  lbl_tap_scan:'Нажмите для сканирования',
+  labelName:'Имя', labelTime:'Время рождения', labelGender:'Пол',
+  lbl_birth_label:'Дата рождения', lbl_solar:'Солнечный', lbl_lunar:'Лунный',
+  lbl_birth_place:'Место рождения', lbl_cur_place:'Текущее местоположение',
+  ph_year:'Год', ph_month:'Мес', ph_day:'День',
+  ph_name:'Например: Иван Иванов',
+  cosmic_subtitle:'Планетарный путь реального времени', cosmic_sky:'🌌 Состояние неба',
+  cosmic_btn:'🚨 Получить сигнал удачи!', cosmic_btn_sub:'NASA + 20 движков × Анализ',
+  cosmic_gear_default:'Карта судьбы<br>и планеты',
+  word_time:'Время', lbl_live:'● LIVE', nasaLive:'NASA JPL Live',
+  today_fortune:'Судьба на сегодня', algo18_title:'🔯 20 движков × NASA',
+  btnSolar:'Солнечный', btnLunar:'Лунный', btn_18engine:'Синхр. 20 движков',
+  bioScan:'🧬 Биосканирование',
+  ipTitle:'📋 Введите информацию — нужны имя и дата рождения!',
+  mbtiLabel:'Тип личности MBTI', mbti_19th:'19-й движок',
+  face_sub:'Цвет и форма лица<br>FCI·FMA анализ',
+  palm_sub:'Линия жизни·ум<br>BLI·HRV анализ',
+  tongue_sub:'Цвет·налёт·цвет крови<br>Анализ энергии органов',
+  cosmic_subtitle:'Планетарный путь реального времени',
+  word_time:'Время',
+  cosmic_sky:'🌌 Состояние неба',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Планетарный путь реального времени / Время',
+  lbl_birth_hint:'Район → Координаты',
+  lbl_cur_hint:'Район → Направление',
+  ph_birth_place:'Введите место рождения (напр. Москва, Tokyo, London...)',
+  ph_cur_place:'Введите текущее местоположение (напр. Санкт-Петербург...)',
+  optMale:'Мужчина',
+  optFemale:'Женщина',
+  nasa_subtitle_time:'Время',
+};
+
+_I18N.hi = {
+  flag:'🇮🇳', code:'HI',
+  calcBtn:'⚡ ऑटो विश्लेषण', calcSync:'सिंक करें',
+  fortuneWait:'✨ ऊपर जानकारी दर्ज करें और «ऑटो विश्लेषण» दबाएं!',
+  fortuneDateDefault:'गणना के बाद दिखाया जाएगा', cosmicSub:'⚡ गणना के बाद',
+  male:'पुरुष', female:'महिला', auto_loc:'📡 मेरा स्थान',
+  section_dash:'डैशबोर्ड', section_scan:'बायो स्कैन', section_algo:'🩺 AI स्वास्थ्य',
+  section_report:'रिपोर्ट', section_consult:'🔮 परामर्श', section_sports:'⚽ खेल',
+  section_stock:'📈 शेयर',
+  banner1:'🛸 NASA रियल-टाइम डेटा, बायो सिग्नल और', banner2:'20 ज्योतिष इंजन',
+  banner3:' मिलकर बनाते हैं', banner4:'आपका व्यक्तिगत जीवन सूचकांक', banner5:'।',
+  fortune_ttl:'आज मेरी ऊर्जा कैसी है?',
+  mbti_know:'मुझे अपना MBTI पता है', mbti_dontknow:'MBTI नहीं पता',
+  mbti_direct:'सीधे चुनें → लागू करें', mbti_test:'परीक्षण से खोजें',
+  lbl_face:'मुखाकृति', lbl_palm:'हस्तरेखा', lbl_tongue:'जीभ निदान',
+  lbl_tap_scan:'स्कैन के लिए टैप करें',
+  labelName:'नाम', labelTime:'जन्म समय', labelGender:'लिंग',
+  lbl_birth_label:'जन्म तिथि', lbl_solar:'सौर', lbl_lunar:'चंद्र',
+  lbl_birth_place:'जन्म स्थान', lbl_cur_place:'वर्तमान स्थान',
+  ph_year:'वर्ष', ph_month:'माह', ph_day:'दिन',
+  ph_name:'उदा: राज शर्मा',
+  cosmic_subtitle:'वास्तविक समय ग्रह पथ', cosmic_sky:'🌌 आकाश की स्थिति',
+  cosmic_btn:'🚨 अपना शुभ संकेत पाएं!', cosmic_btn_sub:'NASA + 20 इंजन × विश्लेषण',
+  cosmic_gear_default:'जन्म कुंडली<br>और ग्रह',
+  word_time:'समय', lbl_live:'● LIVE', nasaLive:'NASA JPL लाइव',
+  today_fortune:'आज का भाग्य', algo18_title:'🔯 20 इंजन × NASA',
+  btnSolar:'सौर', btnLunar:'चंद्र', btn_18engine:'20 इंजन सिंक',
+  bioScan:'🧬 बायो स्किन विश्लेषण',
+  ipTitle:'📋 जानकारी दर्ज करें — नाम और जन्मतिथि चाहिए!',
+  mbtiLabel:'MBTI व्यक्तित्व प्रकार', mbti_19th:'19वां इंजन',
+  face_sub:'चेहरे का रंग·आकार<br>FCI·FMA विश्लेषण',
+  palm_sub:'जीवन रेखा·मस्तिष्क रेखा<br>BLI·HRV विश्लेषण',
+  tongue_sub:'जीभ रंग·परत·रक्त रंग<br>अंग ऊर्जा विश्लेषण',
+  cosmic_subtitle:'वास्तविक समय ग्रह पथ',
+  word_time:'समय',
+  cosmic_sky:'🌌 आकाश की स्थिति',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'वास्तविक समय ग्रह पथ / समय',
+  lbl_birth_hint:'जिला → निर्देशांक',
+  lbl_cur_hint:'जिला → दिशा',
+  ph_birth_place:'जन्म स्थान दर्ज करें (जैसे दिल्ली, Tokyo, London...)',
+  ph_cur_place:'वर्तमान स्थान दर्ज करें (जैसे मुंबई, London...)',
+  optMale:'पुरुष',
+  optFemale:'महिला',
+};
+
+_I18N.es = {
+  flag:'🇪🇸', code:'ES',
+  calcBtn:'⚡ Análisis Auto', calcSync:'Sincronizar',
+  fortuneWait:'✨ Ingresa tu información arriba y presiona «Análisis Auto»!',
+  fortuneDateDefault:'Se muestra tras el cálculo', cosmicSub:'⚡ Tras el cálculo',
+  male:'Masculino', female:'Femenino', auto_loc:'📡 Mi ubicación',
+  section_dash:'Panel', section_scan:'Bioescaneo', section_algo:'🩺 IA Salud',
+  section_report:'Informe', section_consult:'🔮 Consulta', section_sports:'⚽ Deportes',
+  section_stock:'📈 Acciones',
+  banner1:'🛸 Datos NASA en tiempo real, bioseñales y', banner2:'20 Motores Astrológicos',
+  banner3:' fusionados para crear', banner4:'tu Índice de Vida personal', banner5:'.',
+  fortune_ttl:'¿Cuál es mi energía hoy?',
+  mbti_know:'Conozco mi MBTI', mbti_dontknow:'No sé mi MBTI',
+  mbti_direct:'Seleccionar → Aplicar', mbti_test:'Encontrar por test',
+  lbl_face:'Fisonomía', lbl_palm:'Quiromancia', lbl_tongue:'Diagnóstico lingual',
+  lbl_tap_scan:'Toca para escanear',
+  labelName:'Nombre', labelTime:'Hora de nacimiento', labelGender:'Género',
+  lbl_birth_label:'Fecha de nacimiento', lbl_solar:'Solar', lbl_lunar:'Lunar',
+  lbl_birth_place:'Lugar de nacimiento', lbl_cur_place:'Ubicación actual',
+  ph_year:'Año', ph_month:'Mes', ph_day:'Día',
+  ph_name:'Ej: María García',
+  cosmic_subtitle:'Ruta planetaria en tiempo real', cosmic_sky:'🌌 Estado del cielo',
+  cosmic_btn:'🚨 ¡Recibe tu señal de suerte!', cosmic_btn_sub:'NASA + 20 motores × Análisis',
+  cosmic_gear_default:'Carta natal<br>y planetas',
+  word_time:'Hora', lbl_live:'● EN VIVO', nasaLive:'NASA JPL En vivo',
+  today_fortune:'Fortuna de hoy', algo18_title:'🔯 20 Motores × NASA',
+  btnSolar:'Solar', btnLunar:'Lunar', btn_18engine:'Sincr. 20 motores',
+  bioScan:'🧬 Análisis Bio Piel',
+  ipTitle:'📋 Ingresa información — ¡Solo nombre y fecha de nacimiento!',
+  mbtiLabel:'Tipo de personalidad MBTI', mbti_19th:'Motor 19',
+  face_sub:'Color·forma facial<br>Análisis FCI·FMA',
+  palm_sub:'Línea vida·cerebro<br>Análisis BLI·HRV',
+  tongue_sub:'Color·capa·color sangre<br>Análisis energía órganos',
+  cosmic_subtitle:'Trayectoria planetaria en tiempo real',
+  word_time:'Hora',
+  cosmic_sky:'🌌 Estado del cielo',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Trayectoria planetaria en tiempo real / Hora',
+  lbl_birth_hint:'Distrito → Coordenadas',
+  lbl_cur_hint:'Distrito → Dirección',
+  ph_birth_place:'Ingresa lugar de nacimiento (ej. Madrid, Tokyo, London...)',
+  ph_cur_place:'Ingresa ubicación actual (ej. Barcelona, London...)',
+  optMale:'Masculino',
+  optFemale:'Femenino',
+};
+
+_I18N.de = {
+  flag:'🇩🇪', code:'DE',
+  calcBtn:'⚡ Auto Analyse', calcSync:'Synchronisieren',
+  fortuneWait:'✨ Gib deine Infos oben ein und drücke «Auto Analyse»!',
+  fortuneDateDefault:'Nach Berechnung angezeigt', cosmicSub:'⚡ Nach Berechnung',
+  male:'Männlich', female:'Weiblich', auto_loc:'📡 Mein Standort',
+  section_dash:'Dashboard', section_scan:'Bioscan', section_algo:'🩺 KI Gesundheit',
+  section_report:'Bericht', section_consult:'🔮 Beratung', section_sports:'⚽ Sport',
+  section_stock:'📈 Aktien',
+  banner1:'🛸 NASA-Echtzeit-Daten, Biosignale und', banner2:'20 Astro-Motoren',
+  banner3:' vereint für', banner4:'deinen persönlichen Lebensindex', banner5:'.',
+  fortune_ttl:'Was ist meine Energie heute?',
+  mbti_know:'Ich kenne mein MBTI', mbti_dontknow:'MBTI unbekannt',
+  mbti_direct:'Direkt wählen → Anwenden', mbti_test:'Per Test finden',
+  lbl_face:'Physiognomie', lbl_palm:'Chirologie', lbl_tongue:'Zungendiagnose',
+  lbl_tap_scan:'Zum Scannen tippen',
+  labelName:'Name', labelTime:'Geburtszeit', labelGender:'Geschlecht',
+  lbl_birth_label:'Geburtsdatum', lbl_solar:'Solar', lbl_lunar:'Lunar',
+  lbl_birth_place:'Geburtsort', lbl_cur_place:'Aktueller Standort',
+  ph_year:'Jahr', ph_month:'Mon', ph_day:'Tag',
+  ph_name:'Bsp: Max Müller',
+  cosmic_subtitle:'Planetenbahn Echtzeit', cosmic_sky:'🌌 Himmels-Status',
+  cosmic_btn:'🚨 Mein Glückssignal empfangen!', cosmic_btn_sub:'NASA + 20 Motoren × Analyse',
+  cosmic_gear_default:'Geburtshoroskop<br>und Planeten',
+  word_time:'Zeit', lbl_live:'● LIVE', nasaLive:'NASA JPL Live',
+  today_fortune:'Heutiges Horoskop', algo18_title:'🔯 20 Motoren × NASA',
+  btnSolar:'Solar', btnLunar:'Lunar', btn_18engine:'20 Motoren sync',
+  bioScan:'🧬 Bio-Hautanalyse',
+  ipTitle:'📋 Info eingeben — Nur Name und Geburtsdatum nötig!',
+  mbtiLabel:'MBTI Persönlichkeitstyp', mbti_19th:'19. Motor',
+  face_sub:'Gesichtsfarbe·Form<br>FCI·FMA Analyse',
+  palm_sub:'Lebens·Kopflinie<br>BLI·HRV Analyse',
+  tongue_sub:'Zungenfarbe·Belag·Blutfarbe<br>Organ-Energie Analyse',
+  cosmic_subtitle:'Planetenbahn Echtzeit',
+  word_time:'Zeit',
+  cosmic_sky:'🌌 Himmels-Status',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Planetenbahn Echtzeit / Zeit',
+  lbl_birth_hint:'Bezirk → Koordinaten',
+  lbl_cur_hint:'Bezirk → Richtung',
+  ph_birth_place:'Geburtsort eingeben (z.B. Berlin, Tokyo, London...)',
+  ph_cur_place:'Aktuellen Standort eingeben (z.B. München, London...)',
+  optMale:'Männlich',
+  optFemale:'Weiblich',
+};
+
+_I18N.fr = {
+  flag:'🇫🇷', code:'FR',
+  calcBtn:'⚡ Analyse Auto', calcSync:'Synchroniser',
+  fortuneWait:'✨ Entrez vos infos ci-dessus et appuyez sur «Analyse Auto»!',
+  fortuneDateDefault:'Affiché après calcul', cosmicSub:'⚡ Après calcul',
+  male:'Masculin', female:'Féminin', auto_loc:'📡 Ma position',
+  section_dash:'Tableau de bord', section_scan:'Bioscan', section_algo:'🩺 IA Santé',
+  section_report:'Rapport', section_consult:'🔮 Consultation', section_sports:'⚽ Sports',
+  section_stock:'📈 Actions',
+  banner1:'🛸 Données NASA en temps réel, biosignaux et', banner2:'20 Moteurs Astro',
+  banner3:' fusionnés pour créer', banner4:'votre Index de Vie personnel', banner5:'.',
+  fortune_ttl:"Quelle est mon énergie aujourd'hui?",
+  mbti_know:'Je connais mon MBTI', mbti_dontknow:'MBTI inconnu',
+  mbti_direct:'Sélectionner → Appliquer', mbti_test:'Trouver par test',
+  lbl_face:'Physiognomie', lbl_palm:'Chiromancie', lbl_tongue:'Diagnostic lingual',
+  lbl_tap_scan:'Appuyez pour scanner',
+  labelName:'Nom', labelTime:'Heure de naissance', labelGender:'Genre',
+  lbl_birth_label:'Date de naissance', lbl_solar:'Solaire', lbl_lunar:'Lunaire',
+  lbl_birth_place:'Lieu de naissance', lbl_cur_place:'Position actuelle',
+  ph_year:'Année', ph_month:'Mois', ph_day:'Jour',
+  ph_name:'Ex: Marie Dupont',
+  cosmic_subtitle:'Trajectoire planétaire en direct', cosmic_sky:'🌌 État du ciel',
+  cosmic_btn:'🚨 Recevoir mon signal de chance!', cosmic_btn_sub:'NASA + 20 moteurs × Analyse',
+  cosmic_gear_default:'Thème natal<br>et planètes',
+  word_time:'Heure', lbl_live:'● EN DIRECT', nasaLive:'NASA JPL Direct',
+  today_fortune:"Fortune d'aujourd'hui", algo18_title:'🔯 20 Moteurs × NASA',
+  btnSolar:'Solaire', btnLunar:'Lunaire', btn_18engine:'Sync. 20 moteurs',
+  bioScan:'🧬 Analyse Bio Peau',
+  ipTitle:'📋 Entrez vos infos — Juste nom et date de naissance!',
+  mbtiLabel:'Type de personnalité MBTI', mbti_19th:'19e moteur',
+  face_sub:'Couleur·forme du visage<br>Analyse FCI·FMA',
+  palm_sub:'Ligne vie·tête<br>Analyse BLI·HRV',
+  tongue_sub:'Couleur·enduit·sang<br>Analyse énergie organes',
+  cosmic_subtitle:'Trajectoire planétaire en direct',
+  word_time:'Heure',
+  cosmic_sky:'🌌 État du ciel',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Trajectoire planétaire en direct / Heure',
+  lbl_birth_hint:'Quartier → Coordonnées',
+  lbl_cur_hint:'Quartier → Direction',
+  ph_birth_place:'Entrez lieu de naissance (ex. Paris, Tokyo, London...)',
+  ph_cur_place:'Entrez position actuelle (ex. Lyon, London...)',
+  optMale:'Masculin',
+  optFemale:'Féminin',
+};
+
+_I18N.pt = {
+  flag:'🇧🇷', code:'PT',
+  calcBtn:'⚡ Análise Auto', calcSync:'Sincronizar',
+  fortuneWait:'✨ Digite suas informações acima e pressione «Análise Auto»!',
+  fortuneDateDefault:'Mostrado após o cálculo', cosmicSub:'⚡ Após o cálculo',
+  male:'Masculino', female:'Feminino', auto_loc:'📡 Minha localização',
+  section_dash:'Painel', section_scan:'Bioscan', section_algo:'🩺 IA Saúde',
+  section_report:'Relatório', section_consult:'🔮 Consulta', section_sports:'⚽ Esportes',
+  section_stock:'📈 Ações',
+  banner1:'🛸 Dados NASA em tempo real, biosinais e', banner2:'20 Motores Astrológicos',
+  banner3:' fundidos para criar', banner4:'seu Índice de Vida pessoal', banner5:'.',
+  fortune_ttl:'Qual é minha energia hoje?',
+  mbti_know:'Conheço meu MBTI', mbti_dontknow:'Não sei meu MBTI',
+  mbti_direct:'Selecionar → Aplicar', mbti_test:'Encontrar pelo teste',
+  lbl_face:'Fisiognomia', lbl_palm:'Quiromancia', lbl_tongue:'Diagnóstico lingual',
+  lbl_tap_scan:'Toque para escanear',
+  labelName:'Nome', labelTime:'Hora de nascimento', labelGender:'Gênero',
+  lbl_birth_label:'Data de nascimento', lbl_solar:'Solar', lbl_lunar:'Lunar',
+  lbl_birth_place:'Local de nascimento', lbl_cur_place:'Localização atual',
+  ph_year:'Ano', ph_month:'Mês', ph_day:'Dia',
+  ph_name:'Ex: João Silva',
+  cosmic_subtitle:'Trajetória planetária ao vivo', cosmic_sky:'🌌 Estado do céu',
+  cosmic_btn:'🚨 Receber meu sinal de sorte!', cosmic_btn_sub:'NASA + 20 motores × Análise',
+  cosmic_gear_default:'Mapa natal<br>e planetas',
+  word_time:'Hora', lbl_live:'● AO VIVO', nasaLive:'NASA JPL Ao Vivo',
+  today_fortune:'Fortuna de hoje', algo18_title:'🔯 20 Motores × NASA',
+  btnSolar:'Solar', btnLunar:'Lunar', btn_18engine:'Sincr. 20 motores',
+  bioScan:'🧬 Análise Bio Pele',
+  ipTitle:'📋 Digite suas informações — Só nome e data de nascimento!',
+  mbtiLabel:'Tipo de personalidade MBTI', mbti_19th:'19º motor',
+  face_sub:'Cor·forma do rosto<br>Análise FCI·FMA',
+  palm_sub:'Linha da vida·cabeça<br>Análise BLI·HRV',
+  tongue_sub:'Cor·saburra·cor do sangue<br>Análise energia órgãos',
+  cosmic_subtitle:'Trajetória planetária ao vivo',
+  word_time:'Hora',
+  cosmic_sky:'🌌 Estado do céu',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Trajetória planetária ao vivo / Hora',
+  lbl_birth_hint:'Bairro → Coordenadas',
+  lbl_cur_hint:'Bairro → Direção',
+  ph_birth_place:'Digite local de nascimento (ex. São Paulo, Tokyo, London...)',
+  ph_cur_place:'Digite localização atual (ex. Rio de Janeiro, London...)',
+  optMale:'Masculino',
+  optFemale:'Feminino',
+};
+
+_I18N.vi = {
+  flag:'🇻🇳', code:'VI',
+  calcBtn:'⚡ Phân tích tự động', calcSync:'Đồng bộ',
+  fortuneWait:'✨ Nhập thông tin ở trên và nhấn «Phân tích tự động»!',
+  fortuneDateDefault:'Hiển thị sau khi tính', cosmicSub:'⚡ Sau khi tính',
+  male:'Nam', female:'Nữ', auto_loc:'📡 Vị trí của tôi',
+  section_dash:'Bảng điều khiển', section_scan:'Quét sinh trắc', section_algo:'🩺 AI Sức khỏe',
+  section_report:'Báo cáo', section_consult:'🔮 Tư vấn', section_sports:'⚽ Thể thao',
+  section_stock:'📈 Cổ phiếu',
+  banner1:'🛸 Dữ liệu NASA thời gian thực, tín hiệu sinh học và', banner2:'20 Động cơ Chiêm tinh',
+  banner3:' kết hợp tạo ra', banner4:'Chỉ số Cuộc sống cá nhân của bạn', banner5:'.',
+  fortune_ttl:'Năng lượng của tôi hôm nay thế nào?',
+  mbti_know:'Tôi biết MBTI của mình', mbti_dontknow:'Không biết MBTI',
+  mbti_direct:'Chọn trực tiếp → Áp dụng', mbti_test:'Tìm qua bài kiểm tra',
+  lbl_face:'Tướng mặt', lbl_palm:'Xem tay', lbl_tongue:'Chẩn đoán lưỡi',
+  lbl_tap_scan:'Nhấn để quét',
+  labelName:'Họ tên', labelTime:'Giờ sinh', labelGender:'Giới tính',
+  lbl_birth_label:'Ngày sinh', lbl_solar:'Dương lịch', lbl_lunar:'Âm lịch',
+  lbl_birth_place:'Nơi sinh', lbl_cur_place:'Vị trí hiện tại',
+  ph_year:'Năm', ph_month:'Tháng', ph_day:'Ngày',
+  ph_name:'VD: Nguyễn Văn A',
+  cosmic_subtitle:'Quỹ đạo hành tinh thời gian thực', cosmic_sky:'🌌 Trạng thái bầu trời',
+  cosmic_btn:'🚨 Nhận tín hiệu may mắn!', cosmic_btn_sub:'NASA + 20 động cơ × Phân tích',
+  cosmic_gear_default:'Bản đồ số mệnh<br>và hành tinh',
+  word_time:'Giờ', lbl_live:'● TRỰC TIẾP', nasaLive:'NASA JPL Trực tiếp',
+  today_fortune:'Vận mệnh hôm nay', algo18_title:'🔯 20 Động cơ × NASA',
+  btnSolar:'Dương lịch', btnLunar:'Âm lịch', btn_18engine:'Đồng bộ 20 động cơ',
+  bioScan:'🧬 Phân tích Da sinh học',
+  ipTitle:'📋 Nhập thông tin — Chỉ cần tên và ngày sinh!',
+  mbtiLabel:'Loại tính cách MBTI', mbti_19th:'Động cơ thứ 19',
+  face_sub:'Màu·hình dạng khuôn mặt<br>Phân tích FCI·FMA',
+  palm_sub:'Chỉ tay sự sống·trí não<br>Phân tích BLI·HRV',
+  tongue_sub:'Màu lưỡi·rêu·màu máu<br>Phân tích năng lượng nội tạng',
+  cosmic_subtitle:'Quỹ đạo hành tinh thời gian thực',
+  word_time:'Giờ',
+  cosmic_sky:'🌌 Trạng thái bầu trời',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Quỹ đạo hành tinh thời gian thực / Giờ',
+  lbl_birth_hint:'Quận → Tọa độ',
+  lbl_cur_hint:'Quận → Hướng',
+  ph_birth_place:'Nhập nơi sinh (VD: Hà Nội, Tokyo, London...)',
+  ph_cur_place:'Nhập vị trí hiện tại (VD: TP.HCM, London...)',
+  optMale:'Nam',
+  optFemale:'Nữ',
+};
+
+_I18N.th = {
+  flag:'🇹🇭', code:'TH',
+  calcBtn:'⚡ วิเคราะห์อัตโนมัติ', calcSync:'ซิงค์',
+  fortuneWait:'✨ กรอกข้อมูลด้านบนแล้วกด «วิเคราะห์อัตโนมัติ»!',
+  fortuneDateDefault:'แสดงหลังการคำนวณ', cosmicSub:'⚡ หลังการคำนวณ',
+  male:'ชาย', female:'หญิง', auto_loc:'📡 ตำแหน่งของฉัน',
+  section_dash:'แดชบอร์ด', section_scan:'สแกนชีวภาพ', section_algo:'🩺 AI สุขภาพ',
+  section_report:'รายงาน', section_consult:'🔮 ปรึกษา', section_sports:'⚽ กีฬา',
+  section_stock:'📈 หุ้น',
+  banner1:'🛸 ข้อมูล NASA แบบเรียลไทม์ สัญญาณชีวภาพ และ', banner2:'20 เครื่องยนต์โหราศาสตร์',
+  banner3:' รวมกันสร้าง', banner4:'ดัชนีชีวิตส่วนตัวของคุณ', banner5:'',
+  fortune_ttl:'พลังงานของฉันวันนี้เป็นอย่างไร?',
+  mbti_know:'ฉันรู้จัก MBTI ของตัวเอง', mbti_dontknow:'ไม่รู้ MBTI',
+  mbti_direct:'เลือกโดยตรง → ใช้งาน', mbti_test:'ค้นหาผ่านการทดสอบ',
+  lbl_face:'โหงวเฮ้ง', lbl_palm:'ดูลายมือ', lbl_tongue:'วิเคราะห์ลิ้น',
+  lbl_tap_scan:'แตะเพื่อสแกน',
+  labelName:'ชื่อ', labelTime:'เวลาเกิด', labelGender:'เพศ',
+  lbl_birth_label:'วันเกิด', lbl_solar:'สุริยคติ', lbl_lunar:'จันทรคติ',
+  lbl_birth_place:'สถานที่เกิด', lbl_cur_place:'ตำแหน่งปัจจุบัน',
+  ph_year:'ปี', ph_month:'เดือน', ph_day:'วัน',
+  ph_name:'เช่น: สมชาย ใจดี',
+  cosmic_subtitle:'เส้นทางดาวเคราะห์แบบเรียลไทม์', cosmic_sky:'🌌 สถานะท้องฟ้า',
+  cosmic_btn:'🚨 รับสัญญาณโชคดี!', cosmic_btn_sub:'NASA + 20 เครื่องยนต์ × วิเคราะห์',
+  cosmic_gear_default:'แผนที่ชะตากรรม<br>และดาวเคราะห์',
+  word_time:'เวลา', lbl_live:'● สด', nasaLive:'NASA JPL สด',
+  today_fortune:'โชคชะตาวันนี้', algo18_title:'🔯 20 เครื่องยนต์ × NASA',
+  btnSolar:'สุริยคติ', btnLunar:'จันทรคติ', btn_18engine:'ซิงค์ 20 เครื่องยนต์',
+  bioScan:'🧬 วิเคราะห์ผิวชีวภาพ',
+  ipTitle:'📋 กรอกข้อมูล — ต้องการเพียงชื่อและวันเกิด!',
+  mbtiLabel:'ประเภทบุคลิกภาพ MBTI', mbti_19th:'เครื่องยนต์ที่ 19',
+  face_sub:'สีหน้า·รูปหน้า<br>วิเคราะห์ FCI·FMA',
+  palm_sub:'เส้นชีวิต·สมอง<br>วิเคราะห์ BLI·HRV',
+  tongue_sub:'สีลิ้น·ฝ้า·สีเลือด<br>วิเคราะห์พลังงานอวัยวะ',
+  cosmic_subtitle:'เส้นทางดาวเคราะห์แบบเรียลไทม์',
+  word_time:'เวลา',
+  cosmic_sky:'🌌 สถานะท้องฟ้า',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'เส้นทางดาวเคราะห์แบบเรียลไทม์ / เวลา',
+  lbl_birth_hint:'แขวง → พิกัด',
+  lbl_cur_hint:'แขวง → ทิศทาง',
+  ph_birth_place:'กรอกสถานที่เกิด (เช่น กรุงเทพ, Tokyo, London...)',
+  ph_cur_place:'กรอกตำแหน่งปัจจุบัน (เช่น เชียงใหม่, London...)',
+  optMale:'ชาย',
+  optFemale:'หญิง',
+};
+
+_I18N.id = {
+  flag:'🇮🇩', code:'ID',
+  calcBtn:'⚡ Analisis Otomatis', calcSync:'Sinkronisasi',
+  fortuneWait:'✨ Masukkan informasi di atas dan tekan «Analisis Otomatis»!',
+  fortuneDateDefault:'Ditampilkan setelah perhitungan', cosmicSub:'⚡ Setelah perhitungan',
+  male:'Laki-laki', female:'Perempuan', auto_loc:'📡 Lokasi saya',
+  section_dash:'Dasbor', section_scan:'Bioscan', section_algo:'🩺 AI Kesehatan',
+  section_report:'Laporan', section_consult:'🔮 Konsultasi', section_sports:'⚽ Olahraga',
+  section_stock:'📈 Saham',
+  banner1:'🛸 Data NASA real-time, biosignal dan', banner2:'20 Mesin Astrologi',
+  banner3:' digabungkan untuk menciptakan', banner4:'Indeks Kehidupan pribadi Anda', banner5:'.',
+  fortune_ttl:'Bagaimana energi saya hari ini?',
+  mbti_know:'Saya tahu MBTI saya', mbti_dontknow:'Tidak tahu MBTI',
+  mbti_direct:'Pilih langsung → Terapkan', mbti_test:'Temukan melalui tes',
+  lbl_face:'Fisiognomi', lbl_palm:'Palmistri', lbl_tongue:'Diagnosa lidah',
+  lbl_tap_scan:'Ketuk untuk scan',
+  labelName:'Nama', labelTime:'Waktu lahir', labelGender:'Jenis kelamin',
+  lbl_birth_label:'Tanggal lahir', lbl_solar:'Masehi', lbl_lunar:'Hijriah',
+  lbl_birth_place:'Tempat lahir', lbl_cur_place:'Lokasi saat ini',
+  ph_year:'Tahun', ph_month:'Bulan', ph_day:'Hari',
+  ph_name:'Cth: Budi Santoso',
+  cosmic_subtitle:'Jalur planet real-time', cosmic_sky:'🌌 Status langit',
+  cosmic_btn:'🚨 Terima sinyal keberuntungan!', cosmic_btn_sub:'NASA + 20 mesin × Analisis',
+  cosmic_gear_default:'Peta nasib<br>dan planet',
+  word_time:'Waktu', lbl_live:'● SIARAN', nasaLive:'NASA JPL Siaran',
+  today_fortune:'Keberuntungan hari ini', algo18_title:'🔯 20 Mesin × NASA',
+  btnSolar:'Masehi', btnLunar:'Hijriah', btn_18engine:'Sinkr. 20 mesin',
+  bioScan:'🧬 Analisis Bio Kulit',
+  ipTitle:'📋 Masukkan informasi — Hanya nama dan tanggal lahir!',
+  mbtiLabel:'Tipe kepribadian MBTI', mbti_19th:'Mesin ke-19',
+  face_sub:'Warna·bentuk wajah<br>Analisis FCI·FMA',
+  palm_sub:'Garis kehidupan·otak<br>Analisis BLI·HRV',
+  tongue_sub:'Warna·lapisan·warna darah<br>Analisis energi organ',
+  cosmic_subtitle:'Jalur planet real-time',
+  word_time:'Waktu',
+  cosmic_sky:'🌌 Status langit',
+  nasa_full:'( NASA )',
+  nasa_subtitle:'Jalur planet real-time / Waktu',
+  lbl_birth_hint:'Kecamatan → Koordinat',
+  lbl_cur_hint:'Kecamatan → Arah',
+  ph_birth_place:'Masukkan tempat lahir (cth. Jakarta, Tokyo, London...)',
+  ph_cur_place:'Masukkan lokasi saat ini (cth. Surabaya, London...)',
+  optMale:'Laki-laki',
+  optFemale:'Perempuan',
+};
+
 // 현재 언어 텍스트 가져오기
 function _t(key) {
   return (_I18N[_LANG] && _I18N[_LANG][key]) || (_I18N['ko'][key]) || key;
@@ -8554,7 +8974,7 @@ function setLang(lang) {
   var codeEl=document.getElementById('langCode'); if(codeEl) codeEl.textContent=p.code;
   var mEl=document.getElementById('langMenu'); if(mEl) mEl.style.display='none';
   // 현재 선택 언어 하이라이트
-  ['ko','en','zh','ja'].forEach(function(l){
+  ['ko','en','zh','ja','ru','hi','es','de','fr','pt','vi','th','id'].forEach(function(l){
     var opt=document.getElementById('langOpt-'+l);
     if(!opt) return;
     opt.style.background = l===lang ? 'rgba(212,168,67,.18)' : '';
@@ -8635,6 +9055,41 @@ function setLang(lang) {
       if(gs){ if(gs.options[0]) gs.options[0].text='남성 (男)'; if(gs.options[1]) gs.options[1].text='여성 (女)'; }
     } catch(e){}
   } else {
+    // placeholder 즉시 교체 (정적팩)
+    try {
+      var _yp=p.ph_year||'Year', _mp=p.ph_month||'Mo', _dp=p.ph_day||'Day';
+      ['ipBirthY','ipBirthM','ipBirthD'].forEach(function(id,i){
+        var el=document.getElementById(id); if(el) el.placeholder=[_yp,_mp,_dp][i];
+      });
+      var _bp=document.getElementById('ipBirthPlace');
+      if(_bp && p.ph_birth_place) _bp.placeholder=p.ph_birth_place;
+      var _cp=document.getElementById('ipCurPlace');
+      if(_cp && p.ph_cur_place) _cp.placeholder=p.ph_cur_place;
+      var _nm=document.getElementById('ipName');
+      if(_nm && p.ph_name) _nm.placeholder=p.ph_name;
+      // nasa_full 즉시 교체
+      var _nf=document.querySelector('[data-i18n="nasa_full"]');
+      if(_nf && p.nasa_full) _nf.textContent=p.nasa_full;
+      var _ns=document.querySelector('[data-i18n="cosmic_subtitle"]');
+      if(_ns && (p.nasa_subtitle||p.cosmic_subtitle)) _ns.textContent=(p.nasa_subtitle||p.cosmic_subtitle);
+      // lbl_birth_hint / lbl_cur_hint 즉시 교체
+      // word_time (/ 시간) 즉시 교체
+      var _wt=document.querySelector('[data-i18n="word_time"]');
+      if(_wt && p.word_time) _wt.textContent=p.word_time;
+      // cosmic_sky 즉시 교체
+      var _csk=document.querySelector('[data-i18n="cosmic_sky"]');
+      if(_csk && p.cosmic_sky) _csk.textContent=p.cosmic_sky;
+      var _bh=document.querySelector('[data-i18n="lbl_birth_hint"]');
+      if(_bh && p.lbl_birth_hint) _bh.textContent=p.lbl_birth_hint;
+      var _ch=document.querySelector('[data-i18n="lbl_cur_hint"]');
+      if(_ch && p.lbl_cur_hint) _ch.textContent=p.lbl_cur_hint;
+      // 성별 옵션
+      var _gs=document.getElementById('ipGender');
+      if(_gs && p.optMale && p.optFemale){
+        if(_gs.options[0]) _gs.options[0].text=p.optMale;
+        if(_gs.options[1]) _gs.options[1].text=p.optFemale;
+      }
+    } catch(e){}
     // AI 번역 실행
     setTimeout(function(){ _cgoAiTranslate(lang, p); }, 100);
   }
@@ -8718,7 +9173,7 @@ function _cgoAiTranslate(lang, pack) {
   // 1. 원본 한국어 스냅샷 저장 (최초 1회)
   _cgoSaveSnap();
 
-  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese'};
+  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian'};
   var tgtLang = langNames[lang] || 'English';
 
   // 2. 현재 활성 페이지 노드만 수집
@@ -8825,7 +9280,7 @@ function _cgoAiTranslate(lang, pack) {
 
 // 특정 루트 엘리먼트만 번역 (페이지 전환용)
 function _cgoAiTranslatePage(lang, pack, rootEl) {
-  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese'};
+  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian'};
   var tgtLang = langNames[lang]||'English';
   var nodes = _cgoGetNodes(rootEl);
   if (!nodes.length) return;
@@ -13458,6 +13913,10 @@ function bioSkinScan(type) {
     var tabMap = { face: 0, palm: 1, tongue: 2 };
     var tabs = document.querySelectorAll('.scan-tab');
     if (tabs[tabMap[type]]) tabs[tabMap[type]].click();
+    // 탭 선택 후 카메라 즉시 시작
+    setTimeout(function() {
+      if (typeof bsStart === 'function' && !BS.on) bsStart();
+    }, 150);
   }, 300);
 
   // 시뮬레이션 스캔값 생성 (실제 카메라 분석 결과와 연동)
@@ -22070,7 +22529,7 @@ function updateCosmicTime() {
   if(!el) return;
   var now = new Date();
   var lang = window._LANG || 'ko';
-  var locales = {ko:'ko-KR', en:'en-US', zh:'zh-CN', ja:'ja-JP'};
+  var locales = {ko:'ko-KR', en:'en-US', zh:'zh-CN', ja:'ja-JP', ru:'ru-RU', hi:'hi-IN', es:'es-ES', de:'de-DE', fr:'fr-FR', pt:'pt-BR', vi:'vi-VN', th:'th-TH', id:'id-ID'};
   var locale = locales[lang] || 'ko-KR';
   el.textContent = now.toLocaleTimeString(locale, {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }
@@ -24334,7 +24793,7 @@ function stkLiveTopStocks(myIdx) {
       };
     })
     .sort(function(a,b){ return b.rank_seed - a.rank_seed; })
-    .slice(0, 5);
+    .slice(0, 30);
 }
 
 
@@ -24406,8 +24865,8 @@ function stkRenderLive() {
   var topStocks = stkLiveTopStocks(myIdx);
   var stockEl = document.getElementById('stk-live-stocks');
   // 이전 순위 기억 (순위 변동 화살표용)
-  var prevNames = (window._stkPrevTop5 || []).map(function(s){ return s.name; });
-  window._stkPrevTop5 = topStocks.slice();
+  var prevNames = (window._stkPrevTop30 || []).map(function(s){ return s.name; });
+  window._stkPrevTop30 = topStocks.slice();
   if (stockEl) stockEl.innerHTML = topStocks.map(function(s, i){
     // 이전 순위 계산
     var prevRank = prevNames.indexOf(s.name);
@@ -24892,37 +25351,48 @@ function sptPreloadLogos(matches) {
 
 // ── 오늘의 경기 DB (오행·역학 기반 자동 생성) ───────────
 var SPT_MATCH_DB = {
-  soccer: [
-    {a:'레알 마드리드', b:'바르셀로나', league:'라리가', time:'03:00', aOh:'금', bOh:'화'},
-    {a:'맨체스터 시티', b:'아스널', league:'EPL', time:'01:30', aOh:'수', bOh:'목'},
-    {a:'전북 현대', b:'울산 HD', league:'K리그1', time:'19:00', aOh:'목', bOh:'화'},
-    {a:'PSG', b:'바이에른', league:'UCL', time:'04:00', aOh:'화', bOh:'금'},
-    {a:'인천 유나이티드', b:'수원 삼성', league:'K리그1', time:'18:30', aOh:'수', bOh:'토'},
-  ],
-  baseball: [
-    {a:'LG 트윈스', b:'두산 베어스', league:'KBO', time:'18:30', aOh:'화', bOh:'목'},
-    {a:'삼성 라이온즈', b:'KT 위즈', league:'KBO', time:'18:30', aOh:'금', bOh:'수'},
-    {a:'뉴욕 양키스', b:'보스턴 레드삭스', league:'MLB', time:'10:10', aOh:'수', bOh:'화'},
-    {a:'SSG 랜더스', b:'한화 이글스', league:'KBO', time:'18:30', aOh:'토', bOh:'화'},
-  ],
-  basketball: [
-    {a:'LA 레이커스', b:'골든스테이트', league:'NBA', time:'12:00', aOh:'화', bOh:'금'},
-    {a:'원주 DB', b:'서울 SK', league:'KBL', time:'19:00', aOh:'목', bOh:'수'},
-    {a:'부산 KCC', b:'안양 KGC', league:'KBL', time:'19:00', aOh:'금', bOh:'화'},
-  ],
-  volleyball: [
-    {a:'대한항공 점보스', b:'현대캐피탈', league:'V리그', time:'19:00', aOh:'수', bOh:'목'},
-    {a:'인천 흥국생명', b:'GS칼텍스', league:'V리그W', time:'19:00', aOh:'화', bOh:'금'},
-  ],
-  tennis: [
-    {a:'노바크 조코비치', b:'카를로스 알카라스', league:'ATP', time:'22:00', aOh:'토', bOh:'목'},
-    {a:'이가 스비아텍', b:'아리나 사발렌카', league:'WTA', time:'20:00', aOh:'화', bOh:'수'},
-  ],
-  etc: [
-    {a:'손흥민', b:'모하메드 살라', league:'이주의 주목선수', time:'—', aOh:'목', bOh:'화', icon:'⭐'},
-    {a:'한국', b:'일본', league:'WBC 예선', time:'18:00', aOh:'금', bOh:'수'},
-  ]
+  soccer: [], baseball: [], basketball: [], volleyball: [], tennis: [], etc: []
 };
+
+// ── 리그 국가 매핑 ─────────────────────────────────────────
+var SPT_LEAGUE_COUNTRY = {
+  // 축구
+  'Premier League':'🏴󠁧󠁢󠁥󠁮󠁧󠁿 EPL','La Liga':'🇪🇸 LaLiga','Bundesliga':'🇩🇪 분데스',
+  'Serie A':'🇮🇹 세리에A','Ligue 1':'🇫🇷 리그1','UEFA Champions League':'🇪🇺 UCL',
+  'UEFA Europa League':'🇪🇺 UEL','K League 1':'🇰🇷 K리그1','K League 2':'🇰🇷 K리그2',
+  'J1 League':'🇯🇵 J1','MLS':'🇺🇸 MLS','Eredivisie':'🇳🇱 에레',
+  'Primeira Liga':'🇵🇹 포르투갈','Scottish Premiership':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Northern NSW NPL':'🇦🇺 NSW NPL','NNSW League 1':'🇦🇺 NNSW','Victoria NPL':'🇦🇺 VIC NPL',
+  'NPFL':'🇳🇬 나이지리아','NPL':'🇦🇺 NPL',
+  // 야구
+  'KBO League':'🇰🇷 KBO','MLB':'🇺🇸 MLB','NPB':'🇯🇵 NPB',
+  // 농구
+  'NBA':'🇺🇸 NBA','KBL':'🇰🇷 KBL','EuroLeague':'🇪🇺 유로리그',
+  // 배구
+  'V-League Men':'🇰🇷 V리그','V-League Women':'🇰🇷 V리그W',
+  'Serie A1 Women':'🇮🇹 이탈리아','CEV Champions League':'🇪🇺 배구UCL',
+};
+
+// 리그명 → 국가 플래그 + 약칭
+function sptLeagueDisplay(league) {
+  if (!league) return '';
+  var mapped = SPT_LEAGUE_COUNTRY[league];
+  if (mapped) return mapped;
+  // 국가 키워드 자동 감지
+  if (/korea|한국|KBO|K리그|KBL|V-League/i.test(league)) return '🇰🇷 ' + league;
+  if (/japan|일본|NPB|J\d/i.test(league)) return '🇯🇵 ' + league;
+  if (/china|중국|CBA/i.test(league)) return '🇨🇳 ' + league;
+  if (/usa|미국|MLB|NBA|NFL|MLS/i.test(league)) return '🇺🇸 ' + league;
+  if (/england|english|premier|EPL/i.test(league)) return '🏴󠁧󠁢󠁥󠁮󠁧󠁿 ' + league;
+  if (/spain|española|laliga/i.test(league)) return '🇪🇸 ' + league;
+  if (/germany|german|bundesliga/i.test(league)) return '🇩🇪 ' + league;
+  if (/france|french|ligue/i.test(league)) return '🇫🇷 ' + league;
+  if (/italy|italian|serie/i.test(league)) return '🇮🇹 ' + league;
+  if (/australia|australian/i.test(league)) return '🇦🇺 ' + league;
+  if (/nigeria|nigerian/i.test(league)) return '🇳🇬 ' + league;
+  if (/UEFA|Champions|Europa/i.test(league)) return '🇪🇺 ' + league;
+  return league;
+}
 
 // ── 현재 탭 ─────────────────────────────────────────────
 var _sptCurrentTab = 'all';
@@ -25012,6 +25482,14 @@ function sptKoName(name) {
   return name; // 매핑 없으면 원본 유지
 }
 
+// 팀명 이중 표시 (영어 + 한글 병기)
+function sptTeamDisplay(name) {
+  if (!name) return name;
+  var ko = sptKoName(name);
+  if (!ko || ko === name) return name; // 한국어 매핑 없으면 그냥 원본
+  return name + ' <span style="font-size:10px;color:#94a3b8;font-weight:400;">(' + ko + ')</span>';
+}
+
 var SPT_TEAM_OH = {
   // EPL
   '맨체스터 시티':'수','Manchester City':'수','Man City':'수',
@@ -25077,7 +25555,11 @@ function sptLeagueToType(league) {
 // ── 오늘 경기 동적 로딩 (TheSportsDB) ───────────────────
 function sptLoadTodayMatches(callback) {
   var _tzParam = encodeURIComponent(CGO_TZ.name || 'Asia/Seoul');
-  var PROXY = 'https://c-go-fuli.vercel.app/api/matches?tz=' + _tzParam;
+  // API-Sports 실시간 키
+  var _apiSportKey = 'd687daf8d309411965927954eb397e7f';
+  var PROXY = 'https://c-go-fuli.vercel.app/api/matches?tz=' + _tzParam + '&apikey=' + _apiSportKey;
+  // API-Sports 직접 호출 (프록시 실패 시 백업)
+  var DIRECT_URL = 'https://v3.football.api-sports.io/fixtures?date=' + new Date().toISOString().slice(0,10) + '&timezone=' + _tzParam;
 
   // 관리자 직접 입력 경기 확인
   function getAdminMatches() {
@@ -25103,57 +25585,283 @@ function sptLoadTodayMatches(callback) {
   }
 
   // 날짜 시드 폴백
-  var FALLBACK_POOL = [
-    {a:'레버쿠젠', b:'아스널', league:'UCL', time:'05:00', aOh:'목', bOh:'목'},
-    {a:'레알 마드리드', b:'맨시티', league:'UCL', time:'05:00', aOh:'금', bOh:'수'},
-    {a:'바르셀로나', b:'도르트문트', league:'UCL', time:'05:00', aOh:'화', bOh:'화'},
-    {a:'바이에른', b:'PSG', league:'UCL', time:'05:00', aOh:'금', bOh:'화'},
-    {a:'인터밀란', b:'아틀레티코', league:'UCL', time:'05:00', aOh:'수', bOh:'토'},
-    {a:'첼시', b:'포르투', league:'UEL', time:'05:00', aOh:'금', bOh:'수'},
-    {a:'맨체스터 시티', b:'아스널', league:'EPL', time:'04:00', aOh:'수', bOh:'목'},
-    {a:'리버풀', b:'맨유', league:'EPL', time:'04:00', aOh:'화', bOh:'토'},
-    {a:'레알 마드리드', b:'바르셀로나', league:'라리가', time:'04:15', aOh:'금', bOh:'화'},
-    {a:'바이에른', b:'도르트문트', league:'분데스', time:'00:30', aOh:'금', bOh:'화'},
-    {a:'전북 현대', b:'울산 HD', league:'K리그1', time:'19:00', aOh:'목', bOh:'화'},
-    {a:'인천 유나이티드', b:'수원 삼성', league:'K리그1', time:'18:30', aOh:'수', bOh:'금'},
-  ];
+  // 폴백: API 완전 실패 시 — 빈 배열로 "경기 없음" 표시
+  var FALLBACK_POOL = [];
 
   var today = new Date();
   var seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
 
   function applyFallback() {
-    var picked = [], seen = {};
-    for (var i=0; i<FALLBACK_POOL.length && picked.length<6; i++) {
-      var item = FALLBACK_POOL[(seed*3 + i*7) % FALLBACK_POOL.length];
-      var k = item.a+item.b;
-      if (!seen[k]) { seen[k]=true; picked.push(item); }
-    }
-    SPT_MATCH_DB.soccer = picked;
-    sptPreloadLogos(picked);
+    // API 완전 실패 — 빈 상태로 두고 "오늘 경기 없음" 표시
+    SPT_MATCH_DB.soccer = [];
+    sptSetApiStatus(false, '❌ 연결 실패');
     if (callback) callback(false);
   }
 
-  // Vercel 프록시 (API-Football 실시간)
-  fetch(PROXY)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var matches = data.matches || [];
-      if (matches.length === 0) { applyFallback(); return; }
-      SPT_MATCH_DB.soccer = matches.map(function(m) {
-        // 로고 캐시 저장
-        if (m.aLogo) _sptLogoCache[m.a] = m.aLogo;
-        if (m.bLogo) _sptLogoCache[m.b] = m.bLogo;
-        return {
-          a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
-          aOh:sptGetOh(m.a), bOh:sptGetOh(m.b), dateStr:m.date||'',
-          aLogo:m.aLogo||'', bLogo:m.bLogo||'',
-          aGoals:m.aGoals, bGoals:m.bGoals, status:m.status||'NS'
-        };
-      });
-      
-      if (callback) callback(true, data.date);
+  // ── API-Sports 직접 호출 함수 ──
+  // API-Sports 날짜 → 로컬 시간 변환
+  function _apiTimeStr(isoDate) {
+    if (!isoDate) return '—';
+    try {
+      return new Date(isoDate).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    } catch(e) { return isoDate.slice(11,16); }
+  }
+
+  // 1부리그 판별 함수
+  function _isTopFlight(fixture) {
+    var lg = fixture.league || {};
+    var lgName = (lg.name || '').toLowerCase();
+    // 명확한 2부리그 키워드
+    var secondDiv = ['championship','segunda','serie b','2. bundesliga','ligue 2',
+      'segunda division','serie c','3. liga','league one','league two',
+      'division 2','2nd','2부','b리그','챌린지','퍼스트','내셔널리그',
+      'regionalliga','oberliga','lower','amateur','youth','reserve','u23','u21','u20','u19'];
+    for (var i=0; i<secondDiv.length; i++) {
+      if (lgName.indexOf(secondDiv[i]) !== -1) return false;
+    }
+    return true;
+  }
+
+  // 공통 fixtures → match 변환
+  function _parseFixtures(fixtures, sport) {
+    return fixtures.map(function(f) {
+      var fix = f.fixture || f.game || {};
+      var teams = f.teams || {};
+      var goals = f.goals || f.scores || {};
+      var league = f.league || {};
+      var statusShort = (fix.status && fix.status.short) || 'NS';
+      var home = teams.home || {};
+      var away = teams.away || {};
+      return {
+        a: home.name || '', b: away.name || '',
+        league: league.name || sport || '',
+        time: _apiTimeStr(fix.date || fix.time),
+        aOh: sptGetOh(home.name||''), bOh: sptGetOh(away.name||''),
+        aLogo: home.logo||'', bLogo: away.logo||'',
+        aGoals: goals.home !== undefined ? goals.home : null,
+        bGoals: goals.away !== undefined ? goals.away : null,
+        status: statusShort,
+        fixtureId: fix.id || fix.id
+      };
+    });
+  }
+
+  function fetchFromApiSports() {
+    var today = new Date().toISOString().slice(0,10);
+    var tz = encodeURIComponent(CGO_TZ.name || 'Asia/Seoul');
+    var h = {'x-apisports-key': _apiSportKey};
+
+    // ── 축구 (Pro) ──
+    var footballP = fetch('https://v3.football.api-sports.io/fixtures?date='+today+'&timezone='+tz,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var allFixtures = (d.response||[]).map(function(f){
+          var fix=f.fixture||{}, t=f.teams||{}, g=f.goals||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:lg.name||'⚽', time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:g.home!==undefined?g.home:null,
+            bGoals:g.away!==undefined?g.away:null,
+            status:st, type:'soccer', fixtureId:fix.id,
+            _raw:f
+          };
+        });
+        // 1부리그 우선 — 없으면 2부리그 포함
+        var top = allFixtures.filter(function(m){ return _isTopFlight(m._raw); });
+        return (top.length > 0 ? top : allFixtures).map(function(m){ delete m._raw; return m; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 야구 (Pro) ──
+    var baseballP = fetch('https://v1.baseball.api-sports.io/games?date='+today,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var allB = (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:lg.name||'⚾', time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'baseball', _raw:f
+          };
+        });
+        var topB = allB.filter(function(m){ return _isTopFlight(m._raw); });
+        return (topB.length > 0 ? topB : allB).map(function(m){ delete m._raw; return m; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 농구 (Pro) ──
+    var basketballP = fetch('https://v1.basketball.api-sports.io/games?date='+today,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var allBK = (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:lg.name||'🏀', time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'basketball', _raw:f
+          };
+        });
+        var topBK = allBK.filter(function(m){ return _isTopFlight(m._raw); });
+        return (topBK.length > 0 ? topBK : allBK).map(function(m){ delete m._raw; return m; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 배구 (Pro) ──
+    var volleyballP = fetch('https://v1.volleyball.api-sports.io/games?date='+today,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        return (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:lg.name||'🏐', time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'volleyball'
+          };
+        });
+      })
+      .catch(function(){ return []; });
+
+    // ── 4종목 병렬 호출 ──
+    return Promise.all([footballP, baseballP, basketballP, volleyballP]).then(function(res) {
+      var soccer=res[0]||[], baseball=res[1]||[], basketball=res[2]||[], volleyball=res[3]||[];
+      if (soccer.length)     SPT_MATCH_DB.soccer     = soccer;
+      if (baseball.length)   SPT_MATCH_DB.baseball   = baseball;
+      if (basketball.length) SPT_MATCH_DB.basketball = basketball;
+      if (volleyball.length) SPT_MATCH_DB.volleyball = volleyball;
+      var all = [].concat(soccer, baseball, basketball, volleyball);
+      return all.length > 0 ? all : null;
+    });
+  }
+
+  // ── API-Sports 직접 호출 우선 (실시간 보장) ──
+  fetchFromApiSports()
+    .then(function(direct) {
+      if (direct && direct.length > 0) {
+        // fetchFromApiSports 내부에서 이미 SPT_MATCH_DB 종목별 업데이트 완료
+        direct.forEach(function(m){
+          if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+          if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+        });
+        sptPreloadLogos(direct);
+        sptSetApiStatus(true, '🟢 API-Sports 실시간 (' + direct.length + '경기)');
+        if (callback) callback(true, '🟢 API-Sports 실시간');
+      } else {
+        // 결과 없으면 Vercel 프록시 시도
+        fetch(PROXY)
+          .then(function(r){ return r.json(); })
+          .then(function(data){
+            var m2 = data.matches || [];
+            if (m2.length > 0) {
+              SPT_MATCH_DB.soccer = m2.map(function(m){
+                if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+                if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+                return {a:m.a,b:m.b,league:m.league||'',time:m.time||'—',
+                  aOh:sptGetOh(m.a),bOh:sptGetOh(m.b),dateStr:m.date||'',
+                  aLogo:m.aLogo||'',bLogo:m.bLogo||'',
+                  aGoals:m.aGoals,bGoals:m.bGoals,status:m.status||'NS'};
+              });
+              sptPreloadLogos(SPT_MATCH_DB.soccer);
+              sptSetApiStatus(true, '🟡 프록시');
+              if (callback) callback(true, '🟡 프록시');
+            } else { applyFallback(); }
+          })
+          .catch(function(){ applyFallback(); });
+      }
     })
-    .catch(function() { applyFallback(); });
+    .catch(function() {
+      // API-Sports 실패 → Vercel 프록시 시도
+      fetch(PROXY)
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          var m2 = data.matches || [];
+          if (m2.length > 0) {
+            SPT_MATCH_DB.soccer = m2.map(function(m){
+              if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+              if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+              return {a:m.a,b:m.b,league:m.league||'',time:m.time||'—',
+                aOh:sptGetOh(m.a),bOh:sptGetOh(m.b),dateStr:m.date||'',
+                aLogo:m.aLogo||'',bLogo:m.bLogo||'',
+                aGoals:m.aGoals,bGoals:m.bGoals,status:m.status||'NS'};
+            });
+            sptPreloadLogos(SPT_MATCH_DB.soccer);
+            sptSetApiStatus(true, '🟡 프록시');
+            if (callback) callback(true, '🟡 프록시');
+          } else { applyFallback(); }
+        })
+        .catch(function(){ applyFallback(); });
+    });
+}
+
+// ── 스포츠 API 상태 업데이트 ──
+function sptSetApiStatus(ok, source) {
+  var el = document.getElementById('spt-api-status');
+  if (!el) return;
+  if (ok) {
+    el.style.background = 'rgba(52,211,153,.12)';
+    el.style.borderColor = 'rgba(52,211,153,.3)';
+    el.style.color = '#34d399';
+    el.textContent = '🟢 ' + (source || 'API-Sports Live');
+  } else {
+    el.style.background = 'rgba(251,191,36,.1)';
+    el.style.borderColor = 'rgba(251,191,36,.3)';
+    el.style.color = '#fbbf24';
+    el.textContent = '🟡 샘플 데이터';
+  }
+}
+
+// ── 강제 새로고침 ──
+function sptForceReload() {
+  var el = document.getElementById('spt-api-status');
+  if (el) { el.textContent = '⏳ 로딩 중...'; el.style.color = '#94a3b8'; }
+  // 캐시 초기화
+  window._sportCache = {};
+  sptLoadTodayMatches(function(ok, src) {
+    sptSetApiStatus(ok, src);
+    sptRenderMatches(_sptCurrentTab || 'all');
+  });
+}
+
+// ── 실시간 스코어 자동 갱신 (5분마다) ──
+var _sptLiveTimer = null;
+function sptStartLiveUpdate() {
+  if (_sptLiveTimer) clearInterval(_sptLiveTimer);
+  _sptLiveTimer = setInterval(function() {
+    // 라이브 경기 있을 때만 갱신
+    var hasLive = SPT_MATCH_DB.soccer.some(function(m){
+      return m.status === '1H' || m.status === '2H' || m.status === 'HT' || m.status === 'ET';
+    });
+    if (hasLive) {
+      sptLoadTodayMatches(function(ok) {
+        if (ok) sptRenderMatches(_sptCurrentTab);
+      });
+    }
+  }, 300000); // 5분 = 300,000ms
 }
 
 function sptAdminAddMatch(a, b, league, time) {
@@ -25344,12 +26052,62 @@ function sptCalcResonance(myOh, teamOh, ili, matchHour) {
 }
 
 // ── 데이터 승률 계산 (의사난수) ──────────────────────────
+// 승률 캐시
+var _sptWinCache = {};
+
 function sptDataWinRate(teamA, teamB) {
-  var hash = 0;
-  var str = teamA + teamB;
-  for (var i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) & 0xffffffff;
-  var base = 42 + (Math.abs(hash) % 17); // 42~58%
+  // 캐시 확인
+  var cacheKey = teamA + '_vs_' + teamB;
+  if (_sptWinCache[cacheKey] !== undefined) return _sptWinCache[cacheKey];
+  // 기본값: 해시 기반 (나중에 AI로 업데이트)
+  var hash = 0, str = teamA + teamB;
+  for (var i=0; i<str.length; i++) hash = (hash*31+str.charCodeAt(i))&0xffffffff;
+  var base = 42 + (Math.abs(hash) % 17);
   return base;
+}
+
+// AI로 실제 승률 조회 (비동기)
+function sptFetchWinRate(teamA, teamB, callback) {
+  var cacheKey = teamA + '_vs_' + teamB;
+  if (_sptWinCache[cacheKey] !== undefined) {
+    if (callback) callback(_sptWinCache[cacheKey], 100 - _sptWinCache[cacheKey]);
+    return;
+  }
+  var apiKey = (window.CG_GEMINI_KEY||'').trim();
+  if (!apiKey) return;
+  var prompt = '축구/스포츠 통계: ' + teamA + ' vs ' + teamB + ' 최근 시즌 승률을 JSON으로만 답하세요. {"homeWin":숫자,"awayWin":숫자,"draw":숫자,"source":"리그명"} 형식. 데이터 없으면 {"homeWin":50,"awayWin":50,"draw":0,"source":"추정"}';
+  fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[{role:'user',content:prompt}],
+      max_tokens:100, temperature:0.1
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+    var m = txt.match(/[{][\s\S]*?[}]/);
+    if (!m) return;
+    var obj = JSON.parse(m[0]);
+    var hw = parseInt(obj.homeWin)||50;
+    _sptWinCache[cacheKey] = hw;
+    if (callback) callback(hw, 100-hw, obj.source||'');
+    // 화면 업데이트
+    var cardEl = document.querySelector('[data-teams="'+cacheKey+'"]');
+    if (cardEl) {
+      var barA = cardEl.querySelector('[data-bar="a"]');
+      var barB = cardEl.querySelector('[data-bar="b"]');
+      var pctA = cardEl.querySelector('[data-pct="a"]');
+      var pctB = cardEl.querySelector('[data-pct="b"]');
+      if(barA) barA.style.width = hw+'%';
+      if(barB) barB.style.width = (100-hw)+'%';
+      if(pctA) pctA.textContent = hw+'%';
+      if(pctB) pctB.textContent = (100-hw)+'%';
+    }
+  })
+  .catch(function(){});
 }
 
 // ── 경기 카드 렌더 ───────────────────────────────────────
@@ -25395,10 +26153,13 @@ function sptRenderMatches(tab) {
     // 종료 경기는 카드 반투명 처리
     var isOverCard = (m.status === 'FT' || m.status === 'AET' || m.status === 'PEN');
     var cardStyle = isOverCard ? ' style="opacity:0.5;"' : '';
-    html += '<div class="spt-match-card" id="spt-card-'+idx+'"'+cardStyle+' onclick="sptSelectMatch('+idx+')">';
+    var _ck = m.a+'_vs_'+m.b;
+    html += '<div class="spt-match-card" id="spt-card-'+idx+'" data-teams="'+_ck+'"'+cardStyle+' onclick="sptSelectMatch('+idx+')">';
+    // 백그라운드로 AI 승률 조회
+    setTimeout(function(_a,_b){ sptFetchWinRate(_a,_b,null); }(m.a,m.b), idx*300);
     html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">';
     html += '<span style="font-size:14px;">'+(sportIcon[m.type]||'🏅')+'</span>';
-    html += '<span style="font-size:10px;color:#a0afc0;font-weight:600;">'+m.league+'</span>';
+    html += '<span style="font-size:10px;color:#a0afc0;font-weight:600;" title="'+m.league+'">'+sptLeagueDisplay(m.league)+'</span>';
     html += '<span style="font-size:10px;color:#6b7280;margin-left:auto;">⏰ '+m.time+'</span>';
     html += '</div>';
     // VS 행
@@ -25416,7 +26177,7 @@ function sptRenderMatches(tab) {
     }
     html += '<div class="spt-team" style="text-align:center;">';
     html += logoHtmlA;
-    html += '<div class="spt-team-name">'+sptKoName(m.a)+'</div>';
+    html += '<div class="spt-team-name">'+sptTeamDisplay(m.a)+'</div>';
     html += '<div class="spt-team-oh" style="background:'+ohA.bg+';color:'+ohA.color+';">'+m.aOh+' 오행</div>';
     html += '<div class="spt-team-stat">데이터 '+dataA+'%</div></div>';
     html += '<div class="spt-vs-badge" style="display:flex;flex-direction:column;align-items:center;">';
@@ -25424,7 +26185,7 @@ function sptRenderMatches(tab) {
     html += '</div>';
     html += '<div class="spt-team" style="text-align:center;">';
     html += logoHtmlB;
-    html += '<div class="spt-team-name">'+sptKoName(m.b)+'</div>';
+    html += '<div class="spt-team-name">'+sptTeamDisplay(m.b)+'</div>';
     html += '<div class="spt-team-oh" style="background:'+ohB.bg+';color:'+ohB.color+';">'+m.bOh+' 오행</div>';
     html += '<div class="spt-team-stat">데이터 '+(100-dataA)+'%</div></div>';
     html += '</div>';
@@ -25444,7 +26205,7 @@ function sptRenderMatches(tab) {
     html += '<div class="spt-resonance"><span class="spt-res-stars">'+stars+'</span>';
     html += '<span class="spt-res-label">'+resonanceLabel+'</span>';
     html += '<span class="spt-res-desc">공명 '+resA+'pts</span></div>';
-    html += '<div style="margin-top:8px;font-size:10px;color:#6ee7b7;text-align:right;">💬 클릭하여 AI 상담 →</div>';
+    html += '<div onclick="(function(){var c=document.getElementById(\'spt-chat-messages\');if(c){c.scrollIntoView({behavior:\'smooth\',block:\'center\'});setTimeout(function(){var i=document.getElementById(\'spt-chat-input\');if(i)i.focus();},500);}})()" style="margin-top:8px;font-size:10px;color:#6ee7b7;text-align:right;cursor:pointer;padding:4px 0;">💬 클릭하여 AI 상담 →</div>';
     html += '</div>';
   });
 
@@ -25471,7 +26232,7 @@ function sptRenderTop3(items) {
     html += '<div class="spt-rank-badge" style="background:rgba(212,168,67,'+(0.15-i*0.04)+');color:'+colors[i]+';">'+medals[i]+'</div>';
     html += '<div style="flex:1;">';
     html += '<div style="font-size:13px;font-weight:700;color:#e2e8f0;">'+item.icon+' '+item.match.a+' vs '+item.match.b+'</div>';
-    html += '<div style="font-size:10px;color:#a0afc0;">'+item.match.league+' · ⏰ '+item.match.time+'</div>';
+    html += '<div style="font-size:10px;color:#a0afc0;">'+sptLeagueDisplay(item.match.league)+' · ⏰ '+item.match.time+'</div>';
     html += '</div>';
     html += '<div style="text-align:right;">';
     html += '<div style="font-size:14px;font-weight:800;color:#34d399;">'+item.resA+'<span style="font-size:10px;font-weight:400;">pts</span></div>';
@@ -25623,9 +26384,17 @@ function sptAskAI(userText, isAuto) {
   var sendBtn = document.getElementById('spt-send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
-  // 검색 키워드 감지 시 "검색 중" 표시
+  // 승률 질문 감지 시 AI로 실제 데이터 먼저 조회
+  var isWinQ = /전적|승률|몇승|몇패|성적|이겼|졌|비겼|역대/.test(userText);
   var isSearchQ = /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|챔피언|득점|실점|이겼|졌|비겼|선수|감독|창단|언제|몇년/.test(userText);
   sptAddTyping(isSearchQ ? '🔍 검색 중...' : null);
+  // 현재 선택 경기의 승률 캐시 없으면 AI로 조회
+  if (isWinQ && _sptAnalyzed) {
+    var _ck2 = _sptAnalyzed.a + '_vs_' + _sptAnalyzed.b;
+    if (_sptWinCache[_ck2] === undefined) {
+      sptFetchWinRate(_sptAnalyzed.a, _sptAnalyzed.b, null);
+    }
+  }
 
   var myOh = (window.calcResult && window.calcResult.domOh) || '목';
   var myName = (window.calcResult && window.calcResult.name) || '사용자';
@@ -25906,8 +26675,7 @@ function sptAskAI(userText, isAuto) {
     return; // 이후 코드 실행 안 함
 
   } else if (needSearch) {
-    // ══ 전적/역사 질문 → Vercel 프록시 + Wikipedia 검색 ══
-
+    // ══ 전적/역사 질문 → Groq AI 웹 검색 도구 사용 ══
     var proxyUrl = 'https://c-go-fuli.vercel.app/api/search';
 
     // NASA 행성 데이터 수집
@@ -25923,12 +26691,16 @@ function sptAskAI(userText, isAuto) {
       moonPhaseNow = ['신월','초승','상현','보름','보름','하현','하현','그믐'][phIdx2];
     } catch(e2){}
 
+    // Groq AI에 웹 검색 포함 프롬프트로 직접 요청
+    var searchResult = '';
+    // 프록시 시도 후 실패 시 Groq 직접 검색 모드
     fetch(proxyUrl, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({query: userText})
     })
     .then(function(r){ return r.json(); })
+    .catch(function(){ return {results:''}; })
     .then(function(searchData) {
       var searchResult = (searchData && searchData.results) || '';
 
@@ -25943,19 +26715,19 @@ function sptAskAI(userText, isAuto) {
           '1. [검색 결과]의 스코어·날짜·대회명을 최우선 활용\n' +
           '2. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
           '3. 전적 형식:\n' +
-          '   \uD83D\uDCCB 통산 전적: A팀 X승 X무 X패\n' +
-          '   \uD83D\uDCC5 주요 경기:\n' +
+          '   📋 통산 전적: A팀 X승 X무 X패\n' +
+          '   📅 주요 경기:\n' +
           '   - YYYY.MM.DD [대회] 팀A X-X 팀B\n' +
-          '   \u26A1 역학 분석: [오행 관점]\n' +
+          '   ⚡ 역학 분석: [오행 관점]\n' +
           '4. 한국어만, 베팅 금지\n' +
           '사용자 오행: ' + myOh;
 
         augUserContent = userText
-          + '\n\n[\uD83D\uDD0D 검색 결과]\n' + searchResult
+          + '\n\n[🔍 검색 결과]\n' + searchResult
           + '\n\n위 결과와 스포츠 지식으로 전적·스코어·날짜 포함 답변하세요.';
 
       } else {
-        // CGO 결핍의 분석 모드 (전적 질문에만 적용)
+        // 검색 결과 없음 → Groq AI 자체 지식으로 최대한 답변
         var managerDB2 = {
           '\ub808\ubc84\ucfe8\uc820': {name:'\uc0e4\ube44 \uc54c\ub860\uc18c', birth:'1981-11-25', oh:'\uae08(\u91d1)', num:7},
           '\uc544\uc2a4\ub0a0': {name:'\ubbf8\ucf08 \uc544\ub974\ud14c\ud0c0', birth:'1982-03-26', oh:'\uc218(\u6c34)', num:5},
@@ -25998,23 +26770,19 @@ function sptAskAI(userText, isAuto) {
         });
 
         augSystem =
-          'CGO-FULI \uc2a4\ud3ec\uce20 \uc5ed\ud559 AI\uc785\ub2c8\ub2e4. \ubc18\ub4dc\uc2dc \ud55c\uad6d\uc5b4\ub85c\ub9cc \ub2f5\ubcc0\ud558\uc138\uc694.\n\n' +
-          '## CGO \uacb0\ud544\uc758 \ubd84\uc11d \ubaa8\ub4dc\n' +
-          '\ub2f5\ubcc0 \uc21c\uc11c:\n' +
-          '1. \uacf5\uc2dd \uc804\uc801 \ud604\ud669 (\uc788\ub294 \uac83\ub9cc \uc0ac\uc2e4\ub300\ub85c)\n' +
-          '2. \uc804\uc801 \uacf5\ubc31\uc758 \uc758\ubbf8 (\ub9ac\uadf8/\ub300\ud68c \uad6c\uc870 \uc124\uba85)\n' +
-          '3. \uac10\ub3c5 \uc5ed\ud559 \uad81\ud569 \ubd84\uc11d\n' +
-          '4. \ud300 \ucc3d\ub2e8\uc77c \uc624\ud589 \uc0c1\uc131\n' +
-          '5. NASA \ud589\uc131 \ubc30\uce58 \uc0c1\uc131\n' +
-          '6. \uc885\ud569 CGO \uc608\uce21 \uc810\uc218\n\n' +
-          '감독: ' + (foundManagers2.map(function(m){return m.team+' '+m.info.name+'('+m.info.birth+','+m.info.oh+')'}).join(' vs ')||'정보없음') + '\n' +
-          '\ud300 \ucc3d\ub2e8: ' + (foundedStr2||'\uc815\ubcf4\uc5c6\uc74c') + '\n' +
-          'NASA \ud589\uc131: ' + (planetStr||'\ub85c\ub529\uc911') + '\n' +
-          '\ub2ec\uc704\uc0c1: ' + (moonPhaseNow||'\ubbf8\uc0c1') + '\n' +
-          '\uc0ac\uc6a9\uc790 \uc624\ud589: ' + myOh + '\n\n' +
-          '\ube0c\ud305 \uae08\uc9c0, \ud55c\uad6d\uc5b4\ub9cc';
+          'CGO-FULI 스포츠 역학 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          '## 중요: 전적/승률 질문 답변 방침\n' +
+          '- 학습 데이터(2024년 초까지)를 최대한 활용해 실제 전적·성적을 답변하세요.\n' +
+          '- 작은 지역 리그 팀이라도 리그명·구조·팀 특성을 최대한 설명하세요.\n' +
+          '- "정보가 없습니다"로만 답변하지 마세요. 리그 설명이라도 해주세요.\n' +
+          '- 답변 형식: 📋 팀/리그 정보 → 📊 알려진 전적 → ⚡ 역학 분석\n\n' +
+          '감독: ' + (foundManagers2.map(function(m){return m.team+' '+m.info.name+'('+m.info.oh+')'}).join(' vs ')||'검색 필요') + '\n' +
+          '팀 창단: ' + (foundedStr2||'검색 필요') + '\n' +
+          'NASA 행성: ' + (planetStr||'로딩중') + '\n사용자 오행: ' + myOh + '\n\n베팅 금지, 한국어만';
 
-        augUserContent = userText + '\n\n[\uc804\uc801 \ub370\uc774\ud130 \ubd80\uc871 \u2192 CGO \uacb0\ud544\uc758 \ubd84\uc11d \ubaa8\ub4dc]';
+        augUserContent = userText +
+          '\n\n[참고: 검색 결과 없음 → 학습 데이터+역학으로 최대한 답변]\n' +
+          (_sptAnalyzed ? '경기: ' + _sptAnalyzed.a + ' vs ' + _sptAnalyzed.b + ' (' + (_sptAnalyzed.league||'') + ')' : '');
       }
 
       var augMessages = [{role:'system', content: augSystem}];
@@ -26104,12 +26872,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── 오늘 경기 실시간 로딩 ──────────────────────────
     var loadingEl = document.getElementById('spt-matches-list');
     if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">📡 오늘 경기 불러오는 중...</div>';
-    sptLoadTodayMatches(function(loaded) {
+    sptLoadTodayMatches(function(loaded, src) {
+      sptSetApiStatus(loaded, src);
       sptRenderMatches(_sptCurrentTab);
       if (loaded) {
         var todayStr2 = new Date().toLocaleDateString('ko-KR', {month:'numeric',day:'numeric'});
+        var totalGames = Object.keys(SPT_MATCH_DB).reduce(function(s,k){return s+SPT_MATCH_DB[k].length;},0);
         var countEl = document.getElementById('spt-today-count');
-        if (countEl) countEl.textContent = todayStr2 + ' 실시간 ' + SPT_MATCH_DB.soccer.length + '경기';
+        if (countEl) countEl.textContent = todayStr2 + ' 실시간 ' + totalGames + '경기';
+        sptStartLiveUpdate(); // 라이브 자동갱신 시작
       }
     });
     // 첫 방문 시 AI 인사
@@ -27558,11 +28329,21 @@ function cgoCopyReport() {
 </script>
 
 
-<div id="langMenu" style="display:none;position:fixed;top:56px;right:12px;background:var(--bg-card);border:1px solid rgba(212,168,67,.4);border-radius:14px;padding:8px;min-width:160px;z-index:2147483647;box-shadow:0 12px 40px rgba(0,0,0,.95)">
-  <div onclick="setLang('ko')" class="lang-opt" id="langOpt-ko" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇰🇷</span> <span>한국어</span></div>
-  <div onclick="setLang('en')" class="lang-opt" id="langOpt-en" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇺🇸</span> <span>English</span></div>
-  <div onclick="setLang('zh')" class="lang-opt" id="langOpt-zh" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇨🇳</span> <span>中文</span></div>
-  <div onclick="setLang('ja')" class="lang-opt" id="langOpt-ja" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:18px">🇯🇵</span> <span>日本語</span></div>
+<div id="langMenu" style="display:none;position:fixed;top:56px;right:12px;background:var(--bg-card);border:1px solid rgba(212,168,67,.4);border-radius:14px;padding:8px;min-width:165px;z-index:2147483647;box-shadow:0 12px 40px rgba(0,0,0,.95);max-height:80vh;overflow-y:auto">
+  <div onclick="setLang('ko')" class="lang-opt" id="langOpt-ko" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇰🇷</span> <span>한국어</span></div>
+  <div onclick="setLang('en')" class="lang-opt" id="langOpt-en" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇺🇸</span> <span>English</span></div>
+  <div onclick="setLang('zh')" class="lang-opt" id="langOpt-zh" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇨🇳</span> <span>中文</span></div>
+  <div onclick="setLang('ja')" class="lang-opt" id="langOpt-ja" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇯🇵</span> <span>日本語</span></div>
+  <div style="height:1px;background:rgba(255,255,255,.08);margin:4px 8px"></div>
+  <div onclick="setLang('ru')" class="lang-opt" id="langOpt-ru" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇷🇺</span> <span>Русский</span></div>
+  <div onclick="setLang('hi')" class="lang-opt" id="langOpt-hi" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇮🇳</span> <span>हिंदी</span></div>
+  <div onclick="setLang('es')" class="lang-opt" id="langOpt-es" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇪🇸</span> <span>Español</span></div>
+  <div onclick="setLang('de')" class="lang-opt" id="langOpt-de" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇩🇪</span> <span>Deutsch</span></div>
+  <div onclick="setLang('fr')" class="lang-opt" id="langOpt-fr" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇫🇷</span> <span>Français</span></div>
+  <div onclick="setLang('pt')" class="lang-opt" id="langOpt-pt" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇧🇷</span> <span>Português</span></div>
+  <div onclick="setLang('vi')" class="lang-opt" id="langOpt-vi" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇻🇳</span> <span>Tiếng Việt</span></div>
+  <div onclick="setLang('th')" class="lang-opt" id="langOpt-th" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇹🇭</span> <span>ภาษาไทย</span></div>
+  <div onclick="setLang('id')" class="lang-opt" id="langOpt-id" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-1);transition:all .15s" onmouseover="this.style.background='rgba(212,168,67,.12)'" onmouseout="this.style.background=''"><span style="font-size:16px">🇮🇩</span> <span>Indonesia</span></div>
 </div>
 </body>
 </html>
