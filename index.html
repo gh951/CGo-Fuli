@@ -131,6 +131,21 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
   .topbar-title { font-size: clamp(12px,3.5vw,15px) !important; }
   /* 궁합 페이지 */
   #page-couple .sq-sentence { font-size: clamp(12px,3.5vw,16px) !important; }
+
+  /* ── 20대 역학 그리드: 모바일 1컬럼 ── */
+  #algo18-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  /* 역학 카드 행 내부 글씨 */
+  #algo18-east .ac-row, #algo18-west .ac-row {
+    font-size: 11px !important;
+  }
+  /* 전문가 버튼 */
+  #algo18-east .expert-btn, #algo18-west .expert-btn {
+    font-size: 10px !important;
+    padding: 3px 7px !important;
+  }
 }
 .topbar-right{display:flex;align-items:center;gap:8px}
 .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-size:16px;transition:all .2s}
@@ -3549,7 +3564,7 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="algo18-grid">
           <!-- 왼쪽: 핵심 8선 (우주·천문) -->
           <div>
             <div style="font-size:10px;color:rgba(56,189,248,.9);letter-spacing:.08em;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px">
@@ -7846,6 +7861,10 @@ function hltBreathStart(){
   _HV.bPhase=0;_HV.bSec=0;_HV.bCycle=0;
   _breathEngineStart(); // 센서 수집 시작
   var btn=_g('hlt-bbtn');if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
+  // 호흡 시작 음성 안내 — 300ms 딜레이 (iOS Safari TTS 잠금 해제 시간 확보)
+  setTimeout(function(){
+    _hvbSpeak('4·7·8 호흡을 시작합니다. 코로 깊게 숨을 들이마시세요. 넷.');
+  }, 300);
   _HV.bTimer=setInterval(_hvbTick,1000);
   _hvbTick();
 }
@@ -8042,27 +8061,57 @@ function _tempCalcFromSensors(){
 function hltTempScan(){
   if(_HV.tmpDone)return;
   var btn=_g('hlt-tempbtn');if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
-  var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (2초)';
+  var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
+  // 체온 측정 음성 안내 (300ms 딜레이)
+  setTimeout(function(){
+    _hvbSpeak('스마트폰을 양손으로 단단히 잡아주세요. 체온을 15초간 측정합니다. 흔들림 없이 고정해주세요.');
+  }, 300);
+
   _tempEngineCollect(function(){
     var targetTemp=_tempCalcFromSensors();
-    var step=0;
+    var elapsed=0; // 경과 초
+    var TOTAL=15;  // 15초 측정
+
+    // 7초 중간 안내
+    setTimeout(function(){
+      if(!_HV.tmpDone) _hvbSpeak('잘 하고 계세요. 조금만 더 고정해주세요.');
+    }, 7000);
+
     _HV.tmpTimer=setInterval(function(){
-      var progress=step/9;
-      var animTemp=35.8+(targetTemp-35.8)*progress+(_hvr(3003+step)%3)*0.01;
+      elapsed++;
+      var remain=TOTAL-elapsed;
+      var progress=elapsed/TOTAL;
+
+      // 카운트다운 표시
+      var ts2=_g('hlt-temp-status');
+      if(ts2) ts2.textContent='🌡️ 측정 중... ('+remain+'초 남음)';
+
+      // 온도 애니메이션
+      var animTemp=35.8+(targetTemp-35.8)*progress+(_hvr(3003+elapsed)%3)*0.01;
       animTemp=Math.max(35.5,Math.min(38.5,animTemp));
       var tv=_g('hlt-tempval');if(tv)tv.textContent=animTemp.toFixed(1);
       var normP=Math.min(1,(animTemp-35.5)/2);
       var ring=_g('hlt-tcircle'),wrap=_g('hlt-tempval-wrap');
       var col=animTemp<36?'#38bdf8':animTemp<37?'#fbbf24':animTemp<37.5?'#f97316':'#f87171';
       if(ring){ring.style.strokeDashoffset=(232.5*(1-normP*0.85)).toFixed(1);ring.style.stroke=col;}
-      if(wrap){wrap.style.boxShadow='0 0 '+(step*4)+'px '+col+'44';var tv2=_g('hlt-tempval');if(tv2)tv2.style.color=col;}
-      step++;
-      if(step>=10){clearInterval(_HV.tmpTimer);_hvtmpFinish(targetTemp,_hvds()+3003);}
-    },400);
+      if(wrap){wrap.style.boxShadow='0 0 '+(elapsed*3)+'px '+col+'44';var tv2=_g('hlt-tempval');if(tv2)tv2.style.color=col;}
+
+      if(elapsed>=TOTAL){
+        clearInterval(_HV.tmpTimer);
+        var ts3=_g('hlt-temp-status');
+        if(ts3) ts3.textContent='✅ 측정 완료!';
+        _hvtmpFinish(targetTemp,_hvds()+3003);
+      }
+    },1000); // 1초마다 (15초 카운트)
   });
 }
 function _hvtmpFinish(temp,seed){
   _HV.tmpDone=true;
+  // 체온 완료 음성 — 500ms 딜레이로 확실히 출력
+  var msg = temp<36?'체온이 다소 낮습니다. '+temp.toFixed(1)+'도. 따뜻하게 해주세요.':
+            temp<37.5?'체온 정상입니다. '+temp.toFixed(1)+'도. 측정이 완료되었습니다.':
+            '체온이 높습니다. '+temp.toFixed(1)+'도. 충분한 안정을 취해주세요.';
+  setTimeout(function(){ _hvbSpeak(msg); }, 500);
   // 체온 기반 실측 점수 (36.5°C 최적)
   var diff=Math.abs(temp-36.5);
   var sc=diff<0.2?88+Math.round(diff*10):diff<0.5?78-Math.round(diff*20):diff<1.0?62:48;
@@ -10301,6 +10350,9 @@ var _GOOD={
 };
 
 function showSijinDetail(idx, energy) {
+  // 기존 팝업 강제 닫기 후 열기
+  var fpO = document.getElementById('fortunePopupOverlay');
+  if(fpO) fpO.classList.remove('show');
   // idx 범위 보정
   idx = ((idx % 12) + 12) % 12;
   var s=_SPD[idx];
@@ -10460,11 +10512,12 @@ function showSijinDetail(idx, energy) {
 
   var fpH = document.getElementById('fpHeader');
   var fpB = document.getElementById('fpBody');
-  var fpO = document.getElementById('fortunePopupOverlay');
-  if(!fpH||!fpB||!fpO){ console.warn('시진 팝업 DOM 없음'); return; }
+  var fpO2 = document.getElementById('fortunePopupOverlay');
+  if(!fpH||!fpB||!fpO2){ console.warn('시진 팝업 DOM 없음'); return; }
   fpH.innerHTML=hHtml;
   fpB.innerHTML=bHtml;
-  fpO.classList.add('show');
+  // 약간 딜레이 후 show — 이전 팝업 닫힘 애니메이션 완료 후
+  setTimeout(function(){ fpO2.classList.add('show'); }, 50);
 }
 
 
@@ -16292,15 +16345,39 @@ function bioSkinScan(type) {
   var statusEl = document.getElementById('bioSkin-' + type + '-status');
   var resultEl = document.getElementById('bioSkinResult');
   window._scanFromDashboard = type;
-  if (typeof goScan === 'function') goScan();
-  setTimeout(function() {
-    var tabMap = { face: 0, palm: 1, tongue: 2 };
-    var tabs = document.querySelectorAll('.scan-tab');
-    if (tabs[tabMap[type]]) tabs[tabMap[type]].click();
+
+  // 부위별 음성 안내 — 음성 끝난 후 스캔 시작
+  var voiceMsg = {
+    face:   '점선에 얼굴을 맞추고 15초간 멈춰 주세요. 눈을 정면으로 응시하고 무표정을 유지하세요.',
+    palm:   '점선에 손바닥을 맞추고 15초간 멈춰 주세요. 손가락을 가볍게 펴고 흔들림 없이 고정하세요.',
+    tongue: '점선에 혀를 맞추고 15초간 멈춰 주세요. 입을 크게 벌리고 혀를 끝까지 내미세요.'
+  };
+
+  function _doStartScan(){
+    if (typeof goScan === 'function') goScan();
     setTimeout(function() {
-      if (typeof bsStart === 'function' && !BS.on) bsStart();
-    }, 150);
-  }, 300);
+      var tabMap = { face: 0, palm: 1, tongue: 2 };
+      var tabs = document.querySelectorAll('.scan-tab');
+      if (tabs[tabMap[type]]) tabs[tabMap[type]].click();
+      setTimeout(function() {
+        if (typeof bsStart === 'function' && !BS.on) bsStart();
+      }, 150);
+    }, 300);
+  }
+
+  if(voiceMsg[type] && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _u = new SpeechSynthesisUtterance(voiceMsg[type]);
+    _u.lang='ko-KR'; _u.rate=0.88; _u.volume=1.0;
+    // 음성 끝나면 스캔 시작
+    _u.onend = function(){ _doStartScan(); };
+    // 음성 실패 대비 — 4초 후 강제 시작
+    var _scanFallback = setTimeout(function(){ _doStartScan(); }, 4000);
+    _u.onend = function(){ clearTimeout(_scanFallback); _doStartScan(); };
+    window.speechSynthesis.speak(_u);
+  } else {
+    _doStartScan();
+  }
 
   setTimeout(function() {
     // ── seed: 현재 시각(ms) 포함 → 매번 다른 값 생성 ──
@@ -33705,11 +33782,11 @@ function showPinAfterAgree(){
         🎉 무결성 런칭 기념 프리패스
       </div>
       <!-- 메인 슬로건 -->
-      <div style="font-family:'Orbitron','Noto Sans KR',sans-serif;font-size:22px;font-weight:900;color:#d4a843;line-height:1.35;text-shadow:0 0 15px rgba(212,168,67,.6),0 0 30px rgba(212,168,67,.3);margin-bottom:8px;animation:cgpFadeUp .5s .05s ease both;">
-        운은 빌고,<br>숫자는 계산한다.
+      <div style="font-family:'Orbitron','Noto Sans KR',sans-serif;font-size:20px;font-weight:900;color:#d4a843;line-height:1.4;text-shadow:0 0 15px rgba(212,168,67,.6),0 0 30px rgba(212,168,67,.3);margin-bottom:8px;animation:cgpFadeUp .5s .05s ease both;">
+        글로벌 앱을 목표로 한<br>한 발짝
       </div>
-      <div style="font-size:13px;color:rgba(240,220,160,.65);margin-bottom:12px;animation:cgpFadeUp .5s .1s ease both;">
-        NASA가 점찍은 오늘의 당첨 지수!
+      <div style="font-size:12px;color:rgba(240,220,160,.6);margin-bottom:12px;line-height:1.7;animation:cgpFadeUp .5s .1s ease both;">
+        4,500년 역학의 미신을 걷어내고<br>과학으로 승화된 단 하나의 운명 기상청
       </div>
       <!-- 330원 -->
       <div style="display:inline-block;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(52,211,153,.08));border:1px solid rgba(212,168,67,.4);border-radius:14px;padding:10px 22px;animation:cgpFadeUp .5s .15s ease both;">
@@ -33748,6 +33825,34 @@ function showPinAfterAgree(){
     <!-- ALL-IN-ONE 서비스 -->
     <div style="margin:0 16px 16px;animation:cgpFadeUp .5s .45s ease both;">
       <div style="font-size:10px;font-weight:800;color:rgba(212,168,67,.7);letter-spacing:.15em;margin-bottom:8px;text-align:center;">💎 ALL-IN-ONE 마스터 서비스</div>
+
+      <!-- 13개 언어 — 차별화 강조 카드 -->
+      <div style="background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(212,168,67,.08));border:2px solid rgba(56,189,248,.5);border-radius:12px;padding:12px 14px;margin-bottom:8px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#020817;font-size:9px;font-weight:900;padding:3px 10px;border-radius:0 12px 0 10px;letter-spacing:.05em;">GLOBAL</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:22px;">🌍</div>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:900;color:#38bdf8;margin-bottom:4px;letter-spacing:.03em;">13개 언어 완전 지원</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;">
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇰🇷 KO</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇺🇸 EN</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇨🇳 ZH</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇯🇵 JA</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇷🇺 RU</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇮🇳 HI</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇪🇸 ES</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇩🇪 DE</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇫🇷 FR</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇧🇷 PT</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇻🇳 VI</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇹🇭 TH</span>
+              <span style="font-size:9px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);border-radius:5px;padding:1px 6px;color:#38bdf8;">🇮🇩 ID</span>
+            </div>
+            <div style="font-size:9px;color:rgba(240,220,160,.5);line-height:1.5;">전 세계 어디서든 모국어로 운명을 분석합니다</div>
+          </div>
+        </div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
         <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 10px;">
           <div style="font-size:14px;margin-bottom:3px;">🛰️</div>
@@ -33783,6 +33888,21 @@ function showPinAfterAgree(){
           <div style="font-size:14px;margin-bottom:3px;">🖋️</div>
           <div style="font-size:10px;font-weight:700;color:#d4a843;margin-bottom:2px;">글로벌 작명·풍수</div>
           <div style="font-size:9px;color:rgba(240,220,160,.5);line-height:1.5;">동양 한자 이름 추천 · 동/서양 통합 풍수 에너지 분석</div>
+        </div>
+        <!-- 음악 — 차별화 강조 -->
+        <div style="grid-column:1/-1;background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(236,72,153,.06));border:1px solid rgba(168,85,247,.35);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;font-size:9px;font-weight:900;padding:3px 10px;border-radius:0 10px 0 10px;letter-spacing:.05em;">NEW</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-size:22px;">🎵</div>
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:900;color:#c084fc;margin-bottom:3px;">실시간 에너지 상승 음악 처방</div>
+              <div style="font-size:9px;color:rgba(240,220,160,.6);line-height:1.6;">20대 역학 × NASA × 오행 주파수 — 내 에너지에 맞는 솔페지오 주파수 음악을 AI가 실시간으로 처방합니다</div>
+              <button onclick="cgpClose();setTimeout(function(){_cgNavigateTo('scan');},300);"
+                style="margin-top:6px;padding:5px 14px;background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.4);border-radius:8px;color:#c084fc;font-size:10px;font-weight:700;cursor:pointer;">
+                🎵 지금 바로 처방받기 →
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
