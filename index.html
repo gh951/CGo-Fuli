@@ -2215,7 +2215,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </head>
 <body>
 <script>
-// ✅ iOS Safari TTS 잠금 해제 — 첫 번째 사용자 터치 시 speechSynthesis 활성화
+// ✅ iOS Safari TTS 잠금 해제 — 첫 번째 사용자 터치/클릭 시 speechSynthesis 활성화
 window._ttsUnlocked = false;
 window._ttsEnabled  = true;
 (function(){
@@ -2223,14 +2223,19 @@ window._ttsEnabled  = true;
     if(window._ttsUnlocked) return;
     if(!window.speechSynthesis) return;
     try {
+      window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance('');
       u.volume = 0;
+      u.onend = function(){ window._ttsUnlocked = true; };
+      u.onerror = function(){ window._ttsUnlocked = true; };
       window.speechSynthesis.speak(u);
-      window._ttsUnlocked = true;
-    } catch(e){}
+      // 보험: onend가 발화 안 될 경우 500ms 후 강제 해제
+      setTimeout(function(){ window._ttsUnlocked = true; }, 500);
+    } catch(e){ window._ttsUnlocked = true; }
   }
   document.addEventListener('touchstart', _unlockTTS, {once:true, passive:true});
   document.addEventListener('click',      _unlockTTS, {once:true, passive:true});
+  document.addEventListener('keydown',    _unlockTTS, {once:true});
 })();
 </script>
 <div id="cgoEntrance">
@@ -3912,7 +3917,7 @@ function updateTransitSectionWithNASA(planets) {
         <video id="bsVideo" autoplay playsinline muted
           style="width:100%;height:100%;object-fit:cover;opacity:1;display:none;border-radius:inherit;"></video>
         <canvas id="bsCanvas"
-          style="position:absolute;top:0;left:0;width:100%;height:100%;mix-blend-mode:screen;opacity:0.85"></canvas>
+          style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.75;pointer-events:none"></canvas>
 
         <!-- 대기 화면 -->
         <div id="bsIdle" style="position:absolute;inset:0;display:flex;flex-direction:column;
@@ -8087,20 +8092,47 @@ function hltBreathStart(){
 }
 // 호흡 TTS 음성 — Web Speech API
 var _breathSpeech = null;
+var _hvbSpeakQueue = []; // 음성 큐
+var _hvbSpeaking = false;
+
+function _hvbSpeakFlush() {
+  if(_hvbSpeaking || _hvbSpeakQueue.length === 0) return;
+  if(!window.speechSynthesis || !window._ttsUnlocked || !window._ttsEnabled) { _hvbSpeakQueue=[]; return; }
+  _hvbSpeaking = true;
+  var text = _hvbSpeakQueue.shift();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR'; u.rate = 0.88; u.pitch = 1.0; u.volume = 0.9;
+  u.onend = function(){ _hvbSpeaking=false; setTimeout(_hvbSpeakFlush, 80); };
+  u.onerror = function(){ _hvbSpeaking=false; setTimeout(_hvbSpeakFlush, 80); };
+  window.speechSynthesis.speak(u);
+  _breathSpeech = u;
+}
+
 function _hvbSpeak(text) {
   try {
     if (!window.speechSynthesis) return;
     if (!window._ttsUnlocked) return;
     if (!window._ttsEnabled) return;
-    window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR';
-    u.rate = 0.85;
-    u.pitch = 1.0;
-    u.volume = 0.9;
-    window.speechSynthesis.speak(u);
-    _breathSpeech = u;
+    _hvbSpeakQueue.push(text);
+    _hvbSpeakFlush();
   } catch(e) {}
+}
+
+// 즉시 끊고 새 음성 재생 (긴급 안내용)
+function _hvbSpeakNow(text) {
+  try {
+    if (!window.speechSynthesis || !window._ttsUnlocked || !window._ttsEnabled) return;
+    _hvbSpeakQueue = []; _hvbSpeaking = false;
+    window.speechSynthesis.cancel();
+    setTimeout(function(){
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang='ko-KR'; u.rate=0.88; u.pitch=1.0; u.volume=0.9;
+      u.onend=function(){ _hvbSpeaking=false; };
+      _hvbSpeaking=true;
+      window.speechSynthesis.speak(u);
+      _breathSpeech=u;
+    }, 80);
+  } catch(e){}
 }
 
 var _hvbLastSpoken = -1; // 중복 음성 방지
@@ -16831,17 +16863,20 @@ function bioSkinScan(type) {
     }, 300);
   }
 
-  if(voiceMsg[type] && window.speechSynthesis){
-    window.speechSynthesis.cancel();
-    var _u = new SpeechSynthesisUtterance(voiceMsg[type]);
-    _u.lang='ko-KR'; _u.rate=0.88; _u.volume=1.0;
-    // 음성 끝나면 스캔 시작
-    _u.onend = function(){ _doStartScan(); };
-    // 음성 실패 대비 — 4초 후 강제 시작
-    var _scanFallback = setTimeout(function(){ _doStartScan(); }, 4000);
-    _u.onend = function(){ clearTimeout(_scanFallback); _doStartScan(); };
-    window.speechSynthesis.speak(_u);
+  if(voiceMsg[type] && window.speechSynthesis && window._ttsUnlocked && window._ttsEnabled){
+    // ✅ _hvbSpeakNow 사용 — 큐 초기화 후 즉시 재생, cancel 안전하게 처리
+    if(typeof _hvbSpeakNow === 'function'){
+      _hvbSpeakNow(voiceMsg[type]);
+    } else {
+      window.speechSynthesis.cancel();
+      var _u = new SpeechSynthesisUtterance(voiceMsg[type]);
+      _u.lang='ko-KR'; _u.rate=0.88; _u.volume=1.0;
+      window.speechSynthesis.speak(_u);
+    }
+    // 음성 길이 고려 — 4초 후 스캔 시작 (음성 완료 대기)
+    setTimeout(function(){ _doStartScan(); }, 4000);
   } else {
+    // TTS 미잠금 or 음성 꺼진 경우 → 바로 스캔 시작
     _doStartScan();
   }
 
@@ -21003,9 +21038,11 @@ function cplReset(){
     _ttsReady = true;
     var u = new SpeechSynthesisUtterance('');
     u.volume = 0;
+    u.onend = function(){ window._ttsUnlocked = true; };
     window.speechSynthesis.speak(u);
     // iOS Safari 추가 대응 — voices 로드
     window.speechSynthesis.getVoices();
+    setTimeout(function(){ window._ttsUnlocked = true; }, 500);
   }
   document.addEventListener('touchstart', _unlockTTS, {once:true, passive:true});
   document.addEventListener('click', _unlockTTS, {once:true});
@@ -22547,22 +22584,41 @@ function bsStart(){
   _rPPG.offCanvas=document.createElement('canvas');
   _rPPG.offCtx=_rPPG.offCanvas.getContext('2d');
 
-  // 카메라 시작
+  // 카메라 시작 — iOS/Android 완전 지원
   if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({
+    var _facingMode = BS.mode==='palm' ? 'environment' : 'user';
+    var _constraints = {
       video:{
-        facingMode: BS.mode==='palm'?'environment':'user',
+        facingMode: _facingMode,
         width:{ideal:640}, height:{ideal:480},
         frameRate:{ideal:30}
       }
-    }).then(function(s){
+    };
+    navigator.mediaDevices.getUserMedia(_constraints)
+    .catch(function(){
+      // iOS에서 exact facingMode 실패 시 ideal로 재시도
+      return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:_facingMode}}});
+    })
+    .catch(function(){
+      // 그래도 실패 시 제약 없이 시도
+      return navigator.mediaDevices.getUserMedia({video:true});
+    })
+    .then(function(s){
       _rPPG.stream=s; _rPPG.hasCamera=true;
       var v=bsE('bsVideo');
-      if(v){ v.srcObject=s; v.style.display='block'; v.play(); }
-      // RAF 루프 시작 (카메라 준비 후)
+      if(v){
+        v.srcObject=s;
+        v.setAttribute('playsinline','');
+        v.setAttribute('autoplay','');
+        v.muted=true;
+        v.style.display='block';
+        v.style.opacity='1';
+        v.style.webkitTransform='scaleX('+(BS.mode==='palm'?'1':'-1')+')';
+        v.style.transform='scaleX('+(BS.mode==='palm'?'1':'-1')+')';
+        v.play().catch(function(){});
+      }
       setTimeout(function(){ _rPPG.rafId=requestAnimationFrame(_rPPGLoop); }, 500);
     }).catch(function(){
-      // 카메라 없으면 고품질 생체 시뮬레이션
       _rPPG.hasCamera=false;
       _bsSimulateRealBio();
     });
