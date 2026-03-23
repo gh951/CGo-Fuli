@@ -8222,10 +8222,30 @@ function hltBreathStart(){
   _HV.bPhase=0;_HV.bSec=0;_HV.bCycle=0;
   _breathEngineStart();
   var btn=_g('hlt-bbtn');if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
-  window._cgoSpeak('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.', function(){
+
+  // ✅ iOS 핵심: 클릭 직후 user gesture 체인 안에서 즉시 speak()
+  if(window._ttsEnabled && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _u = new SpeechSynthesisUtterance('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.');
+    _u.lang='ko-KR'; _u.volume=1.0; _u.rate=0.88;
+    var _vv=window.speechSynthesis.getVoices();
+    var _kv=_vv.filter(function(v){return v.lang==='ko-KR';})[0]||_vv.filter(function(v){return v.lang.indexOf('ko')>=0;})[0];
+    if(_kv) _u.voice=_kv;
+    _u.onend=function(){
+      _HV.bTimer=setInterval(_hvbTick,1000);
+      _hvbTick();
+    };
+    // 안전장치: 4초 후 강제 시작
+    var _fb=setTimeout(function(){
+      if(!_HV.bTimer){ _HV.bTimer=setInterval(_hvbTick,1000); _hvbTick(); }
+    },4000);
+    _u.onend=function(){ clearTimeout(_fb); _HV.bTimer=setInterval(_hvbTick,1000); _hvbTick(); };
+    window.speechSynthesis.speak(_u);
+    if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+  } else {
     _HV.bTimer=setInterval(_hvbTick,1000);
     _hvbTick();
-  });
+  }
 }
 // ══ 호흡/파지 TTS 래퍼 ══
 var _breathSpeech = null;
@@ -8449,11 +8469,18 @@ function hltTempScan(){
   if(_HV.tmpDone)return;
   var btn=_g('hlt-tempbtn');if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
-  // ✅ _cgoSpeak: PC=TTS, 스마트폰=자막+비프음
-  window._cgoSpeak('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.', function(){
-    // 확인 안내
-    if(!_HV.tmpDone) window._cgoSpeak('맞습니다. 손바닥 중앙이 폰 뒷면에 밀착되도록 유지해 주세요.');
-  });
+
+  // ✅ iOS 핵심: 클릭 직후 user gesture 체인 안에서 즉시 speak()
+  if(window._ttsEnabled && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _u2 = new SpeechSynthesisUtterance('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
+    _u2.lang='ko-KR'; _u2.volume=1.0; _u2.rate=0.88;
+    var _vv3=window.speechSynthesis.getVoices();
+    var _kv3=_vv3.filter(function(v){return v.lang==='ko-KR';})[0]||_vv3.filter(function(v){return v.lang.indexOf('ko')>=0;})[0];
+    if(_kv3) _u2.voice=_kv3;
+    window.speechSynthesis.speak(_u2);
+    if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+  }
 
   _tempEngineCollect(function(){
     var targetTemp=_tempCalcFromSensors();
@@ -16940,12 +16967,25 @@ function bioSkinScan(type) {
   var resultEl = document.getElementById('bioSkinResult');
   window._scanFromDashboard = type;
 
-  // 부위별 음성 안내 — 음성 끝난 후 스캔 시작
   var voiceMsg = {
     face:   '점선에 얼굴을 맞추고 30초간 멈춰 주세요. 눈을 정면으로 응시하고 무표정을 유지하세요.',
     palm:   '점선에 손바닥을 맞추고 30초간 멈춰 주세요. 손가락을 가볍게 펴고 흔들림 없이 고정하세요.',
     tongue: '점선에 혀를 맞추고 30초간 멈춰 주세요. 입을 크게 벌리고 혀를 끝까지 내미세요.'
   };
+
+  // ✅ iOS 핵심: 클릭 직후 user gesture 체인 안에서 즉시 speak() 호출
+  // goScan() 페이지 전환 전에 먼저 발화해야 iOS Safari에서 작동
+  if(voiceMsg[type] && window._ttsEnabled && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _u = new SpeechSynthesisUtterance(voiceMsg[type]);
+    _u.lang='ko-KR'; _u.volume=1.0; _u.rate=0.88;
+    var _vv2 = window.speechSynthesis.getVoices();
+    var _kv2 = _vv2.filter(function(v){return v.lang==='ko-KR';})[0]
+             || _vv2.filter(function(v){return v.lang.indexOf('ko')>=0;})[0];
+    if(_kv2) _u.voice=_kv2;
+    window.speechSynthesis.speak(_u);
+    if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+  }
 
   function _doStartScan(){
     if (typeof goScan === 'function') goScan();
@@ -16959,14 +16999,8 @@ function bioSkinScan(type) {
     }, 300);
   }
 
-  // ✅ _cgoSpeak: PC=TTS, 스마트폰=자막+비프음, onDone 후 스캔 시작
-  if(voiceMsg[type] && window._ttsEnabled){
-    window._cgoSpeak(voiceMsg[type], function(){ _doStartScan(); });
-    // 폴백: 6초 후 강제 스캔
-    setTimeout(function(){ _doStartScan(); }, 6000);
-  } else {
-    _doStartScan();
-  }
+  // 음성과 동시에 스캔 시작 (iOS 안정성을 위해 onend 대기 안 함)
+  _doStartScan();
 
   setTimeout(function() {
     // ── seed: 현재 시각(ms) 포함 → 매번 다른 값 생성 ──
@@ -23415,6 +23449,23 @@ var BsFs = {
 function bsFullscreen(){
   var wrap=document.getElementById('bsFullWrap');
   if(!wrap) return;
+
+  // ✅ iOS 핵심 수정: 버튼 클릭 직후 (user gesture 체인 안에서) 즉시 TTS 언락 + 첫 음성
+  // getUserMedia 호출 전에 반드시 speak() 먼저 실행해야 iOS에서 작동함
+  if(window._ttsEnabled && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _wakeU = new SpeechSynthesisUtterance('스캔을 시작합니다.');
+    _wakeU.lang='ko-KR'; _wakeU.volume=1.0; _wakeU.rate=0.9;
+    // voices 최적 선택
+    var _vv = window.speechSynthesis.getVoices();
+    var _kv = _vv.filter(function(v){return v.lang==='ko-KR';})[0]
+           || _vv.filter(function(v){return v.lang.indexOf('ko')>=0;})[0];
+    if(_kv) _wakeU.voice=_kv;
+    window.speechSynthesis.speak(_wakeU);
+  }
+  // AudioContext 언락
+  if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+
   wrap.style.display='flex';
   BsFs.step='face'; BsFs.running=false; BsFs.sec=0;
   _bsFsUpdateUI();
