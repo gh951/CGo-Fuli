@@ -2290,59 +2290,75 @@ window._cgoSpeak = function(text, onDone) {
   if (!window._ttsEnabled) { if(onDone) onDone(); return; }
   window._cgoCaption(text);
 
-  function _doSpeak() {
+  function _doSpeak(retry) {
     if (!window.speechSynthesis) {
       window._cgoBeep(text);
-      window._cgoCaption(text);
       if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
       return;
     }
     window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
 
-    // 막둥이 2단: voices 목록에서 최적 음성 선택
-    var voices = window.speechSynthesis.getVoices();
-    var koVoice = null;
+    // iOS: cancel() 후 약간 대기 필요
+    setTimeout(function(){
+      var u = new SpeechSynthesisUtterance(text);
 
-    if (voices.length > 0) {
-      // 1순위: ko-KR 정확히 일치
-      koVoice = voices.filter(function(v){ return v.lang === 'ko-KR'; })[0];
-      // 2순위: ko 포함
-      if (!koVoice) koVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0];
-      // 3순위: 아무 음성이나 (무음 방지)
-      if (!koVoice) koVoice = voices[0];
-    }
-
-    if (koVoice) {
-      u.voice = koVoice;
-      u.lang = koVoice.lang;
-    } else {
-      // voices 비어있으면 lang만 설정 (브라우저 기본음)
-      u.lang = 'ko-KR';
-    }
-
-    u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
-    var _done = false;
-    u.onend = function(){ if(!_done){ _done=true; if(onDone) onDone(); } };
-    u.onerror = function(e){
-      if(!_done){ _done=true;
-        // onerror 시 비프음으로 폴백
-        window._cgoBeep(text);
-        if(onDone) setTimeout(onDone, 1000);
+      var voices = window.speechSynthesis.getVoices();
+      var koVoice = null;
+      if (voices.length > 0) {
+        koVoice = voices.filter(function(v){ return v.lang === 'ko-KR'; })[0];
+        if (!koVoice) koVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0];
+        if (!koVoice) koVoice = voices[0];
       }
-    };
-    window.speechSynthesis.speak(u);
+      if (koVoice) { u.voice = koVoice; u.lang = koVoice.lang; }
+      else { u.lang = 'ko-KR'; }
 
-    // 안전장치: 최대 대기 후 강제 진행
-    var maxWait = Math.min(9000, text.length * 130 + 1500);
-    setTimeout(function(){ if(!_done){ _done=true; if(onDone) onDone(); } }, maxWait);
+      u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
+      var _done = false;
+
+      u.onend = function(){ if(!_done){ _done=true; if(onDone) onDone(); } };
+
+      u.onerror = function(e){
+        if(_done) return;
+        // interrupted는 정상 취소 — 무시
+        if(e && e.error === 'interrupted') return;
+        // not-allowed: user gesture 부족 → 비프음
+        if(e && e.error === 'not-allowed'){
+          _done=true;
+          window._cgoBeep(text);
+          if(onDone) setTimeout(onDone, 1000);
+          return;
+        }
+        // 그 외: 1회 재시도
+        if(!retry){
+          _done=true;
+          setTimeout(function(){ _doSpeak(true); }, 300);
+        } else {
+          _done=true;
+          window._cgoBeep(text);
+          if(onDone) setTimeout(onDone, 1000);
+        }
+      };
+
+      window.speechSynthesis.speak(u);
+
+      // iOS 무한 pending 버그 방지: 주기적으로 resume() 호출
+      var _resumeTimer = setInterval(function(){
+        if(_done){ clearInterval(_resumeTimer); return; }
+        if(window.speechSynthesis.paused) window.speechSynthesis.resume();
+      }, 500);
+
+      var maxWait = Math.min(10000, text.length * 140 + 2000);
+      setTimeout(function(){
+        clearInterval(_resumeTimer);
+        if(!_done){ _done=true; if(onDone) onDone(); }
+      }, maxWait);
+    }, retry ? 300 : 50);
   }
 
-  // voices 준비됐으면 바로, 아니면 로드 후 실행
   if (window._ttsVoicesReady) {
-    _doSpeak();
+    _doSpeak(false);
   } else {
-    window._cgoLoadVoices(function(){ _doSpeak(); });
+    window._cgoLoadVoices(function(){ _doSpeak(false); });
   }
 };
 
@@ -34358,14 +34374,23 @@ nums.forEach(function(n){
 // ── 숫자 입력 ──
 function pressNum(n, btn, yk){
   if(!inputEnabled || pin.length>=4) return;
-  // ✅ 막둥이 1단: 첫 터치에서 오디오 통로 강제 개통 + voices 즉시 로드
+  // ✅ 첫 터치: 오디오 통로 강제 개통 + TTS 엔진 웜업
   if(!window._audioUnlocked){
     window._audioUnlocked = true;
-    // 무음 MP3로 오디오 컨텍스트 활성화
     if(typeof window._cgoUnlockAudio === 'function') window._cgoUnlockAudio();
-    // voices 로드 — 첫 터치 이후 onvoiceschanged 발생하는 브라우저 대응
     if(window.speechSynthesis){
-      window.speechSynthesis.getVoices();
+      // voices 즉시 로드
+      var _vInit = window.speechSynthesis.getVoices();
+      if(_vInit.length > 0){
+        window._ttsVoices = _vInit;
+        window._ttsKoVoice = _vInit.filter(function(x){ return x.lang.indexOf('ko')>=0; })[0] || null;
+        window._ttsVoicesReady = true;
+      }
+      // ✅ 핵심: 빈 발화로 iOS TTS 엔진 사전 웜업 (user gesture 체인 안에서!)
+      var _warmUp = new SpeechSynthesisUtterance(' ');
+      _warmUp.volume = 0.01; _warmUp.lang = 'ko-KR';
+      window.speechSynthesis.speak(_warmUp);
+      // 500ms 후 voices 재확인
       setTimeout(function(){
         var v = window.speechSynthesis.getVoices();
         if(v.length > 0){
