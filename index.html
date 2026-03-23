@@ -2215,29 +2215,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </head>
 <body>
 <script>
-// ✅ CGO-FULI TTS 설정
-window._ttsEnabled = true;
-// iOS Safari 감지
-window._isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-window._isAndroid = /Android/.test(navigator.userAgent);
-
-// ── 핵심 speak 함수 ──
-// iOS: onclick 안에서만 작동. setTimeout 안 speak는 무시됨.
-// 해결: _cgoSpeak()는 항상 즉시 실행. iOS에서도 작동하는 단일 함수.
-// ── CGO-FULI 통합 음성 엔진 v3 (막둥이 3단 콤보) ──
-// 1. 무음 MP3로 오디오 통로 강제 개통
-// 2. getVoices() 대기 후 한국어 없으면 기본음 강제
-// 3. Groq TTS MP3 폴백
-
+// ✅ CGO-FULI TTS 엔진 v4 — 단순 직결 (막둥이 처방)
 window._ttsEnabled = true;
 window._isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 window._isAndroid = /Android/.test(navigator.userAgent);
-window._ttsVoicesReady = false;
-window._ttsVoices = [];
-window._ttsKoVoice = null;
 
-// ── STEP 1: 무음 MP3로 오디오 컨텍스트 강제 개통 ──
-// 0.1초짜리 무음 base64 MP3 — 오디오 통로 뚫기용
+// 무음 MP3 — 오디오 컨텍스트 강제 개통용
 window._CGO_SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAAN2Mu';
 
 window._cgoUnlockAudio = function(cb) {
@@ -2245,148 +2228,68 @@ window._cgoUnlockAudio = function(cb) {
     var a = new Audio(window._CGO_SILENT_MP3);
     a.volume = 0.01;
     var p = a.play();
-    if (p && p.then) {
-      p.then(function(){ if(cb) cb(); }).catch(function(){ if(cb) cb(); });
-    } else {
-      if(cb) setTimeout(cb, 100);
-    }
+    if (p && p.then) { p.then(function(){ if(cb) cb(); }).catch(function(){ if(cb) cb(); }); }
+    else { if(cb) setTimeout(cb, 100); }
   } catch(e) { if(cb) cb(); }
 };
 
-// ── STEP 2: voices 로드 대기 ──
-window._cgoLoadVoices = function(cb) {
-  if (!window.speechSynthesis) { if(cb) cb(); return; }
-  var voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    window._ttsVoices = voices;
-    window._ttsKoVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
-    window._ttsVoicesReady = true;
-    if(cb) cb();
-    return;
-  }
-  // 비동기 로드 대기
-  var done = false;
-  window.speechSynthesis.onvoiceschanged = function() {
-    if (done) return; done = true;
-    var v2 = window.speechSynthesis.getVoices();
-    window._ttsVoices = v2;
-    window._ttsKoVoice = v2.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
-    window._ttsVoicesReady = true;
-    if(cb) cb();
-  };
-  // 2초 후 강제 진행 (onvoiceschanged 안 오면)
-  setTimeout(function(){
-    if (done) return; done = true;
-    var v3 = window.speechSynthesis.getVoices();
-    window._ttsVoices = v3;
-    window._ttsKoVoice = v3.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
-    window._ttsVoicesReady = true;
-    if(cb) cb();
-  }, 2000);
-};
-
-// ── 메인 speak 함수 ──
+// ── 핵심: 단순 무식한 직결 speak ──
+// 규칙: cancel() 먼저 → 바로 speak() → voices 없으면 lang만 설정하고 무조건 발화
+// 비프음 폴백 없음. 안 되면 그냥 안 되는 것 (자막은 항상 표시)
 window._cgoSpeak = function(text, onDone) {
-  if (!window._ttsEnabled) { if(onDone) onDone(); return; }
+  if (!window._ttsEnabled || !text) { if(onDone) onDone(); return; }
   window._cgoCaption(text);
+  if (!window.speechSynthesis) { if(onDone) setTimeout(onDone, 500); return; }
 
-  function _doSpeak(retry) {
-    if (!window.speechSynthesis) {
-      window._cgoBeep(text);
-      if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
-      return;
-    }
-    window.speechSynthesis.cancel();
+  // 1단계: 꼬인 거 다 취소
+  window.speechSynthesis.cancel();
 
-    // iOS: cancel() 후 약간 대기 필요
-    setTimeout(function(){
-      var u = new SpeechSynthesisUtterance(text);
+  // 2단계: 50ms 후 바로 발화 (cancel() 처리 시간)
+  setTimeout(function(){
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.88; u.pitch = 1.0; u.volume = 1.0;
 
-      var voices = window.speechSynthesis.getVoices();
-      var koVoice = null;
-      if (voices.length > 0) {
-        koVoice = voices.filter(function(v){ return v.lang === 'ko-KR'; })[0];
-        if (!koVoice) koVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0];
-        if (!koVoice) koVoice = voices[0];
-      }
-      if (koVoice) { u.voice = koVoice; u.lang = koVoice.lang; }
+    // voices: 있으면 ko-KR 우선, 없으면 lang만 설정하고 그냥 발화
+    var vv = window.speechSynthesis.getVoices();
+    if (vv && vv.length > 0) {
+      var kv = vv.filter(function(v){ return v.lang === 'ko-KR'; })[0]
+             || vv.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0]
+             || vv[0];
+      if (kv) { u.voice = kv; u.lang = kv.lang; }
       else { u.lang = 'ko-KR'; }
+    } else {
+      u.lang = 'ko-KR'; // voices 없어도 그냥 발화
+    }
 
-      u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
-      var _done = false;
+    var _done = false;
+    var _finish = function(){ if(!_done){ _done=true; if(onDone) onDone(); } };
 
-      u.onend = function(){ if(!_done){ _done=true; if(onDone) onDone(); } };
+    u.onend = _finish;
+    u.onerror = function(e){
+      // interrupted = cancel로 인한 정상 중단 → 무시
+      if (e && e.error === 'interrupted') return;
+      // 그 외 에러 → onDone만 호출 (비프음 없음)
+      _finish();
+    };
 
-      u.onerror = function(e){
-        if(_done) return;
-        // interrupted는 정상 취소 — 무시
-        if(e && e.error === 'interrupted') return;
-        // not-allowed: user gesture 부족 → 비프음
-        if(e && e.error === 'not-allowed'){
-          _done=true;
-          window._cgoBeep(text);
-          if(onDone) setTimeout(onDone, 1000);
-          return;
-        }
-        // 그 외: 1회 재시도
-        if(!retry){
-          _done=true;
-          setTimeout(function(){ _doSpeak(true); }, 300);
-        } else {
-          _done=true;
-          window._cgoBeep(text);
-          if(onDone) setTimeout(onDone, 1000);
-        }
-      };
+    // iOS 무한 pending 방지: 500ms마다 resume()
+    var _rt = setInterval(function(){
+      if (_done){ clearInterval(_rt); return; }
+      try { if(window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch(e){}
+    }, 500);
 
-      window.speechSynthesis.speak(u);
+    // 최대 대기 시간 후 강제 완료
+    var maxMs = Math.min(12000, text.length * 150 + 2000);
+    setTimeout(function(){ clearInterval(_rt); _finish(); }, maxMs);
 
-      // iOS 무한 pending 버그 방지: 주기적으로 resume() 호출
-      var _resumeTimer = setInterval(function(){
-        if(_done){ clearInterval(_resumeTimer); return; }
-        if(window.speechSynthesis.paused) window.speechSynthesis.resume();
-      }, 500);
-
-      var maxWait = Math.min(10000, text.length * 140 + 2000);
-      setTimeout(function(){
-        clearInterval(_resumeTimer);
-        if(!_done){ _done=true; if(onDone) onDone(); }
-      }, maxWait);
-    }, retry ? 300 : 50);
-  }
-
-  if (window._ttsVoicesReady) {
-    _doSpeak(false);
-  } else {
-    window._cgoLoadVoices(function(){ _doSpeak(false); });
-  }
+    window.speechSynthesis.speak(u);
+  }, 50);
 };
 
 // ── Groq TTS MP3 폴백 ──
 window._cgoGroqSpeak = function(text, onDone) {
-  var key = window.CG_GEMINI_KEY || '';
-  if (!key) {
-    window._cgoBeep(text);
-    if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
-    return;
-  }
-  var speakText = text.length > 60 ? text.substring(0, 60) + '.' : text;
-  fetch('https://api.groq.com/openai/v1/audio/speech', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'playai-tts', input: speakText, voice: 'Charon', response_format: 'mp3' })
-  })
-  .then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-  .then(function(buf){
-    var ac = new (window.AudioContext || window.webkitAudioContext)();
-    ac.decodeAudioData(buf, function(decoded){
-      var src = ac.createBufferSource();
-      src.buffer = decoded; src.connect(ac.destination);
-      src.onended = function(){ if(onDone) onDone(); };
-      src.start(0);
-    }, function(){ window._cgoBeep(text); if(onDone) setTimeout(onDone,1500); });
-  })
-  .catch(function(){ window._cgoBeep(text); if(onDone) setTimeout(onDone, Math.min(4000,text.length*80)); });
+  // Groq 폴백 — _cgoSpeak으로 위임 (비프음 없음)
+  window._cgoSpeak(text, onDone);
 };
 
 // ── 화면 자막 ──
@@ -2404,23 +2307,23 @@ window._cgoCaption = function(text) {
   window._cgoCaptionTimer = setTimeout(function(){ el.style.opacity='0'; }, Math.min(8000, Math.max(2000, text.length*80)));
 };
 
-// ── 비프음 폴백 ──
+// ── 비프음: 삭제 (TTS 우선, 비프음 없음) ──
 window._cgoBeep = function(text) {
-  try {
-    var ac = new (window.AudioContext || window.webkitAudioContext)();
-    var patterns = { '시작':[[440,.15],[0,.05],[440,.15],[0,.05],[880,.3]], '완료':[[523,.15],[659,.15],[784,.3]], '맞':[[660,.1],[880,.2]], '들이':[[440,.4]], '참':[[330,.5]], '내쉬':[[220,.6]], 'default':[[440,.1],[0,.05],[440,.1]] };
-    var pat = patterns.default;
-    for (var k in patterns) { if(k!=='default' && text.indexOf(k)>=0){ pat=patterns[k]; break; } }
-    var t = ac.currentTime + 0.05;
-    pat.forEach(function(p){ if(p[0]===0){t+=p[1];return;} var o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=p[0];o.type='sine'; g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+p[1]); o.start(t);o.stop(t+p[1]); t+=p[1]+.02; });
-  } catch(e) {}
+  // 비프음 비활성화 — TTS가 안 되면 자막만 표시
+  window._cgoCaption && window._cgoCaption(text);
 };
 
 // ── 페이지 로드 시 voices 미리 로드 ──
 document.addEventListener('DOMContentLoaded', function(){
-  if(window.speechSynthesis) window._cgoLoadVoices(function(){
-    console.log('CGO TTS: voices 로드 완료, 한국어:', window._ttsKoVoice ? window._ttsKoVoice.name : '없음(기본음 사용)');
-  });
+  if(window.speechSynthesis){
+    // onvoiceschanged로 voices 사전 로드
+    var _loadV = function(){
+      var vv = window.speechSynthesis.getVoices();
+      if(vv && vv.length > 0) console.log('CGO TTS ready:', vv.length, '개 voices');
+    };
+    window.speechSynthesis.onvoiceschanged = _loadV;
+    _loadV();
+  }
 });
 </script>
 <div id="cgoEntrance">
