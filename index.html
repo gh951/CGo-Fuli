@@ -2224,146 +2224,169 @@ window._isAndroid = /Android/.test(navigator.userAgent);
 // ── 핵심 speak 함수 ──
 // iOS: onclick 안에서만 작동. setTimeout 안 speak는 무시됨.
 // 해결: _cgoSpeak()는 항상 즉시 실행. iOS에서도 작동하는 단일 함수.
-// ── CGO-FULI 통합 음성 엔진 ──
-// PC: speechSynthesis TTS
-// 스마트폰(TTS 미지원): Groq TTS API → MP3 → Web Audio 재생
-window._cgoSpeak = function(text, onDone) {
-  if (!window._ttsEnabled) { if(onDone) onDone(); return; }
+// ── CGO-FULI 통합 음성 엔진 v3 (막둥이 3단 콤보) ──
+// 1. 무음 MP3로 오디오 통로 강제 개통
+// 2. getVoices() 대기 후 한국어 없으면 기본음 강제
+// 3. Groq TTS MP3 폴백
 
-  // 자막은 항상 표시
-  window._cgoCaption(text);
+window._ttsEnabled = true;
+window._isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+window._isAndroid = /Android/.test(navigator.userAgent);
+window._ttsVoicesReady = false;
+window._ttsVoices = [];
+window._ttsKoVoice = null;
 
-  // ① speechSynthesis 지원 시 → 브라우저 TTS
-  if (window.speechSynthesis) {
-    try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ko-KR'; u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
-      u.onend = function(){ if(onDone) onDone(); };
-      u.onerror = function(){
-        // TTS 실패 → Groq TTS 폴백
-        window._cgoGroqSpeak(text, onDone);
-      };
-      window.speechSynthesis.speak(u);
-      return;
-    } catch(e) {}
-  }
+// ── STEP 1: 무음 MP3로 오디오 컨텍스트 강제 개통 ──
+// 0.1초짜리 무음 base64 MP3 — 오디오 통로 뚫기용
+window._CGO_SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDV1dXV1dXV1dXV1dXV1dXV1dXV1dXV6urq6urq6urq6urq6urq6urq6urq6v////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//MUZAAAAAGkAAAAAAAAA0gAAAAATEFN//MUZAMAAAGkAAAAAAAAA0gAAAAARTMu//MUZAYAAAGkAAAAAAAAA0gAAAAAOTku//MUZAkAAAGkAAAAAAAAA0gAAAAAN2Mu';
 
-  // ② speechSynthesis 없음 → Groq TTS API
-  window._cgoGroqSpeak(text, onDone);
+window._cgoUnlockAudio = function(cb) {
+  try {
+    var a = new Audio(window._CGO_SILENT_MP3);
+    a.volume = 0.01;
+    var p = a.play();
+    if (p && p.then) {
+      p.then(function(){ if(cb) cb(); }).catch(function(){ if(cb) cb(); });
+    } else {
+      if(cb) setTimeout(cb, 100);
+    }
+  } catch(e) { if(cb) cb(); }
 };
 
-// Groq TTS API로 음성 생성 후 Web Audio로 재생
+// ── STEP 2: voices 로드 대기 ──
+window._cgoLoadVoices = function(cb) {
+  if (!window.speechSynthesis) { if(cb) cb(); return; }
+  var voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    window._ttsVoices = voices;
+    window._ttsKoVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
+    window._ttsVoicesReady = true;
+    if(cb) cb();
+    return;
+  }
+  // 비동기 로드 대기
+  var done = false;
+  window.speechSynthesis.onvoiceschanged = function() {
+    if (done) return; done = true;
+    var v2 = window.speechSynthesis.getVoices();
+    window._ttsVoices = v2;
+    window._ttsKoVoice = v2.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
+    window._ttsVoicesReady = true;
+    if(cb) cb();
+  };
+  // 2초 후 강제 진행 (onvoiceschanged 안 오면)
+  setTimeout(function(){
+    if (done) return; done = true;
+    var v3 = window.speechSynthesis.getVoices();
+    window._ttsVoices = v3;
+    window._ttsKoVoice = v3.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0] || null;
+    window._ttsVoicesReady = true;
+    if(cb) cb();
+  }, 2000);
+};
+
+// ── 메인 speak 함수 ──
+window._cgoSpeak = function(text, onDone) {
+  if (!window._ttsEnabled) { if(onDone) onDone(); return; }
+  window._cgoCaption(text);
+
+  function _doSpeak() {
+    if (!window.speechSynthesis) {
+      // speechSynthesis 없음 → Groq TTS MP3
+      window._cgoGroqSpeak(text, onDone);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    // 한국어 음성 있으면 지정, 없으면 기본음
+    if (window._ttsKoVoice) {
+      u.voice = window._ttsKoVoice;
+      u.lang = window._ttsKoVoice.lang;
+    } else {
+      u.lang = 'ko-KR';
+    }
+    u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
+    u.onend = function(){ if(onDone) onDone(); };
+    u.onerror = function(e){
+      // 오류 시 Groq TTS 폴백
+      window._cgoGroqSpeak(text, onDone);
+    };
+    window.speechSynthesis.speak(u);
+
+    // 5초 후에도 onend 안 오면 강제 진행
+    setTimeout(function(){
+      if(onDone){ var tmp=onDone; onDone=null; tmp(); }
+    }, Math.min(8000, text.length * 120 + 1000));
+  }
+
+  // voices 준비됐으면 바로, 아니면 로드 후 실행
+  if (window._ttsVoicesReady) {
+    _doSpeak();
+  } else {
+    window._cgoLoadVoices(function(){ _doSpeak(); });
+  }
+};
+
+// ── Groq TTS MP3 폴백 ──
 window._cgoGroqSpeak = function(text, onDone) {
   var key = window.CG_GEMINI_KEY || '';
   if (!key) {
-    // 키 없으면 비프음 + 콜백
     window._cgoBeep(text);
     if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
     return;
   }
-
-  // 텍스트 30자 이상이면 앞부분만 (TTS 비용 절감)
   var speakText = text.length > 60 ? text.substring(0, 60) + '.' : text;
-
   fetch('https://api.groq.com/openai/v1/audio/speech', {
     method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + key,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'playai-tts',
-      input: speakText,
-      voice: 'Charon',  // 한국어 지원 음성
-      response_format: 'mp3'
-    })
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'playai-tts', input: speakText, voice: 'Charon', response_format: 'mp3' })
   })
-  .then(function(res) {
-    if (!res.ok) throw new Error('Groq TTS 오류: ' + res.status);
-    return res.arrayBuffer();
-  })
-  .then(function(buffer) {
+  .then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+  .then(function(buf){
     var ac = new (window.AudioContext || window.webkitAudioContext)();
-    ac.decodeAudioData(buffer, function(decoded) {
+    ac.decodeAudioData(buf, function(decoded){
       var src = ac.createBufferSource();
-      src.buffer = decoded;
-      src.connect(ac.destination);
+      src.buffer = decoded; src.connect(ac.destination);
       src.onended = function(){ if(onDone) onDone(); };
       src.start(0);
-    }, function() {
-      // 디코딩 실패 → 비프음
-      window._cgoBeep(text);
-      if(onDone) setTimeout(onDone, 1500);
-    });
+    }, function(){ window._cgoBeep(text); if(onDone) setTimeout(onDone,1500); });
   })
-  .catch(function() {
-    // API 실패 → 비프음
-    window._cgoBeep(text);
-    if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
-  });
+  .catch(function(){ window._cgoBeep(text); if(onDone) setTimeout(onDone, Math.min(4000,text.length*80)); });
 };
 
-// 화면 자막 표시
+// ── 화면 자막 ──
 window._cgoCaption = function(text) {
   var el = document.getElementById('_cgoSubtitle');
   if (!el) {
     el = document.createElement('div');
     el.id = '_cgoSubtitle';
-    el.style.cssText = [
-      'position:fixed', 'bottom:80px', 'left:50%',
-      'transform:translateX(-50%)',
-      'background:rgba(0,0,0,.88)',
-      'color:#f0e6c8', 'font-size:15px', 'font-weight:600',
-      'padding:12px 20px', 'border-radius:12px',
-      'max-width:88vw', 'text-align:center', 'line-height:1.6',
-      'z-index:99999', 'pointer-events:none',
-      'border:1px solid rgba(212,168,67,.4)',
-      'box-shadow:0 4px 20px rgba(0,0,0,.6)',
-      'transition:opacity .3s', 'opacity:0'
-    ].join(';');
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#f0e6c8;font-size:15px;font-weight:600;padding:12px 20px;border-radius:12px;max-width:88vw;text-align:center;line-height:1.6;z-index:99999;pointer-events:none;border:1px solid rgba(212,168,67,.4);box-shadow:0 4px 20px rgba(0,0,0,.6);transition:opacity .3s;opacity:0';
     document.body.appendChild(el);
   }
   el.textContent = '🔊 ' + text;
   el.style.opacity = '1';
   clearTimeout(window._cgoCaptionTimer);
-  var dur = Math.min(8000, Math.max(2000, text.length * 80));
-  window._cgoCaptionTimer = setTimeout(function(){
-    el.style.opacity = '0';
-  }, dur);
+  window._cgoCaptionTimer = setTimeout(function(){ el.style.opacity='0'; }, Math.min(8000, Math.max(2000, text.length*80)));
 };
 
-// Web Audio 비프음 (API 실패 폴백용)
+// ── 비프음 폴백 ──
 window._cgoBeep = function(text) {
   try {
     var ac = new (window.AudioContext || window.webkitAudioContext)();
-    var patterns = {
-      '시작': [[440,0.15],[0,0.05],[440,0.15],[0,0.05],[880,0.3]],
-      '완료': [[523,0.15],[659,0.15],[784,0.3]],
-      '맞': [[660,0.1],[880,0.2]],
-      '들이': [[440,0.4]],
-      '참': [[330,0.5]],
-      '내쉬': [[220,0.6]],
-      'default': [[440,0.1],[0,0.05],[440,0.1]]
-    };
+    var patterns = { '시작':[[440,.15],[0,.05],[440,.15],[0,.05],[880,.3]], '완료':[[523,.15],[659,.15],[784,.3]], '맞':[[660,.1],[880,.2]], '들이':[[440,.4]], '참':[[330,.5]], '내쉬':[[220,.6]], 'default':[[440,.1],[0,.05],[440,.1]] };
     var pat = patterns.default;
-    for (var key in patterns) {
-      if (key !== 'default' && text.indexOf(key) >= 0) { pat = patterns[key]; break; }
-    }
+    for (var k in patterns) { if(k!=='default' && text.indexOf(k)>=0){ pat=patterns[k]; break; } }
     var t = ac.currentTime + 0.05;
-    pat.forEach(function(p) {
-      if (p[0] === 0) { t += p[1]; return; }
-      var o = ac.createOscillator();
-      var g = ac.createGain();
-      o.connect(g); g.connect(ac.destination);
-      o.frequency.value = p[0]; o.type = 'sine';
-      g.gain.setValueAtTime(0.3, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + p[1]);
-      o.start(t); o.stop(t + p[1]);
-      t += p[1] + 0.02;
-    });
+    pat.forEach(function(p){ if(p[0]===0){t+=p[1];return;} var o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=p[0];o.type='sine'; g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+p[1]); o.start(t);o.stop(t+p[1]); t+=p[1]+.02; });
   } catch(e) {}
 };
+
+// ── 페이지 로드 시 voices 미리 로드 ──
+document.addEventListener('DOMContentLoaded', function(){
+  if(window.speechSynthesis) window._cgoLoadVoices(function(){
+    console.log('CGO TTS: voices 로드 완료, 한국어:', window._ttsKoVoice ? window._ttsKoVoice.name : '없음(기본음 사용)');
+  });
+});
 </script>
 <div id="cgoEntrance">
 
@@ -34265,6 +34288,12 @@ nums.forEach(function(n){
 // ── 숫자 입력 ──
 function pressNum(n, btn, yk){
   if(!inputEnabled || pin.length>=4) return;
+  // ✅ 막둥이 1단: 첫 터치에서 무음MP3로 오디오 통로 강제 개통
+  if(!window._audioUnlocked){
+    window._audioUnlocked = true;
+    if(typeof window._cgoUnlockAudio === 'function') window._cgoUnlockAudio();
+    if(typeof window._cgoLoadVoices === 'function') window._cgoLoadVoices();
+  }
   haptic('tap');
   playXylophone(n);
   pin.push(n);
