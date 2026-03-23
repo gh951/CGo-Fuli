@@ -2226,34 +2226,82 @@ window._isAndroid = /Android/.test(navigator.userAgent);
 // 해결: _cgoSpeak()는 항상 즉시 실행. iOS에서도 작동하는 단일 함수.
 // ── CGO-FULI 통합 음성 엔진 ──
 // PC: speechSynthesis TTS
-// 스마트폰(TTS 미지원): Web Audio 비프음 + 화면 자막
+// 스마트폰(TTS 미지원): Groq TTS API → MP3 → Web Audio 재생
 window._cgoSpeak = function(text, onDone) {
   if (!window._ttsEnabled) { if(onDone) onDone(); return; }
 
-  // ① speechSynthesis 지원 시 → TTS
+  // 자막은 항상 표시
+  window._cgoCaption(text);
+
+  // ① speechSynthesis 지원 시 → 브라우저 TTS
   if (window.speechSynthesis) {
     try {
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ko-KR';
-      u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
+      u.lang = 'ko-KR'; u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
       u.onend = function(){ if(onDone) onDone(); };
       u.onerror = function(){
-        // TTS 실패 → 자막으로 폴백
-        window._cgoCaption(text);
-        if(onDone) setTimeout(onDone, text.length * 80);
+        // TTS 실패 → Groq TTS 폴백
+        window._cgoGroqSpeak(text, onDone);
       };
       window.speechSynthesis.speak(u);
-      // 자막도 함께 표시
-      window._cgoCaption(text);
       return;
     } catch(e) {}
   }
 
-  // ② speechSynthesis 미지원 → Web Audio 비프음 + 자막
-  window._cgoBeep(text);
-  window._cgoCaption(text);
-  if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80 + 500));
+  // ② speechSynthesis 없음 → Groq TTS API
+  window._cgoGroqSpeak(text, onDone);
+};
+
+// Groq TTS API로 음성 생성 후 Web Audio로 재생
+window._cgoGroqSpeak = function(text, onDone) {
+  var key = window.CG_GEMINI_KEY || '';
+  if (!key) {
+    // 키 없으면 비프음 + 콜백
+    window._cgoBeep(text);
+    if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
+    return;
+  }
+
+  // 텍스트 30자 이상이면 앞부분만 (TTS 비용 절감)
+  var speakText = text.length > 60 ? text.substring(0, 60) + '.' : text;
+
+  fetch('https://api.groq.com/openai/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + key,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'playai-tts',
+      input: speakText,
+      voice: 'Charon',  // 한국어 지원 음성
+      response_format: 'mp3'
+    })
+  })
+  .then(function(res) {
+    if (!res.ok) throw new Error('Groq TTS 오류: ' + res.status);
+    return res.arrayBuffer();
+  })
+  .then(function(buffer) {
+    var ac = new (window.AudioContext || window.webkitAudioContext)();
+    ac.decodeAudioData(buffer, function(decoded) {
+      var src = ac.createBufferSource();
+      src.buffer = decoded;
+      src.connect(ac.destination);
+      src.onended = function(){ if(onDone) onDone(); };
+      src.start(0);
+    }, function() {
+      // 디코딩 실패 → 비프음
+      window._cgoBeep(text);
+      if(onDone) setTimeout(onDone, 1500);
+    });
+  })
+  .catch(function() {
+    // API 실패 → 비프음
+    window._cgoBeep(text);
+    if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
+  });
 };
 
 // 화면 자막 표시
@@ -2279,18 +2327,16 @@ window._cgoCaption = function(text) {
   el.textContent = '🔊 ' + text;
   el.style.opacity = '1';
   clearTimeout(window._cgoCaptionTimer);
-  // 텍스트 길이에 비례해서 표시 (최소 2초, 최대 8초)
   var dur = Math.min(8000, Math.max(2000, text.length * 80));
   window._cgoCaptionTimer = setTimeout(function(){
     el.style.opacity = '0';
   }, dur);
 };
 
-// Web Audio 비프음 (단계 안내용)
+// Web Audio 비프음 (API 실패 폴백용)
 window._cgoBeep = function(text) {
   try {
     var ac = new (window.AudioContext || window.webkitAudioContext)();
-    // 텍스트 내용에 따라 비프 패턴 결정
     var patterns = {
       '시작': [[440,0.15],[0,0.05],[440,0.15],[0,0.05],[880,0.3]],
       '완료': [[523,0.15],[659,0.15],[784,0.3]],
@@ -2302,9 +2348,7 @@ window._cgoBeep = function(text) {
     };
     var pat = patterns.default;
     for (var key in patterns) {
-      if (key !== 'default' && text.indexOf(key) >= 0) {
-        pat = patterns[key]; break;
-      }
+      if (key !== 'default' && text.indexOf(key) >= 0) { pat = patterns[key]; break; }
     }
     var t = ac.currentTime + 0.05;
     pat.forEach(function(p) {
