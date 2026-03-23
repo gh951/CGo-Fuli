@@ -7982,33 +7982,7 @@ var _breathEngine = {
 
 function _breathEngineStart(){
   _breathEngine.reset();
-  // 1) 마이크 (호흡음 감지)
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(s){
-      _breathEngine.micStream=s;
-      _breathEngine.hasMic=true;
-      var ac=new(window.AudioContext||window.webkitAudioContext)();
-      var src=ac.createMediaStreamSource(s);
-      var an=ac.createAnalyser(); an.fftSize=256;
-      src.connect(an);
-      _breathEngine.analyser=an;
-      _breathEngine.micData=new Uint8Array(an.frequencyBinCount);
-      // 마이크 샘플링 (50ms 간격)
-      _breathEngine._micTimer=setInterval(function(){
-        if(!_breathEngine.analyser) return;
-        _breathEngine.analyser.getByteTimeDomainData(_breathEngine.micData);
-        var rms=0;
-        for(var i=0;i<_breathEngine.micData.length;i++){
-          var v=(_breathEngine.micData[i]-128)/128;
-          rms+=v*v;
-        }
-        rms=Math.sqrt(rms/_breathEngine.micData.length);
-        _breathEngine.micSamples.push({t:Date.now(),v:rms});
-        if(_breathEngine.micSamples.length>400) _breathEngine.micSamples.shift();
-      },50);
-    }).catch(function(){});
-  }
-  // 2) 가속도계 (흉곽 미세 진동)
+  // 가속도계만 사용 (마이크 권한 요청 완전 제거 — Stereo Mix 문제 원인)
   if(window.DeviceMotionEvent){
     window._breathMotionHandler=function(e){
       if(!e.accelerationIncludingGravity) return;
@@ -8024,7 +7998,7 @@ function _breathEngineStart(){
 
 function _breathEngineStop(){
   if(_breathEngine._micTimer) clearInterval(_breathEngine._micTimer);
-  if(_breathEngine.micStream) _breathEngine.micStream.getTracks().forEach(function(t){t.stop();});
+  if(_breathEngine.micStream) try{ _breathEngine.micStream.getTracks().forEach(function(t){t.stop();}); }catch(e){}
   if(window._breathMotionHandler) window.removeEventListener('devicemotion',window._breathMotionHandler);
   _breathEngine.analyser=null;
 }
@@ -8090,50 +8064,41 @@ function hltBreathStart(){
     _hvbTick();
   }, 3500);
 }
-// 호흡 TTS 음성 — Web Speech API
+// 호흡 TTS 음성 — Web Speech API (단순 안정 버전)
 var _breathSpeech = null;
-var _hvbSpeakQueue = []; // 음성 큐
+var _hvbSpeakQueue = [];
 var _hvbSpeaking = false;
-
-function _hvbSpeakFlush() {
-  if(_hvbSpeaking || _hvbSpeakQueue.length === 0) return;
-  if(!window.speechSynthesis || !window._ttsUnlocked || !window._ttsEnabled) { _hvbSpeakQueue=[]; return; }
-  _hvbSpeaking = true;
-  var text = _hvbSpeakQueue.shift();
-  var u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ko-KR'; u.rate = 0.88; u.pitch = 1.0; u.volume = 0.9;
-  u.onend = function(){ _hvbSpeaking=false; setTimeout(_hvbSpeakFlush, 80); };
-  u.onerror = function(){ _hvbSpeaking=false; setTimeout(_hvbSpeakFlush, 80); };
-  window.speechSynthesis.speak(u);
-  _breathSpeech = u;
-}
 
 function _hvbSpeak(text) {
   try {
     if (!window.speechSynthesis) return;
-    if (!window._ttsUnlocked) return;
     if (!window._ttsEnabled) return;
-    _hvbSpeakQueue.push(text);
-    _hvbSpeakFlush();
+    // _ttsUnlocked 미잠금 시 자동 해제 후 재시도
+    if (!window._ttsUnlocked) {
+      try {
+        var _wu = new SpeechSynthesisUtterance('');
+        _wu.volume = 0;
+        window.speechSynthesis.speak(_wu);
+        window._ttsUnlocked = true;
+      } catch(e){ window._ttsUnlocked = true; }
+    }
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 0.85;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+    _breathSpeech = u;
   } catch(e) {}
 }
 
 // 즉시 끊고 새 음성 재생 (긴급 안내용)
 function _hvbSpeakNow(text) {
-  try {
-    if (!window.speechSynthesis || !window._ttsUnlocked || !window._ttsEnabled) return;
-    _hvbSpeakQueue = []; _hvbSpeaking = false;
-    window.speechSynthesis.cancel();
-    setTimeout(function(){
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang='ko-KR'; u.rate=0.88; u.pitch=1.0; u.volume=0.9;
-      u.onend=function(){ _hvbSpeaking=false; };
-      _hvbSpeaking=true;
-      window.speechSynthesis.speak(u);
-      _breathSpeech=u;
-    }, 80);
-  } catch(e){}
+  _hvbSpeak(text);
 }
+
+function _hvbSpeakFlush() { /* 하위 호환 유지 */ }
 
 var _hvbLastSpoken = -1; // 중복 음성 방지
 
@@ -16863,20 +16828,12 @@ function bioSkinScan(type) {
     }, 300);
   }
 
-  if(voiceMsg[type] && window.speechSynthesis && window._ttsUnlocked && window._ttsEnabled){
-    // ✅ _hvbSpeakNow 사용 — 큐 초기화 후 즉시 재생, cancel 안전하게 처리
+  if(voiceMsg[type] && window.speechSynthesis && window._ttsEnabled){
     if(typeof _hvbSpeakNow === 'function'){
       _hvbSpeakNow(voiceMsg[type]);
-    } else {
-      window.speechSynthesis.cancel();
-      var _u = new SpeechSynthesisUtterance(voiceMsg[type]);
-      _u.lang='ko-KR'; _u.rate=0.88; _u.volume=1.0;
-      window.speechSynthesis.speak(_u);
     }
-    // 음성 길이 고려 — 4초 후 스캔 시작 (음성 완료 대기)
     setTimeout(function(){ _doStartScan(); }, 4000);
   } else {
-    // TTS 미잠금 or 음성 꺼진 경우 → 바로 스캔 시작
     _doStartScan();
   }
 
@@ -23572,13 +23529,21 @@ function _bsFsDrawHandLandmarks(results){
 // ── 부위별 안내 음성 ──
 function _bsFsSpeak(text){
   if(!window.speechSynthesis) return;
-  if(!window._ttsUnlocked) return;
   if(!window._ttsEnabled) return;
+  // _ttsUnlocked 미잠금 시 자동 해제
+  if(!window._ttsUnlocked){
+    try{
+      var _wu=new SpeechSynthesisUtterance('');
+      _wu.volume=0;
+      window.speechSynthesis.speak(_wu);
+      window._ttsUnlocked=true;
+    }catch(e){ window._ttsUnlocked=true; }
+  }
   window.speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   var langMap={ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP',ru:'ru-RU',hi:'hi-IN',es:'es-ES',de:'de-DE',fr:'fr-FR',pt:'pt-BR',vi:'vi-VN',th:'th-TH',id:'id-ID'};
   u.lang = langMap[window._LANG||'ko'] || 'ko-KR';
-  u.rate=0.88; u.pitch=1.0; u.volume=1.0;
+  u.rate=0.85; u.pitch=1.0; u.volume=1.0;
   window.speechSynthesis.speak(u);
 }
 
