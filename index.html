@@ -2292,31 +2292,50 @@ window._cgoSpeak = function(text, onDone) {
 
   function _doSpeak() {
     if (!window.speechSynthesis) {
-      // speechSynthesis 없음 → Groq TTS MP3
-      window._cgoGroqSpeak(text, onDone);
+      window._cgoBeep(text);
+      window._cgoCaption(text);
+      if(onDone) setTimeout(onDone, Math.min(4000, text.length * 80));
       return;
     }
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
-    // 한국어 음성 있으면 지정, 없으면 기본음
-    if (window._ttsKoVoice) {
-      u.voice = window._ttsKoVoice;
-      u.lang = window._ttsKoVoice.lang;
+
+    // 막둥이 2단: voices 목록에서 최적 음성 선택
+    var voices = window.speechSynthesis.getVoices();
+    var koVoice = null;
+
+    if (voices.length > 0) {
+      // 1순위: ko-KR 정확히 일치
+      koVoice = voices.filter(function(v){ return v.lang === 'ko-KR'; })[0];
+      // 2순위: ko 포함
+      if (!koVoice) koVoice = voices.filter(function(v){ return v.lang.indexOf('ko') >= 0; })[0];
+      // 3순위: 아무 음성이나 (무음 방지)
+      if (!koVoice) koVoice = voices[0];
+    }
+
+    if (koVoice) {
+      u.voice = koVoice;
+      u.lang = koVoice.lang;
     } else {
+      // voices 비어있으면 lang만 설정 (브라우저 기본음)
       u.lang = 'ko-KR';
     }
+
     u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
-    u.onend = function(){ if(onDone) onDone(); };
+    var _done = false;
+    u.onend = function(){ if(!_done){ _done=true; if(onDone) onDone(); } };
     u.onerror = function(e){
-      // 오류 시 Groq TTS 폴백
-      window._cgoGroqSpeak(text, onDone);
+      if(!_done){ _done=true;
+        // onerror 시 비프음으로 폴백
+        window._cgoBeep(text);
+        if(onDone) setTimeout(onDone, 1000);
+      }
     };
     window.speechSynthesis.speak(u);
 
-    // 5초 후에도 onend 안 오면 강제 진행
-    setTimeout(function(){
-      if(onDone){ var tmp=onDone; onDone=null; tmp(); }
-    }, Math.min(8000, text.length * 120 + 1000));
+    // 안전장치: 최대 대기 후 강제 진행
+    var maxWait = Math.min(9000, text.length * 130 + 1500);
+    setTimeout(function(){ if(!_done){ _done=true; if(onDone) onDone(); } }, maxWait);
   }
 
   // voices 준비됐으면 바로, 아니면 로드 후 실행
@@ -34288,11 +34307,23 @@ nums.forEach(function(n){
 // ── 숫자 입력 ──
 function pressNum(n, btn, yk){
   if(!inputEnabled || pin.length>=4) return;
-  // ✅ 막둥이 1단: 첫 터치에서 무음MP3로 오디오 통로 강제 개통
+  // ✅ 막둥이 1단: 첫 터치에서 오디오 통로 강제 개통 + voices 즉시 로드
   if(!window._audioUnlocked){
     window._audioUnlocked = true;
+    // 무음 MP3로 오디오 컨텍스트 활성화
     if(typeof window._cgoUnlockAudio === 'function') window._cgoUnlockAudio();
-    if(typeof window._cgoLoadVoices === 'function') window._cgoLoadVoices();
+    // voices 로드 — 첫 터치 이후 onvoiceschanged 발생하는 브라우저 대응
+    if(window.speechSynthesis){
+      window.speechSynthesis.getVoices();
+      setTimeout(function(){
+        var v = window.speechSynthesis.getVoices();
+        if(v.length > 0){
+          window._ttsVoices = v;
+          window._ttsKoVoice = v.filter(function(x){ return x.lang.indexOf('ko')>=0; })[0] || null;
+          window._ttsVoicesReady = true;
+        }
+      }, 500);
+    }
   }
   haptic('tap');
   playXylophone(n);
