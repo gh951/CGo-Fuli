@@ -34378,15 +34378,370 @@ function updateMufe(){
 }
 
 // ── 핀 체크 ──
+// ════════════════════════════════════════════════
+// CGO-FULI 관리자 시스템 v2.0 (Firebase Firestore)
+// PIN: 7777 (대표님 전용)
+// ════════════════════════════════════════════════
+
+// ── Firebase 설정 ──
+// 무료 Firebase 프로젝트 사용 (Firestore)
+var _CGO_FB_URL = 'https://firestore.googleapis.com/v1/projects/cgo-life/databases/(default)/documents';
+var _CGO_FB_KEY = 'AIzaSyBwT8Dz1C07J-UK3V6Y1oj4-XJvxr6CXMg';
+
+// ── Firestore REST API 래퍼 ──
+async function _fbGet(path){
+  try {
+    var r = await fetch(_CGO_FB_URL + '/' + path + '?key=' + _CGO_FB_KEY);
+    if(!r.ok) return null;
+    var d = await r.json();
+    return _fbParse(d);
+  } catch(e){ return null; }
+}
+
+async function _fbSet(path, data){
+  try {
+    // PATCH로 문서 생성/업데이트
+    var body = _fbEncode(data);
+    var r = await fetch(_CGO_FB_URL + '/' + path + '?key=' + _CGO_FB_KEY, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    return r.ok;
+  } catch(e){ return false; }
+}
+
+async function _fbList(collection){
+  try {
+    var r = await fetch(_CGO_FB_URL + '/' + collection + '?key=' + _CGO_FB_KEY);
+    if(!r.ok) return [];
+    var d = await r.json();
+    if(!d.documents) return [];
+    return d.documents.map(function(doc){ return _fbParse(doc); });
+  } catch(e){ return []; }
+}
+
+async function _fbDelete(path){
+  try {
+    var r = await fetch(_CGO_FB_URL + '/' + path + '?key=' + _CGO_FB_KEY, { method:'DELETE' });
+    return r.ok;
+  } catch(e){ return false; }
+}
+
+// Firestore 값 인코딩
+function _fbEncode(obj){
+  var fields = {};
+  Object.keys(obj).forEach(function(k){
+    var v = obj[k];
+    if(v === null || v === undefined) fields[k] = {nullValue: null};
+    else if(typeof v === 'boolean') fields[k] = {booleanValue: v};
+    else if(typeof v === 'number') fields[k] = {integerValue: String(v)};
+    else if(typeof v === 'object') fields[k] = {stringValue: JSON.stringify(v)};
+    else fields[k] = {stringValue: String(v)};
+  });
+  return {fields: fields};
+}
+
+// Firestore 값 디코딩
+function _fbParse(doc){
+  if(!doc || !doc.fields) return null;
+  var obj = {};
+  Object.keys(doc.fields).forEach(function(k){
+    var f = doc.fields[k];
+    if(f.stringValue !== undefined){
+      try { obj[k] = JSON.parse(f.stringValue); }
+      catch(e){ obj[k] = f.stringValue; }
+    } else if(f.booleanValue !== undefined) obj[k] = f.booleanValue;
+    else if(f.integerValue !== undefined) obj[k] = parseInt(f.integerValue);
+    else if(f.nullValue !== undefined) obj[k] = null;
+  });
+  // name 추가 (doc id에서)
+  if(doc.name){
+    var parts = doc.name.split('/');
+    obj._docId = parts[parts.length-1];
+  }
+  return obj;
+}
+
+// ── 유저 고유 ID ──
+function _cgoGetUserId(){
+  var id = localStorage.getItem('cgo_user_id');
+  if(!id){
+    id = 'U' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2,4).toUpperCase();
+    localStorage.setItem('cgo_user_id', id);
+  }
+  return id;
+}
+
+// ── 유저 접속 기록 ──
+async function _cgoRecordVisit(){
+  var uid = _cgoGetUserId();
+  var name = localStorage.getItem('cgo_prof_name') || '익명';
+  var now = new Date();
+  var record = {
+    uid: uid,
+    name: name,
+    lastVisit: now.toISOString(),
+    lastVisitKr: now.toLocaleDateString('ko-KR')+' '+now.toLocaleTimeString('ko-KR'),
+    visitCount: 1,
+    blocked: false,
+    blockReason: '',
+    region: '위치 확인 중',
+    lat: 0, lng: 0
+  };
+
+  // 기존 기록 병합
+  var prev = await _fbGet('users/' + uid);
+  if(prev){
+    record.visitCount = (prev.visitCount||0) + 1;
+    record.blocked = prev.blocked || false;
+    record.blockReason = prev.blockReason || '';
+    record.name = name || prev.name || '익명';
+    record.region = prev.region || '위치 확인 중';
+    record.lat = prev.lat || 0;
+    record.lng = prev.lng || 0;
+  }
+
+  // 위치 정보 (이미 있으면 사용)
+  if(window._cgoLat && window._cgoLon){
+    record.lat = parseFloat(window._cgoLat).toFixed(4);
+    record.lng = parseFloat(window._cgoLon).toFixed(4);
+    _cgoGetRegion(record.lat, record.lng, async function(region){
+      record.region = region;
+      await _fbSet('users/' + uid, record);
+    });
+  } else {
+    await _fbSet('users/' + uid, record);
+    // 위치 비동기 요청
+    navigator.geolocation && navigator.geolocation.getCurrentPosition(
+      async function(pos){
+        window._cgoLat = pos.coords.latitude;
+        window._cgoLon = pos.coords.longitude;
+        record.lat = pos.coords.latitude.toFixed(4);
+        record.lng = pos.coords.longitude.toFixed(4);
+        _cgoGetRegion(record.lat, record.lng, async function(region){
+          record.region = region;
+          await _fbSet('users/' + uid, record);
+        });
+      }, function(){}, {timeout:5000}
+    );
+  }
+}
+
+// 역지오코딩
+function _cgoGetRegion(lat, lng, cb){
+  fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&accept-language=ko',
+    {headers:{'User-Agent':'CGO-FULI/1.0'}})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var a = d.address||{};
+    var region = [a.country, a.state, a.city||a.county||a.town].filter(Boolean).join(' > ');
+    cb(region || '알 수 없음');
+  })
+  .catch(function(){ cb('위치 정보 없음'); });
+}
+
+// ── 차단 확인 ──
+async function _cgoCheckBlocked(){
+  var uid = _cgoGetUserId();
+  var data = await _fbGet('users/' + uid);
+  if(data && data.blocked){
+    _cgoShowBlocked(data.blockReason || '관리자에 의해 접근이 차단되었습니다.');
+    return true;
+  }
+  return false;
+}
+
+// ── 차단 화면 ──
+function _cgoShowBlocked(reason){
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:#000;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;';
+  el.innerHTML = '<div style="font-size:60px;margin-bottom:20px;">🚫</div>'
+    +'<div style="font-size:22px;font-weight:900;color:#f87171;margin-bottom:12px;">접근 차단</div>'
+    +'<div style="font-size:14px;color:rgba(240,230,200,.7);line-height:1.8;max-width:320px;">'+reason+'</div>'
+    +'<div style="margin-top:24px;font-size:11px;color:rgba(255,255,255,.3);">문의: CGO-FULI 관리자</div>';
+  document.body.appendChild(el);
+}
+
+// ── 관리자 패널 ──
+async function _cgoAdminOpen(){
+  var panel = document.getElementById('_cgoAdminPanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = '_cgoAdminPanel';
+    panel.style.cssText = 'position:fixed;inset:0;background:#020810;z-index:999999;overflow-y:auto;font-family:"Noto Sans KR",sans-serif;';
+    document.body.appendChild(panel);
+  }
+  panel.style.display = 'block';
+  panel.innerHTML =
+    '<div style="max-width:600px;margin:0 auto;padding:20px 16px 60px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid rgba(212,168,67,.3);margin-bottom:20px;">'
+    +'<div><div style="font-size:11px;color:#d4a843;font-weight:800;letter-spacing:.15em;margin-bottom:4px;">👑 CGO-FULI 관리자</div>'
+    +'<div style="font-size:20px;font-weight:900;color:#f0e6c8;">관리 대시보드</div></div>'
+    +'<button onclick="document.getElementById(\'_cgoAdminPanel\').style.display=\'none\'" '
+    +'style="padding:8px 16px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);border-radius:10px;color:#f87171;font-size:12px;cursor:pointer;font-family:inherit;">✕ 닫기</button>'
+    +'</div>'
+    +'<div id="_cgoAdminContent"><div style="text-align:center;padding:40px;color:rgba(240,230,200,.5);">⏳ 데이터 로딩 중...</div></div>'
+    +'</div>';
+  await _cgoAdminLoad();
+}
+
+async function _cgoAdminLoad(){
+  var content = document.getElementById('_cgoAdminContent');
+  if(!content) return;
+
+  // Firebase 키 미설정 시 안내
+  if(false){ // Firebase 연결됨 — 이 블록은 실행 안 됨
+    content.innerHTML =
+      '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:14px;padding:24px;text-align:center;">'
+      +'<div style="font-size:32px;margin-bottom:12px;">⚙️</div>'
+      +'<div style="font-size:15px;font-weight:800;color:#fbbf24;margin-bottom:10px;">Firebase 설정 필요</div>'
+      +'<div style="font-size:12px;color:rgba(240,230,200,.7);line-height:2;">'
+      +'1. <a href="https://console.firebase.google.com" target="_blank" style="color:#38bdf8;">console.firebase.google.com</a> 접속<br>'
+      +'2. 새 프로젝트 생성 → Firestore Database 활성화<br>'
+      +'3. 프로젝트 설정 → 웹 API 키 복사<br>'
+      +'4. 클로드 형님에게 API 키 전달 → 코드에 적용'
+      +'</div>'
+      +'</div>';
+    return;
+  }
+
+  try {
+    var noticeData = await _fbGet('admin/notice');
+    var users = await _fbList('users');
+    users.sort(function(a,b){ return (b.lastVisit||'')>(a.lastVisit||'')?1:-1; });
+    var blocked = users.filter(function(u){ return u.blocked; });
+    var active  = users.filter(function(u){ return !u.blocked; });
+
+    content.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">'
+      +_adminCard('👥','전체 유저',users.length+'명','#38bdf8')
+      +_adminCard('✅','활성 유저',active.length+'명','#34d399')
+      +_adminCard('🚫','차단 유저',blocked.length+'명','#f87171')
+      +'</div>'
+      +'<div style="background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.25);border-radius:14px;padding:16px;margin-bottom:20px;">'
+      +'<div style="font-size:13px;font-weight:800;color:#d4a843;margin-bottom:12px;">📢 공지사항</div>'
+      +'<textarea id="_cgoNoticeText" style="width:100%;height:80px;background:rgba(0,0,0,.3);border:1px solid rgba(212,168,67,.2);border-radius:8px;color:#f0e6c8;font-size:13px;padding:10px;font-family:inherit;resize:none;box-sizing:border-box;" placeholder="공지사항을 입력하세요...">'+(noticeData&&noticeData.text?noticeData.text:'')+'</textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;">'
+      +'<button onclick="_cgoAdminSaveNotice()" style="flex:1;padding:10px;background:rgba(212,168,67,.2);border:1px solid rgba(212,168,67,.4);border-radius:8px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">💾 저장</button>'
+      +'<button onclick="_cgoAdminClearNotice()" style="padding:10px 14px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:8px;color:#f87171;font-size:12px;cursor:pointer;font-family:inherit;">🗑️ 삭제</button>'
+      +'</div>'
+      +(noticeData&&noticeData.text?'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:6px;">마지막 수정: '+(noticeData.updatedKr||'')+'</div>':'')
+      +'</div>'
+      +'<div style="background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.15);border-radius:14px;padding:16px;">'
+      +'<div style="font-size:13px;font-weight:800;color:#38bdf8;margin-bottom:12px;">👥 유저 목록 ('+users.length+'명)'
+      +'<button onclick="_cgoAdminLoad()" style="margin-left:10px;padding:4px 10px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);border-radius:6px;color:#38bdf8;font-size:10px;cursor:pointer;font-family:inherit;">🔄 새로고침</button>'
+      +'</div>'
+      +(users.length===0
+        ?'<div style="text-align:center;padding:20px;color:rgba(240,230,200,.4);font-size:13px;">아직 접속한 유저가 없습니다</div>'
+        :users.map(function(u){ return _adminUserRow(u); }).join('')
+      )
+      +'</div>';
+  } catch(e){
+    content.innerHTML = '<div style="padding:20px;color:#f87171;text-align:center;">⚠️ 오류: '+e.message+'</div>';
+  }
+}
+
+function _adminCard(ico,label,val,color){
+  return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px;text-align:center;">'
+    +'<div style="font-size:22px;margin-bottom:4px;">'+ico+'</div>'
+    +'<div style="font-size:20px;font-weight:900;color:'+color+';">'+val+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:2px;">'+label+'</div>'
+    +'</div>';
+}
+
+function _adminUserRow(u){
+  var isBlocked = u.blocked;
+  var uid = u.uid || u._docId || '?';
+  var region = u.region || '위치 미확인';
+  var flag = region.indexOf('한국')>=0||region.indexOf('Korea')>=0?'🇰🇷 ':'📍 ';
+  return '<div style="background:'+(isBlocked?'rgba(248,113,113,.06)':'rgba(52,211,153,.04)')
+    +';border:1px solid '+(isBlocked?'rgba(248,113,113,.2)':'rgba(52,211,153,.12)')
+    +';border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">'
+    +'<span>'+(isBlocked?'🚫':'✅')+'</span>'
+    +'<span style="font-size:13px;font-weight:700;color:#f0e6c8;">'+(u.name||'익명')+'</span>'
+    +'<span style="font-size:9px;color:rgba(240,230,200,.35);background:rgba(255,255,255,.05);padding:1px 6px;border-radius:6px;">'+uid+'</span>'
+    +'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:2px;">방문 '+(u.visitCount||1)+'회 · '+(u.lastVisitKr||'-')+'</div>'
+    +'<div style="font-size:11px;color:#38bdf8;">'+flag+region
+    +(u.lat?'<span style="font-size:9px;color:rgba(240,230,200,.3);"> ('+u.lat+', '+u.lng+')</span>':'')
+    +'</div>'
+    +(isBlocked?'<div style="font-size:10px;color:#f87171;margin-top:2px;">차단 사유: '+(u.blockReason||'-')+'</div>':'')
+    +'</div>'
+    +'<button onclick="_cgoAdminBlock(\''+uid+'\')" style="'+(isBlocked?'display:none;':'')+'padding:6px 10px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);border-radius:8px;color:#f87171;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;">차단</button>'
+    +'<button onclick="_cgoAdminUnblock(\''+uid+'\')" style="'+(isBlocked?'':'display:none;')+'padding:6px 10px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:8px;color:#34d399;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;">포룀해제</button>'
+    +'</div></div>';
+}
+
+async function _cgoAdminBlock(uid){
+  var reason = prompt('차단 사유 (선택):') || '관리자에 의해 차단되었습니다.';
+  var data = await _fbGet('users/'+uid) || {uid:uid};
+  data.blocked = true; data.blockReason = reason; data.blockedAt = new Date().toISOString();
+  await _fbSet('users/'+uid, data);
+  await _cgoAdminLoad();
+}
+
+async function _cgoAdminUnblock(uid){
+  var data = await _fbGet('users/'+uid) || {uid:uid};
+  data.blocked = false; data.blockReason = '';
+  await _fbSet('users/'+uid, data);
+  await _cgoAdminLoad();
+}
+
+async function _cgoAdminSaveNotice(){
+  var text = (document.getElementById('_cgoNoticeText')||{}).value;
+  if(!text||!text.trim()){ alert('공지사항을 입력해 주세요!'); return; }
+  var now = new Date();
+  await _fbSet('admin/notice', {text:text.trim(), updatedAt:now.toISOString(), updatedKr:now.toLocaleDateString('ko-KR')+' '+now.toLocaleTimeString('ko-KR')});
+  alert('✅ 공지사항이 저장되었습니다!');
+  await _cgoAdminLoad();
+}
+
+async function _cgoAdminClearNotice(){
+  if(!confirm('공지사항을 삭제하시겠어요?')) return;
+  await _fbDelete('admin/notice');
+  await _cgoAdminLoad();
+}
+
+// ── 앱 시작 시 공지 + 차단 확인 ──
+async function _cgoInitAdmin(){
+  // Firebase 연결됨 — 항상 실행
+  var isBlocked = await _cgoCheckBlocked();
+  if(isBlocked) return;
+  try {
+    var notice = await _fbGet('admin/notice');
+    if(notice && notice.text){
+      var nb = document.createElement('div');
+      nb.id = '_cgoNoticeBanner';
+      nb.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(135deg,rgba(212,168,67,.95),rgba(180,140,40,.95));color:#000;padding:10px 16px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(212,168,67,.4);';
+      nb.innerHTML = '<span style="font-size:16px;">📢</span><span style="flex:1;line-height:1.5;">'+notice.text+'</span>'
+        +'<button onclick="this.parentNode.style.display=\'none\'" style="background:none;border:none;font-size:18px;cursor:pointer;color:#000;">✕</button>';
+      document.body.appendChild(nb);
+    }
+  } catch(e){}
+}
+
 function checkPin(){
   var entered=pin.join('');
+  // ✅ 관리자 PIN 7777
+  if(entered==='7777'){
+    inputEnabled=false;
+    document.getElementById('mufeFill').style.width='100%';
+    document.getElementById('mufeStatus').textContent='👑 관리자 인증!';
+    setTimeout(function(){ _cgoAdminOpen(); }, 600);
+    return;
+  }
   if(entered===CORRECT_PIN){
     inputEnabled=false;
     document.getElementById('mufeFill').style.width='100%';
     document.getElementById('mufeStatus').textContent='✅ 인증 완료!';
+    // 유저 접속 기록
+    _cgoRecordVisit();
     setTimeout(openGate, 600);
   } else {
-    // 오류
     showError();
     pin=[];
     for(var i=0;i<4;i++){
@@ -34591,6 +34946,8 @@ function _cgoEntranceDone(){
   // 대문 오버레이 숨기기
   var el = document.getElementById('cgoEntrance');
   if(el){ el.classList.add('hidden'); setTimeout(function(){ el.style.display='none'; }, 900); }
+  // 관리자 시스템 초기화 (공지사항 표시 + 차단 확인)
+  if(typeof _cgoInitAdmin === 'function') setTimeout(_cgoInitAdmin, 1000);
   // 우주 나침반 웰컴 팝업 표시 (1.2초 후)
   setTimeout(function(){ if(typeof cgpShow==='function') cgpShow(); }, 1200);
 }
