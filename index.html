@@ -174,6 +174,7 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
 .ip-field:focus{border-color:var(--gold-dim);box-shadow:0 0 0 3px rgba(212,168,67,0.08)}
 .ip-calc-btn{width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,var(--gold),#e8bc4a);border:none;color:var(--bg-deep);font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;letter-spacing:.05em;box-shadow:0 2px 16px rgba(212,168,67,0.3)}
 .ip-calc-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,168,67,0.4)}
+.ip-calc-btn:disabled{background:rgba(255,255,255,.08)!important;color:rgba(255,255,255,.25)!important;cursor:not-allowed!important;transform:none!important;box-shadow:none!important;opacity:1!important}
 .ip-results{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:12px;display:none}
 .ip-card{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;opacity:0;transform:translateY(6px);transition:all .4s}
 .ip-card.on{opacity:1;transform:translateY(0)}
@@ -830,9 +831,9 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* 모바일 최적화 → 하단 통합 미디어쿼리에서 처리 */
 /* ════ 운수 상세 팝업 ════ */
-.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;pointer-events:none;-webkit-overflow-scrolling:touch;touch-action:auto}
+.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;pointer-events:none;-webkit-overflow-scrolling:touch;touch-action:none}
 .fortune-popup-overlay.show{opacity:1;pointer-events:all}
-.fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 60px}
+.fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 60px}
 .fortune-popup-overlay.show .fortune-popup{transform:translateY(0)}
 .fortune-popup-header{position:sticky;top:0;background:var(--bg-card);border-bottom:1px solid var(--border);padding:16px 20px 14px;display:flex;align-items:center;gap:12px;z-index:1}
 .fortune-popup-icon{font-size:28px;width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(56,189,248,.1));display:flex;align-items:center;justify-content:center}
@@ -3043,7 +3044,7 @@ function updateTransitSectionWithNASA(planets) {
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
-            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name">
+            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name" oninput="if(typeof _checkCalcReady==='function')_checkCalcReady()">
           </div>
           <div class="ip-group">
             <div class="ip-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -3244,12 +3245,7 @@ function updateTransitSectionWithNASA(planets) {
                         ① <strong style="color:#38bdf8;">코로 4초</strong> 들이마시기<br>
                         ② <strong style="color:#fbbf24;">7초</strong> 숨 참기<br>
                         ③ <strong style="color:#34d399;">입으로 8초</strong> 내쉬기<br>
-                        ④ 1사이클(19초) 완료 시 자동 분석됩니다<br>
-                        <div style="margin-top:6px;padding:7px 10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;">
-                          📱 <strong style="color:#38bdf8;">스마트폰 방향 안내</strong><br>
-                          충전 단자(하단 포트) 쪽을 입 방향으로 향하게 하고 호흡하세요.<br>
-                          마이크가 충전 단자 옆에 있어 호흡음을 가장 정확하게 감지합니다.
-                        </div>
+                        ④ 1사이클(19초) 완료 시 자동 분석됩니다
                       </div>
                     </div>
                   </div>
@@ -3265,11 +3261,7 @@ function updateTransitSectionWithNASA(planets) {
                         ① 양손 손바닥 전체로 스마트폰을 감싸 쥐세요<br>
                         ② <strong style="color:#34d399;">"맞습니다"</strong> 안내음 후 그대로 유지하세요<br>
                         ③ <strong style="color:#fbbf24;">15초간</strong> 흔들림 없이 고정하세요<br>
-                        <div style="margin-top:6px;padding:7px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:8px;">
-                          🔑 <strong style="color:#34d399;">정확도를 높이는 파지 방법</strong><br>
-                          케이스가 있을 경우 <strong style="color:#fbbf24;">한쪽 면(뒷면)을 넘겨서</strong> 맨 폰 면이 손바닥에 직접 닿도록 잡으세요.<br>
-                          케이스가 두꺼울수록 체온 전도가 줄어 측정값이 낮게 나올 수 있습니다.
-                        </div>
+                        ④ 충전 중이거나 케이스 두께가 두꺼우면 정확도가 낮아질 수 있습니다
                       </div>
                     </div>
                   </div>
@@ -3486,7 +3478,12 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
-        <button class="ip-calc-btn" id="calcBtn" onclick="calcAstro()" style="position:relative">⚡ 자동 계산<span style="position:absolute;top:-9px;right:-6px;background:#34d399;color:#082011;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.04em;white-space:nowrap">전체 동기화</span></button>
+        <button class="ip-calc-btn" id="calcBtn" onclick="calcAstro()" style="position:relative" disabled>⚡ 자동 계산<span style="position:absolute;top:-9px;right:-6px;background:#34d399;color:#082011;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.04em;white-space:nowrap" id="calcBtnBadge">전체 동기화</span></button>
+        <!-- 준비 상태 안내 -->
+        <div id="calcReadyHint" style="margin-top:8px;padding:10px 12px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:10px;font-size:11px;color:rgba(212,168,67,.8);line-height:1.8;">
+          <div style="font-weight:800;margin-bottom:5px;color:#d4a843;">⚡ 자동 계산 활성화 조건</div>
+          <div id="calcReadyList" style="display:flex;flex-direction:column;gap:3px;"></div>
+        </div>
 
         <!-- CGO-MASTER 유기체 상태 -->
         <div id="cgoMasterStatus" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;font-size:10px;color:rgba(56,189,248,.9);line-height:1.8">
@@ -7905,36 +7902,9 @@ var _breathEngine = {
 
 function _breathEngineStart(){
   _breathEngine.reset();
-  // 1) 마이크 (호흡음 감지) — 실제 마이크 입력만 선택 (Stereo Mix/루프백 차단)
+  // 1) 마이크 (호흡음 감지)
   if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    // enumerateDevices로 실제 audioinput 장치 ID 먼저 확보
-    var _micConstraint = {
-      audio: {
-        echoCancellation: false,  // 꺼야 호흡음 원형 보존
-        noiseSuppression: false,  // 꺼야 저주파 호흡 신호 보존
-        autoGainControl:  false,  // 꺼야 실제 음량 변화 측정 가능
-        channelCount: 1
-      },
-      video: false
-    };
-    // enumerateDevices로 실제 마이크(audioinput)만 필터링
-    (navigator.mediaDevices.enumerateDevices
-      ? navigator.mediaDevices.enumerateDevices()
-      : Promise.resolve([])
-    ).then(function(devices){
-      // 실제 마이크만 추출 (Stereo Mix, Virtual, Loopback 제외)
-      var realMics = devices.filter(function(d){
-        if(d.kind !== 'audioinput') return false;
-        var lbl = d.label.toLowerCase();
-        return !(lbl.indexOf('stereo mix')>=0 || lbl.indexOf('loopback')>=0 ||
-                 lbl.indexOf('virtual')>=0  || lbl.indexOf('what u hear')>=0 ||
-                 lbl.indexOf('wave out')>=0 || lbl.indexOf('mix')>=0 && lbl.indexOf('realtek')>=0);
-      });
-      if(realMics.length > 0){
-        _micConstraint.audio.deviceId = {exact: realMics[0].deviceId};
-      }
-      return navigator.mediaDevices.getUserMedia(_micConstraint);
-    }).then(function(s){
+    navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(s){
       _breathEngine.micStream=s;
       _breathEngine.hasMic=true;
       var ac=new(window.AudioContext||window.webkitAudioContext)();
@@ -7956,7 +7926,7 @@ function _breathEngineStart(){
         _breathEngine.micSamples.push({t:Date.now(),v:rms});
         if(_breathEngine.micSamples.length>400) _breathEngine.micSamples.shift();
       },50);
-    }).catch(function(){ _breathEngine.hasMic=false; });
+    }).catch(function(){});
   }
   // 2) 가속도계 (흉곽 미세 진동)
   if(window.DeviceMotionEvent){
@@ -8267,7 +8237,7 @@ function hltTempScan(){
   var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
   // 체온 측정 음성 안내 (300ms 딜레이)
   setTimeout(function(){
-    _hvbSpeak('스마트폰을 양손으로 단단히 잡아주세요. 케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 잡아주세요. 체온을 15초간 측정합니다.');
+    _hvbSpeak('스마트폰을 양손으로 단단히 잡아주세요. 손바닥 전체로 기기를 감싸주세요. 체온을 15초간 측정합니다.');
   }, 300);
 
   // 3초 안내 — 파지 확인
@@ -10508,6 +10478,10 @@ function showFortuneDetail(el) {
 
   document.getElementById('fpHeader').innerHTML = headerHtml;
   document.getElementById('fpBody').innerHTML   = bodyHtml;
+  // ✅ iOS 스크롤 잠금
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
   document.getElementById('fortunePopupOverlay').classList.add('show');
 
   setTimeout(function(){
@@ -10757,8 +10731,14 @@ function showSijinDetail(idx, energy) {
   if(!fpH||!fpB||!fpO2){ console.warn('시진 팝업 DOM 없음'); return; }
   fpH.innerHTML=hHtml;
   fpB.innerHTML=bHtml;
+  // ✅ iOS 스크롤 잠금 — 팝업 뒤 배경 스크롤 방지
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
   // 약간 딜레이 후 show — 이전 팝업 닫힘 애니메이션 완료 후
   setTimeout(function(){ fpO2.classList.add('show'); }, 50);
+  // fpBody 스크롤 최상단으로
+  setTimeout(function(){ if(fpB) fpB.scrollTop=0; }, 100);
 }
 
 
@@ -11989,6 +11969,10 @@ function _applyLangLocalization(lang) {
 function closeFortunePopup(e) {
   if(!e || e.target===document.getElementById('fortunePopupOverlay')) {
     document.getElementById('fortunePopupOverlay').classList.remove('show');
+    // ✅ iOS 스크롤 잠금 해제
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
   }
 }
 
@@ -12985,6 +12969,7 @@ function syncBirthField() {
       if(conv) conv.style.display='none';
     }
   }
+  if(typeof _checkCalcReady==='function') _checkCalcReady();
 }
 function syncCpBirth(who) {
   var y=document.getElementById('cpBirth'+who+'Y'), m=document.getElementById('cpBirth'+who+'M'), d=document.getElementById('cpBirth'+who+'D');
@@ -16718,6 +16703,8 @@ function mbtiShowResult() {
   document.getElementById('mbtiResultDesc').textContent =
     (info.trait||m.trait||'') + ' · ' + m.oh+'('+ohChi+') 오행' +
     (m.source ? ' · '+m.source : '');
+  // ✅ MBTI 완료 → 버튼 배지 20개로 업데이트
+  if(typeof _checkCalcReady==='function') _checkCalcReady();
 }
 
 function mbtiReset() {
@@ -16727,6 +16714,7 @@ function mbtiReset() {
     var el = document.getElementById(id);
     if (el) el.style.display = id==='mbtiStep1'?'grid':'none';
   });
+  if(typeof _checkCalcReady==='function') _checkCalcReady();
 }
 
 function getMbtiCorrection(domOh) {
@@ -16810,6 +16798,7 @@ function bioSkinScan(type) {
         if (window._HV) window._HV.v4 = _faceScore4d;
         _setBioDataBatch({ fci: _useFci, fma: _useFma||0, faceScore: _faceScore4d });
       }
+      if(typeof _checkCalcReady==='function') _checkCalcReady();
 
     } else if (type === 'palm') {
       // ★ 스캔 실측값만 사용 — 추정값 생성 금지
@@ -16833,6 +16822,7 @@ function bioSkinScan(type) {
         if (window._HV) window._HV.v5 = _useBli;
         _setBioDataBatch({ bli: _useBli, hrv: _useHrv||0, palmScore: _useBli });
       }
+      if(typeof _checkCalcReady==='function') _checkCalcReady();
 
     } else if (type === 'tongue') {
       // 혀 색상: 사주 오행 기반 (체질 반영 — 고정이 맞음)
@@ -16855,6 +16845,7 @@ function bioSkinScan(type) {
       _bioSkinData.tongue = vals;
       if (statusEl) { statusEl.textContent = '✅ ' + vals.color + ' · ' + vals.organ; statusEl.style.color = '#fca5a5'; }
       if (window.appState && window.appState.bio) window.appState.bio.tongueEnergy = vals.energy;
+      if(typeof _checkCalcReady==='function') _checkCalcReady();
     }
 
 
@@ -16931,6 +16922,58 @@ function bioSkinScan(type) {
   }, 800);
 }
 
+// ══ 자동 계산 버튼 활성화 조건 체크 ══════════════════════════
+// 룰: 이름 + 생년월일 + 생체 스킨 3종(관상·손금·혀) 모두 완료 시 활성화
+// MBTI 추가 시 → 전체 20개 역학 적용 배지로 업데이트
+function _checkCalcReady() {
+  var btn   = document.getElementById('calcBtn');
+  var hint  = document.getElementById('calcReadyHint');
+  var list  = document.getElementById('calcReadyList');
+  var badge = document.getElementById('calcBtnBadge');
+  if(!btn) return;
+
+  var nameOk  = !!(document.getElementById('ipName') && document.getElementById('ipName').value.trim());
+  var birthOk = !!(document.getElementById('ipBirth') && document.getElementById('ipBirth').value);
+  var faceOk  = !!(window._bioSkinData && window._bioSkinData.face);
+  var palmOk  = !!(window._bioSkinData && window._bioSkinData.palm);
+  var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
+  var mbtiOk  = !!(window._mbtiResult);
+
+  var allReady = nameOk && birthOk && faceOk && palmOk && tongOk;
+
+  // 버튼 활성/비활성
+  btn.disabled = !allReady;
+
+  // 배지: MBTI 완료 시 20개, 아니면 19개
+  if(badge) {
+    badge.textContent = (allReady && mbtiOk) ? '20개 역학 적용!' : allReady ? '19개 역학 → MBTI 추가 시 20개' : '준비 중...';
+    badge.style.background = (allReady && mbtiOk) ? '#a855f7' : allReady ? '#34d399' : 'rgba(255,255,255,.15)';
+    badge.style.color = (allReady && mbtiOk) ? '#fff' : allReady ? '#082011' : 'rgba(255,255,255,.4)';
+  }
+
+  // 준비 상태 리스트
+  if(list) {
+    var items = [
+      {ok: nameOk,  label: '이름 입력'},
+      {ok: birthOk, label: '생년월일 입력'},
+      {ok: faceOk,  label: '🧖 관상 스캔'},
+      {ok: palmOk,  label: '✋ 손금 스캔'},
+      {ok: tongOk,  label: '👅 혀 스캔'},
+      {ok: mbtiOk,  label: '🧠 MBTI 선택 (선택·20번째 역학)', optional: true}
+    ];
+    list.innerHTML = items.map(function(it){
+      return '<div style="display:flex;align-items:center;gap:7px;font-size:10px;">'
+        + '<span style="font-size:12px">' + (it.ok ? '✅' : it.optional ? '⬜' : '⬜') + '</span>'
+        + '<span style="color:' + (it.ok ? '#34d399' : it.optional ? 'rgba(240,230,200,.4)' : 'rgba(240,230,200,.65)') + '">'
+        + it.label + (it.optional && !it.ok ? ' — 선택 사항' : '') + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
+  // 모두 완료 시 힌트 숨김
+  if(hint) hint.style.display = allReady ? 'none' : 'block';
+}
+
 function calcAstro() {
   syncBirthField();
 
@@ -16965,29 +17008,22 @@ function calcAstro() {
   if(!curLat||isNaN(curLat)){curLat=birthLat;curLng=birthLng;}
   if(!bStr){ alert('생년월일을 입력해주세요'); return; }
 
-  // ── 관상·손금·혀 스캔 여부 확인 → 미완료 시 경고 ──
+  // ── 관상·손금·혀 스캔 완료 여부 재확인 (버튼이 disabled여도 직접 호출될 수 있으므로 이중 차단)
   var _fDone = _bioSkinData && _bioSkinData.face;
   var _pDone = _bioSkinData && _bioSkinData.palm;
   var _tDone = _bioSkinData && _bioSkinData.tongue;
-  // 생체 미완료 시 → 계산은 그대로 진행, 하단에 안내 배너만 표시
   if (!_fDone || !_pDone || !_tDone) {
     var _missing = [];
     if (!_fDone) _missing.push('🧖 관상');
     if (!_pDone) _missing.push('✋ 손금');
     if (!_tDone) _missing.push('👅 혀');
-    // 안내 배너 표시 (계산 중단 없음)
-    var _bioHint = document.getElementById('bioScanHint');
-    if (!_bioHint) {
-      _bioHint = document.createElement('div');
-      _bioHint.id = 'bioScanHint';
-      _bioHint.style.cssText = 'margin-top:8px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;font-size:11px;color:rgba(251,191,36,.9);line-height:1.6';
-      var _calcBtn = document.getElementById('calcBtn');
-      if (_calcBtn && _calcBtn.parentNode) _calcBtn.parentNode.insertBefore(_bioHint, _calcBtn.nextSibling);
-    }
-    _bioHint.innerHTML = '💡 생체 스캔 미완료: ' + _missing.join(', ') + ' — 역학 계산은 진행됩니다. 스캔 완료 후 재계산하면 더 정밀해집니다.';
-    _bioHint.style.display = 'block';
-    setTimeout(function(){ if(_bioHint) _bioHint.style.display='none'; }, 5000);
+    alert('생체 스킨 스캔을 먼저 완료해 주세요!\n\n미완료: ' + _missing.join(', ') + '\n\n정보 입력란 아래 생체 스킨 분석에서 스캔 후\n자동 계산 버튼이 활성화됩니다.');
+    return;
   }
+
+  // ── 역학 개수 확인 및 표시 (19개 or 20개)
+  var _mbtiApplied = !!(window._mbtiResult);
+  var _engineCount = _mbtiApplied ? 20 : 19;
 
   var parts = bStr.split('-').map(Number);
   var y=parts[0], m=parts[1], d=parts[2];
@@ -17383,8 +17419,24 @@ function calcAstro() {
 
   // 버튼 피드백
   var btn=document.getElementById('calcBtn');
-  btn.textContent=(_t&&typeof _t==='function')?_t('calcDone'):'✓ 계산 완료!';
+  var _doneLabel = _mbtiApplied
+    ? ('✓ '+_engineCount+'개 역학 완료!')
+    : '✓ 계산 완료! (MBTI 추가 시 20개)';
+  btn.textContent = _doneLabel;
   btn.style.background='linear-gradient(135deg,var(--green),#16a34a)';
+
+  // 배지 최종 업데이트
+  var _badge = document.getElementById('calcBtnBadge');
+  if(_badge){
+    _badge.textContent = _mbtiApplied ? '20개 역학 적용!' : '19개 역학 적용';
+    _badge.style.background = _mbtiApplied ? '#a855f7' : '#34d399';
+    _badge.style.color = '#fff';
+  }
+
+  // 준비 힌트 완전 숨김
+  var _rHint = document.getElementById('calcReadyHint');
+  if(_rHint) _rHint.style.display = 'none';
+
   setTimeout(function(){
     btn.textContent='⚡ 자동 계산';
     btn.style.background='linear-gradient(135deg,var(--gold),#e8bc4a)';
@@ -20904,7 +20956,7 @@ window.addEventListener('load', function(){
 
 <!-- 운수 상세 팝업 -->
 <div class="fortune-popup-overlay" id="fortunePopupOverlay" onclick="closeFortunePopup(event)">
-  <div class="fortune-popup" id="fortunePopup">
+  <div class="fortune-popup" id="fortunePopup" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
     <div class="fortune-popup-header" id="fpHeader"></div>
     <div class="fortune-popup-body" id="fpBody"></div>
   </div>
@@ -34225,6 +34277,53 @@ document.addEventListener('DOMContentLoaded', function(){
   if(c1) c1.addEventListener('change', syncChecks);
   if(c2) c2.addEventListener('change', syncChecks);
   if(ca) ca.addEventListener('change', syncAll);
+  // ✅ 페이지 로드 시 calcBtn 초기 상태 설정
+  setTimeout(function(){ if(typeof _checkCalcReady==='function') _checkCalcReady(); }, 500);
+
+  // ✅ 새로고침 시 대문 건너뛰기 — 이미 PIN 인증된 세션이면 바로 CGO-FULI 진입
+  try {
+    if(sessionStorage.getItem('cgo_unlocked') === '1') {
+      // 대문 즉시 숨기고 바로 앱 진입
+      var entrance = document.getElementById('cgoEntrance');
+      if(entrance){
+        entrance.style.display = 'none';
+      }
+      // _cgoEntranceDone의 초기화 로직 실행 (위치, 입력값 복원 등)
+      // sessionStorage 저장은 이미 돼있으므로 다시 저장 불필요
+      setTimeout(function(){
+        // 위치 권한 재요청
+        if(!window._cgoLocationDone && navigator.geolocation){
+          window._cgoLocationDone = true;
+          navigator.geolocation.getCurrentPosition(
+            function(pos){
+              window._cgoLat = pos.coords.latitude;
+              window._cgoLon = pos.coords.longitude;
+              if(typeof _tzrUpdate === 'function') _tzrUpdate();
+            }, function(){}
+          );
+        }
+        // 저장된 프로필 자동 복원 (localStorage에서 직접 읽기)
+        var setVal2 = function(id,v){ var e=document.getElementById(id); if(e&&v) e.value=v; };
+        var setTxt2 = function(id,v){ var e=document.getElementById(id); if(e&&v) e.textContent=v; };
+        var sn2 = localStorage.getItem('cgo_prof_name');
+        if(sn2){ setVal2('ipName',sn2); setTxt2('topName',sn2); setTxt2('topAvatar',sn2.charAt(0)); setTxt2('sbAvatar',sn2.charAt(0)); }
+        var sy2=localStorage.getItem('cgo_prof_birth_y'), sm2=localStorage.getItem('cgo_prof_birth_m'), sd2=localStorage.getItem('cgo_prof_birth_d');
+        if(sy2) setVal2('ipBirthY',sy2);
+        if(sm2) setVal2('ipBirthM',sm2);
+        if(sd2) setVal2('ipBirthD',sd2);
+        if(sy2&&sm2&&sd2) setVal2('ipBirth', sy2+'-'+sm2.padStart(2,'0')+'-'+sd2.padStart(2,'0'));
+        var st2=localStorage.getItem('cgo_prof_time'); if(st2) setVal2('ipTime',st2);
+        var sg2=localStorage.getItem('cgo_prof_gender'); if(sg2){ var gS=document.getElementById('ipGender'); if(gS) gS.value=sg2; }
+        var bp2=localStorage.getItem('cgo_birth_place'); if(bp2) setVal2('ipBirthPlace',bp2);
+        var cp2=localStorage.getItem('cgo_cur_place'); if(cp2) setTimeout(function(){ setVal2('ipCurPlace',cp2); },300);
+        // syncBirthField + calcBtn 업데이트
+        setTimeout(function(){
+          if(typeof syncBirthField==='function') syncBirthField();
+          if(typeof _checkCalcReady==='function') _checkCalcReady();
+        }, 500);
+      }, 300);
+    }
+  } catch(e){}
 });
 
 // ── 키보드 지원 ──
@@ -34236,6 +34335,9 @@ document.addEventListener('keydown',function(e){
 
 // ── 대문 완료 → 앱 표시 + 사주 자동 채우기 ──
 function _cgoEntranceDone(){
+  // ✅ 새로고침 시 대문 건너뛰기 — 탭이 열려있는 동안만 유지 (sessionStorage)
+  try { sessionStorage.setItem('cgo_unlocked', '1'); } catch(e){}
+
   // ── 위치 권한 1회만 요청 → 전역 저장 ──
   if(!window._cgoLocationDone && navigator.geolocation){
     window._cgoLocationDone = true;
