@@ -2215,28 +2215,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </head>
 <body>
 <script>
-// ✅ iOS Safari TTS 잠금 해제 — 첫 번째 사용자 터치/클릭 시 speechSynthesis 활성화
-window._ttsUnlocked = false;
+// ✅ TTS 설정 — _ttsUnlocked 체크 제거 (iOS에서 onclick 안에서 직접 호출이 핵심)
+window._ttsUnlocked = true;  // 항상 true — 실제 잠금은 브라우저가 관리
 window._ttsEnabled  = true;
-(function(){
-  function _unlockTTS() {
-    if(window._ttsUnlocked) return;
-    if(!window.speechSynthesis) return;
-    try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance('');
-      u.volume = 0;
-      u.onend = function(){ window._ttsUnlocked = true; };
-      u.onerror = function(){ window._ttsUnlocked = true; };
-      window.speechSynthesis.speak(u);
-      // 보험: onend가 발화 안 될 경우 500ms 후 강제 해제
-      setTimeout(function(){ window._ttsUnlocked = true; }, 500);
-    } catch(e){ window._ttsUnlocked = true; }
-  }
-  document.addEventListener('touchstart', _unlockTTS, {once:true, passive:true});
-  document.addEventListener('click',      _unlockTTS, {once:true, passive:true});
-  document.addEventListener('keydown',    _unlockTTS, {once:true});
-})();
 </script>
 <div id="cgoEntrance">
 
@@ -8051,54 +8032,37 @@ function hltBreathStart(){
   if(_HV.bDone)return;
   clearInterval(_HV.bTimer);
   _HV.bPhase=0;_HV.bSec=0;_HV.bCycle=0;
-  _breathEngineStart(); // 센서 수집 시작
+  _breathEngineStart();
   var btn=_g('hlt-bbtn');if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
-  // 호흡 시작 음성 안내 — 위치 안내 먼저, 이후 호흡 시작
+  // ✅ iOS 호환: onclick 핸들러 안에서 즉시 speak() 호출
+  _hvbSpeak('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.');
+  // 음성(약 4초) 후 카운트 시작
   setTimeout(function(){
-    _hvbSpeak('충전 단자에서 10센티에서 13센티 거리를 유지하세요. 너무 가까우면 노이즈가 생깁니다.');
-  }, 300);
-  setTimeout(function(){
-    _hvbSpeak('4, 7, 8 호흡을 시작합니다. 코로 숨을 들이마시세요. 넷.');
-    // 호흡 카운트 타이머는 위치 안내 후 시작
     _HV.bTimer=setInterval(_hvbTick,1000);
     _hvbTick();
-  }, 3500);
+  }, 4000);
 }
-// 호흡 TTS 음성 — Web Speech API (단순 안정 버전)
+// ══ CGO-FULI TTS 엔진 (iOS/Android/PC 완전 호환) ══
+// iOS Safari 핵심 규칙: onclick 핸들러 안에서 즉시 speak() 호출해야만 작동
+// setTimeout 안에서는 iOS에서 완전 차단됨
 var _breathSpeech = null;
 var _hvbSpeakQueue = [];
 var _hvbSpeaking = false;
 
+// 기본 TTS 함수 — 즉시 호출용
 function _hvbSpeak(text) {
   try {
     if (!window.speechSynthesis) return;
     if (!window._ttsEnabled) return;
-    // _ttsUnlocked 미잠금 시 자동 해제 후 재시도
-    if (!window._ttsUnlocked) {
-      try {
-        var _wu = new SpeechSynthesisUtterance('');
-        _wu.volume = 0;
-        window.speechSynthesis.speak(_wu);
-        window._ttsUnlocked = true;
-      } catch(e){ window._ttsUnlocked = true; }
-    }
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR';
-    u.rate = 0.85;
-    u.pitch = 1.0;
-    u.volume = 1.0;
+    u.lang = 'ko-KR'; u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
     window.speechSynthesis.speak(u);
     _breathSpeech = u;
   } catch(e) {}
 }
-
-// 즉시 끊고 새 음성 재생 (긴급 안내용)
-function _hvbSpeakNow(text) {
-  _hvbSpeak(text);
-}
-
-function _hvbSpeakFlush() { /* 하위 호환 유지 */ }
+function _hvbSpeakNow(text) { _hvbSpeak(text); }
+function _hvbSpeakFlush() {}
 
 var _hvbLastSpoken = -1; // 중복 음성 방지
 
@@ -8311,10 +8275,8 @@ function hltTempScan(){
   if(_HV.tmpDone)return;
   var btn=_g('hlt-tempbtn');if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
-  // 체온 측정 음성 안내 (300ms 딜레이)
-  setTimeout(function(){
-    _hvbSpeak('스마트폰 파지를 시작합니다. 케이스가 있으면 뒷면을 넘겨 맨 폰 면이 손바닥에 직접 닿도록 하세요. 양손으로 폰 뒷면 전체를 감싸 쥐고 손가락은 옆면까지 감싸주세요. 체온을 15초간 측정합니다.');
-  }, 300);
+  // ✅ iOS 호환: onclick 안에서 즉시 speak()
+  _hvbSpeak('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
 
   // 3초 안내 — 파지 확인
   setTimeout(function(){
@@ -16828,10 +16790,9 @@ function bioSkinScan(type) {
     }, 300);
   }
 
+  // ✅ iOS 호환: onclick 안에서 즉시 speak()
   if(voiceMsg[type] && window.speechSynthesis && window._ttsEnabled){
-    if(typeof _hvbSpeakNow === 'function'){
-      _hvbSpeakNow(voiceMsg[type]);
-    }
+    _hvbSpeak(voiceMsg[type]);
     setTimeout(function(){ _doStartScan(); }, 4000);
   } else {
     _doStartScan();
@@ -19846,8 +19807,13 @@ function dbBreathStart(){
   var btn=document.getElementById('db-breath-btn');
   if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
   _breathEngineStart && _breathEngineStart();
-  _dbBreath.tId=setInterval(_dbBreathTick,1000);
-  _dbBreathTick();
+  // ✅ 음성 즉시 호출 (onclick 안에서)
+  if(typeof _hvbSpeak==='function') _hvbSpeak('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다. 코로 숨을 들이마시세요.');
+  // 음성 후 카운트 시작
+  setTimeout(function(){
+    _dbBreath.tId=setInterval(_dbBreathTick,1000);
+    _dbBreathTick();
+  }, 3500);
 }
 
 function dbBreathStop(){
@@ -19899,6 +19865,8 @@ function dbTempStart(){
   if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var st=document.getElementById('db-temp-status');
   if(st) st.textContent='📱 센서 수집 중... (2초)';
+  // ✅ 음성 즉시 호출 (onclick 안에서)
+  if(typeof _hvbSpeak==='function') _hvbSpeak('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
   // 기존 체온 엔진 재사용
   if(typeof _tempEngineCollect==='function'){
     _tempEngineCollect(function(){
@@ -20985,26 +20953,7 @@ function cplReset(){
 
 // ══ 커플 궁합 엔진 끝 ══════════════════════════════════════
 
-// ── TTS 무결성 꼼수 (막둥이 요청 ㅋㅋ) ──
-// 브라우저 자동재생 정책 우회: 첫 터치/클릭 시 빈 발화로 TTS 엔진 사전 활성화
-(function(){
-  var _ttsReady = false;
-  function _unlockTTS(){
-    if(_ttsReady) return;
-    if(!window.speechSynthesis) return;
-    _ttsReady = true;
-    var u = new SpeechSynthesisUtterance('');
-    u.volume = 0;
-    u.onend = function(){ window._ttsUnlocked = true; };
-    window.speechSynthesis.speak(u);
-    // iOS Safari 추가 대응 — voices 로드
-    window.speechSynthesis.getVoices();
-    setTimeout(function(){ window._ttsUnlocked = true; }, 500);
-  }
-  document.addEventListener('touchstart', _unlockTTS, {once:true, passive:true});
-  document.addEventListener('click', _unlockTTS, {once:true});
-  document.addEventListener('keydown', _unlockTTS, {once:true});
-})();
+// ── TTS 엔진 사전 준비 완료 (별도 unlock 불필요)
 
 window.addEventListener('load', function(){
   createStars();
@@ -23528,23 +23477,16 @@ function _bsFsDrawHandLandmarks(results){
 
 // ── 부위별 안내 음성 ──
 function _bsFsSpeak(text){
-  if(!window.speechSynthesis) return;
-  if(!window._ttsEnabled) return;
-  // _ttsUnlocked 미잠금 시 자동 해제
-  if(!window._ttsUnlocked){
-    try{
-      var _wu=new SpeechSynthesisUtterance('');
-      _wu.volume=0;
-      window.speechSynthesis.speak(_wu);
-      window._ttsUnlocked=true;
-    }catch(e){ window._ttsUnlocked=true; }
-  }
-  window.speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(text);
-  var langMap={ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP',ru:'ru-RU',hi:'hi-IN',es:'es-ES',de:'de-DE',fr:'fr-FR',pt:'pt-BR',vi:'vi-VN',th:'th-TH',id:'id-ID'};
-  u.lang = langMap[window._LANG||'ko'] || 'ko-KR';
-  u.rate=0.85; u.pitch=1.0; u.volume=1.0;
-  window.speechSynthesis.speak(u);
+  try {
+    if(!window.speechSynthesis) return;
+    if(!window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    var langMap={ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP',ru:'ru-RU',hi:'hi-IN',es:'es-ES',de:'de-DE',fr:'fr-FR',pt:'pt-BR',vi:'vi-VN',th:'th-TH',id:'id-ID'};
+    u.lang = langMap[window._LANG||'ko'] || 'ko-KR';
+    u.rate=0.85; u.pitch=1.0; u.volume=1.0;
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
 }
 
 var _bsFsAlignTimer=null;
