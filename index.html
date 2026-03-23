@@ -2215,9 +2215,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </head>
 <body>
 <script>
-// ✅ TTS 설정 — _ttsUnlocked 체크 제거 (iOS에서 onclick 안에서 직접 호출이 핵심)
-window._ttsUnlocked = true;  // 항상 true — 실제 잠금은 브라우저가 관리
-window._ttsEnabled  = true;
+// ✅ CGO-FULI TTS 설정
+window._ttsEnabled = true;
+// iOS Safari 감지
+window._isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+window._isAndroid = /Android/.test(navigator.userAgent);
+
+// ── 핵심 speak 함수 ──
+// iOS: onclick 안에서만 작동. setTimeout 안 speak는 무시됨.
+// 해결: _cgoSpeak()는 항상 즉시 실행. iOS에서도 작동하는 단일 함수.
+window._cgoSpeak = function(text) {
+  if (!window._ttsEnabled) return;
+  if (!window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = window._isIOS ? 0.9 : 0.85;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
+};
 </script>
 <div id="cgoEntrance">
 
@@ -8034,29 +8053,31 @@ function hltBreathStart(){
   _HV.bPhase=0;_HV.bSec=0;_HV.bCycle=0;
   _breathEngineStart();
   var btn=_g('hlt-bbtn');if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
-  // ✅ iOS 호환: onclick 핸들러 안에서 즉시 speak() 호출
-  _hvbSpeak('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.');
-  // 음성(약 4초) 후 카운트 시작
-  setTimeout(function(){
-    _HV.bTimer=setInterval(_hvbTick,1000);
-    _hvbTick();
-  }, 4000);
+  // ✅ iOS 호환: onend 체인
+  (function(){
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u1 = new SpeechSynthesisUtterance('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.');
+    u1.lang='ko-KR'; u1.rate=0.85; u1.volume=1.0;
+    u1.onend = function(){
+      _HV.bTimer=setInterval(_hvbTick,1000);
+      _hvbTick();
+    };
+    window.speechSynthesis.speak(u1);
+  })();
 }
 // ══ CGO-FULI TTS 엔진 (iOS/Android/PC 완전 호환) ══
-// iOS Safari 핵심 규칙: onclick 핸들러 안에서 즉시 speak() 호출해야만 작동
-// setTimeout 안에서는 iOS에서 완전 차단됨
 var _breathSpeech = null;
 var _hvbSpeakQueue = [];
 var _hvbSpeaking = false;
 
-// 기본 TTS 함수 — 즉시 호출용
 function _hvbSpeak(text) {
+  if(typeof window._cgoSpeak === 'function') { window._cgoSpeak(text); return; }
   try {
-    if (!window.speechSynthesis) return;
-    if (!window._ttsEnabled) return;
+    if (!window.speechSynthesis || !window._ttsEnabled) return;
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR'; u.rate = 0.85; u.pitch = 1.0; u.volume = 1.0;
+    u.lang='ko-KR'; u.rate=0.85; u.pitch=1.0; u.volume=1.0;
     window.speechSynthesis.speak(u);
     _breathSpeech = u;
   } catch(e) {}
@@ -8275,27 +8296,31 @@ function hltTempScan(){
   if(_HV.tmpDone)return;
   var btn=_g('hlt-tempbtn');if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
-  // ✅ iOS 호환: onclick 안에서 즉시 speak()
-  _hvbSpeak('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
-
-  // 3초 안내 — 파지 확인
-  setTimeout(function(){
-    if(!_HV.tmpDone) _hvbSpeak('맞습니다. 손바닥 중앙이 폰 뒷면에 밀착되도록 유지해 주세요.');
-  }, 3500);
+  // ✅ iOS 호환: onend 체인으로 연속 안내
+  (function(){
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u1 = new SpeechSynthesisUtterance('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
+    u1.lang='ko-KR'; u1.rate=0.85; u1.volume=1.0;
+    u1.onend = function(){
+      if(_HV.tmpDone) return;
+      var u2 = new SpeechSynthesisUtterance('맞습니다. 손바닥 중앙이 폰 뒷면에 밀착되도록 유지해 주세요.');
+      u2.lang='ko-KR'; u2.rate=0.85; u2.volume=1.0;
+      window.speechSynthesis.speak(u2);
+    };
+    window.speechSynthesis.speak(u1);
+  })();
 
   _tempEngineCollect(function(){
     var targetTemp=_tempCalcFromSensors();
     var elapsed=0; // 경과 초
     var TOTAL=15;  // 15초 측정
 
-    // 7초 중간 안내
-    setTimeout(function(){
-      if(!_HV.tmpDone) _hvbSpeak('잘 하고 계세요. 거의 다 됐습니다. 조금만 더 고정해 주세요.');
-    }, 7000);
-
     _HV.tmpTimer=setInterval(function(){
       elapsed++;
       var remain=TOTAL-elapsed;
+      // 7초 시점 중간 안내 — setInterval 안에서 처리 (iOS에서 허용)
+      if(elapsed===7 && !_HV.tmpDone) _hvbSpeak('잘 하고 계세요. 거의 다 됐습니다. 조금만 더 고정해 주세요.');
       var progress=elapsed/TOTAL;
 
       // 카운트다운 표시
@@ -8323,11 +8348,11 @@ function hltTempScan(){
 }
 function _hvtmpFinish(temp,seed){
   _HV.tmpDone=true;
-  // 체온 완료 음성 — 500ms 딜레이로 확실히 출력
+  // 체온 완료 음성 — 즉시 speak (iOS 호환)
   var msg = temp<36?'체온이 다소 낮습니다. '+temp.toFixed(1)+'도. 따뜻하게 해주세요.':
             temp<37.5?'체온 정상입니다. '+temp.toFixed(1)+'도. 측정이 완료되었습니다.':
             '체온이 높습니다. '+temp.toFixed(1)+'도. 충분한 안정을 취해주세요.';
-  setTimeout(function(){ _hvbSpeak(msg); }, 500);
+  _hvbSpeak(msg);
   // 체온 기반 실측 점수 (36.5°C 최적)
   var diff=Math.abs(temp-36.5);
   var sc=diff<0.2?88+Math.round(diff*10):diff<0.5?78-Math.round(diff*20):diff<1.0?62:48;
@@ -16790,10 +16815,16 @@ function bioSkinScan(type) {
     }, 300);
   }
 
-  // ✅ iOS 호환: onclick 안에서 즉시 speak()
+  // ✅ iOS 호환: onend 체인으로 음성 후 스캔 시작
   if(voiceMsg[type] && window.speechSynthesis && window._ttsEnabled){
-    _hvbSpeak(voiceMsg[type]);
-    setTimeout(function(){ _doStartScan(); }, 4000);
+    window.speechSynthesis.cancel();
+    var _vu = new SpeechSynthesisUtterance(voiceMsg[type]);
+    _vu.lang='ko-KR'; _vu.rate=0.85; _vu.volume=1.0;
+    _vu.onend = function(){ _doStartScan(); };
+    _vu.onerror = function(){ _doStartScan(); };
+    window.speechSynthesis.speak(_vu);
+    // 폴백: 6초 후 강제 스캔 시작 (onend 안 불릴 경우)
+    setTimeout(function(){ _doStartScan(); }, 6000);
   } else {
     _doStartScan();
   }
@@ -19807,13 +19838,19 @@ function dbBreathStart(){
   var btn=document.getElementById('db-breath-btn');
   if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
   _breathEngineStart && _breathEngineStart();
-  // ✅ 음성 즉시 호출 (onclick 안에서)
-  if(typeof _hvbSpeak==='function') _hvbSpeak('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다. 코로 숨을 들이마시세요.');
-  // 음성 후 카운트 시작
-  setTimeout(function(){
-    _dbBreath.tId=setInterval(_dbBreathTick,1000);
-    _dbBreathTick();
-  }, 3500);
+  // ✅ iOS 호환: onend 체인으로 연속 안내
+  (function(){
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u1 = new SpeechSynthesisUtterance('충전 단자에서 10에서 13센티 거리를 유지하세요. 4, 7, 8 호흡을 시작합니다.');
+    u1.lang='ko-KR'; u1.rate=0.85; u1.volume=1.0;
+    u1.onend = function(){
+      // 카운트 시작
+      _dbBreath.tId=setInterval(_dbBreathTick,1000);
+      _dbBreathTick();
+    };
+    window.speechSynthesis.speak(u1);
+  })();
 }
 
 function dbBreathStop(){
@@ -19865,8 +19902,14 @@ function dbTempStart(){
   if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var st=document.getElementById('db-temp-status');
   if(st) st.textContent='📱 센서 수집 중... (2초)';
-  // ✅ 음성 즉시 호출 (onclick 안에서)
-  if(typeof _hvbSpeak==='function') _hvbSpeak('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 폰 전체를 감싸 쥐고 15초간 고정해 주세요.');
+  // ✅ iOS 호환: onend 체인
+  (function(){
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u1 = new SpeechSynthesisUtterance('케이스가 있으면 뒷면을 넘겨 맨 폰이 손바닥에 닿도록 하세요. 양손으로 감싸 쥐고 고정해 주세요.');
+    u1.lang='ko-KR'; u1.rate=0.85; u1.volume=1.0;
+    window.speechSynthesis.speak(u1);
+  })();
   // 기존 체온 엔진 재사용
   if(typeof _tempEngineCollect==='function'){
     _tempEngineCollect(function(){
@@ -23477,14 +23520,12 @@ function _bsFsDrawHandLandmarks(results){
 
 // ── 부위별 안내 음성 ──
 function _bsFsSpeak(text){
+  if(typeof window._cgoSpeak === 'function') { window._cgoSpeak(text); return; }
   try {
-    if(!window.speechSynthesis) return;
-    if(!window._ttsEnabled) return;
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
-    var langMap={ko:'ko-KR',en:'en-US',zh:'zh-CN',ja:'ja-JP',ru:'ru-RU',hi:'hi-IN',es:'es-ES',de:'de-DE',fr:'fr-FR',pt:'pt-BR',vi:'vi-VN',th:'th-TH',id:'id-ID'};
-    u.lang = langMap[window._LANG||'ko'] || 'ko-KR';
-    u.rate=0.85; u.pitch=1.0; u.volume=1.0;
+    u.lang='ko-KR'; u.rate=0.85; u.pitch=1.0; u.volume=1.0;
     window.speechSynthesis.speak(u);
   } catch(e) {}
 }
@@ -23508,7 +23549,8 @@ function _bsFsStartAlignDetect(){
   var lbl={face:'점선에 얼굴을 맞추고 멈춰주세요 →',palm:'점선에 손바닥을 맞추고 멈춰주세요 →',tongue:'점선에 혀를 맞추고 멈춰주세요 →'};
 
   var c=vc[BsFs.step]; if(!c) return;
-  setTimeout(function(){ _bsFsSpeak(c); },600);
+  // iOS 호환: setTimeout 없이 즉시 speak
+  _bsFsSpeak(c);
   var lb=document.getElementById('bsFsGuideLbl');
   if(lb) lb.textContent=lbl[BsFs.step]||'점선에 맞춰주세요 →';
 
@@ -23611,29 +23653,33 @@ function bsFsDoStart(){
     _bsFsSpeak('정밀 측정을 위해 스마트폰을 양손으로 단단히 잡아주세요. 흔들림 없이 고정하세요.');
   }
 
-  // ── 제3항: 4·7·8 호흡 안내 (스캔 시작과 동시) ──
-  var breathTimes={inhale:4, hold:7, exhale:8};
-  // 4초 — 들이마시기
-  _bsFsSpeak('코로 깊게 숨을 들이마시세요. 넷.');
-  setTimeout(function(){
-    if(!BsFs.running) return;
-    var lb=document.getElementById('bsFsGuideSub');
-    if(lb) lb.textContent='🫁 숨 들이마시기 — 4초';
-  },500);
-  // 4초 후 — 멈추기
-  setTimeout(function(){
-    if(!BsFs.running) return;
-    _bsFsSpeak('좋습니다. 7초간 숨을 멈추고 몸 안의 기운을 응축하세요.');
-    var lb=document.getElementById('bsFsGuideSub');
-    if(lb) lb.textContent='⏸️ 숨 멈추기 — 7초';
-  },4000);
-  // 11초 후 — 내뱉기
-  setTimeout(function(){
-    if(!BsFs.running) return;
-    _bsFsSpeak('이제 8초간 입으로 가늘고 길게 숨을 내뱉으며 탁한 기운을 보내세요.');
-    var lb=document.getElementById('bsFsGuideSub');
-    if(lb) lb.textContent='💨 숨 내뱉기 — 8초';
-  },11000);
+  // ── 제3항: 4·7·8 호흡 안내 — onend 체인 방식 (iOS 호환) ──
+  // iOS: 첫 speak의 onend에서 다음 speak 호출 → 사용자 제스처 컨텍스트 유지
+  (function(){
+    if(!window.speechSynthesis || !window._ttsEnabled) return;
+    window.speechSynthesis.cancel();
+    var u1 = new SpeechSynthesisUtterance('코로 깊게 숨을 들이마시세요. 넷.');
+    u1.lang='ko-KR'; u1.rate=0.85; u1.volume=1.0;
+    u1.onend = function(){
+      if(!BsFs.running) return;
+      var lb=document.getElementById('bsFsGuideSub');
+      if(lb) lb.textContent='⏸️ 숨 멈추기 — 7초';
+      var u2 = new SpeechSynthesisUtterance('좋습니다. 7초간 숨을 멈추고 몸 안의 기운을 응축하세요.');
+      u2.lang='ko-KR'; u2.rate=0.85; u2.volume=1.0;
+      u2.onend = function(){
+        if(!BsFs.running) return;
+        var lb2=document.getElementById('bsFsGuideSub');
+        if(lb2) lb2.textContent='💨 숨 내뱉기 — 8초';
+        var u3 = new SpeechSynthesisUtterance('이제 8초간 입으로 가늘고 길게 숨을 내뱉으며 탁한 기운을 보내세요.');
+        u3.lang='ko-KR'; u3.rate=0.85; u3.volume=1.0;
+        window.speechSynthesis.speak(u3);
+      };
+      window.speechSynthesis.speak(u2);
+    };
+    var lb0=document.getElementById('bsFsGuideSub');
+    if(lb0) lb0.textContent='🫁 숨 들이마시기 — 4초';
+    window.speechSynthesis.speak(u1);
+  })();
 
   BsFs.tId=setInterval(function(){
     BsFs.sec++;
