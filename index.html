@@ -21023,15 +21023,33 @@ function cplToggleCam(who){
   }
   // A=전면, B=후면 (혼자 테스트 시 전/후면 동시 사용)
   var facingMode = who==='a' ? 'user' : 'environment';
-  if(!navigator.mediaDevices){alert('카메라를 지원하지 않는 환경입니다.');return;}
-  navigator.mediaDevices.getUserMedia({video:{facingMode:facingMode},audio:false})
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('카메라를 지원하지 않는 환경입니다.\nHTTPS 환경에서만 카메라가 작동합니다.');
+    return;
+  }
+
+  // iOS Safari 호환 constraints
+  var constraints = {
+    video: {
+      facingMode: {ideal: facingMode},
+      width: {ideal: 640},
+      height: {ideal: 480}
+    },
+    audio: false
+  };
+
+  navigator.mediaDevices.getUserMedia(constraints)
   .then(function(stream){
     _cplStreams[who]=stream;
     var vid=document.getElementById('cpl-video-'+who);
-    if(vid){ vid.srcObject=stream; vid.style.display='block'; }
+    if(vid){
+      vid.srcObject=stream;
+      vid.style.display='block';
+      // iOS Safari 필수: play() 명시 호출
+      vid.play().catch(function(e){ console.log('video play:', e); });
+    }
     var ph=document.getElementById('cpl-ph-'+who);
     if(ph) ph.style.display='none';
-    // 사진 숨기기
     var photo=document.getElementById('cpl-photo-'+who);
     if(photo) photo.style.display='none';
     var badge=document.getElementById('cpl-badge-'+who);
@@ -21060,12 +21078,22 @@ function cplToggleCam(who){
         if(txtEl) txtEl.textContent=(who==='a'?'나(A)':'상대(B)')+' 스캔 중... 상대 카메라도 켜세요';
       }
     },1200);
-  }).catch(function(){
-    if(facingMode==='environment'){
-      navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})
-      .then(function(s){ _cplStreams[who]=s; var v=document.getElementById('cpl-video-'+who); if(v){v.srcObject=s;v.style.display='block';} var p=document.getElementById('cpl-ph-'+who); if(p) p.style.display='none'; })
-      .catch(function(){alert('카메라 권한이 필요합니다.');});
-    } else { alert('카메라 권한이 필요합니다.'); }
+  }).catch(function(err){
+    console.log('카메라 오류:', err);
+    // 폴백: 제약 없이 재시도
+    navigator.mediaDevices.getUserMedia({video:true, audio:false})
+    .then(function(s){
+      _cplStreams[who]=s;
+      var v=document.getElementById('cpl-video-'+who);
+      if(v){ v.srcObject=s; v.style.display='block'; v.play().catch(function(){}); }
+      var p=document.getElementById('cpl-ph-'+who);
+      if(p) p.style.display='none';
+      var btn2=document.getElementById('cpl-btn-'+who);
+      if(btn2){btn2.textContent='■ 끄기';btn2.style.background='rgba(248,113,113,.15)';btn2.style.borderColor='rgba(248,113,113,.4)';btn2.style.color='#f87171';}
+    })
+    .catch(function(){
+      alert('카메라 권한이 필요합니다.\n브라우저 설정에서 카메라 권한을 허용해주세요.');
+    });
   });
 }
 
