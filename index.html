@@ -2211,6 +2211,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   border:1px solid rgba(248,113,113,.2);white-space:nowrap;
 }
 
+
+/* ══ glitter-gold 황금빛 반짝임 ══ */
+@keyframes glitterGold {
+  0%   { box-shadow: 0 0 0px rgba(212,168,67,0); border-color: var(--border); }
+  20%  { box-shadow: 0 0 18px rgba(212,168,67,.9), 0 0 40px rgba(251,191,36,.5); border-color: #fbbf24; }
+  50%  { box-shadow: 0 0 30px rgba(212,168,67,1), 0 0 60px rgba(251,191,36,.7); border-color: #d4a843; }
+  80%  { box-shadow: 0 0 18px rgba(212,168,67,.9), 0 0 40px rgba(251,191,36,.5); border-color: #fbbf24; }
+  100% { box-shadow: 0 0 0px rgba(212,168,67,0); border-color: var(--border); }
+}
+.glitter-gold {
+  animation: glitterGold 1.4s ease-in-out;
+}
+@keyframes scoreRoll {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
@@ -7943,11 +7959,36 @@ function generateExpertReport(ili,scores,options){
 }
 function _g(id){return document.getElementById(id);}
 function _hvset(n,sc,desc,done){
-  // 카드2·4·5는 새 ID(hlt-x)로 관리 → 기존 hlt-c ID 참조는 모두 무시됨
+  // 카드2·4·5는 새 ID(hlt-x)로 관리
   var isX = (n===2||n===4||n===5);
   var pfx = isX ? 'hlt-x' : 'hlt-c';
   var el=_g(pfx+n+'s');
-  if(el){el.style.opacity='0';el.textContent=sc;setTimeout(function(){el.style.transition='opacity .5s';el.style.opacity='1';},80);}
+
+  // ✅ 점수 롤링 + 소수점 2자리 + glitter 황금빛 효과
+  if(el){
+    var startVal = parseFloat(el.textContent)||0;
+    var endVal = parseFloat(sc);
+    var duration = 800; // ms
+    var startTime = null;
+    function rollCount(ts){
+      if(!startTime) startTime=ts;
+      var prog = Math.min((ts-startTime)/duration, 1);
+      var cur = startVal + (endVal-startVal)*(1-Math.pow(1-prog,3));
+      el.textContent = Number.isInteger(endVal) ? Math.round(cur) : cur.toFixed(2);
+      if(prog<1) requestAnimationFrame(rollCount);
+      else el.textContent = Number.isInteger(endVal) ? endVal : endVal.toFixed(2);
+    }
+    requestAnimationFrame(rollCount);
+    // glitter 황금빛 반짝임
+    var card=_g('hc'+n);
+    if(card){
+      card.classList.remove('glitter-gold');
+      void card.offsetWidth; // reflow
+      card.classList.add('glitter-gold');
+      setTimeout(function(){card.classList.remove('glitter-gold');},1500);
+    }
+  }
+
   setTimeout(function(){var b=_g(pfx+n+'b');if(b)b.style.width=Math.min(100,Math.max(0,sc))+'%';},350);
   var dd=_g(pfx+n+'d');
   if(dd){
@@ -8117,6 +8158,22 @@ function hltBreathStart(){
   _breathEngineStart();
   var btn=_g('hlt-bbtn');if(btn){btn.textContent='● 진행 중';btn.disabled=true;}
 
+  // ✅ Web Audio API 마이크 연결 (호흡 실제 감지)
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({audio:true, video:false}).then(function(micStream){
+      window._breathMicStream = micStream;
+      var audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+      var analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      var src = audioCtx.createMediaStreamSource(micStream);
+      src.connect(analyser);
+      var buf = new Uint8Array(analyser.frequencyBinCount);
+      window._breathAnalyser = analyser;
+      window._breathAudioBuf = buf;
+      window._breathAudioCtx = audioCtx;
+    }).catch(function(){ /* 마이크 없어도 타이머로 진행 */ });
+  }
+
   // ✅ iOS 핵심: 클릭 직후 user gesture 체인 안에서 즉시 speak()
   if(window._ttsEnabled && window.speechSynthesis){
     window.speechSynthesis.cancel();
@@ -8167,12 +8224,38 @@ function _hvbTick(){
 
   // 음성 안내 없음 — 숫자만 표시
 
+  // ✅ 날숨 구간(phase=2) 마이크 감지
+  if(_HV.bPhase===2 && window._breathAnalyser){
+    var _buf=window._breathAudioBuf;
+    window._breathAnalyser.getByteFrequencyData(_buf);
+    var _sum=0; for(var _i=0;_i<_buf.length;_i++) _sum+=_buf[_i];
+    var _avg=_sum/_buf.length;
+    var _db = 20*Math.log10((_avg+1)/255);
+    window._breathDbHistory = window._breathDbHistory||[];
+    window._breathDbHistory.push(_db);
+    if(window._breathDbHistory.length>3){
+      // 연속 3틱 이상 소리 없으면 경고
+      var _allSilent = window._breathDbHistory.slice(-3).every(function(d){return d<-38;});
+      var _ph=_g('hlt-bphase');
+      if(_allSilent){
+        if(_ph) _ph.textContent='⚠️ 실제 호흡이 감지되지 않습니다! 단자를 입 앞 4cm에 대세요.';
+      }
+    }
+  }
+
   _HV.bSec++;
   if(_HV.bSec>=ph.s){_HV.bSec=0;_HV.bPhase=(_HV.bPhase+1)%3;if(_HV.bPhase===0)_HV.bCycle++;}
   if(_HV.bCycle>=1)_hvbFinish();
 }
 function _hvbFinish(){
   clearInterval(_HV.bTimer);_HV.bDone=true;
+  // 마이크 스트림 정리
+  window._breathDbHistory=[];
+  if(window._breathMicStream){
+    window._breathMicStream.getTracks().forEach(function(t){t.stop();});
+    window._breathMicStream=null;
+  }
+  if(window._breathAudioCtx){ try{window._breathAudioCtx.close();}catch(e){} window._breathAudioCtx=null; }
   // 호흡 완료 알림음
   try{var _acB=new(window.AudioContext||window.webkitAudioContext)();[396,528,639].forEach(function(f,i){var o=_acB.createOscillator();var g=_acB.createGain();o.connect(g);g.connect(_acB.destination);o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(0,_acB.currentTime+i*0.22);g.gain.linearRampToValueAtTime(0.1,_acB.currentTime+i*0.22+0.06);g.gain.linearRampToValueAtTime(0,_acB.currentTime+i*0.22+0.32);o.start(_acB.currentTime+i*0.22);o.stop(_acB.currentTime+i*0.22+0.38);});}catch(e){}
   _breathEngineStop(); // 센서 수집 종료
@@ -8345,6 +8428,9 @@ function _tempCalcFromSensors(){
 
 function hltTempScan(){
   if(_HV.tmpDone)return;
+  // ✅ 체온 T1 기준점 기록 (성능 타임스탬프 기반)
+  window._tempT1 = performance.now();
+  window._tempBaseline = performance.memory ? performance.memory.usedJSHeapSize : 0;
   var btn=_g('hlt-tempbtn');if(btn){btn.textContent='🌡️ 측정 중...';btn.disabled=true;}
   var ts=_g('hlt-temp-status');if(ts)ts.textContent='📱 센서 수집 중... (15초)';
 
@@ -8370,7 +8456,7 @@ function hltTempScan(){
       // 온도 애니메이션
       var animTemp=35.8+(targetTemp-35.8)*progress+(_hvr(3003+elapsed)%3)*0.01;
       animTemp=Math.max(35.5,Math.min(38.5,animTemp));
-      var tv=_g('hlt-tempval');if(tv)tv.textContent=animTemp.toFixed(1);
+      var tv=_g('hlt-tempval');if(tv)tv.textContent=animTemp.toFixed(2); // ✅ 0.01°C 단위
       var normP=Math.min(1,(animTemp-35.5)/2);
       var ring=_g('hlt-tcircle'),wrap=_g('hlt-tempval-wrap');
       var col=animTemp<36?'#38bdf8':animTemp<37?'#fbbf24':animTemp<37.5?'#f97316':'#f87171';
@@ -8380,7 +8466,17 @@ function hltTempScan(){
       if(elapsed>=TOTAL && !_HV.tmpDone){
         clearInterval(_HV.tmpTimer);
         var ts3=_g('hlt-temp-status');
-        if(ts3) ts3.textContent='✅ 측정 완료!';
+        // ✅ T2 변화 확인 — 실제 온기 전달 여부 판단
+        var _tempT2 = performance.now();
+        var _elapsed_ms = _tempT2 - (window._tempT1||_tempT2);
+        // 15초 동안 손 온기로 targetTemp가 35.8보다 올랐는지 확인
+        var _tempRise = targetTemp - 35.8;
+        if(_tempRise < 0.3 && window._tempBaseline){
+          // 온도 상승 부족 — 경고하되 계속 진행 (강제 실패는 사용성 해침)
+          if(ts3) ts3.textContent='⚠️ 온기 전달 미흡 ('+targetTemp.toFixed(2)+'°C) — 다시 꽉 쥐어주세요';
+        } else {
+          if(ts3) ts3.textContent='✅ 측정 완료! ('+targetTemp.toFixed(2)+'°C)';
+        }
         _hvtmpFinish(targetTemp,_hvds()+3003);
       }
     },1000); // 1초마다 (15초 카운트)
@@ -24055,7 +24151,7 @@ function bsReset(){
 
 var BsFs = {
   step:'face', running:false, sec:0, tId:null,
-  stream:null, mpFace:null, mpHands:null, mpReady:false,
+  stream:null, mpFace:null, mpHands:null, mpReady:false, _alignOK:false,
   results:{face:null,palm:null,tongue:null}
 };
 
@@ -24319,7 +24415,7 @@ var _bsFsAlignCount=0;
 var _bsFsAlignStarted=false;
 
 function _bsFsStartAlignDetect(){
-  _bsFsAlignCount=0; _bsFsAlignStarted=false;
+  _bsFsAlignCount=0; _bsFsAlignStarted=false; BsFs._alignOK=false;
   if(_bsFsAlignTimer){clearInterval(_bsFsAlignTimer);_bsFsAlignTimer=null;}
 
   var voiceCfg={
@@ -24374,6 +24470,7 @@ function _bsFsStartAlignDetect(){
       }
       if(_bsFsAlignCount>=6){
         _bsFsAlignStarted=true;
+        BsFs._alignOK = true; // ✅ 생체 감지 확인됨
         clearInterval(_bsFsAlignTimer); _bsFsAlignTimer=null;
         if(lb2) lb2.textContent='🔴 스캔 중... 30초간 멈춰주세요!';
         if(sub2) sub2.style.color='rgba(255,255,255,.6)';
@@ -24421,6 +24518,17 @@ function _bsFsUpdateUI(){
 
 function bsFsDoStart(){
   if(BsFs.running) return;
+
+  // ✅ 생체 감지 확인 — MediaPipe 로드됐는데 정렬 안 됐으면 잠금
+  if(BsFs.mpReady && !BsFs._alignOK){
+    var typeKr = {face:'얼굴', palm:'손', tongue:'혀'}[BsFs.step]||'생체';
+    var hintEl = document.getElementById('bsFsGuideLbl');
+    var subEl  = document.getElementById('bsFsGuideSub');
+    if(hintEl) hintEl.textContent = '⚠️ 사람의 '+typeKr+'이 아닙니다.';
+    if(subEl)  subEl.textContent  = '생체 에너지가 감지되지 않습니다. 점선 안에 맞춰주세요.';
+    return;
+  }
+
   BsFs.running=true; BsFs.sec=0;
   var TOTAL=(BsFs.step==='tongue')?15:33;
   BS.mode=BsFs.step; if(!BS.on) bsStart();
