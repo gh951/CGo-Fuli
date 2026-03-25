@@ -8471,13 +8471,25 @@ function hltTempScan(){
         var _elapsed_ms = _tempT2 - (window._tempT1||_tempT2);
         // 15초 동안 손 온기로 targetTemp가 35.8보다 올랐는지 확인
         var _tempRise = targetTemp - 35.8;
-        if(_tempRise < 0.3 && window._tempBaseline){
-          // 온도 상승 부족 — 경고하되 계속 진행 (강제 실패는 사용성 해침)
-          if(ts3) ts3.textContent='⚠️ 온기 전달 미흡 ('+targetTemp.toFixed(2)+'°C) — 다시 꽉 쥐어주세요';
+        if(_tempRise < 0.3){
+          // 온기 전달 미흡 — 경고 + 재측정 유도 (tmpDone 설정 안 함)
+          clearInterval(_HV.tmpTimer);
+          if(ts3) ts3.textContent='⚠️ 온기 전달 미흡! 양손으로 꽉 쥐고 다시 측정하세요.';
+          var btn=_g('hlt-tempbtn');
+          if(btn){btn.textContent='🌡️ 다시 측정';btn.disabled=false;}
+          if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+          // 알람
+          try{var _acF=new(window.AudioContext||window.webkitAudioContext)();
+          var _oF=_acF.createOscillator(),_gF=_acF.createGain();
+          _oF.connect(_gF);_gF.connect(_acF.destination);
+          _oF.frequency.value=220;_oF.type='sawtooth';
+          _gF.gain.setValueAtTime(.3,_acF.currentTime);
+          _gF.gain.exponentialRampToValueAtTime(.001,_acF.currentTime+.5);
+          _oF.start();_oF.stop(_acF.currentTime+.5);}catch(e){}
         } else {
           if(ts3) ts3.textContent='✅ 측정 완료! ('+targetTemp.toFixed(2)+'°C)';
+          _hvtmpFinish(targetTemp,_hvds()+3003);
         }
-        _hvtmpFinish(targetTemp,_hvds()+3003);
       }
     },1000); // 1초마다 (15초 카운트)
   });
@@ -16925,6 +16937,8 @@ var _bioSkinData = { face: null, palm: null, tongue: null };
 
 function bioSkinScan(type) {
   var labels = { face:'관상', palm:'손금', tongue:'혀' };
+  // ✅ 스캔 시작 시 정렬 상태 초기화
+  if(typeof BsFs !== 'undefined') BsFs._alignOK = false;
   var statusEl = document.getElementById('bioSkin-' + type + '-status');
   var resultEl = document.getElementById('bioSkinResult');
   // dashboard 페이지일 때만 복귀 플래그 설정 (scan 페이지는 해당없음)
@@ -24158,6 +24172,8 @@ var BsFs = {
 function bsFullscreen(){
   var wrap=document.getElementById('bsFullWrap');
   if(!wrap) return;
+  // ✅ 전체화면 열 때마다 정렬 초기화
+  BsFs._alignOK = false;
 
   // ✅ iOS 핵심 수정: 버튼 클릭 직후 (user gesture 체인 안에서) 즉시 TTS 언락 + 첫 음성
   // getUserMedia 호출 전에 반드시 speak() 먼저 실행해야 iOS에서 작동함
@@ -24519,13 +24535,15 @@ function _bsFsUpdateUI(){
 function bsFsDoStart(){
   if(BsFs.running) return;
 
-  // ✅ 생체 감지 확인 — MediaPipe 로드됐는데 정렬 안 됐으면 잠금
-  if(BsFs.mpReady && !BsFs._alignOK){
+  // ✅ 생체 감지 확인 — 반드시 점선 정렬 완료 후에만 스캔 허용
+  if(!BsFs._alignOK){
     var typeKr = {face:'얼굴', palm:'손', tongue:'혀'}[BsFs.step]||'생체';
     var hintEl = document.getElementById('bsFsGuideLbl');
     var subEl  = document.getElementById('bsFsGuideSub');
-    if(hintEl) hintEl.textContent = '⚠️ 사람의 '+typeKr+'이 아닙니다.';
-    if(subEl)  subEl.textContent  = '생체 에너지가 감지되지 않습니다. 점선 안에 맞춰주세요.';
+    if(hintEl) hintEl.textContent = '⚠️ '+typeKr+'을 점선 안에 맞춰주세요.';
+    if(subEl)  subEl.textContent  = BsFs.mpReady
+      ? '생체 에너지가 감지되지 않습니다. 다시 맞춰주세요.'
+      : 'AI 엔진 로딩 중... 잠시 후 맞춰주세요.';
     return;
   }
 
