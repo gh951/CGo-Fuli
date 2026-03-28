@@ -12846,193 +12846,213 @@ function _cgoGetNodes(rootEl) {
 
 // ── Groq AI 번역 엔진 ─────────────────────────────────────────
 function _cgoAiTranslate(lang, pack) {
-  var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian'};
+  if (!lang || lang === 'ko') return;
+
+  var langNames = {
+    en:'English', zh:'Simplified Chinese', ja:'Japanese',
+    ru:'Russian', hi:'Hindi', es:'Spanish', de:'German',
+    fr:'French', pt:'Portuguese (Brazil)', vi:'Vietnamese',
+    th:'Thai', id:'Indonesian'
+  };
   var tgtLang = langNames[lang] || 'English';
 
-  // ── 전략 2: 화면에 보이는 노드 우선 수집 ──
-  var allNodes = _cgoGetNodes();
-  if (!allNodes.length) return;
+  // ══ 전략1: 고정 번역 사전 (API 없이 즉시 적용) ══
+  var _staticDict = {
+    en: {
+      '대시보드':'Dashboard','오늘의 운세':'Today Fortune','가족 관리':'Family',
+      '건강 대시보드':'Health','정밀분석 리포트':'Report','풍수 카메라':'Feng Shui',
+      '작명 서비스':'Naming','별 충전소':'Star Shop','1대1 고민상담':'Consulting',
+      '행운 번호 추출기':'Lucky Numbers','커플 궁합 분석':'Couple Match',
+      '주식 에너지 예측':'Stock Energy','VIP 분석':'VIP','오행 맞춤 분석':'5-Elements',
+      '자동 계산':'⚡ Calculate','이름 (성명)':'Name','생년월일':'Birthday',
+      '성별':'Gender','남성 (男)':'Male','여성 (女)':'Female','양력':'Solar',
+      '음력':'Lunar','출생지':'Birthplace','현재 거주지':'Current Location',
+      '분석 중...':'Analyzing...','계산 완료':'Done!','오늘의 운세 상세 보기':'View Details',
+      '전체선택':'Select All','초기화':'Reset','분석 시작':'Start Analysis',
+      '저장':'Save','닫기':'Close','확인':'Confirm','취소':'Cancel',
+      '탭하여 정밀 분석':'Tap for Analysis','운명 기상청':'Life Navigator',
+      '과학입니다.':'It is Science.','실시간 데이터 연동':'Live Data',
+      '클릭하여 연결':'Click to Connect','50대 역학 선택':'Select Divination',
+      '0개 선택됨':'0 Selected','전체 반영 고지':'Global Sync Notice',
+      '전체 페이지 연동 분석':'Full Page Analysis','바로 입장':'Enter Now',
+      '입장하기':'Enter','언어를 선택하세요':'Select Language',
+      '총운':'Overall','재물':'Wealth','애정':'Love','건강':'Health',
+      '직업':'Career','대인관계':'Relations','합격':'Success','사업':'Business',
+      '가족':'Family','운세':'Fortune','행운 방위':'Lucky Direction',
+      '행운 숫자':'Lucky Number','행운 색상':'Lucky Color'
+    },
+    zh: {
+      '대시보드':'仪表板','오늘의 운세':'今日运势','가족 관리':'家庭管理',
+      '건강 대시보드':'健康仪表板','정밀분석 리포트':'精密分析报告',
+      '풍수 카메라':'风水相机','작명 서비스':'起名服务','별 충전소':'星星充值',
+      '1대1 고민상담':'一对一咨询','행운 번호 추출기':'幸运号码',
+      '커플 궁합 분석':'情侣合婚','주식 에너지 예측':'股票能量',
+      '자동 계산':'⚡ 自动计算','이름 (성명)':'姓名','생년월일':'出生日期',
+      '성별':'性别','남성 (男)':'男性','여성 (女)':'女性',
+      '양력':'阳历','음력':'农历','저장':'保存','닫기':'关闭',
+      '확인':'确认','취소':'取消','총운':'总运','재물':'财运',
+      '애정':'爱情','건강':'健康','직업':'事业','가족':'家庭'
+    },
+    ja: {
+      '대시보드':'ダッシュボード','오늘의 운세':'今日の運勢','가족 관리':'家族管理',
+      '건강 대시보드':'健康ダッシュボード','풍수 카메라':'風水カメラ',
+      '작명 서비스':'命名サービス','자동 계산':'⚡ 自動計算',
+      '이름 (성명)':'名前','생년월일':'生年月日','성별':'性別',
+      '남성 (男)':'男性','여성 (女)':'女性','양력':'新暦','음력':'旧暦',
+      '저장':'保存','닫기':'閉じる','확인':'確認','취소':'キャンセル',
+      '총운':'総運','재물':'財運','애정':'愛情','건강':'健康'
+    }
+  };
 
-  // 보이는 노드 먼저, 숨겨진 노드 나중
-  var visibleNodes = [], hiddenNodes = [];
+  // 사전으로 data-i18n 즉시 교체
+  var dict = _staticDict[lang] || {};
+  var p = _I18N[lang] || {};
+
+  // data-i18n 즉시 교체
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n');
+    if (p[k]) el.textContent = p[k];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+    var k = el.getAttribute('data-i18n-html');
+    if (p[k]) el.innerHTML = p[k];
+  });
+
+  // 사전으로 텍스트 노드 즉시 교체
+  var allNodes = _cgoGetNodes();
+  var apiNodes = []; // API가 필요한 노드들
+
   allNodes.forEach(function(node) {
-    var el = node.parentElement;
-    if (!el) return;
-    var rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight * 2 && rect.bottom > -100) {
-      visibleNodes.push(node);
-    } else {
-      hiddenNodes.push(node);
+    var t = (node.nodeValue || '').trim();
+    if (dict[t]) {
+      node.nodeValue = dict[t]; // 즉시 교체
+    } else if (t.length >= 2 && /[가-힣]/.test(t)) {
+      apiNodes.push(node); // API 필요
     }
   });
-  // 보이는 것 먼저, 나머지 뒤에
-  var nodes = visibleNodes.concat(hiddenNodes);
 
-  console.log('[CGO번역] 전체:', allNodes.length, '보이는것:', visibleNodes.length, 'lang:', lang);
+  console.log('[CGO번역] 사전:', allNodes.length - apiNodes.length + '개 즉시완료, API필요:', apiNodes.length + '개');
 
-  // ── 배지 생성 ──
+  if (!apiNodes.length) return; // API 불필요
+
+  // ══ 배지 생성 ══
   var badge = document.getElementById('_cgoTransBadge');
   if (!badge) {
     badge = document.createElement('div');
     badge.id = '_cgoTransBadge';
-    badge.style.cssText = 'position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(212,168,67,.98);color:#030818;font-size:12px;font-weight:900;padding:6px 20px;border-radius:20px;z-index:99999;letter-spacing:.04em;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none';
+    badge.style.cssText = 'position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(212,168,67,.98);color:#030818;font-size:12px;font-weight:900;padding:6px 20px;border-radius:20px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.6);pointer-events:none';
     document.body.appendChild(badge);
   }
   badge.textContent = (pack.flag||'🌐') + ' 번역 중... 0%';
   badge.style.display = 'block';
 
-  // ── 전략 3: localStorage 캐시 ──
-  var _cacheKey = 'cgo_trans_' + lang;
-  var _savedCache = {};
-  try {
-    var _saved = localStorage.getItem(_cacheKey);
-    if (_saved) _savedCache = JSON.parse(_saved);
-  } catch(e) {}
+  // ══ localStorage 캐시 로드 ══
+  var _cacheKey = 'cgo_trans_v2_' + lang;
+  var _cache = {};
+  try { var _s = localStorage.getItem(_cacheKey); if(_s) _cache = JSON.parse(_s); } catch(e) {}
 
-  // 배치 크기 20개 (작게 유지)
+  // 캐시 적용 후 남은 노드만 API 처리
+  var uncachedNodes = [];
+  apiNodes.forEach(function(node) {
+    var t = (node.nodeValue||'').trim();
+    if (_cache[t]) {
+      node.nodeValue = _cache[t];
+    } else {
+      uncachedNodes.push(node);
+    }
+  });
+
+  console.log('[CGO번역] 캐시:', apiNodes.length - uncachedNodes.length + '개, API호출:', uncachedNodes.length + '개');
+
+  if (!uncachedNodes.length) {
+    badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
+    setTimeout(function(){ badge.style.display='none'; }, 1500);
+    return;
+  }
+
+  // ══ 전략3: 완벽한 직렬 큐 (20개씩, 3초 간격) ══
   var batchSize = 20;
   var batches = [];
-  for (var i=0; i<nodes.length; i+=batchSize) batches.push(nodes.slice(i,i+batchSize));
+  for (var i=0; i<uncachedNodes.length; i+=batchSize) {
+    batches.push(uncachedNodes.slice(i, i+batchSize));
+  }
   var done = 0;
   var total = batches.length;
 
-  function doNextBatch(bi) {
-    if (bi >= total) return;
-    if (window._LANG !== lang) { badge.style.display='none'; return; }
+  // 직렬 처리 — 반드시 이전 완료 후 다음 실행
+  function processNextBatch(bi) {
+    if (bi >= total || window._LANG !== lang) {
+      badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
+      setTimeout(function(){ badge.style.display='none'; }, 2000);
+      // 캐시 저장
+      try {
+        if (Object.keys(_cache).length < 600) {
+          localStorage.setItem(_cacheKey, JSON.stringify(_cache));
+        }
+      } catch(e) {}
+      return;
+    }
 
     var batch = batches[bi];
-    var texts = batch.map(function(n){ return n.nodeValue.trim(); });
+    var texts = batch.map(function(n){ return (n.nodeValue||'').trim(); });
 
-    // ── 전략 3: 캐시 확인 ──
-    var cacheHit = true;
-    texts.forEach(function(t) { if (!_savedCache[t]) cacheHit = false; });
+    badge.textContent = (pack.flag||'🌐') + ' ' + Math.round((bi/total)*100) + '%';
 
-    if (cacheHit && texts.length > 0) {
-      // 캐시에서 즉시 적용
-      batch.forEach(function(node, i) {
-        var translated = _savedCache[texts[i]];
-        if (translated && translated !== texts[i]) node.nodeValue = translated;
-      });
-      done++;
-      badge.textContent = (pack.flag||'🌐') + ' ' + Math.round(done/total*100) + '%';
-      if (done >= total) {
-        badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
-        setTimeout(function(){ badge.style.display='none'; }, 1500);
-      } else {
-        setTimeout(function(){ doNextBatch(bi+1); }, 50);
-      }
-      return;
-    }
+    var sysMsg = 'Translate Korean to ' + tgtLang + '. Return ONLY a JSON array with same count. Keep emojis, numbers, brands.';
 
-    var sysMsg = 'Translate Korean UI text to ' + tgtLang + '. Return ONLY a JSON array. Same count as input. Keep emojis, numbers, brand names.';
-    var userMsg = JSON.stringify(texts);
-
-    // 메모리 캐시도 확인
-    if (!window._transCache) window._transCache = {};
-    var _memKey = lang + '_' + userMsg.substring(0, 40);
-    if (window._transCache[_memKey]) {
-      var _c = window._transCache[_memKey];
-      batch.forEach(function(node,i){ if(_c[i]) node.nodeValue=_c[i]; });
-      done++;
-      badge.textContent = (pack.flag||'🌐') + ' ' + Math.round(done/total*100) + '%';
-      if (done >= total) {
-        badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
-        setTimeout(function(){ badge.style.display='none'; }, 1500);
-      } else {
-        setTimeout(function(){ doNextBatch(bi+1); }, 100);
-      }
-      return;
-    }
-
-    // API 호출
     fetch('/api/groq', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        messages: [{role:'system', content:sysMsg}, {role:'user', content:userMsg}],
-        max_tokens: 1500,
-        temperature: 0.1,
-        stream: false
+        messages: [{role:'system', content:sysMsg}, {role:'user', content:JSON.stringify(texts)}],
+        max_tokens: 1200,
+        temperature: 0.1
       })
     })
     .then(function(r) {
       if (r.status === 429) {
-        // 429: 10초 대기 후 재시도
-        badge.textContent = (pack.flag||'🌐') + ' ⏳ 잠시 대기...';
-        return new Promise(function(resolve) {
-          setTimeout(function() {
-            fetch('/api/groq', {
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sysMsg},{role:'user',content:userMsg}],max_tokens:1500,temperature:0.1,stream:false})
-            }).then(function(r2){ return r2.json(); }).then(resolve).catch(function(){ resolve(null); });
-          }, 10000);
-        });
+        badge.textContent = (pack.flag||'🌐') + ' ⏳ 대기 중...';
+        // 429: 15초 후 같은 배치 재시도
+        setTimeout(function(){ processNextBatch(bi); }, 15000);
+        return null;
       }
-      if (!r.ok) { console.warn('[번역] HTTP오류:', r.status); return null; }
+      if (!r.ok) return null;
       return r.json();
     })
     .then(function(data) {
-      if (!data) {
-        done++;
-        if (done >= total) { badge.style.display='none'; }
-        else { setTimeout(function(){ doNextBatch(bi+1); }, 1500); }
-        return;
-      }
-      if (window._LANG !== lang) { badge.style.display='none'; return; }
+      if (!data) return; // 429 재시도 중이면 무시
       try {
         var raw = ((data.choices||[])[0]||{}).message && data.choices[0].message.content || '';
-        raw = raw.trim().replace(/^```[a-zA-Z]*/,'').replace(/```$/,'').trim();
+        raw = raw.trim().replace(/^```[\w]*/,'').replace(/```$/,'').trim();
         var m = raw.match(/(\[[\s\S]*\])/);
-        if (!m) throw new Error('no array: '+raw.substring(0,50));
+        if (!m) throw new Error('no array');
         var arr = JSON.parse(m[1]);
-
-        // 메모리 캐시 저장
-        window._transCache[_memKey] = arr;
-
         batch.forEach(function(node, i) {
           var v = arr[i];
-          if (v && typeof v==='string' && v.trim() && v !== node.nodeValue) {
+          if (v && typeof v==='string' && v.trim()) {
             node.nodeValue = v;
-            // localStorage 캐시에도 저장
-            _savedCache[texts[i]] = v;
+            _cache[texts[i]] = v; // 캐시에 저장
           }
         });
-
-        // localStorage 저장 (500개 이하일 때만)
-        try {
-          var cacheSize = Object.keys(_savedCache).length;
-          if (cacheSize < 500) {
-            localStorage.setItem(_cacheKey, JSON.stringify(_savedCache));
-          }
-        } catch(e) {}
-
-      } catch(e) { console.warn('[번역] 파싱오류 배치'+bi+':', e.message); }
+      } catch(e) { console.warn('[번역] 파싱오류 배치'+bi); }
 
       done++;
       badge.textContent = (pack.flag||'🌐') + ' ' + Math.round(done/total*100) + '%';
-      if (done >= total) {
-        badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
-        setTimeout(function(){ badge.style.display='none'; }, 2000);
-      } else {
-        // ── 전략 1: 배치 간 1.5초 간격 ──
-        setTimeout(function(){ doNextBatch(bi+1); }, 1500);
-      }
+
+      // ── 3초 후 다음 배치 ──
+      setTimeout(function(){ processNextBatch(bi+1); }, 3000);
     })
     .catch(function(err) {
-      console.error('[번역] fetch실패:', err.message||err);
+      console.warn('[번역] 오류 배치'+bi+':', err.message);
       done++;
-      if (done >= total) {
-        badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
-        setTimeout(function(){ badge.style.display='none'; }, 1500);
-      } else {
-        setTimeout(function(){ doNextBatch(bi+1); }, 2000);
-      }
+      // 오류 시 2초 후 다음 배치
+      setTimeout(function(){ processNextBatch(bi+1); }, 2000);
     });
   }
 
-  doNextBatch(0);
+  // 시작
+  processNextBatch(0);
 }
 
 // ── 팝업 번역 트리거 헬퍼 ──────────────────────────────────────
