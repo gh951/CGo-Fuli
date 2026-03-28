@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2388,7 +2387,7 @@ window._cgoGroqSpeak = function(text, onDone) {
     return;
   }
   var speakText = text.length > 60 ? text.substring(0, 60) + '.' : text;
-  fetch('https://api.groq.com/openai/v1/audio/speech', {
+  fetch('/api/tts', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'playai-tts', input: speakText, voice: 'Charon', response_format: 'mp3' })
@@ -5181,7 +5180,8 @@ function fcRunAnalysis(){
     resultDiv.scrollIntoView({behavior:'smooth', block:'start'});
 
   }, 3000);
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-gmd'));},800);}}
 
 // ── 팝업 열기/닫기 ──
 function openFcPopup(key, score, deg){
@@ -7877,8 +7877,8 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 // ══ Groq 키 자동 로테이션 (한도 초과시 다음 키로 자동 전환) ══
 (function(){
   var KEY_POOL = [
-    'Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28=',
-    'Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28=',
+    'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=',
+    'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=',
   ];
   window._CGO_KEY_POOL = KEY_POOL;
   var idx = parseInt(localStorage.getItem('cgo_key_idx') || '0');
@@ -9041,7 +9041,8 @@ function hltRunAnalysis(){
   })();
 
   setTimeout(function(){_hvShowResult(seed,oh,sd);},1300);
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-scan'));},800);}}
 
 // ── 생체 실측 5카드 동기화 함수 ──────────────────────────────
 function hltSyncBioCards() {
@@ -10135,7 +10136,8 @@ function hltCardTap(n){
   if(ov)ov.style.display='block';
   if(pop){pop.style.display='block';setTimeout(function(){pop.style.transform='translateY(0)';},20);}
   setTimeout(function(){if(pb)pb.querySelectorAll('[data-w]').forEach(function(b){b.style.width=b.getAttribute('data-w')+'%';});},400);
-}
+
+  _cgoTransPopup && _cgoTransPopup('hlt-pop');}
 function hltPopClose(){
   var pop=_g('hlt-pop');var ov=_g('hlt-pop-ov');
   if(pop){pop.style.transform='translateY(100%)';setTimeout(function(){pop.style.display='none';},350);}
@@ -12463,9 +12465,11 @@ function toggleLangMenu() {
 function setLang(lang) {
   _LANG = lang;
   var p = _I18N[lang] || _I18N['ko'];
-  // 언어 변경 시 번역 캐시 초기화
+  // 언어 변경 시 캐시 완전 초기화
+  window._transCache = {};
+  window._cgoOrigSnap = null;
+  window._cgoTransDone = null;
   if (lang !== 'ko') {
-    window._transCache = {};
     console.log('[CGO] setLang 호출: lang='+lang+' KEY='+(window.CG_GEMINI_KEY||'').substring(0,15)+'...');
   }
 
@@ -12588,10 +12592,16 @@ function setLang(lang) {
         if(_gs.options[1]) _gs.options[1].text=p.optFemale;
       }
     } catch(e){}
-    // AI 번역 실행 — 현재 DOM 상태 그대로 번역
+    // AI 번역 실행 — DOM 완전 렌더 후
+    // 1차: 800ms 후 (빠른 정적 텍스트)
     setTimeout(function(){
       _cgoAiTranslate(lang, p);
-    }, 100);
+    }, 800);
+    // 2차: 4초 후 재번역 (동적 생성 텍스트)
+    setTimeout(function(){
+      window._transCache = {};
+      _cgoAiTranslate(lang, p);
+    }, 4000);
   }
   // 별자리 이름 언어 업데이트
   if(typeof _updateZodiacLang==='function') _updateZodiacLang(lang);
@@ -12818,6 +12828,11 @@ function _cgoGetNodes(rootEl) {
       if (t.length >= 2 && /[가-힣]/.test(t)) {
         var par = node.parentElement;
         if (par && (par.getAttribute('data-i18n') || par.getAttribute('data-i18n-html'))) return;
+        // rootEl 없을 때 숨겨진 .page 제외
+        if (!rootEl && par) {
+          var pg = par.closest && par.closest('.page');
+          if (pg && !pg.classList.contains('active')) return;
+        }
         result.push(node);
       }
     } else if (node.nodeType === 1 && !skip[node.tagName]) {
@@ -12833,15 +12848,9 @@ function _cgoAiTranslate(lang, pack) {
   var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian'};
   var tgtLang = langNames[lang] || 'English';
 
-  // 2. 전체 body 한국어 노드 수집
   var nodes = _cgoGetNodes();
-  console.log('[CGO번역] 시작 lang='+lang+' tgt='+tgtLang+' 노드수='+nodes.length);
-  if (!nodes.length) {
-    console.warn('[CGO번역] 번역할 한국어 노드 없음! lang='+lang);
-    return;
-  }
+  if (!nodes.length) return;
 
-  // 3. 로딩 배지
   var badge = document.getElementById('_cgoTransBadge');
   if (!badge) {
     badge = document.createElement('div');
@@ -12853,10 +12862,9 @@ function _cgoAiTranslate(lang, pack) {
   badge.style.display = 'block';
 
   var apiKey = (window.CG_GEMINI_KEY||'').trim();
-  if (!apiKey) { try { apiKey=atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); }catch(e){} }
+  if (!apiKey) { try { apiKey=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); }catch(e){} }
 
-  // 4. 배치 분할 (60개씩)
-  var batchSize = 60;
+  var batchSize = 50;
   var batches = [];
   for (var i=0; i<nodes.length; i+=batchSize) batches.push(nodes.slice(i,i+batchSize));
   var done = 0;
@@ -12864,89 +12872,99 @@ function _cgoAiTranslate(lang, pack) {
 
   function doNextBatch(bi) {
     if (bi >= total) return;
-    // 언어가 바뀌었으면 중단
     if (window._LANG !== lang) { badge.style.display='none'; return; }
 
     var batch = batches[bi];
     var texts = batch.map(function(n){ return n.nodeValue.trim(); });
-
-    var sysMsg = 'You are a professional Korean UI translator. Task: translate Korean text to ' + tgtLang + '. Rules: 1) Return ONLY a JSON array. 2) Same number of elements as input. 3) Keep emojis, numbers, symbols, brand names (NASA, CGO-FULI, ILI, HRV, FCI, MBTI) unchanged. 4) Short UI text only - be concise.';
+    var sysMsg = 'Translate Korean to '+tgtLang+'. Return ONLY a JSON array with same number of elements. Keep emojis, numbers, brand names unchanged.';
     var userMsg = JSON.stringify(texts);
 
-    // 번역 캐시 확인 (동일 텍스트 재번역 방지)
-    var _tCacheKey = lang + '_' + userMsg.length + '_' + userMsg.substring(0,30) + userMsg.substring(userMsg.length-20);
+    var _key = lang+'_'+userMsg.length+'_'+userMsg.substring(0,20);
     if (!window._transCache) window._transCache = {};
-    if (window._transCache[_tCacheKey]) {
-      try {
-        var _cached = window._transCache[_tCacheKey];
-        batch.forEach(function(node,i){ if(_cached[i]&&_cached[i].trim()) node.nodeValue=_cached[i]; });
-      } catch(e){}
+    if (window._transCache[_key]) {
+      var _c = window._transCache[_key];
+      batch.forEach(function(node,i){ if(_c[i]&&_c[i].trim()) node.nodeValue=_c[i]; });
       done++;
       badge.textContent=(pack.flag||'🌐')+' '+Math.round(done/total*100)+'%';
-      if(done>=total){badge.textContent=(pack.flag||'🌐')+' ✓ 완료';setTimeout(function(){badge.style.display='none';},1500);}
+      if(done>=total){ badge.textContent=(pack.flag||'🌐')+' ✓ '+(pack.trans_done||'완료'); setTimeout(function(){badge.style.display='none';},1500); }
       else doNextBatch(bi+1);
       return;
     }
-    console.log('[CGO번역] 배치'+bi+' API호출 key='+apiKey.substring(0,15)+'...');
-    fetch('https://api.groq.com/openai/v1/chat/completions',{
+
+    fetch('/api/groq',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'llama-3.3-70b-versatile',
-        messages:[
-          {role:'system', content:sysMsg},
-          {role:'user', content:userMsg}
-        ],
-        max_tokens:2048,
-        temperature:0.1,
-        stream:false
+        messages:[{role:'system',content:sysMsg},{role:'user',content:userMsg}],
+        max_tokens:2048, temperature:0.1, stream:false
       })
     })
     .then(function(r){
-      console.log('[CGO번역] 배치'+bi+' HTTP응답:', r.status, r.statusText);
-      if(!r.ok) return r.text().then(function(t){ throw new Error('HTTP '+r.status+': '+t.substring(0,200)); });
+      if(r.status === 429){
+        // 429: 요청 한도 초과 → 3초 후 재시도
+        console.warn('[번역] 429 한도초과 — 3초 후 재시도');
+        badge.textContent = (pack.flag||'🌐') + ' ⏳ 잠시 대기 중...';
+        return new Promise(function(resolve){
+          setTimeout(function(){
+            fetch('/api/groq',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                model:'llama-3.3-70b-versatile',
+                messages:[{role:'system',content:sysMsg},{role:'user',content:userMsg}],
+                max_tokens:2048, temperature:0.1, stream:false
+              })
+            }).then(function(r2){ resolve(r2.json()); }).catch(function(){ resolve(null); });
+          }, 3000);
+        });
+      }
+      if(!r.ok){
+        badge.textContent='⚠️ API오류('+r.status+')';
+        setTimeout(function(){badge.style.display='none';},4000);
+        console.error('[번역] HTTP오류:',r.status);
+        return null;
+      }
       return r.json();
     })
     .then(function(data){
-      console.log('[CGO번역] 배치'+bi+' 응답OK');
+      if(!data){ done++; if(done>=total){badge.style.display='none';}else doNextBatch(bi+1); return; }
       if (window._LANG !== lang) { badge.style.display='none'; return; }
       try {
-        var raw = ((data.choices||[])[0]||{}).message && data.choices[0].message.content || '';
+        var raw = '';
+        if(data.choices && data.choices[0] && data.choices[0].message){
+          raw = data.choices[0].message.content || '';
+        }
         raw = raw.trim().replace(/^```[a-zA-Z]*/,'').replace(/```$/,'').trim();
-        // JSON 배열 추출
         var m = raw.match(/(\[[\s\S]*\])/);
-        if (!m) throw new Error('no array: ' + raw.substring(0,100));
+        if (!m) throw new Error('no array: '+raw.substring(0,50));
         var arr = JSON.parse(m[1]);
-        if (!Array.isArray(arr)) throw new Error('not array');
-        // 번역 결과 캐시 저장
-        window._transCache[_tCacheKey] = arr;
+        if(!Array.isArray(arr)) throw new Error('not array');
+        window._transCache[_key] = arr;
         batch.forEach(function(node,i){
           var v = arr[i];
-          if (v && typeof v === 'string' && v.trim() && v !== node.nodeValue) {
-            node.nodeValue = v;
-          }
+          if (v && typeof v==='string' && v.trim() && v !== node.nodeValue) node.nodeValue = v;
         });
-      } catch(e){
-        console.error('[CGO번역] 배치'+bi+' 파싱 오류:', e.message, 'raw:', raw.substring(0,200));
-      }
+      } catch(e) { console.warn('[번역] 파싱오류 배치'+bi+':', e.message); }
       done++;
-      badge.textContent = (pack.flag||'🌐') + ' ' + Math.round(done/total*100) + '%';
+      badge.textContent = (pack.flag||'🌐')+' '+Math.round(done/total*100)+'%';
       if (done >= total) {
-        badge.textContent = (pack.flag||'🌐') + ' ✓ ' + (pack.trans_done||'완료');
-        // AI 번역 완료 후 동적 텍스트 추가 적용
-        if(typeof _cgoApplyAllDynamicTexts==='function') {
-          setTimeout(function(){ _cgoApplyAllDynamicTexts(lang, pack); }, 100);
-        }
+        badge.textContent = (pack.flag||'🌐')+' ✓ '+(pack.trans_done||'완료');
         setTimeout(function(){ badge.style.display='none'; }, 2000);
       } else {
         doNextBatch(bi+1);
       }
     })
     .catch(function(err){
-      console.warn('[번역] 네트워크 오류 배치'+bi+':', err);
+      console.error('[번역] fetch실패 배치'+bi+':', err.message||err);
+      badge.textContent='⚠️ 네트워크오류 — 재시도중';
       done++;
-      if(done>=total){ badge.style.display='none'; }
-      else { setTimeout(function(){ doNextBatch(bi+1); }, 500); }
+      if(done>=total){
+        badge.textContent=(pack.flag||'🌐')+' ✓ '+(pack.trans_done||'완료');
+        setTimeout(function(){badge.style.display='none';},2000);
+      } else {
+        setTimeout(function(){ doNextBatch(bi+1); }, 1000);
+      }
     });
   }
 
@@ -12954,20 +12972,6 @@ function _cgoAiTranslate(lang, pack) {
 }
 
 // ── 팝업 번역 트리거 헬퍼 ──────────────────────────────────────
-function _cgoTransPopup(elId) {
-  if (!window._LANG || window._LANG === 'ko') return;
-  var el = document.getElementById(elId);
-  if (!el) return;
-  var p = _I18N[window._LANG];
-  if (!p) return;
-  clearTimeout(window._cgoPopupTransTimer);
-  window._cgoPopupTransTimer = setTimeout(function(){
-    if (typeof _cgoAiTranslatePage === 'function') {
-      _cgoAiTranslatePage(window._LANG, p, el);
-    }
-  }, 150);
-}
-
 // 특정 루트 엘리먼트만 번역 (페이지 전환용)
 function _cgoAiTranslatePage(lang, pack, rootEl) {
   var langNames = {en:'English',zh:'Simplified Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian'};
@@ -12976,9 +12980,11 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
   if (!nodes.length) return;
 
   var apiKey=(window.CG_GEMINI_KEY||'').trim();
-  if(!apiKey){try{apiKey=atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28=');}catch(e){}}
+  if(!apiKey){try{apiKey=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=');}catch(e){}}
 
-  var batchSize=60, batches=[], i;
+  var batchSize=80, batches=[], i;
+  // 노드 없으면 종료
+  if(nodes.length === 0) return;
   for(i=0;i<nodes.length;i+=batchSize) batches.push(nodes.slice(i,i+batchSize));
 
   function doBatch(bi){
@@ -12986,9 +12992,9 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
     var batch=batches[bi];
     var texts=batch.map(function(n){return n.nodeValue.trim();});
     var sysMsg='Translate Korean UI text to '+tgtLang+'. Return ONLY a JSON array. Same count. Keep brand names/emojis/numbers unchanged.';
-    fetch('https://api.groq.com/openai/v1/chat/completions',{
+    fetch('/api/groq',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sysMsg},{role:'user',content:JSON.stringify(texts)}],max_tokens:2048,temperature:0.1,stream:false})
     })
     .then(function(r){return r.json();})
@@ -13393,7 +13399,8 @@ function analyzeMyName() {
 
   var rc = document.getElementById('myNameResult');
   if (rc) rc.innerHTML = html;
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-naming');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 // ── 날짜 동기화 헬퍼 함수들 ──
 // ── 출생지·현재 위치 자동완성 ──
@@ -14668,7 +14675,8 @@ function runCouple(){
       rc.querySelectorAll('[data-w]').forEach(function(b){b.style.width=b.getAttribute('data-w')+'%';});
     },200);
   }
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-couple');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 
 // ============================================================
@@ -15118,7 +15126,8 @@ function runLotto() {
     rc.innerHTML=html;
     window._lottoDone = true;
   }
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-lotto');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 
 // ============================================================
@@ -16495,7 +16504,8 @@ function runNaming() {
       });
     }, 200);
   }
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-naming');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 
 
@@ -18623,10 +18633,14 @@ function calcAstro() {
     if (_cPack && typeof _cgoAiTranslate === 'function') {
       // 자동계산 후 캐시 초기화 → 재번역
       window._transCache = {};
-      // 1차: 1.5초 후 번역 (DOM 완전 생성 후)
-      setTimeout(function(){ _cgoAiTranslate(_cLang, _cPack); }, 1500);
-      // 2차: 6초 후 재번역 (느린 요소 포함)
-      setTimeout(function(){ _cgoAiTranslate(_cLang, _cPack); }, 6000);
+      window._cgoOrigSnap = null;
+      // 1차: 1초 후 번역
+      setTimeout(function(){ _cgoAiTranslate(_cLang, _cPack); }, 1000);
+      // 2차: 5초 후 재번역 (동적 텍스트 포함)
+      setTimeout(function(){
+        window._transCache = {};
+        _cgoAiTranslate(_cLang, _cPack);
+      }, 5000);
     }
   }
 
@@ -18863,7 +18877,8 @@ function syncToFamily(r){
   if(document.getElementById('page-family').classList.contains('active')) renderFamily();
   var sf=document.getElementById('stat-family');
   if(sf)sf.textContent=familyData.length;
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-family');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 // ============================================================
 // 리포트 생성 — 상세 + 친절한 설명
@@ -21403,14 +21418,9 @@ function cgoSoftGo(pageId) {
   if (pageId === 'couple') {
     setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); }, 200);
   }
-  // 외국어 선택 상태면 새 페이지도 번역
-  if (window._LANG && window._LANG !== 'ko') {
-    setTimeout(function(){
-      var p2 = _I18N[window._LANG];
-      if (p2 && typeof _cgoAiTranslate === 'function') _cgoAiTranslate(window._LANG, p2);
-    }, 500);
-  }
-  // 페이지 이동 후 번역 (정적팩 즉시 + AI 전체 번역)
+  // 페이지별 번역 후처리 트리거
+  window._cgoLastPage = pageId;
+  // 페이지 이동 후 번역
   if (window._LANG && window._LANG !== 'ko') {
     var _tLang = window._LANG;
     var _p3 = _I18N[_tLang];
@@ -21422,11 +21432,22 @@ function cgoSoftGo(pageId) {
       document.querySelectorAll('[data-i18n-html]').forEach(function(el){
         var k=el.getAttribute('data-i18n-html'); if(_p3[k]!==undefined) el.innerHTML=_p3[k];
       });
-      // AI 번역으로 동적 생성 텍스트 처리
+      // AI 번역 — 현재 활성 페이지만 번역 (빠름)
       setTimeout(function(){
+        if(window._LANG !== _tLang) return;
         window._transCache = {};
-        if (typeof _cgoAiTranslate === 'function') _cgoAiTranslate(_tLang, _p3);
+        var _pg = document.getElementById('page-'+pageId);
+        if(_pg && typeof _cgoAiTranslatePage === 'function') {
+          _cgoAiTranslatePage(_tLang, _p3, _pg);
+        } else if(typeof _cgoAiTranslate === 'function') {
+          _cgoAiTranslate(_tLang, _p3);
+        }
       }, 500);
+      // 2차: body 전체 재번역 (숨겨진 요소 포함)
+      setTimeout(function(){
+        if(window._LANG !== _tLang) return;
+        if(typeof _cgoAiTranslate === 'function') _cgoAiTranslate(_tLang, _p3);
+      }, 3500);
     }
   }
 }
@@ -22926,10 +22947,13 @@ var _tfEnvStream=null, _tfEnvTimer=null;
 function cgoOpenTodayFortune(){
   var ov = document.getElementById('todayFortuneOverlay');
   if(ov){ ov.style.display='block'; document.body.style.overflow='hidden'; }
-  // ✅ 현재 선택 언어로 오버레이 번역
-  if(window._LANG && window._LANG !== 'ko' && typeof _cgoAiTranslatePage === 'function'){
+  // 오늘의 운세 오버레이 번역 (언어가 한국어 아닐 때)
+  if(window._LANG && window._LANG !== 'ko') {
     var _tfOv = document.getElementById('todayFortuneOverlay');
-    if(_tfOv) setTimeout(function(){ _cgoAiTranslatePage(window._LANG, _I18N[window._LANG]||{}, _tfOv); }, 300);
+    var _p = _I18N[window._LANG] || {};
+    if(_tfOv && typeof _cgoAiTranslatePage === 'function') {
+      setTimeout(function(){ _cgoAiTranslatePage(window._LANG, _p, _tfOv); }, 300);
+    }
   }
   // 날짜 표시
   var now=new Date();
@@ -23383,6 +23407,16 @@ function _cgoTfCompute(r,w){
   var rs=document.getElementById('tf-result');
   if(ld) ld.style.display='none';
   if(rs) rs.style.display='block';
+
+  // 분석 결과 번역 트리거 (외국어일 때)
+  if(window._LANG && window._LANG !== 'ko') {
+    var _tfOv2 = document.getElementById('todayFortuneOverlay');
+    var _p2 = _I18N[window._LANG] || {};
+    if(_tfOv2 && typeof _cgoAiTranslatePage === 'function') {
+      setTimeout(function(){ _cgoAiTranslatePage(window._LANG, _p2, _tfOv2); }, 600);
+      setTimeout(function(){ _cgoAiTranslatePage(window._LANG, _p2, _tfOv2); }, 3500);
+    }
+  }
 
   // ══ calcResult에 오늘의 운세 결과 반영 → 전체 페이지 연동 ══
   window.calcResult = window.calcResult || {};
@@ -23924,11 +23958,11 @@ function cgoTfAiChat(){
     _addMsg('user', txt);
     _addMsg('ai', '<span style="color:#6b7280;">⏳ 분석 중...</span>');
     var key = (window.CG_GEMINI_KEY||'').trim();
-    if(!key){ try{ key=atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); }catch(e){} }
+    if(!key){ try{ key=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); }catch(e){} }
     var sys = 'CGO-FULI 운세 AI. 사용자: '+name+', 오행: '+oh+', 에너지: '+total+'점. 신점의 감각적 풀이+과학적 역학 분석으로 친근하게 2-3문장 한국어 답변.';
-    fetch('https://api.groq.com/openai/v1/chat/completions',{
+    fetch('/api/groq',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:txt}],max_tokens:300,temperature:0.7})
     }).then(function(res){return res.json();}).then(function(d){
       var box=document.getElementById(msgsId);
@@ -29415,6 +29449,14 @@ function syncAllPages(r){
       generateReport(window.calcResult);
     }
   }, 800);
+
+  // 외국어 선택 시 syncAllPages 완료 후 현재 페이지 재번역
+  if(window._LANG && window._LANG !== 'ko' && typeof _cgoAiTranslatePage === 'function') {
+    var _syncLang = window._LANG;
+    var _syncPack = _I18N[_syncLang] || {};
+    // syncAllPages 후 번역은 _cgoAiTranslate(전체)로 처리
+    // (calcAstro 후 번역 트리거에서 실행됨 — 중복 방지)
+  }
 }
 
 // ── 20개 역학 카드 배열 (가중치 순) ──────────────────────
@@ -30086,7 +30128,8 @@ function shopInit(){
   window._sCurPrompt=p;
   var pb=document.getElementById('shop-prompt-box'); if(pb)pb.textContent=p;
   shopRenderGrid('all');
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-shop'));},500);}}
 
 function _shopTalismanSvg(oh, emoji){
   var cfg={
@@ -32394,7 +32437,8 @@ function cgInit() {
   lines.push('💡 아래 버튼으로 주제를 선택하시거나 직접 입력해 주세요.');
 
   cgAddBubble('ai', lines.join('\n'), null);
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-consult'));},500);}}
 
 function cgQuick(topic) {
   var inp = document.getElementById('cg-input');
@@ -32458,7 +32502,7 @@ function cgSend() {
 function cgCallClaude(userText, sendBtn) {
 
   // 키 로딩 — 3단계 폴백
-  var _BUILTIN = 'Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28=';
+  var _BUILTIN = 'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=';
   if (!window.CG_GEMINI_KEY || window.CG_GEMINI_KEY.trim() === '') {
     // 1) localStorage
     var _saved = localStorage.getItem('cgo_gemini_key');
@@ -32618,7 +32662,7 @@ function cgCallClaude(userText, sendBtn) {
   messages.push({role:'user', content:userText});
 
   // ── Groq API 호출 (OpenAI 호환, 완전 무료) ──
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('/api/groq', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -32777,7 +32821,7 @@ function cgCloseApiKeyModal() {
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; }
   else {
-    try { window.CG_GEMINI_KEY = atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); } catch(e){}
+    try { window.CG_GEMINI_KEY = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); } catch(e){}
   }
   document.addEventListener('DOMContentLoaded', function(){
     var kb = document.getElementById('cg-key-btn');
@@ -32959,7 +33003,7 @@ function cgEnterSend(e) {
   try { saved = localStorage.getItem('cgo_gemini_key') || ''; } catch(e){}
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; return; }
-  try { window.CG_GEMINI_KEY = atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); } catch(e){}
+  try { window.CG_GEMINI_KEY = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); } catch(e){}
 })();
 
 // ── 페이지 진입 감지 → cgInit 호출 + 키 상태 체크 ──────
@@ -33167,7 +33211,7 @@ function stkAISearch(companyName) {
     + '설립일은 법인 설립 또는 공식 창업일 기준. 정확히 모르면 연도만이라도 YYYY-01-01로.'
     + '반드시 JSON 하나만, 마크다운 없이.';
 
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('/api/groq', {
     method: 'POST',
     headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
     body: JSON.stringify({
@@ -33724,9 +33768,9 @@ function runStockAnalysis() {
       var btn = document.getElementById('stk-analyze-btn');
       if (btn) { btn.disabled=true; btn.textContent='🤖 검색 중...'; }
       var prompt = '기업명: "'+searchVal+'"\nJSON만 답하세요: {"name":"","ticker":"","founded":"YYYY-MM-DD","country":"ISO2","sector":"한국어업종"}\n마크다운 없이 JSON만.';
-      fetch('https://api.groq.com/openai/v1/chat/completions',{
+      fetch('/api/groq',{
         method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:150,temperature:0.1})
       })
       .then(function(r){return r.json();})
@@ -34649,9 +34693,9 @@ function sptFetchWinRate(teamA, teamB, callback) {
   var apiKey = (window.CG_GEMINI_KEY||'').trim();
   if (!apiKey) return;
   var prompt = '축구/스포츠 통계: ' + teamA + ' vs ' + teamB + ' 최근 시즌 승률을 JSON으로만 답하세요. {"homeWin":숫자,"awayWin":숫자,"draw":숫자,"source":"리그명"} 형식. 데이터 없으면 {"homeWin":50,"awayWin":50,"draw":0,"source":"추정"}';
-  fetch('https://api.groq.com/openai/v1/chat/completions',{
+  fetch('/api/groq',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       model:'llama-3.3-70b-versatile',
       messages:[{role:'user',content:prompt}],
@@ -35067,7 +35111,7 @@ function sptAskAI(userText, isAuto) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   // ── 검색 필요 여부 판단 키워드 ─────────────────────────
@@ -35207,9 +35251,9 @@ function sptAskAI(userText, isAuto) {
           {role:'user',   content: _user3}
         ];
 
-        fetch('https://api.groq.com/openai/v1/chat/completions', {
+        fetch('/api/groq', {
           method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+          headers:{'Content-Type':'application/json'},
           body:JSON.stringify({model:'llama-3.3-70b-versatile', messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
         })
         .then(function(r3){ return r3.json(); })
@@ -35362,7 +35406,7 @@ function sptAskAI(userText, isAuto) {
       _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
       augMessages.push({role:'user', content: augUserContent});
 
-      return fetch('https://api.groq.com/openai/v1/chat/completions', {
+      return fetch('/api/groq', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
         body: JSON.stringify({
@@ -35394,7 +35438,7 @@ function sptAskAI(userText, isAuto) {
 }
 
 function _sptFallbackAnswer(messages, apiKey, sendBtn) {
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('/api/groq', {
     method: 'POST',
     headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
     body: JSON.stringify({model:'llama-3.3-70b-versatile', messages:messages, max_tokens:1200, temperature:0.75, stream:false})
@@ -35728,12 +35772,12 @@ function stkAiCallApi(userText) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX2dIRDRvNEZORXM1NDl3ZUhQSnZ4V0dkeWIzRllkNUFHMnlnbk9tM1RHTE0wbVRNUEt3d28='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('/api/groq', {
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'llama-3.3-70b-versatile', messages:messages, max_tokens:500, temperature:0.75, stream:false})
   })
   .then(function(r){ return r.json(); })
@@ -36254,7 +36298,8 @@ function vipShowEngineStatus() {
   el.innerHTML = engines.map(function(e, i) {
     return '<span style="font-size:9px;padding:2px 6px;border-radius:10px;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.25);color:rgba(212,168,67,0.7);animation:fadeIn .3s '+( i*0.08)+'s both;">✓'+e+'</span>';
   }).join('');
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-vip');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
 function vipSection(type) {
   var area = document.getElementById('vip-section-area');
@@ -36369,7 +36414,8 @@ function vipRenderStock() {
         +'</div>';
     }).join('');
   }
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-vip'));} ,600);}}
 
 // ── VIP 로또 고급 렌더 ──────────────────────────────────
 function vipLottoGen() {
@@ -36604,9 +36650,9 @@ function vipAskAI(userText) {
     return;
   }
 
-  fetch('https://api.groq.com/openai/v1/chat/completions', {
+  fetch('/api/groq', {
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,max_tokens:1500,temperature:0.7})
   }).then(function(r){ return r.json(); }).then(function(data) {
     if (typing) typing.remove();
@@ -36636,7 +36682,8 @@ function starInit(){
   else{_starState.naviUsed=saved.naviUsed||0;_starState.faceUsed=saved.faceUsed||0;_starState.objUsed=saved.objUsed||0;}
   _starState.plan=saved.plan||'free';
   starRenderUI();
-}
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},document.getElementById('page-star'));},500);}}
 function starSave(){localStorage.setItem('_starState',JSON.stringify({plan:_starState.plan,naviUsed:_starState.naviUsed,faceUsed:_starState.faceUsed,objUsed:_starState.objUsed,lastReset:_starState.lastReset}));}
 function starRenderUI(){
   var lim=STAR_LIMITS[_starState.plan];
@@ -38024,6 +38071,20 @@ function _cgoEntranceDone(){
   if(typeof _cgoInitAdmin === 'function') setTimeout(_cgoInitAdmin, 1000);
   // 우주 나침반 웰컴 팝업 표시 (1.2초 후)
   setTimeout(function(){ if(typeof cgpShow==='function') cgpShow(); }, 1200);
+
+  // 대문에서 선택한 언어 적용 — 앱 진입 완료 후 번역 실행
+  setTimeout(function(){
+    var _savedLang = 'ko';
+    try { _savedLang = localStorage.getItem('cgo_lang') || 'ko'; } catch(e){}
+    if(_savedLang && _savedLang !== 'ko') {
+      window._LANG = _savedLang;
+      console.log('[CGO] 앱 진입 후 언어 적용:', _savedLang);
+      // setLang으로 정적 텍스트 교체
+      if(typeof setLang === 'function') {
+        setLang(_savedLang);
+      }
+    }
+  }, 1500);
 }
 
 // ── 체크박스 연동 ──
@@ -38402,6 +38463,82 @@ function cgpShow(){
   } else {
     _p0Init();
   }
+})();
+</script>
+
+
+<!-- 번역 테스트 버튼 -->
+<div id="_cgoTestPanel" style="display:none;position:fixed;bottom:70px;right:10px;z-index:99999;flex-direction:column;gap:6px;max-width:200px;">
+  <div id="_cgoTestResult" style="background:rgba(0,0,0,.85);color:#34d399;font-size:10px;padding:8px;border-radius:8px;word-break:break-all;display:none;max-height:120px;overflow-y:auto;"></div>
+  <button id="_cgoTestApi" style="background:#1e40af;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border:none;border-radius:8px;cursor:pointer;">🔍 API 연결 테스트</button>
+  <button id="_cgoTestTrans" style="background:#065f46;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border:none;border-radius:8px;cursor:pointer;">🌐 번역 강제 실행</button>
+  <button id="_cgoTestClose" style="background:#374151;color:#9ca3af;font-size:10px;padding:4px;border:none;border-radius:6px;cursor:pointer;">✕ 닫기</button>
+</div>
+<script>
+(function(){
+  // 테스트 패널 — 항상 표시
+  function _initTestPanel(){
+    var p = document.getElementById('_cgoTestPanel');
+    if(p) p.style.display='flex';
+
+    var res = document.getElementById('_cgoTestResult');
+    function _show(msg, color){
+      if(!res) return;
+      res.style.display='block';
+      res.style.color = color||'#34d399';
+      res.textContent = msg;
+    }
+
+    // API 테스트
+    var testBtn = document.getElementById('_cgoTestApi');
+    if(testBtn) testBtn.addEventListener('click', function(){
+      _show('API 연결 중...', '#fbbf24');
+      var key = (window.CG_GEMINI_KEY||'');
+      if(!key){ try{ key=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); }catch(e){} }
+      fetch('/api/groq',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:'say "OK" in one word'}],max_tokens:10})
+      })
+      .then(function(r){
+        _show('HTTP: '+r.status+(r.ok?' ✅':' ❌'), r.ok?'#34d399':'#f87171');
+        return r.json();
+      })
+      .then(function(d){
+        var txt = d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'no content';
+        _show('API OK ✅ / 응답: '+txt+' / 키: '+key.substring(0,15)+'...', '#34d399');
+      })
+      .catch(function(e){
+        _show('연결실패 ❌ '+e.message, '#f87171');
+      });
+    });
+
+    // 번역 강제 실행
+    var transBtn = document.getElementById('_cgoTestTrans');
+    if(transBtn) transBtn.addEventListener('click', function(){
+      var lang = window._LANG||'ko';
+      if(lang==='ko'){ _show('언어를 먼저 선택하세요!','#fbbf24'); return; }
+      _show('번역 시작 (lang='+lang+')', '#fbbf24');
+      window._transCache={};
+      var p2=_I18N&&_I18N[lang];
+      if(p2&&typeof _cgoAiTranslate==='function'){
+        _cgoAiTranslate(lang,p2);
+        setTimeout(function(){ _show('번역 실행됨! 배지 확인하세요','#34d399'); },500);
+      } else {
+        _show('함수없음: _cgoAiTranslate='+typeof _cgoAiTranslate,'#f87171');
+      }
+    });
+
+    var closeBtn = document.getElementById('_cgoTestClose');
+    if(closeBtn) closeBtn.addEventListener('click', function(){
+      var p2=document.getElementById('_cgoTestPanel');
+      if(p2) p2.style.display='none';
+    });
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',_initTestPanel);
+  } else { _initTestPanel(); }
 })();
 </script>
 </body>
