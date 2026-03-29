@@ -30618,7 +30618,7 @@ function _showMusicList(el,bs,avg){
         '<div class="bsml-reason">'+t.reason+'</div>'+
       '</div>'+
       '<div class="bsml-actions">'+
-        (t.yt?'<button class="bsml-yt" data-song="'+encodeURIComponent(t.song||'')+'\" data-artist="'+encodeURIComponent(t.artist||'')+'\" onclick="event.stopPropagation();cgoYtBtn(this)">▶ YouTube</button>':'')+
+        (t.yt?'<a href="'+t.yt+'" target="_blank" class="bsml-yt" onclick="event.stopPropagation()">▶ YouTube</a>':'')+
         '<div class="bsml-tag" style="background:'+tb+';color:'+tc+';border:1px solid '+tbr+'">'+(t.tag||'')+'</div>'+
       '</div>'+
     '</div>';
@@ -33450,20 +33450,110 @@ document.addEventListener('DOMContentLoaded', function(){
     _origBsMusicRecommend = window.bsMusicRecommend;
   }, 500);
 
-  // 🎵 시진 자동 실시간 변경 — 2시간마다 시진이 바뀌면 음악 자동 갱신
-  setInterval(function(){
-    var newSiJin = getCurrentSiJin();
-    var newSeason = getCurrentSeason();
-    if(newSiJin !== _musicSiJin || newSeason !== _musicSeason) {
-      _musicSiJin = newSiJin;
-      _musicSeason = newSeason;
+  // 🎵 음악 자동 실시간 갱신 시스템 (A+B 통합)
+  var _prevMusicSiJin   = -1;
+  var _prevMusicSlot    = -1;  // 10분 슬롯
+  var _prevMusicSunLon  = null;
+  var _prevMusicMoonLon = null;
+
+  function _musicAutoRefresh(reason) {
+    var box = document.getElementById('bsMusicBox');
+    if (!box || box.style.display === 'none') return;
+    if (!window._lastMusicILI) return;
+
+    // 갱신 중 표시
+    var statusEl = document.getElementById('musicAutoStatus');
+    var timeEl   = document.getElementById('musicRefreshTime');
+    if (statusEl) {
+      statusEl.style.display = 'inline';
+      statusEl.textContent   = '⟳ ' + reason + ' → 갱신 중...';
+      statusEl.style.color   = '#d4a843';
+      statusEl.style.borderColor = 'rgba(212,168,67,.4)';
+      statusEl.style.background  = 'rgba(212,168,67,.1)';
+    }
+    if (timeEl) {
+      var n = new Date();
+      timeEl.textContent = n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+' 갱신';
+    }
+
+    setTimeout(function() {
       updateMusicTimeUI();
-      // 이미 계산된 사용자가 있으면 음악 자동 갱신
-      if(window._lastMusicILI) {
+      if (typeof bsMusicRecommend === 'function') {
         bsMusicRecommend(window._lastMusicILI);
       }
+      // 완료 후 상태 복원
+      setTimeout(function() {
+        if (statusEl) {
+          statusEl.textContent   = '⟳ 자동갱신 ON';
+          statusEl.style.color   = '#34d399';
+          statusEl.style.borderColor = 'rgba(52,211,153,.3)';
+          statusEl.style.background  = 'rgba(52,211,153,.1)';
+        }
+      }, 2000);
+    }, 300);
+  }
+
+  // A: 10분마다 + 시진 변경 체크
+  setInterval(function(){
+    var newSiJin  = getCurrentSiJin();
+    var newSeason = getCurrentSeason();
+    var nowSlot   = Math.floor(new Date().getMinutes() / 10); // 0~5 (10분 슬롯)
+
+    // 시진 변경 감지
+    if (newSiJin !== _musicSiJin || newSeason !== _musicSeason) {
+      _musicSiJin   = newSiJin;
+      _musicSeason  = newSeason;
+      _prevMusicSiJin = newSiJin;
+      _musicAutoRefresh('⏰ 시진 변경');
+      return;
     }
-  }, 60000); // 1분마다 체크
+
+    // 10분 슬롯 변경 감지
+    if (_prevMusicSlot !== -1 && nowSlot !== _prevMusicSlot) {
+      _prevMusicSlot = nowSlot;
+      _musicAutoRefresh('⏱ 10분 경과');
+      return;
+    }
+    _prevMusicSlot = nowSlot;
+
+    // B: NASA 행성 변화 감지
+    var np = window._nasaPlanets;
+    if (np && np.sun) {
+      var sunLon  = parseFloat(np.sun.lon  || 0);
+      var moonLon = np.moon ? parseFloat(np.moon.lon || 0) : null;
+
+      if (_prevMusicSunLon !== null) {
+        var sunDiff = Math.abs(sunLon - _prevMusicSunLon);
+        if (sunDiff > 180) sunDiff = 360 - sunDiff;
+        if (sunDiff >= 0.5) {
+          _prevMusicSunLon  = sunLon;
+          _prevMusicMoonLon = moonLon;
+          _musicAutoRefresh('🛰️ 태양 ' + sunLon.toFixed(1) + '°');
+          return;
+        }
+      } else {
+        _prevMusicSunLon = sunLon;
+      }
+
+      if (moonLon !== null && _prevMusicMoonLon !== null) {
+        var moonDiff = Math.abs(moonLon - _prevMusicMoonLon);
+        if (moonDiff > 180) moonDiff = 360 - moonDiff;
+        if (moonDiff >= 1.0) {
+          _prevMusicMoonLon = moonLon;
+          _musicAutoRefresh('🌙 달 ' + moonLon.toFixed(1) + '°');
+          return;
+        }
+      } else {
+        _prevMusicMoonLon = moonLon;
+      }
+    }
+  }, 60000); // 1분마다 체크 (A+B 통합)
+
+  // 자동갱신 ON 배지 표시
+  setTimeout(function(){
+    var statusEl = document.getElementById('musicAutoStatus');
+    if (statusEl) statusEl.style.display = 'inline';
+  }, 2000);
 });
 
 </script>
@@ -40636,44 +40726,7 @@ function cgoYtClose() {
 
   // 음악 박스 열릴 때 자동갱신 시작
   // bsMusicRecommend 호출 시점에 훅 연결
-  var _origBsMusicRecommend = null;
-  function _hookMusicRecommend() {
-    if (typeof bsMusicRecommend !== 'function') {
-      setTimeout(_hookMusicRecommend, 500);
-      return;
-    }
-    if (_origBsMusicRecommend) return; // 이미 훅됨
-    _origBsMusicRecommend = bsMusicRecommend;
-    // 전역 함수 래핑
-    var _wrapped = function(ili) {
-      _origBsMusicRecommend(ili);
-      // 음악 박스 열리면 자동갱신 시작
-      var statusEl = document.getElementById('musicAutoStatus');
-      if (statusEl) statusEl.style.display = 'inline';
-      _startTenMinTimer();
-      _startNasaWatcher();
-    };
-    // 전역에 덮어쓰기
-    if (window.bsMusicRecommend !== _wrapped) {
-      window.bsMusicRecommend = _wrapped;
-      bsMusicRecommend = _wrapped;
-    }
-  }
-
-  // DOM 준비 후 훅 연결
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _hookMusicRecommend);
-  } else {
-    setTimeout(_hookMusicRecommend, 1000);
-  }
-
-  // 페이지 나가면 타이머 정리
-  window.addEventListener('beforeunload', function() {
-    clearInterval(_musicAutoTimer);
-    clearInterval(_musicNasaTimer);
-  });
-
-  console.log('[CGO-MUSIC] 자동갱신 시스템 초기화 — A(10분) + B(NASA 감지)');
+  // A+B 자동갱신: 위 DOMContentLoaded 블록에서 통합 처리
 })();
 
 </script>
