@@ -2409,7 +2409,7 @@ window._cgoGroqSpeak = function(text, onDone) {
   var speakText = text.length > 60 ? text.substring(0, 60) + '.' : text;
   fetch('/api/tts', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'playai-tts', input: speakText, voice: 'Charon', response_format: 'mp3' })
   })
   .then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
@@ -19181,7 +19181,8 @@ function _checkCalcReady() {
   var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
   var mbtiOk  = !!(window._mbtiResult);
 
-  var allReady = nameOk && birthOk && faceOk && palmOk && tongOk;
+  // ✅ 수정: 이름+생년월일만 있으면 계산 가능 (스캔은 선택사항)
+  var allReady = nameOk && birthOk;
 
   // 버튼 활성/비활성
   btn.disabled = !allReady;
@@ -19192,7 +19193,11 @@ function _checkCalcReady() {
     var _t20 = _bp3.badge_20eng || '20개 역학 적용!';
     var _t19 = _bp3.badge_19eng || '19개 역학 → MBTI 추가 시 20개';
     var _tWait = _bp3.badge_wait || '준비 중...';
-    badge.textContent = (allReady && mbtiOk) ? _t20 : allReady ? _t19 : _tWait;
+    var allScans = faceOk && palmOk && tongOk;
+    badge.textContent = (allReady && mbtiOk && allScans) ? _t20
+      : (allReady && mbtiOk) ? _t20
+      : allReady ? _t19
+      : _tWait;
     badge.style.background = (allReady && mbtiOk) ? '#a855f7' : allReady ? '#34d399' : 'rgba(255,255,255,.15)';
     badge.style.color = (allReady && mbtiOk) ? '#fff' : allReady ? '#082011' : 'rgba(255,255,255,.4)';
   }
@@ -27158,8 +27163,12 @@ function bsFinish(){
       var badge = bsE('bsBadge');
       if(badge){ badge.textContent='👤 얼굴 완료'; badge.style.background='rgba(56,189,248,.15)'; badge.style.color='#38bdf8'; }
 
-      // 대시보드에서 출발한 경우 자동 복귀 (횟수 무관)
-      if(window._scanFromDashboard) _returnToDashboard(1500);
+      // ✅ 수정: 대시보드에서 출발한 경우에도 손금으로 자동 연속 (복귀 안 함)
+      // 관상 완료 → 손금 자동 시작 (1.5초 후)
+      setTimeout(function(){
+        if(typeof bsSetMode==='function') bsSetMode('palm');
+        if(typeof bsStart==='function') bsStart();
+      }, 1500);
 
       // 버튼을 "✋ 손금 스캔 시작"으로 전환
       var btn = bsE('bsBtn');
@@ -27283,8 +27292,12 @@ function bsFinish(){
       var badge2 = bsE('bsBadge');
       if(badge2){ badge2.textContent='✋ 손금 완료'; badge2.style.background='rgba(244,114,182,.15)'; badge2.style.color='#f472b6'; }
 
-      // 대시보드에서 출발한 경우 자동 복귀 (횟수 무관)
-      if(window._scanFromDashboard) _returnToDashboard(1500);
+      // ✅ 수정: 손금 완료 후도 혀 스캔 자동 연속 (복귀 안 함)
+      // 손금 완료 → 혀 자동 시작 (1.5초 후)
+      setTimeout(function(){
+        if(typeof bsSetMode==='function') bsSetMode('tongue');
+        if(typeof bsStart==='function') bsStart();
+      }, 1500);
 
       // STEP4 손금박스 자동 업데이트
       setTimeout(function(){
@@ -33933,8 +33946,7 @@ function cgCallClaude(userText, sendBtn) {
   fetch('/api/groq', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
@@ -34481,7 +34493,7 @@ function stkAISearch(companyName) {
 
   fetch('/api/groq', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [{role:'user', content: prompt}],
@@ -36880,7 +36892,7 @@ function sptAskAI(userText, isAuto) {
 
       return fetch('/api/groq', {
         method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
           messages: augMessages,
@@ -36912,7 +36924,7 @@ function sptAskAI(userText, isAuto) {
 function _sptFallbackAnswer(messages, apiKey, sendBtn) {
   fetch('/api/groq', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({model:'llama-3.3-70b-versatile', messages:messages, max_tokens:1200, temperature:0.75, stream:false})
   })
   .then(function(r){ return r.json(); })
