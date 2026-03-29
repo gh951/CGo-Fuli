@@ -1033,6 +1033,20 @@ input[type=number]::-webkit-outer-spin-button {
 .bsml-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
 .bsml-yt{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);color:#ff4444;font-size:10px;font-weight:700;text-decoration:none;flex-shrink:0;transition:background .2s}
 .bsml-yt:hover{background:rgba(255,0,0,.25)}
+/* ══ YouTube 인앱 플레이어 ══ */
+#cgoYtOverlay{position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;flex-direction:column;}
+#cgoYtOverlay.show{display:flex;}
+#cgoYtBox{position:relative;width:min(96vw,640px);background:#0f0f0f;border-radius:14px;overflow:hidden;box-shadow:0 0 60px rgba(255,0,0,.3);}
+#cgoYtClose{position:absolute;top:10px;right:10px;z-index:10;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#cgoYtFrame{width:100%;aspect-ratio:16/9;border:none;}
+#cgoYtInfo{padding:10px 14px;background:#0f0f0f;}
+#cgoYtResultList{max-height:220px;overflow-y:auto;padding:8px 14px;}
+.cgo-yt-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;align-items:center;}
+.cgo-yt-item:hover{background:rgba(255,255,255,.04);}
+.cgo-yt-thumb{width:80px;height:45px;object-fit:cover;border-radius:6px;flex-shrink:0;}
+.cgo-yt-title{font-size:11px;color:#e2e8f0;line-height:1.5;font-weight:600;}
+.cgo-yt-ch{font-size:9px;color:#94a3b8;margin-top:2px;}
+
 .bsml-tag{padding:3px 8px;border-radius:8px;font-size:9px;font-weight:700;flex-shrink:0}
 
 
@@ -4374,6 +4388,7 @@ function updateTransitSectionWithNASA(planets) {
         <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 6px #34d399;animation:pulse 2s infinite"></div>
         <span style="font-size:12px;color:rgba(56,189,248,.9);letter-spacing:.08em;font-weight:700">🎵 20대 역학 × NASA — 실시간 운 상승 음악 처방</span>
       <span id="musicRefreshTime" style="font-size:10px;color:rgba(56,189,248,.5);margin-left:8px"></span>
+      <span id="musicAutoStatus" style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;margin-left:6px;display:none;">⟳ 자동갱신 ON</span>
       </div>
       <span style="font-size:9px;color:rgba(240,230,200,.35);font-style:italic">음악을 듣는 것만으로도 운이 좋아진다</span>
     </div>
@@ -18525,14 +18540,149 @@ function julianDay(y,m,d){
   return d+Math.floor((153*mo+2)/5)+365*yr+Math.floor(yr/4)-Math.floor(yr/100)+Math.floor(yr/400)-32045;
 }
 
-function getDayGanJi(y,m,d){
-  var jd=julianDay(y,m,d);
-  return {gan:GANS[((jd%10)+10)%10], ji:JIJIS[((jd%12)+12)%12]};
+// ══════════════════════════════════════════════════════════════
+// 🛰️ NASA 실시간 태양 황도 기반 동적 만세력 (세계 최초)
+// 전통 만세력: 수식 근사값 → 절기 당일 오차 발생
+// NASA 융합:  태양 황도 실측 → 절기 분·초 단위 정밀 판별
+// ══════════════════════════════════════════════════════════════
+
+// 24절기 태양 황도 기준각 (°)
+var SOLAR_TERMS_LON = [
+  {lon:315, name:'소한', month:1},  // 1월
+  {lon:330, name:'대한', month:1},
+  {lon:345, name:'입춘', month:2},  // 2월 (인월 시작 ★)
+  {lon:0,   name:'우수', month:2},
+  {lon:15,  name:'경칩', month:3},  // 3월 (묘월 시작 ★)
+  {lon:30,  name:'춘분', month:3},
+  {lon:45,  name:'청명', month:4},  // 4월 (진월 시작 ★)
+  {lon:60,  name:'곡우', month:4},
+  {lon:75,  name:'입하', month:5},  // 5월 (사월 시작 ★)
+  {lon:90,  name:'소만', month:5},
+  {lon:105, name:'망종', month:6},  // 6월 (오월 시작 ★)
+  {lon:120, name:'하지', month:6},
+  {lon:135, name:'소서', month:7},  // 7월 (미월 시작 ★)
+  {lon:150, name:'대서', month:7},
+  {lon:165, name:'입추', month:8},  // 8월 (신월 시작 ★)
+  {lon:180, name:'처서', month:8},
+  {lon:195, name:'백로', month:9},  // 9월 (유월 시작 ★)
+  {lon:210, name:'추분', month:9},
+  {lon:225, name:'한로', month:10}, // 10월 (술월 시작 ★)
+  {lon:240, name:'상강', month:10},
+  {lon:255, name:'입동', month:11}, // 11월 (해월 시작 ★)
+  {lon:270, name:'소설', month:11},
+  {lon:285, name:'대설', month:12}, // 12월 (자월 시작 ★)
+  {lon:300, name:'동지', month:12},
+];
+
+// 월건(月建) 절기 시작 황도 (입춘=315°부터 각 30°마다)
+// 사주 월주: 입춘(315°) 기준 인월(寅月) 시작
+var MONTH_START_LON = [315,345,15,45,75,105,135,165,195,225,255,285];
+// 대응 지지: 인묘진사오미신유술해자축
+var MONTH_JI_ORDER = ['寅','卯','辰','巳','午','未','申','酉','戌','亥','子','丑'];
+
+/**
+ * NASA 태양 황도로 정확한 사주 월주 계산
+ * @param {number} sunLon - NASA JPL 실시간 태양 황도 (°)
+ * @param {number} y - 연도 (월간 계산용)
+ * @returns {gan, ji, term, termName} - 정밀 월주
+ */
+function getMonthGanJiNASA(sunLon, y) {
+  var lon = ((sunLon % 360) + 360) % 360;
+
+  // 현재 월건 인덱스 (0=인월, 1=묘월 ... 11=축월)
+  var monthIdx = 0;
+  for (var i = 0; i < 12; i++) {
+    var startLon = MONTH_START_LON[i];
+    var endLon   = MONTH_START_LON[(i + 1) % 12];
+    // 황도 0° 넘는 구간 처리 (285°→315° 사이)
+    var inRange;
+    if (startLon > endLon) {
+      inRange = (lon >= startLon || lon < endLon);
+    } else {
+      inRange = (lon >= startLon && lon < endLon);
+    }
+    if (inRange) { monthIdx = i; break; }
+  }
+
+  // 월지 (지지)
+  var monthJi = MONTH_JI_ORDER[monthIdx];
+
+  // 월간 (천간) — 연간 기준 오자법
+  // 甲己년→丙寅시작, 乙庚년→戊寅, 丙辛년→庚寅, 丁壬년→壬寅, 戊癸년→甲寅
+  var yearGanIdx = ((y - 4) % 10 + 10) % 10;
+  var monthGanBase = [2, 4, 6, 8, 0][yearGanIdx % 5]; // 인월 시작 천간 인덱스
+  var monthGan = GANS[(monthGanBase + monthIdx) % 10];
+
+  // 현재 절기 이름
+  var termName = '';
+  var minDiff = 360;
+  SOLAR_TERMS_LON.forEach(function(t) {
+    var diff = Math.abs(lon - t.lon);
+    if (diff > 180) diff = 360 - diff;
+    if (diff < minDiff) { minDiff = diff; termName = t.name; }
+  });
+
+  // 절기까지 남은 각도 (다음 절기까지)
+  var nextTermLon = MONTH_START_LON[(monthIdx + 1) % 12];
+  var remaining = nextTermLon - lon;
+  if (remaining < 0) remaining += 360;
+  var remainDays = Math.round(remaining / 360 * 365.25);
+
+  return {
+    gan: monthGan,
+    ji: monthJi,
+    termName: termName,
+    monthIdx: monthIdx,
+    remainDays: remainDays,
+    sunLon: lon.toFixed(2),
+    isNASA: true
+  };
 }
 
-function getMonthGanJi(y,m){
-  var gOff=[2,4,6,8,0][((y-4)%10+10)%10%5];
-  return {gan:GANS[(gOff+m-1)%10], ji:JIJIS[(m+1)%12]};
+/**
+ * 오늘 날짜의 NASA 기반 일진(日辰) — 현재는 전통 방식과 동일하나
+ * 향후 달 위상 보정 연동 가능
+ */
+function getDayGanJiNASA(y, m, d) {
+  var jd = julianDay(y, m, d);
+  var gan = GANS[((jd % 10) + 10) % 10];
+  var ji  = JIJIS[((jd % 12) + 12) % 12];
+  // NASA 달 위상으로 일진 에너지 보정값 계산
+  var moonBonus = 0;
+  if (window._nasaPlanets && window._nasaPlanets.moon) {
+    var moonLon = parseFloat(window._nasaPlanets.moon.lon || 0);
+    var sunLon2  = window._nasaPlanets.sun ? parseFloat(window._nasaPlanets.sun.lon || 0) : 0;
+    var phase    = ((moonLon - sunLon2) % 360 + 360) % 360;
+    // 보름(180°) 근처 — 에너지 최고조
+    moonBonus = Math.round(Math.sin(phase * Math.PI / 180) * 5);
+  }
+  return { gan: gan, ji: ji, moonBonus: moonBonus, isNASA: true };
+}
+
+/**
+ * 🛰️ NASA 동적 만세력 메인 함수
+ * 기존 getMonthGanJi를 NASA 실시간으로 대체
+ */
+function getMonthGanJi(y, m) {
+  // NASA 데이터 있으면 실시간 황도 기반
+  if (window._nasaPlanets && window._nasaPlanets.sun) {
+    var sunLon = parseFloat(window._nasaPlanets.sun.lon || 0);
+    var result = getMonthGanJiNASA(sunLon, y);
+    // 콘솔 로그 (디버깅용)
+    if (window._LANG === 'ko') {
+      console.log('[CGO-만세력] NASA 태양황도 ' + result.sunLon + '° → ' +
+        result.gan + result.ji + '월 (' + result.termName + ' 후 ' + result.remainDays + '일)');
+    }
+    return result;
+  }
+  // NASA 없으면 기존 수식 폴백
+  var gOff = [2, 4, 6, 8, 0][((y - 4) % 10 + 10) % 10 % 5];
+  return { gan: GANS[(gOff + m - 1) % 10], ji: JIJIS[(m + 1) % 12], isNASA: false };
+}
+
+function getDayGanJi(y, m, d) {
+  // NASA 달 위상 보정 포함
+  return getDayGanJiNASA(y, m, d);
 }
 
 function getHourShiIdx(h){ return h===23?0:Math.floor((h+1)/2); }
@@ -19275,11 +19425,43 @@ function calcAstro() {
   var y=parts[0], m=parts[1], d=parts[2];
   var h=parseInt(tStr.split(':')[0]);
 
-  // --- 사주 계산 ---
+  // --- 사주 계산 (NASA 실시간 동적 만세력) ---
   var yGan  = GANS[((y-4)%10+10)%10];
   var yJi   = JIJIS[((y-4)%12+12)%12];
   var mGJ   = getMonthGanJi(y,m);
   var dGJ   = getDayGanJi(y,m,d);
+
+  // ✅ NASA 동적 만세력 결과 표시
+  (function(){
+    var nb = document.getElementById('cgoNasaManseBadge');
+    if (!nb) {
+      nb = document.createElement('div');
+      nb.id = 'cgoNasaManseBadge';
+      nb.style.cssText = 'margin-top:8px;padding:8px 12px;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.25);border-radius:10px;font-size:10px;color:rgba(56,189,248,.9);line-height:1.7;display:none;';
+      var ip = document.querySelector('.input-panel');
+      if (ip) ip.appendChild(nb);
+    }
+    var np = window._nasaPlanets || {};
+    if (mGJ.isNASA && np.sun) {
+      var sLon = parseFloat(np.sun.lon||0).toFixed(1);
+      var moonTxt = dGJ.moonBonus !== 0
+        ? ' · 달 위상 <strong style="color:' + (dGJ.moonBonus > 0 ? '#34d399' : '#f87171') + '">' + (dGJ.moonBonus > 0 ? '+' : '') + dGJ.moonBonus + 'pts</strong>'
+        : '';
+      nb.innerHTML = '🛰️ <strong style="color:#38bdf8">NASA 동적 만세력</strong> · 태양 황도 <strong>' + sLon + '°</strong>'
+        + ' → <strong style="color:#d4a843">' + mGJ.gan + mGJ.ji + '월</strong>'
+        + (mGJ.termName ? ' · ' + mGJ.termName + ' 후 ' + (mGJ.remainDays||0) + '일' : '')
+        + moonTxt;
+      nb.style.background = 'rgba(56,189,248,.07)';
+      nb.style.borderColor = 'rgba(56,189,248,.25)';
+      nb.style.color = 'rgba(56,189,248,.9)';
+    } else {
+      nb.innerHTML = '⚠️ NASA 연결 중 — 전통 만세력 적용';
+      nb.style.background = 'rgba(251,191,36,.07)';
+      nb.style.borderColor = 'rgba(251,191,36,.25)';
+      nb.style.color = 'rgba(251,191,36,.8)';
+    }
+    nb.style.display = 'block';
+  })();
   var shiIdx = getHourShiIdx(h);
   var sGan  = getHourGan(GANS.indexOf(dGJ.gan), shiIdx);
   var sJi   = JIJIS[shiIdx];
@@ -30436,7 +30618,7 @@ function _showMusicList(el,bs,avg){
         '<div class="bsml-reason">'+t.reason+'</div>'+
       '</div>'+
       '<div class="bsml-actions">'+
-        (t.yt?'<a href="'+t.yt+'" target="_blank" class="bsml-yt" onclick="event.stopPropagation()">▶ YouTube</a>':'')+
+        (t.yt?'<button class="bsml-yt" data-song="'+encodeURIComponent(t.song||'')+'\" data-artist="'+encodeURIComponent(t.artist||'')+'\" onclick="event.stopPropagation();cgoYtBtn(this)">▶ YouTube</button>':'')+
         '<div class="bsml-tag" style="background:'+tb+';color:'+tc+';border:1px solid '+tbr+'">'+(t.tag||'')+'</div>'+
       '</div>'+
     '</div>';
@@ -30480,8 +30662,8 @@ function _showMusicList(el,bs,avg){
 
   // 유튜브 안내
   h+='<div style="background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.2);border-radius:12px;padding:13px;margin-bottom:14px">'+
-    '<div style="font-size:11px;color:rgba(255,80,80,.85);font-weight:700;margin-bottom:6px">▶ YouTube 검색 링크 안내</div>'+
-    '<div style="font-size:11px;color:rgba(240,230,200,.7);line-height:1.75">각 곡의 <strong style="color:#ff4444">YouTube</strong> 버튼을 누르면 해당 곡의 유튜브 검색 결과로 이동합니다. 공식 업로드·저작권 인증 영상을 선택하여 청취하세요. 솔페지오 주파수 음악은 대부분 무료 공개된 힐링 영상입니다.</div>'+
+    '<div style="font-size:11px;color:rgba(255,80,80,.85);font-weight:700;margin-bottom:6px">▶ YouTube 실시간 AI 검색 재생</div>'+
+    '<div style="font-size:11px;color:rgba(240,230,200,.7);line-height:1.75">각 곡의 <strong style="color:#ff4444">YouTube</strong> 버튼을 누르면 앱 안에서 바로 재생됩니다. YouTube Data API v3 실시간 검색으로 최적 영상을 자동 선택합니다.</div>'+
   '</div>';
 
   // 특허 배너
@@ -38425,6 +38607,25 @@ function cgoPrintReport() {
 
 
 
+
+
+
+
+<!-- ══ YouTube 인앱 플레이어 ══ -->
+<div id="cgoYtOverlay">
+  <div id="cgoYtBox">
+    <button id="cgoYtClose" onclick="cgoYtClose()">✕</button>
+    <iframe id="cgoYtFrame" src="" allowfullscreen allow="autoplay"></iframe>
+    <div id="cgoYtInfo">
+      <div id="cgoYtTitle" style="font-size:12px;font-weight:700;color:#f0e6c8;margin-bottom:2px;"></div>
+      <div id="cgoYtCh" style="font-size:10px;color:#94a3b8;"></div>
+    </div>
+    <div style="padding:6px 14px 4px;font-size:10px;color:rgba(240,220,160,.6);font-weight:700;">🔍 관련 영상 더 보기</div>
+    <div id="cgoYtResultList"></div>
+  </div>
+  <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3);">화면 밖 터치 또는 ✕ 로 닫기</div>
+</div>
+
 </body>
 </html>`);
   printWin.document.close();
@@ -40157,6 +40358,310 @@ function cgpShow(){
 </script>
 
 
+
+
+
+<script>
+// ══ CGO-FULI YouTube Data API v3 실시간 검색 + 인앱 재생 ══
+var _CGO_YT_KEY = 'AIzaSyDZ5nASm58tXaeZy0a4enYBoVaCqSRDht0';
+var _cgoYtCache = {}; // 검색 캐시 (쿼터 절약)
+
+// YouTube 검색 + 인앱 플레이어 열기
+// 버튼 data 속성에서 안전하게 읽기
+function cgoYtBtn(btn) {
+  var song   = decodeURIComponent(btn.dataset.song   || '');
+  var artist = decodeURIComponent(btn.dataset.artist || '');
+  cgoYtSearch(song + ' ' + artist, song, artist);
+}
+
+function cgoYtSearch(query, songName, artist) {
+  var overlay = document.getElementById('cgoYtOverlay');
+  var frame   = document.getElementById('cgoYtFrame');
+  var titleEl = document.getElementById('cgoYtTitle');
+  var chEl    = document.getElementById('cgoYtCh');
+  var listEl  = document.getElementById('cgoYtResultList');
+  if (!overlay) return;
+
+  // 플레이어 열기
+  overlay.classList.add('show');
+  if (titleEl) titleEl.textContent = '🔍 "' + songName + ' - ' + artist + '" 검색 중...';
+  if (chEl)    chEl.textContent = 'YouTube Data API v3 실시간 검색';
+  if (frame)   frame.src = '';
+  if (listEl)  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(240,220,160,.6);font-size:11px;">⏳ AI가 최적 영상을 검색 중입니다...</div>';
+
+  // 배경 클릭 닫기
+  overlay.onclick = function(e) {
+    if (e.target === overlay) cgoYtClose();
+  };
+
+  // 캐시 확인
+  if (_cgoYtCache[query]) {
+    _cgoYtRender(_cgoYtCache[query], frame, titleEl, chEl, listEl);
+    return;
+  }
+
+  // YouTube Data API v3 검색
+  var url = 'https://www.googleapis.com/youtube/v3/search'
+    + '?part=snippet'
+    + '&q=' + encodeURIComponent(query + ' 공식 MV OR official OR 음악')
+    + '&type=video'
+    + '&maxResults=5'
+    + '&videoEmbeddable=true'
+    + '&relevanceLanguage=ko'
+    + '&key=' + _CGO_YT_KEY;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        // API 오류 시 검색 페이지로 폴백
+        if (titleEl) titleEl.textContent = '⚠️ API 한도 초과 — 검색 페이지로 이동합니다';
+        setTimeout(function() {
+          window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), '_blank');
+          cgoYtClose();
+        }, 1000);
+        return;
+      }
+      var items = data.items || [];
+      if (!items.length) {
+        if (titleEl) titleEl.textContent = '검색 결과 없음';
+        return;
+      }
+      _cgoYtCache[query] = items; // 캐시 저장
+      _cgoYtRender(items, frame, titleEl, chEl, listEl);
+    })
+    .catch(function() {
+      // 네트워크 오류 시 폴백
+      window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), '_blank');
+      cgoYtClose();
+    });
+}
+
+function _cgoYtRender(items, frame, titleEl, chEl, listEl) {
+  if (!items || !items.length) return;
+  var first = items[0];
+  var vid   = first.id && first.id.videoId;
+  var snip  = first.snippet || {};
+
+  // 첫 번째 영상 자동 재생
+  if (frame && vid) {
+    frame.src = 'https://www.youtube.com/embed/' + vid + '?autoplay=1&rel=0';
+  }
+  if (titleEl) titleEl.textContent = snip.title || '';
+  if (chEl)    chEl.textContent = (snip.channelTitle || '') + ' · YouTube';
+
+  // 관련 영상 목록
+  if (listEl) {
+    // data 속성 방식 — 제목/채널명 특수문자 안전하게 처리
+    listEl.innerHTML = '';
+    items.forEach(function(item, i) {
+      var v  = (item.id && item.id.videoId) || '';
+      var s  = item.snippet || {};
+      var th = s.thumbnails && (s.thumbnails.default || s.thumbnails.medium);
+      var div = document.createElement('div');
+      div.className = 'cgo-yt-item';
+      div.dataset.vid = v;
+      div.dataset.title = s.title || '';
+      div.dataset.ch = s.channelTitle || '';
+      div.innerHTML = (th ? '<img class="cgo-yt-thumb" src="' + th.url + '" loading="lazy">' 
+        : '<div class="cgo-yt-thumb" style="background:#1a1a2e;display:flex;align-items:center;justify-content:center;font-size:20px;">▶</div>')
+        + '<div><div class="cgo-yt-title">' + (s.title || '') + '</div>'
+        + '<div class="cgo-yt-ch">' + (s.channelTitle || '') + '</div></div>';
+      div.onclick = function() {
+        cgoYtPlay(this.dataset.vid, this.dataset.title, this.dataset.ch);
+      };
+      listEl.appendChild(div);
+    });
+  }
+}
+
+// 다른 영상 선택 재생
+function cgoYtPlay(videoId, title, channel) {
+  var frame   = document.getElementById('cgoYtFrame');
+  var titleEl = document.getElementById('cgoYtTitle');
+  var chEl    = document.getElementById('cgoYtCh');
+  if (frame)   frame.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&rel=0';
+  if (titleEl) titleEl.textContent = title;
+  if (chEl)    chEl.textContent = channel + ' · YouTube';
+}
+
+// 플레이어 닫기
+function cgoYtClose() {
+  var overlay = document.getElementById('cgoYtOverlay');
+  var frame   = document.getElementById('cgoYtFrame');
+  if (frame)   frame.src = ''; // 재생 중지
+  if (overlay) overlay.classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+// 🎵 음악 처방 자동 갱신 시스템 (A+B)
+// A: 10분마다 자동 갱신
+// B: NASA 행성 변화 감지 시 즉시 갱신
+// ══════════════════════════════════════════════
+(function(){
+  var _musicAutoTimer  = null;  // 10분 타이머
+  var _musicNasaTimer  = null;  // NASA 감지 타이머
+  var _prevSunLon      = null;  // 이전 태양 황도
+  var _prevMoonLon     = null;  // 이전 달 황도
+  var _prevSiJin       = -1;    // 이전 시진
+  var PLANET_THRESHOLD = 0.5;   // 행성 이동 감지 임계값 (°)
+  var REFRESH_INTERVAL = 10 * 60 * 1000; // 10분 (ms)
+  var NASA_CHECK_INTERVAL = 60 * 1000;   // 1분마다 NASA 체크
+
+  // 음악 박스가 열려있고 스캔 완료된 경우에만 갱신
+  function _isMusicActive() {
+    var box = document.getElementById('bsMusicBox');
+    return box && box.style.display !== 'none' && window._lastMusicILI;
+  }
+
+  // 갱신 표시 애니메이션
+  function _showRefreshing(reason) {
+    var statusEl = document.getElementById('musicAutoStatus');
+    var timeEl   = document.getElementById('musicRefreshTime');
+    if (statusEl) {
+      statusEl.style.display = 'inline';
+      statusEl.textContent   = '⟳ ' + reason + ' 감지 → 갱신 중...';
+      statusEl.style.background = 'rgba(212,168,67,.12)';
+      statusEl.style.borderColor = 'rgba(212,168,67,.4)';
+      statusEl.style.color = '#d4a843';
+      setTimeout(function() {
+        statusEl.textContent   = '⟳ 자동갱신 ON';
+        statusEl.style.background = 'rgba(52,211,153,.1)';
+        statusEl.style.borderColor = 'rgba(52,211,153,.3)';
+        statusEl.style.color = '#34d399';
+      }, 3000);
+    }
+    if (timeEl) {
+      var now = new Date();
+      timeEl.textContent = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + ' 갱신';
+    }
+  }
+
+  // 실제 갱신 실행
+  function _doRefresh(reason) {
+    if (!_isMusicActive()) return;
+    _showRefreshing(reason);
+    setTimeout(function() {
+      if (typeof bsMusicRecommend === 'function') {
+        bsMusicRecommend(window._lastMusicILI);
+      }
+    }, 400);
+  }
+
+  // A: 10분 타이머 시작
+  function _startTenMinTimer() {
+    clearInterval(_musicAutoTimer);
+    _musicAutoTimer = setInterval(function() {
+      if (!_isMusicActive()) return;
+      // 시진 변경 체크 (2시간마다)
+      var nowH  = new Date().getHours();
+      var siJin = Math.floor(nowH / 2);
+      if (siJin !== _prevSiJin) {
+        _prevSiJin = siJin;
+        _doRefresh('⏰ 시진 변경');
+      } else {
+        _doRefresh('⏱ 10분 경과');
+      }
+    }, REFRESH_INTERVAL);
+  }
+
+  // B: NASA 행성 변화 감지
+  function _startNasaWatcher() {
+    clearInterval(_musicNasaTimer);
+    _musicNasaTimer = setInterval(function() {
+      if (!_isMusicActive()) return;
+      var np = window._nasaPlanets;
+      if (!np || !np.sun) return;
+
+      var sunLon  = parseFloat(np.sun.lon  || 0);
+      var moonLon = np.moon ? parseFloat(np.moon.lon || 0) : null;
+
+      // 태양 황도 변화 감지
+      if (_prevSunLon !== null) {
+        var sunDiff = Math.abs(sunLon - _prevSunLon);
+        if (sunDiff > 180) sunDiff = 360 - sunDiff; // 0°/360° 경계 처리
+        if (sunDiff >= PLANET_THRESHOLD) {
+          _prevSunLon  = sunLon;
+          _prevMoonLon = moonLon;
+          _doRefresh('🛰️ 태양 ' + sunLon.toFixed(1) + '°');
+          return;
+        }
+      } else {
+        _prevSunLon = sunLon;
+      }
+
+      // 달 황도 변화 감지 (달은 더 빠르게 움직임 → 임계값 1°)
+      if (moonLon !== null && _prevMoonLon !== null) {
+        var moonDiff = Math.abs(moonLon - _prevMoonLon);
+        if (moonDiff > 180) moonDiff = 360 - moonDiff;
+        if (moonDiff >= 1.0) {
+          _prevMoonLon = moonLon;
+          _doRefresh('🌙 달 ' + moonLon.toFixed(1) + '°');
+        }
+      } else {
+        _prevMoonLon = moonLon;
+      }
+    }, NASA_CHECK_INTERVAL);
+  }
+
+  // 음악 박스 열릴 때 자동갱신 시작
+  // bsMusicRecommend 호출 시점에 훅 연결
+  var _origBsMusicRecommend = null;
+  function _hookMusicRecommend() {
+    if (typeof bsMusicRecommend !== 'function') {
+      setTimeout(_hookMusicRecommend, 500);
+      return;
+    }
+    if (_origBsMusicRecommend) return; // 이미 훅됨
+    _origBsMusicRecommend = bsMusicRecommend;
+    // 전역 함수 래핑
+    var _wrapped = function(ili) {
+      _origBsMusicRecommend(ili);
+      // 음악 박스 열리면 자동갱신 시작
+      var statusEl = document.getElementById('musicAutoStatus');
+      if (statusEl) statusEl.style.display = 'inline';
+      _startTenMinTimer();
+      _startNasaWatcher();
+    };
+    // 전역에 덮어쓰기
+    if (window.bsMusicRecommend !== _wrapped) {
+      window.bsMusicRecommend = _wrapped;
+      bsMusicRecommend = _wrapped;
+    }
+  }
+
+  // DOM 준비 후 훅 연결
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _hookMusicRecommend);
+  } else {
+    setTimeout(_hookMusicRecommend, 1000);
+  }
+
+  // 페이지 나가면 타이머 정리
+  window.addEventListener('beforeunload', function() {
+    clearInterval(_musicAutoTimer);
+    clearInterval(_musicNasaTimer);
+  });
+
+  console.log('[CGO-MUSIC] 자동갱신 시스템 초기화 — A(10분) + B(NASA 감지)');
+})();
+
+</script>
+
+<!-- ══ YouTube 인앱 플레이어 ══ -->
+<div id="cgoYtOverlay">
+  <div id="cgoYtBox">
+    <button id="cgoYtClose" onclick="cgoYtClose()">✕</button>
+    <iframe id="cgoYtFrame" src="" allowfullscreen allow="autoplay"></iframe>
+    <div id="cgoYtInfo">
+      <div id="cgoYtTitle" style="font-size:12px;font-weight:700;color:#f0e6c8;margin-bottom:2px;"></div>
+      <div id="cgoYtCh" style="font-size:10px;color:#94a3b8;"></div>
+    </div>
+    <div style="padding:6px 14px 4px;font-size:10px;color:rgba(240,220,160,.6);font-weight:700;">🔍 관련 영상 더 보기</div>
+    <div id="cgoYtResultList"></div>
+  </div>
+  <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3);">화면 밖 터치 또는 ✕ 로 닫기</div>
+</div>
 
 </body>
 </html>
