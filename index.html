@@ -39330,50 +39330,35 @@ function _cgoUpdateSat() {
 
 // ── B. 날씨 실시간 (GPS → OpenWeather 무료) ──
 function _cgoUpdateWeather() {
-  // 기존 날씨 데이터 재활용 (이미 앱에서 로딩됨)
-  var iconEl   = document.getElementById('cgoWeatherIconBar');
-  var tempEl   = document.getElementById('cgoWeatherTempBar');
-  var humEl    = document.getElementById('cgoWeatherHumBar');
-  var ohEl     = document.getElementById('cgoWeatherOhBar');
-
-  // 기존 캐시 데이터 활용
-  var temp = window._tzrWeatherTemp || null;
-  var key  = window._tzrWeatherKey  || null;
+  var iconEl = document.getElementById('cgoWeatherIconBar');
+  var tempEl = document.getElementById('cgoWeatherTempBar');
+  var humEl  = document.getElementById('cgoWeatherHumBar');
+  var ohEl   = document.getElementById('cgoWeatherOhBar');
 
   var weatherMap = {
-    sunny:    { icon:'☀️', oh:'화(火)', hum:'낮음' },
-    cloudy:   { icon:'⛅', oh:'금(金)', hum:'중간' },
-    overcast: { icon:'☁️', oh:'토(土)', hum:'높음' },
-    rain:     { icon:'🌧️', oh:'수(水)', hum:'높음' },
-    snow:     { icon:'❄️', oh:'수(水)', hum:'높음' },
-    thunder:  { icon:'⛈️', oh:'화(火)', hum:'매우높음' },
-    morning:  { icon:'🌅', oh:'목(木)', hum:'중간' },
-    noon:     { icon:'☀️', oh:'화(火)', hum:'낮음' },
-    afternoon:{ icon:'🌤️', oh:'금(金)', hum:'중간' },
-    evening:  { icon:'🌇', oh:'토(土)', hum:'중간' },
-    night:    { icon:'🌙', oh:'수(水)', hum:'중간' }
+    sunny:{icon:'☀️',oh:'화(火)',hum:'45%'},
+    cloudy:{icon:'⛅',oh:'금(金)',hum:'55%'},
+    overcast:{icon:'☁️',oh:'토(土)',hum:'70%'},
+    rain:{icon:'🌧️',oh:'수(水)',hum:'85%'},
+    snow:{icon:'❄️',oh:'수(水)',hum:'80%'},
+    thunder:{icon:'⛈️',oh:'화(火)',hum:'90%'},
+    morning:{icon:'🌅',oh:'목(木)',hum:'50%'},
+    noon:{icon:'☀️',oh:'화(火)',hum:'40%'},
+    afternoon:{icon:'🌤️',oh:'금(金)',hum:'45%'},
+    evening:{icon:'🌇',oh:'토(土)',hum:'55%'},
+    night:{icon:'🌙',oh:'수(水)',hum:'60%'}
   };
 
-  var wData = weatherMap[key] || weatherMap['afternoon'];
+  var hr = new Date().getHours();
+  var timeKey = hr>=6&&hr<9?'morning':hr>=9&&hr<12?'noon':hr>=12&&hr<18?'afternoon':hr>=18&&hr<21?'evening':'night';
+  var key   = window._tzrWeatherKey  || timeKey;
+  var temp  = window._tzrWeatherTemp || null;
+  var wData = weatherMap[key] || weatherMap[timeKey];
 
   if(iconEl) iconEl.textContent = wData.icon;
-  if(tempEl) tempEl.textContent = temp ? temp + '°C' : '--°C';
-  if(humEl)  humEl.textContent  = '습도 ' + (key==='rain'||key==='snow'?'80':key==='overcast'?'65':'45') + '%';
-  if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
-
-  // GPS 기반 실시간 날씨 요청
-  if(!window._cgoWeatherLoaded) {
-    window._cgoWeatherLoaded = true;
-    cgoGetLocation(function(pos) {
-      if(!pos) return;
-      // 현재 시간대로 날씨 오행 추정
-      var hr = new Date().getHours();
-      var wKey = hr>=6&&hr<9?'morning':hr>=9&&hr<18?'sunny':hr>=18&&hr<21?'evening':'night';
-      var w2 = weatherMap[wKey];
-      if(iconEl) iconEl.textContent = w2.icon;
-      if(ohEl)   ohEl.textContent   = '오행 ' + w2.oh;
-    });
-  }
+  if(tempEl) tempEl.textContent = temp ? temp+'°C' : '--°C';
+  if(humEl)  humEl.textContent  = '습도 '+wData.hum;
+  if(ohEl)   ohEl.textContent   = wData.oh+' 기운';
 }
 
 // ── C. 나침반 실시간 ──
@@ -39451,27 +39436,38 @@ function _cgoStartCompassBar() {
   }, 3000);
 }
 
-// ── 전체 초기화 ──
-(function() {
-  // 위성: 30초마다 갱신
+// ── 전체 초기화 — DOM 준비 후 실행 ──
+function _cgoRealtimeInit() {
+  // 위젯 DOM 존재 확인
+  if (!document.getElementById('cgoRealtimeBar')) {
+    setTimeout(_cgoRealtimeInit, 500);
+    return;
+  }
+
+  // 🛰️ 위성: 즉시 + 30초마다 갱신
   _cgoUpdateSat();
   setInterval(_cgoUpdateSat, 30000);
 
-  // 날씨: 5분마다 갱신
-  _cgoUpdateWeather();
-  setInterval(_cgoUpdateWeather, 300000);
+  // ☀️ 날씨: 1초 후 + 5분마다 갱신 (다른 위치 데이터 로딩 후)
+  setTimeout(function() {
+    _cgoUpdateWeather();
+    setInterval(_cgoUpdateWeather, 300000);
+  }, 1000);
 
-  // 날씨: 기존 tzrWeather 업데이트 시 자동 반영
-  var _origTzrUpdate = window._tzrUpdate;
-  if(typeof _origTzrUpdate === 'function') {
-    setTimeout(function() { _cgoUpdateWeather(); }, 2000);
-  }
-
-  // 나침반: 즉시 시작
-  _cgoStartCompassBar();
+  // 🧭 나침반: 2초 후 시작 (권한 요청 겹치지 않도록)
+  setTimeout(function() {
+    _cgoStartCompassBar();
+  }, 2000);
 
   console.log('[CGO-REALTIME] 🛰️ 위성 + ☀️ 날씨 + 🧭 나침반 실시간 엔진 가동');
-})();
+}
+
+// DOM 준비 시 실행
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _cgoRealtimeInit);
+} else {
+  setTimeout(_cgoRealtimeInit, 300);
+}
 </script>
 
 </body>
