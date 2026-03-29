@@ -36221,14 +36221,31 @@ function sptRenderMatches(tab) {
   var list = document.getElementById('spt-match-list');
   if (!list) return;
 
+  // ✅ 핀셋 수정: 종목별 최대 30개 제한
+  var MAX_PER_TAB = 30;
+
   var matches = [];
   if (tab === 'all') {
+    // 전체탭: 각 종목별 30개씩 → 합쳐서 표시
     Object.keys(SPT_MATCH_DB).forEach(function(k) {
-      SPT_MATCH_DB[k].forEach(function(m) { matches.push(Object.assign({}, m, {type:k})); });
+      var limited = SPT_MATCH_DB[k].slice(0, MAX_PER_TAB);
+      limited.forEach(function(m) { matches.push(Object.assign({}, m, {type:k})); });
     });
   } else {
-    matches = (SPT_MATCH_DB[tab] || []).map(function(m){ return Object.assign({}, m, {type:tab}); });
+    // 개별탭: 해당 종목 최대 30개만
+    matches = (SPT_MATCH_DB[tab] || []).slice(0, MAX_PER_TAB).map(function(m){
+      return Object.assign({}, m, {type:tab});
+    });
   }
+
+  // ✅ 핀셋 수정: 진행중·예정 경기 우선 정렬 (종료 경기는 뒤로)
+  matches.sort(function(a, b) {
+    var stA = a.status || 'NS';
+    var stB = b.status || 'NS';
+    var doneA = (stA==='FT'||stA==='AET'||stA==='PEN'||stA==='AWD'||stA==='WO') ? 1 : 0;
+    var doneB = (stB==='FT'||stB==='AET'||stB==='PEN'||stB==='AWD'||stB==='WO') ? 1 : 0;
+    return doneA - doneB;
+  });
 
   var sportIcon = {soccer:'⚽', baseball:'⚾', basketball:'🏀', volleyball:'🏐', tennis:'🎾', etc:'🏅'};
 
