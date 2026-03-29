@@ -39340,25 +39340,73 @@ function _cgoUpdateWeather() {
     cloudy:{icon:'⛅',oh:'금(金)',hum:'55%'},
     overcast:{icon:'☁️',oh:'토(土)',hum:'70%'},
     rain:{icon:'🌧️',oh:'수(水)',hum:'85%'},
-    snow:{icon:'❄️',oh:'수(水)',hum:'80%'},
+    snow:{icon:'❄️',oh:'수(Water)',hum:'80%'},
     thunder:{icon:'⛈️',oh:'화(火)',hum:'90%'},
     morning:{icon:'🌅',oh:'목(木)',hum:'50%'},
     noon:{icon:'☀️',oh:'화(火)',hum:'40%'},
     afternoon:{icon:'🌤️',oh:'금(金)',hum:'45%'},
     evening:{icon:'🌇',oh:'토(土)',hum:'55%'},
-    night:{icon:'🌙',oh:'수(水)',hum:'60%'}
+    night:{icon:'🌙',oh:'수(Water)',hum:'60%'}
   };
 
   var hr = new Date().getHours();
   var timeKey = hr>=6&&hr<9?'morning':hr>=9&&hr<12?'noon':hr>=12&&hr<18?'afternoon':hr>=18&&hr<21?'evening':'night';
-  var key   = window._tzrWeatherKey  || timeKey;
-  var temp  = window._tzrWeatherTemp || null;
-  var wData = weatherMap[key] || weatherMap[timeKey];
 
-  if(iconEl) iconEl.textContent = wData.icon;
-  if(tempEl) tempEl.textContent = temp ? temp+'°C' : '--°C';
-  if(humEl)  humEl.textContent  = '습도 '+wData.hum;
-  if(ohEl)   ohEl.textContent   = wData.oh+' 기운';
+  // 기존 앱 날씨 데이터 있으면 즉시 표시
+  if(window._tzrWeatherKey && window._tzrWeatherTemp) {
+    var key = window._tzrWeatherKey;
+    var wData = weatherMap[key] || weatherMap[timeKey];
+    if(iconEl) iconEl.textContent = wData.icon;
+    if(tempEl) tempEl.textContent = window._tzrWeatherTemp + '°C';
+    if(humEl)  humEl.textContent  = '습도 ' + wData.hum;
+    if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
+    return;
+  }
+
+  // wttr.in API로 직접 날씨 가져오기 (위치 권한 불필요)
+  if(!window._cgoBarWeatherDone) {
+    window._cgoBarWeatherDone = true;
+    if(tempEl) tempEl.textContent = '로딩중...';
+    fetch('https://wttr.in/?format=j1&lang=ko')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var cur = d.current_condition && d.current_condition[0];
+        if(!cur) throw new Error('no data');
+        var tempC = cur.temp_C || '--';
+        var hum   = cur.humidity || '--';
+        var code  = parseInt(cur.weatherCode || 800);
+        var wKey;
+        if(code===800){wKey='sunny';}
+        else if(code<=802){wKey='cloudy';}
+        else if(code<=804){wKey='overcast';}
+        else if(code<=531){wKey='rain';}
+        else if(code<=622){wKey='snow';}
+        else if(code<=232){wKey='thunder';}
+        else{wKey=timeKey;}
+        window._tzrWeatherKey  = wKey;
+        window._tzrWeatherTemp = tempC;
+        var wData = weatherMap[wKey] || weatherMap[timeKey];
+        if(iconEl) iconEl.textContent = wData.icon;
+        if(tempEl) tempEl.textContent = tempC + '°C';
+        if(humEl)  humEl.textContent  = '습도 ' + hum + '%';
+        if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
+      })
+      .catch(function() {
+        // 폴백: 시간대 기반
+        var wData = weatherMap[timeKey];
+        if(iconEl) iconEl.textContent = wData.icon;
+        if(tempEl) tempEl.textContent = '--°C';
+        if(humEl)  humEl.textContent  = '습도 ' + wData.hum;
+        if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
+      });
+  } else {
+    // 이미 요청 중 — 시간대 기반으로 일단 표시
+    var wData = weatherMap[timeKey];
+    if(iconEl) iconEl.textContent = wData.icon;
+    if(tempEl) tempEl.textContent = '--°C';
+    if(humEl)  humEl.textContent  = '습도 ' + wData.hum;
+    if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
+  }
 }
 
 // ── C. 나침반 실시간 ──
@@ -39368,74 +39416,71 @@ function _cgoStartCompassBar() {
 
   var dirs = ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
   var fengMap = {
-    '북':'수(水) 기운 — 지혜·귀인', '동':'목(木) 기운 — 성장·도전',
-    '남':'화(火) 기운 — 열정·인기', '서':'금(金) 기운 — 재물·결단',
-    '북동':'토(土) 기운 — 안정·신뢰', '남동':'목(木) 기운 — 발전·확장',
-    '남서':'토(土) 기운 — 기반·포용', '북서':'금(金) 기운 — 명예·완성'
+    '북':'수(水) 기운 — 지혜·귀인','동':'목(木) 기운 — 성장·도전',
+    '남':'화(火) 기운 — 열정·인기','서':'금(金) 기운 — 재물·결단',
+    '북동':'토(土) 기운 — 안정·신뢰','남동':'목(木) 기운 — 발전·확장',
+    '남서':'토(土) 기운 — 기반·포용','북서':'금(金) 기운 — 명예·완성'
   };
 
   function updateCompassBar(deg) {
-    var d = ((deg % 360) + 360) % 360;
-    var dirIdx = Math.round(d / 22.5) % 16;
-    var dir    = dirs[dirIdx];
-    var mainDir = dir.length > 1 ? dir.slice(-1) : dir; // 주 방위
-    if(mainDir === '동' || mainDir === '남' || mainDir === '서' || mainDir === '북') {
-      // 이미 주 방위
-    } else {
-      mainDir = dir.slice(-1);
-    }
+    var d = ((deg%360)+360)%360;
+    var dir = dirs[Math.round(d/22.5)%16];
+    var mainDir = dir.slice(-1);
     var feng = fengMap[dir] || fengMap[mainDir] || '중앙 토(土) 기운';
-
     var needle = document.getElementById('cgoCompassNeedleBar');
     var degEl  = document.getElementById('cgoCompassDegBar');
     var dirEl  = document.getElementById('cgoCompassDirBar');
     var fengEl = document.getElementById('cgoCompassFengBar');
-
-    if(needle) needle.style.transform = 'rotate(' + d + 'deg)';
-    if(degEl)  degEl.textContent  = Math.round(d) + '°';
-    if(dirEl)  dirEl.textContent  = dir + ' 방위';
+    if(needle) needle.style.transform = 'rotate('+d+'deg)';
+    if(degEl)  degEl.textContent  = Math.round(d)+'°';
+    if(dirEl)  dirEl.textContent  = dir+' 방위';
     if(fengEl) fengEl.textContent = feng;
   }
 
   function handleOri(e) {
-    var alpha = e.alpha || 0;
-    var deg = e.webkitCompassHeading != null ? e.webkitCompassHeading : (360 - alpha);
+    var alpha = e.alpha||0;
+    var deg = e.webkitCompassHeading!=null ? e.webkitCompassHeading : (360-alpha);
     updateCompassBar(deg);
     _cgoBarCompassActive = true;
   }
 
+  function startListening() {
+    window.addEventListener('deviceorientationabsolute', handleOri, true);
+    window.addEventListener('deviceorientation', handleOri, true);
+  }
+
   if(window.DeviceOrientationEvent) {
     if(typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+ — 사용자 클릭 시 권한 요청
-      document.getElementById('cgoRealtimeBar') && document.getElementById('cgoRealtimeBar').addEventListener('click', function() {
-        DeviceOrientationEvent.requestPermission().then(function(r) {
-          if(r === 'granted') {
-            window.addEventListener('deviceorientationabsolute', handleOri, true);
-            window.addEventListener('deviceorientation', handleOri, true);
-          }
-        }).catch(function(){});
-      }, {once: true});
+      // iOS 13+ — 나침반 카드 탭 시 권한 요청
+      var fengEl2 = document.getElementById('cgoCompassFengBar');
+      if(fengEl2) fengEl2.textContent = '탭하면 활성화';
+      var compassCard = document.querySelector('#cgoRealtimeBar > div:last-child');
+      if(compassCard) {
+        compassCard.style.cursor = 'pointer';
+        compassCard.addEventListener('click', function() {
+          DeviceOrientationEvent.requestPermission()
+            .then(function(r) {
+              if(r==='granted') startListening();
+              else if(fengEl2) fengEl2.textContent = '권한 거부됨';
+            }).catch(function(){});
+        }, {once:true});
+      }
     } else {
-      window.addEventListener('deviceorientationabsolute', handleOri, true);
-      window.addEventListener('deviceorientation', handleOri, true);
+      startListening(); // Android 자동 시작
     }
   }
 
-  // 나침반 미지원 시 폴백: NASA 태양 황도 기반 방위 추정
+  // NASA 폴백 (3초 후 미작동 시)
   setTimeout(function() {
     if(!_cgoBarCompassActive) {
       var np = window._nasaPlanets;
-      if(np && np.sun) {
-        var sunLon = parseFloat(np.sun.lon || 0);
-        var estimatedDeg = (sunLon + 180) % 360;
-        updateCompassBar(estimatedDeg);
-        var fengEl = document.getElementById('cgoCompassFengBar');
-        if(fengEl) fengEl.textContent = 'NASA 황도 기반 추정';
-      }
+      var deg = np&&np.sun ? (parseFloat(np.sun.lon||0)+180)%360 : (new Date().getHours()/24)*360;
+      updateCompassBar(deg);
+      var fe = document.getElementById('cgoCompassFengBar');
+      if(fe && !_cgoBarCompassActive) fe.textContent = 'NASA 황도 기반';
     }
   }, 3000);
 }
-
 // ── 전체 초기화 — DOM 준비 후 실행 ──
 function _cgoRealtimeInit() {
   // 위젯 DOM 존재 확인
