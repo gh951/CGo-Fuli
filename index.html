@@ -18320,15 +18320,45 @@ function generateFortune(r){
       '</div>'+
       '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">'+
       timeSlots.map(function(s,i){
-        var isCur = i===curSlotIdx;
-        var isBest = sangSaeng[s.oh]===myOh||s.oh===myOh;
-        var isWarn = sangKuk[s.oh]===myOh;
-        var bg = isCur?'rgba(212,168,67,.15)':isBest?'rgba(52,211,153,.06)':isWarn?'rgba(248,113,113,.06)':'rgba(255,255,255,.02)';
-        var bc = isCur?'rgba(212,168,67,.4)':isBest?'rgba(52,211,153,.2)':isWarn?'rgba(248,113,113,.2)':'rgba(255,255,255,.07)';
-        var mark = isCur?' ← 지금':isBest?' ⭐':isWarn?' ⚠️':'';
-        return '<div onclick="showSijinDetail('+i+','+(35+Math.round(Math.sin(i*1.7+seed)*20+55))+')" style="display:grid;grid-template-columns:130px auto;gap:8px;align-items:start;padding:8px 10px;border-radius:9px;background:'+bg+';border:1px solid '+bc+';cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">'+
-          '<div style="font-size:11px;font-weight:700;color:'+(isCur?'#d4a843':isBest?'#34d399':isWarn?'#f87171':'rgba(240,230,200,.6)')+'">'+s.t+'<br><span style="font-size:9px;font-weight:400">'+ohEmoji[s.oh]+''+mark+'</span></div>'+
-          '<div style="font-size:11px;color:rgba(240,230,200,.7);line-height:1.6">'+s.memo+' <span style="font-size:9px;color:rgba(212,168,67,.5)">▸ 상세</span></div>'+
+        var isCur  = i === curSlotIdx;
+        var isPast = i < curSlotIdx;  // ✅ 지나간 시진
+        var isFuture = i > curSlotIdx; // ✅ 아직 안 온 시진
+        var isBest = !isPast && (sangSaeng[s.oh]===myOh||s.oh===myOh);
+        var isWarn = !isPast && sangKuk[s.oh]===myOh;
+
+        // ✅ 실시간 원칙: 지나간 시진 = 흐릿하게, 미래 시진 = 잠금
+        var bg, bc, mark, opacity;
+        if (isCur) {
+          bg = 'rgba(212,168,67,.15)'; bc = 'rgba(212,168,67,.4)';
+          mark = ' ← 지금 ●'; opacity = '1';
+        } else if (isPast) {
+          bg = 'rgba(255,255,255,.01)'; bc = 'rgba(255,255,255,.04)';
+          mark = ' ✓ 지남'; opacity = '0.35';
+        } else if (isFuture) {
+          // 미래 시진: 다음 시진만 미리 보기, 그 이후는 잠금
+          var isNext = i === curSlotIdx + 1;
+          bg = isNext ? 'rgba(56,189,248,.05)' : 'rgba(255,255,255,.01)';
+          bc = isNext ? 'rgba(56,189,248,.15)' : 'rgba(255,255,255,.03)';
+          mark = isNext ? ' 다음 ▶' : ' 🔒';
+          opacity = isNext ? '0.8' : '0.3';
+        }
+        if (isBest && !isPast && !isCur) mark += ' ⭐';
+        if (isWarn && !isPast && !isCur) mark += ' ⚠️';
+
+        var memoTxt = isPast
+          ? '<span style="font-size:10px;color:rgba(240,230,200,.35);font-style:italic">이 시간은 지나갔어요</span>'
+          : isFuture && i > curSlotIdx + 1
+            ? '<span style="font-size:10px;color:rgba(240,230,200,.3);">🔒 시간이 되면 열립니다</span>'
+            : s.memo + ' <span style="font-size:9px;color:rgba(212,168,67,.5)">▸ 상세</span>';
+
+        var clickable = (!isPast && !(isFuture && i > curSlotIdx + 1));
+
+        var _sc = 35+Math.round(Math.sin(i*1.7+seed)*20+55);
+        var _onclick = clickable ? ('onclick="showSijinDetail('+i+','+_sc+')"') : '';
+        var _hover = clickable ? ('onmouseover="this.style.opacity=0.85" onmouseout="this.style.opacity='+opacity+'"') : '';
+        return '<div '+_onclick+' '+_hover+' style="display:grid;grid-template-columns:130px auto;gap:8px;align-items:start;padding:8px 10px;border-radius:9px;background:'+bg+';border:1px solid '+bc+';cursor:'+(clickable?'pointer':'default')+';opacity:'+opacity+';transition:all .2s">'+
+          '<div style="font-size:11px;font-weight:700;color:'+(isCur?'#d4a843':isPast?'rgba(240,230,200,.3)':isBest?'#34d399':isWarn?'#f87171':'rgba(240,230,200,.6)')+'">'+s.t+'<br><span style="font-size:9px;font-weight:400">'+ohEmoji[s.oh]+mark+'</span></div>'+
+          '<div style="font-size:11px;color:rgba(240,230,200,.7);line-height:1.6">'+memoTxt+'</div>'+
         '</div>';
       }).join('')+
       '</div></div>'+
@@ -25453,8 +25483,7 @@ window.addEventListener('load', function(){
   if(tf)tf.value='';
   if(nf)nf.value='';
   // 자동 계산 비활성화 (사용자가 ⚡ 자동 계산 버튼 클릭 시 실행)
-});
-</script>
+});</script>
 
 <!-- 운수 상세 팝업 -->
 <!-- ✦ 오늘의 운세 전체화면 ✦ -->
@@ -31369,6 +31398,28 @@ function fcDate(offset) {
     if(typeof algoPopup==='function') algoPopup(window._apCurrentKey);
   }
 }
+
+// ✅ 시진 변경 시 운세 자동 갱신 (실시간 원칙)
+(function(){
+  var _prevAutoSiJin = -1;
+  setInterval(function(){
+    if (!window.calcResult) return;
+    var nowH = new Date().getHours();
+    var curSiJin = nowH<1?0:nowH<3?1:nowH<5?2:nowH<7?3:nowH<9?4:nowH<11?5:nowH<13?6:nowH<15?7:nowH<17?8:nowH<19?9:nowH<21?10:11;
+    if (_prevAutoSiJin !== -1 && curSiJin !== _prevAutoSiJin) {
+      // 시진 바뀜 → 오늘 날짜로 운세 자동 갱신
+      console.log('[CGO] 시진 변경 감지 → 운세 자동 갱신', curSiJin);
+      fcDate(0); // 오늘 날짜 기준으로 전체 갱신
+      // 갱신 알림
+      var badge = document.createElement('div');
+      badge.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(212,168,67,.95);color:#020817;font-size:11px;font-weight:700;padding:8px 20px;border-radius:20px;box-shadow:0 4px 20px rgba(212,168,67,.4);';
+      badge.textContent = '⏰ 시진 변경 — 운세 자동 갱신 완료!';
+      document.body.appendChild(badge);
+      setTimeout(function(){ badge.remove(); }, 3000);
+    }
+    _prevAutoSiJin = curSiJin;
+  }, 60000); // 1분마다 체크
+})();
 
 function fcDateDirect(val) {
   var r = window._fcR;
