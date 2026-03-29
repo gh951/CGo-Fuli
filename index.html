@@ -3579,25 +3579,6 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
 
-        <!-- ✦ 토정비결 카드 ✦ -->
-        <div onclick="cgoOpenTojung()" id="tojung-card"
-          style="margin:0 0 10px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(248,113,113,.08));border:1.5px solid rgba(251,191,36,.35);border-radius:16px;padding:14px 18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
-          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(251,191,36,.25)'"
-          onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-          <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 20% 50%,rgba(251,191,36,.07),transparent 60%);pointer-events:none;"></div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="font-size:30px;filter:drop-shadow(0 0 10px rgba(251,191,36,.6));animation:pulse 3s infinite;">📜</div>
-            <div style="flex:1;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-                <div style="font-size:14px;font-weight:800;color:#fbbf24;letter-spacing:.05em;">토정비결</div>
-                <span style="font-size:9px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 7px;border-radius:8px;font-weight:700;">土亭秘訣</span>
-              </div>
-              <div style="font-size:11px;color:rgba(240,220,160,.55);">사주 × 달력 × 오행 — 이달의 운수와 오늘의 기운</div>
-            </div>
-            <div style="font-size:22px;color:rgba(251,191,36,.5);">›</div>
-          </div>
-          <div id="tojung-preview" style="margin-top:8px;display:none;font-size:11px;color:rgba(251,191,36,.8);font-style:italic;padding:6px 10px;background:rgba(251,191,36,.05);border-radius:8px;border-left:2px solid rgba(251,191,36,.3);"></div>
-        </div>
         <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
         <div style="margin:14px 0 10px;">
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
@@ -4066,7 +4047,7 @@ function updateTransitSectionWithNASA(planets) {
       <!-- ✦ 오행 쉬운 설명 코칭 카드 — 자동계산 후 표시 -->
       <div id="ohCoachSection" style="margin-top:14px;display:none"></div>
 
-        <div class="ip-palja" id="ipPalja">
+        <div class="ip-palja" id="ipPalja" style="display:none">
           <div class="ip-palja-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px"><span>📊 사주 팔자 (四柱八字) 자동 도출</span><button id="pajDetailBtn" onclick="pajOpen()" style="display:none;padding:4px 11px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.4);border-radius:8px;color:#d4a843;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit">🔍 정밀 분석</button></div>
           <div class="ip-palja-grid" id="ipPaljaGrid"></div>
         </div>
@@ -5085,6 +5066,29 @@ function fcGetGPS(){
 }
 
 // ── 방위 핸들러 ──
+
+// ✅ 대시보드 나침반 위젯 업데이트 함수
+var _fengMapWidget = {
+  '북':'수(水) — 지혜·귀인','남':'화(火) — 열정·인기',
+  '동':'목(木) — 성장·도전','서':'금(金) — 재물·결단',
+  '북동':'토(土) — 안정·신뢰','남동':'목(木) — 발전·확장',
+  '남서':'토(土) — 기반·포용','북서':'금(金) — 명예·완성',
+  '북북동':'수(Water) — 귀인','동북동':'목(木) — 활력',
+  '동남동':'목(木) — 도약','남남동':'화(火) — 인기',
+  '남남서':'토(土) — 안정','서남서':'금(金) — 재물',
+  '서북서':'금(金) — 명예','북북서':'수(Water) — 지혜'
+};
+function _cgoUpdateCompassWidget(deg, dirText) {
+  var needle = document.getElementById('cgoCompassNeedleBar');
+  var degEl  = document.getElementById('cgoCompassDegBar');
+  var dirEl  = document.getElementById('cgoCompassDirBar');
+  var fengEl = document.getElementById('cgoCompassFengBar');
+  if(needle) needle.style.transform = 'rotate('+deg+'deg)';
+  if(degEl)  degEl.textContent = deg+'°';
+  if(dirEl)  dirEl.textContent = (dirText||deg+'°')+' 방위';
+  if(fengEl) fengEl.textContent = _fengMapWidget[dirText]||'방위 연동중';
+  _cgoBarCompassActive = true;
+}
 function fcHandleOrientation(e){
   var deg = null;
   if(e.webkitCompassHeading != null && e.webkitCompassHeading !== 0){
@@ -5097,6 +5101,9 @@ function fcHandleOrientation(e){
   if(isNaN(deg)) return;
   fcDegree = deg;
   var dirText = fcDegToDir(deg);
+
+  // ✅ 대시보드 나침반 위젯 실시간 연동
+  _cgoUpdateCompassWidget(deg, dirText);
 
   // 카메라 오버레이
   var needle = document.getElementById('fcNeedleSvg');
@@ -38861,7 +38868,10 @@ function cgoPrintReport() {
 <div class="footer">
   ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
   본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
-</div><\/script>
+</div>
+</body>
+</html>`);
+<\/script>
 
 
 
@@ -38883,7 +38893,6 @@ function cgoPrintReport() {
   </div>
   <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3);">화면 밖 터치 또는 ✕ 로 닫기</div>
 </div>
-
 
 <!-- ══════════════════════════════════════════════
   📜 토정비결 팝업 (CGO-FULI 스타일)
@@ -38947,6 +38956,11 @@ function cgoPrintReport() {
   </div>
 </div>
 
+
+
+  printWin.document.close();
+  setTimeout(function(){ printWin.print(); }, 800);
+}
 <script>
 // ══════════════════════════════════════════════
 // 📜 CGO-FULI 토정비결 엔진
@@ -39065,10 +39079,28 @@ var TOJ_JI_DB = {
 
 function cgoOpenTojung() {
   var r = window.calcResult;
+
+  // 자동계산 없어도 이름+생년월일만 있으면 열기
   if (!r || !r.name) {
-    alert('먼저 이름과 생년월일을 입력하고 ⚡ 자동 계산을 눌러주세요! 😊');
-    return;
+    var nm = (document.getElementById('ipName')||{}).value||'';
+    var by = (document.getElementById('ipBirthY')||{}).value||'';
+    var bm = (document.getElementById('ipBirthM')||{}).value||'';
+    var bd = (document.getElementById('ipBirthD')||{}).value||'';
+    if (!nm.trim() || !by || !bm || !bd) {
+      alert('이름과 생년월일을 입력해 주세요! 😊');
+      return;
+    }
+    // 기본 calcResult 생성
+    window.calcResult = {
+      name: nm.trim(),
+      y: parseInt(by), m: parseInt(bm), d: parseInt(bd),
+      domOh: '토', lifeNum: ((parseInt(by)+parseInt(bm)+parseInt(bd))%9)||9,
+      dGJ: {gan:'甲', ji:'子', moonBonus:0},
+      zodiacName: ['쥐','소','범','토끼','용','뱀','말','양','원숭이','닭','개','돼지'][(parseInt(by)-4)%12]
+    };
+    r = window.calcResult;
   }
+
   var overlay = document.getElementById('cgoTojungOverlay');
   if (!overlay) return;
   overlay.style.display = 'flex';
@@ -39363,25 +39395,30 @@ function _cgoUpdateWeather() {
     return;
   }
 
-  // wttr.in API로 직접 날씨 가져오기 (위치 권한 불필요)
+  // Open-Meteo API (GPS 기반, 무료, 정확)
   if(!window._cgoBarWeatherDone) {
     window._cgoBarWeatherDone = true;
     if(tempEl) tempEl.textContent = '로딩중...';
-    fetch('https://wttr.in/?format=j1&lang=ko')
+    // GPS 먼저 획득 후 Open-Meteo 호출
+    cgoGetLocation(function(pos) {
+      var lat = pos ? pos.coords.latitude.toFixed(4)  : '37.5665';
+      var lon = pos ? pos.coords.longitude.toFixed(4) : '126.9780';
+      fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto')
       .then(function(r){ return r.json(); })
       .then(function(d) {
-        var cur = d.current_condition && d.current_condition[0];
+        var cur = d.current;
         if(!cur) throw new Error('no data');
-        var tempC = cur.temp_C || '--';
-        var hum   = cur.humidity || '--';
-        var code  = parseInt(cur.weatherCode || 800);
+        var tempC = Math.round(cur.temperature_2m || 0);
+        var hum   = Math.round(cur.relative_humidity_2m || 0);
+        var code  = parseInt(cur.weather_code || 0);
+        // WMO 코드 → 날씨 분류
         var wKey;
-        if(code===800){wKey='sunny';}
-        else if(code<=802){wKey='cloudy';}
-        else if(code<=804){wKey='overcast';}
-        else if(code<=531){wKey='rain';}
-        else if(code<=622){wKey='snow';}
-        else if(code<=232){wKey='thunder';}
+        if(code===0){wKey='sunny';}
+        else if(code<=2){wKey='cloudy';}
+        else if(code<=3){wKey='overcast';}
+        else if(code<=67){wKey='rain';}
+        else if(code<=77){wKey='snow';}
+        else if(code<=99){wKey='thunder';}
         else{wKey=timeKey;}
         window._tzrWeatherKey  = wKey;
         window._tzrWeatherTemp = tempC;
@@ -39392,13 +39429,13 @@ function _cgoUpdateWeather() {
         if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
       })
       .catch(function() {
-        // 폴백: 시간대 기반
         var wData = weatherMap[timeKey];
         if(iconEl) iconEl.textContent = wData.icon;
         if(tempEl) tempEl.textContent = '--°C';
         if(humEl)  humEl.textContent  = '습도 ' + wData.hum;
         if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
       });
+    }); // cgoGetLocation 닫기
   } else {
     // 이미 요청 중 — 시간대 기반으로 일단 표시
     var wData = weatherMap[timeKey];
@@ -39515,9 +39552,8 @@ if (document.readyState === 'loading') {
 }
 </script>
 
-</body>
-</html>`);
-  printWin.document.close();
+
+  
   setTimeout(function(){ printWin.print(); }, 800);
 }
 
