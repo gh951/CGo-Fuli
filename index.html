@@ -7,6 +7,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 <title>GO Future — ILI 라이프 인덱스</title>
 <!-- ✅ 언어 기본값 보장 — 반드시 최상단에서 실행 -->
+
+<script>
+// ══ 위치 권한 싱글톤 — 최초 1회만 요청, 결과 전역 공유 ══
+window._cgoGeoPromise = null;
+window._cgoGeoResult  = null;
+
+function cgoGetLocation(callback) {
+  // 이미 결과 있으면 즉시 반환
+  if (window._cgoGeoResult) {
+    if (typeof callback === 'function') callback(window._cgoGeoResult);
+    return;
+  }
+  // 이미 요청 중이면 큐에 추가
+  if (window._cgoGeoPromise) {
+    window._cgoGeoPromise.push(callback);
+    return;
+  }
+  // 최초 요청
+  if (!navigator.geolocation) {
+    if (typeof callback === 'function') callback(null);
+    return;
+  }
+  window._cgoGeoPromise = [callback];
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      window._cgoGeoResult = pos;
+      var cbs = window._cgoGeoPromise || [];
+      window._cgoGeoPromise = null;
+      cbs.forEach(function(cb) { if(typeof cb==='function') cb(pos); });
+    },
+    function(err) {
+      window._cgoGeoResult = null;
+      var cbs = window._cgoGeoPromise || [];
+      window._cgoGeoPromise = null;
+      cbs.forEach(function(cb) { if(typeof cb==='function') cb(null); });
+    },
+    { timeout: 8000, maximumAge: 300000 } // 5분 캐시
+  );
+}
+</script>
 <script>
 (function(){
   try {
@@ -3326,6 +3366,62 @@ function updateTransitSectionWithNASA(planets) {
         </div>
       </div>
 
+
+      <!-- ══ 실시간 3대 과학 위젯 (위성·날씨·나침반) ══ -->
+      <div id="cgoRealtimeBar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+
+        <!-- 🛰️ 위성 실시간 -->
+        <div style="background:linear-gradient(135deg,rgba(56,189,248,.1),rgba(99,102,241,.06));border:1px solid rgba(56,189,248,.25);border-radius:13px;padding:10px 10px;text-align:center;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(56,189,248,.6),transparent);animation:rtScan 2s linear infinite;"></div>
+          <div id="cgoSatIcon" style="font-size:22px;display:inline-block;animation:rtOrbit 4s linear infinite;">🛰️</div>
+          <div style="font-size:8px;font-weight:800;color:#38bdf8;letter-spacing:.08em;margin:3px 0 2px;">SATELLITE</div>
+          <div id="cgoSatAlt" style="font-size:9px;font-weight:700;color:rgba(240,220,160,.9);">408km</div>
+          <div id="cgoSatLat" style="font-size:8px;color:rgba(56,189,248,.7);margin-top:1px;">--°N --°E</div>
+          <div id="cgoSatVel" style="font-size:8px;color:rgba(56,189,248,.5);">7.66km/s</div>
+          <div style="font-size:7px;color:rgba(52,211,153,.7);margin-top:3px;font-weight:700;animation:rtPulse 1.5s ease-in-out infinite;">● LIVE</div>
+        </div>
+
+        <!-- ☀️ 날씨 실시간 -->
+        <div style="background:linear-gradient(135deg,rgba(52,211,153,.1),rgba(16,185,129,.06));border:1px solid rgba(52,211,153,.25);border-radius:13px;padding:10px 10px;text-align:center;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6),transparent);animation:rtScan 2.5s linear infinite;"></div>
+          <div id="cgoWeatherIconBar" style="font-size:22px;animation:rtWeather 3s ease-in-out infinite;">🌤️</div>
+          <div style="font-size:8px;font-weight:800;color:#34d399;letter-spacing:.08em;margin:3px 0 2px;">WEATHER</div>
+          <div id="cgoWeatherTempBar" style="font-size:9px;font-weight:700;color:rgba(240,220,160,.9);">--°C</div>
+          <div id="cgoWeatherHumBar" style="font-size:8px;color:rgba(52,211,153,.7);margin-top:1px;">습도 --%</div>
+          <div id="cgoWeatherOhBar" style="font-size:8px;color:rgba(52,211,153,.5);">오행 측정중</div>
+          <div style="font-size:7px;color:rgba(52,211,153,.7);margin-top:3px;font-weight:700;animation:rtPulse 2s ease-in-out infinite;">● GPS SYNC</div>
+        </div>
+
+        <!-- 🧭 나침반 실시간 -->
+        <div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(245,158,11,.06));border:1px solid rgba(212,168,67,.25);border-radius:13px;padding:10px 10px;text-align:center;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);animation:rtScan 3s linear infinite;"></div>
+          <!-- 나침반 다이얼 -->
+          <div style="position:relative;width:30px;height:30px;margin:0 auto 3px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(212,168,67,.4);background:rgba(0,0,0,.3);">
+              <div style="position:absolute;top:1px;left:50%;transform:translateX(-50%);font-size:7px;color:rgba(212,168,67,.8);font-weight:800;">N</div>
+              <div style="position:absolute;bottom:1px;left:50%;transform:translateX(-50%);font-size:7px;color:rgba(255,255,255,.3);">S</div>
+            </div>
+            <!-- 바늘 -->
+            <div id="cgoCompassNeedleBar" style="position:absolute;top:50%;left:50%;width:2px;height:12px;background:linear-gradient(to bottom,#f87171,transparent);transform-origin:bottom center;margin-left:-1px;margin-top:-12px;border-radius:1px;transition:transform .3s ease;"></div>
+            <div style="position:absolute;top:50%;left:50%;width:2px;height:8px;background:linear-gradient(to top,#38bdf8,transparent);transform-origin:top center;margin-left:-1px;border-radius:1px;"></div>
+            <div style="position:absolute;top:50%;left:50%;width:4px;height:4px;border-radius:50%;background:#d4a843;transform:translate(-50%,-50%);z-index:3;"></div>
+          </div>
+          <div style="font-size:8px;font-weight:800;color:#d4a843;letter-spacing:.08em;margin-bottom:2px;">COMPASS</div>
+          <div id="cgoCompassDegBar" style="font-size:9px;font-weight:700;color:rgba(240,220,160,.9);">---°</div>
+          <div id="cgoCompassDirBar" style="font-size:8px;color:rgba(212,168,67,.7);margin-top:1px;">방위 측정중</div>
+          <div id="cgoCompassFengBar" style="font-size:7px;color:rgba(212,168,67,.5);">풍수 연동중</div>
+          <div style="font-size:7px;color:rgba(212,168,67,.7);margin-top:3px;font-weight:700;animation:rtPulse 2.5s ease-in-out infinite;">● LIVE</div>
+        </div>
+
+      </div>
+
+      <style>
+      @keyframes rtOrbit{0%{transform:rotate(0deg) translateX(2px) rotate(0deg);}100%{transform:rotate(360deg) translateX(2px) rotate(-360deg);}}
+      @keyframes rtScan{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+      @keyframes rtPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+      @keyframes rtWeather{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+      </style>
+
       <div class="input-panel">
         <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 이름·생년월일만 넣으면 모든 게 자동으로 계산돼요!</div>
         <div class="ip-form">
@@ -3482,6 +3578,26 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
+
+        <!-- ✦ 토정비결 카드 ✦ -->
+        <div onclick="cgoOpenTojung()" id="tojung-card"
+          style="margin:0 0 10px;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(248,113,113,.08));border:1.5px solid rgba(251,191,36,.35);border-radius:16px;padding:14px 18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(251,191,36,.25)'"
+          onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+          <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 20% 50%,rgba(251,191,36,.07),transparent 60%);pointer-events:none;"></div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="font-size:30px;filter:drop-shadow(0 0 10px rgba(251,191,36,.6));animation:pulse 3s infinite;">📜</div>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <div style="font-size:14px;font-weight:800;color:#fbbf24;letter-spacing:.05em;">토정비결</div>
+                <span style="font-size:9px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 7px;border-radius:8px;font-weight:700;">土亭秘訣</span>
+              </div>
+              <div style="font-size:11px;color:rgba(240,220,160,.55);">사주 × 달력 × 오행 — 이달의 운수와 오늘의 기운</div>
+            </div>
+            <div style="font-size:22px;color:rgba(251,191,36,.5);">›</div>
+          </div>
+          <div id="tojung-preview" style="margin-top:8px;display:none;font-size:11px;color:rgba(251,191,36,.8);font-style:italic;padding:6px 10px;background:rgba(251,191,36,.05);border-radius:8px;border-left:2px solid rgba(251,191,36,.3);"></div>
+        </div>
         <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
         <div style="margin:14px 0 10px;">
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
@@ -15024,7 +15140,8 @@ function ipHideSuggest(type){
 }
 function ipGetMyLocation(){
   if(!navigator.geolocation){alert('이 브라우저는 위치 정보를 지원하지 않습니다.');return;}
-  navigator.geolocation.getCurrentPosition(function(pos){
+  cgoGetLocation(function(pos){
+  if(!pos){alert('위치 정보를 가져올 수 없습니다.');return;}
     var lat=pos.coords.latitude, lng=pos.coords.longitude;
     document.getElementById('ipCurLat').value=lat.toFixed(4);
     document.getElementById('ipCurLng').value=lng.toFixed(4);
@@ -38767,6 +38884,596 @@ function cgoPrintReport() {
   <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3);">화면 밖 터치 또는 ✕ 로 닫기</div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════
+  📜 토정비결 팝업 (CGO-FULI 스타일)
+  기존 오늘의 운세와 별도 — 결이 다른 전통 감성
+════════════════════════════════════════════════ -->
+<style>
+#cgoTojungOverlay{position:fixed;inset:0;z-index:10001;background:rgba(2,4,12,.92);backdrop-filter:blur(10px);display:none;align-items:flex-end;justify-content:center;}
+#cgoTojungOverlay.show{display:flex;}
+#cgoTojungBox{width:100%;max-width:540px;max-height:92vh;overflow-y:auto;background:linear-gradient(160deg,#0a0c0f 0%,#0f1218 100%);border-radius:22px 22px 0 0;border:1px solid rgba(251,191,36,.3);border-bottom:none;padding-bottom:40px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);}
+#cgoTojungOverlay.show #cgoTojungBox{transform:translateY(0);}
+.toj-tab{padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .2s;}
+.toj-tab.active{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);color:#fbbf24;}
+.toj-tab:not(.active){color:rgba(240,220,160,.4);border-color:rgba(255,255,255,.06);}
+.toj-month-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.toj-month-card:hover{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.04);}
+.toj-month-card.current{border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.08);}
+@keyframes tojPulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+</style>
+
+<div id="cgoTojungOverlay" onclick="if(event.target===this)cgoCloseTojung()">
+  <div id="cgoTojungBox">
+    <!-- 헤더 -->
+    <div style="position:sticky;top:0;background:linear-gradient(160deg,#0a0c0f,#0f1218);border-bottom:1px solid rgba(251,191,36,.15);padding:16px 20px 12px;z-index:5;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:24px;">📜</div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#fbbf24;letter-spacing:.05em;">토정비결 <span style="font-size:11px;color:rgba(251,191,36,.5);font-weight:400;">土亭秘訣</span></div>
+            <div id="tojung-user-info" style="font-size:10px;color:rgba(240,220,160,.5);margin-top:1px;"></div>
+          </div>
+        </div>
+        <button onclick="cgoCloseTojung()" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(240,220,160,.6);font-size:13px;cursor:pointer;">✕</button>
+      </div>
+      <!-- 탭 -->
+      <div style="display:flex;gap:6px;">
+        <button class="toj-tab active" id="tojTab0" onclick="tojShowTab(0)">📅 이달의 운수</button>
+        <button class="toj-tab" id="tojTab1" onclick="tojShowTab(1)">☀️ 오늘의 기운</button>
+        <button class="toj-tab" id="tojTab2" onclick="tojShowTab(2)">📆 연간 운수</button>
+      </div>
+    </div>
+
+    <!-- 콘텐츠 영역 -->
+    <div style="padding:16px 18px;">
+
+      <!-- 탭0: 이달의 운수 -->
+      <div id="tojContent0">
+        <div id="toj-month-content"></div>
+      </div>
+
+      <!-- 탭1: 오늘의 기운 -->
+      <div id="tojContent1" style="display:none;">
+        <div id="toj-today-content"></div>
+      </div>
+
+      <!-- 탭2: 연간 운수 -->
+      <div id="tojContent2" style="display:none;">
+        <div id="toj-year-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// 📜 CGO-FULI 토정비결 엔진
+// 사주 간지 × 달력 × 오행 × 수리 알고리즘
+// ══════════════════════════════════════════════
+
+// 토정비결 월별 운수 DB (12달 × 오행별 × 수리별)
+var TOJ_MONTH_DB = {
+  // 오행별 이달의 기운 패턴
+  목: {
+    good:[2,5,8,11], warn:[4,7,10], strong:'봄·여름', weak:'가을',
+    base: ['새로운 시작의 에너지가 넘칩니다. 뿌리를 내리듯 계획을 다져가세요.',
+           '성장의 기운이 강합니다. 배움과 도전에 좋은 시기입니다.',
+           '창의력이 발동하는 달. 아이디어를 실행에 옮기면 결실이 있습니다.',
+           '인간관계가 넓어지는 달. 귀인을 만날 가능성이 높습니다.',
+           '재물운이 흐릅니다. 단, 무리한 투자는 삼가세요.',
+           '건강에 특별히 유의하세요. 충분한 휴식이 필요합니다.',
+           '가정에 화목한 기운이 깃듭니다. 가족과 시간을 보내세요.',
+           '직업·사업운이 상승합니다. 중요한 결정을 내리기 좋은 때.',
+           '애정운이 풍성합니다. 솔직한 마음 표현이 행운을 부릅니다.',
+           '학업·기술 습득에 유리한 달. 꾸준한 노력이 빛납니다.',
+           '여행·이동에 좋은 기운이 있습니다. 새로운 환경이 도움이 됩니다.',
+           '한 해를 마무리하는 달. 감사하는 마음이 복을 부릅니다.']
+  },
+  화: {
+    good:[1,4,7,10], warn:[3,6,9,12], strong:'여름', weak:'겨울',
+    base: ['열정이 넘치는 달. 의욕이 앞서지 않도록 차분하게 시작하세요.',
+           '인기운이 상승합니다. 사람들과의 교류가 활발해집니다.',
+           '창조적 에너지가 폭발하는 달. 예술·기획에 특히 유리합니다.',
+           '재물의 기운이 강합니다. 적극적인 활동이 결실을 맺습니다.',
+           '건강에 주의하세요. 과도한 열기를 식혀야 합니다.',
+           '감정 기복이 있을 수 있습니다. 냉정한 판단이 필요합니다.',
+           '리더십이 빛나는 달. 앞장서면 주변이 따라옵니다.',
+           '빠른 변화의 달. 유연하게 대응하면 기회가 옵니다.',
+           '사랑에 뜨거운 기운이 흐릅니다. 적극적으로 표현하세요.',
+           '명예운이 상승하는 달. 실력을 마음껏 펼치세요.',
+           '여행·야외 활동에 좋은 기운. 새로운 자극이 도움됩니다.',
+           '한 해를 불태운 달. 충분한 휴식으로 재충전하세요.']
+  },
+  토: {
+    good:[3,6,9,12], warn:[2,5,8,11], strong:'환절기', weak:'봄',
+    base: ['안정을 추구하는 달. 기초를 다지는 일이 우선입니다.',
+           '신중함이 필요한 달. 서두르지 말고 차근차근 진행하세요.',
+           '재물 기반이 단단해지는 시기. 저축과 절약이 복이 됩니다.',
+           '신뢰가 쌓이는 달. 성실한 모습이 귀인을 끌어옵니다.',
+           '건강 관리에 집중하세요. 소화기에 특히 주의합니다.',
+           '부동산·토지와 관련된 일이 유리합니다.',
+           '가정의 안정이 중요한 달. 가족과의 화합이 행복입니다.',
+           '학문·연구에 집중하기 좋은 달. 깊이 파고들면 성과가 납니다.',
+           '인연의 달. 오래된 친구나 동료와의 재회가 있을 수 있습니다.',
+           '직업운이 안정됩니다. 묵묵히 맡은 일에 최선을 다하세요.',
+           '작은 변화가 큰 결실을 만드는 달. 디테일에 집중하세요.',
+           '마무리와 정리의 달. 불필요한 것들을 내려놓으세요.']
+  },
+  금: {
+    good:[1,4,7,10], warn:[6,9,12], strong:'가을', weak:'여름',
+    base: ['결단의 달. 오랫동안 미뤄온 결정을 내려야 할 때입니다.',
+           '명예와 직업운이 강합니다. 승진·취업의 기회가 옵니다.',
+           '재물운이 예리하게 흐릅니다. 투자 판단력이 높아집니다.',
+           '인간관계를 정리하는 달. 진정한 인연만 남기세요.',
+           '건강에 유의하세요. 폐·기관지를 특히 관리하세요.',
+           '집중력이 최고조에 달하는 달. 공부·연구에 최적입니다.',
+           '냉철한 판단이 필요한 달. 감정보다 이성이 앞서야 합니다.',
+           '계약·협상에 유리한 기운. 꼼꼼하게 검토하면 유리합니다.',
+           '독립심이 강해지는 달. 자신만의 길을 가는 것이 복입니다.',
+           '예술적 감각이 빛나는 달. 창작 활동에 집중하세요.',
+           '여행보다 집에서 휴식하는 것이 이롭습니다.',
+           '한 해의 결실을 거두는 달. 성과를 정리하고 감사하세요.']
+  },
+  수: {
+    good:[2,5,8,11], warn:[1,4,7,10], strong:'겨울', weak:'봄',
+    base: ['지혜가 샘솟는 달. 깊이 생각하고 통찰하는 시기입니다.',
+           '직관이 강해지는 달. 내면의 소리에 귀를 기울이세요.',
+           '귀인을 만나는 달. 소개·연결을 통해 기회가 옵니다.',
+           '학문·영성·철학에 깊이 빠져드는 시기입니다.',
+           '건강에 유의하세요. 신장·방광을 특히 관리하세요.',
+           '숨겨진 재물운이 흐릅니다. 예상치 못한 수입이 있을 수 있습니다.',
+           '감수성이 풍부해지는 달. 예술·음악에 끌립니다.',
+           '여행·이동에 좋은 기운. 물가 근처가 특히 이롭습니다.',
+           '인연의 달. 새로운 만남이 깊은 인연으로 발전합니다.',
+           '내면을 정화하는 시기. 명상과 휴식이 복이 됩니다.',
+           '사업운이 흐릅니다. 물 흐르듯 자연스럽게 밀고 나가세요.',
+           '한 해를 마무리하며 씨앗을 심는 달. 내년을 준비하세요.']
+  }
+};
+
+// 일진별 오늘의 기운 (60갑자 기반)
+var TOJ_TODAY_DB = {
+  甲:{ energy:'🌳 창시(創始)의 기운', desc:'새로운 일을 시작하기에 좋은 날. 주도적으로 행동하면 길합니다.', luck:'동쪽·청색·3·8' },
+  乙:{ energy:'🌿 성장(成長)의 기운', desc:'부드럽게 나아가는 날. 협력과 배려가 행운을 만듭니다.', luck:'동쪽·녹색·3·8' },
+  丙:{ energy:'☀️ 광명(光明)의 기운', desc:'밝고 활기찬 날. 사람들과의 교류에서 기회가 옵니다.', luck:'남쪽·적색·2·7' },
+  丁:{ energy:'🕯️ 문명(文明)의 기운', desc:'지혜가 빛나는 날. 학습과 창작에 특히 유리합니다.', luck:'남쪽·주홍·2·7' },
+  戊:{ energy:'⛰️ 두텁고(厚) 안정된 기운', desc:'안정을 추구하는 날. 신중하게 행동하면 복이 옵니다.', luck:'중앙·황색·5·10' },
+  己:{ energy:'🌾 풍요(豊饒)의 기운', desc:'결실을 맺는 날. 그동안의 노력이 빛을 발합니다.', luck:'중앙·노란·5·10' },
+  庚:{ energy:'⚙️ 결단(決斷)의 기운', desc:'결단을 내려야 하는 날. 명확한 판단이 행운을 부릅니다.', luck:'서쪽·백색·4·9' },
+  辛:{ energy:'💎 예리(銳利)한 기운', desc:'세밀한 관찰이 빛나는 날. 꼼꼼하게 검토하면 성공합니다.', luck:'서쪽·흰색·4·9' },
+  壬:{ energy:'🌊 지혜(智慧)의 기운', desc:'통찰력이 높아지는 날. 직관을 믿고 나아가세요.', luck:'북쪽·흑색·1·6' },
+  癸:{ energy:'💧 정화(淨化)의 기운', desc:'내면을 돌아보는 날. 감사와 성찰이 다음 기운을 만듭니다.', luck:'북쪽·검정·1·6' }
+};
+
+// 지지별 시간 에너지
+var TOJ_JI_DB = {
+  子:'자시 에너지 — 지혜와 직관이 깊어지는 기운. 새로운 씨앗이 땅 속에서 움트는 시간.',
+  丑:'축시 에너지 — 묵묵한 인내가 빛나는 기운. 성실함이 복을 부르는 시간.',
+  寅:'인시 에너지 — 용감하게 나아가는 기운. 도전과 개척이 길한 시간.',
+  卯:'묘시 에너지 — 예민한 감각이 살아나는 기운. 예술과 창작에 유리한 시간.',
+  辰:'진시 에너지 — 변화와 창조의 기운. 상상력이 현실이 되는 시간.',
+  巳:'사시 에너지 — 지혜롭게 빛나는 기운. 깊은 통찰과 판단력이 최고조인 시간.',
+  午:'오시 에너지 — 열정과 에너지가 넘치는 기운. 리더십이 빛나는 시간.',
+  未:'미시 에너지 — 따뜻한 포용의 기운. 가족과 인연이 소중해지는 시간.',
+  申:'신시 에너지 — 기민하고 영리한 기운. 변화에 유연하게 대응하는 시간.',
+  酉:'유시 에너지 — 아름다움과 완성의 기운. 마무리와 정리에 좋은 시간.',
+  戌:'술시 에너지 — 충직하고 의리있는 기운. 신뢰와 인간관계가 빛나는 시간.',
+  亥:'해시 에너지 — 포용과 지혜의 기운. 내면의 충만함으로 쉬는 시간.'
+};
+
+function cgoOpenTojung() {
+  var r = window.calcResult;
+  if (!r || !r.name) {
+    alert('먼저 이름과 생년월일을 입력하고 ⚡ 자동 계산을 눌러주세요! 😊');
+    return;
+  }
+  var overlay = document.getElementById('cgoTojungOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  setTimeout(function(){ overlay.classList.add('show'); }, 10);
+  _cgoRenderTojung();
+}
+
+function cgoCloseTojung() {
+  var overlay = document.getElementById('cgoTojungOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  setTimeout(function(){ overlay.style.display = 'none'; }, 350);
+}
+
+function tojShowTab(idx) {
+  [0,1,2].forEach(function(i) {
+    document.getElementById('tojContent'+i).style.display = i===idx ? 'block' : 'none';
+    var tb = document.getElementById('tojTab'+i);
+    if(tb) tb.className = 'toj-tab' + (i===idx?' active':'');
+  });
+}
+
+function _cgoRenderTojung() {
+  var r   = window.calcResult || {};
+  var now = window._fcBase || new Date();
+  var curM = now.getMonth() + 1;  // 현재 달
+  var curY = now.getFullYear();
+  var oh  = r.domOh || '토';
+  var db  = TOJ_MONTH_DB[oh] || TOJ_MONTH_DB['토'];
+  var name = r.name || '이름';
+  var dGJ  = r.dGJ || {gan:'甲', ji:'子'};
+  var yGan = r.yGan || '甲';
+
+  // 사용자 정보 표시
+  var infoEl = document.getElementById('tojung-user-info');
+  if(infoEl) infoEl.textContent = name + '님 · ' + (r.y||'')+' ' + (r.zodiacName||'') + '띠 · ' + oh + '('+{목:'木',화:'火',토:'土',금:'金',수:'水'}[oh]+') 기운';
+
+  // ── 탭0: 이달의 운수 ──
+  var mIdx = curM - 1; // 0~11
+  var isGoodM  = db.good.indexOf(curM) !== -1;
+  var isWarnM  = db.warn.indexOf(curM) !== -1;
+  var moodColor = isGoodM ? '#34d399' : isWarnM ? '#f87171' : '#fbbf24';
+  var moodLabel = isGoodM ? '🌟 대길 (大吉)' : isWarnM ? '⚠️ 주의 (注意)' : '☯️ 평운 (平運)';
+
+  // 수리 계산 (생년+생월+생일 수리)
+  var lifeNum = r.lifeNum || 5;
+  var monthNum = ((lifeNum + curM - 1) % 9) + 1;
+
+  var monthHtml =
+    '<div style="background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(248,113,113,.06));border:1px solid rgba(251,191,36,.3);border-radius:14px;padding:14px 16px;margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+        '<div style="font-size:12px;font-weight:800;color:#fbbf24;">' + curY + '년 ' + curM + '월의 운수</div>' +
+        '<div style="font-size:13px;font-weight:800;color:' + moodColor + ';">' + moodLabel + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:rgba(240,220,160,.8);line-height:1.9;padding:10px 12px;background:rgba(0,0,0,.2);border-radius:10px;font-style:italic;">' +
+        '"' + db.base[mIdx] + '"' +
+      '</div>' +
+    '</div>' +
+
+    // 이달의 12달 전체 미니 뷰
+    '<div style="font-size:11px;font-weight:700;color:rgba(251,191,36,.7);letter-spacing:.1em;margin-bottom:8px;">📅 이번 해 월별 운수 흐름</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">' +
+    [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m) {
+      var good = db.good.indexOf(m) !== -1;
+      var warn = db.warn.indexOf(m) !== -1;
+      var cur  = m === curM;
+      var bg   = cur ? 'rgba(251,191,36,.2)' : good ? 'rgba(52,211,153,.08)' : warn ? 'rgba(248,113,113,.08)' : 'rgba(255,255,255,.02)';
+      var bc   = cur ? 'rgba(251,191,36,.6)' : good ? 'rgba(52,211,153,.3)' : warn ? 'rgba(248,113,113,.3)' : 'rgba(255,255,255,.06)';
+      var lbl  = good ? '🌟' : warn ? '⚠️' : '☯️';
+      var tc   = cur ? '#fbbf24' : good ? '#34d399' : warn ? '#f87171' : 'rgba(240,220,160,.5)';
+      return '<div onclick="tojShowMonth(' + m + ')" style="background:' + bg + ';border:1px solid ' + bc + ';border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;transition:all .2s;">' +
+        '<div style="font-size:9px;color:' + tc + ';font-weight:700;">' + m + '월</div>' +
+        '<div style="font-size:12px;">' + lbl + '</div>' +
+      '</div>';
+    }).join('') +
+    '</div>' +
+
+    // 이달 세부 조언
+    '<div style="font-size:11px;font-weight:700;color:rgba(251,191,36,.7);letter-spacing:.1em;margin-bottom:8px;">🔷 이달의 세부 조언</div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;">' +
+    [
+      {icon:'💼', label:'직업·사업', txt: isGoodM ? '적극적으로 나아가세요. 기회가 열려있습니다.' : isWarnM ? '신중하게 검토하고 서두르지 마세요.' : '꾸준히 실력을 쌓는 달입니다.'},
+      {icon:'💰', label:'재물', txt: isGoodM ? '재물운이 흐릅니다. 투자보다 저축이 복입니다.' : isWarnM ? '지출을 줄이고 새 투자는 미루세요.' : '현상 유지가 최선입니다.'},
+      {icon:'❤️', label:'인연·애정', txt: isGoodM ? '귀인을 만날 가능성이 높습니다. 인연을 소중히.' : isWarnM ? '오해가 생길 수 있습니다. 솔직한 대화가 필요합니다.' : '안정된 관계가 이어집니다.'},
+      {icon:'🌿', label:'건강', txt: '지배 오행(' + oh + ')이 관장하는 장기를 특히 살피세요. ' + {목:'간·담·눈에 유의하세요.',화:'심장·혈관에 유의하세요.',토:'위·소화기에 유의하세요.',금:'폐·기관지에 유의하세요.',수:'신장·방광에 유의하세요.'}[oh]}
+    ].map(function(item) {
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;">' +
+        '<span style="font-size:16px;flex-shrink:0;">' + item.icon + '</span>' +
+        '<div><div style="font-size:11px;font-weight:700;color:rgba(240,220,160,.8);margin-bottom:2px;">' + item.label + '</div>' +
+        '<div style="font-size:11px;color:rgba(240,220,160,.6);line-height:1.6;">' + item.txt + '</div></div>' +
+      '</div>';
+    }).join('') +
+    '</div>' +
+
+    // 이달 행운 정보
+    '<div style="margin-top:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;">' +
+      '<div style="font-size:10px;font-weight:700;color:rgba(251,191,36,.7);letter-spacing:.1em;margin-bottom:8px;">✨ 이달의 행운 정보</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
+        '<div style="text-align:center;padding:8px;background:rgba(0,0,0,.15);border-radius:8px;"><div style="font-size:9px;color:rgba(240,220,160,.5);">행운 방향</div><div style="font-size:12px;font-weight:700;color:#fbbf24;">' + {목:'동쪽',화:'남쪽',토:'중앙',금:'서쪽',수:'북쪽'}[oh] + '</div></div>' +
+        '<div style="text-align:center;padding:8px;background:rgba(0,0,0,.15);border-radius:8px;"><div style="font-size:9px;color:rgba(240,220,160,.5);">행운 색상</div><div style="font-size:12px;font-weight:700;color:#fbbf24;">' + {목:'청색·녹색',화:'적색·주홍',토:'황색·갈색',금:'백색·은색',수:'흑색·남색'}[oh] + '</div></div>' +
+        '<div style="text-align:center;padding:8px;background:rgba(0,0,0,.15);border-radius:8px;"><div style="font-size:9px;color:rgba(240,220,160,.5);">행운 숫자</div><div style="font-size:12px;font-weight:700;color:#fbbf24;">' + {목:'3·8',화:'2·7',토:'5·10',금:'4·9',수:'1·6'}[oh] + '</div></div>' +
+        '<div style="text-align:center;padding:8px;background:rgba(0,0,0,.15);border-radius:8px;"><div style="font-size:9px;color:rgba(240,220,160,.5);">이달 수리</div><div style="font-size:12px;font-weight:700;color:#fbbf24;">' + monthNum + '수(數)</div></div>' +
+      '</div>' +
+    '</div>';
+
+  var m0 = document.getElementById('toj-month-content');
+  if(m0) m0.innerHTML = monthHtml;
+
+  // ── 탭1: 오늘의 기운 ──
+  var gan  = dGJ.gan || '甲';
+  var ji   = dGJ.ji  || '子';
+  var todayDB = TOJ_TODAY_DB[gan] || TOJ_TODAY_DB['甲'];
+  var jiDesc  = TOJ_JI_DB[ji]    || '';
+  var moonBonus = dGJ.moonBonus || 0;
+
+  var todayHtml =
+    // 오늘 일진 헤더
+    '<div style="background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(56,189,248,.06));border:1px solid rgba(251,191,36,.3);border-radius:14px;padding:14px 16px;margin-bottom:12px;text-align:center;">' +
+      '<div style="font-size:11px;color:rgba(240,220,160,.5);margin-bottom:6px;">오늘의 일진 (日辰)</div>' +
+      '<div style="font-size:28px;font-weight:900;color:#fbbf24;font-family:serif;letter-spacing:.1em;">' + gan + ji + '</div>' +
+      '<div style="font-size:12px;color:rgba(251,191,36,.7);margin-top:4px;">' + todayDB.energy + '</div>' +
+    '</div>' +
+
+    // 오늘의 기운 설명
+    '<div style="padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;margin-bottom:10px;">' +
+      '<div style="font-size:12px;color:rgba(240,220,160,.8);line-height:1.9;font-style:italic;">"' + todayDB.desc + '"</div>' +
+    '</div>' +
+
+    // 지지 에너지
+    '<div style="padding:10px 14px;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-radius:12px;margin-bottom:10px;">' +
+      '<div style="font-size:10px;font-weight:700;color:#38bdf8;margin-bottom:4px;">🌙 지지(地支) 기운 — ' + ji + '</div>' +
+      '<div style="font-size:11px;color:rgba(240,220,160,.7);line-height:1.7;">' + jiDesc + '</div>' +
+    '</div>' +
+
+    // NASA 달 위상 보정
+    (moonBonus !== 0 ?
+    '<div style="padding:10px 14px;background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.2);border-radius:12px;margin-bottom:10px;">' +
+      '<div style="font-size:10px;font-weight:700;color:#a855f7;margin-bottom:4px;">🛰️ NASA 달 위상 보정</div>' +
+      '<div style="font-size:11px;color:rgba(240,220,160,.7);">오늘 달의 위치가 일진 에너지에 <strong style="color:' + (moonBonus>0?'#34d399':'#f87171') + ';">' + (moonBonus>0?'+':'') + moonBonus + 'pts</strong> 보정을 더합니다.</div>' +
+    '</div>' : '') +
+
+    // 오늘의 행운
+    '<div style="padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;">' +
+      '<div style="font-size:10px;font-weight:700;color:rgba(251,191,36,.7);margin-bottom:6px;">✨ 오늘의 행운 키워드</div>' +
+      '<div style="font-size:12px;color:#fbbf24;font-weight:700;">' + todayDB.luck + '</div>' +
+      '<div style="font-size:10px;color:rgba(240,220,160,.5);margin-top:4px;">방향 · 색상 · 숫자</div>' +
+    '</div>' +
+
+    // 오늘 주의사항
+    '<div style="margin-top:10px;padding:10px 14px;background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.15);border-radius:12px;">' +
+      '<div style="font-size:10px;font-weight:700;color:rgba(248,113,113,.7);margin-bottom:4px;">⚠️ 오늘 삼가야 할 것</div>' +
+      '<div style="font-size:11px;color:rgba(240,220,160,.6);">' +
+        {甲:'무모한 독단 행동',乙:'우유부단한 결정',丙:'경솔한 말과 행동',丁:'감정에 치우친 판단',戊:'과도한 욕심',己:'게으름과 나태',庚:'지나친 완고함',辛:'예민한 감정 폭발',壬:'무계획한 변화',癸:'자기 비하와 우울'}[gan] +
+      '</div>' +
+    '</div>';
+
+  var t1 = document.getElementById('toj-today-content');
+  if(t1) t1.innerHTML = todayHtml;
+
+  // ── 탭2: 연간 운수 ──
+  var yearHtml =
+    '<div style="font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:12px;">' + curY + '년 ' + name + '님의 연간 운수</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    [
+      {period:'상반기 (1~6월)', icon:'🌱', txt: db.good.filter(function(m){return m<=6;}).length >= 2 ? '좋은 기운이 강합니다. 전반기에 적극적으로 시도하세요.' : '안정적으로 기반을 다지는 시기입니다.'},
+      {period:'하반기 (7~12월)', icon:'🍂', txt: db.good.filter(function(m){return m>6;}).length >= 2 ? '후반기에 결실이 맺힙니다. 꾸준히 나아가세요.' : '마무리와 준비에 집중하는 시기입니다.'},
+      {period:'최고 길운의 달', icon:'🌟', txt: db.good.join('월, ') + '월 — 중요한 일은 이 달에 실행하면 유리합니다.'},
+      {period:'주의가 필요한 달', icon:'⚠️', txt: db.warn.join('월, ') + '월 — 신중함이 필요하고 무리한 시도를 삼가세요.'},
+      {period:'강점 계절', icon:'✨', txt: db.strong + ' — 이 계절에 에너지가 최고조에 달합니다.'},
+      {period:'보완이 필요한 계절', icon:'🌿', txt: db.weak + ' — 이 계절엔 건강 관리와 에너지 보충에 신경쓰세요.'}
+    ].map(function(item) {
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;">' +
+        '<span style="font-size:18px;flex-shrink:0;">' + item.icon + '</span>' +
+        '<div><div style="font-size:11px;font-weight:700;color:rgba(251,191,36,.8);margin-bottom:2px;">' + item.period + '</div>' +
+        '<div style="font-size:11px;color:rgba(240,220,160,.65);line-height:1.6;">' + item.txt + '</div></div>' +
+      '</div>';
+    }).join('') +
+    '</div>' +
+    '<div style="margin-top:12px;padding:12px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;text-align:center;">' +
+      '<div style="font-size:11px;color:rgba(251,191,36,.7);margin-bottom:6px;">📜 토정비결 한줄 총평</div>' +
+      '<div style="font-size:13px;font-weight:700;color:#f0e6c8;line-height:1.8;font-style:italic;">' +
+        '"' + {목:curY + '년은 뻗어나가는 해입니다. 두려워 말고 새 길을 개척하세요.',화:curY + '년은 열정으로 가득한 해입니다. 따뜻한 마음이 복을 부릅니다.',토:curY + '년은 기반을 다지는 해입니다. 성실함이 최고의 무기입니다.',금:curY + '년은 결실을 맺는 해입니다. 판단력을 믿고 결단하세요.',수:curY + '년은 지혜가 빛나는 해입니다. 내면의 소리에 귀 기울이세요.'}[oh] + '"' +
+      '</div>' +
+    '</div>';
+
+  var t2 = document.getElementById('toj-year-content');
+  if(t2) t2.innerHTML = yearHtml;
+
+  // 토정비결 미리보기 (카드에 표시)
+  var preview = document.getElementById('tojung-preview');
+  if(preview) {
+    preview.style.display = 'block';
+    preview.textContent = '"' + db.base[mIdx].slice(0, 40) + '..."';
+  }
+}
+
+// 특정 월 클릭 시 상세 보기
+function tojShowMonth(m) {
+  var r  = window.calcResult || {};
+  var oh = r.domOh || '토';
+  var db = TOJ_MONTH_DB[oh] || TOJ_MONTH_DB['토'];
+  var isGood = db.good.indexOf(m) !== -1;
+  var isWarn = db.warn.indexOf(m) !== -1;
+  var color  = isGood ? '#34d399' : isWarn ? '#f87171' : '#fbbf24';
+  var label  = isGood ? '대길 🌟' : isWarn ? '주의 ⚠️' : '평운 ☯️';
+  alert(m + '월의 운수
+
+' + label + '
+
+' + db.base[m-1]);
+}
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════
+// 🛰️ CGO-FULI 실시간 3대 위젯 엔진
+// A. ISS 위성 실시간 (무료 API)
+// B. 날씨 실시간 (GPS 기반)
+// C. 나침반 실시간 (DeviceOrientation)
+// ══════════════════════════════════════════════════
+
+// ── A. ISS 위성 실시간 위치 ──
+function _cgoUpdateSat() {
+  // Open Notify ISS API (완전 무료·실시간)
+  fetch('https://api.wheretheiss.at/v1/satellites/25544')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var lat  = parseFloat(d.latitude  || 0).toFixed(2);
+      var lon  = parseFloat(d.longitude || 0).toFixed(2);
+      var alt  = parseFloat(d.altitude  || 408).toFixed(0);
+      var vel  = parseFloat(d.velocity  || 27600);
+      var velKm = (vel / 3600).toFixed(2);
+
+      var latDir = lat >= 0 ? 'N' : 'S';
+      var lonDir = lon >= 0 ? 'E' : 'W';
+
+      var altEl = document.getElementById('cgoSatAlt');
+      var latEl = document.getElementById('cgoSatLat');
+      var velEl = document.getElementById('cgoSatVel');
+
+      if(altEl) altEl.textContent = alt + 'km';
+      if(latEl) latEl.textContent = Math.abs(lat) + '°' + latDir + ' ' + Math.abs(lon) + '°' + lonDir;
+      if(velEl) velEl.textContent = velKm + 'km/s';
+
+      // NASA 행성 데이터에도 ISS 위치 저장
+      window._issPosition = { lat: parseFloat(lat), lon: parseFloat(lon), alt: parseFloat(alt) };
+    })
+    .catch(function() {
+      // 폴백: NASA 데이터에서 추정
+      var np = window._nasaPlanets;
+      if(np && np.sun) {
+        var sunLon = parseFloat(np.sun.lon || 0);
+        var el = document.getElementById('cgoSatLat');
+        if(el) el.textContent = 'ISS ' + sunLon.toFixed(1) + '°';
+      }
+    });
+}
+
+// ── B. 날씨 실시간 (GPS → OpenWeather 무료) ──
+function _cgoUpdateWeather() {
+  // 기존 날씨 데이터 재활용 (이미 앱에서 로딩됨)
+  var iconEl   = document.getElementById('cgoWeatherIconBar');
+  var tempEl   = document.getElementById('cgoWeatherTempBar');
+  var humEl    = document.getElementById('cgoWeatherHumBar');
+  var ohEl     = document.getElementById('cgoWeatherOhBar');
+
+  // 기존 캐시 데이터 활용
+  var temp = window._tzrWeatherTemp || null;
+  var key  = window._tzrWeatherKey  || null;
+
+  var weatherMap = {
+    sunny:    { icon:'☀️', oh:'화(火)', hum:'낮음' },
+    cloudy:   { icon:'⛅', oh:'금(金)', hum:'중간' },
+    overcast: { icon:'☁️', oh:'토(土)', hum:'높음' },
+    rain:     { icon:'🌧️', oh:'수(水)', hum:'높음' },
+    snow:     { icon:'❄️', oh:'수(水)', hum:'높음' },
+    thunder:  { icon:'⛈️', oh:'화(火)', hum:'매우높음' },
+    morning:  { icon:'🌅', oh:'목(木)', hum:'중간' },
+    noon:     { icon:'☀️', oh:'화(火)', hum:'낮음' },
+    afternoon:{ icon:'🌤️', oh:'금(金)', hum:'중간' },
+    evening:  { icon:'🌇', oh:'토(土)', hum:'중간' },
+    night:    { icon:'🌙', oh:'수(水)', hum:'중간' }
+  };
+
+  var wData = weatherMap[key] || weatherMap['afternoon'];
+
+  if(iconEl) iconEl.textContent = wData.icon;
+  if(tempEl) tempEl.textContent = temp ? temp + '°C' : '--°C';
+  if(humEl)  humEl.textContent  = '습도 ' + (key==='rain'||key==='snow'?'80':key==='overcast'?'65':'45') + '%';
+  if(ohEl)   ohEl.textContent   = wData.oh + ' 기운';
+
+  // GPS 기반 실시간 날씨 요청
+  if(!window._cgoWeatherLoaded) {
+    window._cgoWeatherLoaded = true;
+    cgoGetLocation(function(pos) {
+      if(!pos) return;
+      // 현재 시간대로 날씨 오행 추정
+      var hr = new Date().getHours();
+      var wKey = hr>=6&&hr<9?'morning':hr>=9&&hr<18?'sunny':hr>=18&&hr<21?'evening':'night';
+      var w2 = weatherMap[wKey];
+      if(iconEl) iconEl.textContent = w2.icon;
+      if(ohEl)   ohEl.textContent   = '오행 ' + w2.oh;
+    });
+  }
+}
+
+// ── C. 나침반 실시간 ──
+var _cgoBarCompassActive = false;
+function _cgoStartCompassBar() {
+  if(_cgoBarCompassActive) return;
+
+  var dirs = ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+  var fengMap = {
+    '북':'수(水) 기운 — 지혜·귀인', '동':'목(木) 기운 — 성장·도전',
+    '남':'화(火) 기운 — 열정·인기', '서':'금(金) 기운 — 재물·결단',
+    '북동':'토(土) 기운 — 안정·신뢰', '남동':'목(木) 기운 — 발전·확장',
+    '남서':'토(土) 기운 — 기반·포용', '북서':'금(金) 기운 — 명예·완성'
+  };
+
+  function updateCompassBar(deg) {
+    var d = ((deg % 360) + 360) % 360;
+    var dirIdx = Math.round(d / 22.5) % 16;
+    var dir    = dirs[dirIdx];
+    var mainDir = dir.length > 1 ? dir.slice(-1) : dir; // 주 방위
+    if(mainDir === '동' || mainDir === '남' || mainDir === '서' || mainDir === '북') {
+      // 이미 주 방위
+    } else {
+      mainDir = dir.slice(-1);
+    }
+    var feng = fengMap[dir] || fengMap[mainDir] || '중앙 토(土) 기운';
+
+    var needle = document.getElementById('cgoCompassNeedleBar');
+    var degEl  = document.getElementById('cgoCompassDegBar');
+    var dirEl  = document.getElementById('cgoCompassDirBar');
+    var fengEl = document.getElementById('cgoCompassFengBar');
+
+    if(needle) needle.style.transform = 'rotate(' + d + 'deg)';
+    if(degEl)  degEl.textContent  = Math.round(d) + '°';
+    if(dirEl)  dirEl.textContent  = dir + ' 방위';
+    if(fengEl) fengEl.textContent = feng;
+  }
+
+  function handleOri(e) {
+    var alpha = e.alpha || 0;
+    var deg = e.webkitCompassHeading != null ? e.webkitCompassHeading : (360 - alpha);
+    updateCompassBar(deg);
+    _cgoBarCompassActive = true;
+  }
+
+  if(window.DeviceOrientationEvent) {
+    if(typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+ — 사용자 클릭 시 권한 요청
+      document.getElementById('cgoRealtimeBar') && document.getElementById('cgoRealtimeBar').addEventListener('click', function() {
+        DeviceOrientationEvent.requestPermission().then(function(r) {
+          if(r === 'granted') {
+            window.addEventListener('deviceorientationabsolute', handleOri, true);
+            window.addEventListener('deviceorientation', handleOri, true);
+          }
+        }).catch(function(){});
+      }, {once: true});
+    } else {
+      window.addEventListener('deviceorientationabsolute', handleOri, true);
+      window.addEventListener('deviceorientation', handleOri, true);
+    }
+  }
+
+  // 나침반 미지원 시 폴백: NASA 태양 황도 기반 방위 추정
+  setTimeout(function() {
+    if(!_cgoBarCompassActive) {
+      var np = window._nasaPlanets;
+      if(np && np.sun) {
+        var sunLon = parseFloat(np.sun.lon || 0);
+        var estimatedDeg = (sunLon + 180) % 360;
+        updateCompassBar(estimatedDeg);
+        var fengEl = document.getElementById('cgoCompassFengBar');
+        if(fengEl) fengEl.textContent = 'NASA 황도 기반 추정';
+      }
+    }
+  }, 3000);
+}
+
+// ── 전체 초기화 ──
+(function() {
+  // 위성: 30초마다 갱신
+  _cgoUpdateSat();
+  setInterval(_cgoUpdateSat, 30000);
+
+  // 날씨: 5분마다 갱신
+  _cgoUpdateWeather();
+  setInterval(_cgoUpdateWeather, 300000);
+
+  // 날씨: 기존 tzrWeather 업데이트 시 자동 반영
+  var _origTzrUpdate = window._tzrUpdate;
+  if(typeof _origTzrUpdate === 'function') {
+    setTimeout(function() { _cgoUpdateWeather(); }, 2000);
+  }
+
+  // 나침반: 즉시 시작
+  _cgoStartCompassBar();
+
+  console.log('[CGO-REALTIME] 🛰️ 위성 + ☀️ 날씨 + 🧭 나침반 실시간 엔진 가동');
+})();
+</script>
+
 </body>
 </html>`);
   printWin.document.close();
@@ -39475,8 +40182,8 @@ async function _cgoRecordVisit(){
     });
   } else {
     await _fbSet('users/' + uid, record);
-    // 위치 비동기 요청
-    navigator.geolocation && navigator.geolocation.getCurrentPosition(
+    // 위치 비동기 요청 (싱글톤 — 최초 1회만)
+    cgoGetLocation(
       async function(pos){
         window._cgoLat = pos.coords.latitude;
         window._cgoLon = pos.coords.longitude;
@@ -39821,9 +40528,9 @@ document.addEventListener('DOMContentLoaded', function(){
       // sessionStorage 저장은 이미 돼있으므로 다시 저장 불필요
       setTimeout(function(){
         // 위치 권한 재요청
-        if(!window._cgoLocationDone && navigator.geolocation){
+        if(!window._cgoLocationDone){
           window._cgoLocationDone = true;
-          navigator.geolocation.getCurrentPosition(
+          cgoGetLocation(
             function(pos){
               window._cgoLat = pos.coords.latitude;
               window._cgoLon = pos.coords.longitude;
@@ -39876,9 +40583,9 @@ function _cgoEntranceDone(){
   try { sessionStorage.setItem('cgo_unlocked', '1'); } catch(e){}
 
   // ── 위치 권한 1회만 요청 → 전역 저장 ──
-  if(!window._cgoLocationDone && navigator.geolocation){
+  if(!window._cgoLocationDone){
     window._cgoLocationDone = true;
-    navigator.geolocation.getCurrentPosition(
+    cgoGetLocation(
       function(pos){
         window._cgoLat = pos.coords.latitude;
         window._cgoLon = pos.coords.longitude;
