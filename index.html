@@ -4383,6 +4383,8 @@ function updateTransitSectionWithNASA(planets) {
         <div style="font-size:10px;color:rgba(212,168,67,.7);letter-spacing:.1em;font-weight:600;margin-bottom:6px">⚡ CEI — 생체+역학 융합 에너지 지수</div>
         <div id="bsFIli" style="font-size:48px;font-weight:900;color:#d4a843;font-family:'Orbitron',sans-serif;line-height:1">--</div>
         <div id="bsFIliSub" style="font-size:10px;color:rgba(212,168,67,.55);margin-top:5px">스캔 후 동기화 상태 표시</div>
+        <!-- 🌌 공명 알고리즘 UX 표시 -->
+        <div id="cgoResonanceBadges" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;min-height:0;"></div>
       </div>
       <div style="text-align:center;padding:13px;background:rgba(255,255,255,.04);border-radius:12px">
         <div style="font-size:10px;color:var(--text-3);margin-bottom:5px">역학 에너지</div>
@@ -5088,6 +5090,8 @@ function _cgoUpdateCompassWidget(deg, dirText) {
   if(dirEl)  dirEl.textContent = (dirText||deg+'°')+' 방위';
   if(fengEl) fengEl.textContent = _fengMapWidget[dirText]||'방위 연동중';
   _cgoBarCompassActive = true;
+  // ✅ 공명 알고리즘용 전역 저장
+  window._cgoCompassDeg = deg;
 }
 function fcHandleOrientation(e){
   var deg = null;
@@ -9401,6 +9405,115 @@ function _hvShowResult(seed,oh,sd){
     var doneArr=_HV.scores.filter(function(v){return v>0;});
     rawTotal=doneArr.length>0?Math.round(doneArr.reduce(function(a,b){return a+b;},0)/doneArr.length):0;
   }
+
+  // ══════════════════════════════════════════════════════════
+  // 🌌 CGO-FULI 공명(Resonance) 알고리즘 v2.0
+  // 설계: 제미니 막둥이 × 구현: Claude 형님
+  // 외부 환경이 관련 역학군을 실시간 증폭
+  // ══════════════════════════════════════════════════════════
+  (function() {
+    var np = window._nasaPlanets || {};
+    var wKey = window._tzrWeatherKey || '';
+    var compassDeg = window._cgoCompassDeg || null;
+    var resonanceLog = []; // UX용 공명 로그
+
+    // ── 역학 클러스터 정의 ──
+    // A. 천문 공명 클러스터 (NASA 행성 데이터 연동)
+    // [0]행성트랜짓, [1]자미두수, [3]베딕+태양궁, [4]구성학, [9]태양궁, [10]하우스
+    var astroIdx = [0, 1, 3, 4, 9, 10];
+
+    // B. 기상 공명 클러스터 (날씨/오행 연동)
+    // [5]주역, [7]사주명리, [13]풍수지리
+    var natureIdx = [5, 7, 13];
+
+    // C. 공간 공명 클러스터 (나침반/방위 연동)
+    // [2]기문둔갑, [6]태을신수, [13]풍수지리, [14]육임
+    var spaceIdx = [2, 6, 13, 14];
+
+    var resonanceBonus = 0;
+
+    // ── A. 천문 공명 (NASA 유효 시 +25%) ──
+    if (np && np.sun && parseFloat(np.sun.lon || 0) > 0) {
+      var astroSum = 0, astroW = 0;
+      astroIdx.forEach(function(i) {
+        if (_HV.scores[i] > 0) {
+          astroSum += _HV.scores[i] * ILI_WEIGHTS[i] * 0.25; // 25% 증폭
+          astroW   += ILI_WEIGHTS[i];
+        }
+      });
+      if (astroW > 0) {
+        var astroBonus = Math.round(astroSum / weightTotal);
+        resonanceBonus += astroBonus;
+        resonanceLog.push('🛰️ NASA 천문 공명 +' + astroBonus + 'pt');
+      }
+    }
+
+    // ── B. 기상 공명 (맑음·온화 시 +15%) ──
+    var goodWeather = ['sunny', 'cloudy', 'morning', 'noon', 'afternoon'];
+    if (goodWeather.indexOf(wKey) !== -1) {
+      var natureSum = 0, natureW = 0;
+      natureIdx.forEach(function(i) {
+        if (_HV.scores[i] > 0) {
+          natureSum += _HV.scores[i] * ILI_WEIGHTS[i] * 0.15;
+          natureW   += ILI_WEIGHTS[i];
+        }
+      });
+      if (natureW > 0) {
+        var natureBonus = Math.round(natureSum / weightTotal);
+        resonanceBonus += natureBonus;
+        resonanceLog.push('🌤️ 기상 공명 +' + natureBonus + 'pt');
+      }
+    }
+
+    // ── C. 공간 공명 (길방 방위 시 +10%) ──
+    // 동(45-135°), 남동(90-180°), 동남(112.5°) = 길방
+    if (compassDeg !== null) {
+      var isAuspDir = (compassDeg >= 45 && compassDeg <= 180) ||
+                     (compassDeg >= 292 && compassDeg <= 360);
+      if (isAuspDir) {
+        var spaceSum = 0, spaceW = 0;
+        spaceIdx.forEach(function(i) {
+          if (_HV.scores[i] > 0) {
+            spaceSum += _HV.scores[i] * ILI_WEIGHTS[i] * 0.10;
+            spaceW   += ILI_WEIGHTS[i];
+          }
+        });
+        if (spaceW > 0) {
+          var spaceBonus = Math.round(spaceSum / weightTotal);
+          resonanceBonus += spaceBonus;
+          resonanceLog.push('🧭 공간 공명 +' + spaceBonus + 'pt');
+        }
+      }
+    }
+
+    // ── 표준화: 언밸런스 방지 ──
+    // 1. 역학 베이스 가드: 최소 35점 보장
+    var baseGuarded = Math.max(rawTotal, 35);
+
+    // 2. 공명 보너스 적용
+    var boosted = baseGuarded + resonanceBonus;
+
+    // 3. 시그모이드 캡: 100점 초과 방지 (자연스러운 곡선)
+    var sigmoid = function(x) {
+      return 100 / (1 + Math.exp(-0.08 * (x - 75)));
+    };
+    var finalILI = boosted > 90 ? Math.round(sigmoid(boosted)) : Math.min(boosted, 99);
+
+    // 4. 안정적 신뢰 구간 (40~90) 보정
+    finalILI = Math.max(40, Math.min(90, finalILI));
+
+    // rawTotal을 공명 적용된 값으로 업데이트
+    if (resonanceBonus > 0) {
+      rawTotal = finalILI;
+      // 공명 로그 전역 저장 (UX 표시용)
+      window._cgoResonanceLog = resonanceLog;
+    } else {
+      // 공명 없어도 하한선 적용
+      rawTotal = Math.max(rawTotal, 35);
+      window._cgoResonanceLog = [];
+    }
+  })();
+  // ══════════════════════════════════════════════════════════
 
   // ══ 건강 종합점수: 생체 30% + 역학 70% ══════════════════
   // 건강 예측에서 실제 생체 측정이 핵심 — 역학은 맥락 보정
@@ -38874,6 +38987,37 @@ function cgoPrintReport() {
 }
 </script>
 
+<script>
+// ✅ 공명 알고리즘 UX 배지 업데이트
+function _cgoUpdateResonanceBadges() {
+  var el = document.getElementById('cgoResonanceBadges');
+  if (!el) return;
+  var logs = window._cgoResonanceLog || [];
+  if (logs.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = logs.map(function(log) {
+    var color = log.indexOf('NASA') >= 0 ? '#38bdf8' :
+                log.indexOf('기상') >= 0 ? '#34d399' : '#d4a843';
+    return '<span style="font-size:9px;padding:2px 8px;border-radius:10px;' +
+           'background:rgba(255,255,255,.06);border:1px solid ' + color + '44;' +
+           'color:' + color + ';font-weight:700;">' + log + '</span>';
+  }).join('');
+}
+
+// ILI 업데이트 시 공명 배지도 함께 갱신
+var _origBsFIliUpdate = setInterval(function() {
+  var el = document.getElementById('bsFIli');
+  if (el && el.textContent !== '--') {
+    _cgoUpdateResonanceBadges();
+  }
+}, 2000);
+
+// 자동계산 완료 후에도 갱신
+document.addEventListener('calcDone', _cgoUpdateResonanceBadges);
+</script>
+
 
 
 <!-- ══ YouTube 인앱 플레이어 ══ -->
@@ -39298,11 +39442,7 @@ function tojShowMonth(m) {
   var isWarn = db.warn.indexOf(m) !== -1;
   var color  = isGood ? '#34d399' : isWarn ? '#f87171' : '#fbbf24';
   var label  = isGood ? '대길 🌟' : isWarn ? '주의 ⚠️' : '평운 ☯️';
-  alert(m + '월의 운수
-
-' + label + '
-
-' + db.base[m-1]);
+  alert(m + '월의 운수\n\n' + label + '\n\n' + db.base[m-1]);
 }
 </script>
 
@@ -39439,74 +39579,106 @@ function _cgoUpdateWeather() {
 }
 
 // ── C. 나침반 실시간 ──
+// ── 나침반 위젯 (최적화) ──────────────────────────────
 var _cgoBarCompassActive = false;
+var _dirs = ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+var _fengMapBar = {
+  '북':'수(水) 기운 — 지혜·귀인','동':'목(木) 기운 — 성장·도전',
+  '남':'화(火) 기운 — 열정·인기','서':'금(金) 기운 — 재물·결단',
+  '북동':'토(土) 기운 — 안정·신뢰','남동':'목(木) 기운 — 발전·확장',
+  '남서':'토(土) 기운 — 기반·포용','북서':'금(金) 기운 — 명예·완성'
+};
+
+// UI 업데이트 함수
+function _updateCompassBarUI(heading, source) {
+  var d   = ((heading%360)+360)%360;
+  var dir = _dirs[Math.round(d/22.5)%16];
+  var feng = _fengMapBar[dir] || _fengMapBar[dir.slice(-1)] || '중앙 토(土) 기운';
+  var needle = document.getElementById('cgoCompassNeedleBar');
+  var degEl  = document.getElementById('cgoCompassDegBar');
+  var dirEl  = document.getElementById('cgoCompassDirBar');
+  var fengEl = document.getElementById('cgoCompassFengBar');
+  if(needle) needle.style.transform = 'rotate('+d+'deg)';
+  if(degEl)  degEl.textContent  = Math.round(d)+'°';
+  if(dirEl)  dirEl.textContent  = dir+' 방위';
+  if(fengEl) fengEl.textContent = source ? feng+' ('+source+')' : feng;
+  // 기존 fcHandleOrientation 위젯 연동도 유지
+  if(typeof _cgoUpdateCompassWidget === 'function') _cgoUpdateCompassWidget(Math.round(d), dir);
+}
+
+// 이벤트 리스너 (absolute 우선, 중복 방지)
+function _cgoCompassStartListening() {
+  var _handler = function(e) {
+    // webkitCompassHeading 최우선 (iOS에서 가장 정확)
+    var heading = e.webkitCompassHeading;
+    if(heading === undefined || heading === null) {
+      heading = e.alpha ? (360 - e.alpha) : 0;
+    }
+    _updateCompassBarUI(heading, null);
+    _cgoBarCompassActive = true;
+  };
+
+  // absolute 지원하면 그것만 사용 (배터리·연산 최적화)
+  if('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', _handler, true);
+  } else {
+    window.addEventListener('deviceorientation', _handler, true);
+  }
+}
+
+// 권한 요청 (반드시 클릭 이벤트 내에서 호출)
+function _cgoRequestCompassPermission() {
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(function(r) {
+        if(r === 'granted') {
+          _cgoCompassStartListening();
+        } else {
+          var fe = document.getElementById('cgoCompassFengBar');
+          if(fe) fe.textContent = '브라우저 설정에서 동작 및 방향 접근을 허용해주세요';
+        }
+      })
+      .catch(function(err) {
+        var fe = document.getElementById('cgoCompassFengBar');
+        if(fe) fe.textContent = '오류: '+err.message;
+      });
+  } else {
+    // Android / 구형 iOS — 바로 시작
+    _cgoCompassStartListening();
+  }
+}
+
+// 초기화 (페이지 로드 시 자동 실행 금지 원칙 적용)
 function _cgoStartCompassBar() {
   if(_cgoBarCompassActive) return;
 
-  var dirs = ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
-  var fengMap = {
-    '북':'수(水) 기운 — 지혜·귀인','동':'목(木) 기운 — 성장·도전',
-    '남':'화(火) 기운 — 열정·인기','서':'금(金) 기운 — 재물·결단',
-    '북동':'토(土) 기운 — 안정·신뢰','남동':'목(木) 기운 — 발전·확장',
-    '남서':'토(土) 기운 — 기반·포용','북서':'금(金) 기운 — 명예·완성'
-  };
+  var fengEl = document.getElementById('cgoCompassFengBar');
+  var compassCard = document.querySelector('#cgoRealtimeBar > div:last-child');
 
-  function updateCompassBar(deg) {
-    var d = ((deg%360)+360)%360;
-    var dir = dirs[Math.round(d/22.5)%16];
-    var mainDir = dir.slice(-1);
-    var feng = fengMap[dir] || fengMap[mainDir] || '중앙 토(土) 기운';
-    var needle = document.getElementById('cgoCompassNeedleBar');
-    var degEl  = document.getElementById('cgoCompassDegBar');
-    var dirEl  = document.getElementById('cgoCompassDirBar');
-    var fengEl = document.getElementById('cgoCompassFengBar');
-    if(needle) needle.style.transform = 'rotate('+d+'deg)';
-    if(degEl)  degEl.textContent  = Math.round(d)+'°';
-    if(dirEl)  dirEl.textContent  = dir+' 방위';
-    if(fengEl) fengEl.textContent = feng;
-  }
-
-  function handleOri(e) {
-    var alpha = e.alpha||0;
-    var deg = e.webkitCompassHeading!=null ? e.webkitCompassHeading : (360-alpha);
-    updateCompassBar(deg);
-    _cgoBarCompassActive = true;
-  }
-
-  function startListening() {
-    window.addEventListener('deviceorientationabsolute', handleOri, true);
-    window.addEventListener('deviceorientation', handleOri, true);
-  }
-
-  if(window.DeviceOrientationEvent) {
-    if(typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS 13+ — 나침반 카드 탭 시 권한 요청
-      var fengEl2 = document.getElementById('cgoCompassFengBar');
-      if(fengEl2) fengEl2.textContent = '탭하면 활성화';
-      var compassCard = document.querySelector('#cgoRealtimeBar > div:last-child');
-      if(compassCard) {
-        compassCard.style.cursor = 'pointer';
-        compassCard.addEventListener('click', function() {
-          DeviceOrientationEvent.requestPermission()
-            .then(function(r) {
-              if(r==='granted') startListening();
-              else if(fengEl2) fengEl2.textContent = '권한 거부됨';
-            }).catch(function(){});
-        }, {once:true});
-      }
-    } else {
-      startListening(); // Android 자동 시작
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS 13+ : 자동 실행 금지 → 카드 탭 시 권한 요청
+    if(fengEl) fengEl.textContent = '탭하면 나침반 활성화';
+    if(compassCard) {
+      compassCard.style.cursor = 'pointer';
+      compassCard.addEventListener('click', function() {
+        _cgoRequestCompassPermission();
+      }, {once: true});
     }
+  } else {
+    // Android / PC — 바로 시작 (권한 팝업 없음)
+    _cgoCompassStartListening();
   }
 
   // NASA 폴백 (3초 후 미작동 시)
   setTimeout(function() {
     if(!_cgoBarCompassActive) {
       var np = window._nasaPlanets;
-      var deg = np&&np.sun ? (parseFloat(np.sun.lon||0)+180)%360 : (new Date().getHours()/24)*360;
-      updateCompassBar(deg);
-      var fe = document.getElementById('cgoCompassFengBar');
-      if(fe && !_cgoBarCompassActive) fe.textContent = 'NASA 황도 기반';
+      var deg = np&&np.sun ? (parseFloat(np.sun.lon||0)+180)%360
+                           : (new Date().getHours()/24)*360;
+      _updateCompassBarUI(deg, 'NASA');
+      if(fengEl && !_cgoBarCompassActive) fengEl.textContent = 'NASA 황도 기반';
     }
   }, 3000);
 }
