@@ -3526,6 +3526,7 @@ function updateTransitSectionWithNASA(planets) {
   var bp  = (document.getElementById('ipBirthPlace')||{}).value||'';
   var cp  = (document.getElementById('ipCurPlace')||{}).value||'';
   var gv  = (document.getElementById('ipGender')||{}).value||'';
+  // ✅ 오늘의 운세: 이름+생년월일+성별+출생지+거주지 (시간만 선택)
   if(!nm.trim()){
     alert('이름을 입력해 주세요! 😊'); return;
   }
@@ -19598,8 +19599,10 @@ function _checkCalcReady() {
   var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
   var mbtiOk  = !!(window._mbtiResult);
 
-  // ✅ 수정: 이름+생년월일만 있으면 계산 가능 (스캔은 선택사항)
-  var allReady = nameOk && birthOk;
+  // ✅ 원래 조건: 이름+생년월일+생체스캔(관상·손금·혀) 모두 완료해야 자동계산 활성
+  // MBTI는 선택사항
+  var allScans = faceOk && palmOk && tongOk;
+  var allReady = nameOk && birthOk && allScans;
 
   // 버튼 활성/비활성
   btn.disabled = !allReady;
@@ -19607,16 +19610,14 @@ function _checkCalcReady() {
   // 배지: MBTI 완료 시 20개, 아니면 19개
   if(badge) {
     var _bp3 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
-    var _t20 = _bp3.badge_20eng || '20개 역학 적용!';
-    var _t19 = _bp3.badge_19eng || '19개 역학 → MBTI 추가 시 20개';
-    var _tWait = _bp3.badge_wait || '준비 중...';
-    var allScans = faceOk && palmOk && tongOk;
-    badge.textContent = (allReady && mbtiOk && allScans) ? _t20
-      : (allReady && mbtiOk) ? _t20
+    var _t20   = _bp3.badge_20eng || '20개 역학 적용!';
+    var _t19   = _bp3.badge_19eng || '19개 역학 → MBTI 추가 시 20개';
+    var _tWait = _bp3.badge_wait  || '준비 중...';
+    badge.textContent = (allReady && mbtiOk) ? _t20
       : allReady ? _t19
       : _tWait;
     badge.style.background = (allReady && mbtiOk) ? '#a855f7' : allReady ? '#34d399' : 'rgba(255,255,255,.15)';
-    badge.style.color = (allReady && mbtiOk) ? '#fff' : allReady ? '#082011' : 'rgba(255,255,255,.4)';
+    badge.style.color      = (allReady && mbtiOk) ? '#fff'    : allReady ? '#082011' : 'rgba(255,255,255,.4)';
   }
 
   // 준비 상태 리스트 (선택 언어 반영)
