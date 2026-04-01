@@ -1,5 +1,7 @@
 
 
+
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8360,8 +8362,8 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 // ══ Groq 키 자동 로테이션 (한도 초과시 다음 키로 자동 전환) ══
 (function(){
   var KEY_POOL = [
-    'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=',
-    'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=',
+    '',
+    '',
   ];
   window._CGO_KEY_POOL = KEY_POOL;
   var idx = parseInt(localStorage.getItem('cgo_key_idx') || '0');
@@ -14559,7 +14561,7 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
   if (!nodes.length) return;
 
   var apiKey=(window.CG_GEMINI_KEY||'').trim();
-  if(!apiKey){try{apiKey=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=');}catch(e){}}
+  if(!apiKey){try{apiKey=atob('');}catch(e){}}
 
   var batchSize=80, batches=[], i;
   // 노드 없으면 종료
@@ -20795,32 +20797,43 @@ function tarotChatSend(){
     oh?'오행: '+oh+(nbti?' / NBTI: '+nbti:''):'',
     systems?'연동 역학: '+systems:'',
     '',
-    '규칙:',
+   '규칙:',
     '1. 근거 없는 % 수치 절대 사용 금지',
     '2. 단정 표현 금지',
     '3. 쉽고 따뜻하게 2~4문장으로 답변',
     '4. 필요하면 역으로 질문해서 더 정밀한 분석 유도'
   ].join('\n');
-    var messages = [{role:'system',content:systemPrompt}];
-  _tarotState.chatHistory.slice(-6).forEach(function(h){ messages.push({role:h.role,content:h.content}); });
 
-  // 로딩
+  var messages = [{role:'system', content:systemPrompt}];
+  _tarotState.chatHistory.slice(-6).forEach(function(h){ 
+    messages.push({role:h.role, content:h.content}); 
+  });
+
+  // 로딩 표시 시작
   var loadDiv = document.createElement('div');
   loadDiv.style.cssText='text-align:center;color:rgba(139,92,246,.5);font-size:11px;padding:8px;';
   loadDiv.textContent='🤖 분석 중...';
   document.getElementById('tarot-chat-messages').appendChild(loadDiv);
 
-  fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+['gsk_oEETSvbk6yIWEs','GL31S5WGdyb3FYFv8h','KGivc2GWYY474MG0PUhU'].join('')},
-    body:JSON.stringify({model:'llama-3.1-70b-versatile',messages:messages,max_tokens:300,temperature:0.7})
-  }).then(function(r){return r.json();}).then(function(data){
+  // ✅ 데이터 전송 및 결과 처리
+  fetch('/api/groq', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.1-70b-versatile',
+      messages: messages,
+      max_tokens: 300,
+      temperature: 0.7
+    })
+  }).then(function(r){ 
+    return r.json(); 
+  }).then(function(data){
     loadDiv.remove();
-    var reply = data.choices&&data.choices[0]?data.choices[0].message.content:'분석 중 오류가 발생했습니다.';
+    var reply = data.choices && data.choices[0] ? data.choices[0].message.content : '분석 중 오류가 발생했습니다.';
     tarotAddMessage('ai', reply);
   }).catch(function(){
     loadDiv.remove();
-    tarotAddMessage('ai','잠시 후 다시 시도해 주세요.');
+    tarotAddMessage('ai', '잠시 후 다시 시도해 주세요.');
   });
 }
 
@@ -20853,7 +20866,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 
 // API 설정
-var _GK = ['gsk_oEETSvbk6yIWEsG','L31S5WGdyb3FYFv8h','KGivc2GWYY474MG0PUhU'].join('');
+var _GK = [''].join('');
 // ✦ CGO-FULI 타로 22장
 var _TAROT_IMG_BASE = 'https://raw.githubusercontent.com/gh951/CGo-Fuli/main/CGO-FULI-Tarot/';
 var QT_TAROT = [
@@ -21131,7 +21144,7 @@ function qtCallAI(userMsg,callback){
   var loading=qtShowLoading();
   fetch('https://api.groq.com/openai/v1/chat/completions',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+['gsk_oEETSvbk6yIWEs','GL31S5WGdyb3FYFv8h','KGivc2GWYY474MG0PUhU'].join('')},
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+[''].join('')},
     body:JSON.stringify({model:'llama-3.1-70b-versatile',messages:messages,max_tokens:350,temperature:0.75})
   }).then(function(res){return res.json();}).then(function(data){
     if(loading) loading.remove();
@@ -26971,7 +26984,7 @@ function cgoTfAiChat(){
     _addMsg('user', txt);
     _addMsg('ai', '<span style="color:#6b7280;">⏳ 분석 중...</span>');
     var key = (window.CG_GEMINI_KEY||'').trim();
-    if(!key){ try{ key=atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); }catch(e){} }
+    if(!key){ try{ key=atob(''); }catch(e){} }
     var sys = 'CGO-FULI 운세 AI. 사용자: '+name+', 오행: '+oh+', 에너지: '+total+'점. 신점의 감각적 풀이+과학적 역학 분석으로 친근하게 2-3문장 한국어 답변.';
     fetch('/api/groq',{
       method:'POST',
@@ -35739,7 +35752,7 @@ function cgSend() {
 function cgCallClaude(userText, sendBtn) {
 
   // 키 로딩 — 3단계 폴백
-  var _BUILTIN = 'Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU=';
+  var _BUILTIN = '';
   if (!window.CG_GEMINI_KEY || window.CG_GEMINI_KEY.trim() === '') {
     // 1) localStorage
     var _saved = localStorage.getItem('cgo_gemini_key');
@@ -35899,7 +35912,7 @@ function cgCallClaude(userText, sendBtn) {
   messages.push({role:'user', content:userText});
 
   // ── Groq API 직접 호출 ──
-  var _cgK=['gsk_oEETSvbk6yIWEs','GL31S5WGdyb3FYFv8h','KGivc2GWYY474MG0PUhU'].join('');
+  var _cgK=[''].join('');
   fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -36059,7 +36072,7 @@ function cgCloseApiKeyModal() {
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; }
   else {
-    try { window.CG_GEMINI_KEY = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); } catch(e){}
+    try { window.CG_GEMINI_KEY = atob(''); } catch(e){}
   }
   document.addEventListener('DOMContentLoaded', function(){
     var kb = document.getElementById('cg-key-btn');
@@ -36241,7 +36254,7 @@ function cgEnterSend(e) {
   try { saved = localStorage.getItem('cgo_gemini_key') || ''; } catch(e){}
   if (!saved) { try { saved = sessionStorage.getItem('cgo_gemini_key') || ''; } catch(e){} }
   if (saved) { window.CG_GEMINI_KEY = saved; return; }
-  try { window.CG_GEMINI_KEY = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); } catch(e){}
+  try { window.CG_GEMINI_KEY = atob(''); } catch(e){}
 })();
 
 // ── 페이지 진입 감지 → cgInit 호출 + 키 상태 체크 ──────
@@ -38570,7 +38583,7 @@ function sptAskAI(userText, isAuto) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob(''); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   // ── 검색 필요 여부 판단 키워드 ─────────────────────────
@@ -39231,7 +39244,7 @@ function stkAiCallApi(userText) {
 
   var apiKey = (window.CG_GEMINI_KEY || '').trim();
   if (!apiKey) {
-    try { apiKey = atob('Z3NrX29FRVRTdmJrNnlJV0VzR0wzMVM1V0dkeWIzRllGdjhoS0dpdmMyR1dZWTQ3NE1HMFBVaFU='); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+    try { apiKey = atob(''); window.CG_GEMINI_KEY = apiKey; } catch(e){}
   }
 
   fetch('/api/groq', {
