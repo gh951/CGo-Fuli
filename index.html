@@ -3648,13 +3648,22 @@ function updateTransitSectionWithNASA(planets) {
     window.calcResult.ili=70;
     window.calcResult.dGJ={gan:'甲',ji:'子'};
   }
-  // 실시간 데이터 연동 — 헤더/카드 복원
+  // 실시간 데이터 연동 — 헤더/카드 복원 + 순수역학 결과 초기화
   setTimeout(function(){
     var h=document.getElementById('tf-overlay-title');
     if(h){h.textContent='🛰️ 실시간 데이터 연동 분석';h.style.color='#38bdf8';}
     var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
     var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='block';
     var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
+    // ★ 순수역학 결과·선택 패널 숨기기 (실시간 연동과 독립)
+    var rs=document.getElementById('tf-result');
+    var ld=document.getElementById('tf-loading');
+    var ep=document.getElementById('tf-engine-panel');
+    if(rs) rs.style.display='none';
+    if(ld) ld.style.display='none';
+    if(ep) ep.style.display='none';
+    window._cgoInRealtimeMode = true;
+    window._cgoInPureMode = false;
   },50);
   if(typeof cgoOpenTodayFortune==='function') cgoOpenTodayFortune();
 })()"
@@ -3850,6 +3859,15 @@ function updateTransitSectionWithNASA(planets) {
           var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
           var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='none';
           var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='block';
+          // ★ 순수역학 결과·선택 패널 숨기기 (rPPG 연동과 독립)
+          var rs=document.getElementById('tf-result');
+          var ld=document.getElementById('tf-loading');
+          var ep=document.getElementById('tf-engine-panel');
+          if(rs) rs.style.display='none';
+          if(ld) ld.style.display='none';
+          if(ep) ep.style.display='none';
+          window._cgoInRealtimeMode = true;
+          window._cgoInPureMode = false;
         },50);if(typeof cgoOpenTodayFortune==='function')cgoOpenTodayFortune();})()"
           style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
@@ -25720,6 +25738,11 @@ function cgoOpenPureMetaphysics(){
     var rc = document.getElementById('tf-realtime-card'); if(rc) rc.style.display='none';
     var bc = document.getElementById('tf-bio-card');      if(bc) bc.style.display='none';
     var rp = document.getElementById('tf-rppg-card');     if(rp) rp.style.display='none';
+    // ★ 실시간 연동 플래그 해제 + 역학 선택 패널 복원
+    var ep2=document.getElementById('tf-engine-panel');
+    if(ep2) ep2.style.display='block';
+    window._cgoInRealtimeMode = false;
+    window._cgoInPureMode = true;
   }, 50);
 
   cgoOpenTodayFortune();
@@ -25873,6 +25896,11 @@ function cgoTfUpdateWeight(){
 }
 
 function cgoRunTodayFortune(){
+  // 순수역학 모드가 아니면 실행 안 함
+  if(window._cgoInRealtimeMode && !window._cgoInPureMode){
+    console.log('[CGO] 실시간 연동 모드 - 순수역학 분석 차단');
+    return;
+  }
   var r = window.calcResult;
   if(!r||!r.y){
     var _y=parseInt((document.getElementById('ipBirthY')||{}).value)||0;
@@ -27608,7 +27636,7 @@ window.addEventListener('load', function(){
     </div>
 
     <!-- 50대 역학 선택 -->
-    <div style="background:rgba(0,0,0,.25);border:1px solid rgba(212,168,67,.2);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+    <div id="tf-engine-panel" style="background:rgba(0,0,0,.25);border:1px solid rgba(212,168,67,.2);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:#d4a843;">⚖️ 50대 역학 선택 <span id="tf-selected-count" style="color:#38bdf8;">(0개 선택됨)</span></div>
         <div style="display:flex;gap:6px;">
