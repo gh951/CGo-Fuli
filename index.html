@@ -26096,15 +26096,93 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   selectedEngines.forEach(function(e){eSet[e.id]=true;});
 
   function _hasRel(area){
+    // 50개 역학 전체 관여 영역 매핑
     var m={
-      work:['bazi','ziwei','qimen','kyusei','tojeong','maehwa','iching','jyotish','horary','liuren','sixlines','taiyi'],
-      money:['bazi','ziwei','qimen','tojeong','maehwa','iching','jyotish','horary','numerology','gematria','onomancy','sixlines'],
-      love:['bazi','ziwei','jyotish','nakshatra','hellenistic','horary','tarot','lenormand','enneagram','humandesign'],
-      health:['bazi','jyotish','nakshatra','biorhythm','myeongsang','palmistry','vastu','yangtaek','luopan'],
-      social:['bazi','enneagram','humandesign','genekeys','onomancy','gematria','iching'],
-      legal:['horary','liuren','sixlines','qimen','iching','bazi','jyotish'],
-      career:['bazi','ziwei','qimen','kyusei','tojeong','iching','jyotish','horary','humandesign'],
-      direction:['qimen','liuren','luopan','yangtaek','vastu','san_phra','kanso','xuankong','taiyi','kyusei']
+      work:[
+        'bazi','ziwei','qimen','kyusei','tojeong','maehwa','iching','jyotish','horary',
+        'liuren','sixlines','taiyi',
+        // 서양: 헬레니즘 10하우스(사회적성취), 호라리, KP 직업궁
+        'hellenistic','kp','sabian',
+        // 인도: 조티쉬 10바브, 나크샤트라
+        'nakshatra',
+        // 동남아/기타
+        'thai_royal','primbon','tuvi','rokuyo','onmyodo',
+        // 성격/적성: 휴먼디자인, 에니어그램
+        'humandesign','genekeys'
+      ],
+      money:[
+        'bazi','ziwei','qimen','tojeong','maehwa','iching','jyotish','horary',
+        'liuren','sixlines',
+        // 서양: 헬레니즘 2하우스(자산), 타로, 게마트리아
+        'hellenistic','kp','tarot','lenormand','numerology','gematria','onomancy','sabian',
+        // 인도: 조티쉬 2바브, 랄키탑
+        'nakshatra','lalkitab',
+        // 수비: 루시안 수비학
+        'ru_numerology',
+        // 동남아
+        'tuvi','primbon','thai_royal',
+        // 룬
+        'runes'
+      ],
+      love:[
+        'bazi','ziwei','jyotish','nakshatra',
+        // 서양: 헬레니즘 7하우스(파트너십), 금성·화성 애스펙트
+        'hellenistic','kp','sabian','horary','tarot','lenormand',
+        // 성격: 에니어그램, 휴먼디자인, 진 키스
+        'enneagram','humandesign','genekeys',
+        // 기타
+        'lalkitab','tuvi','thai_royal','wayang','runes','tzolkin','onmyodo','slav_totem'
+      ],
+      health:[
+        'bazi','jyotish','nakshatra',
+        // 서양: 헬레니즘 6하우스(건강·수명), 토성·화성 영향
+        'hellenistic','kp','sabian',
+        // 생체: 생체리듬, 관상, 수상
+        'biorhythm','myeongsang','palmistry',
+        // 공간: 바스투, 양택, 나경
+        'vastu','yangtaek','luopan',
+        // 인도: 랄키탑, 아유르베다
+        'lalkitab',
+        // 동남아
+        'tuvi','san_phra','xuankong','kanso','sacredgeo'
+      ],
+      social:[
+        'bazi',
+        // 서양: 헬레니즘 11하우스(우정·커뮤니티), 수성
+        'hellenistic','kp','sabian',
+        // 성격: 에니어그램, 휴먼디자인, 진 키스
+        'enneagram','humandesign','genekeys',
+        // 수비/기호: 오노만시, 게마트리아
+        'onomancy','gematria',
+        // 기타
+        'iching','tarot','lenormand','runes','wayang','slav_totem',
+        'tzolkin','maehwa','nakshatra','primbon'
+      ],
+      legal:[
+        'horary','liuren','sixlines','qimen','iching','bazi','jyotish',
+        // 서양: 헬레니즘 9하우스(법·철학), 목성·토성
+        'hellenistic','kp','sabian',
+        'taiyi','maehwa'
+      ],
+      career:[
+        'bazi','ziwei','qimen','kyusei','tojeong','iching','jyotish','horary',
+        // 서양: 헬레니즘 10하우스·섹트, KP
+        'hellenistic','kp','sabian',
+        // 성격/적성
+        'humandesign','enneagram','genekeys',
+        // 수비
+        'numerology','onomancy','ru_numerology',
+        // 기타
+        'nakshatra','lalkitab','tuvi','thai_royal','primbon'
+      ],
+      direction:[
+        'qimen','liuren','luopan','yangtaek','vastu','san_phra','kanso',
+        'xuankong','taiyi','kyusei',
+        // 서양: 점지오만시, 방위 점성
+        'geomancy','radiesthesia',
+        // 기타 공간
+        'hellenistic','primbon','ongtao','sacredgeo'
+      ]
     };
     return (m[area]||[]).some(function(id){return eSet[id];});
   }
@@ -40783,45 +40861,176 @@ function cgoTfBarPopup(key){
   var engList=selectedEngines.map(function(e){return e.name+'('+e.en+', '+e.w+'pt)';}).join(', ');
   var locationInfo=bp||cp?'출생지: '+bp+(cp?', 거주지: '+cp:''):'';
 
+  // ===== key별 역학 전용 프롬프트 =====
+  var engList=selectedEngines.map(function(e){return e.name+'('+e.en+', '+e.w+'pt)';}).join(', ');
+  var locationInfo=bp||cp?'출생지:'+bp+(cp?' 거주지:'+cp:''):'';
+
+  // 선택 역학 계열 판단
+  var _eids=selectedEngines.map(function(e){return e.id;});
+  function _hasId(id){return _eids.indexOf(id)>=0;}
+  var isWestern=_eids.some(function(id){return ['hellenistic','horary','sabian','kp'].indexOf(id)>=0;});
+  var isIndian=_eids.some(function(id){return ['jyotish','nakshatra','lalkitab','vastu'].indexOf(id)>=0;});
+  var isOriental=_eids.some(function(id){return ['bazi','ziwei','qimen','iching','taiyi','liuren','sixlines','kyusei','tojeong','maehwa'].indexOf(id)>=0;});
+  var isTarot=_eids.some(function(id){return ['tarot','lenormand','runes'].indexOf(id)>=0;});
+  var isNumerology=_eids.some(function(id){return ['numerology','gematria','onomancy','ru_numerology','genekeys'].indexOf(id)>=0;});
+  var isSpace=_eids.some(function(id){return ['luopan','yangtaek','xuankong','vastu','kanso','san_phra','geomancy'].indexOf(id)>=0;});
+  var isBio=_eids.some(function(id){return ['myeongsang','palmistry','biorhythm','enneagram','humandesign'].indexOf(id)>=0;});
+
+  // 전문가 롤 (선택 역학 계열에 따라)
+  var sysRole = isWestern && !isOriental
+    ? '당신은 헬레니즘·호라리 서양 점성술 전문가입니다. 반드시 황도대·하우스·섹트·애스펙트·행성 등 서양 점성술 용어만 사용하세요. 동양 역학 용어(오행·관록궁·일진·천간·지지·괘 등)는 절대 사용 금지입니다.'
+    : isIndian && !isOriental
+    ? '당신은 조티쉬·나크샤트라 베딕 점성술 전문가입니다. 나바그라하·다샤·라시·바브·카르마 등 인도 역학 용어만 사용하세요. 동양 오행 용어는 사용 금지입니다.'
+    : isTarot && !isOriental && !isWestern
+    ? '당신은 타로·레노르망·룬 전문가입니다. 카드·아르카나·룬 문자 등 해당 역학 용어만 사용하세요.'
+    : isNumerology && !isOriental && !isWestern
+    ? '당신은 수비학(수학 역학) 전문가입니다. 생명수·운명수·카르마수 등 수비학 용어만 사용하세요.'
+    : '당신은 사주명리·기문둔갑·토정비결 등 동양 역학 전문가입니다. 천간·지지·오행·괘·성·궁·살 등 동양 역학 용어만 사용하세요.';
+
+  // key별 분석 초점 (완전히 다름)
+  var focusMap={
+    'pop_total':{
+      focus:'오늘 전체 종합 에너지를 선택된 역학('+engList+') 전체로 분석',
+      subs: isWestern
+        ? ['태양 섹트 에너지','행성 트랜짓 영향','하우스 활성도']
+        : isIndian
+        ? ['라그나 에너지','다샤 단계','나크샤트라 위상']
+        : ['오행 종합 에너지','일진 기운','역학 시너지']
+    },
+    'pop_ohbal':{
+      focus: isWestern
+        ? '오늘 4원소(불·흙·바람·물) 균형과 행성 분포를 헬레니즘 관점으로만 분석. 동양 오행(목화토금수)은 절대 언급 금지.'
+        : isIndian
+        ? '오늘 판차부타(공간·바람·불·물·흙) 균형을 베딕 관점으로만 분석.'
+        : '오늘 목(木)·화(火)·토(土)·금(金)·수(水) 오행 균형과 상생·상극 관계를 동양 역학으로만 분석.',
+      subs: isWestern
+        ? ['불 원소(양자리·사자·사수) 강도','흙 원소(황소·처녀·염소) 강도','바람·물 원소 균형']
+        : ['목(木) 기운 강도','화(火)·토(土) 균형','금(金)·수(水) 기운']
+    },
+    'pop_iljin':{
+      focus: isWestern
+        ? '오늘 달의 위상·행성 트랜짓·보이드 오브 코스(Void of Course)가 하루에 미치는 영향을 서양 점성술로만 분석. 일진·천간·지지는 절대 언급 금지.'
+        : isIndian
+        ? '오늘 달의 나크샤트라·다샤·트랜짓이 하루에 미치는 영향을 베딕 역학으로만 분석.'
+        : '오늘 일진(日辰)의 천간·지지와 선택된 역학의 시간 이론이 하루에 미치는 영향을 분석.',
+      subs: isWestern
+        ? ['달 위상 영향','행성 트랜짓 강도','보이드 오브 코스 주의']
+        : ['일진 천간 기운','일지 지지 에너지','길시·흉시 판단']
+    },
+    'pop_space':{
+      focus:'선택 역학의 방위·공간 에너지를 분석. 풍수(기문·나경)·바스투·점지오만시 등 공간 역학 이론으로만.',
+      subs:['길방(吉方) 에너지','거주 공간 조화도','이동 방향 판단']
+    },
+    'pop_bio':{
+      focus:'선택 역학(관상·수상·생체리듬·에니어그램 등)의 생체·심리 에너지를 분석.',
+      subs:['체력 지수','심리 안정도','감성 에너지']
+    },
+    'pop_work':{
+      focus: isWestern
+        ? '헬레니즘 10하우스(사회적 성취)와 섹트(낮/밤 차트) 원리로 직업·사업 에너지 분석. 동양 관록궁·관성은 절대 언급 금지.'
+        : isIndian
+        ? '베딕의 10번째 바브(카르마 바브·사회적 지위)와 현재 다샤로 직업 에너지 분석.'
+        : '선택된 동양 역학의 관록궁·관성(官星) 이론으로 직업·사업 에너지 분석.',
+      subs: isWestern
+        ? ['10하우스 행성 강도','섹트 활성도','미드헤븐 트랜짓']
+        : ['관록궁 에너지','관성(官星) 기운','집중력·추진력']
+    },
+    'pop_money':{
+      focus: isWestern
+        ? '헬레니즘 2하우스(자산·가치)와 목성·금성 트랜짓으로 금전 에너지 분석. 재백궁·재성은 절대 언급 금지.'
+        : isIndian
+        ? '베딕 2번째 바브(재산)와 목성 다샤로 금전 에너지 분석.'
+        : '선택된 동양 역학의 재백궁(財帛宮)·재성(財星) 이론으로 금전 에너지 분석.',
+      subs: isWestern
+        ? ['2하우스 행성 강도','목성 트랜짓 영향','재물 유입 가능성']
+        : ['재성(財星) 기운','재백궁 에너지','지출 주의 지수']
+    },
+    'pop_love':{
+      focus: isWestern
+        ? '헬레니즘 7하우스(파트너십)와 금성·화성 애스펙트로 관계 에너지 분석. 부처궁·도화살은 절대 언급 금지.'
+        : isIndian
+        ? '베딕 7번째 바브와 금성 다샤·나크샤트라로 관계 에너지 분석.'
+        : '선택된 동양 역학의 부처궁(夫妻宮)·도화살(桃花殺) 이론으로 관계 에너지 분석.',
+      subs: isWestern
+        ? ['7하우스 행성 강도','금성 트랜짓 영향','파트너십 에너지']
+        : ['부처궁 에너지','도화(桃花) 기운','소통 지수']
+    },
+    'pop_health':{
+      focus: isWestern
+        ? '헬레니즘 6하우스(건강·수명)와 토성·화성 영향으로 건강 에너지 분석. 신체 오행·오장육부는 절대 언급 금지.'
+        : isIndian
+        ? '베딕 6번째 바브·8번째 바브(수명)와 신체 지시자 행성으로 건강 분석.'
+        : '선택된 동양 역학의 신체 오행·오장(五臟) 이론으로 건강 에너지 분석.',
+      subs: isWestern
+        ? ['6하우스 에너지','토성·화성 영향','수명 지시자 강도']
+        : ['신체 오행 균형','오장(五臟) 기운','면역·활력']
+    },
+    'pop_social':{
+      focus: isWestern
+        ? '헬레니즘 11하우스(우정·커뮤니티)와 수성 트랜짓으로 대인 에너지 분석.'
+        : '선택된 역학의 대인관계 이론(인성·식신 또는 커뮤니티 하우스)으로 분석.',
+      subs: isWestern
+        ? ['11하우스 에너지','수성 트랜짓 영향','사회적 연결 강도']
+        : ['인성(印星) 기운','사회적 에너지','갈등 지수']
+    },
+    'pop_legal':{
+      focus: isWestern
+        ? '헬레니즘 9하우스(법·철학·제도)와 목성·토성으로 법적 에너지 분석.'
+        : '선택된 동양 역학의 관성(官星)·형충파해 이론으로 법적 에너지 분석.',
+      subs: isWestern
+        ? ['9하우스 에너지','목성·토성 영향','계약 타이밍']
+        : ['관성(官殺) 기운','형충 강도','계약 주의 지수']
+    },
+    'pop_career':{
+      focus: isWestern
+        ? '헬레니즘 10하우스 섹트와 목성 트랜짓으로 합격·취업 에너지 분석.'
+        : '선택된 역학의 관록궁·인성(印星) 이론으로 합격·취업 에너지 분석.',
+      subs: isWestern
+        ? ['10하우스 활성도','목성 트랜짓','합격 타이밍']
+        : ['관록궁 에너지','인성(印星) 기운','준비도 지수']
+    },
+    'pop_dir':{
+      focus:'선택 역학(기문둔갑·나경·바스투·점지오만시)의 방위 이론으로만 분석.',
+      subs:['길방(吉方) 에너지','흉방(凶方) 주의','공간 조화도']
+    }
+  };
+
+  var fData = focusMap[key] || focusMap['pop_total'];
+  var subsDesc = fData.subs.join(' / ');
+
   var pLines=[
-    '당신은 토정비결·사주명리·기문둔갑 등 한국 역학 최고 전문가입니다.',
-    '아래 정보를 바탕으로 ['+m.area+'] 영역을 토정비결처럼 깊고 구체적으로 분석하세요.',
+    sysRole,
+    '',
+    '⚠️ 중요: 선택된 역학('+engList+')의 이론·용어만 사용하세요.',
+    '선택되지 않은 역학의 용어는 절대 사용 금지입니다.',
     '',
     '## 분석 대상자',
-    '이름: '+name+' | 오행: '+oh+'('+ohK[oh]+') | 생명수: '+lifeNum+(locationInfo?' | '+locationInfo:''),
+    '이름:'+name+' | 생명수:'+lifeNum+(locationInfo?' | '+locationInfo:''),
+    (isOriental?'오행:'+oh+'('+ohK[oh]+')':''),
     '',
-    '## 선택된 역학 ('+engCount+'개)',
+    '## 선택 역학 ('+engCount+'개) — 이 역학의 이론·용어만 사용',
     engList,
     '',
-    '## 전체 에너지 점수',
-    '총운:'+total+' 직업:'+ws+' 금전:'+ms+' 사랑:'+ls+' 건강:'+hs+' 대인:'+ss+' 법적:'+legal,
+    '## 분석: ['+m.area+'] (점수:'+m.score+'점)',
+    fData.focus,
+    '세부지표 제목 예시: '+subsDesc,
     '',
-    '## 분석 요청: ['+m.area+'] 영역 (현재 점수: '+m.score+'점)',
-    '',
-    '다음 내용을 반드시 포함하세요:',
-    '1. 선택 역학의 실제 이론 (괘·성·궁·살 등 역학 용어)',
-    '2. 이 점수가 나온 구체적 역학 근거',
-    (locationInfo?'3. 출생지·거주지 지리 오행이 미치는 영향':''),
-    '4. 봄/여름/가을/겨울 계절별 에너지 흐름',
-    '5. 구체적 행동 조언 (시간대·방위 포함)',
-    '',
-    '반드시 아래 JSON만 출력 (다른 텍스트 절대 금지):',
-    '{"headline":"핵심 한 줄","score":'+m.score+',',
+    '반드시 아래 JSON만 출력:',
+    '{"headline":"핵심 한 줄 (선택 역학 관점)","score":'+m.score+',',
     '"subItems":[',
-    '{"label":"세부지표1 (역학용어포함)","value":숫자,"color":"#hex","why":"역학 근거 2문장"},',
-    '{"label":"세부지표2","value":숫자,"color":"#hex","why":"역학 근거 2문장"},',
-    '{"label":"세부지표3","value":숫자,"color":"#hex","why":"역학 근거 2문장"}],',
-    '"mainAnalysis":"['+m.area+'] 역학 심층 분석. 선택 역학명 명시, 역학 용어 사용, 구체적 근거 포함. 5-6문장 상세히.",',
+    '{"label":"'+fData.subs[0]+'","value":숫자,"color":"#38bdf8","why":"선택 역학 이론 근거 2문장"},',
+    '{"label":"'+fData.subs[1]+'","value":숫자,"color":"#d4a843","why":"근거 2문장"},',
+    '{"label":"'+(fData.subs[2]||'에너지 종합')+'","value":숫자,"color":"#34d399","why":"근거 2문장"}],',
+    '"mainAnalysis":"['+m.area+'] 분석 5-6문장. 반드시 '+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+' 이론·용어만 사용.",',
     '"monthly":[',
-    '{"period":"봄(3-5월)","level":"길 또는 보통 또는 주의","desc":"이 시기 '+m.area+' 에너지 흐름과 구체적 조언"},',
+    '{"period":"봄(3-5월)","level":"길 또는 보통 또는 주의","desc":"선택 역학 기준 에너지 흐름"},',
     '{"period":"여름(6-8월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
     '{"period":"가을(9-11월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
     '{"period":"겨울(12-2월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"}],',
-    '"actionTip":"시간대 포함 구체적 행동 조언 2가지",',
-    '"cautionTip":"역학 근거 있는 주의사항",',
-    (locationInfo?'"locationTip":"'+locationInfo+' 지리 오행이 '+m.area+' 에너지에 미치는 영향",'
-                 :'"locationTip":"",'),
-    '"luckyFactor":"역학 근거 있는 행운 요소: 음식/색상/방위/시간 구체적으로"}'
+    '"actionTip":"선택 역학 기준 구체적 조언 2가지 (시간대 포함)",',
+    '"cautionTip":"선택 역학 이론의 주의사항",',
+    (locationInfo?'"locationTip":"'+locationInfo+' 지리적 특성이 '+m.area+' 에너지에 미치는 영향",'                 :'"locationTip":"",'),
+    '"luckyFactor":"선택 역학 기준 행운 요소 (선택되지 않은 역학 용어 절대 금지)"}'
   ];
   var prompt=pLines.filter(function(l){return l!=='';}).join('\n');
 
@@ -40831,7 +41040,7 @@ function cgoTfBarPopup(key){
     body:JSON.stringify({
       model:'llama-3.3-70b-versatile',
       messages:[
-        {role:'system',content:'당신은 토정비결·사주명리 전문가입니다. 반드시 유효한 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.'},
+        {role:'system',content:sysRole+' 반드시 유효한 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.'},
         {role:'user',content:prompt}
       ],
       max_tokens:1600,
@@ -40852,6 +41061,11 @@ function cgoTfBarPopup(key){
     }
   })
   .catch(function(){_cgoRenderDetailPopupFallback(m,d,_rgb);});
+}
+
+function cgoTfBarPopupClose(){
+  var ov=document.getElementById('tf-bar-popup-ov');
+  if(ov) ov.style.display='none';
 }
 
 function _cgoRenderDetailPopup(p, m, _rgb){
