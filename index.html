@@ -3655,15 +3655,15 @@ function updateTransitSectionWithNASA(planets) {
     var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
     var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='block';
     var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
-    // ★ 순수역학 결과·선택 패널 숨기기 (실시간 연동과 독립)
+    // ★ 순수역학 결과 숨기기 + 실시간 전용 역학 선택 복원
     var rs=document.getElementById('tf-result');
     var ld=document.getElementById('tf-loading');
-    var ep=document.getElementById('tf-engine-panel');
     if(rs) rs.style.display='none';
     if(ld) ld.style.display='none';
-    if(ep) ep.style.display='none';
     window._cgoInRealtimeMode = true;
     window._cgoInPureMode = false;
+    // 실시간 전용 선택 상태 복원
+    if(typeof _cgoRestoreEngineMode==='function') _cgoRestoreEngineMode('realtime');
   },50);
   if(typeof cgoOpenTodayFortune==='function') cgoOpenTodayFortune();
 })()"
@@ -3859,15 +3859,15 @@ function updateTransitSectionWithNASA(planets) {
           var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
           var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='none';
           var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='block';
-          // ★ 순수역학 결과·선택 패널 숨기기 (rPPG 연동과 독립)
+          // ★ 순수역학 결과 숨기기 + rPPG 전용 역학 선택 복원
           var rs=document.getElementById('tf-result');
           var ld=document.getElementById('tf-loading');
-          var ep=document.getElementById('tf-engine-panel');
           if(rs) rs.style.display='none';
           if(ld) ld.style.display='none';
-          if(ep) ep.style.display='none';
           window._cgoInRealtimeMode = true;
           window._cgoInPureMode = false;
+          // rPPG 전용 선택 상태 복원
+          if(typeof _cgoRestoreEngineMode==='function') _cgoRestoreEngineMode('rppg');
         },50);if(typeof cgoOpenTodayFortune==='function')cgoOpenTodayFortune();})()"
           style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
@@ -25691,14 +25691,23 @@ var _TF_ENGINES = [
   {id:'numerology',   name:'수비학 (피타고라스)',en:'Pythagorean Numerology',icon:'🌐', group:'🌐 글로벌 특수', w:3, domain:'astro'},
 ];
 
-// 선택 상태 (기본 20개 선택)
-var _tfSelected = {};
+// ★ 3개 모드 완전 독립 선택 상태
+var _tfSelectedPure     = {};  // 📜 순수역학 전용
+var _tfSelectedRealtime = {};  // 🛰️ 실시간 연동 전용
+var _tfSelectedRppg     = {};  // 🛰️ rPPG 전용
+var _tfSelected         = _tfSelectedPure; // 현재 활성 모드 포인터 (초기=순수역학)
+var _cgoActiveMode      = 'pure';
 var _tfOnNasa=false, _tfOnWeather=false, _tfOnEnv=false;
 var _tfEnvStream=null, _tfEnvTimer=null;
 
 // 초기화 — 기본 20개 선택
 (function(){
-  _TF_ENGINES.forEach(function(e,i){ _tfSelected[e.id] = false; }); // 초기 0개 선택
+  _TF_ENGINES.forEach(function(e){
+  _tfSelectedPure[e.id]=false;
+  _tfSelectedRealtime[e.id]=false;
+  _tfSelectedRppg[e.id]=false;
+  _tfSelected[e.id]=false;
+}); // 3개 모드 각각 초기화
 })();
 
 
@@ -25738,11 +25747,11 @@ function cgoOpenPureMetaphysics(){
     var rc = document.getElementById('tf-realtime-card'); if(rc) rc.style.display='none';
     var bc = document.getElementById('tf-bio-card');      if(bc) bc.style.display='none';
     var rp = document.getElementById('tf-rppg-card');     if(rp) rp.style.display='none';
-    // ★ 실시간 연동 플래그 해제 + 역학 선택 패널 복원
-    var ep2=document.getElementById('tf-engine-panel');
-    if(ep2) ep2.style.display='block';
+    // ★ 실시간 연동 플래그 해제 + 순수역학 전용 선택 복원
     window._cgoInRealtimeMode = false;
     window._cgoInPureMode = true;
+    // 순수역학 전용 선택 상태 복원
+    if(typeof _cgoRestoreEngineMode==='function') _cgoRestoreEngineMode('pure');
   }, 50);
 
   cgoOpenTodayFortune();
@@ -25856,12 +25865,19 @@ function cgoTfRenderEngineList(){
 }
 
 function cgoTfCheckEngine(id,val){
+  // 현재 활성 모드 객체에만 저장 (다른 모드에 영향 없음)
+  if(_cgoActiveMode==='pure')     _tfSelectedPure[id]=val;
+  else if(_cgoActiveMode==='realtime') _tfSelectedRealtime[id]=val;
+  else if(_cgoActiveMode==='rppg')     _tfSelectedRppg[id]=val;
   _tfSelected[id]=val;
   cgoTfUpdateCount();
   cgoTfUpdateWeight();
 }
 function cgoTfSelectAll(val){
-  _TF_ENGINES.forEach(function(e){ _tfSelected[e.id]=val; });
+  // 현재 활성 모드 객체에만 적용
+  var modeObj = _cgoActiveMode==='realtime'?_tfSelectedRealtime:
+                _cgoActiveMode==='rppg'?_tfSelectedRppg:_tfSelectedPure;
+  _TF_ENGINES.forEach(function(e){ modeObj[e.id]=val; _tfSelected[e.id]=val; });
   cgoTfRenderEngineList();
   cgoTfUpdateWeight();
 }
@@ -27638,7 +27654,7 @@ window.addEventListener('load', function(){
     <!-- 50대 역학 선택 -->
     <div id="tf-engine-panel" style="background:rgba(0,0,0,.25);border:1px solid rgba(212,168,67,.2);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:700;color:#d4a843;">⚖️ 50대 역학 선택 <span id="tf-selected-count" style="color:#38bdf8;">(0개 선택됨)</span></div>
+        <div style="font-size:12px;font-weight:700;color:#d4a843;">⚖️ <span class="engine-mode-label">역학 선택</span> <span id="tf-selected-count" style="color:#38bdf8;">(0개 선택됨)</span></div>
         <div style="display:flex;gap:6px;">
           <button onclick="cgoTfSelectAll(true)" style="padding:4px 10px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:6px;color:#d4a843;font-size:10px;cursor:pointer;">전체선택</button>
           <button onclick="cgoTfSelectAll(false)" style="padding:4px 10px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:6px;color:#f87171;font-size:10px;cursor:pointer;">초기화</button>
@@ -41095,6 +41111,52 @@ function cgoTfBarPopupClose(){
   var ov=document.getElementById('tf-bar-popup-ov');
   if(ov) ov.style.display='none';
 }
+
+// ══ 3개 분석 모드별 독립 역학 선택 시스템 ══
+// 각 모드가 독립된 역학 선택 상태를 가짐
+window._cgoEngineStates = {
+  pure:     {},  // 📜 순수 역학 분석 전용
+  realtime: {},  // 🛰️ 실시간 데이터 연동 전용
+  rppg:     {}   // 🛰️ rPPG 데이터 연동 전용
+};
+window._cgoCurrentMode = 'pure';
+
+// 현재 선택 상태를 모드에 저장
+function _cgoSaveEngineMode(mode){
+  window._cgoEngineStates[mode] = {};
+  _TF_ENGINES.forEach(function(e){
+    window._cgoEngineStates[mode][e.id] = !!_tfSelected[e.id];
+  });
+}
+
+// 모드 전환 - 포인터 방식으로 완전 독립
+function _cgoRestoreEngineMode(mode){
+  _cgoActiveMode = mode;
+  // _tfSelected 포인터를 해당 모드 객체로 교체
+  if(mode==='realtime'){
+    _TF_ENGINES.forEach(function(e){ _tfSelected[e.id]=_tfSelectedRealtime[e.id]; });
+  } else if(mode==='rppg'){
+    _TF_ENGINES.forEach(function(e){ _tfSelected[e.id]=_tfSelectedRppg[e.id]; });
+  } else {
+    _TF_ENGINES.forEach(function(e){ _tfSelected[e.id]=_tfSelectedPure[e.id]; });
+  }
+  // UI 갱신
+  if(typeof cgoTfRenderEngineList==='function') cgoTfRenderEngineList();
+  if(typeof cgoTfUpdateWeight==='function') cgoTfUpdateWeight();
+  // 모드별 타이틀
+  var titleMap={
+    pure:    {text:'📜 순수 역학 분석',            color:'#d4a843'},
+    realtime:{text:'🛰️ 실시간 데이터 연동 분석',   color:'#38bdf8'},
+    rppg:    {text:'🛰️ 실시간 rPPG 데이터 연동',   color:'#34d399'}
+  };
+  var t=titleMap[mode]||titleMap.pure;
+  var h=document.getElementById('tf-overlay-title');
+  if(h){h.textContent=t.text;h.style.color=t.color;}
+  var lbl=document.querySelector('#tf-engine-panel .engine-mode-label');
+  if(lbl) lbl.textContent={pure:'📜 순수역학',realtime:'🛰️ 실시간',rppg:'🛰️ rPPG'}[mode]||'역학';
+}
+
+// 모드별 독립 선택은 cgoTfCheckEngine 내부에서 처리됨
 
 function _cgoRenderDetailPopup(p, m, _rgb){
   var body=document.getElementById('tf-popup-body');
