@@ -3523,6 +3523,16 @@ function updateTransitSectionWithNASA(planets) {
             </div>
           </div>
         </div>
+        <!-- ① 정보 저장 체크박스 -->
+        <div style="margin:12px 0 0;padding:10px 12px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px;display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" id="chkSaveInfo" onchange="cgoSaveInfoToggle()"
+            style="width:18px;height:18px;cursor:pointer;accent-color:#34d399;flex-shrink:0;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#34d399;">💾 이 정보를 저장해서 다음에도 자동 입력</div>
+            <div style="font-size:10px;color:rgba(240,230,200,0.5);margin-top:2px;">체크하면 다음 방문 시 자동으로 입력됩니다</div>
+          </div>
+        </div>
+
         <!-- ① 정보 입력 후 클릭 -->
         <div style="margin:12px 0 0;padding:8px 0;">
           <div style="font-size:13px;font-weight:800;color:#34d399;">정보 입력 후 클릭</div>
@@ -3532,58 +3542,7 @@ function updateTransitSectionWithNASA(planets) {
         <div style="margin:12px 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),transparent);"></div>
 
         <!-- ✦ 오늘의 운세 카드 ✦ -->
-        <div onclick="(function(){
-  var nm  = (document.getElementById('ipName')||{}).value||'';
-  var by  = (document.getElementById('ipBirthY')||{}).value||'';
-  var bm  = (document.getElementById('ipBirthM')||{}).value||'';
-  var bd  = (document.getElementById('ipBirthD')||{}).value||'';
-  var bp  = (document.getElementById('ipBirthPlace')||{}).value||'';
-  var cp  = (document.getElementById('ipCurPlace')||{}).value||'';
-  var gv  = (document.getElementById('ipGender')||{}).value||'';
-  // ✅ 오늘의 운세: 이름+생년월일+성별+출생지+거주지 (시간만 선택)
-  if(!nm.trim()){
-    alert('이름을 입력해 주세요! 😊'); return;
-  }
-  if(!by||!bm||!bd){
-    alert('생년월일을 입력해 주세요! 😊'); return;
-  }
-  if(!gv||gv===''){
-    alert('성별을 선택해 주세요! 😊'); return;
-  }
-  if(!bp.trim()){
-    alert('출생지를 입력해 주세요! 😊'); return;
-  }
-  if(!cp.trim()){
-    alert('현재 거주지를 입력해 주세요! 😊'); return;
-  }
-  // 정보 입력만 있으면 기본값으로 운세 열기
-  if(!window.calcResult||!window.calcResult.name){
-    window.calcResult = window.calcResult || {};
-    window.calcResult.name = nm.trim();
-    window.calcResult.y = parseInt(by);
-    window.calcResult.m = parseInt(bm);
-    window.calcResult.d = parseInt(bd);
-    window.calcResult.gender = gv;
-    window.calcResult.domOh = '토';
-    window.calcResult.lifeNum = ((parseInt(by)+(parseInt(bm))+(parseInt(bd)))%9)||9;
-    window.calcResult.ili = 70;
-    window.calcResult.dGJ = {gan:'甲',ji:'子'};
-    window.calcResult.ohBal = 50;
-  }
-  // 순수 역학 — 헤더 타이틀 변경
-  setTimeout(function(){
-    var h=document.getElementById('tf-overlay-title');
-    if(h){h.textContent='📜 순수 역학 분석';h.style.color='#d4a843';}
-    // 실시간 데이터 연동 카드 숨김
-    var rc=document.getElementById('tf-realtime-card');
-    if(rc) rc.style.display='none';
-    // 생체 설명 카드 숨김
-    var bc=document.getElementById('tf-bio-card');
-    if(bc) bc.style.display='none';
-    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
-  },50);
-  cgoOpenTodayFortune();
-})()" id="today-fortune-card"
+        <div onclick="cgoOpenPureMetaphysics()" id="today-fortune-card"
           style="margin:20px 0 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(139,92,246,.1));border:2px solid rgba(212,168,67,.45);border-radius:18px;padding:18px 20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(212,168,67,.3)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
@@ -18597,19 +18556,7 @@ function getStars(s){
 }
 
 function generateFortune(r){
-  // ══ 통합 점수 시스템: 오늘의 운세 분석 결과 우선 사용 ══
-  if(window._todayFortuneAnalyzed && window.calcResult && window.calcResult.todayTotal) {
-    var _cr = window.calcResult;
-    // 오늘의 운세 분석 결과가 있으면 그 점수로 카드 업데이트
-    var _tTotal = _cr.todayTotal;
-    // 대시보드 카드 점수를 분석 결과로 동기화
-    window._fortScores = window._fortScores || {};
-    window._fortScores.ov = _tTotal;
-    window._fortScores.mn = _cr.todayMoney  || _tTotal;
-    window._fortScores.wk = _cr.todayWork   || _tTotal;
-    window._fortScores.lv = _cr.todayLove   || _tTotal;
-    window._fortScores.hl = _cr.todayHealth || _tTotal;
-  }
+  // ══ 실시간 과학 기반 연동 — 순수 역학 결과 미참조 ══
   // r 기본값 보강 (자동계산 없이 정보만 입력한 경우)
   r = r || {};
   if(!r.name){ r.name = (document.getElementById('ipName')||{}).value || '사용자'; }
@@ -25660,62 +25607,70 @@ function cgoScanStart(type){
 
 // 50대 역학 리스트
 var _TF_ENGINES = [
-  // GROUP 1: NASA & 우주
-  {id:'planet_transit', name:'행성 트랜짓', en:'Planet Transit', icon:'🇺🇸', group:'NASA & 우주', w:8, domain:'nasa'},
-  {id:'retrograde',     name:'행성 역행',   en:'Retrograde',     icon:'🇺🇸', group:'NASA & 우주', w:4, domain:'nasa'},
-  {id:'fixed_stars',    name:'항성 데이터', en:'Fixed Stars',    icon:'🇺🇸', group:'NASA & 우주', w:3, domain:'nasa'},
-  {id:'lunar_phase',    name:'달의 위상',   en:'Lunar Phase',    icon:'🇺🇸', group:'NASA & 우주', w:4, domain:'nasa'},
-  {id:'solar_cycle',    name:'태양 활동',   en:'Solar Cycle',    icon:'🇺🇸', group:'NASA & 우주', w:3, domain:'nasa'},
-  // GROUP 2: 동북아
-  {id:'bazi',     name:'사주명리',  en:'Bazi',         icon:'🇨🇳', group:'동북아', w:10, domain:'astro'},
-  {id:'ziwei',    name:'자미두수',  en:'Zi Wei',       icon:'🇨🇳', group:'동북아', w:8,  domain:'nasa'},
-  {id:'qimen',    name:'기문둔갑',  en:'Qimen Dunjia', icon:'🇨🇳', group:'동북아', w:7,  domain:'weather'},
-  {id:'kyusei',   name:'구성기학',  en:'Kyusei',       icon:'🇯🇵', group:'동북아', w:5,  domain:'astro'},
-  {id:'rokuyo',   name:'육요',      en:'Rokuyo',       icon:'🇯🇵', group:'동북아', w:3,  domain:'astro'},
-  {id:'iching',   name:'주역',      en:'I-Ching',      icon:'🇨🇳',  group:'동북아', w:8,  domain:'astro'},
-  {id:'tojeong',  name:'토정비결',  en:'Tojeong',      icon:'🇰🇷', group:'동북아', w:4,  domain:'astro'},
-  {id:'taiyi',    name:'태을신수',  en:'Tai Yi',       icon:'🇨🇳', group:'동북아', w:5,  domain:'astro'},
-  {id:'liuren',   name:'육임',      en:'Liu Ren',      icon:'🇨🇳', group:'동북아', w:4,  domain:'weather'},
-  {id:'onmyodo',  name:'음양도',    en:'Onmyodo',      icon:'🇯🇵', group:'동북아', w:3,  domain:'astro'},
-  {id:'tuvi',     name:'자미도수',  en:'Tu Vi',        icon:'🇻🇳', group:'동북아', w:3,  domain:'astro'},
-  {id:'onomancy', name:'성명학',    en:'Onomancy',     icon:'🇰🇷', group:'동북아', w:3,  domain:'bio'},
-  // GROUP 3: 인도&동남아
-  {id:'jyotish',    name:'베딕 점성술', en:'Jyotish',    icon:'🇮🇳', group:'인도&동남아', w:7, domain:'nasa'},
-  {id:'nakshatra',  name:'나크샤트라', en:'Nakshatra',  icon:'🇮🇳', group:'인도&동남아', w:4, domain:'nasa'},
-  {id:'lalkitab',   name:'라 리 키탑', en:'Lal Kitab',  icon:'🇮🇳', group:'인도&동남아', w:3, domain:'bio'},
-  {id:'kp',         name:'KP 시스템',  en:'KP System',  icon:'🇮🇳', group:'인도&동남아', w:3, domain:'nasa'},
-  {id:'mahabote',   name:'마하보테',   en:'Mahabote',   icon:'🇲🇲', group:'인도&동남아', w:2, domain:'astro'},
-  // GROUP 4: 서구권
-  {id:'hellenistic', name:'헬레니즘',     en:'Hellenistic',     icon:'🇬🇷', group:'서구권', w:6, domain:'nasa'},
-  {id:'horary',      name:'호라리',       en:'Horary',          icon:'🇬🇧', group:'서구권', w:4, domain:'astro'},
-  {id:'sabian',      name:'세이비언',     en:'Sabian Symbols',  icon:'🇺🇸', group:'서구권', w:3, domain:'astro'},
-  {id:'gematria',    name:'카발라',       en:'Gematria',        icon:'🇮🇱', group:'서구권', w:3, domain:'astro'},
-  {id:'numerology',  name:'수비학',       en:'Numerology',      icon:'🇺🇸', group:'서구권', w:4, domain:'astro'},
-  {id:'tarot',       name:'타로',         en:'Tarot',           icon:'🇫🇷', group:'서구권', w:5, domain:'astro'},
-  {id:'lenormand',   name:'레노먼드',     en:'Lenormand',       icon:'🇫🇷', group:'서구권', w:2, domain:'astro'},
-  {id:'runes',       name:'룬 문자',      en:'Runes',           icon:'🇩🇪',  group:'서구권', w:2, domain:'astro'},
-  {id:'ogham',       name:'켈틱 나무',    en:'Ogham',           icon:'🇮🇪', group:'서구권', w:2, domain:'env'},
-  {id:'alchemy',     name:'연금술',       en:'Alchemy',         icon:'🇩🇪', group:'서구권', w:2, domain:'astro'},
-  {id:'humandesign', name:'인간 설계',    en:'Human Design',    icon:'🇺🇸', group:'서구권', w:3, domain:'bio'},
-  {id:'genekeys',    name:'유전자키',     en:'Gene Keys',       icon:'🇬🇧', group:'서구권', w:2, domain:'bio'},
-  // GROUP 5: 중동&아프리카&남미
-  {id:'enneagram',  name:'에니어그램', en:'Enneagram',   icon:'🇸🇦',  group:'중동&남미', w:3, domain:'bio'},
-  {id:'arabparts',  name:'아랍 파트',  en:'Arabic Parts', icon:'🇸🇦', group:'중동&남미', w:2, domain:'nasa'},
-  {id:'decans',     name:'이집트 데칸',en:'Decans',       icon:'🇪🇬', group:'중동&남미', w:2, domain:'nasa'},
-  {id:'geomancy',   name:'지오맨시',   en:'Geomancy',     icon:'🇲🇦', group:'중동&남미', w:2, domain:'env'},
-  {id:'tzolkin',    name:'마야 촐킨',  en:'Tzolkin',      icon:'🇲🇽', group:'중동&남미', w:3, domain:'astro'},
-  // GROUP 6: 공간&풍수
-  {id:'luopan',   name:'나경 풍수',    en:'Luo Pan',      icon:'🇨🇳', group:'풍수', w:5, domain:'env'},
-  {id:'vastu',    name:'바스투',       en:'Vastu Shastra',icon:'🇮🇳', group:'풍수', w:3, domain:'env'},
-  {id:'terroir',  name:'테루아',       en:'Terroir',      icon:'🇫🇷', group:'풍수', w:2, domain:'env'},
-  {id:'kanso',    name:'칸소',         en:'Kanso',        icon:'🇯🇵', group:'풍수', w:2, domain:'env'},
-  {id:'yangtaek', name:'양택가상학',   en:'Yang Taek',    icon:'🇰🇷', group:'풍수', w:3, domain:'env'},
-  {id:'radiesthesia',name:'레이더스테지아',en:'Radiesthesia',icon:'🇫🇷',group:'풍수', w:2, domain:'env'},
-  // GROUP 7: 생체
-  {id:'myeongsang', name:'관상학',    en:'Myeongsang',    icon:'🇰🇷', group:'생체', w:6, domain:'bio'},
-  {id:'palmistry',  name:'수상학',    en:'Palmistry',     icon:'🇯🇵', group:'생체', w:6, domain:'bio'},
-  {id:'biorhythm',  name:'생체 리듬', en:'Biorhythm',     icon:'🇩🇪', group:'생체', w:4, domain:'bio'},
-  {id:'sacredgeo',  name:'신성 기하학',en:'Sacred Geometry',icon:'🇬🇷', group:'생체', w:2, domain:'bio'},
+  // 🇰🇷 대한민국
+  {id:'bazi',         name:'사주명리',         en:'Bazi',              icon:'🇰🇷', group:'🇰🇷 대한민국', w:10, domain:'astro'},
+  {id:'tojeong',      name:'토정비결',         en:'Tojeong Bigyeol',   icon:'🇰🇷', group:'🇰🇷 대한민국', w:5,  domain:'astro'},
+  {id:'onomancy',     name:'성명학',           en:'Name Science',      icon:'🇰🇷', group:'🇰🇷 대한민국', w:4,  domain:'bio'},
+  {id:'maehwa',       name:'매화역수',         en:'Plum Blossom',      icon:'🇰🇷', group:'🇰🇷 대한민국', w:4,  domain:'astro'},
+  {id:'yangtaek',     name:'양택가상학',       en:'Yang Taek',         icon:'🇰🇷', group:'🇰🇷 대한민국', w:3,  domain:'env'},
+  // 🇨🇳 중국
+  {id:'ziwei',        name:'자미두수',         en:'Zi Wei Dou Shu',    icon:'🇨🇳', group:'🇨🇳 중국', w:8,  domain:'astro'},
+  {id:'qimen',        name:'기문둔갑',         en:'Qi Men Dun Jia',    icon:'🇨🇳', group:'🇨🇳 중국', w:7,  domain:'weather'},
+  {id:'taiyi',        name:'태을신수',         en:'Tai Yi Shen Shu',   icon:'🇨🇳', group:'🇨🇳 중국', w:5,  domain:'astro'},
+  {id:'liuren',       name:'육임',             en:'Liu Ren',           icon:'🇨🇳', group:'🇨🇳 중국', w:4,  domain:'weather'},
+  {id:'iching',       name:'주역',             en:'I-Ching',           icon:'🇨🇳', group:'🇨🇳 중국', w:8,  domain:'astro'},
+  {id:'sixlines',     name:'육효',             en:'Liu Yao',           icon:'🇨🇳', group:'🇨🇳 중국', w:4,  domain:'astro'},
+  {id:'xuankong',     name:'현공풍수',         en:'Xuan Kong',         icon:'🇨🇳', group:'🇨🇳 중국', w:5,  domain:'env'},
+  // 🇯🇵 일본
+  {id:'kyusei',       name:'구성기학',         en:'Kyusei Kigaku',     icon:'🇯🇵', group:'🇯🇵 일본', w:5,  domain:'astro'},
+  {id:'onmyodo',      name:'음양도',           en:'Onmyodo',           icon:'🇯🇵', group:'🇯🇵 일본', w:3,  domain:'astro'},
+  {id:'rokuyo',       name:'육요',             en:'Rokuyo',            icon:'🇯🇵', group:'🇯🇵 일본', w:3,  domain:'astro'},
+  {id:'kanso',        name:'칸소',             en:'Kanso',             icon:'🇯🇵', group:'🇯🇵 일본', w:2,  domain:'env'},
+  // 🇮🇳 인도
+  {id:'jyotish',      name:'베딕 점성술',      en:'Jyotish',           icon:'🇮🇳', group:'🇮🇳 인도', w:7,  domain:'astro'},
+  {id:'nakshatra',    name:'나크샤트라',       en:'Nakshatra',         icon:'🇮🇳', group:'🇮🇳 인도', w:4,  domain:'astro'},
+  {id:'lalkitab',     name:'라 리 키탑',       en:'Lal Kitab',         icon:'🇮🇳', group:'🇮🇳 인도', w:3,  domain:'bio'},
+  {id:'kp',           name:'KP 시스템',        en:'KP System',         icon:'🇮🇳', group:'🇮🇳 인도', w:3,  domain:'astro'},
+  {id:'vastu',        name:'바스투 샤스트라',  en:'Vastu Shastra',     icon:'🇮🇳', group:'🇮🇳 인도', w:3,  domain:'env'},
+  // 🇺🇸🇬🇧 영미권
+  {id:'hellenistic',  name:'헬레니즘 점성술',  en:'Hellenistic',       icon:'🇬🇷', group:'🇺🇸🇬🇧 영미권', w:6, domain:'astro'},
+  {id:'horary',       name:'호라리',           en:'Horary',            icon:'🇬🇧', group:'🇺🇸🇬🇧 영미권', w:4, domain:'astro'},
+  {id:'sabian',       name:'세이비언 심볼',    en:'Sabian Symbols',    icon:'🇺🇸', group:'🇺🇸🇬🇧 영미권', w:3, domain:'astro'},
+  {id:'humandesign',  name:'인간 설계',        en:'Human Design',      icon:'🇺🇸', group:'🇺🇸🇬🇧 영미권', w:3, domain:'bio'},
+  {id:'genekeys',     name:'유전자키',         en:'Gene Keys',         icon:'🇬🇧', group:'🇺🇸🇬🇧 영미권', w:2, domain:'bio'},
+  // 🇩🇪 독일
+  {id:'biorhythm',    name:'생체 리듬',        en:'Biorhythm',         icon:'🇩🇪', group:'🇩🇪 독일', w:4, domain:'bio'},
+  {id:'sacredgeo',    name:'신성 기하학',      en:'Sacred Geometry',   icon:'🇩🇪', group:'🇩🇪 독일', w:2, domain:'bio'},
+  {id:'runes',        name:'룬 문자',          en:'Rune Reading',      icon:'🇩🇪', group:'🇩🇪 독일', w:2, domain:'astro'},
+  // 🇫🇷 프랑스
+  {id:'terroir',      name:'테루아',           en:'Terroir',           icon:'🇫🇷', group:'🇫🇷 프랑스', w:2, domain:'env'},
+  {id:'radiesthesia', name:'레이더스테지아',   en:'Radiesthesia',      icon:'🇫🇷', group:'🇫🇷 프랑스', w:2, domain:'env'},
+  {id:'lenormand',    name:'레노먼드',         en:'Lenormand',         icon:'🇫🇷', group:'🇫🇷 프랑스', w:2, domain:'astro'},
+  // 🇪🇸🇧🇷 중남미
+  {id:'tzolkin',      name:'마야 촐킨',        en:'Maya Tzolkin',      icon:'🇲🇽', group:'🇪🇸🇧🇷 중남미', w:3, domain:'astro'},
+  {id:'enneagram',    name:'에니어그램',       en:'Enneagram',         icon:'🇪🇸', group:'🇪🇸🇧🇷 중남미', w:3, domain:'bio'},
+  {id:'brazil_energy',name:'브라질 토속 에너지학',en:'Brazilian Energy',icon:'🇧🇷', group:'🇪🇸🇧🇷 중남미', w:2, domain:'env'},
+  // 🇷🇺 러시아
+  {id:'ru_numerology',name:'러시아 수비학',    en:'Russian Numerology',icon:'🇷🇺', group:'🇷🇺 러시아', w:3, domain:'astro'},
+  {id:'slav_totem',   name:'슬라브 토템 역학', en:'Slavic Totem',      icon:'🇷🇺', group:'🇷🇺 러시아', w:2, domain:'bio'},
+  {id:'siberian',     name:'시베리아 관측 역학',en:'Siberian Astro',   icon:'🇷🇺', group:'🇷🇺 러시아', w:2, domain:'astro'},
+  // 🇻🇳 베트남
+  {id:'tuvi',         name:'베트남 자미두수',  en:'Tu Vi',             icon:'🇻🇳', group:'🇻🇳 베트남', w:3, domain:'astro'},
+  {id:'ongtao',       name:'옹따오',           en:'Ong Tao',           icon:'🇻🇳', group:'🇻🇳 베트남', w:2, domain:'env'},
+  // 🇹🇭 태국
+  {id:'thai_royal',   name:'태국 왕실 점성술', en:'Thai Royal Astro',  icon:'🇹🇭', group:'🇹🇭 태국', w:3, domain:'astro'},
+  {id:'san_phra',     name:'산 프라 품',       en:'San Phra Phum',     icon:'🇹🇭', group:'🇹🇭 태국', w:2, domain:'env'},
+  // 🇮🇩 인도네시아
+  {id:'primbon',      name:'프리본',           en:'Primbon',           icon:'🇮🇩', group:'🇮🇩 인도네시아', w:3, domain:'astro'},
+  {id:'wayang',       name:'와양 기질학',      en:'Wayang',            icon:'🇮🇩', group:'🇮🇩 인도네시아', w:2, domain:'bio'},
+  // 🇮🇱 중동
+  {id:'gematria',     name:'카발라 게마트리아', en:'Kabbalah Gematria', icon:'🇮🇱', group:'🇮🇱 중동', w:3, domain:'astro'},
+  {id:'arabparts',    name:'아랍 파트',        en:'Arabic Parts',      icon:'🇸🇦', group:'🇮🇱 중동', w:2, domain:'astro'},
+  {id:'geomancy',     name:'지오맨시',         en:'Geomancy',          icon:'🇲🇦', group:'🇮🇱 중동', w:2, domain:'env'},
+  // 🌐 글로벌 특수
+  {id:'decans',       name:'이집트 데칸',      en:'Egyptian Decans',   icon:'🇪🇬', group:'🌐 글로벌 특수', w:3, domain:'astro'},
+  {id:'luopan',       name:'나경 풍수',        en:'Luo Pan',           icon:'🌐',  group:'🌐 글로벌 특수', w:4, domain:'env'},
+  {id:'numerology',   name:'수비학 (피타고라스)',en:'Pythagorean Numerology',icon:'🌐', group:'🌐 글로벌 특수', w:3, domain:'astro'},
 ];
 
 // 선택 상태 (기본 20개 선택)
@@ -25728,6 +25683,47 @@ var _tfEnvStream=null, _tfEnvTimer=null;
   _TF_ENGINES.forEach(function(e,i){ _tfSelected[e.id] = false; }); // 초기 0개 선택
 })();
 
+
+// ══ 순수 역학 분석 카드 클릭 함수 ══
+function cgoOpenPureMetaphysics(){
+  var nm = (document.getElementById('ipName')||{}).value||'';
+  var by = (document.getElementById('ipBirthY')||{}).value||'';
+  var bm = (document.getElementById('ipBirthM')||{}).value||'';
+  var bd = (document.getElementById('ipBirthD')||{}).value||'';
+  var bp = (document.getElementById('ipBirthPlace')||{}).value||'';
+  var cp = (document.getElementById('ipCurPlace')||{}).value||'';
+  var gv = (document.getElementById('ipGender')||{}).value||'';
+
+  if(!nm.trim()){ alert('이름을 입력해 주세요! 😊'); return; }
+  if(!by||!bm||!bd){ alert('생년월일을 입력해 주세요! 😊'); return; }
+  if(!gv||gv===''){ alert('성별을 선택해 주세요! 😊'); return; }
+  if(!bp.trim()){ alert('출생지를 입력해 주세요! 😊 (순수역학에 필요합니다)'); return; }
+  if(!cp.trim()){ alert('현재 거주지를 입력해 주세요! 😊 (순수역학에 필요합니다)'); return; }
+
+  if(!window.calcResult||!window.calcResult.name){
+    window.calcResult = window.calcResult||{};
+    window.calcResult.name = nm.trim();
+    window.calcResult.y = parseInt(by);
+    window.calcResult.m = parseInt(bm);
+    window.calcResult.d = parseInt(bd);
+    window.calcResult.gender = gv;
+    window.calcResult.domOh = '토';
+    window.calcResult.lifeNum = ((parseInt(by)+parseInt(bm)+parseInt(bd))%9)||9;
+    window.calcResult.ili = 70;
+    window.calcResult.dGJ = {gan:'甲',ji:'子'};
+    window.calcResult.ohBal = 50;
+  }
+
+  setTimeout(function(){
+    var h = document.getElementById('tf-overlay-title');
+    if(h){ h.textContent='📜 순수 역학 분석'; h.style.color='#d4a843'; }
+    var rc = document.getElementById('tf-realtime-card'); if(rc) rc.style.display='none';
+    var bc = document.getElementById('tf-bio-card');      if(bc) bc.style.display='none';
+    var rp = document.getElementById('tf-rppg-card');     if(rp) rp.style.display='none';
+  }, 50);
+
+  cgoOpenTodayFortune();
+}
 function cgoOpenTodayFortune(){
   var ov = document.getElementById('todayFortuneOverlay');
   if(ov){ ov.style.display='block'; document.body.style.overflow='hidden'; }
@@ -25813,16 +25809,19 @@ function cgoTfRenderEngineList(){
   });
   var html='';
   Object.keys(groups).forEach(function(g){
-    html+='<div style="font-size:10px;color:rgba(212,168,67,.5);letter-spacing:.08em;margin:8px 0 4px;font-weight:700;">'+g+'</div>';
+    html+='<div style="font-size:10px;color:rgba(212,168,67,.6);letter-spacing:.1em;margin:12px 0 6px;font-weight:800;padding:4px 8px;border-left:2px solid rgba(212,168,67,.4);">'+g+'</div>';
     groups[g].forEach(function(e){
       var chk=_tfSelected[e.id]?'checked':'';
-      html+='<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background .2s;" onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\'transparent\'">'
-        +'<input type="checkbox" '+chk+' onchange="cgoTfCheckEngine(\''+e.id+'\',this.checked)" style="width:16px;height:16px;accent-color:#d4a843;cursor:pointer;">'
-        +'<span style="font-size:14px;">'+e.icon+'</span>'
-        +'<div style="flex:1;">'
-        +'<div style="font-size:12px;font-weight:600;color:rgba(240,220,160,.85);">'+e.name+'</div>'
-        +'<div style="font-size:10px;color:rgba(240,220,160,.4);">'+e.en+' · 기본가중치 '+e.w+'pt</div>'
-        +'</div></label>';
+      var sel=_tfSelected[e.id];
+      html+='<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .2s;'+(sel?'background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);':'background:transparent;border:1px solid transparent;')+'margin-bottom:3px;" onmouseover="this.style.background=\'rgba(212,168,67,.07)\';this.style.borderColor=\'rgba(212,168,67,.2)\'" onmouseout="this.style.background=\''+( sel?'rgba(212,168,67,.1)':'transparent')+'\';this.style.borderColor=\''+( sel?'rgba(212,168,67,.25)':'transparent')+'\'">'
+        +'<input type="checkbox" '+chk+' onchange="cgoTfCheckEngine(\''+e.id+'\',this.checked)" style="width:17px;height:17px;accent-color:#d4a843;cursor:pointer;flex-shrink:0;">'
+        +'<div style="font-size:18px;flex-shrink:0;width:24px;text-align:center;">'+e.icon+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12px;font-weight:700;color:'+(sel?'#d4a843':'rgba(240,220,160,.85)')+';">'+e.name+'</div>'
+        +'<div style="font-size:10px;color:rgba(240,220,160,.4);margin-top:1px;">'+e.en+' · '+e.w+'pt</div>'
+        +'</div>'
+        +(sel?'<div style="font-size:10px;color:#d4a843;font-weight:700;flex-shrink:0;">✓</div>':'')
+        +'</label>';
     });
   });
   el.innerHTML=html;
@@ -25874,40 +25873,390 @@ function cgoTfUpdateWeight(){
 }
 
 function cgoRunTodayFortune(){
-  // ✅ calcResult 없으면 대시보드 입력값으로 직접 구성
   var r = window.calcResult;
   if(!r||!r.y){
-    // 대시보드 입력값 직접 읽기
-    var _y=parseInt(document.getElementById('ipBirthY')&&document.getElementById('ipBirthY').value)||0;
-    var _m=parseInt(document.getElementById('ipBirthM')&&document.getElementById('ipBirthM').value)||0;
-    var _d=parseInt(document.getElementById('ipBirthD')&&document.getElementById('ipBirthD').value)||0;
-    var _nm=document.getElementById('ipName')&&document.getElementById('ipName').value||'';
-    var _bp=document.getElementById('ipBirthPlace')&&document.getElementById('ipBirthPlace').value||'서울';
-    var _gen=document.getElementById('ipGender')&&document.getElementById('ipGender').value||'M';
+    var _y=parseInt((document.getElementById('ipBirthY')||{}).value)||0;
+    var _m=parseInt((document.getElementById('ipBirthM')||{}).value)||0;
+    var _d=parseInt((document.getElementById('ipBirthD')||{}).value)||0;
+    var _nm=(document.getElementById('ipName')||{}).value||'';
+    var _bp=(document.getElementById('ipBirthPlace')||{}).value||'서울';
+    var _cp=(document.getElementById('ipCurPlace')||{}).value||'서울';
+    var _gen=(document.getElementById('ipGender')||{}).value||'M';
     if(!_y||!_m||!_d){
-      alert('이름·생년월일을 입력해주세요! (오늘의 운세 분석에 필요합니다)');
+      alert('이름·생년월일을 입력해주세요!');
       cgoCloseTodayFortune();
       if(typeof cgoSoftGo==='function') cgoSoftGo('dashboard');
       return;
     }
-    // 임시 r 객체 생성
     r = {
-      name: _nm||'사용자', y:_y, m:_m, d:_d, h:-1,
-      gender:_gen, birthPlace:_bp,
+      name:_nm||'사용자', y:_y, m:_m, d:_d, h:-1,
+      gender:_gen, birthPlace:_bp, curPlace:_cp,
       domOh:['목','화','토','금','수'][(_y+_m)%5],
       lifeNum:((_y%9)+(_m%9)+(_d%9))%9+1
     };
   }
-  // ✅ 관상/수상 선택 시 스캔 안내 (선택사항 — 아니오 눌러도 분석 가능)
-  if((_tfSelected['myeongsang']||_tfSelected['palmistry']) && !(window._bioFinalData&&window._bioFinalData.fci>0)){
-    // 스캔 팝업 비활성화 — 운세 페이지에서 스캔 권유 안 함
-  }
+
   var ld=document.getElementById('tf-loading');
   var rs=document.getElementById('tf-result');
   if(ld){ld.style.display='block';} if(rs){rs.style.display='none';}
+
+  // ══ 제미나이 감성 로딩 연출 ══
+  _cgoTfLoadingAnim();
   cgoTfUpdateWeight();
-  var w=window._tfWeights||{nasa:12,weather:4,env:4,bio:6,base:74};
-  setTimeout(function(){ _cgoTfCompute(r,w); },1500);
+
+  // 선택 역학 목록
+  var selectedEngines = _TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
+  if(selectedEngines.length === 0){
+    alert('분석할 역학을 최소 1개 선택해 주세요!');
+    if(ld) ld.style.display='none';
+    return;
+  }
+
+  // AI 실제 역학 분석 호출
+  _cgoTfAiAnalysis(r, selectedEngines);
+}
+
+// ══ 감성 로딩 애니메이션 (제미나이 막둥이 감성) ══
+function _cgoTfLoadingAnim(){
+  var ld = document.getElementById('tf-loading');
+  if(!ld) return;
+  var msgs = [
+    '천간(天干)과 지지(地支)의 합을 읽는 중...',
+    '성명의 파동 에너지를 연산 중...',
+    '선택 역학의 기운을 융합하는 중...',
+    '오행 상생·상극 관계를 분석 중...',
+    'AI 역학 해석을 완성하는 중...'
+  ];
+  var icons = ['☯️','🔮','⭐','🌙','✨'];
+  var i = 0;
+  ld.innerHTML = '<div id="tf-load-icon" style="font-size:48px;animation:pulse 1.5s infinite;margin-bottom:16px;">☯️</div>'
+    + '<div id="tf-load-msg" style="color:#d4a843;font-size:13px;font-weight:700;margin-bottom:8px;min-height:20px;">역학 분석 준비 중...</div>'
+    + '<div style="width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:3px;margin:0 auto;overflow:hidden;">'
+    + '<div id="tf-load-bar" style="height:100%;background:linear-gradient(90deg,#d4a843,#fbbf24);width:0%;transition:width 0.5s;border-radius:3px;"></div></div>';
+  var bar = document.getElementById('tf-load-bar');
+  var msg = document.getElementById('tf-load-msg');
+  var icon = document.getElementById('tf-load-icon');
+  if(window._tfLoadTimer) clearInterval(window._tfLoadTimer);
+  window._tfLoadTimer = setInterval(function(){
+    if(i < msgs.length){
+      if(msg) msg.textContent = msgs[i];
+      if(icon) icon.textContent = icons[i];
+      if(bar) bar.style.width = ((i+1)/msgs.length*80)+'%';
+      i++;
+    }
+  }, 800);
+}
+
+// ══ AI 실제 역학 분석 핵심 함수 ══
+function _cgoTfAiAnalysis(r, selectedEngines){
+  var today = new Date();
+  var todayStr = today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일 ('+['일','월','화','수','목','금','토'][today.getDay()]+'요일)';
+
+  var engineNames = selectedEngines.map(function(e){ return e.name+'('+e.en+')'; }).join(', ');
+  var engCount = selectedEngines.length;
+
+  // 오행 계산
+  var ohOrder = ['목','화','토','금','수'];
+  var ohK = {목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var userOh = r.domOh || '토';
+  var todayOh = ohOrder[today.getDate()%5];
+  var ohDiff = (ohOrder.indexOf(todayOh) - ohOrder.indexOf(userOh) + 5) % 5;
+  var ohRel = ohDiff===1?'상생(相生)':ohDiff===3?'상극(相剋)':ohDiff===0?'비화(比和)':ohDiff===2?'상설(相洩)':'상충(相沖)';
+
+  // AI 프롬프트 - 진짜 역학 지식으로 분석
+  var _pl = [
+    '당신은 세계 최고의 역학 종합 분석 AI입니다.',
+    '',
+    '## 분석 대상자',
+    '- 이름: '+r.name,
+    '- 생년월일: '+r.y+'년 '+r.m+'월 '+r.d+'일',
+    '- 성별: '+(r.gender==='M'?'남성':'여성'),
+    '- 출생지: '+(r.birthPlace||'미입력'),
+    '- 거주지: '+(r.curPlace||'미입력'),
+    '- 오행: '+userOh+'('+ohK[userOh]+')',
+    '- 수비학 생명수: '+r.lifeNum,
+    '',
+    '## 오늘 날짜',
+    todayStr,
+    '오늘 일진 오행: '+todayOh+'('+ohK[todayOh]+')',
+    '사용자 오행과 오늘 관계: '+ohRel,
+    '',
+    '## 선택된 순수 역학 ('+engCount+'개)',
+    engineNames,
+    '',
+    '위 역학들의 실제 지식으로 오늘 운세를 분석하세요.',
+    '다음 JSON만 출력하세요 (다른 텍스트 금지):',
+    '{"totalScore":숫자,"grade":"총평","summary":"요약","money":{"score":숫자,"msg":"조언"},"love":{"score":숫자,"msg":"조언"},"work":{"score":숫자,"msg":"조언"},"health":{"score":숫자,"msg":"조언"},"legal":{"score":숫자,"msg":"조언"},"social":{"score":숫자,"msg":"조언"},"factBomb":"직설조언","whyMoney":"재물근거","whyDate":"날짜근거","calcExplain":"계산설명","food":"음식","luckyDir":"방위","luckyColor":"색상","luckyNum":숫자,"energyGuide":"에너지법","csiNote":"역학궁합"}'
+  ];
+  var prompt = _pl.join('\n');
+
+  fetch('/api/groq', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{role:'user', content: prompt}],
+      max_tokens: 1200,
+      temperature: 0.6
+    })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    if(window._tfLoadTimer){ clearInterval(window._tfLoadTimer); window._tfLoadTimer=null; }
+    var bar = document.getElementById('tf-load-bar');
+    if(bar) bar.style.width='100%';
+    try {
+      var txt = (data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+      var clean = txt.replace(/```json|```/g,'').trim();
+      // JSON 추출
+      var jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if(!jsonMatch) throw new Error('JSON 없음');
+      var result = JSON.parse(jsonMatch[0]);
+      setTimeout(function(){ _cgoTfRenderAiResult(result, r, selectedEngines, engCount); }, 300);
+    } catch(e) {
+      // AI 응답 파싱 실패 시 기존 방식으로 폴백
+      console.warn('AI 분석 파싱 오류, 직접 렌더링:', e);
+      _cgoTfRenderFallback(r, selectedEngines, engCount);
+    }
+  })
+  .catch(function(err){
+    if(window._tfLoadTimer){ clearInterval(window._tfLoadTimer); window._tfLoadTimer=null; }
+    console.warn('AI 분석 오류, 직접 렌더링:', err);
+    _cgoTfRenderFallback(r, selectedEngines, engCount);
+  });
+}
+
+// ══ AI 분석 결과 렌더링 ══
+
+// ══ 폴백 렌더링 (API 실패 시) ══
+function _cgoTfRenderFallback(r, selectedEngines, engCount){
+  var oh = r.domOh||'토';
+  var ohFoodMap = {목:'채소·녹색 음식·부추',화:'붉은 과일·토마토',토:'잡곡밥·고구마',금:'흰쌀·도라지·배',수:'검은콩·미역'};
+  var ohDirMap  = {목:'동쪽',화:'남쪽',토:'중앙',금:'서쪽',수:'북쪽'};
+  var seed = (r.y*7+r.m*13+r.d*3+new Date().getDate()*11)%9973;
+  function rng(s){return((s*1103515245+12345)&0x7fffffff);}
+  var s1=rng(seed);
+  var base = 55 + rng(s1)%28;
+  var result = {
+    totalScore: base,
+    grade: base>=80?'🔥 대길일 — 무엇을 해도 이롭습니다':base>=70?'💫 길일 — 적극적으로 나아갈 때':'✨ 보통 — 안정적으로 유지하세요',
+    summary: r.name+'님('+oh+')의 오늘 에너지는 '+base+'점입니다. '+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+' 기반 분석입니다.',
+    money:  {score:Math.max(40,base-5+rng(s1+1)%15), msg:'재물 흐름을 주의 깊게 살피세요'},
+    love:   {score:Math.max(40,base+rng(s1+2)%10),   msg:'관계에 진심을 담아보세요'},
+    work:   {score:Math.max(40,base+2+rng(s1+3)%12), msg:'집중력을 발휘할 때입니다'},
+    health: {score:Math.max(40,base-2+rng(s1+4)%10), msg:'충분한 휴식을 취하세요'},
+    legal:  {score:Math.max(40,base-3+rng(s1+5)%8),  msg:'계약서는 꼼꼼히 확인하세요'},
+    social: {score:Math.max(40,base+rng(s1+6)%10),   msg:'배려와 양보로 관계를 돈독히 하세요'},
+    factBomb: r.name+'님, 오늘 '+oh+' 오행의 기운이 하루를 이끌고 있어요. 선택하신 역학('+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+')이 오늘의 흐름을 분석했습니다.',
+    whyMoney: oh+' 오행 기준 오늘 재물궁 분석 결과입니다.',
+    whyDate: '오늘 일진과 선택 역학의 교차 분석 결과입니다.',
+    calcExplain: selectedEngines.length+'개 역학 종합 분석입니다.',
+    food: ohFoodMap[oh]||'균형 잡힌 식사를 하세요.',
+    luckyDir: ohDirMap[oh]||'북쪽',
+    luckyColor: {목:'초록',화:'빨강',토:'노랑',금:'흰색',수:'검정'}[oh]||'금색',
+    luckyNum: (rng(s1+7)%9)+1,
+    energyGuide: ohDirMap[oh]+'으로 몸을 향하고 시작하세요.\n오행 식단: '+(ohFoodMap[oh]||'균형 잡힌 식사')+'를 드세요.\n행운 색상을 소품이나 의상에 활용해보세요.',
+    csiNote: ''
+  };
+  _cgoTfRenderAiResult(result, r, selectedEngines, engCount);
+}
+
+function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
+  var ld=document.getElementById('tf-loading');
+  var rs=document.getElementById('tf-result');
+  var body=document.getElementById('tf-result-body');
+  if(ld) ld.style.display='none';
+  if(rs) rs.style.display='block';
+  if(!body) return;
+
+  var total=Math.max(40,Math.min(99,result.totalScore||65));
+  var ms=Math.max(40,Math.min(99,(result.money&&result.money.score)||Math.round(total*.95)));
+  var ls=Math.max(40,Math.min(99,(result.love&&result.love.score)||Math.round(total*.97)));
+  var ws=Math.max(40,Math.min(99,(result.work&&result.work.score)||Math.round(total*1.02)));
+  var hs=Math.max(40,Math.min(99,(result.health&&result.health.score)||Math.round(total*.98)));
+  var ss=Math.max(40,Math.min(99,(result.social&&result.social.score)||Math.round(total*.96)));
+  var legal=Math.max(10,Math.min(99,(result.legal&&result.legal.score)||Math.round(total*.7)));
+  var career=Math.max(40,Math.min(99,Math.round((ws+ms)*.5)));
+  var dirScore=Math.max(40,Math.min(99,Math.round((hs+ws)*.5)));
+
+  var oh=r.domOh||'토';
+  var ohK={목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var ohC={목:'#4ade80',화:'#f87171',토:'#d4a843',금:'#e2e8f0',수:'#38bdf8'}[oh]||'#d4a843';
+  var name=r.name||'사용자';
+  var lifeNum=r.lifeNum||1;
+  var engNames=selectedEngines.slice(0,3).map(function(e){return e.name;}).join('·');
+  var precisionNote=engCount>=40?'50대 역학 완전체':engCount>=20?'정밀 다중역학':engCount>=10?'표준 역학':engCount+'개 역학';
+  var gradeC=total>=80?'#34d399':total>=65?'#d4a843':total>=50?'#fbbf24':'#f87171';
+
+  // 도메인 분류
+  var dSet={};
+  selectedEngines.forEach(function(e){dSet[e.domain]=true;});
+  var hasAstro=!!dSet.astro, hasWeather=!!dSet.weather, hasEnv=!!dSet.env, hasBio=!!dSet.bio;
+  var eSet={};
+  selectedEngines.forEach(function(e){eSet[e.id]=true;});
+
+  function _hasRel(area){
+    var m={
+      work:['bazi','ziwei','qimen','kyusei','tojeong','maehwa','iching','jyotish','horary','liuren','sixlines','taiyi'],
+      money:['bazi','ziwei','qimen','tojeong','maehwa','iching','jyotish','horary','numerology','gematria','onomancy','sixlines'],
+      love:['bazi','ziwei','jyotish','nakshatra','hellenistic','horary','tarot','lenormand','enneagram','humandesign'],
+      health:['bazi','jyotish','nakshatra','biorhythm','myeongsang','palmistry','vastu','yangtaek','luopan'],
+      social:['bazi','enneagram','humandesign','genekeys','onomancy','gematria','iching'],
+      legal:['horary','liuren','sixlines','qimen','iching','bazi','jyotish'],
+      career:['bazi','ziwei','qimen','kyusei','tojeong','iching','jyotish','horary','humandesign'],
+      direction:['qimen','liuren','luopan','yangtaek','vastu','san_phra','kanso','xuankong','taiyi','kyusei']
+    };
+    return (m[area]||[]).some(function(id){return eSet[id];});
+  }
+
+  // SVG 레이더
+  function _mkRadar(scores,labels,color){
+    var cx=110,cy=110,rr=78,n=scores.length;
+    var pts=scores.map(function(s,i){var a=(Math.PI*2/n)*i-Math.PI/2,rv=rr*(Math.max(0,Math.min(100,s))/100);return[(cx+rv*Math.cos(a)).toFixed(1),(cy+rv*Math.sin(a)).toFixed(1)];});
+    var bg=scores.map(function(_,i){var a=(Math.PI*2/n)*i-Math.PI/2;return[(cx+rr*Math.cos(a)).toFixed(1),(cy+rr*Math.sin(a)).toFixed(1)];});
+    var lp=scores.map(function(_,i){var a=(Math.PI*2/n)*i-Math.PI/2;return[(cx+(rr+20)*Math.cos(a)).toFixed(1),(cy+(rr+20)*Math.sin(a)).toFixed(1)];});
+    var h='<svg width="220" height="220" viewBox="0 0 220 220" style="display:block;margin:0 auto">';
+    [.33,.66,1].forEach(function(f){var gp=bg.map(function(p){return[(cx+(p[0]-cx)*f).toFixed(1),(cy+(p[1]-cy)*f).toFixed(1)];});h+='<polygon points="'+gp.map(function(p){return p.join(',');}).join(' ')+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';});
+    bg.forEach(function(p){h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="rgba(255,255,255,.06)" stroke-width="1"/>';});
+    h+='<polygon points="'+pts.map(function(p){return p.join(',');}).join(' ')+'" fill="'+color+'22" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
+    pts.forEach(function(p){h+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="'+color+'"/>';});
+    labels.forEach(function(lb,i){var p=lp[i];var ax=parseFloat(p[0]);var anc=ax<cx-6?'end':ax>cx+6?'start':'middle';h+='<text x="'+p[0]+'" y="'+p[1]+'" text-anchor="'+anc+'" dominant-baseline="middle" font-size="9" fill="rgba(240,230,200,.65)">'+lb+'</text>';});
+    return h+'</svg>';
+  }
+
+  // 바 (클릭 가능)
+  function _mkBar(label,val,color,inactive,popKey){
+    if(inactive) return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.3)">'+label+'</span><span style="font-size:10px;color:rgba(255,255,255,.2);font-style:italic">(관여 없음)</span></div><div style="height:5px;background:rgba(255,255,255,.04);border-radius:3px"></div></div>';
+    var v=Math.max(0,Math.min(100,val||0));
+    var ca=popKey?'onclick="cgoTfBarPopup(\'' + popKey + '\')";' : '';
+    var hint=popKey?'<span style="font-size:9px;color:rgba(212,168,67,.5);margin-left:4px">▶</span>':'';
+    return '<div style="margin-bottom:8px" '+ca+'><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.8)">'+label+hint+'</span><span style="font-size:12px;font-weight:700;color:'+color+'">'+v+'</span></div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div data-w="'+v+'" style="height:100%;width:0%;background:'+color+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div></div>';
+  }
+  function _sciTag(t,c){return '<span style="display:inline-block;font-size:9px;padding:2px 7px;border-radius:8px;background:'+c+'18;border:1px solid '+c+'44;color:'+c+';margin:2px 2px 0 0">'+t+'</span>';}
+
+  // 팝업 데이터 저장
+  window._tfPopupData={total:total,ms:ms,ls:ls,ws:ws,hs:hs,ss:ss,legal:legal,career:career,dirScore:dirScore,r:r,birthPlace:(r&&r.birthPlace)||'',curPlace:(r&&r.curPlace)||'',r:r,birthPlace:(r&&r.birthPlace)||'',curPlace:(r&&r.curPlace)||'',
+    oh:oh,ohK:ohK,ohC:ohC,name:name,engNames:engNames,engCount:engCount,
+    result:result,selectedEngines:selectedEngines,mkRadar:_mkRadar};
+
+  // ① 점수 링
+  var scoreRing='<div class="fp-score-ring">'
+    +'<div style="position:relative;width:72px;height:72px;flex-shrink:0">'
+    +'<svg width="72" height="72" viewBox="0 0 72 72" style="transform:rotate(-90deg)">'
+    +'<circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>'
+    +'<circle cx="36" cy="36" r="28" fill="none" stroke="'+gradeC+'" stroke-width="7" stroke-dasharray="'+Math.round(2*Math.PI*28*total/100)+' 999" stroke-linecap="round"/>'
+    +'</svg>'
+    +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">'
+    +'<div style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700;color:'+gradeC+'">'+total+'</div>'
+    +'</div></div>'
+    +'<div><div style="font-size:18px;font-weight:700;color:'+gradeC+'">'+name+' ☀️</div>'
+    +'<div style="font-size:11px;color:var(--text-3);margin-top:3px">오늘 총운 에너지 점수</div>'
+    +'<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">'
+    +['일간 '+oh,oh+' 오행','생명수 '+lifeNum,precisionNote].map(function(t){return '<span class="fp-tag" style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);color:var(--gold)">'+t+'</span>';}).join('')
+    +'</div></div></div>';
+
+  // ② 세부 에너지 바
+  var barItems=[
+    {label:'총운 에너지',      val:total,              color:'#d4a843',inactive:false,      key:'pop_total'},
+    {label:'오행 균형',        val:Math.round((ws+hs)*.5),color:'#38bdf8',inactive:!(hasAstro||hasWeather),key:'pop_ohbal'},
+    {label:'일진 영향',        val:ws,                 color:'#34d399',inactive:!(hasAstro||hasWeather),key:'pop_iljin'},
+    {label:'공간·방위 에너지', val:Math.round((hs+ss)*.5),color:'#a78bfa',inactive:!hasEnv, key:'pop_space'},
+    {label:'생체·심리 에너지', val:Math.round((hs+ls)*.5),color:'#f472b6',inactive:!hasBio, key:'pop_bio'}
+  ];
+  var barChart='<div class="fp-section"><div class="fp-section-title">📊 세부 에너지 분석 <span style="font-size:9px;color:rgba(212,168,67,.5);font-weight:400;font-style:italic">▶ 항목 탭하여 상세 보기</span></div>'
+    +'<div style="font-size:9px;color:rgba(212,168,67,.5);margin-bottom:8px">선택 역학: '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'</div>'
+    +barItems.map(function(b){return _mkBar(b.label,b.val,b.color,b.inactive,b.inactive?null:b.key);}).join('')
+    +'</div>';
+
+  // ③ 레이더
+  var rd=[],rl=[];
+  if(_hasRel('work')){rd.push(ws);rl.push('직업');}
+  if(_hasRel('money')){rd.push(ms);rl.push('금전');}
+  if(_hasRel('love')){rd.push(ls);rl.push('사랑');}
+  if(_hasRel('health')){rd.push(hs);rl.push('건강');}
+  if(_hasRel('social')){rd.push(ss);rl.push('대인');}
+  if(_hasRel('legal')){rd.push(legal);rl.push('법적');}
+  if(rd.length<3){rd=[total,ws,ms,ls,hs];rl=['총운','직업','금전','사랑','건강'];}
+  rd.unshift(total);rl.unshift('총운');
+  var radarSection='<div class="fp-section" style="text-align:center">'
+    +'<div class="fp-section-title">✦ 오늘 에너지 레이더 — 순수역학 종합</div>'
+    +_mkRadar(rd,rl,'#d4a843')
+    +'<div style="font-size:10px;color:rgba(240,230,200,.35);margin-top:2px">'+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  교차 분석</div></div>';
+
+  // ④ 8대 영역 바
+  var e1=selectedEngines[0]?selectedEngines[0].name:'';
+  var e2=selectedEngines[1]?selectedEngines[1].name:'';
+  var wkL='💼 직업·사업'+(e1?' ('+e1+(e2?'·'+e2:'')+'  기반)':'');
+  var areaSection='<div class="fp-section">'
+    +'<div class="fp-section-title">📈 오늘 8대 영역 에너지 요약 <span style="font-size:9px;color:rgba(212,168,67,.5);font-weight:400;font-style:italic">▶ 항목 탭하여 상세 보기</span></div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-bottom:10px">관여 없는 영역은 <span style="color:rgba(255,255,255,.25);font-style:italic">(관여 없음)</span> 표시</div>'
+    +_mkBar(wkL,          ws,     '#38bdf8',!_hasRel('work'),     'pop_work')
+    +_mkBar('💰 금전·재물',ms,     '#d4a843',!_hasRel('money'),   'pop_money')
+    +_mkBar('❤️ 사랑·관계',ls,    '#f472b6',!_hasRel('love'),    'pop_love')
+    +_mkBar('🌿 건강·활력',hs,     '#34d399',!_hasRel('health'),  'pop_health')
+    +_mkBar('🤝 대인관계', ss,     '#a78bfa',!_hasRel('social'),  'pop_social')
+    +_mkBar('⚖️ 법적 분쟁',legal, '#f87171',!_hasRel('legal'),   'pop_legal')
+    +_mkBar('☑️ 합격·취업',career,'#fbbf24',!_hasRel('career'),  'pop_career')
+    +_mkBar('🧭 좋은 방위',dirScore,'#34d399',!_hasRel('direction'),'pop_dir')
+    +'</div>';
+
+  // ⑤ FULI 에너지 흐름
+  var flowSection='<div class="fp-section" style="background:rgba(212,168,67,.04);border:1px solid rgba(212,168,67,.15)">'
+    +'<div class="fp-section-title">💡 FULI가 읽은 오늘의 에너지 흐름</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.95">'+(result.factBomb||('오늘 일간 <strong style="color:'+ohC+'">'+(oh+'('+ohK[oh]+')')+'</strong>의 기운이 하루를 감싸고 있어요. '+(result.summary||'')))+'</div>'
+    +'<div style="margin-top:10px">'+selectedEngines.slice(0,5).map(function(e){return _sciTag(e.name+' '+e.w+'pt','#d4a843');}).join('')+'</div></div>';
+
+  // ⑥ 영역 카드 2열
+  var allCards=[
+    {icon:'💰',label:'재물 에너지',area:'money',color:'#d4a843',items:[{k:'유입 가능성',v:ms},{k:'지출 주의',v:Math.max(20,100-ms)}],tip:(ms>=70?'✔ 소액 투자 OK':'⚠ 지출 자제'),pk:'pop_money'},
+    {icon:'❤️',label:'관계 에너지',area:'love',color:'#f472b6',items:[{k:'관계 흐름',v:ls},{k:'소통 지수',v:Math.min(99,ls+3)}],tip:(ls>=70?'✔ 연락·만남 추천':'⚠ 오해 주의'),pk:'pop_love'},
+    {icon:'🌿',label:'건강 에너지',area:'health',color:'#34d399',items:[{k:'체력',v:hs},{k:'활력',v:Math.min(99,hs+3)}],tip:(hs>=70?'✔ 운동 추천':'⚠ 무리 금지'),pk:'pop_health'},
+    {icon:'💼',label:'직업 에너지',area:'work',color:'#38bdf8',items:[{k:'집중도',v:ws},{k:'대인·협력',v:Math.min(99,ws+2)}],tip:(ws>=70?'✔ 미팅·협상 추천':'⚠ 독단 자제'),pk:'pop_work'},
+    {icon:'🤝',label:'대인관계',area:'social',color:'#a78bfa',items:[{k:'친화력',v:ss},{k:'갈등 지수',v:Math.max(20,95-ss)}],tip:(ss>=70?'✔ 네트워킹 추천':'⚠ 갈등 주의'),pk:'pop_social'},
+    {icon:'⚖️',label:'법적 분쟁',area:'legal',color:'#f87171',items:[{k:'법적 위험',v:legal},{k:'계약 주의',v:Math.max(20,100-legal)}],tip:(legal>=60?'✔ 계약 가능':'⚠ 계약 주의'),pk:'pop_legal'}
+  ];
+  var acards=allCards.filter(function(c){return _hasRel(c.area);});
+  if(!acards.length) acards=allCards.slice(0,4);
+  var cardSection='<div class="fp-section"><div class="fp-section-title">🔷 영역별 오늘의 에너지 요약</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +acards.map(function(c,ci){
+      var rgb=c.color==='#d4a843'?'212,168,67':c.color==='#f472b6'?'244,114,182':c.color==='#34d399'?'52,211,153':c.color==='#38bdf8'?'56,189,248':c.color==='#a78bfa'?'167,139,250':'248,113,113';
+      var divId='tf-acard-'+ci;
+      var divH='<div id="'+divId+'" style="background:rgba('+rgb+',.06);border:1px solid rgba('+rgb+',.2);border-radius:10px;padding:10px;cursor:pointer">';
+      divH+='<div style="font-size:10px;font-weight:800;color:'+c.color+';margin-bottom:5px">'+c.icon+' '+c.label+' &#9654;</div>';
+      c.items.forEach(function(it){var col2=it.v>=75?'#34d399':it.v>=55?c.color:'#f87171';divH+='<div style="margin-bottom:4px"><div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="font-size:10px;color:rgba(240,230,200,.6)">'+it.k+'</span><span style="font-size:11px;font-weight:700;color:'+col2+'">'+it.v+'</span></div><div style="height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden"><div data-w="'+it.v+'" style="height:100%;width:0%;background:'+col2+';border-radius:2px;transition:width 1.2s ease"></div></div></div>';});
+      divH+='<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:4px">'+c.tip+'</div></div>';
+      setTimeout(function(id,pk){var el=document.getElementById(id);if(el)el.onclick=function(){cgoTfBarPopup(pk);};},200,divId,c.pk||'');
+      return divH;
+    }).join('')+'</div></div>';
+
+  // ⑦ 오늘 좋은/나쁜 것
+  var gl=(result.energyGuide||'').split('\n').filter(function(l){return l.trim();});
+  var goodList=gl.length>=3?gl.slice(0,3):['새로운 시작','중요 결정','인맥 활동'];
+  var goodBad='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div class="fp-section" style="background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.2)"><div class="fp-section-title">✅ 오늘 하면 좋은 것</div>'+goodList.map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:4px">• '+t.replace(/^[\u2022\u00b7\-\s\d\.]+/,'').trim()+'</div>';}).join('')+'</div>'
+    +'<div class="fp-section" style="background:rgba(248,113,113,.05);border-color:rgba(248,113,113,.2)"><div class="fp-section-title">✕ 오늘 피해야 할 것</div>'+['충동적 결정','무리한 확장','감정적 판단'].map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:4px">• '+t+'</div>';}).join('')+'</div></div>';
+
+  // ⑧ 역학 근거
+  var whySec='<div class="fp-section"><div class="fp-section-title">🔬 왜 그런지 알려드릴게요</div><div style="display:flex;flex-direction:column;gap:8px">'
+    +[{t:'재물에 주의해야 하는 이유',b:result.whyMoney||'선택 역학 기준 재물궁 분석 결과입니다.'},{t:'오늘 날짜의 역학적 의미',b:result.whyDate||'오늘 일진과 선택 역학의 교차 분석입니다.'},{t:'운세 계산 방법',b:result.calcExplain||'선택 '+engCount+'개 역학의 AI 종합 분석입니다.'},{t:'오늘 먹으면 좋은 것',b:result.food||'오행에 공명하는 음식을 드세요.'}]
+    .map(function(c){return '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;border-left:3px solid rgba(212,168,67,.4)"><div style="font-size:10px;font-weight:700;color:#d4a843;margin-bottom:4px">'+c.t+'</div><div style="font-size:11px;color:rgba(240,230,200,.75);line-height:1.7">'+c.b+'</div></div>';}).join('')+'</div></div>';
+
+  // ⑨ 에너지 올리는 법
+  var energySec='<div class="fp-section" style="background:rgba(52,211,153,.04);border-color:rgba(52,211,153,.2)"><div class="fp-section-title">🪄 오늘 운을 100% 활용하는 방법</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="padding:10px;background:rgba(52,211,153,.06);border-radius:8px"><div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">✅ 해야 할 것</div>'+goodList.map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:3px">• '+t.replace(/^[\u2022\u00b7\-\s\d\.]+/,'').trim()+'</div>';}).join('')+'</div><div style="padding:10px;background:rgba(248,113,113,.06);border-radius:8px"><div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:6px">🚫 피해야 할 것</div>'+['충동적 결정','무리한 확장','감정적 판단'].map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:3px">• '+t+'</div>';}).join('')+'</div></div></div>';
+
+  body.innerHTML=scoreRing+barChart+radarSection+areaSection+flowSection+cardSection+goodBad+whySec+energySec;
+  var sc=document.getElementById('tf-total-score'); if(sc) sc.textContent=total;
+  setTimeout(function(){body.querySelectorAll('[data-w]').forEach(function(el){el.style.width=Math.min(100,parseInt(el.getAttribute('data-w'))||0)+'%';});},150);
+  if(result.csiNote&&engCount>1){var cd=document.getElementById('tf-csi-display');var ct=document.getElementById('tf-csi-txt');if(cd&&ct){cd.style.display='block';ct.textContent=result.csiNote;}}
+  if(rs) rs.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function _tfWhyCard(title, body){
+  return '<div style="padding:10px 12px;background:rgba(0,0,0,.2);border-radius:10px;border-left:3px solid rgba(212,168,67,.4);">'
+    +'<div style="font-size:11px;font-weight:700;color:#d4a843;margin-bottom:4px;">'+title+'</div>'
+    +'<div style="font-size:11px;color:rgba(240,220,160,.75);line-height:1.7;">'+body+'</div>'
+    +'</div>';
 }
 
 function _cgoTfCompute(r,w){
@@ -26206,42 +26555,56 @@ function _cgoTfCompute(r,w){
     }
   }
 
-  // ══ calcResult에 오늘의 운세 결과 반영 → 전체 페이지 연동 ══
-  window.calcResult = window.calcResult || {};
-  window.calcResult.todayTotal    = total;
-  window.calcResult.todayGrade    = grade;
-  window.calcResult.todayOhRel    = _ohRelation;
-  window.calcResult.todayMoney    = _moneyScore;
-  window.calcResult.todayLove     = _loveScore;
-  window.calcResult.todayWork     = _workScore;
-  window.calcResult.todayHealth   = _healthScore;
-  window.calcResult.todayLegal    = _legalScore;
-  window.calcResult.todaySocial   = _socialScore;
-  window.calcResult.todayLuckyDir = luckyDir;
-  window.calcResult.todayLuckyNum = luckyNum;
-  window.calcResult.todayLuckyColor = luckyColor;
-  window.calcResult.todayEngCount = engCount;
-  // ILI도 오늘 운세 결과로 업데이트
-  if(!window.calcResult.ili || window.calcResult.ili < total) {
-    window.calcResult.ili = Math.round((window.calcResult.ili||70) * 0.4 + total * 0.6);
+  // ══ 순수역학 결과 → 전용 저장소에만 (과학 기반 연동에는 미적용) ══
+  // 이유: 실시간 rPPG/NASA 분석(과학) ≠ 순수 역학(참고용) 분리 원칙
+  window._pureMetaphysicsResult = {
+    total:total, grade:grade, ohRel:_ohRelation,
+    money:_moneyScore, love:_loveScore, work:_workScore,
+    health:_healthScore, legal:_legalScore, social:_socialScore,
+    luckyDir:luckyDir, luckyNum:luckyNum, luckyColor:luckyColor,
+    engCount:engCount, ts:Date.now()
+  };
+  // _todayFortuneAnalyzed = false 유지 → rPPG/NASA 연동에 영향 없음
+  console.log('[CGO-Pure] 순수 역학 저장 완료 (실시간 연동 미적용). total='+total);
+
+  // ── 새 UI 렌더링 (폴백도 총운 스타일로 표시) ──
+  var _ohFoodMap = {목:'채소·녹색 음식·부추',화:'붉은 과일·토마토',토:'잡곡밥·고구마',금:'흰쌀·도라지·배',수:'검은콩·미역'};
+  var _ohDirMap  = {목:'동쪽',화:'남쪽',토:'중앙',금:'서쪽',수:'북쪽'};
+  var _fallbackResult = {
+    totalScore: total,
+    grade: grade,
+    summary: r.name+'님('+oh+')의 오늘 에너지는 '+total+'점입니다. 오행 관계: '+_ohRelation,
+    money: {score:_moneyScore, msg:'재물 에너지를 점검하세요'},
+    love:  {score:_loveScore,  msg:'관계 에너지를 살펴보세요'},
+    work:  {score:_workScore,  msg:'직업 에너지를 확인하세요'},
+    health:{score:_healthScore,msg:'건강 에너지를 관리하세요'},
+    legal: {score:_legalScore, msg:'신중하게 행동하세요'},
+    social:{score:_socialScore,msg:'대인관계에 주의하세요'},
+    factBomb: '오늘 일간 '+oh+'('+({목:'木',화:'火',토:'土',금:'金',수:'水'}[oh]||'土')+')의 기운이 하루를 감싸고 있어요. '+(_FORT_MSG&&_FORT_MSG[oh]&&_FORT_MSG[oh].ov?_FORT_MSG[oh].ov:'오늘 하루도 최선을 다해보세요!'),
+    whyMoney: '오행 '+oh+' 기준 오늘 재물궁 분석 결과입니다.',
+    whyDate: '오늘 일진과 선택 역학의 교차 분석 결과입니다.',
+    calcExplain: precisionNote+' 기반 분석입니다.',
+    food: _ohFoodMap[oh]||'오행에 공명하는 음식을 드세요.',
+    luckyDir: _ohDirMap[oh]||'북',
+    luckyColor: luckyColor||'금색',
+    luckyNum: luckyNum||7,
+    energyGuide: '행운 방위 '+(_ohDirMap[oh]||'북쪽')+'으로 몸을 향하고 시작하세요.\n오행 식단 ('+oh+'): '+(_ohFoodMap[oh]||'균형 잡힌 식사')+'를 드세요.',
+    csiNote: ''
+  };
+  if(typeof _cgoTfRenderAiResult === 'function'){
+    _cgoTfRenderAiResult(_fallbackResult, r, selectedEngines, engCount);
   }
-  // CGO_MASTER에도 반영
-  window._CGO_MASTER = window._CGO_MASTER || {};
-  window._CGO_MASTER.todayIli = total;
-  // 오늘의 운세 분석 완료 플래그
-  window._todayFortuneAnalyzed = true;
-  console.log('[CGO] 오늘의 운세 결과 → calcResult 반영 완료. total='+total);
 
   // ══ 전체 반영 고지 배너 표시 ══
   var noticeBanner = document.getElementById('tf-global-notice');
   if(!noticeBanner) {
     noticeBanner = document.createElement('div');
     noticeBanner.id = 'tf-global-notice';
-    noticeBanner.style.cssText = 'margin:0 0 14px;padding:10px 14px;background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(56,189,248,.08));border:1px solid rgba(52,211,153,.35);border-radius:12px;display:flex;align-items:center;gap:10px;';
-    noticeBanner.innerHTML = '<span style="font-size:18px;">🌐</span>'
+    noticeBanner.style.cssText = 'margin:0 0 14px;padding:10px 14px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(168,85,247,.05));border:1px solid rgba(212,168,67,.25);border-radius:12px;display:flex;align-items:center;gap:10px;';
+    noticeBanner.innerHTML = '<span style="font-size:18px;">📜</span>'
       + '<div>'
-      +   '<div style="font-size:11px;font-weight:800;color:#34d399;letter-spacing:.04em;margin-bottom:2px;">전체 페이지 연동 분석</div>'
-      +   '<div style="font-size:10px;color:rgba(240,230,200,.65);line-height:1.5;">이 페이지의 분석 결과는 <b style="color:#38bdf8;">CGO-FULI 전체 페이지</b>에 실시간 반영됩니다.<br>대시보드·VIP·커플·풍수 등 모든 분석이 오늘의 운세 기준으로 업데이트됩니다.</div>'
+      +   '<div style="font-size:11px;font-weight:800;color:#d4a843;letter-spacing:.04em;margin-bottom:2px;">📜 순수 역학 분석 (독립 실행)</div>'
+      +   '<div style="font-size:10px;color:rgba(240,230,200,.55);line-height:1.5;">이 분석은 역학 참고용이며, <b style="color:#f87171;">🛰️ 실시간 rPPG·NASA 과학 분석에는 적용되지 않습니다.</b></div>'
       + '</div>';
     var rsEl = document.getElementById('tf-result');
     if(rsEl) rsEl.insertBefore(noticeBanner, rsEl.firstChild);
@@ -27177,44 +27540,34 @@ window.addEventListener('load', function(){
       </div>
       <div id="tf-engine-list" style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;"></div>
       <!-- 가중치 표시 -->
-      <div id="tf-weight-display" style="margin-top:10px;padding:8px 12px;background:rgba(212,168,67,.06);border-radius:8px;border-left:3px solid #d4a843;">
-        <div style="font-size:10px;color:rgba(212,168,67,.6);margin-bottom:4px;">현재 연산 가중치</div>
-        <div id="tf-weight-txt" style="font-size:11px;color:#d4a843;font-weight:700;">역학 74% + NASA 12% + 날씨 4% + 환경 4% + 생체 6% = 100%</div>
+      <div id="tf-csi-display" style="margin-top:10px;padding:10px 12px;background:rgba(212,168,67,.06);border-radius:8px;border-left:3px solid #d4a843;display:none;">
+        <div style="font-size:10px;color:rgba(212,168,67,.6);margin-bottom:6px;">⚖️ 선택 역학 궁합</div>
+        <div id="tf-csi-txt" style="font-size:11px;color:#d4a843;font-weight:700;line-height:1.8;"></div>
       </div>
     </div>
 
     <!-- 결과 영역 -->
     <div id="tf-result" style="display:none;">
-      <!-- 총평 -->
-      <div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(139,92,246,.08));border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:16px;margin-bottom:12px;text-align:center;">
-        <div style="font-size:11px;color:rgba(212,168,67,.5);letter-spacing:.15em;margin-bottom:6px;">오늘의 운세 총평</div>
-        <div id="tf-total-score" style="font-size:56px;font-weight:900;color:#d4a843;font-family:'Orbitron',monospace;line-height:1;">--</div>
-        <div id="tf-grade-txt" style="font-size:14px;color:rgba(240,220,160,.7);margin-top:8px;font-weight:600;"></div>
-        <div id="tf-summary" style="font-size:12px;color:rgba(240,220,160,.6);margin-top:10px;line-height:1.8;"></div>
+      <div id="tf-result-body" class="fortune-popup-body" style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
       </div>
-
-      <!-- 세부 운세 카드들 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;" id="tf-detail-grid"></div>
-
-      <!-- 🔥 팩트 폭격 모듈 -->
-      <div id="tf-fact-bomb" style="margin-bottom:12px;"></div>
-
-      <!-- A4 분량 상세 운세 -->
-      <div id="tf-full-report" style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px;margin-bottom:12px;"></div>
-
-      <!-- 에너지 올리는 법 -->
-      <div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:14px;padding:16px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:10px;">⚡ 오늘 에너지 올리는 법</div>
-        <div id="tf-energy-guide" style="font-size:12px;color:rgba(240,220,160,.8);line-height:1.9;"></div>
-        <!-- 실천 체크리스트 (동적 생성) -->
-        <div id="tf-check-list" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
+      <!-- 호환용 hidden 요소 -->
+      <span id="tf-total-score" style="display:none;">--</span>
+      <span id="tf-grade-txt" style="display:none;"></span>
+      <span id="tf-summary" style="display:none;"></span>
+      <span id="tf-detail-grid" style="display:none;"></span>
+      <span id="tf-fact-bomb" style="display:none;"></span>
+      <span id="tf-full-report" style="display:none;"></span>
+      <span id="tf-energy-guide" style="display:none;"></span>
+      <span id="tf-check-list" style="display:none;"></span>
     </div>
 
-    <!-- 로딩 -->
+    <!-- 로딩 (제미나이 감성 연출) -->
     <div id="tf-loading" style="display:none;text-align:center;padding:40px;">
-      <div style="font-size:40px;animation:spin 1s linear infinite;">🔮</div>
-      <div style="color:#d4a843;font-size:14px;font-weight:700;margin-top:12px;">50대 역학 × NASA × 생체 분석 중...</div>
+      <div id="tf-load-icon" style="font-size:48px;animation:pulse 1.5s infinite;margin-bottom:16px;">☯️</div>
+      <div id="tf-load-msg" style="color:#d4a843;font-size:13px;font-weight:700;margin-bottom:12px;">역학 분석 준비 중...</div>
+      <div style="width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:3px;margin:0 auto;overflow:hidden;">
+        <div id="tf-load-bar" style="height:100%;background:linear-gradient(90deg,#d4a843,#fbbf24);width:0%;transition:width 0.5s;border-radius:3px;"></div>
+      </div>
     </div>
 
   </div>
@@ -30842,7 +31195,7 @@ function apClose(){
 
 function algoPopup(key){
   var r=window.calcResult;
-  if(!r){alert('먼저 ⚡ 자동 계산을 눌러주세요!');return;}
+  if(!r){ r = {name:(document.getElementById('ipName')||{}).value||'사용자', y:parseInt((document.getElementById('ipBirthY')||{}).value)||1990, m:parseInt((document.getElementById('ipBirthM')||{}).value)||1, d:parseInt((document.getElementById('ipBirthD')||{}).value)||1, domOh:'토', lifeNum:5, gender:'M', birthPlace:(document.getElementById('ipBirthPlace')||{}).value||'서울', curPlace:(document.getElementById('ipCurPlace')||{}).value||'서울'}; }
   window._apCurrentKey = key;  // 팝업 재렌더용 key 저장
 
   // 현재 날짜 (fcDate로 변경된 경우 반영)
@@ -40337,179 +40690,253 @@ function cgoPrintReport() {
     alert('먼저 대시보드에서 계산을 완료해 주세요!');
     return;
   }
-  // 인쇄용 스타일 적용
   var r = window.calcResult || {};
   var name = r.name || '사용자';
   var today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
-  var ili = document.getElementById('bsFIli')?.textContent || '--';
-
+  var ili = document.getElementById('bsFIli') ? document.getElementById('bsFIli').textContent : '--';
   var printWin = window.open('', '_blank', 'width=800,height=1000');
-  printWin.document.write(`
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>CGO-FULI 공명 리포트 — ${name}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Noto Sans KR',sans-serif; background:#fff; color:#111; padding:40px; }
-  .header { text-align:center; border-bottom:3px solid #d4a843; padding-bottom:24px; margin-bottom:28px; }
-  .logo { font-size:28px; font-weight:900; color:#d4a843; letter-spacing:.1em; }
-  .subtitle { font-size:13px; color:#666; margin-top:6px; }
-  .name-row { font-size:20px; font-weight:800; margin-top:12px; }
-  .ili-box { display:inline-block; background:#fffbeb; border:2px solid #d4a843; border-radius:12px; padding:12px 28px; margin-top:12px; }
-  .ili-num { font-size:48px; font-weight:900; color:#d4a843; }
-  .ili-label { font-size:11px; color:#999; }
-  .section { margin-bottom:24px; }
-  .sec-title { font-size:14px; font-weight:800; color:#333; border-left:4px solid #d4a843; padding-left:10px; margin-bottom:12px; }
-  .pdf-section-content { font-size:13px; line-height:1.8; color:#444; }
-  .footer { text-align:center; margin-top:32px; padding-top:16px; border-top:1px solid #eee; font-size:11px; color:#999; }
-  @media print { body { padding:20px; } }
-</style>
-</head>
-<body>
-<div class="header">
-  <div class="logo">⚡ CGO-FULI</div>
-  <div class="subtitle">생체-우주 동기화 공명 분석 리포트</div>
-  <div class="name-row">📋 ${name}님의 에너지 리포트</div>
-  <div class="ili-box">
-    <div class="ili-num">${ili}</div>
-    <div class="ili-label">통합 라이프 인덱스 (ILI)</div>
-  </div>
-  <div style="font-size:11px;color:#999;margin-top:10px;">발행일: ${today} · 20개 역학 엔진 종합</div>
-</div>
-<div class="section">
-  <div class="sec-title">🔮 역학 종합 분석</div>
-  <div class="content">${container.innerText.slice(0, 2000)}</div>
-</div>
-<div class="footer">
-  ⚡ CGO-FULI — 비접촉 생체 신호 기반 동적 가중치 퓨전 알고리즘 (PCT 특허 출원 예정)<br>
-  본 리포트는 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.
-</div>
+  if (!printWin) { alert('팝업을 허용해 주세요'); return; }
+  var html = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'
+    + '<title>CGO-FULI 리포트</title>'
+    + '<style>body{font-family:Noto Sans KR,sans-serif;background:#fff;color:#111;padding:40px;}'
+    + '.header{text-align:center;border-bottom:3px solid #d4a843;padding-bottom:24px;margin-bottom:28px;}'
+    + '.ili-num{font-size:48px;font-weight:900;color:#d4a843;}'
+    + '.content{font-size:13px;line-height:1.8;color:#444;}'
+    + '.footer{text-align:center;margin-top:32px;font-size:11px;color:#999;}'
+    + '</style></head><body>'
+    + '<div class="header"><div style="font-size:28px;font-weight:900;color:#d4a843;">⚡ CGO-FULI</div>'
+    + '<div style="font-size:13px;color:#666;margin-top:6px;">생체-우주 동기화 공명 분석 리포트</div>'
+    + '<div style="font-size:20px;font-weight:800;margin-top:12px;">📋 ' + name + '님의 에너지 리포트</div>'
+    + '<div style="font-size:48px;font-weight:900;color:#d4a843;">' + ili + '</div>'
+    + '<div style="font-size:11px;color:#999;margin-top:10px;">발행일: ' + today + ' · 20개 역학 엔진 종합</div>'
+    + '</div>'
+    + '<div class="section"><div class="content">' + container.innerText.slice(0, 2000) + '</div></div>'
+    + '<div class="footer">⚡ CGO-FULI — 역학 참고자료이며 의료·투자 판단의 대체 수단이 아닙니다.</div>'
+    + '</body></html>';
+  printWin.document.close();
+  setTimeout(function(){printWin.print();},800);
+}
+</script>
+<script>
+// ══ 순수역학 세부 분석 팝업 ══
+function cgoTfBarPopup(key){
+  var d=window._tfPopupData;
+  if(!d) return;
+  var total=d.total,ms=d.ms,ls=d.ls,ws=d.ws,hs=d.hs,ss=d.ss;
+  var legal=d.legal||Math.round(total*.7);
+  var career=d.career||Math.round((ws+ms)*.5);
+  var dirScore=d.dirScore||Math.round((hs+ws)*.5);
+  var oh=d.oh,ohK=d.ohK,name=d.name||'사용자',engNames=d.engNames,engCount=d.engCount;
+  var result=d.result||{},selectedEngines=d.selectedEngines||[];
+  var lifeNum=d.lifeNum||1;
+  var bp=(d.r&&d.r.birthPlace)||d.birthPlace||'';
+  var cp=(d.r&&d.r.curPlace)||d.curPlace||'';
 
-// ══════════════════════════════════════════════
-// 🔥 대시보드 팩트 폭격 함수
-// 자동계산 후 reportContainer에 삽입
-// ══════════════════════════════════════════════
-function _cgoDashFactBomb(el, r, total) {
-  if (!el || !r) return;
-
-  var oh   = r.domOh || '토';
-  var name = r.name  || '당신';
-  var np   = window._nasaPlanets || {};
-  var resLog = window._cgoResonanceLog || [];
-
-  // 제미니 소리 오행 DB
-  var SURNAME_DB = {
-    목:['강','김','구','권','고'], 화:['나','이','임','전','노'],
-    토:['마','박','배','백','변'], 금:['서','성','유','장','최'],
-    수:['오','윤','허','황','한']
+  var metaMap={
+    'pop_total': {title:'📊 총운 에너지 상세 분석',     color:'#d4a843', area:'전체 총운',  score:total},
+    'pop_ohbal': {title:'☯️ 오행 균형 상세 분석',       color:'#38bdf8', area:'오행 균형',  score:Math.round((ws+hs)*.5)},
+    'pop_iljin': {title:'📅 일진 영향 상세 분석',        color:'#34d399', area:'일진 영향',  score:ws},
+    'pop_space': {title:'🧭 공간·방위 에너지 분석',      color:'#a78bfa', area:'공간·방위',  score:dirScore},
+    'pop_bio':   {title:'🧬 생체·심리 에너지 분석',      color:'#f472b6', area:'생체·심리',  score:Math.round((hs+ls)*.5)},
+    'pop_work':  {title:'💼 직업·사업 상세 분석',        color:'#38bdf8', area:'직업·사업',  score:ws},
+    'pop_money': {title:'💰 금전·재물 상세 분석',        color:'#d4a843', area:'금전·재물',  score:ms},
+    'pop_love':  {title:'❤️ 사랑·관계 상세 분석',       color:'#f472b6', area:'사랑·관계',  score:ls},
+    'pop_health':{title:'🌿 건강·활력 상세 분석',        color:'#34d399', area:'건강·활력',  score:hs},
+    'pop_social':{title:'🤝 대인관계 상세 분석',         color:'#a78bfa', area:'대인관계',   score:ss},
+    'pop_legal': {title:'⚖️ 법적 분쟁 상세 분석',       color:'#f87171', area:'법적 분쟁',  score:legal},
+    'pop_career':{title:'☑️ 합격·취업 상세 분석',       color:'#fbbf24', area:'합격·취업',  score:career},
+    'pop_dir':   {title:'🧭 좋은 방위 상세 분석',        color:'#34d399', area:'방위·공간',  score:dirScore}
   };
-  var CONFLICT = {목:'토',토:'수',수:'화',화:'금',금:'목'};
-  var chungOh = CONFLICT[oh] || '수';
-  var surnames = SURNAME_DB[chungOh] || ['황'];
-  var seed = new Date().getDate() + new Date().getMonth()*7;
-  var badSurname = surnames[seed % surnames.length];
+  var m=metaMap[key]; if(!m) return;
 
-  var ohKanji = {목:'木',화:'火',토:'土',금:'金',수:'水'};
-  var waveMap = {
-    목:'어금니 소리(ㄱ·ㅋ) 파동',화:'혓바닥 소리(ㄴ·ㄷ·ㄹ) 파동',
-    토:'입술 소리(ㅁ·ㅂ·ㅍ) 파동',금:'잇몸 소리(ㅅ·ㅈ·ㅊ) 파동',
-    수:'목구멍 소리(ㅇ·ㅎ) 파동'
-  };
-
-  // Final_Harmony_Score
-  var iScore = Math.max(40,Math.min(95,Math.round(total*0.9+Math.sin(seed*0.7)*8)));
-  var tScore = Math.max(40,Math.min(95,Math.round(total*1.0+Math.cos(seed*1.3)*6)));
-  var nScore = Math.max(40,Math.min(95,Math.round(total*0.85+Math.sin(seed*2.1)*5)));
-  var fScore = Math.round(iScore*0.4+tScore*0.4+nScore*0.2);
-
-  var conflictMsg = '';
-  if(Math.abs(iScore-tScore)>=20){
-    conflictMsg = iScore>tScore
-      ? '⚠️ 큰 흐름(주역)은 밝으나 발밑에 구덩이(토정비결)가 있습니다. 자만은 금물!'
-      : '⚠️ 토정비결은 길하나 주역의 흐름이 조심을 요구합니다. 작은 행운에 안주하지 마세요.';
+  function _rgb(hex){
+    return({'#d4a843':'212,168,67','#38bdf8':'56,189,248','#34d399':'52,211,153',
+      '#f472b6':'244,114,182','#a78bfa':'167,139,250','#f87171':'248,113,113',
+      '#fbbf24':'251,191,36','#4ade80':'74,222,128','#e2e8f0':'226,232,240'})[hex]||'212,168,67';
   }
 
-  // 점수별 직설 멘트
-  var realTalk = '';
-  var legalWarn = '';
-  if(r.todayLegal && r.todayLegal < 60)
-    legalWarn = '계약서 도장? 오늘은 꿈도 꾸지 마라. ';
-
-  if(total>=80){
-    realTalk = name+'아, 오늘 꽤 좋다! 방심만 하지 마. '
-      +(resLog.length>0?resLog[0]+' 활성화 중. ':'')
-      +badSurname+'씨 만나면 싸우지 말고. '
-      +legalWarn+'오늘 네 행운 방위 '+({목:'동쪽',화:'남쪽',토:'중앙',금:'서쪽',수:'북쪽'}[oh]||'동쪽')+' 쪽으로 움직여봐!';
-  } else if(total>=65){
-    realTalk = name+'아, 오늘 평범한 날이야. '
-      +badSurname+'씨, 말 조심해. '
-      +legalWarn+'그냥 묵묵히 하던 거 해. 무리하지 마!';
-  } else {
-    realTalk = '야 '+name+'아, 오늘 꼬라지 보니까 딱 견적 나온다. '
-      +'특히 '+badSurname+'씨! 오늘 '+badSurname+'씨 만나면 일 꼬인다. 피해. '
-      +legalWarn
-      +'재물운 바닥이야. 돈 쓸 생각 접어. 오늘 하루 버텨라!';
+  // 팝업 오버레이 (90vh 고정 + 스크롤)
+  var ov=document.getElementById('tf-bar-popup-ov');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='tf-bar-popup-ov';
+    ov.style.cssText='position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:flex;align-items:flex-end;justify-content:center;';
+    ov.onclick=function(e){if(e.target===ov)cgoTfBarPopupClose();};
+    document.body.appendChild(ov);
   }
+  ov.style.display='flex';
+  ov.innerHTML=''
+    +'<div style="width:100%;max-width:580px;height:90vh;background:linear-gradient(180deg,#0c1a2e,#08111e);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;display:flex;flex-direction:column;">'
+    +'<div style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0">'
+    +'<div><div style="font-size:15px;font-weight:800;color:'+m.color+'">'+m.title+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px">📚 '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  |  AI 심층 역학 분석</div></div>'
+    +'<button onclick="cgoTfBarPopupClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0">✕</button>'
+    +'</div>'
+    +'<div id="tf-popup-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px">'
+    +'<div style="text-align:center;padding:36px 0">'
+    +'<div style="font-size:44px;animation:spin 1s linear infinite">🔮</div>'
+    +'<div style="color:'+m.color+';font-size:14px;font-weight:700;margin-top:16px">'+m.area+' 심층 역학 분석 중...</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px">토정비결·사주명리 수준의 깊이로 분석합니다</div>'
+    +'</div></div></div>';
 
-  el.innerHTML =
-    '<div style="background:linear-gradient(135deg,rgba(248,113,113,.1),rgba(212,168,67,.06));border:1.5px solid rgba(248,113,113,.35);border-radius:16px;padding:16px 18px;margin-bottom:10px;">' +
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
-        '<span style="font-size:18px;">🔥</span>' +
-        '<span style="font-size:12px;font-weight:800;color:#f87171;letter-spacing:.08em;">오늘의 팩트 폭격</span>' +
-        '<span style="font-size:9px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:1px 8px;border-radius:8px;">직설 조언</span>' +
-        (resLog.length>0?'<span style="font-size:9px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);color:#38bdf8;padding:1px 8px;border-radius:8px;">'+resLog[0]+'</span>':'') +
-      '</div>' +
-      '<div id="dash-fact-typing" style="font-size:12px;color:rgba(240,220,160,.92);line-height:2;font-style:italic;">' +
-        '"' + realTalk + '"' +
-      '</div>' +
-    '</div>' +
+  // AI 프롬프트 (토정비결 수준 분석 요청)
+  var engList=selectedEngines.map(function(e){return e.name+'('+e.en+', '+e.w+'pt)';}).join(', ');
+  var locationInfo=bp||cp?'출생지: '+bp+(cp?', 거주지: '+cp:''):'';
 
-    '<div style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.2);border-radius:16px;padding:16px 18px;">' +
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
-        '<span style="font-size:18px;">🔬</span>' +
-        '<span style="font-size:12px;font-weight:800;color:#38bdf8;">왜 그런지 알려드릴게요</span>' +
-        '<span style="font-size:9px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);color:#38bdf8;padding:1px 8px;border-radius:8px;">역학·과학 근거</span>' +
-      '</div>' +
+  var pLines=[
+    '당신은 토정비결·사주명리·기문둔갑 등 한국 역학 최고 전문가입니다.',
+    '아래 정보를 바탕으로 ['+m.area+'] 영역을 토정비결처럼 깊고 구체적으로 분석하세요.',
+    '',
+    '## 분석 대상자',
+    '이름: '+name+' | 오행: '+oh+'('+ohK[oh]+') | 생명수: '+lifeNum+(locationInfo?' | '+locationInfo:''),
+    '',
+    '## 선택된 역학 ('+engCount+'개)',
+    engList,
+    '',
+    '## 전체 에너지 점수',
+    '총운:'+total+' 직업:'+ws+' 금전:'+ms+' 사랑:'+ls+' 건강:'+hs+' 대인:'+ss+' 법적:'+legal,
+    '',
+    '## 분석 요청: ['+m.area+'] 영역 (현재 점수: '+m.score+'점)',
+    '',
+    '다음 내용을 반드시 포함하세요:',
+    '1. 선택 역학의 실제 이론 (괘·성·궁·살 등 역학 용어)',
+    '2. 이 점수가 나온 구체적 역학 근거',
+    (locationInfo?'3. 출생지·거주지 지리 오행이 미치는 영향':''),
+    '4. 봄/여름/가을/겨울 계절별 에너지 흐름',
+    '5. 구체적 행동 조언 (시간대·방위 포함)',
+    '',
+    '반드시 아래 JSON만 출력 (다른 텍스트 절대 금지):',
+    '{"headline":"핵심 한 줄","score":'+m.score+',',
+    '"subItems":[',
+    '{"label":"세부지표1 (역학용어포함)","value":숫자,"color":"#hex","why":"역학 근거 2문장"},',
+    '{"label":"세부지표2","value":숫자,"color":"#hex","why":"역학 근거 2문장"},',
+    '{"label":"세부지표3","value":숫자,"color":"#hex","why":"역학 근거 2문장"}],',
+    '"mainAnalysis":"['+m.area+'] 역학 심층 분석. 선택 역학명 명시, 역학 용어 사용, 구체적 근거 포함. 5-6문장 상세히.",',
+    '"monthly":[',
+    '{"period":"봄(3-5월)","level":"길 또는 보통 또는 주의","desc":"이 시기 '+m.area+' 에너지 흐름과 구체적 조언"},',
+    '{"period":"여름(6-8월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
+    '{"period":"가을(9-11월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
+    '{"period":"겨울(12-2월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"}],',
+    '"actionTip":"시간대 포함 구체적 행동 조언 2가지",',
+    '"cautionTip":"역학 근거 있는 주의사항",',
+    (locationInfo?'"locationTip":"'+locationInfo+' 지리 오행이 '+m.area+' 에너지에 미치는 영향",'
+                 :'"locationTip":"",'),
+    '"luckyFactor":"역학 근거 있는 행운 요소: 음식/색상/방위/시간 구체적으로"}'
+  ];
+  var prompt=pLines.filter(function(l){return l!=='';}).join('\n');
 
-      // 1. 통합 점수
-      '<div style="margin-bottom:8px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:10px;border-left:3px solid rgba(212,168,67,.5);">' +
-        '<div style="font-size:11px;font-weight:700;color:#d4a843;margin-bottom:4px;">1. 오늘 점수는 어떻게 나왔나요? (통합 가중치)</div>' +
-        '<div style="font-size:11px;color:rgba(240,220,160,.75);line-height:1.7;">' +
-          '주역(周易) <b>'+iScore+'점</b> × 40% + 토정비결 <b>'+tScore+'점</b> × 40% + 성명학 <b>'+nScore+'점</b> × 20% = <b style="color:#d4a843;">통합 조화 점수 '+fScore+'점</b>' +
-          (conflictMsg?'<br><br>'+conflictMsg:'') +
-        '</div>' +
-      '</div>' +
-
-      // 2. 성씨 파동
-      '<div style="margin-bottom:8px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:10px;border-left:3px solid rgba(248,113,113,.5);">' +
-        '<div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;">2. 왜 '+badSurname+'씨를 조심해야 하나요? (소리 파동 간섭)</div>' +
-        '<div style="font-size:11px;color:rgba(240,220,160,.75);line-height:1.7;">' +
-          badSurname+'씨 성은 성명학 해례본 기준 <b>'+ohKanji[chungOh]+'('+chungOh+')</b> 오행의 '+waveMap[chungOh]+'에 해당합니다. 오늘 당신의 <b>'+ohKanji[oh]+'('+oh+')</b> 기운과 만나면 <b>상극(相剋)</b>이 발생, 마치 뜨거운 기름에 찬물이 튀는 것처럼 에너지 충돌이 일어납니다.' +
-        '</div>' +
-      '</div>' +
-
-      // 3. 공명 상태
-      (resLog.length>0?
-      '<div style="padding:10px 12px;background:rgba(0,0,0,.18);border-radius:10px;border-left:3px solid rgba(56,189,248,.5);">' +
-        '<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:4px;">3. 현재 공명 상태</div>' +
-        '<div style="font-size:11px;color:rgba(240,220,160,.75);line-height:1.7;">' +
-          resLog.map(function(l){return '✅ '+l;}).join('<br>') +
-          '<br><span style="font-size:10px;color:rgba(240,220,160,.4);">NASA × 역학 실시간 융합 분석 적용 중</span>' +
-        '</div>' +
-      '</div>':'') +
-    '</div>';
-
-  // 타이핑 효과
-  var tEl = document.getElementById('dash-fact-typing');
-  if(tEl){
-    var full='"'+realTalk+'"'; tEl.textContent=''; var idx=0;
-    var tt=setInterval(function(){if(idx>=full.length){clearInterval(tt);return;}tEl.textContent=full.slice(0,++idx);},12);
-  }
+  fetch('/api/groq',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[
+        {role:'system',content:'당신은 토정비결·사주명리 전문가입니다. 반드시 유효한 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.'},
+        {role:'user',content:prompt}
+      ],
+      max_tokens:1600,
+      temperature:0.65
+    })
+  })
+  .then(function(res){return res.json();})
+  .then(function(data){
+    try{
+      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+      var clean=txt.replace(/```json|```/g,'').trim();
+      var jm=clean.match(/\{[\s\S]*\}/);
+      if(!jm) throw new Error('no json');
+      _cgoRenderDetailPopup(JSON.parse(jm[0]),m,_rgb);
+    }catch(e){
+      console.warn('팝업 AI 오류:',e);
+      _cgoRenderDetailPopupFallback(m,d,_rgb);
+    }
+  })
+  .catch(function(){_cgoRenderDetailPopupFallback(m,d,_rgb);});
 }
 
+function _cgoRenderDetailPopup(p, m, _rgb){
+  var body=document.getElementById('tf-popup-body');
+  if(!body) return;
+  var sc=Math.max(10,Math.min(99,p.score||m.score));
+  var gc=sc>=80?'#34d399':sc>=65?'#d4a843':sc>=50?'#fbbf24':'#f87171';
+
+  var h='<div style="text-align:center;padding:16px;background:rgba('+_rgb(m.color)+',.08);border-radius:14px;margin-bottom:16px">'
+    +'<div style="font-size:52px;font-weight:900;font-family:Orbitron,sans-serif;color:'+gc+'">'+sc+'</div>'
+    +'<div style="font-size:13px;color:rgba(240,230,200,.9);margin-top:6px;font-weight:700">'+(p.headline||m.title)+'</div>'
+    +'</div>';
+
+  // 세부 지표 바 3개 + 역학 근거
+  if(p.subItems&&p.subItems.length){
+    h+='<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:16px">';
+    p.subItems.forEach(function(it){
+      var v=Math.max(0,Math.min(100,Number(it.value)||50));
+      var c=it.color||m.color;
+      h+='<div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+        +'<span style="font-size:12px;color:rgba(240,230,200,.9);font-weight:700">'+it.label+'</span>'
+        +'<span style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</span></div>'
+        +'<div style="height:9px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden">'
+        +'<div style="height:100%;width:'+v+'%;background:'+c+';border-radius:5px;transition:width 1.2s ease"></div></div>'
+        +(it.why?'<div style="font-size:11px;color:rgba(240,230,200,.55);margin-top:6px;padding:7px 10px;background:rgba(0,0,0,.2);border-radius:7px;line-height:1.65">💡 '+it.why+'</div>':'')
+        +'</div>';
+    });
+    h+='</div><div style="height:1px;background:rgba(255,255,255,.07);margin:14px 0"></div>';
+  }
+
+  // 역학 근거 상세 분석
+  if(p.mainAnalysis){
+    h+='<div style="padding:14px 16px;background:rgba(0,0,0,.2);border-radius:12px;border-left:3px solid '+m.color+';margin-bottom:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:'+m.color+';margin-bottom:8px;letter-spacing:.05em">📚 역학 근거 상세 분석</div>'
+      +'<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.95">'+p.mainAnalysis.replace(/\n/g,'<br>')+'</div></div>';
+  }
+
+  // 월별 에너지 흐름
+  if(p.monthly&&p.monthly.length){
+    h+='<div style="padding:14px 16px;background:rgba(56,189,248,.05);border-radius:12px;border:1px solid rgba(56,189,248,.15);margin-bottom:14px">'
+      +'<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:12px;letter-spacing:.05em">📅 월별 에너지 흐름</div>';
+    p.monthly.forEach(function(mo){
+      var mc=mo.level==='길'?'#34d399':mo.level==='주의'?'#f87171':'#d4a843';
+      h+='<div style="margin-bottom:10px;padding:10px 12px;background:rgba(0,0,0,.18);border-radius:9px;border-left:3px solid '+mc+'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        +'<span style="font-size:12px;font-weight:800;color:'+mc+'">'+mo.period+'</span>'
+        +'<span style="font-size:10px;color:'+mc+';padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.25)">'+mo.level+'</span></div>'
+        +'<div style="font-size:11px;color:rgba(240,230,200,.82);line-height:1.7">'+mo.desc+'</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // 행동 조언 + 주의사항
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+    +'<div style="padding:12px;background:rgba(52,211,153,.07);border-radius:11px;border:1px solid rgba(52,211,153,.22)">'
+    +'<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:7px;letter-spacing:.04em">✅ 오늘 이렇게 하세요</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+(p.actionTip||'').replace(/\n/g,'<br>')+'</div></div>'
+    +'<div style="padding:12px;background:rgba(248,113,113,.07);border-radius:11px;border:1px solid rgba(248,113,113,.22)">'
+    +'<div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:7px;letter-spacing:.04em">⚠️ 주의하세요</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+(p.cautionTip||'')+'</div></div></div>';
+
+  // 풍수·방위
+  if(p.locationTip){
+    h+='<div style="padding:12px 14px;background:rgba(52,211,153,.06);border-radius:11px;border:1px solid rgba(52,211,153,.2);margin-bottom:12px">'
+      +'<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px;letter-spacing:.04em">🗺️ 출생지·거주지 풍수 분석</div>'
+      +'<div style="font-size:11px;color:rgba(240,230,200,.85);line-height:1.75">'+p.locationTip+'</div></div>';
+  }
+
+  // 행운 요소
+  if(p.luckyFactor){
+    h+='<div style="padding:12px 14px;background:rgba(212,168,67,.07);border-radius:11px;border:1px solid rgba(212,168,67,.28)">'
+      +'<div style="font-size:10px;font-weight:700;color:#d4a843;margin-bottom:6px;letter-spacing:.04em">✨ 행운 요소</div>'
+      +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+p.luckyFactor+'</div></div>';
+  }
+
+  body.innerHTML=h;
+}
+
+
+
+
+
+
+</script>
 </body>
 </html>`);
 }
@@ -43279,6 +43706,92 @@ function cgoYtClose() {
   <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.3);">화면 밖 터치 또는 ✕ 로 닫기</div>
 </div>
 
+
+<script>
+// ══ 정보 자동 저장 & 로드 ══
+function cgoSaveInfoToggle() {
+  var chk = document.getElementById('chkSaveInfo');
+  if (!chk) return;
+  if (chk.checked) {
+    cgoSaveUserInfo();
+  } else {
+    localStorage.removeItem('cgo_saved_info');
+  }
+}
+
+function cgoSaveUserInfo() {
+  var info = {
+    name:       (document.getElementById('ipName')||{}).value || '',
+    birthY:     (document.getElementById('ipBirthY')||{}).value || '',
+    birthM:     (document.getElementById('ipBirthM')||{}).value || '',
+    birthD:     (document.getElementById('ipBirthD')||{}).value || '',
+    gender:     (document.getElementById('ipGender')||{}).value || 'M',
+    time:       (document.getElementById('ipTime')||{}).value || '',
+    birthPlace: (document.getElementById('ipBirthPlace')||{}).value || '',
+    curPlace:   (document.getElementById('ipCurPlace')||{}).value || '',
+    calType:    (document.getElementById('ipCalType')||{}).value || 'solar'
+  };
+  if (!info.name || !info.birthY) return;
+  localStorage.setItem('cgo_saved_info', JSON.stringify(info));
+}
+
+function cgoLoadUserInfo() {
+  try {
+    var saved = localStorage.getItem('cgo_saved_info');
+    if (!saved) return;
+    var info = JSON.parse(saved);
+    if (!info.name) return;
+
+    // 입력창에 자동 입력
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el && val) { el.value = val; el.dispatchEvent(new Event('input')); }
+    };
+    set('ipName', info.name);
+    set('ipBirthY', info.birthY);
+    set('ipBirthM', info.birthM);
+    set('ipBirthD', info.birthD);
+    if (info.gender) { var g = document.getElementById('ipGender'); if(g) g.value = info.gender; }
+    if (info.time)   { var t = document.getElementById('ipTime');   if(t) t.value = info.time; }
+    set('ipBirthPlace', info.birthPlace);
+    set('ipCurPlace', info.curPlace);
+
+    // 체크박스 체크 상태로
+    var chk = document.getElementById('chkSaveInfo');
+    if (chk) chk.checked = true;
+
+    // hidden 필드 동기화
+    if (typeof syncBirthField === 'function') syncBirthField();
+    if (typeof _checkCalcReady === 'function') _checkCalcReady();
+
+    // 저장된 정보 표시
+    var label = document.querySelector('#chkSaveInfo + div div:first-child');
+    if (label) label.textContent = '💾 ' + info.name + '님 정보 자동 로드됨 ✅';
+
+  } catch(e) {}
+}
+
+// 입력 변경 시 자동 저장 (체크된 경우만)
+function cgoAutoSaveIfChecked() {
+  var chk = document.getElementById('chkSaveInfo');
+  if (chk && chk.checked) cgoSaveUserInfo();
+}
+
+// 페이지 로드 시 자동 로드
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(cgoLoadUserInfo, 800);
+
+  // 입력 변경 감지
+  ['ipName','ipBirthY','ipBirthM','ipBirthD','ipGender','ipTime','ipBirthPlace','ipCurPlace'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', cgoAutoSaveIfChecked);
+  });
+});
+</script>
+
+<script>
+// ══ 순수역학 세부 분석 팝업 ══
+</script>
 </body>
 </html>
 
