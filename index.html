@@ -21612,18 +21612,26 @@ function tarotChatSend(){
   }).filter(Boolean).join(', ');
 
   var systemPrompt = [
-    '당신은 CGO-FULI 타로 상담 AI입니다.',
-    '사용자: '+name+'님',
-    card?'선택한 타로 카드: '+card.name+' (키워드: '+card.key.join(', ')+')':'',
-    oh?'오행: '+oh+(nbti?' / NBTI: '+nbti:''):'',
+    '당신은 CGO-FULI의 40년 경력 타로 전문 상담사 AI입니다.',
+    '사용자: '+name+'님 | 오행: '+oh+(nbti?' | NBTI: '+nbti:''),
+    card
+      ? '✅ 선택된 카드: ['+card.name+'] ('+card.id+'번) | 키워드: '+card.key.join(', ')
+      : '⚠️ 아직 카드 미선택 — 카드를 먼저 선택하도록 안내하세요',
     systems?'연동 역학: '+systems:'',
     '',
-   '규칙:',
-    '1. 근거 없는 % 수치 절대 사용 금지',
-    '2. 단정 표현 금지',
-    '3. 쉽고 따뜻하게 2~4문장으로 답변',
-    '4. 필요하면 역으로 질문해서 더 정밀한 분석 유도'
-  ].join('\n');
+    '## 절대 규칙',
+    '1. 카드가 선택됐으면 → 반드시 그 카드를 중심으로 즉시 분석하세요. 절대 "어떤 카드냐"고 묻지 마세요.',
+    '2. 카드 이름을 임의로 만들지 마세요. 위에 명시된 카드명만 사용하세요.',
+    '3. 카드 미선택 시 → 카드를 먼저 선택하도록 안내만 하세요.',
+    '4. 근거 없는 % 수치 절대 사용 금지.',
+    '',
+    '## 답변 방식',
+    '- 카드 의미를 사용자 상황에 맞게 구체적으로 풀어서 설명하세요.',
+    '- 전문 용어는 쉬운 말로 풀어쓰기.',
+    '- 따뜻하고 친근한 존댓말.',
+    '- 오늘 실천 가능한 조언 1~2가지 포함.',
+    '- 100% 한국어만 사용.'
+  ].filter(Boolean).join('\n');
 
   var messages = [{role:'system', content:systemPrompt}];
   _tarotState.chatHistory.slice(-6).forEach(function(h){ 
@@ -21643,7 +21651,7 @@ function tarotChatSend(){
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: messages,
-      max_tokens: 300,
+      max_tokens: 700,
       temperature: 0.7
     })
   }).then(function(r){ 
@@ -21943,20 +21951,27 @@ function qtCallAI(userMsg,callback){
   var sys=_qt.selectedSystems.map(function(id){var s=QT_SYSTEMS.find(function(x){return x.id===id;});return s?s.name:'';}).filter(Boolean).join(', ');
 
   var sysPrompt=[
-    '당신은 CGO-FULI 타로 & 역학 AI 상담사입니다.',
-    '말투: 따뜻하고 친근하게, 존댓말, 2~4문장 간결하게',
-    oh?'오행: '+oh:'',
+    '당신은 CGO-FULI의 40년 경력 타로 & 역학 전문 AI 상담사입니다.',
+    oh?'사용자 오행: '+oh:'',
     nbti?'NBTI: '+nbti:'',
-    card?'선택한 타로: '+card.name+' (키워드: '+card.key.join(', ')+')':'',
+    card
+      ? '✅ 선택된 카드: ['+card.name+'] | 키워드: '+card.key.join(', ')
+      : '⚠️ 카드 미선택 상태',
     sys?'연동 역학: '+sys:'',
     '',
-    '규칙:',
-    '1. % 수치나 근거없는 숫자 절대 금지',
-    '2. 단정 표현 금지 (반드시, 확실히 등)',
-    '3. 사용자가 인사만 하면 먼저 질문으로 상황 파악',
-    '4. 타로 카드가 선택된 후에는 카드 기반 분석 제공',
-    '5. 사용자 추가 질문에도 계속 답변',
-    '6. 역으로 질문하여 더 정밀한 분석 유도 가능'
+    '## 핵심 규칙 (반드시 준수)',
+    '1. 카드가 선택됐으면 → 즉시 그 카드 기반으로 분석. "어떤 카드냐" 절대 묻지 말 것.',
+    '2. 카드 이름 임의로 만들지 말 것. 위에 명시된 카드명만 사용.',
+    '3. 카드 미선택 시 → 카드 먼저 선택하도록 안내.',
+    '4. % 수치·근거없는 숫자 절대 금지.',
+    '5. 단정 표현 금지 (반드시, 확실히 등).',
+    '',
+    '## 답변 방식',
+    '- 카드 의미를 사용자 상황에 맞게 구체적으로 설명.',
+    '- 전문 용어는 쉬운 말로 풀어쓰기.',
+    '- 따뜻하고 친근한 존댓말.',
+    '- 오늘 실천 가능한 조언 1~2가지 포함.',
+    '- 100% 한국어만 사용.'
   ].filter(Boolean).join('\n');
 
   var messages=[{role:'system',content:sysPrompt}];
@@ -21966,7 +21981,7 @@ function qtCallAI(userMsg,callback){
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,max_tokens:350,temperature:0.75})
+    body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:messages,max_tokens:700,temperature:0.75})
   }).then(function(res){return res.json();}).then(function(data){
     if(loading) loading.remove();
     var reply=data.choices&&data.choices[0]?data.choices[0].message.content:'잠시 후 다시 시도해 주세요.';
@@ -28696,8 +28711,8 @@ function cgoTfAiChat(){
   // 첫 AI 메시지
   _addMsg('ai',
     '🔮 <b>' + name + '</b>님, 오늘 에너지 <b>' + total + '점</b> · ' + (ohMap[oh]||oh) + '<br><br>'
-    + (total>=80 ? '대길! 지금이 움직일 때입니다 🌟' : total>=65 ? '순조로운 흐름. 차분히 나아가세요 ☀' : '잠시 내면을 들여다보는 날 💫') + '<br><br>'
-    + 'NASA+50대 역학 교차분석 기반입니다. 궁금한 것을 물어보세요! 😊'
+    + (total>=80 ? '✨ 대길의 기운입니다. 지금이 움직일 최적의 타이밍입니다 🌟' : total>=65 ? '☀️ 순조로운 흐름입니다. 차분히 계획대로 나아가세요.' : '💫 내면을 정비하고 에너지를 충전하는 날입니다.') + '<br><br>'
+    + '선택하신 역학 엔진으로 분석한 결과입니다.<br>점수 근거, 오늘의 운세, 조언 등 궁금한 것을 물어보세요! 😊'
   );
 
   function _send(){
@@ -28709,11 +28724,31 @@ function cgoTfAiChat(){
     _addMsg('ai', '<span style="color:#6b7280;">⏳ 분석 중...</span>');
     var key = (window.CG_GEMINI_KEY||'').trim();
     if(!key){ try{ key=atob(''); }catch(e){} }
-    var sys = 'CGO-FULI 운세 AI. 사용자: '+name+', 오행: '+oh+', 에너지: '+total+'점. 신점의 감각적 풀이+과학적 역학 분석으로 친근하게 2-3문장 한국어 답변.';
+    var engList = (window._tfPopupData && window._tfPopupData.selectedEngines)
+      ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·')
+      : '사주명리·수비학';
+    var sys =
+      '당신은 CGO-FULI 앱의 역학 전문 AI 상담사입니다.\n\n' +
+      '## 사용자 정보\n' +
+      '- 이름: ' + name + '\n' +
+      '- 지배 오행: ' + oh + '\n' +
+      '- 오늘 에너지 점수: ' + total + '점 (0~100점 척도)\n' +
+      '- 적용 역학: ' + engList + '\n\n' +
+      '## 점수 산정 원칙 (반드시 숙지)\n' +
+      '- 점수는 선택된 역학 엔진들의 오행 상생·상극, 일진, 생명수, 별자리 에너지를 종합한 값입니다.\n' +
+      '- 50점이 기준(보통), 65점 이상 양호, 80점 이상 대길, 50점 미만 주의.\n' +
+      '- 42점이라면 오행 상극, 일진 흉, 생명수 불일치 등 구체적 원인을 설명하세요.\n\n' +
+      '## 답변 원칙 (반드시 준수)\n' +
+      '1. 두리뭉실한 답변 절대 금지 — 구체적 역학 근거를 반드시 제시하세요.\n' +
+      '2. 점수 관련 질문 시 → 어떤 역학의 어떤 요소가 점수에 영향을 줬는지 명확히 설명.\n' +
+      '3. 전문 용어는 반드시 쉬운 말로 풀어서 설명 (예: "관살이 강하다 = 외부 압박이 많은 날").\n' +
+      '4. 답변 길이: 질문에 따라 충분히 자세하게 — 짧게 끊지 말 것.\n' +
+      '5. 마지막에 오늘 실천 가능한 조언 1~2가지 반드시 포함.\n' +
+      '6. 100% 한국어, 친근한 존댓말 사용.';
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:txt}],max_tokens:300,temperature:0.7})
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:txt}],max_tokens:800,temperature:0.7})
     }).then(function(res){return res.json();}).then(function(d){
       var box=document.getElementById(msgsId);
       if(box&&box.lastChild) box.removeChild(box.lastChild);
