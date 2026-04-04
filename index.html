@@ -94,6 +94,7 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
 @keyframes sealStamp{0%{opacity:0;transform:scale(2) rotate(-15deg)}60%{transform:scale(.95) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0deg)}}
 
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+@keyframes goldPulse{0%,100%{box-shadow:0 0 8px rgba(212,168,67,.35),0 0 0 0 rgba(212,168,67,.3);}50%{box-shadow:0 0 16px rgba(212,168,67,.7),0 0 0 6px rgba(212,168,67,.0);}}
 @keyframes mbtiBackPulse{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.0);opacity:1}50%{box-shadow:0 0 10px 3px rgba(168,85,247,.55);opacity:.85}}
 
 /* ── Gold-Stream Docking Animation (by Gemini 막둥이) ── */
@@ -3352,8 +3353,8 @@ function updateTransitSectionWithNASA(planets) {
       </div>
       <button class="icon-btn" onclick="refreshData()" title="새로고침">↻</button>
       <div class="user-chip" onclick="showPage('profile')" style="cursor:pointer;transition:all .2s" title="프로필 보기">
-        <div class="user-av" id="topAvatar">이</div>
-        <div class="user-nm" id="topName">이주원</div>
+        <div class="user-av" id="topAvatar">?</div>
+        <div class="user-nm" id="topName">이름 입력</div>
       </div>
     </div>
   </header>
@@ -3421,6 +3422,21 @@ function updateTransitSectionWithNASA(planets) {
               <div style="padding:8px 10px;background:rgba(255,255,255,.04);border-radius:10px;font-size:11px;color:rgba(240,220,160,.8);">🏨 풍수 여행</div>
             </div>
           </div>
+          <!-- 슬라이드 4: 330원 카피 -->
+          <div style="min-width:100%;padding:28px 24px 24px;background:linear-gradient(135deg,#030b18 0%,#08111e 50%,#030b18 100%);position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(212,168,67,.1),transparent 60%);pointer-events:none;"></div>
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#34d399,#d4a843,#34d399);"></div>
+            <div style="text-align:center;padding:6px 0 10px;">
+              <div style="font-size:32px;margin-bottom:14px;">☕</div>
+              <div style="font-size:clamp(20px,5vw,26px);font-weight:900;color:#f0ece0;line-height:1.55;">
+                커피 한 잔보다 가벼운<br>
+                <span style="color:#d4a843;">하루 330원</span>으로<br>
+                신세계의 <span style="color:#34d399;">10가지 기능</span>을<br>
+                누려보세요.
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- 슬라이드 도트 -->
@@ -3428,6 +3444,7 @@ function updateTransitSectionWithNASA(planets) {
           <div class="cgo-slide-dot active" data-i="0" onclick="cgoBannerGo(0)" style="width:20px;height:4px;border-radius:2px;background:#d4a843;cursor:pointer;transition:all .3s;"></div>
           <div class="cgo-slide-dot" data-i="1" onclick="cgoBannerGo(1)" style="width:8px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);cursor:pointer;transition:all .3s;"></div>
           <div class="cgo-slide-dot" data-i="2" onclick="cgoBannerGo(2)" style="width:8px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);cursor:pointer;transition:all .3s;"></div>
+          <div class="cgo-slide-dot" data-i="3" onclick="cgoBannerGo(3)" style="width:8px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);cursor:pointer;transition:all .3s;"></div>
         </div>
 
         <!-- 이전/다음 화살표 -->
@@ -3508,7 +3525,7 @@ function updateTransitSectionWithNASA(planets) {
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
-            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name" oninput="if(typeof _checkCalcReady==='function')_checkCalcReady();if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();">
+            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name" oninput="if(typeof _checkCalcReady==='function')_checkCalcReady();if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();if(typeof syncBirthField==='function')syncBirthField();">
           </div>
           <div class="ip-group">
             <div class="ip-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -3608,16 +3625,11 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
-        <!-- ① 정보 입력 후 클릭 -->
-        <div style="margin:12px 0 0;padding:8px 0;">
-          <div style="font-size:13px;font-weight:800;color:#34d399;">정보 입력 후 클릭</div>
-        </div>
-
         <!-- 경계선 -->
         <div style="margin:12px 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),transparent);"></div>
 
         <!-- ✦ 오늘의 운세 카드 ✦ -->
-        <div onclick="cgoOpenPureMetaphysics()" id="today-fortune-card"
+        <div onclick="cgoIntroOpen('pure', function(){ cgoOpenPureMetaphysics(); })" id="today-fortune-card"
           style="margin:20px 0 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(139,92,246,.1));border:2px solid rgba(212,168,67,.45);border-radius:18px;padding:18px 20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(212,168,67,.3)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
@@ -3641,43 +3653,8 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
 
-        <!-- ② 6개 카드 — 오늘의 운세 아래, 항상 표시 -->
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:12px;">
-          <div class="ip-card on" onclick="cpOpen(0)"><div class="ip-card-l">띠 (十二支)</div><div class="ip-card-v" id="ipv2-0" style="color:var(--gold)">—</div><div class="ip-card-s" id="ips2-0">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(1)"><div class="ip-card-l">별자리</div><div class="ip-card-v" id="ipv2-1" style="color:var(--cyan)">—</div><div class="ip-card-s" id="ips2-1">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(2)"><div class="ip-card-l">태어난 시간 에너지</div><div class="ip-card-v" id="ipv2-2" style="color:var(--amber)">—</div><div class="ip-card-s" id="ips2-2">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(3)"><div class="ip-card-l">행운 숫자</div><div class="ip-card-v" id="ipv2-3" style="color:var(--green)">—</div><div class="ip-card-s" id="ips2-3">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(4)"><div class="ip-card-l">나의 오행 에너지</div><div class="ip-card-v" id="ipv2-4" style="color:var(--indigo)">—</div><div class="ip-card-s" id="ips2-4">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(5)"><div class="ip-card-l">타고난 별 에너지</div><div class="ip-card-v" id="ipv2-5" style="color:var(--red)">—</div><div class="ip-card-s" id="ips2-5">—</div></div>
-        </div>
-
-        <!-- ③ 오늘 내 에너지 — 오늘의 운세 아래, 항상 표시 -->
-        <div class="fortune-panel" id="fortunePanel2" style="margin-top:12px;">
-          <div class="fortune-top" style="flex-wrap:wrap;gap:10px">
-            <div class="fortune-icon">🔮</div>
-            <div style="flex:1;min-width:160px">
-              <div class="fortune-ttl">오늘 내 에너지는 어떤가요?</div>
-              <div class="fortune-date" id="fortuneDate2">자동 계산 후 표시됩니다</div>
-            </div>
-            <div id="fortuneDatePicker2" style="display:none;width:100%;margin-top:10px">
-              <div style="font-size:10px;color:rgba(212,168,67,.85);font-weight:700;letter-spacing:.06em;margin-bottom:8px">
-                📅 다른 날짜 에너지도 볼 수 있어요!
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-                <button onclick="fcDate(0)"  class="fc-btn fc-btn-today">● 오늘</button>
-                <button onclick="fcDate(1)"  class="fc-btn fc-btn-future">내일 ▶</button>
-                <button onclick="fcDate(7)"  class="fc-btn fc-btn-future">1주 후 ▶</button>
-                <button onclick="fcDate(30)" class="fc-btn fc-btn-future">1달 후 ▶▶</button>
-              </div>
-            </div>
-          </div>
-          <div id="fortuneContent2">
-            <div class="fortune-wait">✨ 위에 정보 입력 후 "자동 계산" 버튼을 누르면 오늘의 운세를 알 수 있어요!</div>
-          </div>
-        </div>
-
         <!-- ✦ 시간대별 운세 접이식 ✦ -->
-        <div style="margin-top:10px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="margin-top:20px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
           <div onclick="(function(){var b=document.getElementById('sijin2Body');var a=document.getElementById('sijin2Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
                style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
             <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
@@ -3691,55 +3668,15 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 굵은 경계선 + 실시간 데이터 연동 섹션 ✦ -->
-        <div style="margin:20px 0 16px;border:0;border-top:3px solid rgba(56,189,248,.35);position:relative;">
+        <div style="margin:28px 0 20px;border:0;border-top:3px solid rgba(56,189,248,.35);position:relative;">
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card,#0d1829);padding:0 16px;white-space:nowrap;">
             <span style="font-size:11px;font-weight:800;color:#38bdf8;letter-spacing:.08em;">🛰️ 실시간 데이터 및 역학의 수치화로 인한 과학</span>
           </div>
         </div>
 
         <!-- ✦ 실시간 데이터 연동 운세 카드 (복사) ✦ -->
-        <div onclick="(function(){
-  var nm=(document.getElementById('ipName')||{}).value||'';
-  var by=(document.getElementById('ipBirthY')||{}).value||'';
-  var bm=(document.getElementById('ipBirthM')||{}).value||'';
-  var bd=(document.getElementById('ipBirthD')||{}).value||'';
-  var bp=(document.getElementById('ipBirthPlace')||{}).value||'';
-  var cp=(document.getElementById('ipCurPlace')||{}).value||'';
-  var gv=(document.getElementById('ipGender')||{}).value||'';
-  if(!nm.trim()){alert('이름을 입력해 주세요! 😊');return;}
-  if(!by||!bm||!bd){alert('생년월일을 입력해 주세요! 😊');return;}
-  if(!gv||gv===''){alert('성별을 선택해 주세요! 😊');return;}
-  if(!bp.trim()){alert('출생지를 입력해 주세요! 😊');return;}
-  if(!cp.trim()){alert('현재 거주지를 입력해 주세요! 😊');return;}
-  if(!window.calcResult||!window.calcResult.name){
-    window.calcResult=window.calcResult||{};
-    window.calcResult.name=nm.trim();
-    window.calcResult.y=parseInt(by);
-    window.calcResult.m=parseInt(bm);
-    window.calcResult.d=parseInt(bd);
-    window.calcResult.gender=gv;
-    window.calcResult.domOh='토';
-    window.calcResult.lifeNum=((parseInt(by)+(parseInt(bm))+(parseInt(bd)))%9)||9;
-    window.calcResult.ili=70;
-    window.calcResult.dGJ={gan:'甲',ji:'子'};
-  }
-  // ★ 실시간 모드 즉시 설정
-  window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
-  _cgoRestoreEngineMode('realtime');
-  var ov=document.getElementById('todayFortuneOverlay');
-  if(ov){ov.style.display='block';document.body.style.overflow='hidden';}
-  setTimeout(function(){
-    var h=document.getElementById('tf-overlay-title');
-    if(h){h.textContent='🛰️ 실시간 데이터 연동 분석';h.style.color='#38bdf8';}
-    var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
-    var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='block';
-    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
-    var rs=document.getElementById('tf-result'); if(rs) rs.style.display='none';
-    var rts=document.getElementById('tf-rt-result'); if(rts) rts.style.display='none';
-    var ld=document.getElementById('tf-loading'); if(ld) ld.style.display='none';
-  },50);
-})()"
-          style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
+        <div onclick="cgoIntroOpen('realtime', cgoLaunchRealtime)"
+                    style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
           <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 80% 20%,rgba(56,189,248,.07),transparent 60%);pointer-events:none;"></div>
@@ -3759,44 +3696,8 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 실시간 카드 아래 — 6개카드 + 에너지패널 + 시진 (디자인 동일) ✦ -->
-
-        <!-- 6개 카드 -->
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:12px;">
-          <div class="ip-card on" onclick="cpOpen(0)"><div class="ip-card-l">띠 (十二支)</div><div class="ip-card-v" id="ipv3-0" style="color:var(--gold)">—</div><div class="ip-card-s" id="ips3-0">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(1)"><div class="ip-card-l">별자리</div><div class="ip-card-v" id="ipv3-1" style="color:var(--cyan)">—</div><div class="ip-card-s" id="ips3-1">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(2)"><div class="ip-card-l">태어난 시간 에너지</div><div class="ip-card-v" id="ipv3-2" style="color:var(--amber)">—</div><div class="ip-card-s" id="ips3-2">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(3)"><div class="ip-card-l">행운 숫자</div><div class="ip-card-v" id="ipv3-3" style="color:var(--green)">—</div><div class="ip-card-s" id="ips3-3">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(4)"><div class="ip-card-l">나의 오행 에너지</div><div class="ip-card-v" id="ipv3-4" style="color:var(--indigo)">—</div><div class="ip-card-s" id="ips3-4">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(5)"><div class="ip-card-l">타고난 별 에너지</div><div class="ip-card-v" id="ipv3-5" style="color:var(--red)">—</div><div class="ip-card-s" id="ips3-5">—</div></div>
-        </div>
-
-        <!-- 오늘 내 에너지 -->
-        <div class="fortune-panel" id="fortunePanel3" style="margin-top:12px;">
-          <div class="fortune-top" style="flex-wrap:wrap;gap:10px">
-            <div class="fortune-icon">🔮</div>
-            <div style="flex:1;min-width:160px">
-              <div class="fortune-ttl">오늘 내 에너지는 어떤가요?</div>
-              <div class="fortune-date" id="fortuneDate3">자동 계산 후 표시됩니다</div>
-            </div>
-            <div id="fortuneDatePicker3" style="display:none;width:100%;margin-top:10px">
-              <div style="font-size:10px;color:rgba(212,168,67,.85);font-weight:700;letter-spacing:.06em;margin-bottom:8px">
-                📅 다른 날짜 에너지도 볼 수 있어요!
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-                <button onclick="fcDate(0)"  class="fc-btn fc-btn-today">● 오늘</button>
-                <button onclick="fcDate(1)"  class="fc-btn fc-btn-future">내일 ▶</button>
-                <button onclick="fcDate(7)"  class="fc-btn fc-btn-future">1주 후 ▶</button>
-                <button onclick="fcDate(30)" class="fc-btn fc-btn-future">1달 후 ▶▶</button>
-              </div>
-            </div>
-          </div>
-          <div id="fortuneContent3">
-            <div class="fortune-wait">✨ 위에 정보 입력 후 "자동 계산" 버튼을 누르면 오늘의 운세를 알 수 있어요!</div>
-          </div>
-        </div>
-
         <!-- 시간대별 운세 접이식 -->
-        <div style="margin-top:10px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="margin-top:20px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
           <div onclick="(function(){var b=document.getElementById('sijin3Body');var a=document.getElementById('sijin3Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
                style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
             <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
@@ -3810,136 +3711,120 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
-        <div style="margin:14px 0 10px;">
-          <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
+        <div style="margin:28px 0 10px;">
+          <!-- 섹션 레이블 -->
+          <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:600;">
             <span data-i18n="bioScan">🧬 생체 스킨 분석</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
             <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">20개 엔진 즉시 반영</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
 
-            <!-- Cgo-Bio Sensor 안내 배너 (관상 위) -->
-            <div style="grid-column:1/-1;background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(52,211,153,.04));border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:2px;">
-              <div style="font-size:16px;flex-shrink:0;">🔬</div>
-              <div style="flex:1;">
-                <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:4px;">Cgo-Bio Sensor v2.0 <span style="color:rgba(52,211,153,.5);font-weight:400;">(실측 분석)</span></div>
-                <div style="font-size:10px;color:rgba(240,230,200,.65);line-height:1.7;">
-                  📷 <strong style="color:#38bdf8;">rPPG 실측</strong> — Green 채널 픽셀 기반 BPM·HRV 정밀 분석
-                  &nbsp;·&nbsp;
-                  🎤 <strong style="color:#34d399;">호흡 실측</strong> — 마이크 파형 분석을 통한 호흡 리듬 측정
-                  &nbsp;·&nbsp;
-                  🌡️ <strong style="color:#fbbf24;">에너지 추정</strong> — 센서 데이터 융합 기반 체온 및 전신 기운 분석
+          <!-- ★ 큰 통합 카드 -->
+          <div style="background:linear-gradient(160deg,rgba(10,20,45,.95),rgba(8,17,32,.98));border:1.5px solid rgba(52,211,153,.3);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4);">
+
+            <!-- 카드 헤더 -->
+            <div style="padding:16px 18px 14px;border-bottom:1px solid rgba(52,211,153,.15);background:linear-gradient(90deg,rgba(52,211,153,.07),rgba(56,189,248,.04));">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.15));border:1px solid rgba(52,211,153,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="font-size:22px;">🔬</span>
                 </div>
-                <div style="margin-top:5px;display:flex;align-items:center;gap:6px;">
-                  <span style="font-size:10px;color:#fbbf24;">⚠️</span>
-                  <span style="font-size:10px;color:rgba(251,191,36,.8);" data-i18n="bio_caution1">정확한 분석을 위해 안내된 지시 사항(호흡·파지·고정)을 엄격히 준수해 주세요.</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">CGO-Bio Sensor v2.0</div>
+                  <div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px;">실측 분석 — rPPG · 호흡 · 생체신호 융합</div>
                 </div>
-                <div style="margin-top:3px;">
-                  <span style="font-size:8px;color:rgba(240,230,200,.3);" data-i18n="bio_caution2">※ 본 분석은 실제 생체 신호를 활용한 역학적 보정 데이터입니다.</span>
+                <div style="flex-shrink:0;padding:4px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:20px;">
+                  <span style="font-size:10px;font-weight:700;color:#34d399;white-space:nowrap;">● LIVE</span>
                 </div>
               </div>
             </div>
 
-            <!-- ✅ 음성 안내 ON/OFF + 팝업 지시사항 -->
-            <div style="grid-column:1/-1;margin-bottom:4px;">
-              <!-- 음성 토글 행 -->
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:6px;">
-                <div style="display:flex;align-items:center;gap:7px;">
-                  <span id="ttsIconBadge" style="font-size:15px;">🔊</span>
+            <!-- 음성 안내 -->
+            <div style="padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.05);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span id="ttsIconBadge" style="font-size:22px;flex-shrink:0;">🔊</span>
                   <div>
-                    <div style="font-size:11px;font-weight:700;color:rgba(240,230,200,.9);" data-i18n="voice_guide">음성 안내</div>
-                    <div id="ttsStatusTxt" style="font-size:9px;color:rgba(52,211,153,.7);" data-i18n="voice_on_desc">켜짐 — 스캔 중 음성 지시 제공</div>
+                    <div style="font-size:14px;font-weight:700;color:rgba(240,230,200,.95);" data-i18n="voice_guide">음성 안내</div>
+                    <div id="ttsStatusTxt" style="font-size:11px;color:rgba(52,211,153,.75);margin-top:1px;" data-i18n="voice_on_desc">켜짐 — 스캔 중 음성 지시 제공</div>
                   </div>
                 </div>
-                <button id="ttsToggleBtn" onclick="cgoToggleTTS()" style="padding:6px 14px;border-radius:20px;border:1.5px solid rgba(52,211,153,.5);background:rgba(52,211,153,.12);color:#34d399;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;">ON</button>
-              </div>
-
-
-            </div>
-
-            <!-- ✦ CGO-FULI 한 줄 -->
-            <div style="grid-column:1/-1;text-align:center;padding:10px 0 4px;">
-              <div style="font-size:11px;color:rgba(212,168,67,.75);font-weight:600;letter-spacing:.03em;line-height:1.8;">
-                ✦ CGO-FULI = 4,500년 동양 역학 + 2,500년 서양 역학 + NASA 실시간 데이터 + 생체 카메라 실측
+                <button id="ttsToggleBtn" onclick="cgoToggleTTS()" style="padding:8px 22px;border-radius:20px;border:1.5px solid rgba(52,211,153,.5);background:rgba(52,211,153,.12);color:#34d399;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap;flex-shrink:0;">ON</button>
               </div>
             </div>
 
-            <!-- ✦ 5대 생체 측정 버튼 -->
-            <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            <!-- 4개 측정 버튼 -->
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
 
-              <!-- 관상 -->
+              <!-- 관상 rPPG -->
               <button onclick="cgoScanGuide('face')"
-                style="width:100%;padding:12px 14px;background:linear-gradient(135deg,rgba(99,130,201,.12),rgba(56,189,248,.06));border:1px solid rgba(99,130,201,.3);border-radius:12px;color:#93c5fd;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .2s;"
-                onmouseover="this.style.borderColor='rgba(99,130,201,.6)'" onmouseout="this.style.borderColor='rgba(99,130,201,.3)'">
-                <span style="font-size:20px;">🧖</span>
-                <div>
-                  <div data-i18n="scan_face_title">관상 &amp; rPPG 측정</div>
-                  <div style="font-size:10px;color:rgba(147,197,253,.6);font-weight:400;margin-top:2px;" data-i18n="scan_face_sub">33초 · 거치형 파지 (3초 딜레이)</div>
+                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(99,130,201,.15),rgba(56,189,248,.08));border:1.5px solid rgba(99,130,201,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
+                onmouseover="this.style.borderColor='rgba(99,130,201,.7)'" onmouseout="this.style.borderColor='rgba(99,130,201,.35)'">
+                <span style="font-size:26px;flex-shrink:0;">🧖</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#93c5fd;" data-i18n="scan_face_title">관상 &amp; rPPG 측정</div>
+                  <div style="font-size:11px;color:rgba(147,197,253,.6);font-weight:400;margin-top:3px;" data-i18n="scan_face_sub">33초 · 거치형 파지 (3초 딜레이)</div>
                 </div>
-                <span style="margin-left:auto;font-size:11px;opacity:.5;" data-i18n="see_instructions">▶ 지시사항 보기</span>
+                <span id="rppg-check-face" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
+                <span style="font-size:18px;color:rgba(147,197,253,.4);flex-shrink:0;">›</span>
               </button>
 
               <!-- 손금 -->
               <button onclick="cgoScanGuide('palm')"
-                style="width:100%;padding:12px 14px;background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(251,191,36,.06));border:1px solid rgba(212,168,67,.3);border-radius:12px;color:#fcd34d;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .2s;"
-                onmouseover="this.style.borderColor='rgba(212,168,67,.6)'" onmouseout="this.style.borderColor='rgba(212,168,67,.3)'">
-                <span style="font-size:20px;">✋</span>
-                <div>
-                  <div data-i18n="scan_palm_title">손금 측정</div>
-                  <div style="font-size:10px;color:rgba(252,211,77,.6);font-weight:400;margin-top:2px;" data-i18n="scan_palm_sub">33초 · 수직 투사 파지 (3초 딜레이)</div>
+                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(251,191,36,.08));border:1.5px solid rgba(212,168,67,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
+                onmouseover="this.style.borderColor='rgba(212,168,67,.7)'" onmouseout="this.style.borderColor='rgba(212,168,67,.35)'">
+                <span style="font-size:26px;flex-shrink:0;">✋</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#fcd34d;" data-i18n="scan_palm_title">손금 측정</div>
+                  <div style="font-size:11px;color:rgba(252,211,77,.6);font-weight:400;margin-top:3px;" data-i18n="scan_palm_sub">33초 · 수직 투사 파지 (3초 딜레이)</div>
                 </div>
-                <span style="margin-left:auto;font-size:11px;opacity:.5;" data-i18n="see_instructions">▶ 지시사항 보기</span>
+                <span id="rppg-check-palm" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
+                <span style="font-size:18px;color:rgba(252,211,77,.4);flex-shrink:0;">›</span>
               </button>
 
-              <!-- 혀 -->
+              <!-- 혀 스캔 -->
               <button onclick="cgoScanGuide('tongue')"
-                style="width:100%;padding:12px 14px;background:linear-gradient(135deg,rgba(248,113,113,.12),rgba(240,100,150,.06));border:1px solid rgba(248,113,113,.3);border-radius:12px;color:#fca5a5;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .2s;"
-                onmouseover="this.style.borderColor='rgba(248,113,113,.6)'" onmouseout="this.style.borderColor='rgba(248,113,113,.3)'">
-                <span style="font-size:20px;">👅</span>
-                <div>
-                  <div data-i18n="scan_tongue_title">혀 스캔</div>
-                  <div style="font-size:10px;color:rgba(252,165,165,.6);font-weight:400;margin-top:2px;" data-i18n="scan_tongue_sub">15초 · 근접 단독 파지 (10초 딜레이)</div>
+                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(248,113,113,.15),rgba(240,100,150,.08));border:1.5px solid rgba(248,113,113,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
+                onmouseover="this.style.borderColor='rgba(248,113,113,.7)'" onmouseout="this.style.borderColor='rgba(248,113,113,.35)'">
+                <span style="font-size:26px;flex-shrink:0;">👅</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#fca5a5;" data-i18n="scan_tongue_title">혀 스캔</div>
+                  <div style="font-size:11px;color:rgba(252,165,165,.6);font-weight:400;margin-top:3px;" data-i18n="scan_tongue_sub">15초 · 근접 단독 파지 (10초 딜레이)</div>
                 </div>
-                <span style="margin-left:auto;font-size:11px;opacity:.5;" data-i18n="see_instructions">▶ 지시사항 보기</span>
+                <span id="rppg-check-tongue" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
+                <span style="font-size:18px;color:rgba(252,165,165,.4);flex-shrink:0;">›</span>
               </button>
 
-              <!-- 호흡 -->
+              <!-- 4-7-8 호흡 -->
               <button onclick="cgoScanGuide('breath')"
-                style="width:100%;padding:12px 14px;background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(99,130,201,.06));border:1px solid rgba(56,189,248,.3);border-radius:12px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .2s;"
-                onmouseover="this.style.borderColor='rgba(56,189,248,.6)'" onmouseout="this.style.borderColor='rgba(56,189,248,.3)'">
-                <span style="font-size:20px;">🫁</span>
-                <div>
-                  <div data-i18n="scan_breath_title">4-7-8 호흡 측정</div>
-                  <div style="font-size:10px;color:rgba(56,189,248,.6);font-weight:400;margin-top:2px;" data-i18n="scan_breath_sub">19초 · 단자 직결 파지</div>
+                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(99,130,201,.08));border:1.5px solid rgba(56,189,248,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
+                onmouseover="this.style.borderColor='rgba(56,189,248,.7)'" onmouseout="this.style.borderColor='rgba(56,189,248,.35)'">
+                <span style="font-size:26px;flex-shrink:0;">🫁</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#38bdf8;" data-i18n="scan_breath_title">4-7-8 호흡 측정</div>
+                  <div style="font-size:11px;color:rgba(56,189,248,.6);font-weight:400;margin-top:3px;" data-i18n="scan_breath_sub">19초 · 단자 직결 파지</div>
                 </div>
-                <span style="margin-left:auto;font-size:11px;opacity:.5;" data-i18n="see_instructions">▶ 지시사항 보기</span>
+                <span id="rppg-check-breath" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
+                <span style="font-size:18px;color:rgba(56,189,248,.4);flex-shrink:0;">›</span>
               </button>
-
 
             </div>
 
+            <!-- 카드 푸터 -->
+            <div style="padding:10px 18px 14px;border-top:1px solid rgba(255,255,255,.05);">
+              <div style="font-size:11px;color:rgba(251,191,36,.75);display:flex;align-items:flex-start;gap:6px;line-height:1.6;">
+                <span style="flex-shrink:0;">⚠️</span>
+                <span data-i18n="bio_caution1">정확한 분석을 위해 안내된 지시 사항(호흡·파지·고정)을 엄격히 준수해 주세요.</span>
+              </div>
+            </div>
+
           </div>
-          <!-- 스캔 결과 미니 표시 -->
           <!-- bioSkinResult 배너 제거 -->
         </div>
 
         <!-- ✦ 4-7-8 아래 ✦ -->
 
         <!-- 1. 실시간 rPPG 데이터 연동 분석 -->
-        <div onclick="(function(){setTimeout(function(){
-          // ★ rPPG 모드 즉시 설정
-          window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
-          _cgoRestoreEngineMode('rppg');
-          var ov2=document.getElementById('todayFortuneOverlay');
-          if(ov2){ov2.style.display='block';document.body.style.overflow='hidden';}
-          var h=document.getElementById('tf-overlay-title');
-          if(h){h.textContent='🛰️ 실시간 rPPG 데이터 연동 분석';h.style.color='#34d399';}
-          var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
-          var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='none';
-          var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='block';
-          var rs2=document.getElementById('tf-result'); if(rs2) rs2.style.display='none';
-          var rts2=document.getElementById('tf-rt-result'); if(rts2) rts2.style.display='none';
-        },50);if(typeof cgoOpenTodayFortune==='function')cgoOpenTodayFortune();})()"
-          style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
+        <div onclick="cgoIntroOpen('rppg', cgoLaunchRppg)"
+                    style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
           <div style="display:flex;align-items:center;gap:12px;">
@@ -3958,134 +3843,25 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
-        <!-- 2. 6개 카드 -->
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;">
-          <div class="ip-card on" onclick="cpOpen(0)"><div class="ip-card-l">띠 (十二支)</div><div class="ip-card-v" id="ipv4-0" style="color:var(--gold)">—</div><div class="ip-card-s" id="ips4-0">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(1)"><div class="ip-card-l">별자리</div><div class="ip-card-v" id="ipv4-1" style="color:var(--cyan)">—</div><div class="ip-card-s" id="ips4-1">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(2)"><div class="ip-card-l">태어난 시간 에너지</div><div class="ip-card-v" id="ipv4-2" style="color:var(--amber)">—</div><div class="ip-card-s" id="ips4-2">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(3)"><div class="ip-card-l">행운 숫자</div><div class="ip-card-v" id="ipv4-3" style="color:var(--green)">—</div><div class="ip-card-s" id="ips4-3">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(4)"><div class="ip-card-l">나의 오행 에너지</div><div class="ip-card-v" id="ipv4-4" style="color:var(--indigo)">—</div><div class="ip-card-s" id="ips4-4">—</div></div>
-          <div class="ip-card on" onclick="cpOpen(5)"><div class="ip-card-l">타고난 별 에너지</div><div class="ip-card-v" id="ipv4-5" style="color:var(--red)">—</div><div class="ip-card-s" id="ips4-5">—</div></div>
-        </div>
-
-        <!-- 3. 오늘 내 에너지 -->
-        <div class="fortune-panel" id="fortunePanel4" style="margin-bottom:10px;">
-          <div class="fortune-top" style="flex-wrap:wrap;gap:10px">
-            <div class="fortune-icon">🔮</div>
-            <div style="flex:1;min-width:160px">
-              <div class="fortune-ttl">오늘 내 에너지는 어떤가요?</div>
-              <div class="fortune-date" id="fortuneDate4">자동 계산 후 표시됩니다</div>
-            </div>
-            <div id="fortuneDatePicker4" style="display:none;width:100%;margin-top:10px">
-              <div style="font-size:10px;color:rgba(212,168,67,.85);font-weight:700;letter-spacing:.06em;margin-bottom:8px">📅 다른 날짜 에너지도 볼 수 있어요!</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-                <button onclick="fcDate(0)"  class="fc-btn fc-btn-today">● 오늘</button>
-                <button onclick="fcDate(1)"  class="fc-btn fc-btn-future">내일 ▶</button>
-                <button onclick="fcDate(7)"  class="fc-btn fc-btn-future">1주 후 ▶</button>
-                <button onclick="fcDate(30)" class="fc-btn fc-btn-future">1달 후 ▶▶</button>
-              </div>
-            </div>
+        <!-- 4. 시간대별 운세 접이식 -->
+        <div style="margin-bottom:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div onclick="(function(){var b=document.getElementById('sijin4Body');var a=document.getElementById('sijin4Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
+               style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
+            <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
+            <span id="sijin4Arrow" style="font-size:11px;color:#a78bfa;">▼</span>
           </div>
-          <div id="fortuneContent4">
-            <div class="fortune-wait">✨ 위에 정보 입력 후 "자동 계산" 버튼을 누르면 오늘의 운세를 알 수 있어요!</div>
+          <div id="sijin4Body" style="display:none;padding:10px 12px;">
+            <div id="sijin4Content" style="color:rgba(240,220,160,.6);font-size:11px;text-align:center;padding:16px 0;">✨ 자동 계산 후 표시됩니다</div>
           </div>
         </div>
 
-        <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
-        <div style="margin-bottom:20px;">
-          <div style="font-size:11px;font-weight:700;color:rgba(240,220,160,.4);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;">📋 전체 메뉴</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
+        <!-- ▼ 이동: ILI / NBTI / COSMIC ORDER ▼ -->
 
-            <div onclick="cgoGoPage('scan')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(168,85,247,.08)';this.style.borderColor='rgba(168,85,247,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🔬</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">생체 에너지 스캔</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">rPPG 비접촉 30초 측정 · BPM·HRV·FCI</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('algo')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(56,189,248,.08)';this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🩺</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">AI 통합 건강 예측</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">20가지 건강 지표 · NASA × 역학 분석</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('report')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(212,168,67,.08)';this.style.borderColor='rgba(212,168,67,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">📜</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">정밀 분석 리포트</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">사주팔자 · 구성반 · ILI 전체 리포트</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('family')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">👨‍👩‍👧</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">가족 ILI 관리</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">가족 구성원 통합 라이프 인덱스</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('gmd')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">📸</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">풍수 카메라</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">공간 에너지 분석 · 7대 풍수 시스템</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('couple')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(244,114,182,.08)';this.style.borderColor='rgba(244,114,182,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">💑</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">커플 궁합 분석</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">세계 최초 rPPG × 역학 실시간 궁합</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('naming')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(139,92,246,.08)';this.style.borderColor='rgba(139,92,246,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">✍️</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">작명 서비스</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">사주 × 오행 × 수리 최적 이름 추천</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('consult')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.08)';this.style.borderColor='rgba(167,139,250,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🔮</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">1대1 고민 상담</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">AI 역학 상담사 · 24시간 맞춤 상담</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('lotto')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🎰</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">행운 번호 추출기</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × 수비학 · 로또 행운 번호</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('sports')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">⚽</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">스포츠 에너지 궁합</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">K리그·KBO·KBL 실시간 경기 에너지</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('stock')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">📈</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">주식 에너지 예측</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × NASA 행성 · 22,000개 종목 DB</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('travel')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🏨</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">풍수 여행·숙소 추천</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × 풍수 × NASA · 6개국 숙소 TOP30</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('star')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">⭐</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">별 충전소 <span style="font-size:10px;padding:2px 6px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:8px;color:#34d399;margin-left:4px;">FREE</span></div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">무료 콘텐츠 · 역학 지식 충전</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="cgoGoPage('shop')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(248,113,113,.08)';this.style.borderColor='rgba(248,113,113,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
-              <span style="font-size:22px;width:32px;text-align:center;">🛍️</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">오행 맞춤 쇼핑</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">내 오행에 맞는 아이템 큐레이션</div></div>
-              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
-            </div>
-
-            <div onclick="if(typeof cgoVipEntry==='function')cgoVipEntry()" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(180,140,50,.05));border:1px solid rgba(212,168,67,.35);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(212,168,67,.7)'" onmouseout="this.style.borderColor='rgba(212,168,67,.35)'">
-              <span style="font-size:22px;width:32px;text-align:center;">💎</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:#d4a843;">VVIP 프리미엄</div><div style="font-size:11px;color:rgba(212,168,67,.5);margin-top:2px;">특별 분석 · 무제한 AI 상담</div></div>
-              <span style="color:rgba(212,168,67,.5);font-size:16px;">›</span>
-            </div>
-
+        <!-- ── 금색 구분선 ── -->
+        <div style="margin:20px 0 20px;position:relative;">
+          <div style="height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.7),rgba(251,191,36,.9),rgba(212,168,67,.7),transparent);border-radius:2px;"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card,#0d1829);padding:0 14px;">
+            <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.12em;">✦ ILI · BAI ✦</span>
           </div>
         </div>
 
@@ -4132,17 +3908,6 @@ function updateTransitSectionWithNASA(planets) {
           </div>
         </div>
 
-        <!-- 4. 시간대별 운세 접이식 -->
-        <div style="margin-bottom:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
-          <div onclick="(function(){var b=document.getElementById('sijin4Body');var a=document.getElementById('sijin4Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
-               style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
-            <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
-            <span id="sijin4Arrow" style="font-size:11px;color:#a78bfa;">▼</span>
-          </div>
-          <div id="sijin4Body" style="display:none;padding:10px 12px;">
-            <div id="sijin4Content" style="color:rgba(240,220,160,.6);font-size:11px;text-align:center;padding:16px 0;">✨ 자동 계산 후 표시됩니다</div>
-          </div>
-        </div>
 
                 <div id="mbtiSection" style="margin:14px 0 10px;">
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;font-weight:600;">
@@ -4517,6 +4282,112 @@ function updateTransitSectionWithNASA(planets) {
       </div>
       <!-- ═══ /COSMIC ORDER ═══ -->
 
+        <!-- ── COSMIC ORDER / 전체메뉴 구분 카드 ── -->
+        <div style="margin:22px 0 18px;padding:13px 20px;background:linear-gradient(90deg,rgba(212,168,67,.06),rgba(52,211,153,.05),rgba(56,189,248,.05),rgba(212,168,67,.06));border:1px solid rgba(212,168,67,.3);border-radius:40px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 0 18px rgba(212,168,67,.08);">
+          <div style="height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(212,168,67,.5));"></div>
+          <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.18em;white-space:nowrap;">📋 전체 메뉴</span>
+          <div style="height:1px;flex:1;background:linear-gradient(90deg,rgba(212,168,67,.5),transparent);"></div>
+        </div>
+
+        <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px;font-weight:700;color:rgba(240,220,160,.4);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;">📋 전체 메뉴</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+
+            <div onclick="cgoGoPage('scan')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(168,85,247,.08)';this.style.borderColor='rgba(168,85,247,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🔬</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">생체 에너지 스캔</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">rPPG 비접촉 30초 측정 · BPM·HRV·FCI</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('algo')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(56,189,248,.08)';this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🩺</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">AI 통합 건강 예측</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">20가지 건강 지표 · NASA × 역학 분석</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('report')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(212,168,67,.08)';this.style.borderColor='rgba(212,168,67,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">📜</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">정밀 분석 리포트</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">사주팔자 · 구성반 · ILI 전체 리포트</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('family')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">👨‍👩‍👧</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">가족 ILI 관리</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">가족 구성원 통합 라이프 인덱스</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('gmd')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">📸</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">풍수 카메라</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">공간 에너지 분석 · 7대 풍수 시스템</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('couple')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(244,114,182,.08)';this.style.borderColor='rgba(244,114,182,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">💑</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">커플 궁합 분석</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">세계 최초 rPPG × 역학 실시간 궁합</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('naming')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(139,92,246,.08)';this.style.borderColor='rgba(139,92,246,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">✍️</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">작명 서비스</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">사주 × 오행 × 수리 최적 이름 추천</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('consult')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.08)';this.style.borderColor='rgba(167,139,250,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🔮</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">1대1 고민 상담</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">AI 역학 상담사 · 24시간 맞춤 상담</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('lotto')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🎰</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">행운 번호 추출기</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × 수비학 · 로또 행운 번호</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('sports')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">⚽</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">스포츠 에너지 궁합</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">K리그·KBO·KBL 실시간 경기 에너지</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('stock')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">📈</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">주식 에너지 예측</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × NASA 행성 · 22,000개 종목 DB</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('travel')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🏨</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">풍수 여행·숙소 추천</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">오행 × 풍수 × NASA · 6개국 숙소 TOP30</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('star')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(251,191,36,.08)';this.style.borderColor='rgba(251,191,36,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">⭐</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">별 충전소 <span style="font-size:10px;padding:2px 6px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:8px;color:#34d399;margin-left:4px;">FREE</span></div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">무료 콘텐츠 · 역학 지식 충전</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('shop')" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(248,113,113,.08)';this.style.borderColor='rgba(248,113,113,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:32px;text-align:center;">🛍️</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:rgba(240,220,160,.9);">오행 맞춤 쇼핑</div><div style="font-size:11px;color:rgba(240,220,160,.4);margin-top:2px;">내 오행에 맞는 아이템 큐레이션</div></div>
+              <span style="color:rgba(240,220,160,.3);font-size:16px;">›</span>
+            </div>
+
+            <div onclick="if(typeof cgoVipEntry==='function')cgoVipEntry()" style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(180,140,50,.05));border:1px solid rgba(212,168,67,.35);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(212,168,67,.7)'" onmouseout="this.style.borderColor='rgba(212,168,67,.35)'">
+              <span style="font-size:22px;width:32px;text-align:center;">💎</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:700;color:#d4a843;">VVIP 프리미엄</div><div style="font-size:11px;color:rgba(212,168,67,.5);margin-top:2px;">특별 분석 · 무제한 AI 상담</div></div>
+              <span style="color:rgba(212,168,67,.5);font-size:16px;">›</span>
+            </div>
+
+          </div>
+        </div>
+
+
 
 
 
@@ -4544,6 +4415,7 @@ function updateTransitSectionWithNASA(planets) {
 
     <!-- ══ SCAN PAGE ══ -->
     <div class="page" id="page-scan">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <div class="section-head">
     <h2 data-i18n="scan_title">⚡ 실시간 생체 에너지 스캔</h2>
     <p data-i18n="scan_subtitle">AI 안면 인식 + 역학 데이터 융합 · 30초 정밀 분석 완료</p>
@@ -5009,6 +4881,7 @@ function updateTransitSectionWithNASA(planets) {
 
 </div>
 <div class="page" id="page-family">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="family-header">
         <div class="section-head" style="margin-bottom:0"><h2>가족 ILI 관리</h2><p id="familySub">가족 구성원의 통합 라이프 인덱스를 실시간으로 모니터링합니다</p></div>
         <button class="family-add-btn" onclick="openAddModal()">+ 구성원 추가</button>
@@ -5033,6 +4906,7 @@ function updateTransitSectionWithNASA(planets) {
 
     <!-- ══ ALGO PAGE ══ -->
       <div class="page" id="page-algo">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
     <div class="section-head"><h2>🩺 AI 통합 건강 예측</h2><p>20대 역학 × LJR 실측 생체 스캔 — 20가지 건강 지표 종합 분석</p></div>
 
     <!-- rPPG 실측 안내 배너 -->
@@ -5219,6 +5093,7 @@ function updateTransitSectionWithNASA(planets) {
     </div>
   </div>
 <div class="page" id="page-report">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
         <button onclick="cgoPrintReport()" style="flex:1;min-width:140px;padding:12px 16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:12px;color:#020817;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Noto Sans KR',sans-serif;">
           🖨️ PDF 저장 / 인쇄
@@ -5240,6 +5115,7 @@ function updateTransitSectionWithNASA(planets) {
 
     <!-- ══ 풍수 카메라 ══ -->
     <div class="page" id="page-gmd">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="section-head">
         <h2>📸 풍수 카메라 <span style="font-size:14px;color:var(--text-3);font-family:'Noto Sans KR',sans-serif">공간 에너지 분석</span></h2>
         <p>사진 업로드 + 방위 측정 → 글로벌 7대 공간 에너지 시스템 AI 분석</p>
@@ -5931,6 +5807,7 @@ var fcSystems = {
 
 <!-- ===================== ⭐ 별 충전소 페이지 ===================== -->
 <div class="page" id="page-star">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
 <div style="padding:16px;max-width:480px;margin:0 auto;">
 
   <!-- 헤더 -->
@@ -6148,6 +6025,7 @@ var fcSystems = {
 <!-- /page-star -->
 
     <div class="page" id="page-naming">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="naming-wrap">
 
         <!-- 입력 패널 -->
@@ -6346,6 +6224,7 @@ var fcSystems = {
 
     <!-- ══ 1대1 고민 상담 ══ -->
     <div class="page" id="page-consult">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
 
   <!-- API 키 경고 배너 -->
   <div id="cg-key-warn-banner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;align-items:center;gap:12px;">
@@ -6508,6 +6387,7 @@ var fcSystems = {
 
     <!-- ══ 로또 행운 번호 추출기 ══ -->
     <div class="page" id="page-lotto">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="lotto-wrap">
         <div id="lotto-guide-banner" style="margin:0 0 12px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.3);border-radius:16px;overflow:hidden;position:relative;">
           <div style="padding:11px 16px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(251,191,36,0.15)">
@@ -6657,6 +6537,7 @@ var fcSystems = {
 
     <!-- ===================== ⚽ 스포츠 에너지 궁합 페이지 ===================== -->
     <div class="page" id="page-couple">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="section-head">
         <h2>💑 커플 궁합 정밀 분석</h2>
         <p>4,500년 역학 × NASA × 실시간 생체 파동 — 세계 최초 우주적 궁합</p>
@@ -7002,6 +6883,7 @@ var fcSystems = {
     </div>
 
     <div class="page" id="page-sports">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <div id="spt-key-warn-banner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;align-items:center;gap:12px;">
     <div style="font-size:22px;">🔑</div>
     <div style="flex:1">
@@ -7226,6 +7108,7 @@ var fcSystems = {
 
     <!-- ===================== 📈 주식 에너지 예측 페이지 ===================== -->
     <div class="page" id="page-stock">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <div id="stk-key-warn-banner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;align-items:center;gap:12px;">
     <div style="font-size:22px;">🔑</div>
     <div style="flex:1">
@@ -7582,6 +7465,7 @@ var fcSystems = {
     </div><!-- /stk-ai-overlay -->
 
     <div class="page" id="page-profile">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
       <div class="profile-grid">
         <div class="profile-card">
           <div class="profile-avatar-big" id="profAvatar">이</div>
@@ -7673,6 +7557,7 @@ var fcSystems = {
 <!-- ===================== 💎 VVIP 프리미엄 페이지 ===================== -->
 <!-- ══ TAROT PAGE ══ -->
 <div class="page" id="page-vip">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <!-- VIP 잠금 화면 -->
   <div id="vip-lock-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;padding:24px;">
     <div style="text-align:center;max-width:340px;">
@@ -7918,6 +7803,7 @@ var fcSystems = {
      + 안심 숙소 스캔 (몰카·도청 탐지 보조)
 ════════════════════════════════════════════════════ -->
 <div class="page" id="page-travel">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <div class="section-head">
     <h2>🏨 풍수 여행·숙소 큐레이터</h2>
     <p>오행 × 풍수 × NASA × AI — 나만의 에너지 여행지 추천</p>
@@ -8519,6 +8405,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 
 <div class="page" id="page-shop">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button onclick="cgoGoPage('dashboard')" style="min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button></div>
   <div style="padding:16px;max-width:480px;margin:0 auto;">
 
     <!-- 헤더 -->
@@ -16637,6 +16524,16 @@ function syncBirthField() {
   if(typeof _checkCalcReady==='function') _checkCalcReady();
   // ★ 입력값 즉시 localStorage 저장 + calcResult 동기화
   if(typeof _cgoAutoSaveInputs==='function') _cgoAutoSaveInputs();
+
+  // ★★★ 이름 + 생년월일 모두 입력 시 0.6초 후 calcAstro() 자동 실행 ★★★
+  var nameVal = (document.getElementById('ipName')||{}).value||'';
+  var birthVal = hid.value;
+  if(nameVal.trim() && birthVal) {
+    if(window._autoCalcTimer) clearTimeout(window._autoCalcTimer);
+    window._autoCalcTimer = setTimeout(function(){
+      if(typeof calcAstro === 'function') calcAstro();
+    }, 600);
+  }
 }
 function syncCpBirth(who) {
   var y=document.getElementById('cpBirth'+who+'Y'), m=document.getElementById('cpBirth'+who+'M'), d=document.getElementById('cpBirth'+who+'D');
@@ -20789,7 +20686,6 @@ function _checkCalcReady() {
   var hint  = document.getElementById('calcReadyHint');
   var list  = document.getElementById('calcReadyList');
   var badge = document.getElementById('calcBtnBadge');
-  if(!btn) return;
 
   var nameOk  = !!(document.getElementById('ipName') && document.getElementById('ipName').value.trim());
   var birthOk = !!(document.getElementById('ipBirth') && document.getElementById('ipBirth').value);
@@ -20798,15 +20694,13 @@ function _checkCalcReady() {
   var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
   var mbtiOk  = !!(window._mbtiResult);
 
-  // ✅ 원래 조건: 이름+생년월일+생체스캔(관상·손금·혀) 모두 완료해야 자동계산 활성
-  // MBTI는 선택사항
   var allScans = faceOk && palmOk && tongOk;
   var allReady = nameOk && birthOk && allScans;
 
-  // 버튼 활성/비활성
-  btn.disabled = !allReady;
+  // 버튼이 있을 때만 제어
+  if(btn) btn.disabled = !allReady;
 
-  // 배지: MBTI 완료 시 20개, 아니면 19개
+  // 배지
   if(badge) {
     var _bp3 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
     var _t20   = _bp3.badge_20eng || '20개 역학 적용!';
@@ -20819,7 +20713,7 @@ function _checkCalcReady() {
     badge.style.color      = (allReady && mbtiOk) ? '#fff'    : allReady ? '#082011' : 'rgba(255,255,255,.4)';
   }
 
-  // 준비 상태 리스트 (선택 언어 반영)
+  // 준비 상태 리스트
   if(list) {
     var _p2 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
     var items = [
@@ -20840,7 +20734,6 @@ function _checkCalcReady() {
     }).join('');
   }
 
-  // 모두 완료 시 힌트 숨김
   if(hint) hint.style.display = allReady ? 'none' : 'block';
 }
 
@@ -21366,16 +21259,8 @@ function calcAstro() {
 
 // --- 결과 카드 6개 ---
 function _sync2(){
-  for(var i=0;i<6;i++){
-    var v=document.getElementById('ipv-'+i);
-    var v2=document.getElementById('ipv2-'+i),v3=document.getElementById('ipv3-'+i);
-    var s=document.getElementById('ips-'+i);
-    var s2=document.getElementById('ips2-'+i),s3=document.getElementById('ips3-'+i);
-    if(v&&v2){v2.textContent=v.textContent;v2.style.color=v.style.color;}
-    if(v&&v3){v3.textContent=v.textContent;v3.style.color=v.style.color;}
-    if(s&&s2)s2.textContent=s.textContent;
-    if(s&&s3)s3.textContent=s.textContent;
-  }
+  // ipv-0~5 는 실제 DOM에 없음 — updateCards에서 ipv2/3/4 직접 채움
+  // fortune 날짜·콘텐츠·픽커만 동기화
   var fd=document.getElementById('fortuneDate');
   var fd2=document.getElementById('fortuneDate2'),fd3=document.getElementById('fortuneDate3');
   if(fd&&fd2)fd2.textContent=fd.textContent;
@@ -21413,12 +21298,7 @@ document.addEventListener('calcDone',function(){
   },800);
 });
 function _sync4(){
-  for(var i=0;i<6;i++){
-    var v=document.getElementById('ipv-'+i),v4=document.getElementById('ipv4-'+i);
-    var s=document.getElementById('ips-'+i),s4=document.getElementById('ips4-'+i);
-    if(v&&v4){v4.textContent=v.textContent;v4.style.color=v.style.color;}
-    if(s&&s4)s4.textContent=s.textContent;
-  }
+  // ipv4 는 updateCards에서 직접 채움 — fortune 동기화만
   var fd=document.getElementById('fortuneDate'),fd4=document.getElementById('fortuneDate4');
   if(fd&&fd4)fd4.textContent=fd.textContent;
   var fc=document.getElementById('fortuneContent'),fc4=document.getElementById('fortuneContent4');
@@ -22227,11 +22107,15 @@ function updateResultCards(r){
     name: r.name, lm: lm
   };
   data.forEach(function(row,i){
-    document.getElementById('ipv-'+i).textContent=row[0];
-    document.getElementById('ips-'+i).textContent=row[1];
+    // ipv2 (순수 역학), ipv3 (실시간 연동), ipv4 (생체 연동) 모두 업데이트
+    ['2','3','4'].forEach(function(suffix){
+      var vEl=document.getElementById('ipv'+suffix+'-'+i);
+      var sEl=document.getElementById('ips'+suffix+'-'+i);
+      if(vEl) vEl.textContent=row[0];
+      if(sEl) sEl.textContent=row[1];
+    });
     var card=document.getElementById('ipc-'+i);
-    card.classList.remove('on');
-    setTimeout(function(){card.classList.add('on');},i*80+50);
+    if(card){ card.classList.remove('on'); setTimeout(function(){card.classList.add('on');},i*80+50); }
   });
 }
 
@@ -27115,6 +26999,113 @@ function _cgoRestoreEngineMode(mode){
   }
 }
 
+// ══ 3대 분석 소개 팝업 JS ══
+var _cgoIntroCallback = null;
+
+var _cgoIntroContent = {
+  pure: {
+    badge: '📜 순수 역학 분석',
+    badgeColor: '#d4a843',
+    title: '지능형 멀티-엔진 역학 분석',
+    subtitle: 'Human-Intelligence',
+    desc: '50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',
+    body: 'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 나아가 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 이 시스템의 핵심은 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 낸다는 점에 있습니다.',
+    color: 'rgba(212,168,67,.3)'
+  },
+  realtime: {
+    badge: '🛰️ 실시간 데이터 연동 분석',
+    badgeColor: '#38bdf8',
+    title: '하이브리드 환경 데이터 연동 분석',
+    subtitle: 'Nature-Intelligence',
+    desc: 'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',
+    body: '인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. 본 시스템은 NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다. 이를 통해 사용자는 단순한 추측이 아닌, 우주와 지구의 실시간 흐름이 반영된 데이터 기반의 정교한 복합 운명 지수를 도출할 수 있습니다.',
+    color: 'rgba(56,189,248,.3)'
+  },
+  rppg: {
+    badge: '🧬 실시간 rPPG 데이터 연동 분석',
+    badgeColor: '#34d399',
+    title: "세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",
+    subtitle: 'Bio-Intelligence',
+    desc: '바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',
+    body: 'CGO-FULI는 세계 최초로 첨단 rPPG(원격 광혈류 측정) 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 진정한 의미의 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 그리고 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화하여 실시간 연동합니다. 이는 과거의 정적 데이터에 의존하던 기존 역학의 한계를 완전히 극복하고, 사용자의 현재 생체 에너지와 외부 환경 변수를 동시에 분석하는 세계 유일의 동적 역학 분석 솔루션입니다.',
+    color: 'rgba(52,211,153,.3)'
+  }
+};
+
+function cgoIntroOpen(type, callback) {
+  var d = _cgoIntroContent[type];
+  if (!d) { if(callback) callback(); return; }
+  _cgoIntroCallback = callback || null;
+
+  var body = document.getElementById('cgoIntroBody');
+  if (body) {
+    body.innerHTML =
+      '<div style="display:inline-block;padding:4px 14px;background:rgba(255,255,255,.06);border:1px solid '+d.color+';border-radius:20px;font-size:11px;font-weight:700;color:'+d.badgeColor+';margin-bottom:14px;">'+d.badge+'</div>' +
+      '<div style="font-size:18px;font-weight:900;color:#f0ece0;line-height:1.3;margin-bottom:4px;">'+d.title+'</div>' +
+      '<div style="font-size:11px;font-weight:700;color:'+d.badgeColor+';letter-spacing:.1em;margin-bottom:8px;">'+d.subtitle+'</div>' +
+      '<div style="font-size:12px;color:rgba(212,168,67,.7);font-style:italic;margin-bottom:14px;line-height:1.6;">"'+d.desc+'"</div>' +
+      '<div style="font-size:13px;color:rgba(240,230,200,.82);line-height:1.9;padding:14px 16px;background:rgba(255,255,255,.04);border-radius:12px;border-left:3px solid '+d.color+';">'+d.body+'</div>';
+  }
+
+  var pop = document.getElementById('cgoIntroPopup');
+  if (pop) { pop.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+
+function cgoIntroClose() {
+  var pop = document.getElementById('cgoIntroPopup');
+  if (pop) { pop.style.display = 'none'; document.body.style.overflow = ''; }
+  _cgoIntroCallback = null;
+}
+
+function cgoLaunchRealtime() {
+  var nm=(document.getElementById('ipName')||{}).value||'';
+  var by=(document.getElementById('ipBirthY')||{}).value||'';
+  var bm=(document.getElementById('ipBirthM')||{}).value||'';
+  var bd=(document.getElementById('ipBirthD')||{}).value||'';
+  if(!nm.trim()){alert('이름을 입력해 주세요! 😊');return;}
+  if(!by||!bm||!bd){alert('생년월일을 입력해 주세요! 😊');return;}
+  if(!window.calcResult||!window.calcResult.name){
+    window.calcResult=window.calcResult||{};
+    window.calcResult.name=nm.trim();
+    window.calcResult.y=parseInt(by);
+    window.calcResult.m=parseInt(bm);
+    window.calcResult.d=parseInt(bd);
+    window.calcResult.domOh='토';
+    window.calcResult.ili=70;
+  }
+  window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
+  _cgoRestoreEngineMode('realtime');
+  var ov=document.getElementById('todayFortuneOverlay');
+  if(ov){ov.style.display='block';document.body.style.overflow='hidden';}
+  setTimeout(function(){
+    var h=document.getElementById('tf-overlay-title');
+    if(h){h.textContent='🛰️ 실시간 데이터 연동 분석';h.style.color='#38bdf8';}
+    var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
+    var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='block';
+    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
+    var rs=document.getElementById('tf-result'); if(rs) rs.style.display='none';
+    var rts=document.getElementById('tf-rt-result'); if(rts) rts.style.display='none';
+    var ld=document.getElementById('tf-loading'); if(ld) ld.style.display='none';
+  },50);
+}
+
+function cgoLaunchRppg() {
+  window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
+  _cgoRestoreEngineMode('rppg');
+  var ov2=document.getElementById('todayFortuneOverlay');
+  if(ov2){ov2.style.display='block';document.body.style.overflow='hidden';}
+  setTimeout(function(){
+    var h=document.getElementById('tf-overlay-title');
+    if(h){h.textContent='🛰️ 실시간 rPPG 데이터 연동 분석';h.style.color='#34d399';}
+    var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
+    var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='none';
+    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='block';
+    var rs2=document.getElementById('tf-result'); if(rs2) rs2.style.display='none';
+    var rts2=document.getElementById('tf-rt-result'); if(rts2) rts2.style.display='none';
+  },50);
+  if(typeof cgoOpenTodayFortune==='function') cgoOpenTodayFortune();
+}
+
 function cgoOpenPureMetaphysics(){
   var nm=(document.getElementById('ipName')||{}).value||'';
   var by=(document.getElementById('ipBirthY')||{}).value||'';
@@ -28768,13 +28759,14 @@ window.addEventListener('load', function(){
 <div id="todayFortuneOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:#060d1a;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
   <!-- 헤더 -->
-  <div style="position:sticky;top:0;z-index:10;background:rgba(6,13,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,168,67,.2);padding:14px 16px;display:flex;align-items:center;gap:10px;">
-    <button onclick="cgoCloseTodayFortune()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:16px;cursor:pointer;">‹</button>
+  <div style="position:sticky;top:0;z-index:10;background:rgba(6,13,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,168,67,.2);padding:12px 16px;display:flex;align-items:center;gap:10px;">
+    <button onclick="cgoCloseTodayFortune()" style="min-width:80px;height:40px;border-radius:20px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 14px;letter-spacing:.03em;box-shadow:0 0 12px rgba(212,168,67,.3);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;">
+      ‹ 나가기
+    </button>
     <div style="flex:1;">
       <div id="tf-overlay-title" style="font-size:15px;font-weight:800;color:#38bdf8;">🛰️ 실시간 데이터 연동 분석</div>
       <div id="tf-date-str" style="font-size:10px;color:rgba(240,220,160,.4);"></div>
     </div>
-
   </div>
 
   <div style="max-width:600px;margin:0 auto;padding:16px;">
@@ -29514,7 +29506,18 @@ var SHIGAN_DETAIL = [
 function cpOpen(idx) {
   var d = window._cpData;
   if (!d) {
-    alert('먼저 생년월일을 입력하고 자동 계산을 눌러주세요!');
+    // _cpData 없으면 이름+생년월일 확인 후 자동 계산 시도
+    var nameVal = (document.getElementById('ipName')||{}).value||'';
+    var birthVal = (document.getElementById('ipBirth')||{}).value||'';
+    if(!nameVal.trim() || !birthVal) {
+      alert('이름과 생년월일을 입력해 주세요 😊');
+      return;
+    }
+    // 입력은 됐는데 아직 계산 전 → 계산 후 팝업 열기
+    if(typeof calcAstro === 'function') {
+      calcAstro();
+      setTimeout(function(){ if(window._cpData) cpOpen(idx); }, 800);
+    }
     return;
   }
 
@@ -31869,13 +31872,12 @@ window.addEventListener('popstate', function(e) {
   var mc = document.getElementById('cgMenuCard');
   if (bc && bc.style.display !== 'none') { cgCloseBackCard(); _cgHistoryPush(_cgCurrent); return; }
   if (mc && mc.style.display !== 'none') { cgCloseMenuCard(); _cgHistoryPush(_cgCurrent); return; }
-  // 대시보드에서 뒤로가기 → 종료 카드
+  // 대시보드에서 뒤로가기 → 바로 대시보드 유지 (팝업 없음)
   if (_cgCurrent === 'dashboard' || _cgPageHistory.length <= 1) {
-    cgShowBackCard();
     _cgHistoryPush(_cgCurrent);
     return;
   }
-  // 이전 페이지로 이동
+  // 이전 페이지로 바로 이동
   _cgPageHistory.pop();
   var prev = _cgPageHistory[_cgPageHistory.length - 1] || 'dashboard';
   _cgCurrent = prev;
@@ -33419,7 +33421,11 @@ function algoPopup(key){
 
 function pajOpen(){
   var r=window._pajR;
-  if(!r){alert('먼저 생년월일을 입력하고 자동 계산을 눌러주세요!');return;}
+  if(!r){
+    if(typeof calcAstro==='function'){ calcAstro(); setTimeout(function(){if(window._pajR)pajOpen();},800); }
+    else alert('이름과 생년월일을 먼저 입력해 주세요 😊');
+    return;
+  }
   _pajRender(r);
   document.getElementById('pajOv').classList.add('open');
   document.getElementById('pajPop').classList.add('open');
@@ -34752,7 +34758,11 @@ function _syncBanner(filled,name,y,m,d,gender){
 
 function fcDate(offset) {
   var r = window._fcR;
-  if (!r) { alert('먼저 ⚡ 자동 계산을 눌러주세요!'); return; }
+  if (!r) {
+    if(typeof calcAstro==='function'){ calcAstro(); setTimeout(function(){if(window._fcR)fcDate(offset);},800); }
+    else alert('이름과 생년월일을 먼저 입력해 주세요 😊');
+    return;
+  }
   var base = offset === 0 ? new Date() : new Date((window._fcBase||new Date()).getTime());
   if (offset !== 0) base.setDate(base.getDate() + offset);
   window._fcBase = base;
@@ -41294,6 +41304,27 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
+<!-- ══ 3대 분석 소개 팝업 ══ -->
+<div id="cgoIntroPopup" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(2,8,23,.92);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center;">
+  <div style="width:100%;max-width:520px;background:linear-gradient(160deg,#07111f,#0d1829);border-radius:24px 24px 0 0;border:1px solid rgba(212,168,67,.25);box-shadow:0 -8px 40px rgba(0,0,0,.6);animation:slideUpCard .28s ease;max-height:82vh;overflow-y:auto;">
+    <!-- 핸들 -->
+    <div style="text-align:center;padding:12px 0 4px;">
+      <div style="width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto;"></div>
+    </div>
+    <!-- 내용 -->
+    <div id="cgoIntroBody" style="padding:18px 22px 10px;"></div>
+    <!-- 버튼 -->
+    <div style="padding:10px 22px 20px;display:flex;flex-direction:column;gap:10px;">
+      <button id="cgoIntroConfirm" onclick="var _cb=_cgoIntroCallback;cgoIntroClose();if(typeof _cb==='function'){setTimeout(_cb,250);}" style="width:100%;padding:15px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);border-radius:14px;color:#d4a843;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">
+        ✨ 분석 시작하기
+      </button>
+      <button onclick="cgoIntroClose()" style="width:100%;padding:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(240,230,200,.45);font-size:13px;cursor:pointer;font-family:inherit;">
+        닫기
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- 페이지 목차 카드 -->
 <div id="cgMenuCard" style="display:none;position:fixed;inset:0;z-index:99999;
   background:rgba(2,8,23,.88);backdrop-filter:blur(8px);
@@ -42976,7 +43007,7 @@ function _cgoRenderDetailPopup(p, m, _rgb){
 <script>
 // ── CGO-FULI 홍보 배너 슬라이드 ──
 var _cgoBannerIdx = 0;
-var _cgoBannerTotal = 3;
+var _cgoBannerTotal = 4;
 var _cgoBannerTimer = null;
 
 function cgoBannerGo(n){
@@ -45894,9 +45925,26 @@ function cgoAutoSaveIfChecked() {
   if (chk && chk.checked) cgoSaveUserInfo();
 }
 
-// 페이지 로드 시 자동 로드
+// 페이지 로드 시 입력란 비우기 (항상 빈 상태로 시작)
 document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(cgoLoadUserInfo, 800);
+  localStorage.removeItem('cgo_saved_info');
+  localStorage.removeItem('cgo_birth_place');
+  localStorage.removeItem('cgo_cur_place');
+  localStorage.removeItem('cgo_prof_name');
+  localStorage.removeItem('cgo_prof_birth_y');
+  localStorage.removeItem('cgo_prof_birth_m');
+  localStorage.removeItem('cgo_prof_birth_d');
+  localStorage.removeItem('cgo_prof_time');
+  localStorage.removeItem('cgo_prof_gender');
+  // 입력 필드 강제 초기화
+  setTimeout(function(){
+    var clear = function(id){ var e=document.getElementById(id); if(e) e.value=''; };
+    clear('ipName'); clear('ipBirthY'); clear('ipBirthM'); clear('ipBirthD');
+    clear('ipBirthPlace'); clear('ipCurPlace'); clear('ipBirth');
+    var g=document.getElementById('ipGender'); if(g) g.value='';
+    var t=document.getElementById('ipTime'); if(t) t.value='';
+  }, 200);
+  // setTimeout(cgoLoadUserInfo, 800); // 자동 로드 비활성화
 
   // 입력 변경 감지
   ['ipName','ipBirthY','ipBirthM','ipBirthD','ipGender','ipTime','ipBirthPlace','ipCurPlace'].forEach(function(id) {
@@ -45912,7 +45960,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // ── CGO-FULI 홍보 배너 슬라이드 ──
 var _cgoBannerIdx = 0;
-var _cgoBannerTotal = 3;
+var _cgoBannerTotal = 4;
 var _cgoBannerTimer = null;
 
 function cgoBannerGo(n){
