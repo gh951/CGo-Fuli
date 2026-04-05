@@ -3576,7 +3576,7 @@ function updateTransitSectionWithNASA(planets) {
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
                   <input type="text" id="ipBirthPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 강남구 역삼동, 군산 나운동, Tokyo...)" autocomplete="off"
-                    oninput="ipAutoSuggest(this.value,'birth');ipPlaceSuggest(this.value,'birth')"
+                    oninput="ipAutoSuggest(this.value,'birth')"
                     onblur="setTimeout(function(){var d=document.getElementById('ipBirthDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                    onblur="if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();">
@@ -3598,7 +3598,7 @@ function updateTransitSectionWithNASA(planets) {
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
                   <input type="text" id="ipCurPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 분당구 정자동, 군산 수송동, London...)" autocomplete="off"
-                    oninput="ipAutoSuggest(this.value,'cur');ipPlaceSuggest(this.value,'cur')"
+                    oninput="ipAutoSuggest(this.value,'cur')"
                     onblur="setTimeout(function(){var d=document.getElementById('ipCurDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                    onblur="if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();">
@@ -8192,7 +8192,7 @@ function trvAiCourse(){
   ].join('\n');
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'llama-3.3-70b-versatile',
-      messages:[{role:'system',content:'당신은 풍수·역학 기반 여행 큐레이터입니다. 반드시 100% 순수 한국어로만 답하세요. 일본어·중국어·베트남어 등 모든 외국어 절대 금지.'},
+      messages:[{role:'system',content:'당신은 풍수·역학 기반 여행 큐레이터입니다. 한국어로 답하세요.'},
                {role:'user',content:prompt}],
       max_tokens:600,temperature:0.8})})
   .then(function(r){return r.json();})
@@ -9059,7 +9059,7 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 // ══ Groq 키 자동 로테이션 (한도 초과시 다음 키로 자동 전환) ══
 (function(){
   var KEY_POOL = [
-    'Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=',
+    '',
     '',
   ];
   window._CGO_KEY_POOL = KEY_POOL;
@@ -16524,16 +16524,6 @@ function syncBirthField() {
   if(typeof _checkCalcReady==='function') _checkCalcReady();
   // ★ 입력값 즉시 localStorage 저장 + calcResult 동기화
   if(typeof _cgoAutoSaveInputs==='function') _cgoAutoSaveInputs();
-
-  // ★★★ 이름 + 생년월일 모두 입력 시 0.6초 후 calcAstro() 자동 실행 ★★★
-  var nameVal = (document.getElementById('ipName')||{}).value||'';
-  var birthVal = hid.value;
-  if(nameVal.trim() && birthVal) {
-    if(window._autoCalcTimer) clearTimeout(window._autoCalcTimer);
-    window._autoCalcTimer = setTimeout(function(){
-      if(typeof calcAstro === 'function') calcAstro();
-    }, 600);
-  }
 }
 function syncCpBirth(who) {
   var y=document.getElementById('cpBirth'+who+'Y'), m=document.getElementById('cpBirth'+who+'M'), d=document.getElementById('cpBirth'+who+'D');
@@ -20686,6 +20676,7 @@ function _checkCalcReady() {
   var hint  = document.getElementById('calcReadyHint');
   var list  = document.getElementById('calcReadyList');
   var badge = document.getElementById('calcBtnBadge');
+  if(!btn) return;
 
   var nameOk  = !!(document.getElementById('ipName') && document.getElementById('ipName').value.trim());
   var birthOk = !!(document.getElementById('ipBirth') && document.getElementById('ipBirth').value);
@@ -20694,13 +20685,15 @@ function _checkCalcReady() {
   var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
   var mbtiOk  = !!(window._mbtiResult);
 
+  // ✅ 원래 조건: 이름+생년월일+생체스캔(관상·손금·혀) 모두 완료해야 자동계산 활성
+  // MBTI는 선택사항
   var allScans = faceOk && palmOk && tongOk;
   var allReady = nameOk && birthOk && allScans;
 
-  // 버튼이 있을 때만 제어
-  if(btn) btn.disabled = !allReady;
+  // 버튼 활성/비활성
+  btn.disabled = !allReady;
 
-  // 배지
+  // 배지: MBTI 완료 시 20개, 아니면 19개
   if(badge) {
     var _bp3 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
     var _t20   = _bp3.badge_20eng || '20개 역학 적용!';
@@ -20713,7 +20706,7 @@ function _checkCalcReady() {
     badge.style.color      = (allReady && mbtiOk) ? '#fff'    : allReady ? '#082011' : 'rgba(255,255,255,.4)';
   }
 
-  // 준비 상태 리스트
+  // 준비 상태 리스트 (선택 언어 반영)
   if(list) {
     var _p2 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
     var items = [
@@ -20734,6 +20727,7 @@ function _checkCalcReady() {
     }).join('');
   }
 
+  // 모두 완료 시 힌트 숨김
   if(hint) hint.style.display = allReady ? 'none' : 'block';
 }
 
@@ -21259,8 +21253,16 @@ function calcAstro() {
 
 // --- 결과 카드 6개 ---
 function _sync2(){
-  // ipv-0~5 는 실제 DOM에 없음 — updateCards에서 ipv2/3/4 직접 채움
-  // fortune 날짜·콘텐츠·픽커만 동기화
+  for(var i=0;i<6;i++){
+    var v=document.getElementById('ipv-'+i);
+    var v2=document.getElementById('ipv2-'+i),v3=document.getElementById('ipv3-'+i);
+    var s=document.getElementById('ips-'+i);
+    var s2=document.getElementById('ips2-'+i),s3=document.getElementById('ips3-'+i);
+    if(v&&v2){v2.textContent=v.textContent;v2.style.color=v.style.color;}
+    if(v&&v3){v3.textContent=v.textContent;v3.style.color=v.style.color;}
+    if(s&&s2)s2.textContent=s.textContent;
+    if(s&&s3)s3.textContent=s.textContent;
+  }
   var fd=document.getElementById('fortuneDate');
   var fd2=document.getElementById('fortuneDate2'),fd3=document.getElementById('fortuneDate3');
   if(fd&&fd2)fd2.textContent=fd.textContent;
@@ -21298,7 +21300,12 @@ document.addEventListener('calcDone',function(){
   },800);
 });
 function _sync4(){
-  // ipv4 는 updateCards에서 직접 채움 — fortune 동기화만
+  for(var i=0;i<6;i++){
+    var v=document.getElementById('ipv-'+i),v4=document.getElementById('ipv4-'+i);
+    var s=document.getElementById('ips-'+i),s4=document.getElementById('ips4-'+i);
+    if(v&&v4){v4.textContent=v.textContent;v4.style.color=v.style.color;}
+    if(s&&s4)s4.textContent=s.textContent;
+  }
   var fd=document.getElementById('fortuneDate'),fd4=document.getElementById('fortuneDate4');
   if(fd&&fd4)fd4.textContent=fd.textContent;
   var fc=document.getElementById('fortuneContent'),fc4=document.getElementById('fortuneContent4');
@@ -21612,27 +21619,18 @@ function tarotChatSend(){
   }).filter(Boolean).join(', ');
 
   var systemPrompt = [
-    '당신은 CGO-FULI의 40년 경력 타로 전문 상담사 AI입니다.',
-    '사용자: '+name+'님 | 오행: '+oh+(nbti?' | NBTI: '+nbti:''),
-    card
-      ? '✅ 선택된 카드: ['+card.name+'] ('+card.id+'번) | 키워드: '+card.key.join(', ')
-      : '⚠️ 아직 카드 미선택 — 카드를 먼저 선택하도록 안내하세요',
+    '당신은 CGO-FULI 타로 상담 AI입니다.',
+    '사용자: '+name+'님',
+    card?'선택한 타로 카드: '+card.name+' (키워드: '+card.key.join(', ')+')':'',
+    oh?'오행: '+oh+(nbti?' / NBTI: '+nbti:''):'',
     systems?'연동 역학: '+systems:'',
     '',
-    '## 절대 규칙',
-    '1. 카드가 선택됐으면 → 반드시 그 카드를 중심으로 즉시 분석하세요. 절대 "어떤 카드냐"고 묻지 마세요.',
-    '2. 카드 이름을 임의로 만들지 마세요. 위에 명시된 카드명만 사용하세요.',
-    '3. 카드 미선택 시 → 카드를 먼저 선택하도록 안내만 하세요.',
-    '4. 근거 없는 % 수치 절대 사용 금지.',
-    '',
-    '## 답변 방식',
-    '- 카드 의미를 사용자 상황에 맞게 구체적으로 풀어서 설명하세요.',
-    '- 전문 용어는 쉬운 말로 풀어쓰기.',
-    '- 따뜻하고 친근한 존댓말.',
-    '- 오늘 실천 가능한 조언 1~2가지 포함.',
-    '- 반드시 100% 순수 한국어만 사용. 히라가나·가타카나·중국어(真是·矛盾·您 등)·베트남어(nhìn 등) 절대 금지.',
-    '- NASA·AI·ILI·CGO 등 고유명사만 예외.'
-  ].filter(Boolean).join('\n');
+   '규칙:',
+    '1. 근거 없는 % 수치 절대 사용 금지',
+    '2. 단정 표현 금지',
+    '3. 쉽고 따뜻하게 2~4문장으로 답변',
+    '4. 필요하면 역으로 질문해서 더 정밀한 분석 유도'
+  ].join('\n');
 
   var messages = [{role:'system', content:systemPrompt}];
   _tarotState.chatHistory.slice(-6).forEach(function(h){ 
@@ -21652,7 +21650,7 @@ function tarotChatSend(){
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: messages,
-      max_tokens: 700,
+      max_tokens: 300,
       temperature: 0.7
     })
   }).then(function(r){ 
@@ -21951,34 +21949,27 @@ function qtCallAI(userMsg,callback){
   var card=_qt.selectedCard;
   var sys=_qt.selectedSystems.map(function(id){var s=QT_SYSTEMS.find(function(x){return x.id===id;});return s?s.name:'';}).filter(Boolean).join(', ');
 
-  var langRule =
-    '★★★ 언어 규칙 (절대 최우선) ★★★\n' +
-    '반드시 100% 순수 한국어로만 답변. 히라가나·가타카나·일본어·중국어(真是·矛盾·您·簡単·関係 등)·베트남어(nhìn 등)·아랍어·프랑스어 등 모든 외국어 절대 금지.\n' +
-    'NASA·AI·ILI·CGO 같은 고유명사·약어만 예외. 위반 즉시 한국어로 교체.\n';
-
-  var cardInfo = card
-    ? '✅ 현재 선택된 카드: [' + card.name + '] (' + card.id + '번) | 키워드: ' + card.key.join(', ') + '\n→ 반드시 이 카드 기반으로 분석. 다른 카드 이름 절대 생성 금지.'
-    : '⚠️ 카드 미선택 — 위 그리드에서 카드를 먼저 선택하도록 안내하세요.';
-
-  var sysPrompt = [
-    '당신은 CGO-FULI의 40년 경력 타로 & 역학 전문 AI 상담사입니다.',
-    langRule,
-    oh ? '사용자 오행: ' + oh : '',
-    nbti ? 'NBTI: ' + nbti : '',
-    cardInfo,
-    sys ? '연동 역학: ' + sys : '',
+  var sysPrompt=[
+    '당신은 CGO-FULI 40년 경력 타로 전문 AI 상담사입니다.',
+    '★언어규칙: 반드시 100% 순수 한국어. 중국어(真是·矛盾·您 등)·일본어·베트남어(nhìn 등) 절대 금지.',
+    card?'✅선택카드:['+card.name+']('+card.id+'번) 키워드:'+card.key.join(','):'⚠️카드미선택—카드먼저선택안내',
+    '규칙: 카드선택시 즉시분석. 카드이름임의생성금지. 구체적분석. 전문용어쉽게. 실천조언포함.',
+    oh?'오행: '+oh:'',
+    nbti?'NBTI: '+nbti:'',
+    card?'선택한 타로: '+card.name+' (키워드: '+card.key.join(', ')+')':'',
+    sys?'연동 역학: '+sys:'',
     '',
-    '## 핵심 규칙',
-    '1. 카드 선택됨 → 즉시 그 카드로 분석. "어떤 카드냐" 절대 묻지 말 것.',
-    '2. 카드 이름 절대 임의로 만들지 말 것 — 위에 명시된 카드만.',
-    '3. 카드 미선택 → 카드 먼저 선택하도록만 안내.',
-    '4. 두리뭉실 금지 — 카드 의미와 사용자 상황을 연결해 구체적으로.',
-    '5. 전문용어는 쉬운 말로 풀어쓰기.',
-    '6. 따뜻한 존댓말. 실천 조언 1~2가지 포함.'
+    '규칙:',
+    '1. % 수치나 근거없는 숫자 절대 금지',
+    '2. 단정 표현 금지 (반드시, 확실히 등)',
+    '3. 사용자가 인사만 하면 먼저 질문으로 상황 파악',
+    '4. 타로 카드가 선택된 후에는 카드 기반 분석 제공',
+    '5. 사용자 추가 질문에도 계속 답변',
+    '6. 역으로 질문하여 더 정밀한 분석 유도 가능'
   ].filter(Boolean).join('\n');
 
-  var messages = [{role:'system', content:sysPrompt}];
-  _qt.chatHistory.slice(-8).forEach(function(h){ messages.push({role:h.role, content:h.content}); });
+  var messages=[{role:'system',content:sysPrompt}];
+  _qt.chatHistory.slice(-8).forEach(function(h){messages.push({role:h.role,content:h.content});});
 
   var loading=qtShowLoading();
   fetch('/api/groq',{
@@ -22001,18 +21992,14 @@ function qtChatSend(){
   if(!inp||!inp.value.trim()) return;
   var msg=inp.value.trim(); inp.value='';
   qtAddMsg('user',msg);
-  // ★ 카드가 선택된 경우 메시지에 카드 정보 강제 주입
-  var card=_qt.selectedCard;
-  var enrichedMsg = card
-    ? '[현재 선택된 카드: '+card.name+' ('+card.id+'번) / 키워드: '+card.key.join(', ')+']
-사용자 메시지: '+msg
-    : msg;
+  var _card=_qt.selectedCard;
+  var enrichedMsg=_card?'[선택카드:'+_card.name+'('+_card.id+'번)/키워드:'+_card.key.join(',')+']\n'+msg:msg;
   qtCallAI(enrichedMsg,null);
 }
 
 function qtInitChat(){
   if(_qt.chatHistory.length>0) return;
-  qtAddMsg('ai','안녕하세요 😊<br>위의 카드 그리드에서 <b style="color:#d4a843;">마음에 끌리는 카드를 클릭</b>해서 선택해 주세요.<br>카드를 선택하면 바로 분석을 시작합니다! 🔮<br><span style="color:rgba(240,220,160,.5);font-size:11px;">카드 선택 후 궁금한 점을 채팅으로 질문하세요</span>');
+  qtAddMsg('ai','안녕하세요 😊<br>위의 카드 그리드에서 <b style="color:#d4a843;">마음에 끌리는 카드를 클릭</b>해 주세요.<br>카드 선택 후 채팅으로 질문하시면 바로 분석해 드립니다! 🔮');
 }
 
 // ⑤ 역학 분석 실행
@@ -22131,15 +22118,11 @@ function updateResultCards(r){
     name: r.name, lm: lm
   };
   data.forEach(function(row,i){
-    // ipv2 (순수 역학), ipv3 (실시간 연동), ipv4 (생체 연동) 모두 업데이트
-    ['2','3','4'].forEach(function(suffix){
-      var vEl=document.getElementById('ipv'+suffix+'-'+i);
-      var sEl=document.getElementById('ips'+suffix+'-'+i);
-      if(vEl) vEl.textContent=row[0];
-      if(sEl) sEl.textContent=row[1];
-    });
+    document.getElementById('ipv-'+i).textContent=row[0];
+    document.getElementById('ips-'+i).textContent=row[1];
     var card=document.getElementById('ipc-'+i);
-    if(card){ card.classList.remove('on'); setTimeout(function(){card.classList.add('on');},i*80+50); }
+    card.classList.remove('on');
+    setTimeout(function(){card.classList.add('on');},i*80+50);
   });
 }
 
@@ -27023,113 +27006,6 @@ function _cgoRestoreEngineMode(mode){
   }
 }
 
-// ══ 3대 분석 소개 팝업 JS ══
-var _cgoIntroCallback = null;
-
-var _cgoIntroContent = {
-  pure: {
-    badge: '📜 순수 역학 분석',
-    badgeColor: '#d4a843',
-    title: '지능형 멀티-엔진 역학 분석',
-    subtitle: 'Human-Intelligence',
-    desc: '50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',
-    body: 'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 나아가 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 이 시스템의 핵심은 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 낸다는 점에 있습니다.',
-    color: 'rgba(212,168,67,.3)'
-  },
-  realtime: {
-    badge: '🛰️ 실시간 데이터 연동 분석',
-    badgeColor: '#38bdf8',
-    title: '하이브리드 환경 데이터 연동 분석',
-    subtitle: 'Nature-Intelligence',
-    desc: 'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',
-    body: '인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. 본 시스템은 NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다. 이를 통해 사용자는 단순한 추측이 아닌, 우주와 지구의 실시간 흐름이 반영된 데이터 기반의 정교한 복합 운명 지수를 도출할 수 있습니다.',
-    color: 'rgba(56,189,248,.3)'
-  },
-  rppg: {
-    badge: '🧬 실시간 rPPG 데이터 연동 분석',
-    badgeColor: '#34d399',
-    title: "세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",
-    subtitle: 'Bio-Intelligence',
-    desc: '바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',
-    body: 'CGO-FULI는 세계 최초로 첨단 rPPG(원격 광혈류 측정) 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 진정한 의미의 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 그리고 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화하여 실시간 연동합니다. 이는 과거의 정적 데이터에 의존하던 기존 역학의 한계를 완전히 극복하고, 사용자의 현재 생체 에너지와 외부 환경 변수를 동시에 분석하는 세계 유일의 동적 역학 분석 솔루션입니다.',
-    color: 'rgba(52,211,153,.3)'
-  }
-};
-
-function cgoIntroOpen(type, callback) {
-  var d = _cgoIntroContent[type];
-  if (!d) { if(callback) callback(); return; }
-  _cgoIntroCallback = callback || null;
-
-  var body = document.getElementById('cgoIntroBody');
-  if (body) {
-    body.innerHTML =
-      '<div style="display:inline-block;padding:4px 14px;background:rgba(255,255,255,.06);border:1px solid '+d.color+';border-radius:20px;font-size:11px;font-weight:700;color:'+d.badgeColor+';margin-bottom:14px;">'+d.badge+'</div>' +
-      '<div style="font-size:18px;font-weight:900;color:#f0ece0;line-height:1.3;margin-bottom:4px;">'+d.title+'</div>' +
-      '<div style="font-size:11px;font-weight:700;color:'+d.badgeColor+';letter-spacing:.1em;margin-bottom:8px;">'+d.subtitle+'</div>' +
-      '<div style="font-size:12px;color:rgba(212,168,67,.7);font-style:italic;margin-bottom:14px;line-height:1.6;">"'+d.desc+'"</div>' +
-      '<div style="font-size:13px;color:rgba(240,230,200,.82);line-height:1.9;padding:14px 16px;background:rgba(255,255,255,.04);border-radius:12px;border-left:3px solid '+d.color+';">'+d.body+'</div>';
-  }
-
-  var pop = document.getElementById('cgoIntroPopup');
-  if (pop) { pop.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-}
-
-function cgoIntroClose() {
-  var pop = document.getElementById('cgoIntroPopup');
-  if (pop) { pop.style.display = 'none'; document.body.style.overflow = ''; }
-  _cgoIntroCallback = null;
-}
-
-function cgoLaunchRealtime() {
-  var nm=(document.getElementById('ipName')||{}).value||'';
-  var by=(document.getElementById('ipBirthY')||{}).value||'';
-  var bm=(document.getElementById('ipBirthM')||{}).value||'';
-  var bd=(document.getElementById('ipBirthD')||{}).value||'';
-  if(!nm.trim()){alert('이름을 입력해 주세요! 😊');return;}
-  if(!by||!bm||!bd){alert('생년월일을 입력해 주세요! 😊');return;}
-  if(!window.calcResult||!window.calcResult.name){
-    window.calcResult=window.calcResult||{};
-    window.calcResult.name=nm.trim();
-    window.calcResult.y=parseInt(by);
-    window.calcResult.m=parseInt(bm);
-    window.calcResult.d=parseInt(bd);
-    window.calcResult.domOh='토';
-    window.calcResult.ili=70;
-  }
-  window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
-  _cgoRestoreEngineMode('realtime');
-  var ov=document.getElementById('todayFortuneOverlay');
-  if(ov){ov.style.display='block';document.body.style.overflow='hidden';}
-  setTimeout(function(){
-    var h=document.getElementById('tf-overlay-title');
-    if(h){h.textContent='🛰️ 실시간 데이터 연동 분석';h.style.color='#38bdf8';}
-    var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
-    var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='block';
-    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='none';
-    var rs=document.getElementById('tf-result'); if(rs) rs.style.display='none';
-    var rts=document.getElementById('tf-rt-result'); if(rts) rts.style.display='none';
-    var ld=document.getElementById('tf-loading'); if(ld) ld.style.display='none';
-  },50);
-}
-
-function cgoLaunchRppg() {
-  window._cgoInRealtimeMode=true; window._cgoInPureMode=false;
-  _cgoRestoreEngineMode('rppg');
-  var ov2=document.getElementById('todayFortuneOverlay');
-  if(ov2){ov2.style.display='block';document.body.style.overflow='hidden';}
-  setTimeout(function(){
-    var h=document.getElementById('tf-overlay-title');
-    if(h){h.textContent='🛰️ 실시간 rPPG 데이터 연동 분석';h.style.color='#34d399';}
-    var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
-    var bc=document.getElementById('tf-bio-card'); if(bc) bc.style.display='none';
-    var rp=document.getElementById('tf-rppg-card'); if(rp) rp.style.display='block';
-    var rs2=document.getElementById('tf-result'); if(rs2) rs2.style.display='none';
-    var rts2=document.getElementById('tf-rt-result'); if(rts2) rts2.style.display='none';
-  },50);
-  if(typeof cgoOpenTodayFortune==='function') cgoOpenTodayFortune();
-}
-
 function cgoOpenPureMetaphysics(){
   var nm=(document.getElementById('ipName')||{}).value||'';
   var by=(document.getElementById('ipBirthY')||{}).value||'';
@@ -28720,8 +28596,8 @@ function cgoTfAiChat(){
   // 첫 AI 메시지
   _addMsg('ai',
     '🔮 <b>' + name + '</b>님, 오늘 에너지 <b>' + total + '점</b> · ' + (ohMap[oh]||oh) + '<br><br>'
-    + (total>=80 ? '✨ 대길의 기운입니다. 지금이 움직일 최적의 타이밍입니다 🌟' : total>=65 ? '☀️ 순조로운 흐름입니다. 차분히 계획대로 나아가세요.' : '💫 내면을 정비하고 에너지를 충전하는 날입니다.') + '<br><br>'
-    + '선택하신 역학 엔진으로 분석한 결과입니다.<br>점수 근거, 오늘의 운세, 조언 등 궁금한 것을 물어보세요! 😊'
+    + (total>=80 ? '대길! 지금이 움직일 때입니다 🌟' : total>=65 ? '순조로운 흐름. 차분히 나아가세요 ☀' : '잠시 내면을 들여다보는 날 💫') + '<br><br>'
+    + 'NASA+50대 역학 교차분석 기반입니다. 궁금한 것을 물어보세요! 😊'
   );
 
   function _send(){
@@ -28730,34 +28606,11 @@ function cgoTfAiChat(){
     if(!txt) return;
     inp.value = '';
     _addMsg('user', txt);
-    // ★ 카드 정보 주입
-    var _c=_tarotState.selectedCard;
-    if(_c) txt='[선택된 카드: '+_c.name+' ('+_c.id+'번) / 키워드: '+_c.key.join(', ')+']
-사용자: '+txt;
     _addMsg('ai', '<span style="color:#6b7280;">⏳ 분석 중...</span>');
     var key = (window.CG_GEMINI_KEY||'').trim();
     if(!key){ try{ key=atob(''); }catch(e){} }
-    var engList = (window._tfPopupData && window._tfPopupData.selectedEngines)
-      ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·')
-      : '사주명리·수비학';
-    var sys =
-      '당신은 CGO-FULI 앱의 역학 전문 AI 상담사입니다.\n\n' +
-      '## 사용자 정보\n' +
-      '- 이름: ' + name + '\n' +
-      '- 지배 오행: ' + oh + '\n' +
-      '- 오늘 에너지 점수: ' + total + '점 (0~100점 척도)\n' +
-      '- 적용 역학: ' + engList + '\n\n' +
-      '## 점수 산정 원칙 (반드시 숙지)\n' +
-      '- 점수는 선택된 역학 엔진들의 오행 상생·상극, 일진, 생명수, 별자리 에너지를 종합한 값입니다.\n' +
-      '- 50점이 기준(보통), 65점 이상 양호, 80점 이상 대길, 50점 미만 주의.\n' +
-      '- 42점이라면 오행 상극, 일진 흉, 생명수 불일치 등 구체적 원인을 설명하세요.\n\n' +
-      '## 답변 원칙 (반드시 준수)\n' +
-      '1. 두리뭉실한 답변 절대 금지 — 구체적 역학 근거를 반드시 제시하세요.\n' +
-      '2. 점수 관련 질문 시 → 어떤 역학의 어떤 요소가 점수에 영향을 줬는지 명확히 설명.\n' +
-      '3. 전문 용어는 반드시 쉬운 말로 풀어서 설명 (예: "관살이 강하다 = 외부 압박이 많은 날").\n' +
-      '4. 답변 길이: 질문에 따라 충분히 자세하게 — 짧게 끊지 말 것.\n' +
-      '5. 마지막에 오늘 실천 가능한 조언 1~2가지 반드시 포함.\n' +
-      '6. 100% 순수 한국어만 사용. 히라가나·중국어(真是·矛盾·您·簡単 등)·베트남어(nhìn 등) 절대 금지. 위반 즉시 한국어로 교체.';
+    var engList = (window._tfPopupData && window._tfPopupData.selectedEngines) ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·') : '사주명리';
+    var sys = 'CGO-FULI 역학 전문 AI 상담사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n규칙:\n1. 두리뭉실 금지 — 오행 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 중국어·일본어·베트남어 절대 금지';
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -28780,6 +28633,58 @@ function cgoTfAiChat(){
   if(closeEl) closeEl.addEventListener('click', function(){ chatDiv.style.display='none'; });
   if(sendEl) sendEl.addEventListener('click', _send);
   if(inpEl) inpEl.addEventListener('keydown', function(e){ if(e.key==='Enter') _send(); });
+}
+
+// ══ 3대 분석 소개 팝업 ══
+var _cgoIntroCallback = null;
+var _cgoIntroContent = {
+  pure:{badge:'📜 순수 역학 분석',badgeColor:'#d4a843',title:'지능형 멀티-엔진 역학 분석',subtitle:'Human-Intelligence',desc:'50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',body:'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 냅니다.',color:'rgba(212,168,67,.3)'},
+  realtime:{badge:'🛰️ 실시간 데이터 연동 분석',badgeColor:'#38bdf8',title:'하이브리드 환경 데이터 연동 분석',subtitle:'Nature-Intelligence',desc:'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',body:'인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다.',color:'rgba(56,189,248,.3)'},
+  rppg:{badge:'🧬 실시간 rPPG 데이터 연동 분석',badgeColor:'#34d399',title:"세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",subtitle:'Bio-Intelligence',desc:'바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',body:'CGO-FULI는 세계 최초로 첨단 rPPG 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화합니다.',color:'rgba(52,211,153,.3)'}
+};
+function cgoIntroOpen(type,callback){
+  var d=_cgoIntroContent[type]; if(!d){if(callback)callback();return;}
+  _cgoIntroCallback=callback||null;
+  var body=document.getElementById('cgoIntroBody');
+  if(body) body.innerHTML='<div style="display:inline-block;padding:4px 14px;background:rgba(255,255,255,.06);border:1px solid '+d.color+';border-radius:20px;font-size:11px;font-weight:700;color:'+d.badgeColor+';margin-bottom:14px;">'+d.badge+'</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#f0ece0;line-height:1.3;margin-bottom:4px;">'+d.title+'</div>'+
+    '<div style="font-size:11px;font-weight:700;color:'+d.badgeColor+';letter-spacing:.1em;margin-bottom:8px;">'+d.subtitle+'</div>'+
+    '<div style="font-size:12px;color:rgba(212,168,67,.7);font-style:italic;margin-bottom:14px;line-height:1.6;">"'+d.desc+'"</div>'+
+    '<div style="font-size:13px;color:rgba(240,230,200,.82);line-height:1.9;padding:14px 16px;background:rgba(255,255,255,.04);border-radius:12px;border-left:3px solid '+d.color+';">'+d.body+'</div>';
+  var pop=document.getElementById('cgoIntroPopup');
+  if(pop){pop.style.display='flex';document.body.style.overflow='hidden';}
+}
+function cgoIntroClose(){
+  var pop=document.getElementById('cgoIntroPopup');
+  if(pop){pop.style.display='none';document.body.style.overflow='';}
+  _cgoIntroCallback=null;
+}
+function cgoLaunchRealtime(){
+  window._cgoInRealtimeMode=true;window._cgoInPureMode=false;
+  _cgoRestoreEngineMode('realtime');
+  var ov=document.getElementById('todayFortuneOverlay');
+  if(ov){ov.style.display='block';document.body.style.overflow='hidden';}
+  setTimeout(function(){
+    var h=document.getElementById('tf-overlay-title');
+    if(h){h.textContent='🛰️ 실시간 데이터 연동 분석';h.style.color='#38bdf8';}
+    var rc=document.getElementById('tf-realtime-card');if(rc)rc.style.display='block';
+    var rp=document.getElementById('tf-rppg-card');if(rp)rp.style.display='none';
+    var rs=document.getElementById('tf-result');if(rs)rs.style.display='none';
+    var ld=document.getElementById('tf-loading');if(ld)ld.style.display='none';
+  },50);
+}
+function cgoLaunchRppg(){
+  window._cgoInRealtimeMode=true;window._cgoInPureMode=false;
+  _cgoRestoreEngineMode('rppg');
+  var ov=document.getElementById('todayFortuneOverlay');
+  if(ov){ov.style.display='block';document.body.style.overflow='hidden';}
+  setTimeout(function(){
+    var h=document.getElementById('tf-overlay-title');
+    if(h){h.textContent='🛰️ 실시간 rPPG 데이터 연동 분석';h.style.color='#34d399';}
+    var rp=document.getElementById('tf-rppg-card');if(rp)rp.style.display='block';
+    var rs=document.getElementById('tf-result');if(rs)rs.style.display='none';
+  },50);
+  if(typeof cgoOpenTodayFortune==='function')cgoOpenTodayFortune();
 }
 
 window.addEventListener('load', function(){
@@ -28807,14 +28712,13 @@ window.addEventListener('load', function(){
 <div id="todayFortuneOverlay" style="display:none;position:fixed;inset:0;z-index:10000;background:#060d1a;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
   <!-- 헤더 -->
-  <div style="position:sticky;top:0;z-index:10;background:rgba(6,13,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,168,67,.2);padding:12px 16px;display:flex;align-items:center;gap:10px;">
-    <button onclick="cgoCloseTodayFortune()" style="min-width:80px;height:40px;border-radius:20px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 14px;letter-spacing:.03em;box-shadow:0 0 12px rgba(212,168,67,.3);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;">
-      ‹ 나가기
-    </button>
+  <div style="position:sticky;top:0;z-index:10;background:rgba(6,13,26,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,168,67,.2);padding:14px 16px;display:flex;align-items:center;gap:10px;">
+    <button onclick="cgoCloseTodayFortune()" style="min-width:80px;height:40px;border-radius:20px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;padding:0 14px;box-shadow:0 0 12px rgba(212,168,67,.3);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;">‹ 나가기</button>
     <div style="flex:1;">
       <div id="tf-overlay-title" style="font-size:15px;font-weight:800;color:#38bdf8;">🛰️ 실시간 데이터 연동 분석</div>
       <div id="tf-date-str" style="font-size:10px;color:rgba(240,220,160,.4);"></div>
     </div>
+
   </div>
 
   <div style="max-width:600px;margin:0 auto;padding:16px;">
@@ -29554,18 +29458,7 @@ var SHIGAN_DETAIL = [
 function cpOpen(idx) {
   var d = window._cpData;
   if (!d) {
-    // _cpData 없으면 이름+생년월일 확인 후 자동 계산 시도
-    var nameVal = (document.getElementById('ipName')||{}).value||'';
-    var birthVal = (document.getElementById('ipBirth')||{}).value||'';
-    if(!nameVal.trim() || !birthVal) {
-      alert('이름과 생년월일을 입력해 주세요 😊');
-      return;
-    }
-    // 입력은 됐는데 아직 계산 전 → 계산 후 팝업 열기
-    if(typeof calcAstro === 'function') {
-      calcAstro();
-      setTimeout(function(){ if(window._cpData) cpOpen(idx); }, 800);
-    }
+    alert('먼저 생년월일을 입력하고 자동 계산을 눌러주세요!');
     return;
   }
 
@@ -31920,12 +31813,12 @@ window.addEventListener('popstate', function(e) {
   var mc = document.getElementById('cgMenuCard');
   if (bc && bc.style.display !== 'none') { cgCloseBackCard(); _cgHistoryPush(_cgCurrent); return; }
   if (mc && mc.style.display !== 'none') { cgCloseMenuCard(); _cgHistoryPush(_cgCurrent); return; }
-  // 대시보드에서 뒤로가기 → 바로 대시보드 유지 (팝업 없음)
+  // 대시보드에서 뒤로가기 → 종료 카드
   if (_cgCurrent === 'dashboard' || _cgPageHistory.length <= 1) {
     _cgHistoryPush(_cgCurrent);
     return;
   }
-  // 이전 페이지로 바로 이동
+  // 이전 페이지로 이동
   _cgPageHistory.pop();
   var prev = _cgPageHistory[_cgPageHistory.length - 1] || 'dashboard';
   _cgCurrent = prev;
@@ -33469,11 +33362,7 @@ function algoPopup(key){
 
 function pajOpen(){
   var r=window._pajR;
-  if(!r){
-    if(typeof calcAstro==='function'){ calcAstro(); setTimeout(function(){if(window._pajR)pajOpen();},800); }
-    else alert('이름과 생년월일을 먼저 입력해 주세요 😊');
-    return;
-  }
+  if(!r){alert('먼저 생년월일을 입력하고 자동 계산을 눌러주세요!');return;}
   _pajRender(r);
   document.getElementById('pajOv').classList.add('open');
   document.getElementById('pajPop').classList.add('open');
@@ -34806,11 +34695,7 @@ function _syncBanner(filled,name,y,m,d,gender){
 
 function fcDate(offset) {
   var r = window._fcR;
-  if (!r) {
-    if(typeof calcAstro==='function'){ calcAstro(); setTimeout(function(){if(window._fcR)fcDate(offset);},800); }
-    else alert('이름과 생년월일을 먼저 입력해 주세요 😊');
-    return;
-  }
+  if (!r) { alert('먼저 ⚡ 자동 계산을 눌러주세요!'); return; }
   var base = offset === 0 ? new Date() : new Date((window._fcBase||new Date()).getTime());
   if (offset !== 0) base.setDate(base.getDate() + offset);
   window._fcBase = base;
@@ -41355,20 +41240,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- ══ 3대 분석 소개 팝업 ══ -->
 <div id="cgoIntroPopup" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(2,8,23,.92);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center;">
   <div style="width:100%;max-width:520px;background:linear-gradient(160deg,#07111f,#0d1829);border-radius:24px 24px 0 0;border:1px solid rgba(212,168,67,.25);box-shadow:0 -8px 40px rgba(0,0,0,.6);animation:slideUpCard .28s ease;max-height:82vh;overflow-y:auto;">
-    <!-- 핸들 -->
-    <div style="text-align:center;padding:12px 0 4px;">
-      <div style="width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto;"></div>
-    </div>
-    <!-- 내용 -->
+    <div style="text-align:center;padding:12px 0 4px;"><div style="width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto;"></div></div>
     <div id="cgoIntroBody" style="padding:18px 22px 10px;"></div>
-    <!-- 버튼 -->
     <div style="padding:10px 22px 20px;display:flex;flex-direction:column;gap:10px;">
-      <button id="cgoIntroConfirm" onclick="var _cb=_cgoIntroCallback;cgoIntroClose();if(typeof _cb==='function'){setTimeout(_cb,250);}" style="width:100%;padding:15px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);border-radius:14px;color:#d4a843;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">
-        ✨ 분석 시작하기
-      </button>
-      <button onclick="cgoIntroClose()" style="width:100%;padding:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(240,230,200,.45);font-size:13px;cursor:pointer;font-family:inherit;">
-        닫기
-      </button>
+      <button id="cgoIntroConfirm" onclick="var _cb=_cgoIntroCallback;cgoIntroClose();if(typeof _cb==='function'){setTimeout(_cb,250);}" style="width:100%;padding:15px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);border-radius:14px;color:#d4a843;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">✨ 분석 시작하기</button>
+      <button onclick="cgoIntroClose()" style="width:100%;padding:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(240,230,200,.45);font-size:13px;cursor:pointer;font-family:inherit;">닫기</button>
     </div>
   </div>
 </div>
@@ -41386,13 +41262,14 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
     <div style="padding:12px 24px 10px;display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:15px;font-weight:700;color:#f1f5f9">🗂️ 페이지 목차</div>
-      <button onclick="cgCloseMenuCard()" style="padding:4px 12px;background:rgba(255,255,255,.06);
-        border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#64748b;font-size:12px;cursor:pointer">✕</button>
+      <button onclick="cgCloseMenuCard()" style="min-width:80px;height:38px;padding:0 16px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.7);border-radius:20px;color:#d4a843;font-size:13px;font-weight:800;cursor:pointer;animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;">✕ 닫기</button>
     </div>
 
-    <div style="padding:0 16px 8px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="cgMenuGrid">
+    <div style="padding:12px 16px 8px;display:grid;grid-template-columns:1fr 1fr;gap:8px" id="cgMenuGrid">
     </div>
-
+    <div style="padding:10px 16px 6px;border-top:1px solid rgba(255,255,255,.06);">
+      <button onclick="cgCloseMenuCard();cgoGoPage('dashboard');" style="width:100%;padding:15px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(251,191,36,.1));border:2px solid rgba(212,168,67,.65);border-radius:14px;color:#d4a843;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 0 20px rgba(212,168,67,.25);animation:goldPulse 2s ease-in-out infinite;font-family:inherit;">🏠 대시보드로 나가기</button>
+    </div>
   </div>
 </div>
 
@@ -42437,31 +42314,20 @@ function cgoTfBarPopup(key){
     fData.focus,
     '세부지표 제목 예시: '+subsDesc,
     '',
-    '## ★★★ 풀이 작성 3대 원칙 ★★★',
-    '원칙1. mainAnalysis는 반드시 아래 3단 구조로 작성:',
-    '  [풀이해석] 역학 원리를 자연·일상의 비유와 스토리텔링으로 설명. 전문 용어는 쉬운 말로 풀어줄 것. (2-3문장)',
-    '  [오늘의 의미] 이 기운이 오늘 구체적 상황·감정·선택으로 어떻게 나타나는지. (2문장)',
-    '  [균형 포인트] 에너지 과잉·부족 시 문제점과 균형 잡는 방법. (2문장)',
-    '  → 일반인도 바로 이해하는 언어로, 총 6-8문장.',
-    '원칙2. actionTip은 번호 매긴 3가지 실천 지침:',
-    '  형식 예시: "1. 속도 조절과 경청: 의욕이 앞서기 쉬우니 결정 전 세 번 생각하기를 실천하세요.",',
-    '  → 시간대·색상·방향·음식·행동 등 오늘 당장 실천 가능한 내용.',
-    '원칙3. subItems의 why도 비유 포함 2문장으로 풍부하게.',
-    '',
     '반드시 아래 JSON만 출력:',
     '{"headline":"핵심 한 줄 (선택 역학 관점)","score":'+m.score+',',
     '"subItems":[',
-    '{"label":"'+fData.subs[0]+'","value":숫자,"color":"#38bdf8","why":"비유 포함 역학 이론 근거 2문장"},',
-    '{"label":"'+fData.subs[1]+'","value":숫자,"color":"#d4a843","why":"비유 포함 근거 2문장"},',
-    '{"label":"'+(fData.subs[2]||'에너지 종합')+'","value":숫자,"color":"#34d399","why":"비유 포함 근거 2문장"}],',
-    '"mainAnalysis":"[풀이해석] 비유와 스토리로 역학 원리 설명 2-3문장.\\n\\n[오늘의 의미] 오늘 구체적 상황·감정으로 풀어쓰기 2문장.\\n\\n[균형 포인트] 과잉·부족 시 문제와 균형 방법 2문장.",',
+    '{"label":"'+fData.subs[0]+'","value":숫자,"color":"#38bdf8","why":"선택 역학 이론 근거 2문장"},',
+    '{"label":"'+fData.subs[1]+'","value":숫자,"color":"#d4a843","why":"근거 2문장"},',
+    '{"label":"'+(fData.subs[2]||'에너지 종합')+'","value":숫자,"color":"#34d399","why":"근거 2문장"}],',
+    '"mainAnalysis":"['+m.area+'] 분석 5-6문장. 반드시 '+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+' 이론·용어만 사용.",',
     '"monthly":[',
     '{"period":"봄(3-5월)","level":"길 또는 보통 또는 주의","desc":"선택 역학 기준 에너지 흐름"},',
     '{"period":"여름(6-8월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
     '{"period":"가을(9-11월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"},',
     '{"period":"겨울(12-2월)","level":"길 또는 보통 또는 주의","desc":"에너지 흐름"}],',
-    '"actionTip":"1. [지침제목]: 구체적 이유와 방법\\n2. [지침제목]: 구체적 이유와 방법\\n3. [지침제목]: 구체적 이유와 방법",',
-    '"cautionTip":"주의사항 — 구체적 상황과 대처법 포함 2문장",',
+    '"actionTip":"선택 역학 기준 구체적 조언 2가지 (시간대 포함)",',
+    '"cautionTip":"선택 역학 이론의 주의사항",',
     (locationInfo?'"locationTip":"'+locationInfo+' 지리적 특성이 '+m.area+' 에너지에 미치는 영향",'                 :'"locationTip":"",'),
     '"luckyFactor":"선택 역학 기준 행운 요소 (선택되지 않은 역학 용어 절대 금지)"}'
   ];
@@ -42993,16 +42859,11 @@ function _cgoRenderDetailPopup(p, m, _rgb){
     h+='</div><div style="height:1px;background:rgba(255,255,255,.07);margin:14px 0"></div>';
   }
 
-  // 역학 근거 상세 분석 (3단 구조 렌더링)
+  // 역학 근거 상세 분석
   if(p.mainAnalysis){
-    var _maFormatted = p.mainAnalysis
-      .replace(/\[풀이해석\]/g, '<span style="display:inline-block;background:rgba(167,139,250,.18);border:1px solid rgba(167,139,250,.4);color:#a78bfa;font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;margin-bottom:6px;letter-spacing:.05em">📖 풀이해석</span><br>')
-      .replace(/\[오늘의 의미\]/g, '<span style="display:inline-block;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);color:#38bdf8;font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;margin-top:10px;margin-bottom:6px;letter-spacing:.05em">✨ 오늘의 의미</span><br>')
-      .replace(/\[균형 포인트\]/g, '<span style="display:inline-block;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.35);color:#34d399;font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;margin-top:10px;margin-bottom:6px;letter-spacing:.05em">⚖️ 균형 포인트</span><br>')
-      .replace(/\n/g,'<br>');
     h+='<div style="padding:14px 16px;background:rgba(0,0,0,.2);border-radius:12px;border-left:3px solid '+m.color+';margin-bottom:14px">'
-      +'<div style="font-size:11px;font-weight:700;color:'+m.color+';margin-bottom:10px;letter-spacing:.05em">📚 역학 근거 심층 분석</div>'
-      +'<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:2.0">'+_maFormatted+'</div></div>';
+      +'<div style="font-size:11px;font-weight:700;color:'+m.color+';margin-bottom:8px;letter-spacing:.05em">📚 역학 근거 상세 분석</div>'
+      +'<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.95">'+p.mainAnalysis.replace(/\n/g,'<br>')+'</div></div>';
   }
 
   // 월별 에너지 흐름
@@ -43023,8 +42884,8 @@ function _cgoRenderDetailPopup(p, m, _rgb){
   // 행동 조언 + 주의사항
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
     +'<div style="padding:12px;background:rgba(52,211,153,.07);border-radius:11px;border:1px solid rgba(52,211,153,.22)">'
-    +'<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:7px;letter-spacing:.04em">✅ 오늘의 행동 지침</div>'
-    +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.85">'+(p.actionTip||'').replace(/(\d+\.\s*\[?[^\]:\n]+\]?:)/g,'<strong style="color:#34d399">$1</strong>').replace(/\n/g,'<br><br>')+'</div></div>'
+    +'<div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:7px;letter-spacing:.04em">✅ 오늘 이렇게 하세요</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+(p.actionTip||'').replace(/\n/g,'<br>')+'</div></div>'
     +'<div style="padding:12px;background:rgba(248,113,113,.07);border-radius:11px;border:1px solid rgba(248,113,113,.22)">'
     +'<div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:7px;letter-spacing:.04em">⚠️ 주의하세요</div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+(p.cautionTip||'')+'</div></div></div>';
@@ -45973,26 +45834,12 @@ function cgoAutoSaveIfChecked() {
   if (chk && chk.checked) cgoSaveUserInfo();
 }
 
-// 페이지 로드 시 입력란 비우기 (항상 빈 상태로 시작)
+// 페이지 로드 시 자동 로드 비활성화
 document.addEventListener('DOMContentLoaded', function() {
   localStorage.removeItem('cgo_saved_info');
   localStorage.removeItem('cgo_birth_place');
   localStorage.removeItem('cgo_cur_place');
-  localStorage.removeItem('cgo_prof_name');
-  localStorage.removeItem('cgo_prof_birth_y');
-  localStorage.removeItem('cgo_prof_birth_m');
-  localStorage.removeItem('cgo_prof_birth_d');
-  localStorage.removeItem('cgo_prof_time');
-  localStorage.removeItem('cgo_prof_gender');
-  // 입력 필드 강제 초기화
-  setTimeout(function(){
-    var clear = function(id){ var e=document.getElementById(id); if(e) e.value=''; };
-    clear('ipName'); clear('ipBirthY'); clear('ipBirthM'); clear('ipBirthD');
-    clear('ipBirthPlace'); clear('ipCurPlace'); clear('ipBirth');
-    var g=document.getElementById('ipGender'); if(g) g.value='';
-    var t=document.getElementById('ipTime'); if(t) t.value='';
-  }, 200);
-  // setTimeout(cgoLoadUserInfo, 800); // 자동 로드 비활성화
+  // setTimeout(cgoLoadUserInfo, 800);
 
   // 입력 변경 감지
   ['ipName','ipBirthY','ipBirthM','ipBirthD','ipGender','ipTime','ipBirthPlace','ipCurPlace'].forEach(function(id) {
