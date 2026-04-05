@@ -9059,8 +9059,8 @@ function _hvr(s){return(s*1103515245+12345)&0x7fffffff;}
 // ══ Groq 키 자동 로테이션 (한도 초과시 다음 키로 자동 전환) ══
 (function(){
   var KEY_POOL = [
-    '',
-    '',
+    'Z3NrXzAxTzNoT04yOUU0UlVJTEJrRkFWV0dkeWIzRllyeWQxZVRkQTZ1elZaWVRHM0NwN0RMVEw=',
+    'Z3NrX2xFY3RsUzBFeW1lNFlzMzJDM3dMV0dkeWIzRlloc1VSZGs2STJIS2QxdTRVRFEybkY0ZnA=',
   ];
   window._CGO_KEY_POOL = KEY_POOL;
   var idx = parseInt(localStorage.getItem('cgo_key_idx') || '0');
@@ -27503,8 +27503,64 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
     +[{t:'재물에 주의해야 하는 이유',b:result.whyMoney||'선택 역학 기준 재물궁 분석 결과입니다.'},{t:'오늘 날짜의 역학적 의미',b:result.whyDate||'오늘 일진과 선택 역학의 교차 분석입니다.'},{t:'운세 계산 방법',b:result.calcExplain||'선택 '+engCount+'개 역학의 AI 종합 분석입니다.'},{t:'오늘 먹으면 좋은 것',b:result.food||'오행에 공명하는 음식을 드세요.'}]
     .map(function(c){return '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;border-left:3px solid rgba(212,168,67,.4)"><div style="font-size:10px;font-weight:700;color:#d4a843;margin-bottom:4px">'+c.t+'</div><div style="font-size:11px;color:rgba(240,230,200,.75);line-height:1.7">'+c.b+'</div></div>';}).join('')+'</div></div>';
 
-  // ⑨ 에너지 올리는 법
-  var energySec='<div class="fp-section" style="background:rgba(52,211,153,.04);border-color:rgba(52,211,153,.2)"><div class="fp-section-title">🪄 오늘 운을 100% 활용하는 방법</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="padding:10px;background:rgba(52,211,153,.06);border-radius:8px"><div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">✅ 해야 할 것</div>'+goodList.map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:3px">• '+t.replace(/^[\u2022\u00b7\-\s\d\.]+/,'').trim()+'</div>';}).join('')+'</div><div style="padding:10px;background:rgba(248,113,113,.06);border-radius:8px"><div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:6px">🚫 피해야 할 것</div>'+['충동적 결정','무리한 확장','감정적 판단'].map(function(t){return '<div style="font-size:11px;color:rgba(240,230,200,.8);margin-bottom:3px">• '+t+'</div>';}).join('')+'</div></div></div>';
+  // ⑨ 에너지 올리는 법 (새 카드)
+  var modeLabel = (window._cgoInRealtimeMode && !window._cgoInPureMode)
+    ? (result.rppgBai ? '실시간 rPPG 데이터 연동 분석' : '실시간 데이터 연동 분석')
+    : '순수 역학 분석';
+  var isRealtime = window._cgoInRealtimeMode && !window._cgoInPureMode;
+  var isRppg = isRealtime && result.rppgBai;
+  var ohRel = result.ohRelation || (r.domOh||'토')+'(土)과 오늘 기운의 역학적 분석';
+  var baseScore = result.baseScore || total;
+  var nasaPt = isRealtime ? (result.nasaScore||0) : 0;
+  var weatherPt = isRealtime ? (result.weatherScore||0) : 0;
+  var bioPt = isRppg ? (result.bioScore||0) : 0;
+  var luckyDir = result.luckyDir || '남쪽';
+  var luckyNum = result.luckyNum || '7';
+  var ohColorMap = {목:'초록',화:'빨강',토:'노랑',금:'흰색',수:'검정'};
+  var ohFoodMap = {
+    목:'신맛(레몬·식초)+녹색 채소',화:'쓴맛(커피·쑥)+빨간 채소',
+    토:'단맛(고구마·단호박)+노란 채소',금:'매운맛(고추·생강)+흰 채소',수:'짠맛(해산물·된장)+검은 채소'
+  };
+  var ohHanMap = {목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var curOh = r.domOh||'토';
+  var ohColorStr = ohColorMap[curOh]||'노랑';
+  var ohFoodStr = ohFoodMap[curOh]||'단맛(고구마·단호박)+노란 채소';
+  var ohHan = ohHanMap[curOh]||'土';
+
+  var energyItems = [
+    '🫁 4-7-8 호흡법 3회 — 코로 4초 들이마시기 → 7초 참기 → 8초 내쉬기',
+    '🚶 행운 방위 <b style="color:#d4a843;">'+luckyDir+'</b>으로 20분 이상 걷기',
+    '🥦 오행 식단 (<b style="color:#34d399;">'+curOh+'('+ohHan+')</b>): '+ohFoodStr,
+    '✨ 오행색 <b style="color:#fbbf24;">'+ohColorStr+'</b> 활용 · 행운숫자 <b style="color:#d4a843;">'+luckyNum+'</b>'
+  ];
+  if(isRealtime) energyItems.push('🛰️ NASA 실시간 기운: '+(result.nasaGuide||'행성 에너지 흐름을 활용하세요'));
+  if(isRppg && result.rppgBai) energyItems.push('🧬 생체 에너지(BAI '+result.rppgBai+'): '+(result.bioGuide||'현재 생체 리듬에 맞춰 조절하세요'));
+
+  var energySec =
+    '<div style="background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(52,211,153,.05));border:1px solid rgba(212,168,67,.4);border-radius:16px;padding:16px;margin-top:6px;box-shadow:0 0 20px rgba(212,168,67,.08);">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
+      +'<span style="font-size:18px;">⚡</span>'
+      +'<div>'
+        +'<div style="font-size:12px;font-weight:800;color:#d4a843;letter-spacing:.05em;">오늘 에너지 올리는 법</div>'
+        +'<div style="font-size:10px;color:rgba(212,168,67,.55);margin-top:1px;">'+modeLabel+' 맞춤 가이드</div>'
+      +'</div>'
+    +'</div>'
+    // 오행 관계 + 점수 요약 박스
+    +'<div style="padding:10px 12px;background:rgba(0,0,0,.25);border-radius:10px;margin-bottom:10px;border-left:3px solid rgba(212,168,67,.6);">'
+      +'<div style="font-size:10px;color:rgba(212,168,67,.9);font-weight:700;margin-bottom:3px;">🔄 오행 관계 분석</div>'
+      +'<div style="font-size:11px;color:rgba(240,230,200,.85);line-height:1.7;">'+ohRel+'</div>'
+      +'<div style="font-size:10px;color:rgba(240,220,160,.4);margin-top:5px;">📊 기초 역학 분석 ('+engCount+'개 역학) 총점 '+total+'점 = 기본역학 '+baseScore+'pt + NASA '+nasaPt+'pt + 날씨 '+weatherPt+'pt + 생체 '+bioPt+'pt</div>'
+    +'</div>'
+    // 체크리스트
+    +'<div style="display:flex;flex-direction:column;gap:6px;">'
+    +energyItems.map(function(item,idx){
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.07);">'
+        +'<input type="checkbox" id="ec_'+idx+'" style="margin-top:2px;accent-color:#d4a843;flex-shrink:0;width:14px;height:14px;cursor:pointer;">'
+        +'<label for="ec_'+idx+'" style="font-size:11px;color:rgba(240,230,200,.85);line-height:1.65;cursor:pointer;">'+item+'</label>'
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +'</div>'
 
   body.innerHTML=scoreRing+barChart+radarSection+areaSection+flowSection+cardSection+goodBad+whySec+energySec;
   var sc=document.getElementById('tf-total-score'); if(sc) sc.textContent=total;
@@ -28547,16 +28603,28 @@ function cgoTfAiChat(){
   var name = r.name || '친구';
   var ohMap = {목:'🌿목(木)',화:'🔥화(火)',토:'🟤토(土)',금:'⚙️금(金)',수:'💧수(水)'};
 
-  // 이미 열려있으면 토글
+  // ★ 현재 모드 판별
+  var currentMode = (window._cgoInRealtimeMode && !window._cgoInPureMode)
+    ? (window._cgoInRppgMode ? 'rppg' : 'realtime')
+    : 'pure';
+
+  // 이미 열려있으면 → 모드가 달라졌으면 닫고 재생성, 같으면 토글
   var existChat = document.getElementById('tf-inline-chat');
   if(existChat){
-    existChat.style.display = (existChat.style.display==='none') ? 'block' : 'none';
-    return;
+    var prevMode = existChat.getAttribute('data-mode');
+    if(prevMode === currentMode){
+      existChat.style.display = (existChat.style.display==='none') ? 'block' : 'none';
+      return;
+    } else {
+      // 모드 달라짐 → 기존 채팅 제거 후 새로 생성
+      existChat.parentNode.removeChild(existChat);
+    }
   }
 
   // 채팅창 생성
   var chatDiv = document.createElement('div');
   chatDiv.id = 'tf-inline-chat';
+  chatDiv.setAttribute('data-mode', currentMode);
   chatDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:60vh;z-index:10100;background:#0a1628;border-top:2px solid rgba(167,139,250,.4);display:flex;flex-direction:column;';
 
   var closeId = 'tf-chat-close-btn';
@@ -28593,11 +28661,16 @@ function cgoTfAiChat(){
     box.scrollTop = box.scrollHeight;
   }
 
-  // 첫 AI 메시지
+  // 첫 AI 메시지 (모드별)
+  var modeGreet = currentMode==='rppg'
+    ? '🧬 <b>실시간 rPPG 연동 분석</b> AI입니다.<br>위성·날씨·방위 + 생체 신호(심박·스트레스)를 역학과 융합해 분석합니다.<br>생체 에너지, 우주 기운, 천지인 융합에 대해 질문해 주세요! 😊'
+    : currentMode==='realtime'
+    ? '🛰️ <b>실시간 데이터 연동 분석</b> AI입니다.<br>NASA 30초 행성 데이터·날씨·방위를 역학과 융합한 분석을 담당합니다.<br>실시간 우주·기상 에너지에 대해 질문해 주세요! 😊'
+    : '📜 <b>순수 역학 분석</b> AI입니다.<br>선택하신 역학 엔진만으로 정밀 분석합니다.<br>오행, 사주, 점수 근거 등 역학적 내용을 질문해 주세요! 😊';
   _addMsg('ai',
     '🔮 <b>' + name + '</b>님, 오늘 에너지 <b>' + total + '점</b> · ' + (ohMap[oh]||oh) + '<br><br>'
-    + (total>=80 ? '대길! 지금이 움직일 때입니다 🌟' : total>=65 ? '순조로운 흐름. 차분히 나아가세요 ☀' : '잠시 내면을 들여다보는 날 💫') + '<br><br>'
-    + 'NASA+50대 역학 교차분석 기반입니다. 궁금한 것을 물어보세요! 😊'
+    + (total>=80 ? '대길! 지금이 움직일 때입니다 🌟' : total>=65 ? '순조로운 흐름. 차분히 나아가세요 ☀' : '잠시 내면을 정비하고 에너지를 충전하는 날입니다 💫') + '<br><br>'
+    + modeGreet
   );
 
   function _send(){
@@ -28610,7 +28683,14 @@ function cgoTfAiChat(){
     var key = (window.CG_GEMINI_KEY||'').trim();
     if(!key){ try{ key=atob(''); }catch(e){} }
     var engList = (window._tfPopupData && window._tfPopupData.selectedEngines) ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·') : '사주명리';
-    var sys = 'CGO-FULI 역학 전문 AI 상담사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n규칙:\n1. 두리뭉실 금지 — 오행 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 중국어·일본어·베트남어 절대 금지';
+    var sys;
+    if(currentMode === 'rppg'){
+      sys = 'CGO-FULI 실시간 rPPG 생체 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 위성(NASA 30초 주기)·날씨(5분 주기)·방위 + rPPG 생체 신호(심박·스트레스)와 50개 역학을 융합한 천지인(天地人) 통합 분석을 담당합니다.\n\n규칙:\n1. 생체 데이터(심박·HRV·스트레스)와 우주·기상 데이터를 연결해서 구체적으로 설명\n2. 천지인 — 하늘(NASA 행성), 땅(날씨·방위), 사람(rPPG 생체) 3요소를 항상 언급\n3. 두리뭉실 금지 — 수치 근거 제시\n4. 반드시 100% 순수 한국어. 외국어 절대 금지';
+    } else if(currentMode === 'realtime'){
+      sys = 'CGO-FULI 실시간 데이터 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA 30초 주기 행성 궤도 데이터, 5분 주기 기상 데이터, 방위(선택) 데이터를 역학과 융합한 분석을 담당합니다.\n\n규칙:\n1. NASA 위성·날씨·방위 실시간 데이터가 역학에 어떻게 영향을 주는지 구체적으로 설명\n2. 전통 역학 + 현대 과학 데이터의 융합 관점으로 답변\n3. 두리뭉실 금지 — 오행·행성 근거 제시\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지';
+    } else {
+      sys = 'CGO-FULI 순수 역학 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA·날씨·생체 데이터 없이, 오직 선택된 역학 엔진(사주·자미두수·수비학 등)만으로 분석합니다.\n\n규칙:\n1. 두리뭉실 금지 — 선택 역학의 오행·천간·지지 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지';
+    }
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
