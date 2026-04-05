@@ -28619,6 +28619,7 @@ function cgoTfAiChat(){
     } else {
       // 모드 달라짐 → 기존 채팅 제거 후 새로 생성
       existChat.parentNode.removeChild(existChat);
+      window._tfChatHistory = []; // 히스토리 초기화
     }
   }
 
@@ -28686,21 +28687,50 @@ function cgoTfAiChat(){
     var engList = (window._tfPopupData && window._tfPopupData.selectedEngines) ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·') : '사주명리';
     var sys;
     if(currentMode === 'rppg'){
-      sys = 'CGO-FULI 실시간 rPPG 생체 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 위성(NASA 30초 주기)·날씨(5분 주기)·방위 + rPPG 생체 신호(심박·스트레스)와 50개 역학을 융합한 천지인(天地人) 통합 분석을 담당합니다.\n\n규칙:\n1. 생체 데이터(심박·HRV·스트레스)와 우주·기상 데이터를 연결해서 구체적으로 설명\n2. 천지인 — 하늘(NASA 행성), 땅(날씨·방위), 사람(rPPG 생체) 3요소를 항상 언급\n3. 두리뭉실 금지 — 수치 근거 제시\n4. 반드시 100% 순수 한국어. 외국어 절대 금지';
+      sys = 'CGO-FULI 실시간 rPPG 생체 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 위성(NASA 30초 주기)·날씨(5분 주기)·방위 + rPPG 생체 신호(심박·스트레스)와 50개 역학을 융합한 천지인(天地人) 통합 분석을 담당합니다.\n\n규칙:\n1. 생체 데이터(심박·HRV·스트레스)와 우주·기상 데이터를 연결해서 구체적으로 설명\n2. 천지인 — 하늘(NASA 행성), 땅(날씨·방위), 사람(rPPG 생체) 3요소를 항상 언급\n3. 두리뭉실 금지 — 수치 근거 제시\n4. 반드시 100% 순수 한국어. 외국어 절대 금지
+5. 대화 맥락 유지 — 이전 대화 기억하고 이어서 답변. 인사에 처음부터 재분석 금지.
+
+★★★ 언어 절대 규칙 ★★★
+반드시 100% 순수 한국어만 사용.
+금지 목록: 중국어(稍微·記住·深く·があり 등 모든 한자·중문)·일본어(ように·です·ます 등)·터키어(gibi 등)·베트남어·기타 모든 외국어.
+NASA·AI·ILI·CGO 약어만 예외. 위반 즉시 한국어로 교체.';
     } else if(currentMode === 'realtime'){
-      sys = 'CGO-FULI 실시간 데이터 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA 30초 주기 행성 궤도 데이터, 5분 주기 기상 데이터, 방위(선택) 데이터를 역학과 융합한 분석을 담당합니다.\n\n규칙:\n1. NASA 위성·날씨·방위 실시간 데이터가 역학에 어떻게 영향을 주는지 구체적으로 설명\n2. 전통 역학 + 현대 과학 데이터의 융합 관점으로 답변\n3. 두리뭉실 금지 — 오행·행성 근거 제시\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지';
+      sys = 'CGO-FULI 실시간 데이터 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA 30초 주기 행성 궤도 데이터, 5분 주기 기상 데이터, 방위(선택) 데이터를 역학과 융합한 분석을 담당합니다.\n\n규칙:\n1. NASA 위성·날씨·방위 실시간 데이터가 역학에 어떻게 영향을 주는지 구체적으로 설명\n2. 전통 역학 + 현대 과학 데이터의 융합 관점으로 답변\n3. 두리뭉실 금지 — 오행·행성 근거 제시\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지
+6. 대화 맥락 유지 필수 — 이전 대화를 기억하고 이어서 답변. 인사나 짧은 말에도 처음부터 분석 재시작 금지.
+
+★★★ 언어 절대 규칙 ★★★
+반드시 100% 순수 한국어만 사용.
+금지 목록: 중국어(稍微·記住·深く·があり 등 모든 한자·중문)·일본어(ように·です·ます 등)·터키어(gibi 등)·베트남어·기타 모든 외국어.
+NASA·AI·ILI·CGO 약어만 예외. 위반 즉시 한국어로 교체.';
     } else {
-      sys = 'CGO-FULI 순수 역학 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA·날씨·생체 데이터 없이, 오직 선택된 역학 엔진(사주·자미두수·수비학 등)만으로 분석합니다.\n\n규칙:\n1. 두리뭉실 금지 — 선택 역학의 오행·천간·지지 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지';
+      sys = 'CGO-FULI 순수 역학 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA·날씨·생체 데이터 없이, 오직 선택된 역학 엔진(사주·자미두수·수비학 등)만으로 분석합니다.\n\n규칙:\n1. 두리뭉실 금지 — 선택 역학의 오행·천간·지지 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지
+6. 대화 맥락 유지 필수 — 이전 대화를 기억하고 이어서 답변. 인사나 짧은 말에도 처음부터 분석 재시작 금지.
+
+★★★ 언어 절대 규칙 ★★★
+반드시 100% 순수 한국어만 사용.
+금지 목록: 중국어(稍微·記住·深く·があり 등 모든 한자·중문)·일본어(ように·です·ます 등)·터키어(gibi 등)·베트남어·기타 모든 외국어.
+NASA·AI·ILI·CGO 약어만 예외. 위반 즉시 한국어로 교체.';
     }
+    // 대화 히스토리 포함
+    var histMsgs = [{role:'system',content:sys}];
+    (window._tfChatHistory||[]).forEach(function(h){ histMsgs.push(h); });
+    histMsgs.push({role:'user',content:txt});
+    // 히스토리 저장
+    if(!window._tfChatHistory) window._tfChatHistory = [];
+    window._tfChatHistory.push({role:'user',content:txt});
+
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys},{role:'user',content:txt}],max_tokens:800,temperature:0.7})
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:histMsgs,max_tokens:800,temperature:0.7})
     }).then(function(res){return res.json();}).then(function(d){
       var box=document.getElementById(msgsId);
       if(box&&box.lastChild) box.removeChild(box.lastChild);
       var reply=((d.choices||[])[0]||{}).message&&d.choices[0].message.content||'잠시 후 다시 시도해주세요.';
       _addMsg('ai', reply.replace(/\n/g,'<br>'));
+      // AI 답변도 히스토리에 저장 (최근 10턴만 유지)
+      window._tfChatHistory.push({role:'assistant',content:reply});
+      if(window._tfChatHistory.length > 20) window._tfChatHistory = window._tfChatHistory.slice(-20);
     }).catch(function(){
       var box=document.getElementById(msgsId);
       if(box&&box.lastChild) box.removeChild(box.lastChild);
@@ -34776,7 +34806,13 @@ function _syncBanner(filled,name,y,m,d,gender){
 
 function fcDate(offset) {
   var r = window._fcR;
-  if (!r) { alert('먼저 ⚡ 자동 계산을 눌러주세요!'); return; }
+  if (!r) {
+    // alert 대신 자동 계산 시도
+    if(typeof calcAstro==='function') calcAstro();
+    window._fcR = window.calcResult;
+    r = window._fcR;
+    if(!r) return; // 그래도 없으면 조용히 리턴
+  }
   var base = offset === 0 ? new Date() : new Date((window._fcBase||new Date()).getTime());
   if (offset !== 0) base.setDate(base.getDate() + offset);
   window._fcBase = base;
@@ -36118,8 +36154,8 @@ function updateCosmicPlanetGrid(planets) {
 // 칙령 생성 엔진
 function receiveCosmicOrder() {
   if(!window._nasaPlanets || !window.calcResult) {
-    alert('먼저 ⚡ 자동 계산 버튼을 눌러주세요!');
-    return;
+    if(typeof calcAstro==='function') calcAstro();
+    if(!window.calcResult) return;
   }
   var r = window.calcResult;
   var p = window._nasaPlanets;
@@ -44535,6 +44571,7 @@ async function _cgoRecordVisit(){
     // 위치 비동기 요청 (싱글톤 — 최초 1회만)
     cgoGetLocation(
       async function(pos){
+        if(!pos) return;
         window._cgoLat = pos.coords.latitude;
         window._cgoLon = pos.coords.longitude;
         record.lat = pos.coords.latitude.toFixed(4);
@@ -44882,6 +44919,7 @@ document.addEventListener('DOMContentLoaded', function(){
           window._cgoLocationDone = true;
           cgoGetLocation(
             function(pos){
+              if(!pos) return;
               window._cgoLat = pos.coords.latitude;
               window._cgoLon = pos.coords.longitude;
               if(typeof _tzrUpdate === 'function') _tzrUpdate();
