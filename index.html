@@ -3629,7 +3629,6 @@ function updateTransitSectionWithNASA(planets) {
         <!-- 경계선 -->
         <div style="margin:12px 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),transparent);"></div>
 
-        <!-- ✦ 오늘의 운세 카드 ✦ -->
         <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var el=document.getElementById('today-fortune-card');if(el){el.style.animation='shake .3s';setTimeout(function(){el.style.animation='';},400);}var t=document.getElementById('pure-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('pure', function(){ cgoOpenPureMetaphysics(); });})()" id="today-fortune-card"
           style="margin:20px 0 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(139,92,246,.1));border:2px solid rgba(212,168,67,.45);border-radius:18px;padding:18px 20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(212,168,67,.3)'"
@@ -3677,7 +3676,7 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 실시간 데이터 연동 운세 카드 (복사) ✦ -->
-        <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var t=document.getElementById('rt-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('realtime', cgoLaunchRealtime);})()"
+        <div id="realtime-card" onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var t=document.getElementById('rt-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('realtime', cgoLaunchRealtime);})()"
                     style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
@@ -3827,7 +3826,7 @@ function updateTransitSectionWithNASA(planets) {
         <!-- ✦ 4-7-8 아래 ✦ -->
 
         <!-- 1. 실시간 rPPG 데이터 연동 분석 -->
-        <div onclick="(function(){var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};var hasBio=(bfd.fci>0||bfd.hrv>0||bsd.tongue);if(!hasBio){var t=document.getElementById('rppg-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('rppg', cgoLaunchRppg);})()"
+        <div id="rppg-card" onclick="(function(){var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};var hasBio=(bfd.fci>0||bfd.hrv>0||bsd.tongue);if(!hasBio){var t=document.getElementById('rppg-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('rppg', cgoLaunchRppg);})()"
                     style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
           onmouseout="this.style.transform='none';this.style.boxShadow='none'">
@@ -12726,18 +12725,11 @@ function showSijinDetail(idx, energy) {
 
   '<div>'+
     '<div style="font-size:11px;font-weight:800;color:rgba(212,168,67,.9);letter-spacing:.06em;margin-bottom:10px">'+
-      '🔯 20대 역학 × '+s.nm+' 시진 통합 분석 (실시간)'+
+      (function(){var mode=(window._cgoInRealtimeMode&&!window._cgoInPureMode)?(window._cgoInRppgMode?'rPPG':'실시간 데이터 연동'):'순수 역학';var n=(mode==='순수 역학')?'9':'11';return '🔯 '+n+'개 역학 × '+s.nm+' 시진 통합 분석 ('+mode+')';})()+
+      (window._mbtiResult?'<span style="font-size:9px;background:rgba(129,140,248,.15);color:#818cf8;padding:2px 7px;border-radius:6px;margin-left:6px">+MBTI</span>':'')+
       (window._mbtiResult?'<span style="font-size:9px;background:rgba(129,140,248,.15);color:#818cf8;padding:2px 7px;border-radius:6px;margin-left:6px">+MBTI/NPTI ⑳</span>':'')+
     '</div>'+
-    algo18.map(function(a){
-      return '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:6px">'+
-        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'+
-          '<span style="font-size:13px">'+a.ic+'</span>'+
-          '<span style="font-size:11px;font-weight:800;color:'+a.c+'">'+a.n+'</span>'+
-        '</div>'+
-        '<div style="font-size:11px;color:rgba(240,230,200,.72);line-height:1.7">'+a.t+'</div>'+
-      '</div>';
-    }).join('')+
+    (function(){var mode=(window._cgoInRealtimeMode&&!window._cgoInPureMode)?(window._cgoInRppgMode?'rppg':'realtime'):'pure';var pure=['자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','서양 수비학'];var rt=['행성 트랜짓','자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','풍수지리','하우스 시스템'];var rp=['행성 트랜짓','자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','풍수지리','관상·손금'];var allowed=mode==='rppg'?rp:mode==='realtime'?rt:pure;return algo18.filter(function(a){return allowed.indexOf(a.n)>=0;}).map(function(a){return '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:6px">'+'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'+'<span style="font-size:13px">'+a.ic+'</span>'+'<span style="font-size:11px;font-weight:800;color:'+a.c+'">'+a.n+'</span>'+'</div>'+'<div style="font-size:11px;color:rgba(240,230,200,.72);line-height:1.7">'+a.t+'</div>'+'</div>';}).join('');})()+
   '</div>';
 
   var fpH = document.getElementById('fpHeader');
@@ -21000,7 +20992,6 @@ function _checkCalcReady() {
   var hint  = document.getElementById('calcReadyHint');
   var list  = document.getElementById('calcReadyList');
   var badge = document.getElementById('calcBtnBadge');
-  if(!btn) return;
 
   var nameOk  = !!(document.getElementById('ipName') && document.getElementById('ipName').value.trim());
   var birthOk = !!(document.getElementById('ipBirth') && document.getElementById('ipBirth').value);
@@ -21009,49 +21000,31 @@ function _checkCalcReady() {
   var tongOk  = !!(window._bioSkinData && window._bioSkinData.tongue);
   var mbtiOk  = !!(window._mbtiResult);
 
-  // ✅ 원래 조건: 이름+생년월일+생체스캔(관상·손금·혀) 모두 완료해야 자동계산 활성
-  // MBTI는 선택사항
-  var allScans = faceOk && palmOk && tongOk;
-  var allReady = nameOk && birthOk && allScans;
+  var allReady = nameOk && birthOk;
 
-  // 버튼 활성/비활성
-  btn.disabled = !allReady;
-
-  // 배지: MBTI 완료 시 20개, 아니면 19개
-  if(badge) {
-    var _bp3 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
-    var _t20   = _bp3.badge_20eng || '20개 역학 적용!';
-    var _t19   = _bp3.badge_19eng || '19개 역학 → MBTI 추가 시 20개';
-    var _tWait = _bp3.badge_wait  || '준비 중...';
-    badge.textContent = (allReady && mbtiOk) ? _t20
-      : allReady ? _t19
-      : _tWait;
-    badge.style.background = (allReady && mbtiOk) ? '#a855f7' : allReady ? '#34d399' : 'rgba(255,255,255,.15)';
-    badge.style.color      = (allReady && mbtiOk) ? '#fff'    : allReady ? '#082011' : 'rgba(255,255,255,.4)';
+  // ★ 버튼 없이 자동 실행 — 이름+생년월일 입력 시 자동 calcAstro
+  if(allReady && !window._calcAutoRunning){
+    if(!window._calcAutoTimer) {
+      window._calcAutoTimer = setTimeout(function(){
+        window._calcAutoTimer = null;
+        window._calcAutoRunning = true;
+        if(typeof calcAstro==='function') calcAstro();
+        setTimeout(function(){ window._calcAutoRunning = false; }, 3000);
+      }, 800);
+    }
+  } else if(!allReady) {
+    if(window._calcAutoTimer){ clearTimeout(window._calcAutoTimer); window._calcAutoTimer=null; }
   }
 
-  // 준비 상태 리스트 (선택 언어 반영)
-  if(list) {
-    var _p2 = window._calcReadyLang || _I18N[_LANG] || _I18N['ko'];
-    var items = [
-      {ok: nameOk,  label: _p2.ready_name  || '이름 입력'},
-      {ok: birthOk, label: _p2.ready_birth || '생년월일 입력'},
-      {ok: faceOk,  label: _p2.ready_face  || '🧖 관상 스캔'},
-      {ok: palmOk,  label: _p2.ready_palm  || '✋ 손금 스캔'},
-      {ok: tongOk,  label: _p2.ready_tong  || '👅 혀 스캔'},
-      {ok: mbtiOk,  label: _p2.ready_mbti  || '🧠 MBTI 선택 (선택·20번째 역학)', optional: true}
-    ];
-    list.innerHTML = items.map(function(it){
-      var optLabel = it.optional && !it.ok ? ' — '+(_p2.ready_optional||'선택 사항') : '';
-      return '<div style="display:flex;align-items:center;gap:7px;font-size:10px;">'
-        + '<span style="font-size:12px">' + (it.ok ? '✅' : '⬜') + '</span>'
-        + '<span style="color:' + (it.ok ? '#34d399' : it.optional ? 'rgba(240,230,200,.4)' : 'rgba(240,230,200,.65)') + '">'
-        + it.label + optLabel + '</span>'
-        + '</div>';
-    }).join('');
+  // 버튼 있으면 기존 방식도 유지
+  if(btn){
+    btn.disabled = !allReady;
+    if(badge){
+      badge.textContent = (allReady && mbtiOk) ? '20개 역학 적용!' : allReady ? '19개 역학' : '준비 중...';
+      badge.style.background = (allReady && mbtiOk) ? '#a855f7' : allReady ? '#34d399' : 'rgba(255,255,255,.15)';
+      badge.style.color = (allReady && mbtiOk) ? '#fff' : allReady ? '#082011' : 'rgba(255,255,255,.4)';
+    }
   }
-
-  // 모두 완료 시 힌트 숨김
   if(hint) hint.style.display = allReady ? 'none' : 'block';
 }
 
@@ -21522,6 +21495,20 @@ function calcAstro() {
   setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }, 500);
   generateGMD(calcResult);
   generateReport(calcResult);
+
+  // ★ calcDone 이벤트 발생 + 시진 직접 렌더링
+  setTimeout(function(){
+    document.dispatchEvent(new CustomEvent('calcDone'));
+    if(typeof _cgoRenderSijin==='function'){
+      _cgoRenderSijin('sijin2Content','pure');
+      _cgoRenderSijin('sijin3Content','realtime');
+      var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};
+      if(bfd.fci>0||bfd.hrv>0||(bsd.tongue&&bsd.tongue.color)){
+        _cgoRenderSijin('sijin4Content','rppg');
+      }
+
+    }
+  }, 700);
 
   // 버튼 피드백
   var btn=document.getElementById('calcBtn');
@@ -46304,6 +46291,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById(id);
     if (el) el.addEventListener('change', cgoAutoSaveIfChecked);
   });
+
+  // ★ 페이지 로드 시 정보가 채워져 있으면 자동 계산 실행
+  setTimeout(function(){
+    var nameEl = document.getElementById('ipName');
+    var birthEl = document.getElementById('ipBirth');
+    var nameOk = nameEl && nameEl.value.trim();
+    var birthOk = birthEl && birthEl.value;
+    if(nameOk && birthOk && typeof calcAstro==='function'){
+      calcAstro();
+    }
+  }, 1200);
 });
 </script>
 
@@ -47126,12 +47124,11 @@ function _cgoRenderSijin(containerId, mode){
   var el = document.getElementById(containerId);
   if(!el) return;
   var r = window.calcResult;
-  // ★ 자동 계산 완료된 경우만 렌더링
-  if(!r || !r.y || !r.name){
-    el.innerHTML = '<div style="color:rgba(240,220,160,.5);font-size:11px;text-align:center;padding:16px 0;">✨ 이름과 생년월일 입력 후 ⚡ 자동 계산을 눌러주세요</div>';
-    return;
-  }
-  var myOh = r.domOh || '토';
+  var myOh = (r && r.domOh) ? r.domOh : '토';
+  var name = (r && r.name) ? r.name : '';
+  var now = new Date();
+  var curHour = now.getHours();
+  var curIdx = Math.floor(((curHour+1)%24)/2);
   var now = new Date();
   var curHour = now.getHours();
   // 현재 시진 인덱스
@@ -47201,7 +47198,7 @@ document.addEventListener('calcDone', function(){
   setTimeout(function(){
     _cgoRenderSijin('sijin2Content', 'pure');      // 순수역학
     _cgoRenderSijin('sijin3Content', 'realtime');  // 실시간
-    // rPPG sijin — 생체 스캔 완료 후에만
+  // rPPG sijin — 생체 스캔 완료 후에만
     var _bfd=window._bioFinalData||{};var _bsd=window._bioSkinData||{};
     if(_bfd.fci>0||_bfd.hrv>0||(_bsd.tongue&&_bsd.tongue.color)){
       _cgoRenderSijin('sijin4Content', 'rppg');
@@ -47212,14 +47209,106 @@ document.addEventListener('calcDone', function(){
   }, 600);
 });
 
-// calcResult 있으면 페이지 진입 시도 즉시 렌더링
+// 페이지 로드 후 시진 즉시 렌더링
 document.addEventListener('DOMContentLoaded', function(){
   setTimeout(function(){
-    if(window.calcResult){
+    if(typeof _cgoRenderSijin==='function' && typeof _SPD!=='undefined'){
       _cgoRenderSijin('sijin2Content', 'pure');
       _cgoRenderSijin('sijin3Content', 'realtime');
-      _cgoRenderSijin('sijin4Content', 'rppg');
+      var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};
+      if(bfd.fci>0||bfd.hrv>0||(bsd.tongue&&bsd.tongue.color)){
+        _cgoRenderSijin('sijin4Content','rppg');
+      }
+
     }
-  }, 1000);
+  }, 2000);
 });
+</script>
+<script>
+// ══ 카드 잠금 상태 시각화 ══
+function _cgoUpdateCardLock(){
+  var r = window.calcResult;
+  var hasInfo = r && r.y && r.name;
+  var bfd = window._bioFinalData||{};
+  var bsd = window._bioSkinData||{};
+  var hasBio = bfd.fci>0 || bfd.hrv>0 || (bsd.tongue && bsd.tongue.color);
+
+  // 순수역학 카드
+  var pureCard = document.getElementById('today-fortune-card');
+  if(pureCard){
+    if(!hasInfo){
+      pureCard.style.opacity='0.55';
+      pureCard.style.filter='grayscale(40%)';
+      var pLock = pureCard.querySelector('.card-lock-icon');
+      if(!pLock){
+        pLock = document.createElement('div');
+        pLock.className='card-lock-icon';
+        pLock.style.cssText='position:absolute;top:10px;right:12px;font-size:16px;opacity:.7;';
+        pLock.textContent='🔒';
+        pureCard.appendChild(pLock);
+      }
+    } else {
+      pureCard.style.opacity='1';
+      pureCard.style.filter='none';
+      var pLock2 = pureCard.querySelector('.card-lock-icon');
+      if(pLock2) pLock2.remove();
+    }
+  }
+
+  // 실시간 카드
+  var rtCard = document.getElementById('realtime-card');
+  if(rtCard){
+    if(!hasInfo){
+      rtCard.style.opacity='0.55';
+      rtCard.style.filter='grayscale(40%)';
+      var rLock = rtCard.querySelector('.card-lock-icon');
+      if(!rLock){
+        rLock = document.createElement('div');
+        rLock.className='card-lock-icon';
+        rLock.style.cssText='position:absolute;top:10px;right:12px;font-size:16px;opacity:.7;';
+        rLock.textContent='🔒';
+        rtCard.appendChild(rLock);
+      }
+    } else {
+      rtCard.style.opacity='1';
+      rtCard.style.filter='none';
+      var rLock2 = rtCard.querySelector('.card-lock-icon');
+      if(rLock2) rLock2.remove();
+    }
+  }
+
+  // rPPG 카드
+  var rppgCard = document.getElementById('rppg-card');
+  if(rppgCard){
+    if(!hasBio){
+      rppgCard.style.opacity='0.55';
+      rppgCard.style.filter='grayscale(40%)';
+      var bLock = rppgCard.querySelector('.card-lock-icon');
+      if(!bLock){
+        bLock = document.createElement('div');
+        bLock.className='card-lock-icon';
+        bLock.style.cssText='position:absolute;top:10px;right:12px;font-size:16px;opacity:.7;';
+        bLock.textContent='🔒';
+        rppgCard.appendChild(bLock);
+      }
+    } else {
+      rppgCard.style.opacity='1';
+      rppgCard.style.filter='none';
+      var bLock2 = rppgCard.querySelector('.card-lock-icon');
+      if(bLock2) bLock2.remove();
+    }
+  }
+}
+
+// 페이지 로드 시 + 계산 완료 시 + 생체 스캔 완료 시 업데이트
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(_cgoUpdateCardLock, 500); });
+document.addEventListener('calcDone', function(){ setTimeout(_cgoUpdateCardLock, 300); });
+// hltSyncBioCards 후에도 업데이트
+var _origHltSync = window.hltSyncBioCards;
+if(typeof _origHltSync === 'function'){
+  window.hltSyncBioCards = function(){
+    _origHltSync.apply(this, arguments);
+    setTimeout(_cgoUpdateCardLock, 400);
+  };
+}
 </script>
