@@ -8192,7 +8192,7 @@ function trvAiCourse(){
   ].join('\n');
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'llama-3.3-70b-versatile',
-      messages:[{role:'system',content:'당신은 풍수·역학 기반 여행 큐레이터입니다. 한국어로 답하세요.'},
+      messages:[{role:'system',content:'당신은 풍수·역학 기반 여행 큐레이터입니다. 반드시 100% 순수 한국어로만 답하세요. 일본어·중국어·베트남어 등 모든 외국어 절대 금지.'},
                {role:'user',content:prompt}],
       max_tokens:600,temperature:0.8})})
   .then(function(r){return r.json();})
@@ -21630,7 +21630,8 @@ function tarotChatSend(){
     '- 전문 용어는 쉬운 말로 풀어쓰기.',
     '- 따뜻하고 친근한 존댓말.',
     '- 오늘 실천 가능한 조언 1~2가지 포함.',
-    '- 100% 한국어만 사용.'
+    '- 반드시 100% 순수 한국어만 사용. 히라가나·가타카나·중국어(真是·矛盾·您 등)·베트남어(nhìn 등) 절대 금지.',
+    '- NASA·AI·ILI·CGO 등 고유명사만 예외.'
   ].filter(Boolean).join('\n');
 
   var messages = [{role:'system', content:systemPrompt}];
@@ -21950,32 +21951,35 @@ function qtCallAI(userMsg,callback){
   var card=_qt.selectedCard;
   var sys=_qt.selectedSystems.map(function(id){var s=QT_SYSTEMS.find(function(x){return x.id===id;});return s?s.name:'';}).filter(Boolean).join(', ');
 
-  var sysPrompt=[
+  var langRule =
+    '★★★ 언어 규칙 (절대 최우선) ★★★\n' +
+    '반드시 100% 순수 한국어로만 답변. 히라가나·가타카나·일본어·중국어(真是·矛盾·您·簡単·関係 등)·베트남어(nhìn 등)·아랍어·프랑스어 등 모든 외국어 절대 금지.\n' +
+    'NASA·AI·ILI·CGO 같은 고유명사·약어만 예외. 위반 즉시 한국어로 교체.\n';
+
+  var cardInfo = card
+    ? '✅ 현재 선택된 카드: [' + card.name + '] (' + card.id + '번) | 키워드: ' + card.key.join(', ') + '\n→ 반드시 이 카드 기반으로 분석. 다른 카드 이름 절대 생성 금지.'
+    : '⚠️ 카드 미선택 — 위 그리드에서 카드를 먼저 선택하도록 안내하세요.';
+
+  var sysPrompt = [
     '당신은 CGO-FULI의 40년 경력 타로 & 역학 전문 AI 상담사입니다.',
-    oh?'사용자 오행: '+oh:'',
-    nbti?'NBTI: '+nbti:'',
-    card
-      ? '✅ 선택된 카드: ['+card.name+'] | 키워드: '+card.key.join(', ')
-      : '⚠️ 카드 미선택 상태',
-    sys?'연동 역학: '+sys:'',
+    langRule,
+    oh ? '사용자 오행: ' + oh : '',
+    nbti ? 'NBTI: ' + nbti : '',
+    cardInfo,
+    sys ? '연동 역학: ' + sys : '',
     '',
-    '## 핵심 규칙 (반드시 준수)',
-    '1. 카드가 선택됐으면 → 즉시 그 카드 기반으로 분석. "어떤 카드냐" 절대 묻지 말 것.',
-    '2. 카드 이름 임의로 만들지 말 것. 위에 명시된 카드명만 사용.',
-    '3. 카드 미선택 시 → 카드 먼저 선택하도록 안내.',
-    '4. % 수치·근거없는 숫자 절대 금지.',
-    '5. 단정 표현 금지 (반드시, 확실히 등).',
-    '',
-    '## 답변 방식',
-    '- 카드 의미를 사용자 상황에 맞게 구체적으로 설명.',
-    '- 전문 용어는 쉬운 말로 풀어쓰기.',
-    '- 따뜻하고 친근한 존댓말.',
-    '- 오늘 실천 가능한 조언 1~2가지 포함.',
-    '- 100% 한국어만 사용.'
+    '## 핵심 규칙',
+    '1. 카드 선택됨 → 즉시 그 카드로 분석. "어떤 카드냐" 절대 묻지 말 것.',
+    '2. 카드 이름 절대 임의로 만들지 말 것 — 위에 명시된 카드만.',
+    '3. 카드 미선택 → 카드 먼저 선택하도록만 안내.',
+    '4. 두리뭉실 금지 — 카드 의미와 사용자 상황을 연결해 구체적으로.',
+    '5. 전문용어는 쉬운 말로 풀어쓰기.',
+    '6. 따뜻한 존댓말. 실천 조언 1~2가지 포함.'
   ].filter(Boolean).join('\n');
 
-  var messages=[{role:'system',content:sysPrompt}];
-  _qt.chatHistory.slice(-8).forEach(function(h){messages.push({role:h.role,content:h.content});});
+  var messages = [{role:'system', content:sysPrompt}];
+  _qt.chatHistory.slice(-8).forEach(function(h){ messages.push({role:h.role, content:h.content}); });
+  messages.push({role:'user', content:userMsg});
 
   var loading=qtShowLoading();
   fetch('/api/groq',{
@@ -28744,7 +28748,7 @@ function cgoTfAiChat(){
       '3. 전문 용어는 반드시 쉬운 말로 풀어서 설명 (예: "관살이 강하다 = 외부 압박이 많은 날").\n' +
       '4. 답변 길이: 질문에 따라 충분히 자세하게 — 짧게 끊지 말 것.\n' +
       '5. 마지막에 오늘 실천 가능한 조언 1~2가지 반드시 포함.\n' +
-      '6. 100% 한국어, 친근한 존댓말 사용.';
+      '6. 100% 순수 한국어만 사용. 히라가나·중국어(真是·矛盾·您·簡単 등)·베트남어(nhìn 등) 절대 금지. 위반 즉시 한국어로 교체.';
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
