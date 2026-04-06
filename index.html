@@ -4512,11 +4512,11 @@ function updateTransitSectionWithNASA(planets) {
       </div>
 
       <!-- 비디오/캔버스 영역 -->
-      <div style="position:relative;background:#000;aspect-ratio:4/3;overflow:hidden">
+      <div style="position:relative;background:linear-gradient(135deg,#060f22,#0d1e3a);aspect-ratio:4/3;overflow:hidden;border-radius:14px">
         <video id="bsVideo" autoplay playsinline muted
           style="width:100%;height:100%;object-fit:cover;opacity:1;display:none;border-radius:inherit;"></video>
         <canvas id="bsCanvas"
-          style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.75;pointer-events:none"></canvas>
+          style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;pointer-events:none;display:none"></canvas>
 
         <!-- 대기 화면 -->
         <div id="bsIdle" style="position:absolute;inset:0;display:flex;flex-direction:column;
@@ -4638,7 +4638,7 @@ function updateTransitSectionWithNASA(planets) {
 
       <!-- 타이머 + 버튼 -->
       <div style="padding:12px 16px;display:flex;gap:8px;align-items:center">
-        <button id="bsBtn" onclick="bsStart()"
+        <button id="bsBtn" onclick="bsFullscreen()"
           style="flex:1;padding:12px;background:linear-gradient(135deg,#d4a843,#fbbf24);
           border:none;border-radius:10px;color:#020817;font-weight:700;font-size:13px;cursor:pointer">
           ⚡ 스캔 시작
@@ -30893,7 +30893,15 @@ function bsStart(){
   _rPPG.offCtx=_rPPG.offCanvas.getContext('2d');
 
   // 카메라 시작 — iOS/Android 완전 지원
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+  // ★ 전체화면 스캔 중이면 BsFs.stream 재사용 (카메라 2개 동시 열기 방지)
+  var _fsWrap2 = document.getElementById('bsFullWrap');
+  var _fsActive = _fsWrap2 && _fsWrap2.style.display !== 'none' && BsFs.stream;
+  if(_fsActive){
+    _rPPG.stream = BsFs.stream; _rPPG.hasCamera = true;
+    var v=bsE('bsVideo');
+    if(v){ v.srcObject=BsFs.stream; v.setAttribute('playsinline',''); v.muted=true; v.play().catch(function(){}); }
+    setTimeout(function(){ _rPPG.rafId=requestAnimationFrame(_rPPGLoop); }, 300);
+  } else if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
     var _facingMode = BS.mode==='palm' ? 'environment' : 'user';
     var _constraints = {
       video:{
@@ -31067,6 +31075,9 @@ function _bsSimulateRealBio(){
 
 /* ── 스캔 완료 ── */
 function bsFinish(){
+  // ★ 전체화면 스캔 중이면 bsFinish 완료 처리 건너뜀 (BsFs.tId가 전담)
+  var _fsWrap = document.getElementById('bsFullWrap');
+  if(_fsWrap && _fsWrap.style.display !== 'none') return;
   clearInterval(BS.tId);
   clearInterval(BS.hId);
   BS.on = false;
@@ -31925,17 +31936,12 @@ function _bsFsDrawFaceLandmarks(results){
   var cv=document.getElementById('bsFsCanvas');
   if(!cv) return;
   var ctx=cv.getContext('2d');
-  var W=cv.width, H=cv.height;
-  ctx.clearRect(0,0,W,H);
-  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length){
-    // ★ 얼굴 없으면 빨간 안내 박스
-    ctx.strokeStyle='rgba(248,113,113,.6)';
-    ctx.lineWidth=2; ctx.setLineDash([6,4]);
-    ctx.strokeRect(W*0.2, H*0.1, W*0.6, H*0.8);
-    ctx.setLineDash([]);
-    return;
-  }
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // ★ 핀셋수정: 점·선·박스 없음 — 평범한 카메라 화면
+  // FaceMesh 랜드마크 감지는 onResults 콜백에서 정상 작동 유지
+  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length) return;
   var lms=results.multiFaceLandmarks[0];
+  return; // ★ 핀셋수정: 이하 그리기 코드 비활성화 — 평범한 카메라 화면
   // ★ 얼굴 추적 박스 — 랜드마크 기준 경계 계산
   var _lEar=lms[234], _rEar=lms[454], _fore=lms[10], _chin=lms[152];
   if(_lEar&&_rEar&&_fore&&_chin){
@@ -42062,7 +42068,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- 가이드 프레임 오버레이 -->
-  <div id="bsFsGuide" style="position:absolute;inset:0;pointer-events:none">
+  <div id="bsFsGuide" style="display:none;position:absolute;inset:0;pointer-events:none">
     <!-- 얼굴 가이드 타원 -->
     <div id="bsFsGuide_face" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);
       width:min(55vw,220px);height:min(72vw,290px);
@@ -42081,7 +42087,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- 안내 텍스트 -->
-  <div id="bsFsGuideText" style="position:absolute;top:50%;left:50%;transform:translate(-50%,calc(-50% + min(40vw,160px)));
+  <div id="bsFsGuideText" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,calc(-50% + min(40vw,160px)));
     text-align:center;pointer-events:none;padding-top:16px">
     <div id="bsFsGuideLbl" style="font-size:15px;font-weight:700;color:#fff;
       text-shadow:0 2px 8px rgba(0,0,0,.8)">얼굴을 타원 안에 맞춰주세요</div>
@@ -45563,6 +45569,7 @@ document.addEventListener('DOMContentLoaded', function(){
           window._cgoLocationDone = true;
           cgoGetLocation(
             function(pos){
+              if(!pos) return;
               window._cgoLat = pos.coords.latitude;
               window._cgoLon = pos.coords.longitude;
               if(typeof _tzrUpdate === 'function') _tzrUpdate();
@@ -45608,6 +45615,7 @@ function _cgoEntranceDone(){
     window._cgoLocationDone = true;
     cgoGetLocation(
       function(pos){
+        if(!pos) return;
         window._cgoLat = pos.coords.latitude;
         window._cgoLon = pos.coords.longitude;
         // 날씨·천지인 즉시 업데이트
