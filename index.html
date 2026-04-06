@@ -30758,8 +30758,8 @@ function _rPPGSample(){
   // 피부 픽셀 여부 체크 (HSV 근사)
   var mx=Math.max(r,g,b), mn=Math.min(r,g,b);
   var s=mx>0?(mx-mn)/mx:0;
-  // 피부색 조건: R>60, G>40, B>20, R>G>B, 채도 0.15~0.7
-  // ★ 피부 조건 강화 — 조명/배경 오인식 방지
+  // ★ 피부색 + FaceMesh 랜드마크 동시 확인 (책상 완전 차단)
+  var _hasFaceLms = !!(window.BsFs && BsFs._lastFaceLms && BsFs._lastFaceLms.length > 100 && BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime)<1000);
   var isSkin=(r>80&&g>50&&b>30&&r>g&&r>b&&(r-g)>15&&(r-b)>20&&s>0.18&&s<0.65&&(r+g+b)>150);
 
   // rPPG 신호: G채널 기반 (혈류 변화에 민감)
@@ -30800,7 +30800,7 @@ function _rPPGLoop(){
     _rPPG.lastSampleTime=now;
     var s=_rPPGSample();
     if(s){
-      // 피부 감지 시 lostCount 리셋
+      // 피부 감지됐을 때만 lostCount 리셋
       if(s.isSkin){
         // 얼굴 돌아왔고 타이머 정지됐으면 재시작
         if(_rPPG.lostCount>=20 && !BS.running && BS.sec<BS.TOTAL){
@@ -30949,8 +30949,11 @@ function bsStart(){
     BS.sec = sec;
     // ★ 얼굴 스캔 모드일 때만 얼굴 체크 (2초 연속 미감지 → 정지)
     if(BS.mode==='face' || BS.mode==='tongue'){
-      var _faceNow = (_rPPG.lostCount < 20);
-      if(!_faceNow){ _bsNoFaceSec++; } else { _bsNoFaceSec=0; }
+      if(_rPPG.lostCount>=20){
+        _bsNoFaceSec++;
+      } else {
+        _bsNoFaceSec=0;
+      }
       if(_bsNoFaceSec>=2){
         clearInterval(BS.tId); BS.tId=null; BS.running=false; BS.on=false;
         if(bsE('bsFsGuideLbl')) bsE('bsFsGuideLbl').textContent='⛔ 얼굴이 감지되지 않습니다 — 카메라에 얼굴을 맞춰주세요';
