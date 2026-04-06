@@ -8,6 +8,8 @@
 <head>
 <meta charset="UTF-8">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 <title>GO Future — ILI 라이프 인덱스</title>
 <!-- ✅ 언어 기본값 보장 — 반드시 최상단에서 실행 -->
@@ -30725,70 +30727,59 @@ function _rPPGSample(){
 
   var vw=v.videoWidth, vh=v.videoHeight;
   var oc=_rPPG.offCanvas;
-  oc.width=64; oc.height=48; // 저해상도로 빠른 샘플링
+  oc.width=64; oc.height=48;
   var ox=_rPPG.offCtx;
 
-  // ★ FaceMesh 코 위치 기반 동적 ROI — 얼굴 없으면 null
+  // ★ bsVideo 중앙 영역 피부색 직접 체크 (FaceMesh 완전 무관)
+  // 화면 중앙 상단 30% 영역 샘플링
+  var sx = Math.floor(vw*0.25);
+  var sy = Math.floor(vh*0.10);
+  var sw = Math.floor(vw*0.50);
+  var sh = Math.floor(vh*0.40);
+
+  // FaceMesh 랜드마크 있으면 더 정확한 ROI 사용
   var _fm = window.BsFs && BsFs._lastFaceLms;
-  // ★ Qwen/Claude: 500ms 이상 된 랜드마크는 무효 (오래된 데이터 차단)
-  if(BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime) > 500) _fm = null;
-  var sx, sy, sw, sh;
+  if(BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime) > 1000) _fm = null;
+  // ★ 핵심 수정: face/tongue 모드는 FaceMesh 랜드마크 없으면 폴백 없이 즉시 null
+  // → 책상·벽·다른 물체를 비춰도 절대 스캔 진행 안 됨
+  if((BS.mode==='face' || BS.mode==='tongue') && !_fm) return null;
   if(_fm && _fm.length > 100){
-    // ★ 실제 얼굴인지 크기 검증 (책상 오인식 차단)
-    var _nose=_fm[4], _chin=_fm[152], _fore=_fm[10], _lEar2=_fm[234], _rEar2=_fm[454];
-    if(_nose && _chin && _fore && _lEar2 && _rEar2){
-      var _fW=Math.abs(_lEar2.x-_rEar2.x);
+    var _nose=_fm[4], _fore=_fm[10], _lEar=_fm[234], _rEar=_fm[454], _chin=_fm[152];
+    if(_nose && _fore && _lEar && _rEar && _chin){
+      var _fW=Math.abs(_lEar.x-_rEar.x);
       var _fH=Math.abs(_fore.y-_chin.y);
-      if(_fW < 0.10 || _fH < 0.10) return null;
-      // ★ 핵심: 코 위치가 화면 위쪽 70% 안에 있어야 진짜 얼굴
-      // 아래쪽은 책상/반사 오인식
-      if(_nose.y > 0.70) return null;
-      // ★ 캘리브레이션 완료 시 — 점 위치와 랜드마크 일치 여부 체크
-      if(BsFs._calibOK){
-        var _lEye=_fm[133], _rEye=_fm[362], _noseT=_fm[4], _mouthT=_fm[13];
-        var _thresh=0.15; // ±15% 허용
-        var _match=0;
-        if(_lEye && BsFs._calib_leye && Math.abs(_lEye.x-BsFs._calib_leye.x)<_thresh && Math.abs(_lEye.y-BsFs._calib_leye.y)<_thresh) _match++;
-        if(_rEye && BsFs._calib_reye && Math.abs(_rEye.x-BsFs._calib_reye.x)<_thresh && Math.abs(_rEye.y-BsFs._calib_reye.y)<_thresh) _match++;
-        if(_noseT && BsFs._calib_nose && Math.abs(_noseT.x-BsFs._calib_nose.x)<_thresh && Math.abs(_noseT.y-BsFs._calib_nose.y)<_thresh) _match++;
-        if(_mouthT && BsFs._calib_mouth && Math.abs(_mouthT.x-BsFs._calib_mouth.x)<_thresh && Math.abs(_mouthT.y-BsFs._calib_mouth.y)<_thresh) _match++;
-        if(_match < 2) return null; // 2개 미만 일치 → 오인식
+      // 얼굴 크기 충분하고 화면 위쪽에 있으면 랜드마크 ROI 사용
+      if(_fW>0.10 && _fH>0.10 && _nose.y<0.75){
+        sx=Math.floor(vw*Math.max(0,_lEar.x+0.02));
+        sy=Math.floor(vh*Math.max(0,_fore.y));
+        sw=Math.floor(vw*Math.min(0.8,_rEar.x-_lEar.x-0.04));
+        sh=Math.floor(vh*Math.min(0.25,(_nose.y-_fore.y)*0.5));
       }
-    } else {
-      return null;
     }
-    // 코(4번)와 이마(10번) 기준으로 이마 영역 추출
-    var _noseX=_fm[4].x, _noseY=_fm[4].y;
-    var _foreY=_fm[10] ? _fm[10].y : _noseY-0.15;
-    var _lEarX=_fm[234] ? _fm[234].x : _noseX-0.18;
-    var _rEarX=_fm[454] ? _fm[454].x : _noseX+0.18;
-    sx=Math.floor(vw*Math.max(0,_lEarX+0.02));
-    sy=Math.floor(vh*Math.max(0,_foreY));
-    sw=Math.floor(vw*Math.min(0.8,_rEarX-_lEarX-0.04));
-    sh=Math.floor(vh*Math.min(0.25,(_noseY-_foreY)*0.5));
-    if(sw<20||sh<10){ return null; } // 너무 작으면 무효
-  } else {
-    return null; // 얼굴 랜드마크 없으면 샘플링 안 함
   }
+
+  if(sw<20||sh<10) return null;
   ox.drawImage(v, sx,sy,sw,sh, 0,0,64,48);
 
   var px=ox.getImageData(0,0,64,48).data;
-  var rSum=0,gSum=0,bSum=0,cnt=0;
+  var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
   for(var i=0;i<px.length;i+=4){
-    rSum+=px[i]; gSum+=px[i+1]; bSum+=px[i+2]; cnt++;
+    var pr=px[i],pg=px[i+1],pb=px[i+2];
+    rSum+=pr; gSum+=pg; bSum+=pb; cnt++;
+    // 피부색 픽셀 카운트
+    var mx=Math.max(pr,pg,pb),mn=Math.min(pr,pg,pb);
+    var sv=mx>0?(mx-mn)/mx:0;
+    if(pr>80&&pg>50&&pb>30&&pr>pg&&pr>pb&&(pr-pg)>15&&(pr-pb)>20&&sv>0.18&&sv<0.65) skinCnt++;
   }
   if(!cnt) return null;
+
+  // ★ 피부색 픽셀 20% 미만이면 얼굴 없음
+  if(skinCnt/cnt < 0.20) return null;
+
   var r=rSum/cnt, g=gSum/cnt, b=bSum/cnt;
-
-  // 피부 픽셀 여부 체크 (HSV 근사)
-  var mx=Math.max(r,g,b), mn=Math.min(r,g,b);
-  var s=mx>0?(mx-mn)/mx:0;
-  // ★ 피부색 + FaceMesh 랜드마크 동시 확인 (책상 완전 차단)
-  var _hasFaceLms = !!(window.BsFs && BsFs._lastFaceLms && BsFs._lastFaceLms.length > 100 && BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime)<1000);
+  var mx2=Math.max(r,g,b),mn2=Math.min(r,g,b);
+  var s=mx2>0?(mx2-mn2)/mx2:0;
   var isSkin=(r>80&&g>50&&b>30&&r>g&&r>b&&(r-g)>15&&(r-b)>20&&s>0.18&&s<0.65&&(r+g+b)>150);
-
-  // rPPG 신호: G채널 기반 (혈류 변화에 민감)
-  // 정규화된 혈색 지수 (피부 밝기 대비 붉은 정도)
   var fci = isSkin ? Math.round(Math.min(100, Math.max(30, (r-g)/(r+g+1)*200+30))) : null;
   return {green: g, red: r, blue: b, fci: fci, isSkin: isSkin};
 }
@@ -32465,6 +32456,42 @@ window._bsFsCalibReset = function(){
     if(d){d.style.left=defaults[k].l;d.style.top=defaults[k].t;}
   });
 };
+
+// ═══════════════════════════════
+// 🔥 BlazeFace 얼굴 감지 (독립 모델)
+// ═══════════════════════════════
+window._bzFaceDetected = false;
+window._bzModel = null;
+window._bzRunning = false;
+
+async function _bzInit(){
+  try{
+    if(typeof blazeface === 'undefined') return;
+    window._bzModel = await blazeface.load();
+    console.log('BlazeFace 로드 완료');
+    _bzLoop();
+  }catch(e){ console.log('BlazeFace 로드 실패:', e); }
+}
+
+async function _bzLoop(){
+  if(!window._bzModel) return;
+  var v = document.getElementById('bsFsVideo');
+  if(v && v.readyState>=2 && v.videoWidth>0){
+    try{
+      var preds = await window._bzModel.estimateFaces(v, false);
+      window._bzFaceDetected = preds.length > 0;
+    }catch(e){ window._bzFaceDetected = false; }
+  }
+  // 200ms마다 체크 (5fps — 배터리 절약)
+  setTimeout(_bzLoop, 200);
+}
+
+// BlazeFace는 bsStart() 호출 시 초기화
+function _bzInitOnStart(){
+  if(window._bzModel || window._bzLoading) return;
+  window._bzLoading = true;
+  _bzInit();
+}
 
 function _bsFsNextCamera(){
   _bsFsStopStream();
