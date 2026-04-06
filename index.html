@@ -30739,8 +30739,18 @@ function _rPPGSample(){
     if(_nose && _chin && _fore && _lEar2 && _rEar2){
       var _fW=Math.abs(_lEar2.x-_rEar2.x);
       var _fH=Math.abs(_fore.y-_chin.y);
-      // 얼굴 가로/세로가 화면의 10% 미만이면 오인식으로 판단
       if(_fW < 0.10 || _fH < 0.10) return null;
+      // ★ 캘리브레이션 완료 시 — 점 위치와 랜드마크 일치 여부 체크
+      if(BsFs._calibOK){
+        var _lEye=_fm[133], _rEye=_fm[362], _noseT=_fm[4], _mouthT=_fm[13];
+        var _thresh=0.15; // ±15% 허용
+        var _match=0;
+        if(_lEye && BsFs._calib_leye && Math.abs(_lEye.x-BsFs._calib_leye.x)<_thresh && Math.abs(_lEye.y-BsFs._calib_leye.y)<_thresh) _match++;
+        if(_rEye && BsFs._calib_reye && Math.abs(_rEye.x-BsFs._calib_reye.x)<_thresh && Math.abs(_rEye.y-BsFs._calib_reye.y)<_thresh) _match++;
+        if(_noseT && BsFs._calib_nose && Math.abs(_noseT.x-BsFs._calib_nose.x)<_thresh && Math.abs(_noseT.y-BsFs._calib_nose.y)<_thresh) _match++;
+        if(_mouthT && BsFs._calib_mouth && Math.abs(_mouthT.x-BsFs._calib_mouth.x)<_thresh && Math.abs(_mouthT.y-BsFs._calib_mouth.y)<_thresh) _match++;
+        if(_match < 2) return null; // 2개 미만 일치 → 오인식
+      }
     } else {
       return null;
     }
@@ -30820,20 +30830,34 @@ function _rPPGLoop(){
         if(_rPPG.consecutiveLost >= 30){
           var _fw0=bsE('bsFsGuideLbl');
           if(_fw0) _fw0.textContent='⛔ 얼굴이 사라졌습니다 — 카메라에 얼굴을 맞춰주세요';
-          if(BS.tId){ clearInterval(BS.tId); BS.tId=null; BS.running=false; BS.on=false; }
+          // ★ BS.on은 유지 (rPPGLoop 계속 실행 → 재개 감지 가능)
+          if(BS.tId){ clearInterval(BS.tId); BS.tId=null; BS.running=false; }
         }
       }
     } else if(s){
       // 피부 감지됐을 때만 lostCount 리셋
       if(s.isSkin){
-        // 얼굴 돌아왔고 타이머 정지됐으면 재시작
-        if(_rPPG.lostCount>=20 && !BS.running && BS.sec<BS.TOTAL){
+        // ★ 얼굴 돌아왔고 타이머 정지됐으면 재시작
+        if(_rPPG.consecutiveLost>=30 && !BS.running && BsFs.running && BsFs.sec>0 && BsFs.sec<BsFs._TOTAL){
           var _fw3=bsE('bsFsGuideLbl');
           if(_fw3) _fw3.textContent='✅ 얼굴 감지 — 측정 재개';
-          bsFsDoStart();
+          _rPPG.lostCount=0; _rPPG.consecutiveLost=0;
+          // BS.tId 재시작
+          var _bsStartTime2=performance.now(); var _bsLastSec2=BsFs.sec;
+          BS.running=true;
+          BS.tId=setInterval(function(){
+            var elapsed=(performance.now()-_bsStartTime2)/1000;
+            var sec=Math.floor(elapsed)+BsFs.sec;
+            if(sec<=_bsLastSec2) return;
+            _bsLastSec2=sec; BS.sec=sec;
+            var tmr=bsE('bsFsTimer'); var prg=bsE('bsFsProgress');
+            var TOTAL=(BsFs.step==='tongue')?15:33;
+            if(tmr) tmr.textContent=TOTAL-sec;
+            if(prg) prg.style.width=(sec/TOTAL*100)+'%';
+          },200);
         }
         _rPPG.lostCount=0;
-        _rPPG.consecutiveLost=0; // ★ 얼굴 돌아오면 연속소실 리셋
+        _rPPG.consecutiveLost=0;
       }
       else {
         _rPPG.lostCount++;
@@ -32347,6 +32371,97 @@ function bsFsDoStart(){
     }
   },1000);
 }
+
+// ═══════════════════════════════
+// 🎯 얼굴 캘리브레이션 (4점 드래그)
+// ═══════════════════════════════
+(function(){
+  // CSS
+  var st=document.createElement('style');
+  st.textContent='.calib-dot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:rgba(139,92,246,.85);border:3px solid #fff;cursor:grab;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;touch-action:none;box-shadow:0 2px 8px rgba(0,0,0,.4);z-index:20;user-select:none;}'
+    +'.calib-dot::after{content:attr(data-label);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);}';
+  document.head.appendChild(st);
+
+  // 드래그 로직
+  function makeDraggable(dot){
+    var startX,startY,startL,startT;
+    function onStart(e){
+      e.preventDefault();
+      dot.style.cursor='grabbing';
+      var t=e.touches?e.touches[0]:e;
+      startX=t.clientX; startY=t.clientY;
+      startL=parseFloat(dot.style.left); startT=parseFloat(dot.style.top);
+      document.addEventListener('mousemove',onMove);
+      document.addEventListener('touchmove',onMove,{passive:false});
+      document.addEventListener('mouseup',onEnd);
+      document.addEventListener('touchend',onEnd);
+    }
+    function onMove(e){
+      e.preventDefault();
+      var t=e.touches?e.touches[0]:e;
+      var wrap=document.getElementById('bsFsCalibDots');
+      var r=wrap.getBoundingClientRect();
+      var nx=startL+(t.clientX-startX)/r.width*100;
+      var ny=startT+(t.clientY-startY)/r.height*100;
+      dot.style.left=Math.max(5,Math.min(95,nx))+'%';
+      dot.style.top=Math.max(5,Math.min(95,ny))+'%';
+    }
+    function onEnd(){
+      dot.style.cursor='grab';
+      document.removeEventListener('mousemove',onMove);
+      document.removeEventListener('touchmove',onMove);
+      document.removeEventListener('mouseup',onEnd);
+      document.removeEventListener('touchend',onEnd);
+    }
+    dot.addEventListener('mousedown',onStart);
+    dot.addEventListener('touchstart',onStart,{passive:false});
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    ['cdot-leye','cdot-reye','cdot-nose','cdot-mouth'].forEach(function(id){
+      var d=document.getElementById(id);
+      if(d) makeDraggable(d);
+    });
+  });
+})();
+
+// 캘리브레이션 표시
+window._bsFsCalibShow = function(){
+  var el=document.getElementById('bsFsCalibDots');
+  if(el) el.style.display='block';
+  var gl=document.getElementById('bsFsGuideLbl');
+  if(gl) gl.textContent='🎯 점 4개를 눈·코·입에 맞춰주세요 (드래그)';
+};
+
+// 캘리브레이션 완료
+window._bsFsCalibDone = function(){
+  var el=document.getElementById('bsFsCalibDots');
+  if(!el) return;
+  var r=el.getBoundingClientRect();
+  // 각 점의 정규화 좌표 저장 (0~1)
+  ['leye','reye','nose','mouth'].forEach(function(k){
+    var d=document.getElementById('cdot-'+k);
+    if(d){
+      BsFs['_calib_'+k]={
+        x: parseFloat(d.style.left)/100,
+        y: parseFloat(d.style.top)/100
+      };
+    }
+  });
+  BsFs._calibOK=true;
+  el.style.display='none';
+  var gl=document.getElementById('bsFsGuideLbl');
+  if(gl) gl.textContent='✅ 맞춤 완료! 스캔 시작을 누르세요';
+};
+
+// 초기화
+window._bsFsCalibReset = function(){
+  var defaults={leye:{l:'38%',t:'32%'},reye:{l:'58%',t:'32%'},nose:{l:'50%',t:'48%'},mouth:{l:'50%',t:'60%'}};
+  Object.keys(defaults).forEach(function(k){
+    var d=document.getElementById('cdot-'+k);
+    if(d){d.style.left=defaults[k].l;d.style.top=defaults[k].t;}
+  });
+};
 
 function _bsFsNextCamera(){
   _bsFsStopStream();
@@ -41928,6 +42043,18 @@ document.addEventListener('DOMContentLoaded', function() {
     style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9"></video>
   <canvas id="bsFsCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
 
+  <!-- ★ 4개 캘리브레이션 점 (드래그 가능) -->
+  <div id="bsFsCalibDots" style="position:absolute;inset:0;display:none;">
+    <div class="calib-dot" id="cdot-leye"  data-label="👁왼눈" style="top:32%;left:38%"></div>
+    <div class="calib-dot" id="cdot-reye"  data-label="👁오른눈" style="top:32%;left:58%"></div>
+    <div class="calib-dot" id="cdot-nose"  data-label="👃코" style="top:48%;left:50%"></div>
+    <div class="calib-dot" id="cdot-mouth" data-label="👄입" style="top:60%;left:50%"></div>
+    <div style="position:absolute;bottom:12%;left:50%;transform:translateX(-50%);display:flex;gap:8px;">
+      <button onclick="_bsFsCalibDone()" style="padding:8px 18px;background:rgba(52,211,153,.9);border:none;border-radius:10px;color:#000;font-weight:800;font-size:12px;cursor:pointer;">✅ 맞춤 완료</button>
+      <button onclick="_bsFsCalibReset()" style="padding:8px 14px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:10px;color:#fff;font-size:12px;cursor:pointer;">↺ 초기화</button>
+    </div>
+  </div>
+
   <!-- 가이드 프레임 오버레이 -->
   <div id="bsFsGuide" style="position:absolute;inset:0;pointer-events:none">
     <!-- 얼굴 가이드 타원 -->
@@ -41961,11 +42088,14 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- 하단 버튼 -->
-  <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:14px">
+  <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
     <button id="bsFsStartBtn" onclick="bsFsDoStart()"
       style="padding:14px 40px;background:linear-gradient(135deg,#d4a843,#fbbf24);
       border:none;border-radius:14px;color:#020817;font-weight:800;font-size:15px;cursor:pointer;
       box-shadow:0 4px 20px rgba(212,168,67,.4)">⚡ 스캔 시작</button>
+    <button onclick="_bsFsCalibShow()" id="bsFsCalibBtn"
+      style="padding:14px 18px;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.5);
+      border-radius:14px;color:#a78bfa;font-weight:700;font-size:13px;cursor:pointer;">🎯 얼굴 맞춤</button>
     <button onclick="bsFsNextStep()" id="bsFsNextBtn" style="display:none;
       padding:14px 32px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);
       border-radius:14px;color:#34d399;font-weight:700;font-size:14px;cursor:pointer">다음 단계 →</button>
