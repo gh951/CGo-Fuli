@@ -31948,8 +31948,42 @@ function _bsFsDrawFaceLandmarks(results){
   var ctx=cv.getContext('2d');
   var W=cv.width, H=cv.height;
   ctx.clearRect(0,0,W,H);
-  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length) return;
+  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length){
+    // ★ 얼굴 없으면 빨간 안내 박스
+    ctx.strokeStyle='rgba(248,113,113,.6)';
+    ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(W*0.2, H*0.1, W*0.6, H*0.8);
+    ctx.setLineDash([]);
+    return;
+  }
   var lms=results.multiFaceLandmarks[0];
+  // ★ 얼굴 추적 박스 — 랜드마크 기준 경계 계산
+  var _lEar=lms[234], _rEar=lms[454], _fore=lms[10], _chin=lms[152];
+  if(_lEar&&_rEar&&_fore&&_chin){
+    var pad=0.04;
+    var bx=Math.max(0,(_lEar.x-pad)*W);
+    var by=Math.max(0,(_fore.y-pad)*H);
+    var bw=Math.min(W,(_rEar.x-_lEar.x+pad*2)*W);
+    var bh=Math.min(H,(_chin.y-_fore.y+pad*2)*H);
+    // 얼굴 크기 충분하면 초록, 작으면 노랑
+    var _fW=Math.abs(_lEar.x-_rEar.x);
+    var _fH=Math.abs(_fore.y-_chin.y);
+    var boxColor = (_fW>0.10&&_fH>0.10) ? 'rgba(52,211,153,.8)' : 'rgba(251,191,36,.8)';
+    ctx.strokeStyle=boxColor;
+    ctx.lineWidth=3; ctx.setLineDash([]);
+    // 모서리만 그리기 (세련된 UI)
+    var cs=Math.min(bw,bh)*0.2;
+    ctx.beginPath();
+    // 좌상
+    ctx.moveTo(bx,by+cs); ctx.lineTo(bx,by); ctx.lineTo(bx+cs,by);
+    // 우상
+    ctx.moveTo(bx+bw-cs,by); ctx.lineTo(bx+bw,by); ctx.lineTo(bx+bw,by+cs);
+    // 좌하
+    ctx.moveTo(bx,by+bh-cs); ctx.lineTo(bx,by+bh); ctx.lineTo(bx+cs,by+bh);
+    // 우하
+    ctx.moveTo(bx+bw-cs,by+bh); ctx.lineTo(bx+bw,by+bh); ctx.lineTo(bx+bw,by+bh-cs);
+    ctx.stroke();
+  }
 
   function conn(indices,color,width){
     ctx.strokeStyle=color; ctx.lineWidth=width; ctx.setLineDash([]);
@@ -32222,6 +32256,7 @@ function bsFsDoStart(){
   }
 
   BsFs.running=true; BsFs.sec=0;
+  _rPPG.lostCount=0; _rPPG.consecutiveLost=0; // ★ 시작 시 리셋
   var TOTAL=(BsFs.step==='tongue')?15:33;
   BS.mode=BsFs.step; if(!BS.on) bsStart();
   var tmr=document.getElementById('bsFsTimer');
