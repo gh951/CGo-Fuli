@@ -30727,9 +30727,23 @@ function _rPPGSample(){
   oc.width=64; oc.height=48; // 저해상도로 빠른 샘플링
   var ox=_rPPG.offCtx;
 
-  // 이마 ROI: 상단 30~50%, 좌우 30~70%
-  var sx=Math.floor(vw*0.30), sy=Math.floor(vh*0.10);
-  var sw=Math.floor(vw*0.40), sh=Math.floor(vh*0.25);
+  // ★ FaceMesh 코 위치 기반 동적 ROI — 얼굴 없으면 null
+  var _fm = window.BsFs && BsFs._lastFaceLms;
+  var sx, sy, sw, sh;
+  if(_fm && _fm.length > 100){
+    // 코(4번)와 이마(10번) 기준으로 이마 영역 추출
+    var _noseX=_fm[4].x, _noseY=_fm[4].y;
+    var _foreY=_fm[10] ? _fm[10].y : _noseY-0.15;
+    var _lEarX=_fm[234] ? _fm[234].x : _noseX-0.18;
+    var _rEarX=_fm[454] ? _fm[454].x : _noseX+0.18;
+    sx=Math.floor(vw*Math.max(0,_lEarX+0.02));
+    sy=Math.floor(vh*Math.max(0,_foreY));
+    sw=Math.floor(vw*Math.min(0.8,_rEarX-_lEarX-0.04));
+    sh=Math.floor(vh*Math.min(0.25,(_noseY-_foreY)*0.5));
+    if(sw<20||sh<10){ return null; } // 너무 작으면 무효
+  } else {
+    return null; // 얼굴 랜드마크 없으면 샘플링 안 함
+  }
   ox.drawImage(v, sx,sy,sw,sh, 0,0,64,48);
 
   var px=ox.getImageData(0,0,64,48).data;
@@ -30744,7 +30758,8 @@ function _rPPGSample(){
   var mx=Math.max(r,g,b), mn=Math.min(r,g,b);
   var s=mx>0?(mx-mn)/mx:0;
   // 피부색 조건: R>60, G>40, B>20, R>G>B, 채도 0.15~0.7
-  var isSkin=(r>60&&g>40&&b>20&&r>g&&r>b&&s>0.15&&s<0.7);
+  // ★ 피부 조건 강화 — 조명/배경 오인식 방지
+  var isSkin=(r>80&&g>50&&b>30&&r>g&&r>b&&(r-g)>15&&(r-b)>20&&s>0.18&&s<0.65&&(r+g+b)>150);
 
   // rPPG 신호: G채널 기반 (혈류 변화에 민감)
   // 정규화된 혈색 지수 (피부 밝기 대비 붉은 정도)
@@ -31766,8 +31781,14 @@ function _bsFsInitMediaPipe(){
     }});
     BsFs.mpFace.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5,minTrackingConfidence:.5});
     BsFs.mpFace.onResults(function(r){ 
-      // 마지막 얼굴 랜드마크 저장 (정렬 감지용)
-      BsFs._lastFaceLms = (r.multiFaceLandmarks&&r.multiFaceLandmarks[0])||null;
+      // 마지막 얼굴 랜드마크 저장 — 배열 비어있으면 null (얼굴 없음)
+      if(r.multiFaceLandmarks && r.multiFaceLandmarks.length > 0 && r.multiFaceLandmarks[0].length > 100){
+        BsFs._lastFaceLms = r.multiFaceLandmarks[0];
+        BsFs._lastFaceTime = Date.now(); // ★ 감지 시각 기록
+      } else {
+        BsFs._lastFaceLms = null;
+        BsFs._lastFaceTime = 0;
+      }
       // ★ 얼굴 다시 감지 → 타이머 정지됐으면 재시작
       if(BsFs._lastFaceLms && !BsFs.running && BsFs._alignOK && BsFs.sec>0 && BsFs.sec<(BsFs.step==='tongue'?15:33)){
         var _lb3=document.getElementById('bsFsGuideLbl');
@@ -32147,11 +32168,43 @@ function bsFsDoStart(){
     _oT.start();_oT.stop(_acT.currentTime+.3);}catch(e){}
   }
   BsFs._lostCount = 0;
+  BsFs._graceCount = 0; // ★ FaceMesh 준비 대기
   BsFs.tId=setInterval(function(){
-    // ★ 얼굴/혀 감지 체크 — 1초(1틱) 미감지 시 즉시 정지
+    // ★ 첫 5틱(5초)은 FaceMesh 준비 시간 — 감지 체크 + 타이머 모두 대기
+    if(BsFs._graceCount < 5){
+      BsFs._graceCount++;
+      // 얼굴 이미 감지됐으면 grace 즉시 종료
+      var _earlyDetect = false;
+      if(BsFs.step==='face'){
+        var _now0=Date.now();
+        if(BsFs._lastFaceTime&&(_now0-BsFs._lastFaceTime>300)) BsFs._lastFaceLms=null;
+        if(BsFs._lastFaceTime&&(_now0-BsFs._lastFaceTime)<200&&BsFs._lastFaceLms&&BsFs._lastFaceLms.length>=100){
+          var _l0=BsFs._lastFaceLms[234],_r0=BsFs._lastFaceLms[454],_t0=BsFs._lastFaceLms[10],_b0=BsFs._lastFaceLms[152];
+          if(_l0&&_r0&&_t0&&_b0) _earlyDetect=Math.abs(_l0.x-_r0.x)>0.1&&Math.abs(_t0.y-_b0.y)>0.1;
+        }
+      }
+      else if(BsFs.step==='palm') _earlyDetect = !!(BsFs._lastHandLms && BsFs._lastHandLms[0]);
+      else if(BsFs.step==='tongue' && BsFs._lastFaceLms){ var _lt0=BsFs._lastFaceLms[13],_lb0=BsFs._lastFaceLms[14]; _earlyDetect=!!(_lt0&&_lb0&&Math.abs(_lb0.y-_lt0.y)>0.04); }
+      if(!_earlyDetect) return; // 감지 안됐으면 대기 (타이머 안 흐름)
+      BsFs._graceCount = 5; // 감지됐으면 grace 종료
+    }
+    // ★ 얼굴/혀/손 감지 체크 — 1초(1틱) 미감지 시 즉시 정지
     var _detected = false;
     if(BsFs.step==='face'){
-      _detected = !!(BsFs._lastFaceLms && BsFs._lastFaceLms[4]);
+      var _now = Date.now();
+      // ★ stale 데이터 강제 만료 (300ms 갱신 없으면 얼굴 없음)
+      if(BsFs._lastFaceTime && (_now - BsFs._lastFaceTime > 300)){
+        BsFs._lastFaceLms = null;
+      }
+      var _freshFace = BsFs._lastFaceTime && (_now - BsFs._lastFaceTime) < 200;
+      if(_freshFace && BsFs._lastFaceLms && BsFs._lastFaceLms.length >= 100){
+        var _lms=BsFs._lastFaceLms;
+        var _l=_lms[234],_r=_lms[454],_t=_lms[10],_b=_lms[152];
+        if(_l&&_r&&_t&&_b){
+          var _fw=Math.abs(_l.x-_r.x), _fh=Math.abs(_t.y-_b.y);
+          _detected = _fw>0.1 && _fh>0.1;
+        }
+      }
     } else if(BsFs.step==='tongue'){
       if(BsFs._lastFaceLms){
         var _lt=BsFs._lastFaceLms[13], _lb=BsFs._lastFaceLms[14];
@@ -45370,10 +45423,9 @@ function _cgoEntranceDone(){
   // 대문 오버레이 숨기기
   var el = document.getElementById('cgoEntrance');
   if(el){ el.classList.add('hidden'); setTimeout(function(){ el.style.display='none'; }, 900); }
-  // 관리자 시스템 초기화 (공지사항 표시 + 차단 확인)
-  if(typeof _cgoInitAdmin === 'function') setTimeout(_cgoInitAdmin, 1000);
-  // 우주 나침반 웰컴 팝업 표시 (1.2초 후)
-  setTimeout(function(){ if(typeof cgpShow==='function') cgpShow(); }, 1200);
+  // 관리자 시스템 초기화 (차단 확인만 — 공지사항 팝업 제거)
+  if(typeof _cgoInitAdmin === 'function') setTimeout(function(){ _cgoCheckBlocked && _cgoCheckBlocked(); }, 1000);
+  // 우주 나침반 웰컴 팝업 제거
 
   // 대문에서 선택한 언어 적용 — 앱 진입 완료 후 번역 실행
   setTimeout(function(){
