@@ -31794,7 +31794,7 @@ function _bsFsInitMediaPipe(){
       BsFs.mpDetect = new FaceDetection({locateFile:function(f){
         return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/'+f;
       }});
-      BsFs.mpDetect.setOptions({model:'short', minDetectionConfidence:0.7});
+      BsFs.mpDetect.setOptions({model:'short', minDetectionConfidence:0.95});
       BsFs.mpDetect.onResults(function(r){
         // ★ detections 있으면 무조건 얼굴 있음 — 구조 분석 생략
         if(r.detections && r.detections.length > 0){
@@ -32027,8 +32027,27 @@ function _bsFsStartAlignDetect(){
     var vid=document.getElementById('bsFsVideo');
     if(vid && vid.readyState>=2){
       if(BsFs.step==='face' && BsFs._lastFaceLms){
+        // ★ 코 위치 + 피부색 동시 체크
         var nose=BsFs._lastFaceLms[4];
-        if(nose) aligned=(Math.abs(nose.x-0.5)<0.18 && Math.abs(nose.y-0.5)<0.18);
+        var _posOK = nose && (Math.abs(nose.x-0.5)<0.22 && Math.abs(nose.y-0.5)<0.22);
+        // 피부색 확인
+        var _skinOK2=false;
+        try{
+          var _fv2=document.getElementById('bsFsVideo');
+          if(_fv2&&_fv2.readyState>=2&&_posOK){
+            var _fc2=document.createElement('canvas');_fc2.width=8;_fc2.height=8;
+            var _fx2=_fc2.getContext('2d');
+            _fx2.drawImage(_fv2,_fv2.videoWidth*(nose.x-0.1),_fv2.videoHeight*(nose.y-0.1),_fv2.videoWidth*0.2,_fv2.videoHeight*0.2,0,0,8,8);
+            var _pd2=_fx2.getImageData(0,0,8,8).data;
+            var _sc2=0;
+            for(var _j=0;_j<_pd2.length;_j+=4){
+              var _r2=_pd2[_j],_g2=_pd2[_j+1],_b2=_pd2[_j+2];
+              if(_r2>80&&_g2>50&&_b2>30&&_r2>_g2&&_r2>_b2&&(_r2-_g2)>10) _sc2++;
+            }
+            _skinOK2=(_sc2/64)>0.25;
+          }
+        }catch(e){}
+        aligned=_posOK&&_skinOK2;
       } else if(BsFs.step==='palm' && BsFs._lastHandLms){
         var wrist=BsFs._lastHandLms[0];
         if(wrist) aligned=(Math.abs(wrist.x-0.5)<0.25 && Math.abs(wrist.y-0.5)<0.25);
@@ -32199,36 +32218,59 @@ function bsFsDoStart(){
     _oT.start();_oT.stop(_acT.currentTime+.3);}catch(e){}
   }
   BsFs._lostCount = 0;
+  BsFs._accSec = BsFs.sec || 0;
+  BsFs._greenBuf = []; // Green 채널 변동성 버퍼 // 누적 시간 (얼굴 감지된 시간만)
   BsFs.tId=setInterval(function(){
-    // ★ 얼굴/혀/손 감지 체크 — 1초(1틱) 미감지 시 즉시 정지
+    // ★ 핵심: 얼굴/손/혀 감지 여부 체크
     var _detected = false;
     if(BsFs.step==='face'){
-      var _now = Date.now();
-      // ★ GPT 방식: FaceDetection 플래그 + 300ms 이내 갱신
-      _detected = !!(BsFs._faceDetectOK && BsFs._faceDetectTime && (_now - BsFs._faceDetectTime) < 300);
-    } else if(BsFs.step==='tongue'){
-      if(BsFs._lastFaceLms){
-        var _lt=BsFs._lastFaceLms[13], _lb=BsFs._lastFaceLms[14];
-        _detected = !!(_lt && _lb && Math.abs(_lb.y-_lt.y)>0.04);
-      }
+      // ★ CDN 없이 순수 픽셀: 얼굴 영역 Green 채널 변동성 체크
+      try{
+        var _fv=document.getElementById('bsFsVideo');
+        if(_fv&&_fv.readyState>=2&&_fv.videoWidth>0){
+          var _fc=document.createElement('canvas');_fc.width=8;_fc.height=8;
+          var _fx=_fc.getContext('2d');
+          // 화면 중앙 상단 (이마~코 위치)
+          _fx.drawImage(_fv,_fv.videoWidth*0.35,_fv.videoHeight*0.15,_fv.videoWidth*0.3,_fv.videoHeight*0.35,0,0,8,8);
+          var _pd=_fx.getImageData(0,0,8,8).data;
+          var _gSum=0,_rSum=0,_bSum=0,_cnt=0,_skinCnt=0;
+          for(var _i=0;_i<_pd.length;_i+=4){
+            var _r=_pd[_i],_g=_pd[_i+1],_b=_pd[_i+2];
+            _gSum+=_g; _rSum+=_r; _bSum+=_b; _cnt++;
+            // 피부색 조건
+            if(_r>80&&_g>50&&_b>30&&_r>_g&&_r>_b&&(_r-_g)>10) _skinCnt++;
+          }
+          var _gAvg=_gSum/_cnt;
+          // Green 버퍼에 추가 (최근 5개)
+          if(!BsFs._greenBuf) BsFs._greenBuf=[];
+          BsFs._greenBuf.push(_gAvg);
+          if(BsFs._greenBuf.length>5) BsFs._greenBuf.shift();
+          // 피부색 픽셀 30% 이상 AND Green 변동성 있음 (살아있는 얼굴)
+          var _skinRatio=_skinCnt/_cnt;
+          var _variance=0;
+          if(BsFs._greenBuf.length>=3){
+            var _mean=BsFs._greenBuf.reduce(function(a,b){return a+b;})/BsFs._greenBuf.length;
+            BsFs._greenBuf.forEach(function(v){_variance+=Math.pow(v-_mean,2);});
+            _variance/=BsFs._greenBuf.length;
+          }
+          _detected = _skinRatio>0.3 && (_variance>0.05 || BsFs._greenBuf.length<3);
+        }
+      }catch(e){}
     } else if(BsFs.step==='palm'){
       _detected = !!(BsFs._lastHandLms && BsFs._lastHandLms[0]);
-    } else {
-      _detected = true;
-    }
-    if(!_detected){
-      BsFs._lostCount++;
-      if(BsFs._lostCount>=1){
-        clearInterval(BsFs.tId); BsFs.tId=null; BsFs.running=false;
-        var _lb2=document.getElementById('bsFsGuideLbl');
-        if(_lb2) _lb2.textContent='⛔ 얼굴이 사라졌습니다 — 다시 맞춰주세요';
-        var _tmr2=document.getElementById('bsFsTimer');
-        if(_tmr2) _tmr2.textContent='--';
-        return;
+    } else if(BsFs.step==='tongue'){
+      if(BsFs._lastFaceLms){
+        var _lt=BsFs._lastFaceLms[13],_lb=BsFs._lastFaceLms[14];
+        _detected=!!(_lt&&_lb&&Math.abs(_lb.y-_lt.y)>0.04);
       }
-    } else {
-      BsFs._lostCount=0;
     }
+    // 감지 안됐으면 → 타이머 멈춤 (리셋 아님, 이어서 진행)
+    if(!_detected){
+      var _gl=document.getElementById('bsFsGuideLbl');
+      if(_gl) _gl.textContent='⏸ 얼굴을 카메라에 맞춰주세요 — 자동 재개됩니다';
+      return; // sec 증가 안함
+    }
+    // ★ 감지 확인 완료 — 1초 누적
     BsFs.sec++;
     if(tmr) tmr.textContent=(TOTAL-BsFs.sec);
     if(prg) prg.style.width=(BsFs.sec/TOTAL*100)+'%';
