@@ -4473,7 +4473,7 @@ function updateTransitSectionWithNASA(planets) {
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px">
 
     <!-- 왼쪽: 카메라 + 랜드마크 -->
     <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:16px;overflow:hidden">
@@ -30741,9 +30741,7 @@ function _rPPGSample(){
   // FaceMesh 랜드마크 있으면 더 정확한 ROI 사용
   var _fm = window.BsFs && BsFs._lastFaceLms;
   if(BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime) > 1000) _fm = null;
-  // ★ 핵심 수정: face/tongue 모드는 FaceMesh 랜드마크 없으면 폴백 없이 즉시 null
-  // → 책상·벽·다른 물체를 비춰도 절대 스캔 진행 안 됨
-  if((BS.mode==='face' || BS.mode==='tongue') && !_fm) return null;
+  // ★ MAI 구조: FaceMesh 없어도 isSkin 픽셀 감지로 진행 (하드 블록 제거)
   if(_fm && _fm.length > 100){
     var _nose=_fm[4], _fore=_fm[10], _lEar=_fm[234], _rEar=_fm[454], _chin=_fm[152];
     if(_nose && _fore && _lEar && _rEar && _chin){
@@ -30972,6 +30970,15 @@ function bsStart(){
       var _wEl=bsE('bsGuideMsg')||bsE('bsFsGuideLbl');
       if(_bsWarnSec>=1 && _wEl) _wEl.textContent='⚠️ '+(BS.mode==='tongue'?'혀':'얼굴')+'를 카메라에 맞춰주세요!';
       else if(_bsWarnSec===0 && _wEl) _wEl.textContent='';
+      // ★ MAI 구조: 5초 연속 미감지 → 타이머 리셋 (정지 아님!)
+      if(_rPPG.consecutiveLost >= 5){
+        _bsStartTime = performance.now() - 2000; // 2초로 되돌림 (28초 남음)
+        _bsLastSec = 1;
+        _rPPG.consecutiveLost = 0;
+        _rPPG.lostCount = 0;
+        _bsWarnSec = 0;
+        if(bsE('bsProgress')) bsE('bsProgress').style.width='0%';
+      }
     }
     var remain = BS.TOTAL - sec;
     if(bsE('bsTimer'))    bsE('bsTimer').textContent = remain>0?remain:'';
