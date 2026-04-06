@@ -99,6 +99,7 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
 
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
 @keyframes goldPulse{0%,100%{box-shadow:0 0 8px rgba(212,168,67,.35),0 0 0 0 rgba(212,168,67,.3);}50%{box-shadow:0 0 16px rgba(212,168,67,.7),0 0 0 6px rgba(212,168,67,.0);}}
+@keyframes bsFsGlow{0%{box-shadow:0 0 10px #fbbf24,0 0 20px #f59e0b;transform:scale(1);}100%{box-shadow:0 0 24px #fbbf24,0 0 48px #f59e0b,0 0 72px #fbbf24;transform:scale(1.04);}}
 @keyframes mbtiBackPulse{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.0);opacity:1}50%{box-shadow:0 0 10px 3px rgba(168,85,247,.55);opacity:.85}}
 
 /* ── Gold-Stream Docking Animation (by Gemini 막둥이) ── */
@@ -30817,52 +30818,19 @@ function _rPPGLoop(){
     var s=_rPPGSample();
     // ★ 핵심: s가 null(랜드마크 없음)이어도 lostCount 증가
     if(!s){
-      if(BS.on && (BS.mode==='face'||BS.mode==='tongue')){
+      if(BS.on){
         _rPPG.lostCount++;
         _rPPG.consecutiveLost = (_rPPG.consecutiveLost||0) + 1;
-        // ★ Claude/코파일럿: 연속 30프레임(약 1초) 소실 시만 정지
-        if(_rPPG.consecutiveLost >= 30){
-          var _fw0=bsE('bsFsGuideLbl');
-          if(_fw0) _fw0.textContent='⛔ 얼굴이 사라졌습니다 — 카메라에 얼굴을 맞춰주세요';
-          // ★ BS.on은 유지 (rPPGLoop 계속 실행 → 재개 감지 가능)
-          if(BS.tId){ clearInterval(BS.tId); BS.tId=null; BS.running=false; }
-        }
+        // ★ 새 구조: BS.tId 정지 없음 — lostCount만 증가, 경고는 BsFs.tId에서 처리
       }
     } else if(s){
       // 피부 감지됐을 때만 lostCount 리셋
       if(s.isSkin){
-        // ★ 얼굴 돌아왔고 타이머 정지됐으면 재시작
-        if(_rPPG.consecutiveLost>=30 && !BS.running && BsFs.running && BsFs.sec>0 && BsFs.sec<BsFs._TOTAL){
-          var _fw3=bsE('bsFsGuideLbl');
-          if(_fw3) _fw3.textContent='✅ 얼굴 감지 — 측정 재개';
-          _rPPG.lostCount=0; _rPPG.consecutiveLost=0;
-          // BS.tId 재시작
-          var _bsStartTime2=performance.now(); var _bsLastSec2=BsFs.sec;
-          BS.running=true;
-          BS.tId=setInterval(function(){
-            var elapsed=(performance.now()-_bsStartTime2)/1000;
-            var sec=Math.floor(elapsed)+BsFs.sec;
-            if(sec<=_bsLastSec2) return;
-            _bsLastSec2=sec; BS.sec=sec;
-            var tmr=bsE('bsFsTimer'); var prg=bsE('bsFsProgress');
-            var TOTAL=(BsFs.step==='tongue')?15:33;
-            if(tmr) tmr.textContent=TOTAL-sec;
-            if(prg) prg.style.width=(sec/TOTAL*100)+'%';
-          },200);
-        }
         _rPPG.lostCount=0;
         _rPPG.consecutiveLost=0;
       }
       else {
         _rPPG.lostCount++;
-        // ★ 20프레임(약 1초) 연속 미감지 → 즉시 타이머 정지
-        if(_rPPG.lostCount===20){
-          var _faceWarn=bsE('bsFsGuideLbl');
-          if(_faceWarn) _faceWarn.textContent='⛔ 얼굴이 사라졌습니다 — 카메라에 얼굴을 다시 맞춰주세요';
-          var _scanWarn=bsE('bsHrVal');
-          if(_scanWarn) _scanWarn.textContent='--';
-          if(BS.tId){ clearInterval(BS.tId); BS.tId=null; BS.running=false; }
-        }
         // 얼굴 없으면 신호 저장 안 함
         if(_rPPG.lostCount>5) return;
       }
@@ -30983,26 +30951,19 @@ function bsStart(){
   // setInterval(1000)은 모바일에서 500~800ms로 지연돼 15초가 7초처럼 느껴짐
   var _bsStartTime = performance.now();
   var _bsLastSec   = 0;
-  var _bsNoFaceSec = 0; // 얼굴 없는 연속 초
+  var _bsWarnSec   = 0; // 경고 카운트 (타이머 정지 없음)
   BS.tId = setInterval(function(){
     var elapsed = (performance.now() - _bsStartTime) / 1000;
     var sec = Math.floor(elapsed);
     if(sec <= _bsLastSec) return;
     _bsLastSec = sec;
     BS.sec = sec;
-    // ★ 얼굴 스캔 모드일 때만 얼굴 체크 (2초 연속 미감지 → 정지)
+    // ★ 새 구조: 얼굴/손/혀 없어도 타이머 무조건 진행 — 경고만 표시
     if(BS.mode==='face' || BS.mode==='tongue'){
-      if(_rPPG.lostCount>=20){
-        _bsNoFaceSec++;
-      } else {
-        _bsNoFaceSec=0;
-      }
-      if(_bsNoFaceSec>=2){
-        clearInterval(BS.tId); BS.tId=null; BS.running=false; BS.on=false;
-        if(bsE('bsFsGuideLbl')) bsE('bsFsGuideLbl').textContent='⛔ 얼굴이 감지되지 않습니다 — 카메라에 얼굴을 맞춰주세요';
-        if(bsE('bsTimer')) bsE('bsTimer').textContent='--';
-        return;
-      }
+      if(_rPPG.lostCount>=20){ _bsWarnSec++; } else { _bsWarnSec=0; }
+      var _wEl=bsE('bsGuideMsg')||bsE('bsFsGuideLbl');
+      if(_bsWarnSec>=1 && _wEl) _wEl.textContent='⚠️ '+(BS.mode==='tongue'?'혀':'얼굴')+'를 카메라에 맞춰주세요!';
+      else if(_bsWarnSec===0 && _wEl) _wEl.textContent='';
     }
     var remain = BS.TOTAL - sec;
     if(bsE('bsTimer'))    bsE('bsTimer').textContent = remain>0?remain:'';
@@ -32315,53 +32276,68 @@ function bsFsDoStart(){
     _gT.gain.exponentialRampToValueAtTime(.001,_acT.currentTime+.3);
     _oT.start();_oT.stop(_acT.currentTime+.3);}catch(e){}
   }
-  BsFs._lostCount = 0;
+  BsFs._lostCount = 0; BsFs._warnCount = 0;
   BsFs.tId=setInterval(function(){
-    // ★ 얼굴 스캔 모드 — 얼굴 없으면 타이머 정지
-    if(BsFs.step==='face'){
-      var _fW2=0, _fH2=0;
-      if(BsFs._lastFaceLms && BsFs._lastFaceLms.length>100){
-        var _le2=BsFs._lastFaceLms[234],_re2=BsFs._lastFaceLms[454];
-        var _ft2=BsFs._lastFaceLms[10],_fb2=BsFs._lastFaceLms[152];
-        if(_le2&&_re2) _fW2=Math.abs(_le2.x-_re2.x);
-        if(_ft2&&_fb2) _fH2=Math.abs(_ft2.y-_fb2.y);
+    // ★ 새 구조: 타이머 무조건 진행 — 얼굴/손/혀 없으면 경고만 (정지 없음)
+    var _wLbl=document.getElementById('bsFsGuideLbl');
+    var _camWrap=document.getElementById('bsFsCamWrap');
+    if(BsFs.step==='face'||BsFs.step==='tongue'){
+      var _fmOK=BsFs._lastFaceLms&&BsFs._lastFaceLms.length>100;
+      if(!_fmOK){ BsFs._warnCount++; } else { BsFs._warnCount=0; }
+      if(BsFs._warnCount>=1){
+        if(_wLbl) _wLbl.textContent='⚠️ '+(BsFs.step==='tongue'?'혀':'얼굴')+'를 카메라에 맞춰주세요!';
+        if(_camWrap) _camWrap.style.outline='3px solid #ef4444';
+      } else {
+        if(_wLbl) _wLbl.textContent='✅ '+(BsFs.step==='tongue'?'혀':'얼굴')+' 감지 중...';
+        if(_camWrap) _camWrap.style.outline='none';
       }
-      var _validFace = _fW2>0.10 && _fH2>0.10;
-      if(!_validFace){
-        clearInterval(BsFs.tId); BsFs.tId=null; BsFs.running=false;
-        var _gl3=document.getElementById('bsFsGuideLbl');
-        if(_gl3) _gl3.textContent='⛔ 얼굴이 감지되지 않습니다 — 카메라에 얼굴을 맞춰주세요';
-        if(tmr) tmr.textContent='--';
-        return;
+    } else if(BsFs.step==='palm'){
+      if(_rPPG.lostCount>3){
+        if(_wLbl) _wLbl.textContent='⚠️ 손바닥을 카메라에 맞춰주세요!';
+        if(_camWrap) _camWrap.style.outline='3px solid #ef4444';
+      } else {
+        if(_wLbl) _wLbl.textContent='✅ 손금 감지 중...';
+        if(_camWrap) _camWrap.style.outline='none';
       }
     }
     BsFs.sec++;
     if(tmr) tmr.textContent=(TOTAL-BsFs.sec);
     if(prg) prg.style.width=(BsFs.sec/TOTAL*100)+'%';
     if(BsFs.sec>=TOTAL){
-      clearInterval(BsFs.tId); BsFs.running=false;
-      BsFs.results[BsFs.step]=true;
-      var next={face:'palm',palm:'tongue',tongue:'done'};
-      BsFs.step=next[BsFs.step]||'done';
-      // ✅ 핀셋: 매 스캔 완료 시 대시보드 복귀
-      setTimeout(function(){
-        if(typeof bsCloseFullscreen==='function') bsCloseFullscreen();
-        if(typeof _cgNavigateTo==='function') _cgNavigateTo('dashboard');
-      }, 1500);
-      if(prg) prg.style.width='0%';
-      if(tmr) tmr.textContent='';
-      // 완료 음성
-      // 완료 처리: 혀는 벨, 관상/손금은 간단 음성
-      var _prevStep = Object.keys({face:1,palm:1,tongue:1}).filter(function(k){return BsFs.results[k]&&!next[k]||k===Object.keys(BsFs.results).pop();})[0]||'face';
-      if(_prevStep==='tongue'||BsFs.results.tongue){
-        try{var _acD=new(window.AudioContext||window.webkitAudioContext)();
+      clearInterval(BsFs.tId); BsFs.tId=null; BsFs.running=false;
+      if(_camWrap) _camWrap.style.outline='none';
+      // 완료 벨음
+      try{var _acD=new(window.AudioContext||window.webkitAudioContext)();
         [523,659,784,1047].forEach(function(f,i){var o=_acD.createOscillator(),g=_acD.createGain();o.connect(g);g.connect(_acD.destination);o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(.35,_acD.currentTime+i*.18);g.gain.exponentialRampToValueAtTime(.001,_acD.currentTime+i*.18+.25);o.start(_acD.currentTime+i*.18);o.stop(_acD.currentTime+i*.18+.3);});}catch(e){}
-      } else {
-        var doneVoice={face:'얼굴 스캔 완료.',palm:'손금 스캔 완료.',done:'분석 완료.'};
-        _bsFsSpeak(doneVoice[BsFs.step]||doneVoice.done);
+      if(prg) prg.style.width='100%';
+      if(tmr) tmr.textContent='✅';
+      if(_wLbl) _wLbl.textContent='✅ 스캔 완료! 아래 마침 버튼을 눌러주세요';
+      // ★ 마침 버튼 황금 발광
+      if(sb){
+        sb.disabled=false; sb.style.opacity='1';
+        sb.textContent='✅ 마침';
+        sb.style.background='linear-gradient(135deg,#f59e0b,#fbbf24,#f59e0b)';
+        sb.style.color='#1a1a1a'; sb.style.fontWeight='700';
+        sb.style.animation='bsFsGlow 0.9s ease-in-out infinite alternate';
+        sb.onclick=function(){
+          sb.style.animation=''; sb.style.boxShadow='';
+          if(_camWrap) _camWrap.style.outline='none';
+          BsFs.results[BsFs.step]=true;
+          var next={face:'palm',palm:'tongue',tongue:'done'};
+          var _cur=BsFs.step;
+          BsFs.step=next[_cur]||'done';
+          _bsFsUpdateUI();
+          if(BsFs.step!=='done'){
+            _bsFsNextCamera();
+          } else {
+            if(_wLbl) _wLbl.textContent='🎉 모든 스캔 완료!';
+            setTimeout(function(){
+              if(typeof bsCloseFullscreen==='function') bsCloseFullscreen();
+              if(typeof _cgNavigateTo==='function') _cgNavigateTo('dashboard');
+            }, 1200);
+          }
+        };
       }
-      _bsFsUpdateUI();
-      if(BsFs.step!=='done') _bsFsNextCamera();
     }
   },1000);
 }
