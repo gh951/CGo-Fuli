@@ -25732,7 +25732,19 @@ document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
             }
           }
         }
-        // 아무 데이터도 없으면 기본 대기 화면 유지
+        // 아무 데이터도 없으면 → 이름+생년월일 있으면 calcAstro 자동 실행
+        var _nm2 = (document.getElementById('ipName')||{}).value||'';
+        var _by2 = parseInt((document.getElementById('ipBirthY')||{}).value)||0;
+        var _bm2 = parseInt((document.getElementById('ipBirthM')||{}).value)||0;
+        var _bd2 = parseInt((document.getElementById('ipBirthD')||{}).value)||0;
+        if(_nm2 && _by2>1900 && _bm2>0 && _bd2>0){
+          // ★ 정보입력 → calcAstro 자동 실행 → 리포트 생성
+          if(typeof calcAstro==='function') calcAstro();
+          setTimeout(function(){
+            var r2=window.calcResult;
+            if(r2&&r2.y&&typeof generateReport==='function') generateReport(r2);
+          }, 1200);
+        }
       }, 300);
     }
     // ✅ 커플 페이지 진입 시 대시보드 자동 연동
@@ -26611,6 +26623,8 @@ var _CGO_GUIDE_DATA = {
     steps:[
       {ico:'🤲', t:'파지법', d:'양손으로 스마트폰 하단을 받치고, 양 팔꿈치를 옆구리에 밀착시키거나 책상에 고정하세요.'},
       {ico:'📐', t:'각도', d:'눈높이와 카메라를 수평으로 맞추세요. (턱 각도에 따른 관상 왜곡 방지)'},
+      {ico:'💡', t:'조명 필수', d:'밝고 일정한 조명(형광등·LED) 정면에 앉으세요. 역광(창문이 뒤에 있을 때)·어두운 환경은 혈색 오차 최대 30%가 발생합니다. 조명이 얼굴 정면을 고르게 비추는지 확인하세요.'},
+      {ico:'🙅', t:'움직임 금지', d:'측정 중 말하기·미소·고개 돌림을 삼가세요. 고개 1cm 움직임 = 신호 오염 5초치. 숨은 평소대로 쉬되 최대한 동상처럼 고정하세요.'},
       {ico:'💡', t:'이유', d:'33초간 발생하는 미세 떨림을 80% 이상 차단하여 혈류 데이터의 순도를 높입니다. (3초 딜레이 포함)'},
       {ico:'⚠️', t:'주의', d:'측정 종료 알람이 울릴 때까지 정면을 유지하세요.'},
     ],
