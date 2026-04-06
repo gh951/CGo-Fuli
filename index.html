@@ -30730,8 +30730,20 @@ function _rPPGSample(){
 
   // ★ FaceMesh 코 위치 기반 동적 ROI — 얼굴 없으면 null
   var _fm = window.BsFs && BsFs._lastFaceLms;
+  // ★ Qwen/Claude: 500ms 이상 된 랜드마크는 무효 (오래된 데이터 차단)
+  if(BsFs._lastFaceTime && (Date.now()-BsFs._lastFaceTime) > 500) _fm = null;
   var sx, sy, sw, sh;
   if(_fm && _fm.length > 100){
+    // ★ 실제 얼굴인지 크기 검증 (책상 오인식 차단)
+    var _nose=_fm[4], _chin=_fm[152], _fore=_fm[10], _lEar2=_fm[234], _rEar2=_fm[454];
+    if(_nose && _chin && _fore && _lEar2 && _rEar2){
+      var _fW=Math.abs(_lEar2.x-_rEar2.x);
+      var _fH=Math.abs(_fore.y-_chin.y);
+      // 얼굴 가로/세로가 화면의 10% 미만이면 오인식으로 판단
+      if(_fW < 0.10 || _fH < 0.10) return null;
+    } else {
+      return null;
+    }
     // 코(4번)와 이마(10번) 기준으로 이마 영역 추출
     var _noseX=_fm[4].x, _noseY=_fm[4].y;
     var _foreY=_fm[10] ? _fm[10].y : _noseY-0.15;
@@ -30799,7 +30811,19 @@ function _rPPGLoop(){
   if(now-_rPPG.lastSampleTime>=interval){
     _rPPG.lastSampleTime=now;
     var s=_rPPGSample();
-    if(s){
+    // ★ 핵심: s가 null(랜드마크 없음)이어도 lostCount 증가
+    if(!s){
+      if(BS.on && (BS.mode==='face'||BS.mode==='tongue')){
+        _rPPG.lostCount++;
+        _rPPG.consecutiveLost = (_rPPG.consecutiveLost||0) + 1;
+        // ★ Claude/코파일럿: 연속 30프레임(약 1초) 소실 시만 정지
+        if(_rPPG.consecutiveLost >= 30){
+          var _fw0=bsE('bsFsGuideLbl');
+          if(_fw0) _fw0.textContent='⛔ 얼굴이 사라졌습니다 — 카메라에 얼굴을 맞춰주세요';
+          if(BS.tId){ clearInterval(BS.tId); BS.tId=null; BS.running=false; BS.on=false; }
+        }
+      }
+    } else if(s){
       // 피부 감지됐을 때만 lostCount 리셋
       if(s.isSkin){
         // 얼굴 돌아왔고 타이머 정지됐으면 재시작
@@ -30809,6 +30833,7 @@ function _rPPGLoop(){
           bsFsDoStart();
         }
         _rPPG.lostCount=0;
+        _rPPG.consecutiveLost=0; // ★ 얼굴 돌아오면 연속소실 리셋
       }
       else {
         _rPPG.lostCount++;
@@ -31828,9 +31853,14 @@ function _bsFsInitMediaPipe(){
     }});
     BsFs.mpFace.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.9,minTrackingConfidence:.9});
     BsFs.mpFace.onResults(function(r){ 
-      // 마지막 얼굴 랜드마크 저장
-      BsFs._lastFaceLms = (r.multiFaceLandmarks && r.multiFaceLandmarks.length > 0) ? r.multiFaceLandmarks[0] : null;
-      BsFs._lastFaceTime = BsFs._lastFaceLms ? Date.now() : 0;
+      // ★ GROK 핵심: 얼굴 없으면 반드시 null 명시
+      if(r.multiFaceLandmarks && r.multiFaceLandmarks.length > 0){
+        BsFs._lastFaceLms = r.multiFaceLandmarks[0];
+        BsFs._lastFaceTime = Date.now();
+      } else {
+        BsFs._lastFaceLms = null;  // ← 명시적 null (누락되면 오래된 데이터 유지)
+        BsFs._lastFaceTime = 0;
+      }
       // ★ 매 프레임: 랜드마크 없으면 즉시 타이머 정지
       if(BsFs.running && BsFs.step==='face'){
         var _hasLms = !!(r.multiFaceLandmarks && r.multiFaceLandmarks.length > 0);
@@ -32234,7 +32264,24 @@ function bsFsDoStart(){
   }
   BsFs._lostCount = 0;
   BsFs.tId=setInterval(function(){
-
+    // ★ 얼굴 스캔 모드 — 얼굴 없으면 타이머 정지
+    if(BsFs.step==='face'){
+      var _fW2=0, _fH2=0;
+      if(BsFs._lastFaceLms && BsFs._lastFaceLms.length>100){
+        var _le2=BsFs._lastFaceLms[234],_re2=BsFs._lastFaceLms[454];
+        var _ft2=BsFs._lastFaceLms[10],_fb2=BsFs._lastFaceLms[152];
+        if(_le2&&_re2) _fW2=Math.abs(_le2.x-_re2.x);
+        if(_ft2&&_fb2) _fH2=Math.abs(_ft2.y-_fb2.y);
+      }
+      var _validFace = _fW2>0.10 && _fH2>0.10;
+      if(!_validFace){
+        clearInterval(BsFs.tId); BsFs.tId=null; BsFs.running=false;
+        var _gl3=document.getElementById('bsFsGuideLbl');
+        if(_gl3) _gl3.textContent='⛔ 얼굴이 감지되지 않습니다 — 카메라에 얼굴을 맞춰주세요';
+        if(tmr) tmr.textContent='--';
+        return;
+      }
+    }
     BsFs.sec++;
     if(tmr) tmr.textContent=(TOTAL-BsFs.sec);
     if(prg) prg.style.width=(BsFs.sec/TOTAL*100)+'%';
