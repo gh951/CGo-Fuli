@@ -6273,38 +6273,49 @@ var fcSystems = {
       <!-- 차트 바디 (접기/펴기) -->
       <div id="food-profile-body" style="padding:14px 16px;">
 
-        <!-- 차트 상단 줄 (레드라인) -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed rgba(52,211,153,.2);">
-          <div style="width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 1.5s infinite;"></div>
+        <!-- 차트 헤더 정보 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed rgba(52,211,153,.2);">
+          <div style="width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 1.5s infinite;flex-shrink:0;"></div>
           <div style="font-size:10px;color:rgba(52,211,153,.6);letter-spacing:.1em;font-family:'Orbitron',monospace;">CHART NO. CGO-</div>
           <div style="font-size:10px;color:rgba(52,211,153,.8);font-family:'Orbitron',monospace;" id="food-chart-no"></div>
           <div style="margin-left:auto;font-size:10px;color:rgba(52,211,153,.5);" id="food-chart-date"></div>
         </div>
 
-        <!-- 병명 입력 -->
-        <div style="margin-bottom:12px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-            <div style="width:3px;height:14px;background:#f87171;border-radius:2px;"></div>
-            <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.06em;">DIAGNOSIS · 진단 병명</div>
+        <!-- 진단 병명 테이블 -->
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:3px;height:14px;background:#f87171;border-radius:2px;"></div>
+              <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.06em;">DIAGNOSIS · 진단 병명 및 유병 기간</div>
+            </div>
+            <button onclick="foodAddDiseaseRow()" style="padding:3px 10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ 추가</button>
           </div>
-          <input id="food-diseases" placeholder="예: 고혈압, 위염, 당뇨, 역류성식도염" oninput="foodUpdateSummary()"
-            style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;transition:border-color .2s;"
-            onfocus="this.style.borderColor='rgba(248,113,113,.6)'" onblur="this.style.borderColor='rgba(248,113,113,.25)'">
+          <!-- 병명 행 목록 -->
+          <div id="food-disease-rows" style="display:flex;flex-direction:column;gap:6px;">
+            <!-- JS로 렌더링 -->
+          </div>
+          <!-- 빈 상태 -->
+          <div id="food-disease-empty" style="text-align:center;padding:12px;font-size:11px;color:rgba(240,230,200,.3);border:1px dashed rgba(248,113,113,.2);border-radius:8px;">
+            + 추가 버튼으로 병명을 등록하세요
+          </div>
         </div>
 
-        <!-- 기피 성분 입력 -->
+        <!-- 기피 성분 -->
         <div style="margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
             <div style="width:3px;height:14px;background:#fbbf24;border-radius:2px;"></div>
             <div style="font-size:11px;font-weight:700;color:#fbbf24;letter-spacing:.06em;">ALLERGY / AVOID · 기피 성분</div>
           </div>
           <input id="food-avoid" placeholder="예: 카페인, 밀가루, 유제품, 견과류" oninput="foodUpdateSummary()"
-            style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;transition:border-color .2s;"
+            style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;"
             onfocus="this.style.borderColor='rgba(251,191,36,.6)'" onblur="this.style.borderColor='rgba(251,191,36,.25)'">
         </div>
 
+        <!-- hidden: 구버전 호환 -->
+        <input id="food-diseases" type="hidden">
+
         <!-- 저장 버튼 -->
-        <button onclick="foodSaveProfile()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08));border:1px solid rgba(52,211,153,.5);border-radius:10px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.08em;transition:all .2s;"
+        <button onclick="foodSaveProfile()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08));border:1px solid rgba(52,211,153,.5);border-radius:10px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.08em;"
           onmouseover="this.style.background='rgba(52,211,153,.25)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08))'">
           💾 SAVE CHART &nbsp;·&nbsp; 차트 저장
         </button>
@@ -6375,6 +6386,30 @@ var fcSystems = {
       <!-- 활동 처방 -->
       <div id="food-activity-card" style="background:var(--bg-card);border:1px solid rgba(56,189,248,.25);border-radius:16px;padding:16px;"></div>
 
+      <!-- 오늘 식사 추가 버튼 -->
+      <button onclick="foodAddToLog()" style="width:100%;padding:12px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(212,168,67,.1));border:2px solid rgba(251,191,36,.6);border-radius:12px;color:#fbbf24;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;">
+        ➕ 오늘 식사 기록에 추가
+      </button>
+
+    </div>
+
+    <!-- 오늘 식사 기록 -->
+    <div id="food-log-card" style="display:none;background:var(--bg-card);border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:16px;margin-top:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:800;color:#fbbf24;">📋 오늘 식사 기록</div>
+        <button onclick="foodClearLog()" style="padding:3px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 초기화</button>
+      </div>
+      <div id="food-log-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
+      <!-- 총 칼로리 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;margin-bottom:10px;">
+        <div style="font-size:12px;color:rgba(240,230,200,.7);">🔥 오늘 총 섭취 칼로리</div>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <div id="food-log-total" style="font-size:24px;font-weight:900;color:#fbbf24;font-family:'Orbitron',monospace;">0</div>
+          <div style="font-size:11px;color:rgba(251,191,36,.6);">kcal</div>
+        </div>
+      </div>
+      <!-- 총 활동 처방 -->
+      <div id="food-log-activity" style="display:flex;flex-direction:column;gap:5px;"></div>
     </div>
 
     <!-- 로딩 -->
@@ -39940,7 +39975,56 @@ function foodFromGallery(e) {
 }
 
 // ── 프로필 저장/로드 ────────────────────────────────────
-function foodToggleProfile() {
+var _foodDiseaseList = []; // [{name:'고혈압', years:3, severity:'중등'}]
+
+function foodAddDiseaseRow(name, years, severity) {
+  _foodDiseaseList.push({name:name||'', years:years||1, severity:severity||'경증'});
+  foodRenderDiseaseRows();
+}
+
+function foodRemoveDiseaseRow(idx) {
+  _foodDiseaseList.splice(idx, 1);
+  foodRenderDiseaseRows();
+  foodUpdateSummary();
+}
+
+function foodRenderDiseaseRows() {
+  var container = document.getElementById('food-disease-rows');
+  var empty = document.getElementById('food-disease-empty');
+  if (!container) return;
+  if (_foodDiseaseList.length === 0) {
+    container.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    document.getElementById('food-diseases').value = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  container.innerHTML = _foodDiseaseList.map(function(d, i) {
+    var sCol = d.severity==='중증'?'#f87171':d.severity==='중등'?'#fbbf24':'#34d399';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:9px;">'
+      // 병명 입력
+      +'<input value="'+d.name+'" onchange="_foodDiseaseList['+i+'].name=this.value;foodUpdateSummary()" placeholder="병명" '
+      +'style="flex:2;background:transparent;border:none;border-bottom:1px solid rgba(248,113,113,.3);color:#f0ece0;font-size:13px;font-family:\'Noto Sans KR\',sans-serif;outline:none;padding:2px 4px;min-width:0;">'
+      // 유병 기간 (년)
+      +'<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">'
+      +'<input type="number" value="'+d.years+'" min="0" max="99" onchange="_foodDiseaseList['+i+'].years=parseInt(this.value)||0;foodUpdateSummary()" '
+      +'style="width:36px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:5px;color:#60a5fa;font-size:12px;font-weight:700;text-align:center;padding:3px 2px;font-family:\'Orbitron\',monospace;outline:none;">'
+      +'<span style="font-size:11px;color:rgba(96,165,250,.7);">년</span>'
+      +'</div>'
+      // 중증도 선택
+      +'<select onchange="_foodDiseaseList['+i+'].severity=this.value;foodRenderDiseaseRows();foodUpdateSummary()" '
+      +'style="background:rgba(255,255,255,.05);border:1px solid '+sCol+'44;border-radius:6px;color:'+sCol+';font-size:10px;font-weight:700;padding:3px 5px;outline:none;cursor:pointer;flex-shrink:0;">'
+      +'<option'+(d.severity==='경증'?' selected':'')+'>경증</option>'
+      +'<option'+(d.severity==='중등'?' selected':'')+'>중등</option>'
+      +'<option'+(d.severity==='중증'?' selected':'')+'>중증</option>'
+      +'</select>'
+      // 삭제
+      +'<button onclick="foodRemoveDiseaseRow('+i+')" style="width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:11px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>'
+      +'</div>';
+  }).join('');
+  // hidden input 동기화 (분석에 사용)
+  document.getElementById('food-diseases').value = _foodDiseaseList.map(function(d){return d.name;}).filter(Boolean).join(',');
+}
   var body = document.getElementById('food-profile-body');
   var arrow = document.getElementById('food-profile-arrow');
   if (!body) return;
@@ -39950,37 +40034,46 @@ function foodToggleProfile() {
 }
 
 function foodUpdateSummary() {
-  var diseases = (document.getElementById('food-diseases').value||'').trim();
   var avoid = (document.getElementById('food-avoid').value||'').trim();
   var el = document.getElementById('food-profile-summary');
   if (!el) return;
   var parts = [];
-  if (diseases) parts.push(diseases.split(',').length + '개 병명');
-  if (avoid) parts.push(avoid.split(',').length + '개 기피');
+  var active = _foodDiseaseList.filter(function(d){return d.name;});
+  if (active.length) parts.push(active.length+'개 진단');
+  if (avoid) parts.push(avoid.split(',').length+'개 기피');
   el.textContent = parts.length ? parts.join(' · ') : '미입력';
 }
 function foodSaveProfile() {
-  var profile={
-    diseases:(document.getElementById('food-diseases').value||'').trim(),
-    avoid:(document.getElementById('food-avoid').value||'').trim()
+  var profile = {
+    diseaseList: _foodDiseaseList,
+    avoid: (document.getElementById('food-avoid').value||'').trim()
   };
-  localStorage.setItem('cgo_food_profile',JSON.stringify(profile));
-  var saved=document.getElementById('food-profile-saved');
-  saved.style.display='block';
-  setTimeout(function(){saved.style.display='none';},2000);
+  localStorage.setItem('cgo_food_profile', JSON.stringify(profile));
+  var saved = document.getElementById('food-profile-saved');
+  saved.style.display = 'block';
+  setTimeout(function(){saved.style.display='none';}, 2000);
+  foodUpdateSummary();
 }
 
 function foodLoadProfile() {
-  // 차트 번호·날짜 초기화
   var noEl = document.getElementById('food-chart-no');
   var dtEl = document.getElementById('food-chart-date');
   if (noEl) noEl.textContent = (window.calcResult&&window.calcResult.name ? window.calcResult.name.charCodeAt(0).toString().padStart(6,'0') : Math.floor(Math.random()*900000+100000));
   if (dtEl) { var n=new Date(); dtEl.textContent = n.getFullYear()+'.'+(n.getMonth()+1).toString().padStart(2,'0')+'.'+n.getDate().toString().padStart(2,'0'); }
-  try{
-    var p=JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');
-    if(p.diseases) document.getElementById('food-diseases').value=p.diseases;
-    if(p.avoid) document.getElementById('food-avoid').value=p.avoid;
-  }catch(e){}
+  try {
+    var p = JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');
+    // 신버전: diseaseList 배열
+    if (p.diseaseList && Array.isArray(p.diseaseList)) {
+      _foodDiseaseList = p.diseaseList;
+    // 구버전 호환: diseases 문자열
+    } else if (p.diseases) {
+      _foodDiseaseList = p.diseases.split(',').map(function(s){
+        return {name:s.trim(), years:1, severity:'경증'};
+      }).filter(function(d){return d.name;});
+    }
+    if (p.avoid) document.getElementById('food-avoid').value = p.avoid;
+  } catch(e) {}
+  foodRenderDiseaseRows();
   foodUpdateSummary();
 }
 
@@ -39990,35 +40083,28 @@ function foodAnalyze() {
   var previewSrc=document.getElementById('food-preview').src;
   var hasImage = previewSrc && previewSrc.length > 100 && previewSrc !== window.location.href;
 
-  if(!nameInput && !hasImage){ alert('음식명을 입력하거나 사진을 촬영해 주세요.'); return; }
+  if(!nameInput && !hasImage){ alert('음식 사진을 찍거나 음식명을 입력해 주세요.'); return; }
 
   document.getElementById('food-result').style.display='none';
   document.getElementById('food-loading').style.display='block';
-  document.getElementById('food-loading-msg').textContent = hasImage ? '📷 이미지 분석 중... (AI)' : '🔍 음식 DB 검색 중...';
+  document.getElementById('food-loading-msg').textContent = hasImage ? '📷 AI가 음식을 인식 중...' : '🤖 AI 분석 중...';
 
-  // 1. DB 직접 검색
+  // DB 직접 검색 (텍스트 입력 + DB에 있는 경우만 빠른 응답)
   if(nameInput){
     var found=null, bestLen=0;
     Object.keys(FOOD_DB).forEach(function(key){
       if(nameInput.indexOf(key)!==-1 && key.length>bestLen){ found=FOOD_DB[key]; found._key=key; bestLen=key.length; }
     });
-    if(!found){ // 부분 일치
+    if(!found){
       Object.keys(FOOD_DB).forEach(function(key){
         if(key.indexOf(nameInput)!==-1 && key.length>bestLen){ found=FOOD_DB[key]; found._key=key; bestLen=key.length; }
       });
     }
-    if(found){ setTimeout(function(){ foodRenderResult(found._key||nameInput, found); },400); return; }
+    if(found){ setTimeout(function(){ foodRenderResult(found._key||nameInput, found); },300); return; }
   }
 
-  // 2. Groq AI 분석 (이미지 또는 모르는 음식명)
-  var apiKey=(window.CG_GEMINI_KEY||'').trim();
-  if(!apiKey){
-    // API 키 없으면 입력된 이름으로 추정 분석
-    var estFood=_foodEstimate(nameInput||'알 수 없는 음식');
-    setTimeout(function(){ foodRenderResult(nameInput||'알 수 없는 음식', estFood); },500);
-    return;
-  }
-  foodAnalyzeWithAI(nameInput, hasImage ? previewSrc : null, apiKey);
+  // DB에 없거나 이미지 → /api/groq로 AI 분석 (키 불필요 — 서버가 대행)
+  foodAnalyzeWithAI(nameInput, hasImage ? previewSrc : null);
 }
 
 function _foodEstimate(name) {
@@ -40030,31 +40116,65 @@ function _foodEstimate(name) {
   return {cal:cal,c:Math.round(cal*0.55/4),p:Math.round(cal*0.18/4),f:Math.round(cal*0.27/9),na:700,oh:oh,emoji:'🍽️',risk:[]};
 }
 
-async function foodAnalyzeWithAI(name, imageSrc, apiKey) {
+async function foodAnalyzeWithAI(name, imageSrc) {
   try {
-    var msgs=[{role:'user',content:[]}];
-    if(imageSrc && imageSrc.startsWith('data:image')) {
-      var base64=imageSrc.split(',')[1];
-      msgs[0].content.push({type:'image_url',image_url:{url:imageSrc}});
-    }
-    var profile={diseases:(document.getElementById('food-diseases').value||''),avoid:(document.getElementById('food-avoid').value||'')};
-    msgs[0].content.push({type:'text',text:'이 음식을 분석해서 JSON으로만 답하세요 (설명 없이):\n{"name":"음식명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,"oh":오행번호(0금1화2목3토4수),"emoji":"이모지","risk":["위험한 병명 배열"]}\n음식명: '+(name||'사진의 음식')});
+    var content = [];
 
-    var resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({model:'meta-llama/llama-4-scout-17b-16e-instruct',messages:msgs,max_tokens:300,temperature:0.1})
-    });
-    var data=await resp.json();
-    var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-    var jm=text.match(/\{[\s\S]*?\}/);
-    if(jm){
-      var info=JSON.parse(jm[0]);
-      foodRenderResult(info.name||name||'분석 완료', info);
-    } else {
-      foodRenderResult(name||'음식', _foodEstimate(name||''));
+    // 이미지가 있으면 → 압축 후 비전 AI에 전달
+    if (imageSrc && imageSrc.startsWith('data:image')) {
+      // 이미지 800px로 압축 (프록시 전송 크기 최적화)
+      var compressed = await new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var max = 800, w = img.width, h = img.height;
+          if (w > max || h > max) {
+            if (w > h) { h = Math.round(h * max / w); w = max; }
+            else       { w = Math.round(w * max / h); h = max; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = imageSrc;
+      });
+      content.push({type:'image_url', image_url:{url: compressed}});
     }
-  } catch(e){
+
+    var profile = {};
+    try { profile = JSON.parse(localStorage.getItem('cgo_food_profile')||'{}'); } catch(e) {}
+    var prompt = '이 음식을 분석해서 JSON만 반환하세요 (설명 없이, 마크다운 없이):\n'
+      + '{"name":"한국어 음식명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
+      + '"oh":오행번호(0=금/매운것 1=화/빨간것 2=목/녹색 3=토/단것 4=수/짠것),'
+      + '"emoji":"음식이모지","risk":["위험한병명들"]}\n'
+      + (name ? '음식명 힌트: ' + name + '\n' : '사진에서 음식을 직접 인식하세요.\n')
+      + (profile.diseases ? '사용자 병명(참고): ' + profile.diseases : '');
+    content.push({type:'text', text: prompt});
+
+    var resp = await fetch('/api/groq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{role:'user', content: content}],
+        max_tokens: 300,
+        temperature: 0.1
+      })
+    });
+    var data = await resp.json();
+    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    // JSON 추출
+    var jm = text.match(/\{[\s\S]*?\}/);
+    if (jm) {
+      var info = JSON.parse(jm[0]);
+      if (info.name && info.cal) {
+        foodRenderResult(info.name, info);
+        return;
+      }
+    }
+    // AI 응답 파싱 실패 시 이름이라도 보여줌
+    foodRenderResult(name||'분석된 음식', _foodEstimate(name||''));
+  } catch(e) {
     foodRenderResult(name||'음식', _foodEstimate(name||''));
   }
 }
@@ -40179,6 +40299,91 @@ function foodRenderResult(foodName, data) {
   setTimeout(function(){
     document.getElementById('food-result').scrollIntoView({behavior:'smooth',block:'start'});
   },100);
+}
+
+// ── 오늘 식사 기록 ──────────────────────────────────────
+var _foodLog = [];
+
+function foodAddToLog() {
+  if (!_foodLastAnalysis) return;
+  var item = {
+    name: _foodLastAnalysis.name,
+    emoji: _foodLastAnalysis.data.emoji || '🍽️',
+    cal: _foodLastAnalysis.data.cal || 0,
+    time: new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})
+  };
+  _foodLog.push(item);
+  // localStorage 저장
+  try { localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); } catch(e){}
+  foodRenderLog();
+  // 버튼 피드백
+  var btn = event.target;
+  btn.textContent = '✅ 추가됨!';
+  btn.style.borderColor = 'rgba(52,211,153,.6)';
+  btn.style.color = '#34d399';
+  setTimeout(function(){
+    btn.textContent = '➕ 오늘 식사 기록에 추가';
+    btn.style.borderColor = 'rgba(251,191,36,.6)';
+    btn.style.color = '#fbbf24';
+  }, 1500);
+}
+
+function foodClearLog() {
+  _foodLog = [];
+  try { localStorage.removeItem('cgo_food_log_'+new Date().toDateString()); } catch(e){}
+  foodRenderLog();
+}
+
+function foodRenderLog() {
+  var logCard = document.getElementById('food-log-card');
+  var logList = document.getElementById('food-log-list');
+  var logTotal = document.getElementById('food-log-total');
+  var logAct = document.getElementById('food-log-activity');
+  if (!logCard) return;
+
+  if (_foodLog.length === 0) { logCard.style.display = 'none'; return; }
+  logCard.style.display = 'block';
+
+  // 목록 렌더
+  logList.innerHTML = _foodLog.map(function(item, i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;">'
+      +'<span style="font-size:18px;">'+item.emoji+'</span>'
+      +'<div style="flex:1;font-size:12px;color:#e2e8f0;font-weight:600;">'+item.name+'</div>'
+      +'<div style="font-size:12px;color:#fbbf24;font-weight:700;font-family:\'Orbitron\',monospace;">'+item.cal+'</div>'
+      +'<div style="font-size:10px;color:rgba(240,230,200,.35);">kcal</div>'
+      +'<div style="font-size:10px;color:rgba(240,230,200,.3);">'+item.time+'</div>'
+      +'<button onclick="_foodLogRemove('+i+')" style="background:none;border:none;color:rgba(248,113,113,.5);font-size:12px;cursor:pointer;padding:2px 4px;">✕</button>'
+      +'</div>';
+  }).join('');
+
+  // 총 칼로리
+  var total = _foodLog.reduce(function(s,i){return s+(i.cal||0);},0);
+  logTotal.textContent = total;
+
+  // 총 활동 처방
+  var weight = 65;
+  logAct.innerHTML = '<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">🏃 총 칼로리 소모 처방 ('+total+'kcal 기준)</div>'
+    + ACTIVITY_LIST.map(function(act){
+      var mins = Math.round(total / (act.met * weight * 3.5 / 200));
+      var h = Math.floor(mins/60), m = mins%60;
+      var timeStr = h>0 ? h+'시간 '+(m>0?m+'분':'') : m+'분';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.12);border-radius:7px;">'
+        +'<span style="font-size:16px;">'+act.emoji+'</span>'
+        +'<div style="flex:1;font-size:11px;color:rgba(240,230,200,.8);">'+act.name+'</div>'
+        +'<div style="font-size:13px;font-weight:900;color:#38bdf8;font-family:\'Orbitron\',monospace;">'+timeStr+'</div>'
+        +'</div>';
+    }).join('');
+
+  // 스크롤
+  setTimeout(function(){
+    logCard.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },100);
+}
+
+function _foodLogRemove(idx) {
+  _foodLog.splice(idx, 1);
+  try { localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); } catch(e){}
+  foodRenderLog();
 }
 
 // ── 음식 AI 채팅 ────────────────────────────────────────
@@ -47334,7 +47539,13 @@ function cgoGoPage(page){
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   _cgCurrent = page; // ← 현재 페이지 추적 동기화
   if(page==='family') setTimeout(function(){ if(typeof renderFamily==='function') renderFamily(); },200);
-  if(page==='food') setTimeout(function(){ if(typeof foodLoadProfile==='function') foodLoadProfile(); },100);
+  if(page==='food') setTimeout(function(){
+    if(typeof foodLoadProfile==='function') foodLoadProfile();
+    try{
+      var saved=localStorage.getItem('cgo_food_log_'+new Date().toDateString());
+      if(saved&&typeof _foodLog!=='undefined'){ _foodLog=JSON.parse(saved); if(typeof foodRenderLog==='function') foodRenderLog(); }
+    }catch(e){}
+  },100);
   if(page==='report'){
     setTimeout(function(){
       var r=window.calcResult;
