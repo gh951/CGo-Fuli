@@ -40875,31 +40875,25 @@ async function foodAnalyzeWithAI(name, imageSrc) {
       if (gMatch) {
         try {
           var gInfo = JSON.parse(gMatch[0]);
-          // ✅ 칼로리 있고 정상 음식명
+          // ✅ 칼로리 있고 정상 음식명 → Gemini 결과 직접 사용 (DB 덮어쓰기 금지)
           if (gInfo.name && gInfo.cal > 0 && gInfo.name !== '비식품' && gInfo.name !== '식별불가') {
-            gInfo.risk = [];
-            // DB에 같은 음식 있으면 DB 데이터 사용 (더 정확)
-            var dbMatch = _foodFuzzySearch(gInfo.name);
-            if (dbMatch && typeof _foodFuzzySearch === 'function') {
-              dbMatch._key = dbMatch._key || gInfo.name;
-              document.getElementById('food-loading-msg').textContent = '✅ 인식: ' + dbMatch._key;
-              window._foodSimilar = [];
-              foodRenderResult(dbMatch._key, dbMatch);
-            } else {
-              document.getElementById('food-loading-msg').textContent = '✅ 인식: ' + gInfo.name;
-              window._foodSimilar = gInfo.similar ? gInfo.similar.split('|').filter(Boolean) : [];
-              foodRenderResult(gInfo.name, gInfo);
-            }
+            gInfo.risk = gInfo.risk || [];
+            // DB에 완전 일치하는 음식이 있으면 risk 정보만 보완 (칼로리는 Gemini 우선)
+            var dbRef = FOOD_DB[gInfo.name] || FOOD_DB[gInfo.name.replace(/\s/g,'')];
+            if (dbRef && dbRef.risk) gInfo.risk = dbRef.risk; // risk 보완만
+            document.getElementById('food-loading-msg').textContent = '✅ 인식: ' + gInfo.name;
+            window._foodSimilar = gInfo.similar ? gInfo.similar.split('|').filter(Boolean) : [];
+            foodRenderResult(gInfo.name, gInfo);
             return;
           }
-          // 🔄 이름은 있지만 cal=0 → 퍼지 DB 검색 후 텍스트 분석
+          // 🔄 이름은 있지만 cal=0 → DB 퍼지 검색 후 텍스트 분석
           if (gInfo.name && gInfo.name !== '비식품' && gInfo.name !== '식별불가') {
             name = gInfo.name;
-            // DB 퍼지 검색 먼저 시도
-            var dbHit = _foodFuzzySearch(gInfo.name);
-            if (dbHit) {
+            // DB 완전 일치만 허용 (퍼지 매칭 제거 — 오인식 방지)
+            var dbExact = FOOD_DB[gInfo.name] || FOOD_DB[gInfo.name.replace(/\s/g,'')];
+            if (dbExact) {
               document.getElementById('food-loading').style.display='none';
-              foodRenderResult(dbHit._key||gInfo.name, dbHit);
+              foodRenderResult(gInfo.name, dbExact);
               return;
             }
             document.getElementById('food-loading-msg').textContent = '🔍 ' + gInfo.name + ' 영양 정보 검색 중...';
@@ -41052,6 +41046,34 @@ function foodRenderResult(foodName, data) {
   var warnings=[], compatScore=100;
   var foodRiskDiseases=data.risk||[];
 
+  // ── ① 오행 궁합 반영 (프로필 없어도 작동) ──
+  var myOhPre=window.calcResult&&window.calcResult.domOh;
+  var myOhIdxPre={'목':2,'화':1,'토':3,'금':0,'수':4}[myOhPre];
+  if(myOhIdxPre!==undefined){
+    var ssPre=[[2,1],[1,3],[3,0],[0,4],[4,2]],sgPre=[[2,3],[3,1],[1,4],[4,0],[0,2]];
+    if(sgPre.some(function(p){return p[0]===myOhIdxPre&&p[1]===oh;})){
+      compatScore-=20;
+      warnings.push({level:'warn',msg:'🔶 오행 상극: 내 오행('+FOOD_OH_INFO[myOhIdxPre].name+')이 이 음식 오행('+ohInfo.name+')을 억누릅니다. 소화 부담 주의.'});
+    } else if(sgPre.some(function(p){return p[0]===oh&&p[1]===myOhIdxPre;})){
+      compatScore-=15;
+      warnings.push({level:'warn',msg:'🔶 오행 피극: 이 음식 에너지가 내 오행('+FOOD_OH_INFO[myOhIdxPre].name+')을 약하게 할 수 있습니다.'});
+    } else if(ssPre.some(function(p){return p[0]===oh&&p[1]===myOhIdxPre;})){
+      compatScore+=5; // 상생 보너스
+    }
+  }
+
+  // ── ② 영양 기반 기본 감점 (프로필 없어도 작동) ──
+  if(data.na>2000){ compatScore-=20; warnings.push({level:'danger',msg:'🚫 나트륨 '+data.na+'mg — WHO 하루 권장량(2000mg) 초과. 혈압·신장 주의.'}); }
+  else if(data.na>1500){ compatScore-=12; warnings.push({level:'warn',msg:'🔶 나트륨 '+data.na+'mg — 과다 섭취 주의. 물을 충분히 드세요.'}); }
+  else if(data.na>1000){ compatScore-=6; warnings.push({level:'warn',msg:'⚠️ 나트륨 '+data.na+'mg — 다소 높은 편입니다.'}); }
+
+  if(data.f>30){ compatScore-=15; warnings.push({level:'warn',msg:'🔶 지방 '+data.f+'g — 고지방 음식. 고지혈증·비만 주의.'}); }
+  else if(data.f>20){ compatScore-=8; warnings.push({level:'warn',msg:'⚠️ 지방 '+data.f+'g — 지방 함량이 높습니다.'}); }
+
+  if(data.cal>700){ compatScore-=10; warnings.push({level:'warn',msg:'⚠️ '+data.cal+'kcal — 고칼로리 음식. 활동량 조절이 필요합니다.'}); }
+  else if(data.cal>500){ compatScore-=5; }
+
+  // ── ③ 병명 기반 추가 감점 (프로필 있을 때) ──
   myDiseases.forEach(function(d){
     if(!d) return;
     var dWarn=DISEASE_WARN[d];
