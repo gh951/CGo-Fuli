@@ -7215,6 +7215,8 @@ var fcSystems = {
             <span id="stk-sel-elem" style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;"></span>
             <span id="stk-sel-source" style="font-size:10px;color:rgba(180,200,216,0.8);margin-left:auto;"></span>
           </div>
+          <!-- 실제 주가 표시 패널 -->
+          <div id="stk-real-price" style="display:none;margin-top:6px;padding:10px 14px;background:rgba(16,24,48,0.8);border:1px solid rgba(96,165,250,0.25);border-radius:10px;align-items:center;gap:8px;flex-wrap:wrap;"></div>
           <!-- 빠른 선택 버튼 -->
           <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px;">
             <span style="font-size:10px;color:var(--text-3);width:100%;margin-bottom:2px;">🔥 인기 종목</span>
@@ -39028,6 +39030,7 @@ function stkPickItem(obj) {
   document.getElementById('stk-search').value = obj.n;
   document.getElementById('stk-dropdown').style.display = 'none';
   stkShowSelectedChip(obj);
+  stkFetchRealPrice(obj); // 실제 주가 조회
 }
 
 // ── 선택 정보 칩 표시 ─────────────────────────────────────
@@ -39052,8 +39055,15 @@ function stkShowSelectedChip(obj) {
 function stkSelectAndRun(name) {
   document.getElementById('stk-search').value = name;
   var found = STK_DB.find(function(c){ return c.n === name; });
-  if (found) { stkSelected = found; stkShowSelectedChip(found); runStockAnalysis(); }
-  else { stkSelected = null; runStockAnalysis(); }
+  if (found) {
+    stkSelected = found;
+    stkShowSelectedChip(found);
+    stkFetchRealPrice(found); // 실제 주가 조회
+    runStockAnalysis();
+  } else {
+    stkSelected = null;
+    runStockAnalysis();
+  }
 }
 
 // ── Enter / Esc 키 처리 ────────────────────────────────────
@@ -39066,6 +39076,79 @@ function stkSearchKey(e) {
     else { runStockAnalysis(); }
   }
   if (e.key === 'Escape') { document.getElementById('stk-dropdown').style.display = 'none'; }
+}
+
+// ── 실제 주가 조회 (Yahoo Finance + CORS 프록시) ──────────
+var _stkPriceCache = {};
+function _stkYahooTicker(obj) {
+  if (!obj || !obj.t || obj.t === 'N/A') return null;
+  var t = obj.t, flag = obj.c || '';
+  if (/^\d{5,6}$/.test(t)) {
+    return flag === '🇯🇵' ? t + '.T' : t + '.KS';
+  }
+  return t;
+}
+function stkShowRealPrice(pd) {
+  var el = document.getElementById('stk-real-price');
+  if (!el) return;
+  if (!pd) { el.style.display = 'none'; return; }
+  var up = pd.change >= 0;
+  var col = up ? '#34d399' : '#f87171';
+  var arr = up ? '▲' : '▼';
+  var isKRW = pd.currency === 'KRW';
+  var fmtP = isKRW
+    ? Math.round(pd.price).toLocaleString() + '원'
+    : pd.currency + ' ' + pd.price.toFixed(2);
+  var fmtC = isKRW
+    ? arr + Math.round(Math.abs(pd.change)).toLocaleString() + '원'
+    : arr + Math.abs(pd.change).toFixed(2);
+  el.style.display = 'flex';
+  el.innerHTML =
+    '<span style="font-size:10px;color:rgba(96,165,250,.7);flex-shrink:0;">💹 실시간 주가</span>' +
+    '<span style="font-size:15px;font-weight:900;color:#e2e8f0;font-family:\'Orbitron\',monospace;letter-spacing:.02em;">' + fmtP + '</span>' +
+    '<span style="font-size:12px;font-weight:700;color:' + col + ';">' + fmtC + ' (' + arr + Math.abs(pd.changePct) + '%)</span>' +
+    '<span style="font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.06);color:' +
+      (pd.state === 'REGULAR' ? '#34d399' : 'rgba(255,255,255,.3)') + ';">' +
+      (pd.state === 'REGULAR' ? '🟢 장중' : '⚫ 장마감') + '</span>' +
+    '<span style="font-size:9px;color:rgba(255,255,255,.2);margin-left:auto;">Yahoo Finance</span>';
+}
+async function stkFetchRealPrice(obj) {
+  var yt = _stkYahooTicker(obj);
+  if (!yt) { stkShowRealPrice(null); return; }
+  var el = document.getElementById('stk-real-price');
+  if (el) {
+    el.style.display = 'flex';
+    el.innerHTML = '<span style="font-size:11px;color:rgba(96,165,250,.6);">💹 주가 조회 중...</span>';
+  }
+  var now = Date.now();
+  var cached = _stkPriceCache[yt];
+  if (cached && now - cached.ts < 180000) { stkShowRealPrice(cached.data); return; }
+  try {
+    var apiUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yt) + '?interval=1d&range=2d';
+    var proxyUrl = 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl);
+    var resp = await fetch(proxyUrl);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var json = await resp.json();
+    var r = json.chart && json.chart.result && json.chart.result[0];
+    if (!r) throw new Error('no result');
+    var m = r.meta;
+    var price = m.regularMarketPrice || m.previousClose;
+    var prev  = m.chartPreviousClose || m.previousClose;
+    if (!price) throw new Error('no price');
+    var chg = price - prev;
+    var pd = {
+      price: price,
+      change: chg,
+      changePct: prev ? (chg / prev * 100).toFixed(2) : '0.00',
+      currency: m.currency || 'USD',
+      state: m.marketState || 'CLOSED'
+    };
+    _stkPriceCache[yt] = {ts: now, data: pd};
+    stkShowRealPrice(pd);
+  } catch(e) {
+    console.warn('[STK]', yt, e.message);
+    stkShowRealPrice(null);
+  }
 }
 
 // ── 궁합 계산 ─────────────────────────────────────────────
