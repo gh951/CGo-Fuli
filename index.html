@@ -31236,18 +31236,33 @@ function bsStart(){
     if(sec <= _bsLastSec) return;
     _bsLastSec = sec;
     BS.sec = sec;
-    // ★ 새 구조: 얼굴/손/혀 없어도 타이머 무조건 진행 — 경고만 표시
+    // 얼굴·혀: lostCount 기반 리셋
     if(BS.mode==='face' || BS.mode==='tongue'){
       if(_rPPG.lostCount>=20){ _bsWarnSec++; } else { _bsWarnSec=0; }
       var _wEl=bsE('bsGuideMsg')||bsE('bsFsGuideLbl');
       if(_bsWarnSec>=1 && _wEl) _wEl.textContent='⚠️ '+(BS.mode==='tongue'?'혀':'얼굴')+'를 카메라에 맞춰주세요!';
       else if(_bsWarnSec===0 && _wEl) _wEl.textContent='';
-      // ★ MAI 구조: 5초 연속 미감지 → 타이머 리셋 (정지 아님!)
+      // 5초 연속 미감지 → 타이머 리셋
       if(_rPPG.consecutiveLost >= 5){
-        _bsStartTime = performance.now() - 2000; // 2초로 되돌림 (28초 남음)
+        _bsStartTime = performance.now() - 2000;
         _bsLastSec = 1;
         _rPPG.consecutiveLost = 0;
         _rPPG.lostCount = 0;
+        _bsWarnSec = 0;
+        if(bsE('bsProgress')) bsE('bsProgress').style.width='0%';
+      }
+    }
+    // ★ 손금: MediaPipe 랜드마크 없으면 타이머 리셋 (얼굴·혀와 동일 구조)
+    if(BS.mode==='palm'){
+      var _hasHand = !!(typeof BsFs!=='undefined' && BsFs._lastHandLms);
+      if(!_hasHand){ _bsWarnSec++; } else { _bsWarnSec=0; }
+      var _wElP=bsE('bsGuideMsg')||bsE('bsFsGuideLbl');
+      if(_bsWarnSec>=1 && _wElP) _wElP.textContent='⚠️ 손바닥을 카메라에 맞춰주세요!';
+      else if(_bsWarnSec===0 && _wElP) _wElP.textContent='';
+      // 5초 연속 미감지 → 타이머 리셋
+      if(_bsWarnSec >= 5){
+        _bsStartTime = performance.now() - 2000;
+        _bsLastSec = 1;
         _bsWarnSec = 0;
         if(bsE('bsProgress')) bsE('bsProgress').style.width='0%';
       }
