@@ -2323,6 +2323,8 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 .dash-card-locked{opacity:0.45;pointer-events:none;transition:opacity .3s;}
 .bio-locked{opacity:0.45;pointer-events:none;transition:opacity .3s;}
 </style>
+<!-- PeerJS WebRTC — 커플 실시간 영상 연결 -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 <script>
@@ -4751,7 +4753,7 @@ function updateTransitSectionWithNASA(planets) {
   <div style="background:linear-gradient(135deg,rgba(212,168,67,.07),rgba(56,189,248,.04));
     border:1px solid rgba(212,168,67,.22);border-radius:16px;padding:18px;margin-bottom:14px">
     <div style="font-size:11px;color:rgba(212,168,67,.7);letter-spacing:.1em;font-weight:600;margin-bottom:14px">
-      🔮 AI 데이터 퓨전 — 생체(BAI) × 역학(ILI) = CEI 통합 분석
+      🔮 AI 데이터 퓨전 — 생체(BAI)×40% + 역학(ILI)×35% + 공명×25% = CEI
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div style="text-align:center;padding:13px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.15);border-radius:12px;grid-column:span 2">
@@ -6821,7 +6823,7 @@ var fcSystems = {
               </div>
               <div style="margin-top:14px;padding:10px 12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:8px;">
                 <div style="font-size:11px;color:#38bdf8;font-weight:700;margin-bottom:3px;">💡 참고사항</div>
-                <div style="font-size:11px;color:rgba(240,220,160,.6);line-height:1.7;">서버 없이 내 기기에서만 동작하므로 상대방 카메라 실시간 연동은 지원되지 않습니다. 상대방 정보를 직접 입력하면 사주·역학 기반 정밀 궁합 분석이 가능합니다.</div>
+                <div style="font-size:11px;color:rgba(240,220,160,.6);line-height:1.7;">📡 PeerJS WebRTC 기술로 두 기기가 직접 연결됩니다. 방 만들기 → 코드 복사 → 상대방에게 전송 → 상대방이 입장 코드 입력 → 영상 자동 연결! HTTPS 환경(Vercel)에서만 작동합니다.</div>
               </div>
             </div>
           </div>
@@ -7016,6 +7018,8 @@ var fcSystems = {
             <div>
               <div style="font-size:11px;font-weight:700;color:#f472b6;text-align:center;margin-bottom:6px;">👤 상대방 (B) — 사진 업로드</div>
               <div style="position:relative;background:#1a050d;border:2px solid rgba(244,114,182,.35);border-radius:12px;overflow:hidden;aspect-ratio:16/9;">
+                <!-- B 원격 영상 (WebRTC) -->
+                <video id="cpl-video-b-remote" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;border-radius:12px;"></video>
                 <img id="cpl-photo-b" style="width:100%;height:100%;object-fit:cover;display:none;">
                 <div id="cpl-ph-b" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#1a050d,#280a18);">
                   <div style="font-size:28px;opacity:.3;">🫂</div>
@@ -11127,6 +11131,7 @@ function _hvShowResult(seed,oh,sd){
       rawTotal = finalILI;
       // 공명 로그 전역 저장 (UX 표시용)
       window._cgoResonanceLog = resonanceLog;
+      window._cgoLastResonanceBonus = resonanceBonus; // ★ CEI 공명 25% 계산용
     } else {
       // 공명 없어도 하한선 적용
       rawTotal = Math.max(rawTotal, 35);
@@ -26295,9 +26300,23 @@ function cplStartAnalysis(){
   // 탭 상세 분석용 데이터 저장
   _cplDetailData = {aName:aName,bName:bName,ohA:result.ohA,ohB:result.ohB,
     ohScore:result.ohScore,compat:compat,marry:marry,child:child,total:result.total};
-  // 비밀 레이더 초기화
-  _cplScoreA=50; _cplScoreB=50;
-  _cplUpdateBar('a',50); _cplUpdateBar('b',50);
+  // ── B바 초기값: 생년월일 기반 감정 에너지 계산 ──
+  // 오행·생명수·바이오리듬으로 B의 현재 감정 에너지 추정
+  var _bOhScore = {목:68, 화:75, 토:65, 금:70, 수:72}[result.ohB] || 65;
+  var _bLifeNum = (bY+bM+bD)%9 + 1;
+  var _bDays = Math.floor((new Date() - new Date(bY, bM-1, bD)) / 86400000);
+  var _bBio = Math.sin(2*Math.PI*_bDays/28); // 감성 바이오리듬
+  var _bBioBonus = Math.round(_bBio * 8);
+  // 궁합 점수 반영 (둘이 잘 맞을수록 B도 올라감)
+  var _bCompatBonus = Math.round((result.ohScore - 50) * 0.15);
+  var _bInitScore = Math.min(88, Math.max(30,
+    Math.round(_bOhScore + _bBioBonus + _bCompatBonus)
+  ));
+
+  // A는 현재 카메라 값 유지 (리셋 안 함), B는 계산값으로 설정
+  _cplScoreB = _bInitScore;
+  _cplUpdateBar('a', _cplScoreA); // A는 현재 값 유지
+  _cplUpdateBar('b', _bInitScore);
 }
 
 // rPPG 실시간 관심도 스캔
@@ -26391,7 +26410,17 @@ function cplToggleCam(who){
       }
       // 감정 관성 7:3
       var curScore=who==='a'?_cplScoreA:_cplScoreB;
-      var target=measured!==null?Math.min(95,Math.max(15,measured+30)):50;
+      // B 카메라 없을 때 → 바이오리듬 기반 자연 변동 (50 고정 방지)
+      var target;
+      if(measured !== null){
+        target = Math.min(95, Math.max(15, measured+30));
+      } else if(who==='b'){
+        // B 카메라 없음 → 시간 기반 미세 변동 (±3 범위)
+        var _bDrift = Math.sin(Date.now()/8000)*3 + Math.cos(Date.now()/5000)*2;
+        target = Math.min(88, Math.max(28, curScore + _bDrift));
+      } else {
+        target = 50;
+      }
       var inertia=curScore*0.7+target*0.3;
       // 등급별 변화폭
       var maxD=inertia>=85?3:inertia>=70?5:inertia>=55?7:inertia>=45?5:inertia>=30?7:5;
@@ -26416,7 +26445,9 @@ function cplToggleCam(who){
         if(txtEl) txtEl.textContent=txt2;
       } else {
         var txtEl=document.getElementById('cpl-status-txt');
-        if(txtEl) txtEl.textContent=(who==='a'?'나(A)':'상대(B)')+' 스캔 중... 상대 카메라도 켜세요';
+        if(txtEl) txtEl.textContent = who==='a'
+          ? '나(A) 스캔 중... B 카메라도 켜면 실시간 감정 감지'
+          : '상대(B) 역학 에너지 추정 중... B 사진 업로드 시 더 정확';
       }
     },1200);
   }).catch(function(err){
@@ -26711,15 +26742,23 @@ function cplToggleManual(){
 
 // ══ 암호 복사 ══
 function cplCopyRoomCode(){
-  var txt=document.getElementById('cpl-room-code-txt');
-  if(!txt) return;
-  var code=txt.textContent.trim();
+  var box = document.getElementById('cpl-room-code-box');
+  // 전체 Peer ID 복사 (연결에 필요)
+  var fullId = box ? box.getAttribute('data-full-id') : null;
+  var copyText = fullId || (document.getElementById('cpl-room-code-txt')||{}).textContent || '';
+  if(!copyText) return;
   if(navigator.clipboard){
-    navigator.clipboard.writeText(code).then(function(){
+    navigator.clipboard.writeText(copyText).then(function(){
       var btn=event.target;
       btn.textContent='✅ 복사됨!';
       setTimeout(function(){btn.textContent='📋 복사';},2000);
     });
+  } else {
+    // 폴백
+    var ta=document.createElement('textarea');
+    ta.value=copyText; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
   }
 }
 
@@ -26801,55 +26840,197 @@ function _cplStartCountdown(){
   _cplCountTimer=setInterval(tick,1000);
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💑 CGO-FULI WebRTC 커플 영상 연결 (PeerJS)
+// A(방장): Peer 생성 → ID = 방 코드 → B에게 공유
+// B(입장): ID 입력 → A에게 영상 연결
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var _cplPeer = null;          // PeerJS 인스턴스
+var _cplConn = null;          // DataChannel (텍스트 동기화)
+var _cplCall = null;          // MediaConnection (영상)
+var _cplLocalStream = null;   // 내 카메라 스트림
+var _cplRoomCode = null;
+var _cplIsHost = false;
+
+function _cplSetStatus(txt, color){
+  var dot = document.getElementById('cpl-room-status-dot');
+  var el  = document.getElementById('cpl-room-status-txt');
+  if(el) el.textContent = txt;
+  if(dot) dot.style.background = color||'#34d399';
+}
+
+// ── 내 카메라 미리 켜기 ──
+function _cplGetLocalStream(cb){
+  if(_cplLocalStream){ cb(_cplLocalStream); return; }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false})
+  .then(function(s){
+    _cplLocalStream = s;
+    // 내 화면(A 슬롯)에 표시
+    var vA = document.getElementById('cpl-video-a');
+    if(vA){ vA.srcObject=s; vA.style.display='block'; }
+    var phA = document.getElementById('cpl-ph-a');
+    if(phA) phA.style.display='none';
+    var badge = document.getElementById('cpl-badge-a');
+    if(badge) badge.style.display='block';
+    cb(s);
+  })
+  .catch(function(e){
+    alert('카메라 권한이 필요합니다.\n설정에서 카메라를 허용해 주세요.');
+  });
+}
+
+// ── 상대방 영상 수신 처리 ──
+function _cplShowRemote(stream){
+  var vB = document.getElementById('cpl-video-b-remote');
+  if(vB){
+    vB.srcObject = stream;
+    vB.style.display = 'block';
+    vB.play().catch(function(){});
+  }
+  var phB = document.getElementById('cpl-ph-b');
+  if(phB) phB.style.display = 'none';
+  // B 카메라 활성 → B바 카메라 모드로 전환
+  _cplTimers.b = _cplTimers.b || setInterval(function(){
+    var vid2 = document.getElementById('cpl-video-b-remote');
+    var measured = null;
+    if(vid2 && vid2.videoWidth){
+      var oc2=document.createElement('canvas'); oc2.width=64; oc2.height=48;
+      var ox2=oc2.getContext('2d');
+      ox2.drawImage(vid2,0,0,64,48);
+      var px2=ox2.getImageData(0,0,64,48).data;
+      var rS=0,gS=0,bS=0,cnt2=0,skinCnt2=0;
+      for(var i2=0;i2<px2.length;i2+=4){
+        var pr=px2[i2],pg=px2[i2+1],pb=px2[i2+2];
+        rS+=pr; gS+=pg; bS+=pb; cnt2++;
+        var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
+        var sv2=mx2>0?(mx2-mn2)/mx2:0;
+        if(pr>80&&pg>50&&pb>30&&pr>pg&&pr>pb&&(pr-pg)>15&&sv2>0.18&&sv2<0.65) skinCnt2++;
+      }
+      if(cnt2&&skinCnt2/cnt2>=0.12){
+        var gAvg=gS/cnt2, rAvg=rS/cnt2;
+        var fci2=Math.min(100,Math.max(0,(rAvg-gAvg)*2.5));
+        var bright=(rAvg+gAvg+(bS/cnt2))/3;
+        measured=Math.round(fci2*0.6+Math.min(100,Math.max(0,(bright-60)*1.2))*0.4);
+      }
+    }
+    var curScore = _cplScoreB;
+    var target = measured!==null ? Math.min(95,Math.max(15,measured+30))
+               : Math.min(88,Math.max(28,curScore+Math.sin(Date.now()/8000)*3));
+    var inertia=curScore*0.7+target*0.3;
+    var maxD=inertia>=85?3:inertia>=70?5:7;
+    var dif=inertia-curScore;
+    if(Math.abs(dif)>maxD) dif=dif>0?maxD:-maxD;
+    _cplScoreB=Math.min(95,Math.max(15,Math.round(curScore+dif)));
+    _cplUpdateBar('b',_cplScoreB);
+  },1200);
+  _cplSetStatus('🔴 LIVE — 상대방 영상 연결됨!','#d4a843');
+}
+
+// ━━ 방 만들기 (호스트) ━━
 var _cplRoomCode = null;
 function cplCreateRoom(){
-  var code='';
-  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  for(var i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
-  _cplRoomCode=code;
-  var box=document.getElementById('cpl-room-code-box');
-  var txt=document.getElementById('cpl-room-code-txt');
+  if(_cplPeer){ _cplPeer.destroy(); _cplPeer=null; }
+  _cplIsHost = true;
+
+  _cplSetStatus('📡 방 생성 중...','#fbbf24');
+  var box = document.getElementById('cpl-room-code-box');
+  var txt = document.getElementById('cpl-room-code-txt');
   if(box) box.style.display='block';
-  if(txt) txt.textContent=code;
-}
-function cplJoinRoom(){
-  var input=document.getElementById('cpl-room-input');
-  if(!input) return;
-  var code=input.value.toUpperCase().trim();
-  if(code.length<4){ alert('올바른 암호를 입력해주세요'); return; }
+  if(txt) txt.textContent='...';
 
-  var joinedMsg=document.getElementById('cpl-joined-msg');
-  var joinedCode=document.getElementById('cpl-joined-code-show');
-  var codeBox=document.getElementById('cpl-room-code-box');
-
-  if(_cplRoomCode&&code===_cplRoomCode){
-    // 방장 본인이 다시 입력한 경우
-    if(joinedMsg){ joinedMsg.style.display='none'; }
-    if(codeBox){ 
-      var statusTxt=document.getElementById('cpl-room-status-txt');
-      if(statusTxt) statusTxt.textContent='✅ 상대방 입장 완료! 정보를 입력해 주세요.';
-      var statusDot=document.getElementById('cpl-room-status-dot');
-      if(statusDot) statusDot.style.background='#d4a843';
+  _cplGetLocalStream(function(stream){
+    try {
+      _cplPeer = new Peer({ debug:0 });
+    } catch(e) {
+      _cplSetStatus('⚠️ PeerJS 로딩 중... 잠시 후 다시 시도','#f87171');
+      return;
     }
-  } else {
-    // 새로 입장
-    _cplRoomCode=code;
-    if(codeBox) codeBox.style.display='none';
-    if(joinedMsg){ joinedMsg.style.display='block'; }
-    if(joinedCode){ joinedCode.textContent='암호: '+code+' 방 입장 완료'; }
-  }
+    _cplPeer.on('open', function(id){
+      // ID 앞 6자리를 방 코드로 사용
+      var code = id.substring(0,8).toUpperCase();
+      _cplRoomCode = id; // 전체 ID 저장 (입장 시 필요)
+      if(txt) txt.textContent = code;
+      // 실제 코드 박스에 전체 ID도 data로 저장
+      if(box) box.setAttribute('data-full-id', id);
+      _cplSetStatus('상대방 입장 대기 중... 코드를 공유하세요','#34d399');
+    });
 
-  input.value='';
-  // 자동 정보 입력 (대시보드 데이터)
+    // B가 전화 걸어오면 받기
+    _cplPeer.on('call', function(call){
+      _cplCall = call;
+      call.answer(stream); // 내 스트림으로 응답
+      call.on('stream', function(remoteStream){
+        _cplShowRemote(remoteStream);
+      });
+      call.on('error', function(e){ console.log('call error',e); });
+      _cplSetStatus('✅ 상대방 연결됨!','#d4a843');
+    });
+
+    _cplPeer.on('error', function(e){
+      _cplSetStatus('⚠️ 연결 오류: '+e.type,'#f87171');
+    });
+  });
+}
+
+// ━━ 방 입장 (게스트) ━━
+function cplJoinRoom(){
+  var input = document.getElementById('cpl-room-input');
+  if(!input) return;
+  var code = input.value.trim();
+  if(code.length < 4){ alert('올바른 코드를 입력해주세요'); return; }
+
+  _cplIsHost = false;
+  var joinedMsg = document.getElementById('cpl-joined-msg');
+  var joinedCode = document.getElementById('cpl-joined-code-show');
+  var codeBox = document.getElementById('cpl-room-code-box');
+
+  _cplGetLocalStream(function(stream){
+    if(_cplPeer){ _cplPeer.destroy(); _cplPeer=null; }
+    try {
+      _cplPeer = new Peer({ debug:0 });
+    } catch(e) {
+      alert('PeerJS 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return;
+    }
+    _cplPeer.on('open', function(myId){
+      // 호스트에게 전화
+      var call = _cplPeer.call(code, stream);
+      _cplCall = call;
+      if(call){
+        call.on('stream', function(remoteStream){
+          _cplShowRemote(remoteStream);
+          if(codeBox) codeBox.style.display='none';
+          if(joinedMsg) joinedMsg.style.display='block';
+          if(joinedCode) joinedCode.textContent='코드: '+code.substring(0,8).toUpperCase()+' 연결 완료 🎉';
+        });
+        call.on('error', function(e){
+          alert('연결 실패: 코드를 다시 확인해주세요.\n오류: '+e);
+        });
+      } else {
+        alert('연결에 실패했습니다. 코드를 확인해주세요.');
+      }
+    });
+    _cplPeer.on('error', function(e){
+      alert('연결 오류: '+e.type+'\n코드가 맞는지 확인해주세요.');
+    });
+  });
   if(typeof cplAutoFill==='function') setTimeout(cplAutoFill, 300);
+  input.value='';
 }
 
 function cplReset(){
   cplStopRPPG();
+  // PeerJS 연결 정리
+  if(_cplCall){ try{_cplCall.close();}catch(e){} _cplCall=null; }
+  if(_cplPeer){ try{_cplPeer.destroy();}catch(e){} _cplPeer=null; }
+  if(_cplLocalStream){ _cplLocalStream.getTracks().forEach(function(t){t.stop();}); _cplLocalStream=null; }
+  var vBr = document.getElementById('cpl-video-b-remote');
+  if(vBr){ vBr.srcObject=null; vBr.style.display='none'; }
   document.getElementById('cpl-input-section').style.display='block';
   document.getElementById('cpl-live-section').style.display='none';
   document.getElementById('cpl-resonance-msg').style.display='none';
   document.getElementById('cpl-total-score').textContent='--';
+  document.getElementById('cpl-room-code-box').style.display='none';
+  document.getElementById('cpl-joined-msg').style.display='none';
   _cplScoreA=50; _cplScoreB=50;
 }
 
@@ -35312,22 +35493,54 @@ function syncAllPages(r){
       scanned: window._baiScanned || false
     },
     // ── 통합 에너지 지수 ──
-    // BAI(생체활성도): 스캔 완료 시 실측값, 미완료 시 ILI 기반 추정
+    // BAI(생체활성도): BPM·HRV·FCI·BLI 4가지 실측값 기반
     get bai(){
       var b = this.bio;
-      if(b.scanned && (b.hrv>0 || b.fci>0)){
-        var hrvScore = b.hrv>55?90:b.hrv>40?78:65;
-        var fciScore = b.fci>80?90:b.fci>65?78:65;
-        return Math.round((hrvScore+fciScore)/2);
+      if(!b.scanned || !(b.hrv>0 || b.fci>0)){
+        return Math.round(this.ili * 0.85);
       }
-      return Math.round(this.ili * 0.85); // 역학 기반 추정
+      var parts = [];
+      // ① BPM 심박수 (정상 60-80: 90점, 50-95: 75점, 그 외: 60점)
+      if(b.bpm > 0){
+        var bpmS = (b.bpm>=60&&b.bpm<=80)?90:(b.bpm>=50&&b.bpm<=95)?75:60;
+        parts.push(bpmS);
+      }
+      // ② HRV (자율신경 균형)
+      if(b.hrv > 0){
+        var hrvS = b.hrv>55?92:b.hrv>40?78:b.hrv>25?65:52;
+        parts.push(hrvS);
+      }
+      // ③ FCI (안면 혈류 지수)
+      if(b.fci > 0){
+        var fciS = b.fci>80?90:b.fci>65?78:b.fci>50?65:52;
+        parts.push(fciS);
+      }
+      // ④ BLI (손금 생명 지수)
+      if(b.bli > 0){
+        parts.push(Math.min(95, Math.max(40, b.bli)));
+      }
+      // ⑤ TLI (혀 건강 지수) — 있으면 반영
+      var tliScore = window.BS&&window.BS.tongueData ? (window.BS.tongueData.tliScore||0) : 0;
+      if(tliScore > 0) parts.push(Math.min(95, Math.max(40, tliScore)));
+
+      return parts.length > 0
+        ? Math.round(parts.reduce(function(s,v){return s+v;},0) / parts.length)
+        : Math.round(this.ili * 0.85);
     },
-    // 종합 에너지 지수 (ILI + BAI 융합)
-    get cei(){ // Combined Energy Index
-      var bio = this.bai;
-      return this.bio.scanned
-        ? Math.round(this.ili * 0.75 + bio * 0.25)
-        : this.ili;
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CEI = 생체(BAI)×40% + 역학(ILI)×35% + 공명×25%
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    get cei(){
+      var bai = this.bai;
+      var ili = this.ili;
+      if(!this.bio.scanned) return ili;
+
+      // 공명 점수: ILI + 보너스 (NASA·날씨·방위)
+      var resBonus = window._cgoLastResonanceBonus || 0;
+      var resonanceScore = Math.min(99, ili + resBonus);
+
+      var raw = Math.round(bai * 0.40 + ili * 0.35 + resonanceScore * 0.25);
+      return Math.min(99, Math.max(40, raw));
     },
     // 갱신 시각
     updatedAt: new Date()
@@ -45035,27 +45248,36 @@ function cgoRunRppgAnalysis(){
   var HV=window._HV||{};
   var np=window._nasaPlanets||{};
 
-  // 호흡 HRV 15점 (선택)
-  var hrvVal=HV.bScore||0;
-  var breathDone=HV.bDone||hrvVal>0;
-  var bA=breathDone?(hrvVal>=80?15:hrvVal>=65?12:hrvVal>=50?9:hrvVal>=35?5:2):0;
-  var breathRealloc=breathDone?0:15;
+  // ── A. 생체 40점 — BPM·HRV·FCI·BLI·혀 5가지 ──
+  var bfd = window._bioFinalData || {};
+  var bsd = window._bioSkinData  || {};
+  var HV  = window._bsHvProxy   || window.BS || {};
 
-  // 관상 FCI 10점
-  var fciVal=bfd.fci||0;
-  var bB=fciVal>0?(fciVal>75?10:fciVal>60?7:fciVal>45?4:2):0;
+  // ① 심박수 BPM 8점 (★신규 추가)
+  var bpmVal = bfd.bpm || (window.BS && window.BS.bpm) || 0;
+  var bA0 = bpmVal>0 ? (bpmVal>=60&&bpmVal<=80?8 : bpmVal>=50&&bpmVal<=95?6 : bpmVal>0?4 : 0) : 0;
 
-  // 손금 BLI 8점
-  var bliVal=bfd.bli||0;
-  var bC=bliVal>0?(bliVal>70?8:bliVal>50?5:bliVal>30?3:1):0;
+  // ② 호흡 HRV 12점 (기존 15→12 조정)
+  var hrvVal = HV.bScore || bfd.hrv || 0;
+  var breathDone = HV.bDone || hrvVal>0;
+  var bA = breathDone ? (hrvVal>=80?12 : hrvVal>=65?9 : hrvVal>=50?7 : hrvVal>=35?4 : 2) : 0;
+  var breathRealloc = breathDone ? 0 : 12;
 
-  // 혀 설진 7점
-  var bD=0;
-  if(bsd.tongue){bD={담홍색:7,담홍:7,분홍:6,붉음:3,창백:2,자색:1}[bsd.tongue.color]||4;}
-  else if(HV.tScore>0){bD=Math.round(HV.tScore/100*7);}
+  // ③ 관상 FCI 10점
+  var fciVal = bfd.fci || 0;
+  var bB = fciVal>0 ? (fciVal>75?10 : fciVal>60?7 : fciVal>45?4 : 2) : 0;
 
-  var bioTotal=Math.min(40,bA+bB+bC+bD);
-  var bioCount=(breathDone?1:0)+(fciVal>0?1:0)+(bliVal>0?1:0)+(bD>0?1:0);
+  // ④ 손금 BLI 5점 (기존 8→5 조정)
+  var bliVal = bfd.bli || 0;
+  var bC = bliVal>0 ? (bliVal>75?5 : bliVal>55?4 : bliVal>35?2 : 1) : 0;
+
+  // ⑤ 혀 설진 5점 (기존 7→5 조정)
+  var bD = 0;
+  if(bsd.tongue){ bD = {담홍색:5,담홍:5,분홍:4,붉음:2,창백:1,자색:1}[bsd.tongue.color]||3; }
+  else if(HV.tScore>0){ bD = Math.round(HV.tScore/100*5); }
+
+  var bioTotal = Math.min(40, bA0+bA+bB+bC+bD);
+  var bioCount = (bpmVal>0?1:0)+(breathDone?1:0)+(fciVal>0?1:0)+(bliVal>0?1:0)+(bD>0?1:0);
 
   // ── B. 50개 역학 35점 (5클러스터×7점) ──
   var eids=selectedEngines.map(function(e){return e.id;});
@@ -45129,7 +45351,7 @@ function cgoRunRppgAnalysis(){
   var sysRole=isW&&!isI?'당신은 헬레니즘 서양 점성술 전문가입니다. 하우스·트랜짓 용어만 사용하세요.':
               isI&&!isW?'당신은 조티쉬 베딕 전문가입니다. 나바그라하·다샤 용어만 사용하세요.':
               '당신은 사주명리·기문둔갑 동양 역학 전문가입니다. 천간·지지·오행 용어만 사용하세요.';
-  var bioDesc='호흡:'+bA+'/15(HRV='+hrvVal+') 관상:'+bB+'/10(FCI='+fciVal+') 손금:'+bC+'/8 혀:'+bD+'/7';
+  var bioDesc='BPM:'+bpmVal+'/8('+bA0+'점) 호흡HRV:'+bA+'/12(HRV='+hrvVal+'ms) 관상FCI:'+bB+'/10(FCI='+fciVal+'%) 손금BLI:'+bC+'/5(BLI='+bliVal+') 혀:'+bD+'/5';
   // ── rPPG 전용 실시간 데이터 수집 ──
   var wd2 = window._weatherData || {};
   var kp2 = window._kpIndex !== undefined ? window._kpIndex : '미수신';
@@ -45154,11 +45376,12 @@ function cgoRunRppgAnalysis(){
     '이름:'+r.name+' | 오행:'+oh+'('+ohK[oh]+') | 생명수:'+(r.lifeNum||1),
     '',
     '## rPPG 생체 측정값 (지금 이 순간)',
-    '🫀 호흡 HRV: '+(hrvVal>0?hrvVal+'ms('+bA+'/15점)':'미측정'),
+    '❤️ 심박수 BPM: '+(bpmVal>0?bpmVal+'bpm('+bA0+'/8점)':'미측정'),
+    '🫀 호흡 HRV: '+(hrvVal>0?hrvVal+'ms('+bA+'/12점)':'미측정'),
     '👁️ 관상 FCI: '+(fciVal>0?fciVal+'%('+bB+'/10점)':'미측정'),
-    '✋ 손금 BLI: '+(bliVal>0?bliVal+'%('+bC+'/8점)':'미측정'),
-    '👅 혀 설진: '+(bD>0?bD+'/7점':'미측정'),
-    '📊 생체 총점: '+bioTotal+'/40점 ('+bioCount+'개 측정)',
+    '✋ 손금 BLI: '+(bliVal>0?bliVal+'%('+bC+'/5점)':'미측정'),
+    '👅 혀 설진: '+(bD>0?bD+'/5점':'미측정'),
+    '📊 생체 총점: '+bioTotal+'/40점 ('+bioCount+'개 측정)';
     '🔄 바이오리듬: 신체'+bio1.toFixed(2)+' | 감성'+bio2.toFixed(2)+' | 지성'+bio3.toFixed(2),
     '',
     '## 실시간 NASA 우주 데이터',
