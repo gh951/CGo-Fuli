@@ -6256,21 +6256,60 @@ var fcSystems = {
       <div style="font-size:12px;color:rgba(212,168,67,.7);">오행 × 병명 × 생체 에너지 — 세계 최초 음식-생체 융합 분석</div>
     </div>
 
-    <!-- 나의 건강 프로필 -->
-    <div id="food-profile-card" style="background:var(--bg-card);border:1px solid rgba(52,211,153,.3);border-radius:16px;padding:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:800;color:#34d399;">🩺 나의 건강 프로필</div>
-        <button onclick="foodSaveProfile()" style="padding:5px 12px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.35);border-radius:8px;color:#34d399;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">💾 저장</button>
+    <!-- 나의 건강 프로필 (병원 차트 스타일) -->
+    <div id="food-profile-card" style="background:linear-gradient(135deg,rgba(10,20,40,.95),rgba(8,16,32,.98));border:1px solid rgba(52,211,153,.4);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4);">
+
+      <!-- 차트 헤더 (클릭 시 접기/펴기) -->
+      <div onclick="foodToggleProfile()" style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:linear-gradient(90deg,rgba(52,211,153,.12),rgba(52,211,153,.04));border-bottom:1px solid rgba(52,211,153,.2);">
+        <div style="width:28px;height:28px;background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.5);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🩺</div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:900;color:#34d399;letter-spacing:.08em;">PATIENT HEALTH CHART</div>
+          <div style="font-size:10px;color:rgba(52,211,153,.55);letter-spacing:.06em;margin-top:1px;">나의 건강 프로필 · CGO-FULI Medical Record</div>
+        </div>
+        <div id="food-profile-summary" style="font-size:10px;color:rgba(52,211,153,.6);text-align:right;max-width:100px;line-height:1.4;"></div>
+        <div id="food-profile-arrow" style="font-size:12px;color:rgba(52,211,153,.7);transition:transform .3s;margin-left:6px;">▲</div>
       </div>
-      <div style="margin-bottom:10px;">
-        <div style="font-size:11px;color:rgba(240,230,200,.6);margin-bottom:5px;">⚕️ 현재 병명 (쉼표로 구분)</div>
-        <input id="food-diseases" placeholder="예: 고혈압, 위염, 당뇨" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(52,211,153,.25);border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+
+      <!-- 차트 바디 (접기/펴기) -->
+      <div id="food-profile-body" style="padding:14px 16px;">
+
+        <!-- 차트 상단 줄 (레드라인) -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed rgba(52,211,153,.2);">
+          <div style="width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 1.5s infinite;"></div>
+          <div style="font-size:10px;color:rgba(52,211,153,.6);letter-spacing:.1em;font-family:'Orbitron',monospace;">CHART NO. CGO-</div>
+          <div style="font-size:10px;color:rgba(52,211,153,.8);font-family:'Orbitron',monospace;" id="food-chart-no"></div>
+          <div style="margin-left:auto;font-size:10px;color:rgba(52,211,153,.5);" id="food-chart-date"></div>
+        </div>
+
+        <!-- 병명 입력 -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div style="width:3px;height:14px;background:#f87171;border-radius:2px;"></div>
+            <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.06em;">DIAGNOSIS · 진단 병명</div>
+          </div>
+          <input id="food-diseases" placeholder="예: 고혈압, 위염, 당뇨, 역류성식도염" oninput="foodUpdateSummary()"
+            style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;transition:border-color .2s;"
+            onfocus="this.style.borderColor='rgba(248,113,113,.6)'" onblur="this.style.borderColor='rgba(248,113,113,.25)'">
+        </div>
+
+        <!-- 기피 성분 입력 -->
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div style="width:3px;height:14px;background:#fbbf24;border-radius:2px;"></div>
+            <div style="font-size:11px;font-weight:700;color:#fbbf24;letter-spacing:.06em;">ALLERGY / AVOID · 기피 성분</div>
+          </div>
+          <input id="food-avoid" placeholder="예: 카페인, 밀가루, 유제품, 견과류" oninput="foodUpdateSummary()"
+            style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;transition:border-color .2s;"
+            onfocus="this.style.borderColor='rgba(251,191,36,.6)'" onblur="this.style.borderColor='rgba(251,191,36,.25)'">
+        </div>
+
+        <!-- 저장 버튼 -->
+        <button onclick="foodSaveProfile()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08));border:1px solid rgba(52,211,153,.5);border-radius:10px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.08em;transition:all .2s;"
+          onmouseover="this.style.background='rgba(52,211,153,.25)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08))'">
+          💾 SAVE CHART &nbsp;·&nbsp; 차트 저장
+        </button>
+        <div id="food-profile-saved" style="display:none;margin-top:8px;font-size:11px;color:#34d399;text-align:center;letter-spacing:.06em;">✅ 차트 저장 완료</div>
       </div>
-      <div>
-        <div style="font-size:11px;color:rgba(240,230,200,.6);margin-bottom:5px;">🚫 기피 성분 (쉼표로 구분)</div>
-        <input id="food-avoid" placeholder="예: 카페인, 밀가루, 유제품" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(52,211,153,.25);border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
-      </div>
-      <div id="food-profile-saved" style="display:none;margin-top:8px;font-size:11px;color:#34d399;text-align:center;">✅ 프로필 저장됨</div>
     </div>
 
     <!-- 음식 입력 섹션 -->
@@ -39901,6 +39940,25 @@ function foodFromGallery(e) {
 }
 
 // ── 프로필 저장/로드 ────────────────────────────────────
+function foodToggleProfile() {
+  var body = document.getElementById('food-profile-body');
+  var arrow = document.getElementById('food-profile-arrow');
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function foodUpdateSummary() {
+  var diseases = (document.getElementById('food-diseases').value||'').trim();
+  var avoid = (document.getElementById('food-avoid').value||'').trim();
+  var el = document.getElementById('food-profile-summary');
+  if (!el) return;
+  var parts = [];
+  if (diseases) parts.push(diseases.split(',').length + '개 병명');
+  if (avoid) parts.push(avoid.split(',').length + '개 기피');
+  el.textContent = parts.length ? parts.join(' · ') : '미입력';
+}
 function foodSaveProfile() {
   var profile={
     diseases:(document.getElementById('food-diseases').value||'').trim(),
@@ -39913,11 +39971,17 @@ function foodSaveProfile() {
 }
 
 function foodLoadProfile() {
+  // 차트 번호·날짜 초기화
+  var noEl = document.getElementById('food-chart-no');
+  var dtEl = document.getElementById('food-chart-date');
+  if (noEl) noEl.textContent = (window.calcResult&&window.calcResult.name ? window.calcResult.name.charCodeAt(0).toString().padStart(6,'0') : Math.floor(Math.random()*900000+100000));
+  if (dtEl) { var n=new Date(); dtEl.textContent = n.getFullYear()+'.'+(n.getMonth()+1).toString().padStart(2,'0')+'.'+n.getDate().toString().padStart(2,'0'); }
   try{
     var p=JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');
     if(p.diseases) document.getElementById('food-diseases').value=p.diseases;
     if(p.avoid) document.getElementById('food-avoid').value=p.avoid;
   }catch(e){}
+  foodUpdateSummary();
 }
 
 // ── 핵심 분석 함수 ──────────────────────────────────────
@@ -40152,14 +40216,6 @@ function foodAskAI(userText) {
   var sendBtn=document.getElementById('food-chat-send');
   if(sendBtn) sendBtn.disabled=true;
   _foodAddTyping();
-  var apiKey=(window.CG_GEMINI_KEY||'').trim();
-  if (!apiKey) {
-    setTimeout(function(){
-      var t=document.getElementById('food-typing'); if(t) t.remove();
-      _foodAddBubble('ai','⚙️ Groq API 키가 필요합니다.\nconsole.groq.com → 무료 가입 → API Keys → 복사\n전체 메뉴 → 1대1 상담 🔑 버튼에 입력해 주세요.');
-      if(sendBtn) sendBtn.disabled=false;
-    },500); return;
-  }
   var profile={};
   try{profile=JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');}catch(e){}
   var myName=(window.calcResult&&window.calcResult.name)||'사용자';
@@ -40173,9 +40229,9 @@ function foodAskAI(userText) {
   }else{ctx+='아직 음식 미분석\n';}
   ctx+='\n## 사용자\n이름:'+myName+' / 오행:'+myOh+'\n병명:'+(profile.diseases||'없음')+'\n기피성분:'+(profile.avoid||'없음')+'\n';
   var sys='당신은 CGO-FULI 전속 AI 음식·영양 상담사입니다. 동양 오행 역학과 현대 영양학을 융합합니다.\n\n'+ctx+'\n## 원칙\n- 위 사용자 정보 반드시 반영\n- 오행 관점+영양학 관점 동시 제시\n- 병명 있으면 주의사항 포함\n- 대체 음식 추천 시 오행 궁합 설명\n- 간결 실용적 답변 (300자 이내)\n- 한국어 답변';
-  fetch('https://api.groq.com/openai/v1/chat/completions',{
+  fetch('/api/groq',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:sys}].concat(_foodChatHistory),max_tokens:400,temperature:0.7})
   }).then(function(r){return r.json();}).then(function(data){
     var t=document.getElementById('food-typing'); if(t) t.remove();
