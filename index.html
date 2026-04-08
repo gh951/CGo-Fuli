@@ -46748,11 +46748,12 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
-  // 대시보드 이탈 시 스크롤 위치 저장 (DOM으로 확실히 확인)
+  // 대시보드 이탈 시 스크롤 위치 저장 (DOM + window 이중 저장)
   var _dashEl = document.getElementById('page-dashboard');
   if (_dashEl && _dashEl.classList.contains('active') && page !== 'dashboard') {
     var _saveCt = document.querySelector('.content');
-    window._cgoDashScrollY = _saveCt ? _saveCt.scrollTop : window.scrollY;
+    window._cgoDashScrollY = (_saveCt && _saveCt.scrollTop > 0) ? _saveCt.scrollTop : (window.scrollY || window.pageYOffset || 0);
+  }
   // 모든 페이지 숨기기
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   // 대상 페이지 표시
@@ -46797,11 +46798,15 @@ function cgoGoPage(page){
   }
   // 대시보드 복귀 시 저장 위치 복원, 나머지는 맨 위로
   var _ct = document.querySelector('.content');
-  if (page === 'dashboard' && window._cgoDashScrollY != null) {
+  if (page === 'dashboard' && window._cgoDashScrollY != null && window._cgoDashScrollY > 0) {
     var _sv = window._cgoDashScrollY;
     requestAnimationFrame(function(){
       if (_ct) _ct.scrollTop = _sv;
-      setTimeout(function(){ if (_ct) _ct.scrollTop = _sv; }, 80);
+      window.scrollTo(0, _sv);
+      setTimeout(function(){
+        if (_ct) _ct.scrollTop = _sv;
+        window.scrollTo(0, _sv);
+      }, 100);
     });
   } else {
     if (_ct) _ct.scrollTop = 0;
