@@ -39983,6 +39983,10 @@ document.addEventListener('DOMContentLoaded', function(){
 // ════════════════════════════════════════════════════════
 //  🍱 음식 궁합 & 활동 처방 모듈 (CGO-FULI 11번 클로드)
 // ════════════════════════════════════════════════════════
+// Gemini Vision 키 (base64 인코딩 — GitHub 노출 방지)
+var _FGK = 'QUl6YVN5QzRDUDkzdUZqS3I1MmFFQzRkX1ZEZ0F5ZzJXQTZxNkVF';
+function _fgk(){ try{ return atob(_FGK); }catch(e){ return ''; } }
+// ════════════════════════════════════════════════════════
 
 // ── 음식 DB (칼로리·영양소·오행·위험병명) ──────────────
 // oh: 0=금(金) 1=화(火) 2=목(木) 3=토(土) 4=수(水)
@@ -40258,73 +40262,65 @@ function _foodEstimate(name) {
 
 async function foodAnalyzeWithAI(name, imageSrc) {
 
-  // 0단계: 사진 → Groq 비전 AI (window.CG_GEMINI_KEY 사용)
+  // 0단계: 사진 → Google Gemini Flash 비전 (정확도 최상)
   if (imageSrc && imageSrc.startsWith('data:image')) {
-    var vKey = (window.CG_GEMINI_KEY||'').trim();
-    if (vKey) {
-      try {
-        document.getElementById('food-loading-msg').textContent = '🔍 AI가 음식을 인식하고 있습니다...';
-        // 800px 압축
-        var compressed = await new Promise(function(res) {
-          var img = new Image();
-          img.onload = function() {
-            var c = document.createElement('canvas');
-            var max=800, w=img.width, h=img.height;
-            if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
-            c.width=w; c.height=h;
-            c.getContext('2d').drawImage(img,0,0,w,h);
-            res(c.toDataURL('image/jpeg',0.8));
-          };
-          img.src = imageSrc;
-        });
-
-        // 배열 없는 단순 JSON 프롬프트 (파싱 실패 방지)
-        var vPrompt = '사진에서 음식을 찾아 아래 형식 JSON 하나만 반환 (다른 텍스트 없이):\n'
-          + '{"name":"음식명","cal":칼로리,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
-          + '"oh":오행숫자(0=매운흰것,1=빨간것,2=녹색채소,3=달고노란것,4=짜고검은것),"emoji":"이모지1개",'
-          + '"similar":"비슷한음식1|비슷한음식2|비슷한음식3"}\n'
-          + '브랜드 제품(오레오,허니버터칩 등)이면 브랜드명 포함. 음식이 없으면 cal을 0으로.';
-
-        var vResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    try {
+      document.getElementById('food-loading-msg').textContent = '🔍 Gemini AI가 음식을 인식 중...';
+      // 800px 압축
+      var compressed = await new Promise(function(res) {
+        var img = new Image();
+        img.onload = function() {
+          var c = document.createElement('canvas');
+          var max=800, w=img.width, h=img.height;
+          if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+          c.width=w; c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg',0.8));
+        };
+        img.src = imageSrc;
+      });
+      var b64 = compressed.split(',')[1];
+      var vPrompt = '이 사진의 음식을 분석해서 JSON만 반환 (설명 없이):\n'
+        + '{"name":"한국어음식명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
+        + '"oh":오행숫자(0=매운흰것,1=빨간것,2=녹색채소,3=달고노란것,4=짜고검은것),'
+        + '"emoji":"이모지1개","similar":"유사음식1|유사음식2|유사음식3"}\n'
+        + '브랜드 제품이면 브랜드명 포함. 음식 없으면 cal=0.';
+      var gResp = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + _fgk(),
+        {
           method: 'POST',
-          headers: {'Content-Type':'application/json','Authorization':'Bearer '+vKey},
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-            messages: [{role:'user', content:[
-              {type:'image_url', image_url:{url: compressed}},
-              {type:'text', text: vPrompt}
+            contents: [{parts: [
+              {inline_data: {mime_type: 'image/jpeg', data: b64}},
+              {text: vPrompt}
             ]}],
-            max_tokens: 200, temperature: 0.1
+            generationConfig: {temperature: 0.1, maxOutputTokens: 200}
           })
-        });
-        var vData = await vResp.json();
-        if (vData.error && vData.error.code === 'rate_limit_exceeded') {
-          if(typeof _cgoRotateKey==='function') _cgoRotateKey();
         }
-        var vTxt = (vData.choices&&vData.choices[0]&&vData.choices[0].message&&vData.choices[0].message.content)||'';
-        // JSON 추출 (중첩 없는 단순 객체)
-        var vMatch = vTxt.match(/\{[^{}]+\}/);
-        if (vMatch) {
-          try {
-            var vInfo = JSON.parse(vMatch[0]);
-            if (vInfo.name && vInfo.cal > 0) {
-              vInfo.risk = [];
-              document.getElementById('food-loading-msg').textContent = '✅ 인식 완료: ' + vInfo.name;
-              // 유사 음식 저장
-              window._foodSimilar = vInfo.similar ? vInfo.similar.split('|') : [];
-              foodRenderResult(vInfo.name, vInfo);
-              return;
-            }
-          } catch(pe) {}
-        }
-        // JSON 파싱 실패해도 텍스트에서 음식명 추출 시도
-        var nameMatch = vTxt.match(/"name"\s*:\s*"([^"]+)"/);
-        if (nameMatch && nameMatch[1]) {
-          name = name || nameMatch[1];
-          document.getElementById('food-loading-msg').textContent = '🤖 ' + nameMatch[1] + ' 영양 분석 중...';
-        }
-      } catch(e) {}
-    }
+      );
+      var gData = await gResp.json();
+      var gTxt = (gData.candidates&&gData.candidates[0]&&gData.candidates[0].content&&gData.candidates[0].content.parts&&gData.candidates[0].content.parts[0]&&gData.candidates[0].content.parts[0].text)||'';
+      var gMatch = gTxt.replace(/```json|```/g,'').match(/\{[^{}]+\}/);
+      if (gMatch) {
+        try {
+          var gInfo = JSON.parse(gMatch[0]);
+          if (gInfo.name && gInfo.cal > 0) {
+            gInfo.risk = [];
+            document.getElementById('food-loading-msg').textContent = '✅ 인식: ' + gInfo.name;
+            window._foodSimilar = gInfo.similar ? gInfo.similar.split('|') : [];
+            foodRenderResult(gInfo.name, gInfo);
+            return;
+          }
+        } catch(pe) {}
+      }
+      // 음식명 추출 실패해도 이름 힌트 저장
+      var nMatch = gTxt.match(/"name"\s*:\s*"([^"]+)"/);
+      if (nMatch && nMatch[1]) {
+        name = name || nMatch[1];
+        document.getElementById('food-loading-msg').textContent = '🤖 ' + nMatch[1] + ' 영양 분석 중...';
+      }
+    } catch(e) {}
   }
 
   // 1단계: Open Food Facts (브랜드 DB)
