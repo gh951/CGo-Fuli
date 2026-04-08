@@ -39118,36 +39118,51 @@ async function stkFetchRealPrice(obj) {
   var el = document.getElementById('stk-real-price');
   if (el) {
     el.style.display = 'flex';
-    el.innerHTML = '<span style="font-size:11px;color:rgba(96,165,250,.6);">💹 주가 조회 중...</span>';
+    el.innerHTML = '<span style="font-size:11px;color:rgba(96,165,250,.7);animation:pulse 1s infinite;">💹 주가 조회 중...</span>';
   }
   var now = Date.now();
   var cached = _stkPriceCache[yt];
   if (cached && now - cached.ts < 180000) { stkShowRealPrice(cached.data); return; }
-  try {
-    var apiUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yt) + '?interval=1d&range=2d';
-    var proxyUrl = 'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl);
-    var resp = await fetch(proxyUrl);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var json = await resp.json();
-    var r = json.chart && json.chart.result && json.chart.result[0];
-    if (!r) throw new Error('no result');
-    var m = r.meta;
-    var price = m.regularMarketPrice || m.previousClose;
-    var prev  = m.chartPreviousClose || m.previousClose;
-    if (!price) throw new Error('no price');
-    var chg = price - prev;
-    var pd = {
-      price: price,
-      change: chg,
-      changePct: prev ? (chg / prev * 100).toFixed(2) : '0.00',
-      currency: m.currency || 'USD',
-      state: m.marketState || 'CLOSED'
-    };
-    _stkPriceCache[yt] = {ts: now, data: pd};
-    stkShowRealPrice(pd);
-  } catch(e) {
-    console.warn('[STK]', yt, e.message);
-    stkShowRealPrice(null);
+
+  var apiUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(yt) + '?interval=1d&range=2d';
+  var proxies = [
+    'https://corsproxy.io/?url=' + encodeURIComponent(apiUrl),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(apiUrl)
+  ];
+
+  for (var i = 0; i < proxies.length; i++) {
+    try {
+      var resp = await fetch(proxies[i]);
+      if (!resp.ok) continue;
+      var json = await resp.json();
+      var r = json.chart && json.chart.result && json.chart.result[0];
+      if (!r) continue;
+      var m = r.meta;
+      var price = m.regularMarketPrice || m.previousClose;
+      var prev  = m.chartPreviousClose || m.previousClose;
+      if (!price) continue;
+      var chg = price - prev;
+      var pd = {
+        price: price,
+        change: chg,
+        changePct: prev ? (chg / prev * 100).toFixed(2) : '0.00',
+        currency: m.currency || 'USD',
+        state: m.marketState || 'CLOSED'
+      };
+      _stkPriceCache[yt] = {ts: now, data: pd};
+      stkShowRealPrice(pd);
+      return;
+    } catch(e) {
+      continue;
+    }
+  }
+  // 모든 프록시 실패 시
+  if (el) {
+    el.style.display = 'flex';
+    el.innerHTML = '<span style="font-size:10px;color:rgba(248,113,113,.7);">💹 주가 조회 실패</span>' +
+      '<button onclick="stkFetchRealPrice(stkSelected)" style="margin-left:8px;padding:2px 8px;border-radius:5px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:#60a5fa;font-size:10px;cursor:pointer;font-family:inherit;">🔄 재시도</button>' +
+      '<span style="font-size:9px;color:rgba(255,255,255,.25);margin-left:auto;">티커: ' + yt + '</span>';
   }
 }
 
