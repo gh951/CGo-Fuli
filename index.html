@@ -6256,104 +6256,229 @@ var fcSystems = {
       <div style="font-size:12px;color:rgba(212,168,67,.7);">오행 × 병명 × 생체 에너지 — 세계 최초 음식-생체 융합 분석</div>
     </div>
 
-    <!-- 나의 건강 프로필 (병원 차트 스타일) -->
-    <div id="food-profile-card" style="background:linear-gradient(135deg,rgba(10,20,40,.95),rgba(8,16,32,.98));border:1px solid rgba(52,211,153,.4);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4);">
+    <!-- ══ CGO-FULI 실시간 진료 차트 (5단계) ══ -->
+    <div id="food-profile-card" style="background:linear-gradient(135deg,rgba(6,14,30,.97),rgba(4,10,24,.99));border:1px solid rgba(52,211,153,.4);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:0 4px 28px rgba(0,0,0,.5);">
 
-      <!-- 차트 헤더 (클릭 시 접기/펴기) -->
-      <div onclick="foodToggleProfile()" style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:linear-gradient(90deg,rgba(52,211,153,.12),rgba(52,211,153,.04));border-bottom:1px solid rgba(52,211,153,.2);">
-        <div style="width:28px;height:28px;background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.5);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🩺</div>
+      <!-- 차트 헤더 -->
+      <div onclick="foodToggleProfile()" style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:linear-gradient(90deg,rgba(52,211,153,.14),rgba(52,211,153,.03));border-bottom:1px solid rgba(52,211,153,.2);">
+        <div style="width:32px;height:32px;background:rgba(52,211,153,.18);border:1px solid rgba(52,211,153,.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🏥</div>
         <div style="flex:1;">
-          <div style="font-size:12px;font-weight:900;color:#34d399;letter-spacing:.08em;">PATIENT HEALTH CHART</div>
-          <div style="font-size:10px;color:rgba(52,211,153,.55);letter-spacing:.06em;margin-top:1px;">나의 건강 프로필 · CGO-FULI Medical Record</div>
+          <div style="font-size:12px;font-weight:900;color:#34d399;letter-spacing:.1em;">CGO-FULI MEDICAL RECORD</div>
+          <div style="font-size:10px;color:rgba(52,211,153,.5);letter-spacing:.05em;margin-top:1px;">실시간 개인 건강 진료 차트 · Digital Health Record</div>
         </div>
-        <div id="food-profile-summary" style="font-size:10px;color:rgba(52,211,153,.6);text-align:right;max-width:100px;line-height:1.4;"></div>
-        <div id="food-profile-arrow" style="font-size:12px;color:rgba(52,211,153,.7);transition:transform .3s;margin-left:6px;">▲</div>
+        <div id="food-profile-summary" style="font-size:10px;color:rgba(52,211,153,.6);text-align:right;max-width:90px;line-height:1.5;"></div>
+        <div id="food-profile-arrow" style="font-size:11px;color:rgba(52,211,153,.6);transition:transform .3s;margin-left:4px;">▲</div>
       </div>
 
-      <!-- 차트 바디 (접기/펴기) -->
-      <div id="food-profile-body" style="padding:14px 16px;">
+      <!-- 차트 바디 -->
+      <div id="food-profile-body">
 
-        <!-- 차트 헤더 정보 -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed rgba(52,211,153,.2);">
-          <div style="width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 1.5s infinite;flex-shrink:0;"></div>
-          <div style="font-size:10px;color:rgba(52,211,153,.6);letter-spacing:.1em;font-family:'Orbitron',monospace;">CHART NO. CGO-</div>
-          <div style="font-size:10px;color:rgba(52,211,153,.8);font-family:'Orbitron',monospace;" id="food-chart-no"></div>
-          <div style="margin-left:auto;font-size:10px;color:rgba(52,211,153,.5);" id="food-chart-date"></div>
+        <!-- 차트 ID 줄 -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(52,211,153,.04);border-bottom:1px dashed rgba(52,211,153,.15);">
+          <div style="width:5px;height:5px;border-radius:50%;background:#34d399;animation:pulse 1.5s infinite;flex-shrink:0;"></div>
+          <span style="font-size:9px;color:rgba(52,211,153,.5);font-family:'Orbitron',monospace;letter-spacing:.08em;">CHART NO. CGO-</span>
+          <span id="food-chart-no" style="font-size:9px;color:rgba(52,211,153,.8);font-family:'Orbitron',monospace;"></span>
+          <span style="margin-left:auto;font-size:9px;color:rgba(52,211,153,.4);font-family:'Orbitron',monospace;" id="food-chart-date"></span>
         </div>
 
-        <!-- 진단 병명 테이블 -->
-        <div style="margin-bottom:14px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div style="width:3px;height:14px;background:#f87171;border-radius:2px;"></div>
-              <div style="font-size:11px;font-weight:700;color:#f87171;letter-spacing:.06em;">DIAGNOSIS · 진단 병명 및 유병 기간</div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+
+          <!-- ① 건강 기저 데이터 (Background) -->
+          <div style="border:1px solid rgba(96,165,250,.2);border-radius:10px;overflow:hidden;">
+            <div onclick="foodToggleSection('sec1')" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(96,165,250,.07);cursor:pointer;">
+              <span style="font-size:10px;font-weight:900;color:#60a5fa;letter-spacing:.08em;">① BACKGROUND · 건강 기저 데이터</span>
+              <span style="font-size:9px;color:rgba(96,165,250,.5);margin-left:4px;">사회력 · 가족력 · 기본 체질</span>
+              <span id="sec1-arrow" style="margin-left:auto;font-size:10px;color:rgba(96,165,250,.5);transition:transform .25s;">▼</span>
             </div>
-            <button onclick="foodAddDiseaseRow()" style="padding:3px 10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ 추가</button>
+            <div id="sec1" style="display:none;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:10px;color:rgba(96,165,250,.6);margin-bottom:4px;">🍺 음주</div>
+                  <select id="fp-drink" style="width:100%;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:6px 8px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+                    <option value="">선택</option><option value="안함">안 함</option><option value="가끔">가끔(월 1~2)</option><option value="주1~2회">주 1~2회</option><option value="매일">매일</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:10px;color:rgba(96,165,250,.6);margin-bottom:4px;">🚬 흡연</div>
+                  <select id="fp-smoke" style="width:100%;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:6px 8px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+                    <option value="">선택</option><option value="비흡연">비흡연</option><option value="과거흡연">과거 흡연</option><option value="흡연중">흡연 중</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:10px;color:rgba(96,165,250,.6);margin-bottom:4px;">🏃 평소 활동량</div>
+                  <select id="fp-activity" style="width:100%;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:6px 8px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+                    <option value="">선택</option><option value="적음">적음(좌식)</option><option value="보통">보통</option><option value="많음">많음(운동)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:rgba(96,165,250,.6);margin-bottom:4px;">👨‍👩‍👧 가족력 (유전 질환)</div>
+                <input id="fp-family" placeholder="예: 부 고혈압, 모 당뇨, 형 고지혈증" style="width:100%;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+              </div>
+              <div>
+                <div style="font-size:10px;color:rgba(96,165,250,.6);margin-bottom:4px;">☯️ 기본 체질 오행</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                  <button onclick="foodSetOh(this,'목')" class="fp-oh-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.06);color:#4ade80;font-size:11px;cursor:pointer;font-family:inherit;">🌳 목(木)</button>
+                  <button onclick="foodSetOh(this,'화')" class="fp-oh-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.06);color:#f87171;font-size:11px;cursor:pointer;font-family:inherit;">🔥 화(火)</button>
+                  <button onclick="foodSetOh(this,'토')" class="fp-oh-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);color:#fbbf24;font-size:11px;cursor:pointer;font-family:inherit;">🪨 토(土)</button>
+                  <button onclick="foodSetOh(this,'금')" class="fp-oh-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(148,163,184,.3);background:rgba(148,163,184,.06);color:#94a3b8;font-size:11px;cursor:pointer;font-family:inherit;">⚙️ 금(金)</button>
+                  <button onclick="foodSetOh(this,'수')" class="fp-oh-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(96,165,250,.3);background:rgba(96,165,250,.06);color:#60a5fa;font-size:11px;cursor:pointer;font-family:inherit;">💧 수(水)</button>
+                </div>
+                <input type="hidden" id="fp-constitution">
+              </div>
+            </div>
           </div>
-          <!-- 병명 행 목록 -->
-          <div id="food-disease-rows" style="display:flex;flex-direction:column;gap:6px;">
-            <!-- JS로 렌더링 -->
-          </div>
-          <!-- 빈 상태 -->
-          <div id="food-disease-empty" style="text-align:center;padding:12px;font-size:11px;color:rgba(240,230,200,.3);border:1px dashed rgba(248,113,113,.2);border-radius:8px;">
-            + 추가 버튼으로 병명을 등록하세요
-          </div>
-        </div>
 
-        <!-- 기피 성분 -->
-        <div style="margin-bottom:14px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-            <div style="width:3px;height:14px;background:#fbbf24;border-radius:2px;"></div>
-            <div style="font-size:11px;font-weight:700;color:#fbbf24;letter-spacing:.06em;">ALLERGY / AVOID · 기피 성분</div>
+          <!-- ② 주요 호소 증상 C/C + rPPG -->
+          <div style="border:1px solid rgba(251,191,36,.2);border-radius:10px;overflow:hidden;">
+            <div onclick="foodToggleSection('sec2')" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(251,191,36,.07);cursor:pointer;">
+              <span style="font-size:10px;font-weight:900;color:#fbbf24;letter-spacing:.08em;">② C/C &amp; HPI · 주요 호소 증상</span>
+              <span style="font-size:9px;color:rgba(251,191,36,.5);margin-left:4px;">현재 증상 · rPPG 생체 데이터</span>
+              <span id="sec2-arrow" style="margin-left:auto;font-size:10px;color:rgba(251,191,36,.5);transition:transform .25s;">▼</span>
+            </div>
+            <div id="sec2" style="display:none;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+              <div>
+                <div style="font-size:10px;color:rgba(251,191,36,.7);margin-bottom:4px;">🔴 Chief Complaint · 지금 가장 불편한 것</div>
+                <input id="fp-cc" placeholder="예: 속쓰림, 만성 피로, 소화불량, 부종" style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+              </div>
+              <div>
+                <div style="font-size:10px;color:rgba(251,191,36,.7);margin-bottom:4px;">⚡ HPI · 언제/무엇을 먹으면 악화되나요?</div>
+                <input id="fp-hpi" placeholder="예: 식후 속쓰림, 기름진 것 먹으면 설사, 공복시 두통" style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+              </div>
+              <!-- rPPG 생체 데이터 -->
+              <div id="fp-rppg-row" style="padding:8px 10px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.2);border-radius:8px;">
+                <div style="font-size:10px;color:rgba(52,211,153,.7);font-weight:700;margin-bottom:5px;">🔬 Physical Exam · rPPG 생체 측정값</div>
+                <div id="fp-rppg-data" style="font-size:11px;color:rgba(240,230,200,.5);">생체 스캔 페이지에서 측정 후 자동 연동됩니다.</div>
+              </div>
+            </div>
           </div>
-          <input id="food-avoid" placeholder="예: 카페인, 밀가루, 유제품, 견과류" oninput="foodUpdateSummary()"
-            style="width:100%;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:9px 12px;color:#f0ece0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;"
-            onfocus="this.style.borderColor='rgba(251,191,36,.6)'" onblur="this.style.borderColor='rgba(251,191,36,.25)'">
-        </div>
 
-        <!-- hidden: 구버전 호환 -->
-        <input id="food-diseases" type="hidden">
+          <!-- ③ 과거력 & 진단 -->
+          <div style="border:1px solid rgba(248,113,113,.2);border-radius:10px;overflow:hidden;">
+            <div onclick="foodToggleSection('sec3')" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(248,113,113,.07);cursor:pointer;">
+              <span style="font-size:10px;font-weight:900;color:#f87171;letter-spacing:.08em;">③ Dx &amp; Hx · 진단명 &amp; 과거력</span>
+              <span style="font-size:9px;color:rgba(248,113,113,.5);margin-left:4px;">확정 진단 · 수치 기준값</span>
+              <span id="sec3-arrow" style="margin-left:auto;font-size:10px;color:rgba(248,113,113,.5);transition:transform .25s;">▼</span>
+            </div>
+            <div id="sec3" style="display:none;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+              <div>
+                <div style="font-size:10px;color:rgba(248,113,113,.7);margin-bottom:4px;">📋 Diagnosis · 현재 진단명</div>
+                <input id="food-diseases" placeholder="예: 고혈압, 위염, 당뇨, 역류성식도염" oninput="foodUpdateSummary()" style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.25);border-radius:6px;padding:7px 10px;color:#f0ece0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(248,113,113,.6)'" onblur="this.style.borderColor='rgba(248,113,113,.25)'">
+              </div>
+              <div>
+                <div style="font-size:10px;color:rgba(248,113,113,.7);margin-bottom:4px;">🏥 Past History · 과거력 (수술·기왕증)</div>
+                <input id="fp-past" placeholder="예: 2022년 맹장수술, 10년 전 위궤양" style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+              </div>
+              <div style="display:flex;gap:8px;">
+                <div style="flex:1;">
+                  <div style="font-size:10px;color:rgba(248,113,113,.7);margin-bottom:4px;">💉 혈압 (mmHg)</div>
+                  <input id="fp-bp" placeholder="예: 130/85" style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:10px;color:rgba(248,113,113,.7);margin-bottom:4px;">🩸 혈당 (mg/dL)</div>
+                  <input id="fp-sugar" placeholder="예: 공복 110" style="width:100%;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;">
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- 저장 버튼 -->
-        <button onclick="foodSaveProfile()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08));border:1px solid rgba(52,211,153,.5);border-radius:10px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.08em;"
-          onmouseover="this.style.background='rgba(52,211,153,.25)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.08))'">
-          💾 SAVE CHART &nbsp;·&nbsp; 차트 저장
-        </button>
-        <div id="food-profile-saved" style="display:none;margin-top:8px;font-size:11px;color:#34d399;text-align:center;letter-spacing:.06em;">✅ 차트 저장 완료</div>
-      </div>
-    </div>
+          <!-- ④ 알레르기 & 금기 (Allergy/Avoid) -->
+          <div style="border:1px solid rgba(167,139,250,.2);border-radius:10px;overflow:hidden;">
+            <div onclick="foodToggleSection('sec4')" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(167,139,250,.07);cursor:pointer;">
+              <span style="font-size:10px;font-weight:900;color:#a78bfa;letter-spacing:.08em;">④ ALLERGY · 알레르기 &amp; 금기 성분</span>
+              <span id="sec4-arrow" style="margin-left:auto;font-size:10px;color:rgba(167,139,250,.5);transition:transform .25s;">▼</span>
+            </div>
+            <div id="sec4" style="display:none;padding:10px 12px;">
+              <input id="food-avoid" placeholder="예: 카페인, 밀가루, 유제품, 견과류, 갑각류" oninput="foodUpdateSummary()" style="width:100%;background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.25);border-radius:6px;padding:7px 10px;color:#f0ece0;font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(167,139,250,.6)'" onblur="this.style.borderColor='rgba(167,139,250,.25)'">
+            </div>
+          </div>
+
+          <!-- ⑤ 디지털 서명 -->
+          <div style="border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:10px 12px;background:rgba(52,211,153,.04);">
+            <div style="font-size:10px;color:rgba(52,211,153,.6);letter-spacing:.07em;margin-bottom:8px;">⑤ CONSENT &amp; SIGNATURE · 디지털 승인</div>
+            <div style="font-size:10px;color:rgba(240,230,200,.45);line-height:1.7;margin-bottom:10px;">
+              본 데이터는 음식 분석 시 AI의 판단 기준으로 사용되며,<br>
+              저장 즉시 <strong style="color:rgba(52,211,153,.8);">나의 건강 기억소</strong>에 누적되어 다음 분석에 가중치로 작용합니다.
+            </div>
+            <button onclick="foodSaveProfile()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(52,211,153,.22),rgba(52,211,153,.08));border:1px solid rgba(52,211,153,.55);border-radius:10px;color:#34d399;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.1em;" onmouseover="this.style.background='rgba(52,211,153,.28)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(52,211,153,.22),rgba(52,211,153,.08))'">
+              ✅ CONFIRM &amp; SAVE &nbsp;·&nbsp; 차트 확정 저장
+            </button>
+            <div id="food-profile-saved" style="display:none;margin-top:8px;font-size:11px;color:#34d399;text-align:center;letter-spacing:.06em;">💾 차트 저장 완료 — 다음 분석부터 반영됩니다</div>
+          </div>
+
+        </div><!-- /padding -->
+      </div><!-- /food-profile-body -->
+    </div><!-- /food-profile-card -->
 
     <!-- 음식 입력 섹션 -->
     <div style="background:var(--bg-card);border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:16px;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:800;color:#fbbf24;margin-bottom:12px;">🍽️ 음식 분석</div>
+      <div style="font-size:13px;font-weight:800;color:#fbbf24;margin-bottom:4px;">🍽️ 음식 스캔 & 분석</div>
+      <div style="font-size:11px;color:rgba(240,230,200,.45);margin-bottom:12px;">카메라를 음식에 가져다 대고 📸 촬영 버튼을 누르세요</div>
 
-      <!-- 카메라 캡처 -->
-      <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;min-height:160px;display:flex;align-items:center;justify-content:center;" id="food-cam-wrap">
-        <video id="food-video" autoplay playsinline muted style="width:100%;max-height:220px;object-fit:cover;display:none;border-radius:12px;"></video>
-        <canvas id="food-canvas" style="display:none;"></canvas>
-        <div id="food-preview-wrap" style="display:none;width:100%;text-align:center;">
-          <img id="food-preview" style="max-width:100%;max-height:200px;border-radius:10px;object-fit:contain;">
+      <!-- 단계 안내 (카메라 미사용 시) -->
+      <div id="food-step-guide" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:12px;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.15);border-radius:10px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(251,191,36,.8);margin-bottom:4px;">📋 사용 방법 (3단계)</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.5);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fbbf24;flex-shrink:0;">1</div>
+          <div style="font-size:12px;color:rgba(240,230,200,.75);">📷 <strong style="color:#fbbf24;">카메라 시작</strong> 버튼 → 음식에 가져다 대기</div>
         </div>
-        <div id="food-cam-idle" style="text-align:center;padding:20px;">
-          <div style="font-size:40px;margin-bottom:8px;">📸</div>
-          <div style="font-size:12px;color:rgba(240,230,200,.5);">카메라로 음식을 촬영하거나<br>음식명을 직접 입력하세요</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.5);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#34d399;flex-shrink:0;">2</div>
+          <div style="font-size:12px;color:rgba(240,230,200,.75);">🔴 <strong style="color:#34d399;">촬영</strong> 버튼 → 음식이 선명하게 보일 때 찰칵!</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.5);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#a78bfa;flex-shrink:0;">3</div>
+          <div style="font-size:12px;color:rgba(240,230,200,.75);">⚡ <strong style="color:#a78bfa;">분석 시작</strong> → AI가 영양·오행·병명 궁합 판정</div>
+        </div>
+        <div style="margin-top:4px;padding:6px 10px;background:rgba(96,165,250,.07);border-radius:7px;font-size:11px;color:rgba(96,165,250,.7);">
+          💡 갤러리에서 기존 사진을 불러와도 됩니다
         </div>
       </div>
 
+      <!-- 카메라 뷰 -->
+      <div style="position:relative;background:rgba(0,0,0,.85);border-radius:12px;overflow:hidden;margin-bottom:10px;min-height:180px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08);" id="food-cam-wrap">
+        <video id="food-video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:none;border-radius:12px;"></video>
+        <canvas id="food-canvas" style="display:none;"></canvas>
+
+        <!-- 촬영 중 오버레이 -->
+        <div id="food-scan-overlay" style="display:none;position:absolute;inset:0;pointer-events:none;">
+          <div style="position:absolute;top:12px;left:12px;width:20px;height:20px;border-top:2px solid #34d399;border-left:2px solid #34d399;border-radius:2px;"></div>
+          <div style="position:absolute;top:12px;right:12px;width:20px;height:20px;border-top:2px solid #34d399;border-right:2px solid #34d399;border-radius:2px;"></div>
+          <div style="position:absolute;bottom:12px;left:12px;width:20px;height:20px;border-bottom:2px solid #34d399;border-left:2px solid #34d399;border-radius:2px;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:20px;height:20px;border-bottom:2px solid #34d399;border-right:2px solid #34d399;border-radius:2px;"></div>
+          <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#34d399;letter-spacing:.1em;font-weight:700;text-shadow:0 0 8px rgba(52,211,153,.8);">● SCANNING</div>
+        </div>
+
+        <!-- 미리보기 -->
+        <div id="food-preview-wrap" style="display:none;width:100%;text-align:center;position:relative;">
+          <img id="food-preview" style="max-width:100%;max-height:220px;border-radius:10px;object-fit:contain;">
+          <div style="position:absolute;top:8px;right:8px;background:rgba(52,211,153,.2);border:1px solid rgba(52,211,153,.5);border-radius:6px;padding:3px 8px;font-size:10px;color:#34d399;font-weight:700;">✅ 촬영 완료</div>
+          <button onclick="foodResetCamera()" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;font-size:10px;color:rgba(255,255,255,.7);cursor:pointer;font-family:inherit;">🔄 다시 찍기</button>
+        </div>
+
+        <!-- 초기 안내 -->
+        <div id="food-cam-idle" style="text-align:center;padding:24px;">
+          <div style="font-size:44px;margin-bottom:10px;">📷</div>
+          <div style="font-size:13px;font-weight:700;color:rgba(240,230,200,.7);margin-bottom:6px;">카메라를 시작해주세요</div>
+          <div style="font-size:11px;color:rgba(240,230,200,.35);">아래 버튼을 눌러 카메라를 켜거나<br>갤러리에서 사진을 선택하세요</div>
+        </div>
+      </div>
+
+      <!-- 버튼 행 -->
       <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button onclick="foodStartCamera()" id="food-cam-btn" style="flex:1;padding:9px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);border-radius:9px;color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📷 카메라</button>
-        <button onclick="foodCapture()" id="food-snap-btn" style="display:none;flex:1;padding:9px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);border-radius:9px;color:#34d399;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔴 촬영</button>
-        <label style="flex:1;padding:9px;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.35);border-radius:9px;color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;text-align:center;font-family:'Noto Sans KR',sans-serif;">
+        <button onclick="foodStartCamera()" id="food-cam-btn" style="flex:1;padding:11px 8px;background:rgba(251,191,36,.15);border:2px solid rgba(251,191,36,.5);border-radius:10px;color:#fbbf24;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">📷 카메라 시작</button>
+        <button onclick="foodCapture()" id="food-snap-btn" style="display:none;flex:1;padding:11px 8px;background:rgba(52,211,153,.18);border:2px solid rgba(52,211,153,.6);border-radius:10px;color:#34d399;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;animation:goldPulse 1.5s ease-in-out infinite;">🔴 촬영!</button>
+        <label style="flex:1;padding:11px 8px;background:rgba(96,165,250,.12);border:2px solid rgba(96,165,250,.35);border-radius:10px;color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;text-align:center;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;gap:4px;">
           🖼️ 갤러리<input type="file" accept="image/*" onchange="foodFromGallery(event)" style="display:none;">
         </label>
       </div>
 
       <div style="margin-bottom:10px;">
-        <input id="food-name-input" placeholder="또는 음식명 직접 입력 (예: 짜장면, 삼겹살, 샐러드...)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(251,191,36,.3);border-radius:9px;padding:10px 14px;color:#e2e8f0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter') foodAnalyze()">
+        <input id="food-name-input" placeholder="또는 음식명 직접 입력 (예: 오레오, 삼겹살, 된장찌개...)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(251,191,36,.25);border-radius:9px;padding:10px 14px;color:#e2e8f0;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter') foodAnalyze()">
       </div>
 
-      <button onclick="foodAnalyze()" style="width:100%;padding:13px;background:linear-gradient(135deg,rgba(251,191,36,.25),rgba(212,168,67,.15));border:2px solid rgba(251,191,36,.7);border-radius:12px;color:#fbbf24;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em;">
-        ⚡ 음식 궁합 분석
+      <button onclick="foodAnalyze()" style="width:100%;padding:14px;background:linear-gradient(135deg,rgba(251,191,36,.28),rgba(212,168,67,.15));border:2px solid rgba(251,191,36,.75);border-radius:12px;color:#fbbf24;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.05em;">
+        ⚡ 분석 시작 — AI 영양·오행·병명 판정
       </button>
     </div>
 
@@ -6400,7 +6525,6 @@ var fcSystems = {
         <button onclick="foodClearLog()" style="padding:3px 10px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:6px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 초기화</button>
       </div>
       <div id="food-log-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
-      <!-- 총 칼로리 -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;margin-bottom:10px;">
         <div style="font-size:12px;color:rgba(240,230,200,.7);">🔥 오늘 총 섭취 칼로리</div>
         <div style="display:flex;align-items:baseline;gap:3px;">
@@ -6408,7 +6532,6 @@ var fcSystems = {
           <div style="font-size:11px;color:rgba(251,191,36,.6);">kcal</div>
         </div>
       </div>
-      <!-- 총 활동 처방 -->
       <div id="food-log-activity" style="display:flex;flex-direction:column;gap:5px;"></div>
     </div>
 
@@ -6426,6 +6549,7 @@ var fcSystems = {
           <div style="font-size:13px;font-weight:800;color:#34d399;">음식 궁합 AI 영양사</div>
           <div style="font-size:10px;color:rgba(52,211,153,.6);">분석 결과 · 병명 · 오행을 알고 있는 맞춤 상담</div>
         </div>
+        <button onclick="foodChatClear()" style="margin-left:auto;margin-right:8px;padding:3px 8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:6px;color:rgba(248,113,113,.7);font-size:10px;cursor:pointer;font-family:inherit;">🗑 대화삭제</button>
         <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
           <button onclick="foodAskAI('대체 음식 추천해줘')" style="padding:3px 8px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:6px;color:#34d399;font-size:10px;cursor:pointer;font-family:inherit;">🥗 대체 음식</button>
           <button onclick="foodAskAI('오늘 먹은 음식 종합 평가해줘')" style="padding:3px 8px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:6px;color:#d4a843;font-size:10px;cursor:pointer;font-family:inherit;">📊 종합 평가</button>
@@ -39932,23 +40056,45 @@ function foodStartCamera() {
   var snapBtn = document.getElementById('food-snap-btn');
   var video = document.getElementById('food-video');
   var idle = document.getElementById('food-cam-idle');
+  var overlay = document.getElementById('food-scan-overlay');
+  var guide = document.getElementById('food-step-guide');
   if(_foodStream){ foodStopCamera(); return; }
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
     .then(function(stream){
       _foodStream = stream;
-      video.srcObject = stream; video.style.display='block';
+      video.srcObject = stream;
+      video.style.display='block';
+      if(overlay) overlay.style.display='block';
       idle.style.display='none';
+      if(guide) guide.style.display='none';
       btn.textContent='⏹ 카메라 끄기';
+      btn.style.background='rgba(248,113,113,.15)';
+      btn.style.borderColor='rgba(248,113,113,.5)';
+      btn.style.color='#f87171';
       snapBtn.style.display='flex';
-    }).catch(function(){ alert('카메라 접근이 거부되었습니다. 갤러리를 이용해 주세요.'); });
+    }).catch(function(){
+      alert('카메라 접근이 거부되었습니다.\n📱 설정 > 브라우저 > 카메라 권한을 허용해 주세요.\n\n또는 갤러리에서 사진을 선택하세요.');
+    });
 }
 
 function foodStopCamera() {
   if(_foodStream){ _foodStream.getTracks().forEach(function(t){t.stop();}); _foodStream=null; }
   var video=document.getElementById('food-video'); video.style.display='none';
+  var overlay=document.getElementById('food-scan-overlay'); if(overlay) overlay.style.display='none';
   document.getElementById('food-cam-idle').style.display='block';
-  document.getElementById('food-cam-btn').textContent='📷 카메라';
+  var btn=document.getElementById('food-cam-btn');
+  btn.textContent='📷 카메라 시작';
+  btn.style.background='rgba(251,191,36,.15)';
+  btn.style.borderColor='rgba(251,191,36,.5)';
+  btn.style.color='#fbbf24';
   document.getElementById('food-snap-btn').style.display='none';
+}
+
+function foodResetCamera() {
+  document.getElementById('food-preview-wrap').style.display='none';
+  document.getElementById('food-preview').src='';
+  document.getElementById('food-cam-idle').style.display='block';
+  var guide=document.getElementById('food-step-guide'); if(guide) guide.style.display='flex';
 }
 
 function foodCapture() {
@@ -39959,7 +40105,10 @@ function foodCapture() {
   var img=document.getElementById('food-preview');
   img.src=canvas.toDataURL('image/jpeg',0.85);
   document.getElementById('food-preview-wrap').style.display='block';
+  var guide=document.getElementById('food-step-guide'); if(guide) guide.style.display='none';
   foodStopCamera();
+  // 촬영 후 자동 분석 안내
+  document.getElementById('food-name-input').placeholder='촬영 완료! ⚡ 분석 시작 버튼을 눌러주세요';
 }
 
 function foodFromGallery(e) {
@@ -39975,105 +40124,93 @@ function foodFromGallery(e) {
 }
 
 // ── 프로필 저장/로드 ────────────────────────────────────
-var _foodDiseaseList = []; // [{name:'고혈압', years:3, severity:'중등'}]
-
-function foodAddDiseaseRow(name, years, severity) {
-  _foodDiseaseList.push({name:name||'', years:years||1, severity:severity||'경증'});
-  foodRenderDiseaseRows();
+function foodToggleSection(id) {
+  var el = document.getElementById(id);
+  var arrow = document.getElementById(id+'-arrow');
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'flex';
+  if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
 }
-
-function foodRemoveDiseaseRow(idx) {
-  _foodDiseaseList.splice(idx, 1);
-  foodRenderDiseaseRows();
-  foodUpdateSummary();
+function foodSetOh(btn, val) {
+  document.querySelectorAll('.fp-oh-btn').forEach(function(b){ b.style.opacity='0.45'; b.style.fontWeight='400'; });
+  btn.style.opacity='1'; btn.style.fontWeight='900';
+  var inp = document.getElementById('fp-constitution');
+  if (inp) inp.value = val;
 }
-
-function foodRenderDiseaseRows() {
-  var container = document.getElementById('food-disease-rows');
-  var empty = document.getElementById('food-disease-empty');
-  if (!container) return;
-  if (_foodDiseaseList.length === 0) {
-    container.innerHTML = '';
-    if (empty) empty.style.display = 'block';
-    document.getElementById('food-diseases').value = '';
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-  container.innerHTML = _foodDiseaseList.map(function(d, i) {
-    var sCol = d.severity==='중증'?'#f87171':d.severity==='중등'?'#fbbf24':'#34d399';
-    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:9px;">'
-      // 병명 입력
-      +'<input value="'+d.name+'" onchange="_foodDiseaseList['+i+'].name=this.value;foodUpdateSummary()" placeholder="병명" '
-      +'style="flex:2;background:transparent;border:none;border-bottom:1px solid rgba(248,113,113,.3);color:#f0ece0;font-size:13px;font-family:\'Noto Sans KR\',sans-serif;outline:none;padding:2px 4px;min-width:0;">'
-      // 유병 기간 (년)
-      +'<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">'
-      +'<input type="number" value="'+d.years+'" min="0" max="99" onchange="_foodDiseaseList['+i+'].years=parseInt(this.value)||0;foodUpdateSummary()" '
-      +'style="width:36px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:5px;color:#60a5fa;font-size:12px;font-weight:700;text-align:center;padding:3px 2px;font-family:\'Orbitron\',monospace;outline:none;">'
-      +'<span style="font-size:11px;color:rgba(96,165,250,.7);">년</span>'
-      +'</div>'
-      // 중증도 선택
-      +'<select onchange="_foodDiseaseList['+i+'].severity=this.value;foodRenderDiseaseRows();foodUpdateSummary()" '
-      +'style="background:rgba(255,255,255,.05);border:1px solid '+sCol+'44;border-radius:6px;color:'+sCol+';font-size:10px;font-weight:700;padding:3px 5px;outline:none;cursor:pointer;flex-shrink:0;">'
-      +'<option'+(d.severity==='경증'?' selected':'')+'>경증</option>'
-      +'<option'+(d.severity==='중등'?' selected':'')+'>중등</option>'
-      +'<option'+(d.severity==='중증'?' selected':'')+'>중증</option>'
-      +'</select>'
-      // 삭제
-      +'<button onclick="foodRemoveDiseaseRow('+i+')" style="width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:11px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>'
-      +'</div>';
-  }).join('');
-  // hidden input 동기화 (분석에 사용)
-  document.getElementById('food-diseases').value = _foodDiseaseList.map(function(d){return d.name;}).filter(Boolean).join(',');
-}
+function foodToggleProfile() {
   var body = document.getElementById('food-profile-body');
   var arrow = document.getElementById('food-profile-arrow');
   if (!body) return;
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
-  arrow.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+  arrow.textContent = isOpen ? '▼' : '▲';
+  arrow.style.transform = 'rotate(0deg)';
 }
 
 function foodUpdateSummary() {
-  var avoid = (document.getElementById('food-avoid').value||'').trim();
+  var diseases = (document.getElementById('food-diseases')&&document.getElementById('food-diseases').value||'').trim();
+  var avoid = (document.getElementById('food-avoid')&&document.getElementById('food-avoid').value||'').trim();
+  var cc = (document.getElementById('fp-cc')&&document.getElementById('fp-cc').value||'').trim();
   var el = document.getElementById('food-profile-summary');
   if (!el) return;
   var parts = [];
-  var active = _foodDiseaseList.filter(function(d){return d.name;});
-  if (active.length) parts.push(active.length+'개 진단');
-  if (avoid) parts.push(avoid.split(',').length+'개 기피');
+  if (diseases) parts.push(diseases.split(',').length+'개 진단');
+  if (avoid) parts.push(avoid.split(',').length+'개 금기');
+  if (cc) parts.push('증상 있음');
   el.textContent = parts.length ? parts.join(' · ') : '미입력';
 }
 function foodSaveProfile() {
+  var g = function(id){ var el=document.getElementById(id); return el?(el.value||el.textContent||'').trim():''; };
   var profile = {
-    diseaseList: _foodDiseaseList,
-    avoid: (document.getElementById('food-avoid').value||'').trim()
+    diseases: g('food-diseases'), avoid: g('food-avoid'),
+    drink: g('fp-drink'), smoke: g('fp-smoke'), activity: g('fp-activity'),
+    family: g('fp-family'), constitution: g('fp-constitution'),
+    cc: g('fp-cc'), hpi: g('fp-hpi'),
+    past: g('fp-past'), bp: g('fp-bp'), sugar: g('fp-sugar')
   };
   localStorage.setItem('cgo_food_profile', JSON.stringify(profile));
   var saved = document.getElementById('food-profile-saved');
   saved.style.display = 'block';
-  setTimeout(function(){saved.style.display='none';}, 2000);
-  foodUpdateSummary();
+  setTimeout(function(){
+    saved.style.display='none';
+    // 저장 후 자동 접기
+    var body=document.getElementById('food-profile-body');
+    var arrow=document.getElementById('food-profile-arrow');
+    if(body){body.style.display='none'; if(arrow){arrow.textContent='▼';}}
+  }, 1500);
 }
 
 function foodLoadProfile() {
-  var noEl = document.getElementById('food-chart-no');
-  var dtEl = document.getElementById('food-chart-date');
-  if (noEl) noEl.textContent = (window.calcResult&&window.calcResult.name ? window.calcResult.name.charCodeAt(0).toString().padStart(6,'0') : Math.floor(Math.random()*900000+100000));
-  if (dtEl) { var n=new Date(); dtEl.textContent = n.getFullYear()+'.'+(n.getMonth()+1).toString().padStart(2,'0')+'.'+n.getDate().toString().padStart(2,'0'); }
-  try {
-    var p = JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');
-    // 신버전: diseaseList 배열
-    if (p.diseaseList && Array.isArray(p.diseaseList)) {
-      _foodDiseaseList = p.diseaseList;
-    // 구버전 호환: diseases 문자열
-    } else if (p.diseases) {
-      _foodDiseaseList = p.diseases.split(',').map(function(s){
-        return {name:s.trim(), years:1, severity:'경증'};
-      }).filter(function(d){return d.name;});
+  var noEl=document.getElementById('food-chart-no'), dtEl=document.getElementById('food-chart-date');
+  if(noEl) noEl.textContent=(window.calcResult&&window.calcResult.name?window.calcResult.name.charCodeAt(0).toString().padStart(6,'0'):Math.floor(Math.random()*900000+100000));
+  if(dtEl){var n=new Date();dtEl.textContent=n.getFullYear()+'.'+(n.getMonth()+1).toString().padStart(2,'0')+'.'+n.getDate().toString().padStart(2,'0');}
+  // rPPG 생체 데이터 연동
+  var bio = window._bioFinalData;
+  var rppgEl = document.getElementById('fp-rppg-data');
+  if(rppgEl && bio && bio.bpm) {
+    rppgEl.innerHTML = '<span style="color:#34d399;font-weight:700;">BPM '+bio.bpm+'</span> &nbsp;·&nbsp; '
+      +'<span style="color:#60a5fa;">HRV '+bio.hrv+'</span> &nbsp;·&nbsp; '
+      +'<span style="color:#a78bfa;">FCI '+bio.fci+'</span> &nbsp;·&nbsp; '
+      +'<span style="color:#fbbf24;">ILI '+(window._cgoILS&&window._cgoILS.total||'--')+'</span>';
+  }
+  try{
+    var p=JSON.parse(localStorage.getItem('cgo_food_profile')||'{}');
+    var s=function(id,v){var el=document.getElementById(id);if(el&&v)el.value=v;};
+    s('food-diseases',p.diseases); s('food-avoid',p.avoid);
+    s('fp-drink',p.drink); s('fp-smoke',p.smoke); s('fp-activity',p.activity);
+    s('fp-family',p.family); s('fp-cc',p.cc); s('fp-hpi',p.hpi);
+    s('fp-past',p.past); s('fp-bp',p.bp); s('fp-sugar',p.sugar);
+    // 체질 오행 버튼 복원
+    if(p.constitution){
+      document.querySelectorAll('.fp-oh-btn').forEach(function(b){
+        if(b.textContent.indexOf(p.constitution)!==-1){b.style.opacity='1';b.style.fontWeight='900';}
+        else{b.style.opacity='0.45';}
+      });
+      var ci=document.getElementById('fp-constitution');
+      if(ci) ci.value=p.constitution;
     }
-    if (p.avoid) document.getElementById('food-avoid').value = p.avoid;
-  } catch(e) {}
-  foodRenderDiseaseRows();
+  }catch(e){}
   foodUpdateSummary();
 }
 
@@ -40083,27 +40220,27 @@ function foodAnalyze() {
   var previewSrc=document.getElementById('food-preview').src;
   var hasImage = previewSrc && previewSrc.length > 100 && previewSrc !== window.location.href;
 
-  if(!nameInput && !hasImage){ alert('음식 사진을 찍거나 음식명을 입력해 주세요.'); return; }
+  if(!nameInput && !hasImage){ alert('음식명을 입력하거나 사진을 촬영해 주세요.'); return; }
 
   document.getElementById('food-result').style.display='none';
   document.getElementById('food-loading').style.display='block';
-  document.getElementById('food-loading-msg').textContent = hasImage ? '📷 AI가 음식을 인식 중...' : '🤖 AI 분석 중...';
+  document.getElementById('food-loading-msg').textContent = hasImage ? '📷 이미지 분석 중... (AI)' : '🔍 음식 DB 검색 중...';
 
-  // DB 직접 검색 (텍스트 입력 + DB에 있는 경우만 빠른 응답)
+  // 1. DB 직접 검색
   if(nameInput){
     var found=null, bestLen=0;
     Object.keys(FOOD_DB).forEach(function(key){
       if(nameInput.indexOf(key)!==-1 && key.length>bestLen){ found=FOOD_DB[key]; found._key=key; bestLen=key.length; }
     });
-    if(!found){
+    if(!found){ // 부분 일치
       Object.keys(FOOD_DB).forEach(function(key){
         if(key.indexOf(nameInput)!==-1 && key.length>bestLen){ found=FOOD_DB[key]; found._key=key; bestLen=key.length; }
       });
     }
-    if(found){ setTimeout(function(){ foodRenderResult(found._key||nameInput, found); },300); return; }
+    if(found){ setTimeout(function(){ foodRenderResult(found._key||nameInput, found); },400); return; }
   }
 
-  // DB에 없거나 이미지 → /api/groq로 AI 분석 (키 불필요 — 서버가 대행)
+  // 2. DB에 없으면 → /api/groq AI 분석 (API 키 불필요 — 서버 대행)
   foodAnalyzeWithAI(nameInput, hasImage ? previewSrc : null);
 }
 
@@ -40117,66 +40254,144 @@ function _foodEstimate(name) {
 }
 
 async function foodAnalyzeWithAI(name, imageSrc) {
-  try {
-    var content = [];
 
-    // 이미지가 있으면 → 압축 후 비전 AI에 전달
-    if (imageSrc && imageSrc.startsWith('data:image')) {
-      // 이미지 800px로 압축 (프록시 전송 크기 최적화)
-      var compressed = await new Promise(function(resolve) {
-        var img = new Image();
-        img.onload = function() {
-          var canvas = document.createElement('canvas');
-          var max = 800, w = img.width, h = img.height;
-          if (w > max || h > max) {
-            if (w > h) { h = Math.round(h * max / w); w = max; }
-            else       { w = Math.round(w * max / h); h = max; }
-          }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = imageSrc;
-      });
-      content.push({type:'image_url', image_url:{url: compressed}});
+  // 0단계: 사진이 있으면 → Groq 비전 AI 직접 호출 (window.CG_GEMINI_KEY 사용)
+  if (imageSrc && imageSrc.startsWith('data:image')) {
+    var vKey = (window.CG_GEMINI_KEY||'').trim();
+    if (vKey) {
+      try {
+        document.getElementById('food-loading-msg').textContent = '📷 AI가 음식 인식 중...';
+        // 이미지 600px 압축
+        var compressed = await new Promise(function(res) {
+          var img = new Image();
+          img.onload = function() {
+            var c = document.createElement('canvas');
+            var max=600, w=img.width, h=img.height;
+            if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+            c.width=w; c.height=h;
+            c.getContext('2d').drawImage(img,0,0,w,h);
+            res(c.toDataURL('image/jpeg',0.7));
+          };
+          img.src = imageSrc;
+        });
+        var vPrompt = '이 사진의 음식을 분석해서 JSON만 반환하세요 (설명 없이):\n'
+          + '{"name":"한국어음식명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
+          + '"oh":오행(0=금/매운것,1=화/빨간것,2=목/녹색채소,3=토/달고전분,4=수/짠검은것),"emoji":"이모지","risk":["위험병명"]}\n'
+          + '브랜드 제품이면 브랜드명 포함해서 정확히 답하세요.';
+        var vResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+vKey},
+          body: JSON.stringify({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{role:'user', content:[
+              {type:'image_url', image_url:{url: compressed}},
+              {type:'text', text: vPrompt}
+            ]}],
+            max_tokens: 300, temperature: 0.1
+          })
+        });
+        var vData = await vResp.json();
+        // 429 한도초과 시 키 로테이션
+        if (vData.error && vData.error.code === 'rate_limit_exceeded') {
+          if(typeof _cgoRotateKey==='function') _cgoRotateKey();
+        }
+        var vTxt = (vData.choices&&vData.choices[0]&&vData.choices[0].message&&vData.choices[0].message.content)||'';
+        var vJm = vTxt.match(/\{[\s\S]*?\}/);
+        if (vJm) {
+          var vInfo = JSON.parse(vJm[0]);
+          if (vInfo.name && vInfo.cal > 0) { foodRenderResult(vInfo.name, vInfo); return; }
+        }
+      } catch(e) {}
     }
+  }
 
-    var profile = {};
-    try { profile = JSON.parse(localStorage.getItem('cgo_food_profile')||'{}'); } catch(e) {}
-    var prompt = '이 음식을 분석해서 JSON만 반환하세요 (설명 없이, 마크다운 없이):\n'
-      + '{"name":"한국어 음식명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
-      + '"oh":오행번호(0=금/매운것 1=화/빨간것 2=목/녹색 3=토/단것 4=수/짠것),'
-      + '"emoji":"음식이모지","risk":["위험한병명들"]}\n'
-      + (name ? '음식명 힌트: ' + name + '\n' : '사진에서 음식을 직접 인식하세요.\n')
-      + (profile.diseases ? '사용자 병명(참고): ' + profile.diseases : '');
-    content.push({type:'text', text: prompt});
+  // 1단계: Open Food Facts (브랜드·과자·빵 포함, 무료, 키 없음)
+  if (name) {
+    try {
+      var offResp = await fetch(
+        'https://world.openfoodfacts.org/cgi/search.pl?search_terms='
+        + encodeURIComponent(name) + '&search_simple=1&action=process&json=1&page_size=3',
+        {mode:'cors'}
+      );
+      if (offResp.ok) {
+        var offData = await offResp.json();
+        var products = offData.products || [];
+        for (var i = 0; i < products.length; i++) {
+          var nu = products[i].nutriments;
+          if (!nu) continue;
+          var kcal = nu['energy-kcal_100g'] || nu['energy-kcal_serving'] || 0;
+          if (kcal <= 0) continue;
+          var serving = parseFloat(products[i].serving_size) || 100;
+          var factor = serving / 100;
+          var info = {
+            cal: Math.round(kcal * factor),
+            c: Math.round((nu['carbohydrates_100g']||0) * factor),
+            p: Math.round((nu['proteins_100g']||0) * factor),
+            f: Math.round((nu['fat_100g']||0) * factor),
+            na: Math.round((nu['sodium_100g']||0) * factor * 1000),
+            oh: _foodGuessOh(name),
+            emoji: _foodGuessEmoji(name),
+            risk: []
+          };
+          if (info.cal > 0) {
+            var fname = products[i].product_name_ko || products[i].product_name || name;
+            foodRenderResult(fname, info);
+            return;
+          }
+        }
+      }
+    } catch(e) {}
+  }
 
+  // 2단계: Groq 텍스트 AI (LLM 학습 지식으로 분석)
+  try {
+    var foodHint = name || '알 수 없는 음식';
+    var prompt = '음식 "' + foodHint + '" 1인분 영양정보를 JSON만 반환 (설명 없이):\n'
+      + '{"name":"정확한한국어명","cal":칼로리숫자,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
+      + '"oh":오행(0=금매운것,1=화빨간것,2=목녹색,3=토단것,4=수짠것),"emoji":"이모지","risk":["위험병명"]}\n'
+      + '오레오·허니버터칩·빼빼로 등 브랜드 식품도 정확히 답하세요.';
     var resp = await fetch('/api/groq', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{role:'user', content: content}],
-        max_tokens: 300,
-        temperature: 0.1
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[{role:'user',content:prompt}],
+        max_tokens:250, temperature:0.1
       })
     });
     var data = await resp.json();
-    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-    // JSON 추출
-    var jm = text.match(/\{[\s\S]*?\}/);
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var jm = txt.match(/\{[\s\S]*?\}/);
     if (jm) {
       var info = JSON.parse(jm[0]);
-      if (info.name && info.cal) {
-        foodRenderResult(info.name, info);
-        return;
-      }
+      if (info.cal && info.cal > 0) { foodRenderResult(info.name||name, info); return; }
     }
-    // AI 응답 파싱 실패 시 이름이라도 보여줌
-    foodRenderResult(name||'분석된 음식', _foodEstimate(name||''));
-  } catch(e) {
-    foodRenderResult(name||'음식', _foodEstimate(name||''));
-  }
+  } catch(e) {}
+
+  // 3단계: 최후 추정
+  foodRenderResult(name||'음식', _foodEstimate(name||''));
+}
+
+function _foodGuessOh(n) {
+  if (/커피|콜라|검은|미역|된장|간장|블루/.test(n)) return 4;
+  if (/고추|토마토|딸기|육류|삼겹|불고기|치킨|피자/.test(n)) return 1;
+  if (/샐러드|브로콜리|시금치|오이|녹차|사과|키위/.test(n)) return 2;
+  if (/과자|빵|케이크|초콜릿|쿠키|사탕|도넛|와플/.test(n)) return 3;
+  return 0;
+}
+function _foodGuessEmoji(n) {
+  if (/커피/.test(n)) return '☕';
+  if (/피자/.test(n)) return '🍕';
+  if (/햄버거|버거/.test(n)) return '🍔';
+  if (/과자|칩|크래커/.test(n)) return '🍪';
+  if (/빵|케이크|도넛/.test(n)) return '🍞';
+  if (/초콜릿|초코/.test(n)) return '🍫';
+  if (/라면|면/.test(n)) return '🍜';
+  if (/밥/.test(n)) return '🍚';
+  if (/찌개|국/.test(n)) return '🥘';
+  if (/고기|삼겹/.test(n)) return '🥩';
+  if (/샐러드/.test(n)) return '🥗';
+  return '🍽️';
 }
 
 // ── 결과 렌더링 ─────────────────────────────────────────
@@ -40301,6 +40516,10 @@ function foodRenderResult(foodName, data) {
   },100);
 }
 
+// ── 음식 AI 채팅 ────────────────────────────────────────
+var _foodChatHistory = [];
+var _foodLastAnalysis = null;
+
 // ── 오늘 식사 기록 ──────────────────────────────────────
 var _foodLog = [];
 
@@ -40308,44 +40527,41 @@ function foodAddToLog() {
   if (!_foodLastAnalysis) return;
   var item = {
     name: _foodLastAnalysis.name,
-    emoji: _foodLastAnalysis.data.emoji || '🍽️',
-    cal: _foodLastAnalysis.data.cal || 0,
+    emoji: _foodLastAnalysis.data.emoji||'🍽️',
+    cal: _foodLastAnalysis.data.cal||0,
     time: new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})
   };
   _foodLog.push(item);
-  // localStorage 저장
-  try { localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); } catch(e){}
+  try{ localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); }catch(e){}
   foodRenderLog();
-  // 버튼 피드백
-  var btn = event.target;
-  btn.textContent = '✅ 추가됨!';
-  btn.style.borderColor = 'rgba(52,211,153,.6)';
-  btn.style.color = '#34d399';
-  setTimeout(function(){
-    btn.textContent = '➕ 오늘 식사 기록에 추가';
-    btn.style.borderColor = 'rgba(251,191,36,.6)';
-    btn.style.color = '#fbbf24';
-  }, 1500);
+  var btn = event && event.target;
+  if (btn) {
+    btn.textContent='✅ 추가됨!'; btn.style.borderColor='rgba(52,211,153,.6)'; btn.style.color='#34d399';
+    setTimeout(function(){ btn.textContent='➕ 오늘 식사 기록에 추가'; btn.style.borderColor='rgba(251,191,36,.6)'; btn.style.color='#fbbf24'; },1500);
+  }
 }
 
 function foodClearLog() {
-  _foodLog = [];
-  try { localStorage.removeItem('cgo_food_log_'+new Date().toDateString()); } catch(e){}
+  _foodLog=[];
+  try{ localStorage.removeItem('cgo_food_log_'+new Date().toDateString()); }catch(e){}
+  foodRenderLog();
+}
+
+function _foodLogRemove(idx) {
+  _foodLog.splice(idx,1);
+  try{ localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); }catch(e){}
   foodRenderLog();
 }
 
 function foodRenderLog() {
-  var logCard = document.getElementById('food-log-card');
-  var logList = document.getElementById('food-log-list');
-  var logTotal = document.getElementById('food-log-total');
-  var logAct = document.getElementById('food-log-activity');
-  if (!logCard) return;
-
-  if (_foodLog.length === 0) { logCard.style.display = 'none'; return; }
-  logCard.style.display = 'block';
-
-  // 목록 렌더
-  logList.innerHTML = _foodLog.map(function(item, i){
+  var logCard=document.getElementById('food-log-card');
+  var logList=document.getElementById('food-log-list');
+  var logTotal=document.getElementById('food-log-total');
+  var logAct=document.getElementById('food-log-activity');
+  if(!logCard) return;
+  if(_foodLog.length===0){ logCard.style.display='none'; return; }
+  logCard.style.display='block';
+  logList.innerHTML=_foodLog.map(function(item,i){
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;">'
       +'<span style="font-size:18px;">'+item.emoji+'</span>'
       +'<div style="flex:1;font-size:12px;color:#e2e8f0;font-weight:600;">'+item.name+'</div>'
@@ -40355,41 +40571,28 @@ function foodRenderLog() {
       +'<button onclick="_foodLogRemove('+i+')" style="background:none;border:none;color:rgba(248,113,113,.5);font-size:12px;cursor:pointer;padding:2px 4px;">✕</button>'
       +'</div>';
   }).join('');
-
-  // 총 칼로리
-  var total = _foodLog.reduce(function(s,i){return s+(i.cal||0);},0);
-  logTotal.textContent = total;
-
-  // 총 활동 처방
-  var weight = 65;
-  logAct.innerHTML = '<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">🏃 총 칼로리 소모 처방 ('+total+'kcal 기준)</div>'
-    + ACTIVITY_LIST.map(function(act){
-      var mins = Math.round(total / (act.met * weight * 3.5 / 200));
-      var h = Math.floor(mins/60), m = mins%60;
-      var timeStr = h>0 ? h+'시간 '+(m>0?m+'분':'') : m+'분';
+  var total=_foodLog.reduce(function(s,i){return s+(i.cal||0);},0);
+  logTotal.textContent=total;
+  var weight=65;
+  logAct.innerHTML='<div style="font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">🏃 총 칼로리 소모 처방 ('+total+'kcal 기준)</div>'
+    +ACTIVITY_LIST.map(function(act){
+      var mins=Math.round(total/(act.met*weight*3.5/200));
+      var h=Math.floor(mins/60), m=mins%60;
+      var ts=h>0?h+'시간 '+(m>0?m+'분':''):m+'분';
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.12);border-radius:7px;">'
         +'<span style="font-size:16px;">'+act.emoji+'</span>'
         +'<div style="flex:1;font-size:11px;color:rgba(240,230,200,.8);">'+act.name+'</div>'
-        +'<div style="font-size:13px;font-weight:900;color:#38bdf8;font-family:\'Orbitron\',monospace;">'+timeStr+'</div>'
-        +'</div>';
+        +'<div style="font-size:13px;font-weight:900;color:#38bdf8;font-family:\'Orbitron\',monospace;">'+ts+'</div></div>';
     }).join('');
-
-  // 스크롤
-  setTimeout(function(){
-    logCard.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },100);
+  setTimeout(function(){ logCard.scrollIntoView({behavior:'smooth',block:'nearest'}); },100);
 }
 
-function _foodLogRemove(idx) {
-  _foodLog.splice(idx, 1);
-  try { localStorage.setItem('cgo_food_log_'+new Date().toDateString(), JSON.stringify(_foodLog)); } catch(e){}
-  foodRenderLog();
+function foodChatClear() {
+  _foodChatHistory = [];
+  try { localStorage.removeItem('cgo_food_chat'); } catch(e) {}
+  var box = document.getElementById('food-chat-messages');
+  if (box) box.innerHTML = '';
 }
-
-// ── 음식 AI 채팅 ────────────────────────────────────────
-var _foodChatHistory = [];
-var _foodLastAnalysis = null;
-
 function foodChatEnter(e) {
   if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); foodChatSend(); }
 }
@@ -40418,6 +40621,7 @@ function foodAskAI(userText) {
   _foodAddBubble('me', userText);
   _foodChatHistory.push({role:'user',content:userText});
   if (_foodChatHistory.length>10) _foodChatHistory=_foodChatHistory.slice(-10);
+  try { localStorage.setItem('cgo_food_chat', JSON.stringify(_foodChatHistory)); } catch(e) {}
   var sendBtn=document.getElementById('food-chat-send');
   if(sendBtn) sendBtn.disabled=true;
   _foodAddTyping();
@@ -40443,6 +40647,8 @@ function foodAskAI(userText) {
     var reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'답변을 받지 못했습니다.';
     _foodChatHistory.push({role:'assistant',content:reply});
     _foodAddBubble('ai',reply);
+    // localStorage 저장
+    try { localStorage.setItem('cgo_food_chat', JSON.stringify(_foodChatHistory)); } catch(e) {}
     if(sendBtn) sendBtn.disabled=false;
   }).catch(function(){
     var t=document.getElementById('food-typing'); if(t) t.remove();
@@ -47544,6 +47750,20 @@ function cgoGoPage(page){
     try{
       var saved=localStorage.getItem('cgo_food_log_'+new Date().toDateString());
       if(saved&&typeof _foodLog!=='undefined'){ _foodLog=JSON.parse(saved); if(typeof foodRenderLog==='function') foodRenderLog(); }
+    }catch(e){}
+    // 채팅 기록 복원
+    try{
+      var chatSaved=localStorage.getItem('cgo_food_chat');
+      if(chatSaved){
+        var history=JSON.parse(chatSaved);
+        var box=document.getElementById('food-chat-messages');
+        if(box && box.children.length===0 && history.length>0){
+          if(typeof _foodChatHistory!=='undefined') _foodChatHistory=history;
+          history.forEach(function(m){
+            if(typeof _foodAddBubble==='function') _foodAddBubble(m.role==='user'?'me':'ai',m.content);
+          });
+        }
+      }
     }catch(e){}
   },100);
   if(page==='report'){
