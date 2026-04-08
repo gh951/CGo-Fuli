@@ -40737,13 +40737,19 @@ function foodAnalyze() {
 
   if(!nameInput && !hasImage){ alert('음식명을 입력하거나 사진을 촬영해 주세요.'); return; }
 
+  // 사진 있으면 텍스트 입력창 강제 초기화 (이전 검색어 잔존 방지)
+  if(hasImage){
+    var _ni = document.getElementById('food-name-input');
+    if(_ni) _ni.value = '';
+  }
+
   document.getElementById('food-result').style.display='none';
   document.getElementById('food-loading').style.display='block';
   document.getElementById('food-loading-msg').textContent = hasImage ? '🔍 Gemini AI 음식 인식 중...' : '🔍 음식 DB 검색 중...';
 
-  // 📸 사진이 있으면 → 무조건 Gemini 비전 우선 (텍스트 무시)
+  // 📸 사진이 있으면 → Gemini 비전 우선, 텍스트는 전달 안 함 (오래된 입력값 오염 방지)
   if (hasImage) {
-    foodAnalyzeWithAI(nameInput, previewSrc);
+    foodAnalyzeWithAI('', previewSrc);
     return;
   }
 
@@ -40964,10 +40970,12 @@ async function foodAnalyzeWithAI(name, imageSrc) {
     var profile2 = {};
     try { profile2 = JSON.parse(localStorage.getItem('cgo_food_profile')||'{}'); } catch(e2) {}
     var diseaseCtx = profile2.diseases ? '진단:'+profile2.diseases+(profile2.onset?'/발병:'+profile2.onset:'')+(profile2.duration?'/유병:'+profile2.duration:'') : '';
+    // 사진 없고 이름도 없으면 분석 중단 (오래된 입력값 오염 방지)
+    if (!name && !imageSrc) { document.getElementById('food-loading').style.display='none'; return; }
     var prompt = '음식 "'+foodHint+'" 1인분 영양정보를 JSON만 반환 (다른 텍스트 없이):\n'
       + '{"name":"정확한한국어명","cal":칼로리,"c":탄수화물g,"p":단백질g,"f":지방g,"na":나트륨mg,'
       + '"oh":오행숫자(0=금,1=화,2=목,3=토,4=수),"emoji":"이모지","similar":"유사음식1|유사음식2|유사음식3"}\n'
-      + '오레오·허니버터칩·새우깡 등 브랜드도 정확히 답하세요.'
+      + '실제 음식 이름을 정확히 사용하세요. 브랜드 제품은 공식 명칭으로.'
       + (diseaseCtx ? '\n사용자 건강정보(참고): '+diseaseCtx : '');
     var resp = await fetch('/api/groq', {
       method:'POST', headers:{'Content-Type':'application/json'},
