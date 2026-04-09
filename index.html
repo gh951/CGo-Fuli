@@ -28238,9 +28238,9 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   function _mkBar(label,val,color,inactive,popKey){
     if(inactive) return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.3)">'+label+'</span><span style="font-size:10px;color:rgba(255,255,255,.2);font-style:italic">(관여 없음)</span></div><div style="height:5px;background:rgba(255,255,255,.04);border-radius:3px"></div></div>';
     var v=Math.max(0,Math.min(100,val||0));
-    var ca=popKey ? 'onclick="event.stopPropagation();cgoTfBarPopup(\''+popKey+'\')" style="cursor:pointer"' : '';
+    var ca=popKey?'onclick="cgoTfBarPopup(\'' + popKey + '\')"' : '';
     var hint=popKey?'<span style="font-size:9px;color:rgba(212,168,67,.5);margin-left:4px">▶</span>':'';
-    return '<div style="margin-bottom:8px" '+ca+'><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.8)">'+label+hint+'</span><span style="font-size:12px;font-weight:700;color:'+color+'">'+v+'</span></div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div data-w="'+v+'" style="height:100%;width:0%;background:'+color+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div></div>';
+    return '<div style="margin-bottom:8px;cursor:'+(popKey?'pointer':'default')+'" '+ca+'><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.8)">'+label+hint+'</span><span style="font-size:12px;font-weight:700;color:'+color+'">'+v+'</span></div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div data-w="'+v+'" style="height:100%;width:0%;background:'+color+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div></div>';
   }
   function _sciTag(t,c){return '<span style="display:inline-block;font-size:9px;padding:2px 7px;border-radius:8px;background:'+c+'18;border:1px solid '+c+'44;color:'+c+';margin:2px 2px 0 0">'+t+'</span>';}
 
@@ -29888,6 +29888,23 @@ window.addEventListener('load', function(){
   <div class="fortune-popup" id="fortunePopup" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
     <div class="fortune-popup-header" id="fpHeader"></div>
     <div class="fortune-popup-body" id="fpBody"></div>
+  </div>
+</div>
+
+<!-- ★ 세부 에너지 분석 팝업 — 고정 HTML 요소 (동적 생성 방식 대체) -->
+<div id="tf-bar-popup-ov" onclick="if(event.target===this)cgoTfBarPopupClose()"
+  style="display:none;position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center;">
+  <div id="tf-bar-popup-box"
+    style="width:100%;max-width:580px;height:90vh;background:linear-gradient(180deg,#0c1a2e,#08111e);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;display:flex;flex-direction:column;overflow:hidden;">
+    <div id="tf-bar-popup-header"
+      style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0;">
+      <div>
+        <div id="tf-bar-popup-title" style="font-size:15px;font-weight:800;color:#d4a843;"></div>
+        <div id="tf-bar-popup-sub" style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;"></div>
+      </div>
+      <button onclick="cgoTfBarPopupClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>
+    <div id="tf-bar-popup-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;"></div>
   </div>
 </div>
 
@@ -45338,29 +45355,26 @@ function cgoTfBarPopup(key){
       '#fbbf24':'251,191,36','#4ade80':'74,222,128','#e2e8f0':'226,232,240'})[hex]||'212,168,67';
   }
 
-  // 팝업 오버레이 (90vh 고정 + 스크롤)
-  var ov=document.getElementById('tf-bar-popup-ov');
-  if(!ov){
-    ov=document.createElement('div');
-    ov.id='tf-bar-popup-ov';
-    ov.style.cssText='position:fixed;inset:0;z-index:10800;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:flex;align-items:flex-end;justify-content:center;';
-    ov.onclick=function(e){if(e.target===ov)cgoTfBarPopupClose();};
-    document.body.appendChild(ov);
-  }
-  ov.style.display='flex';
-  ov.innerHTML=''
-    +'<div style="width:100%;max-width:580px;height:90vh;background:linear-gradient(180deg,#0c1a2e,#08111e);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;display:flex;flex-direction:column;">'
-    +'<div style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0">'
-    +'<div><div style="font-size:15px;font-weight:800;color:'+m.color+'">'+m.title+'</div>'
-    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px">📚 '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  |  AI 심층 역학 분석</div></div>'
-    +'<button onclick="cgoTfBarPopupClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0">✕</button>'
-    +'</div>'
-    +'<div id="tf-popup-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px">'
-    +'<div style="text-align:center;padding:36px 0">'
+  // ★ 고정 HTML 요소 방식 (hlt-pop 패턴과 동일)
+  var ov = document.getElementById('tf-bar-popup-ov');
+  var titleEl = document.getElementById('tf-bar-popup-title');
+  var subEl   = document.getElementById('tf-bar-popup-sub');
+  var bodyEl  = document.getElementById('tf-bar-popup-body');
+  if(!ov || !bodyEl) return;
+
+  // 헤더 업데이트
+  if(titleEl){ titleEl.textContent=m.title; titleEl.style.color=m.color; }
+  if(subEl)   subEl.textContent='📚 '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  |  AI 심층 역학 분석';
+
+  // 로딩 표시
+  bodyEl.innerHTML='<div style="text-align:center;padding:36px 0">'
     +'<div style="font-size:44px;animation:spin 1s linear infinite">🔮</div>'
     +'<div style="color:'+m.color+';font-size:14px;font-weight:700;margin-top:16px">'+m.area+' 심층 역학 분석 중...</div>'
-    +'<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px">토정비결·사주명리 수준의 깊이로 분석합니다</div>'
-    +'</div></div></div>';
+    +'<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px">분석합니다</div>'
+    +'</div>';
+
+  // ★ display만 변경 (hlt-pop 패턴과 동일)
+  ov.style.display='flex';
 
   // AI 프롬프트 (토정비결 수준 분석 요청)
   var engList=selectedEngines.map(function(e){return e.name+'('+e.en+', '+e.w+'pt)';}).join(', ');
@@ -45571,6 +45585,9 @@ function cgoTfBarPopup(key){
 function cgoTfBarPopupClose(){
   var ov=document.getElementById('tf-bar-popup-ov');
   if(ov) ov.style.display='none';
+  // todayFortuneOverlay가 아직 열려있으면 overflow:hidden 유지
+  var tfo=document.getElementById('todayFortuneOverlay');
+  if(!tfo||tfo.style.display==='none') document.body.style.overflow='';
 }
 // ══════════════════════════════════════════════════════
 // 🧬 CGO-FULI rPPG 통합 분석 v1.0
@@ -46070,7 +46087,7 @@ function cgoRunRealtimeAnalysis(){
 
 
 function _cgoRenderDetailPopup(p, m, _rgb){
-  var body=document.getElementById('tf-popup-body');
+  var body=document.getElementById('tf-bar-popup-body');
   if(!body) return;
   var sc=Math.max(10,Math.min(99,p.score||m.score));
   var gc=sc>=80?'#34d399':sc>=65?'#d4a843':sc>=50?'#fbbf24':'#f87171';
