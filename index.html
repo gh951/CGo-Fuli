@@ -898,8 +898,8 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* 모바일 최적화 → 하단 통합 미디어쿼리에서 처리 */
 /* ════ 운수 상세 팝업 ════ */
-.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;pointer-events:none;-webkit-overflow-scrolling:touch;touch-action:none}
-.fortune-popup-overlay.show{opacity:1;pointer-events:all}
+.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;-webkit-overflow-scrolling:touch;touch-action:none}
+.fortune-popup-overlay.show{display:flex;opacity:1;pointer-events:all}
 .fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 60px}
 .fortune-popup-overlay.show .fortune-popup{transform:translateY(0)}
 .fortune-popup-header{position:sticky;top:0;background:var(--bg-card);border-bottom:1px solid var(--border);padding:16px 20px 14px;display:flex;align-items:center;gap:12px;z-index:1}
@@ -28238,9 +28238,11 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   function _mkBar(label,val,color,inactive,popKey){
     if(inactive) return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.3)">'+label+'</span><span style="font-size:10px;color:rgba(255,255,255,.2);font-style:italic">(관여 없음)</span></div><div style="height:5px;background:rgba(255,255,255,.04);border-radius:3px"></div></div>';
     var v=Math.max(0,Math.min(100,val||0));
-    var ca=popKey?'onclick="cgoTfBarPopup(\'' + popKey + '\')"' : '';
+    var ca=popKey ? 'onclick="event.stopPropagation();cgoTfBarPopup(\''+popKey+'\')" style="cursor:pointer"' : '';
     var hint=popKey?'<span style="font-size:9px;color:rgba(212,168,67,.5);margin-left:4px">▶</span>':'';
-    return '<div style="margin-bottom:8px;cursor:'+(popKey?'pointer':'default')+'" '+ca+'><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.8)">'+label+hint+'</span><span style="font-size:12px;font-weight:700;color:'+color+'">'+v+'</span></div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div data-w="'+v+'" style="height:100%;width:0%;background:'+color+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div></div>';
+    var divId = popKey ? 'tf-mkbar-'+popKey : '';
+    var idAttr = divId ? ' id="'+divId+'"' : '';
+    return '<div'+idAttr+' style="margin-bottom:8px" '+ca+'><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:11px;color:rgba(240,230,200,.8)">'+label+hint+'</span><span style="font-size:12px;font-weight:700;color:'+color+'">'+v+'</span></div><div style="height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden"><div data-w="'+v+'" style="height:100%;width:0%;background:'+color+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)"></div></div></div>';
   }
   function _sciTag(t,c){return '<span style="display:inline-block;font-size:9px;padding:2px 7px;border-radius:8px;background:'+c+'18;border:1px solid '+c+'44;color:'+c+';margin:2px 2px 0 0">'+t+'</span>';}
 
@@ -28275,11 +28277,11 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
 
   // ② 세부 에너지 바
   var barItems=[
-    {label:'총운 에너지',      val:total,              color:'#d4a843',inactive:false,      key:'pop_total'},
-    {label:'오행 균형',        val:Math.round((ws+hs)*.5),color:'#38bdf8',inactive:!(hasAstro||hasWeather),key:'pop_ohbal'},
-    {label:'일진 영향',        val:ws,                 color:'#34d399',inactive:!(hasAstro||hasWeather),key:'pop_iljin'},
-    {label:'공간·방위 에너지', val:Math.round((hs+ss)*.5),color:'#a78bfa',inactive:!hasEnv, key:'pop_space'},
-    {label:'생체·심리 에너지', val:Math.round((hs+ls)*.5),color:'#f472b6',inactive:!hasBio, key:'pop_bio'}
+    {label:'총운 에너지',      val:total,              color:'#d4a843',inactive:false,key:'pop_total'},
+    {label:'오행 균형',        val:Math.round((ws+hs)*.5),color:'#38bdf8',inactive:false,key:'pop_ohbal'},
+    {label:'일진 영향',        val:ws,                 color:'#34d399',inactive:false,key:'pop_iljin'},
+    {label:'공간·방위 에너지', val:Math.round((hs+ss)*.5),color:'#a78bfa',inactive:false,key:'pop_space'},
+    {label:'생체·심리 에너지', val:Math.round((hs+ls)*.5),color:'#f472b6',inactive:false,key:'pop_bio'}
   ];
   var barChart='<div class="fp-section"><div class="fp-section-title">📊 세부 에너지 분석 <span style="font-size:9px;color:rgba(212,168,67,.5);font-weight:400;font-style:italic">▶ 항목 탭하여 상세 보기</span></div>'
     +'<div style="font-size:9px;color:rgba(212,168,67,.5);margin-bottom:8px">선택 역학: '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'</div>'
@@ -28308,14 +28310,14 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   var areaSection='<div class="fp-section">'
     +'<div class="fp-section-title">📈 오늘 8대 영역 에너지 요약 <span style="font-size:9px;color:rgba(212,168,67,.5);font-weight:400;font-style:italic">▶ 항목 탭하여 상세 보기</span></div>'
     +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-bottom:10px">관여 없는 영역은 <span style="color:rgba(255,255,255,.25);font-style:italic">(관여 없음)</span> 표시</div>'
-    +_mkBar(wkL,          ws,     '#38bdf8',!_hasRel('work'),     'pop_work')
-    +_mkBar('💰 금전·재물',ms,     '#d4a843',!_hasRel('money'),   'pop_money')
-    +_mkBar('❤️ 사랑·관계',ls,    '#f472b6',!_hasRel('love'),    'pop_love')
-    +_mkBar('🌿 건강·활력',hs,     '#34d399',!_hasRel('health'),  'pop_health')
-    +_mkBar('🤝 대인관계', ss,     '#a78bfa',!_hasRel('social'),  'pop_social')
-    +_mkBar('⚖️ 법적 분쟁',legal, '#f87171',!_hasRel('legal'),   'pop_legal')
-    +_mkBar('☑️ 합격·취업',career,'#fbbf24',!_hasRel('career'),  'pop_career')
-    +_mkBar('🧭 좋은 방위',dirScore,'#34d399',!_hasRel('direction'),'pop_dir')
+    +_mkBar(wkL,          ws,     '#38bdf8',false,'pop_work')
+    +_mkBar('💰 금전·재물',ms,     '#d4a843',false,'pop_money')
+    +_mkBar('❤️ 사랑·관계',ls,    '#f472b6',false,'pop_love')
+    +_mkBar('🌿 건강·활력',hs,     '#34d399',false,'pop_health')
+    +_mkBar('🤝 대인관계', ss,     '#a78bfa',false,'pop_social')
+    +_mkBar('⚖️ 법적 분쟁',legal, '#f87171',false,'pop_legal')
+    +_mkBar('☑️ 합격·취업',career,'#fbbf24',false,'pop_career')
+    +_mkBar('🧭 좋은 방위',dirScore,'#34d399',false,'pop_dir')
     +'</div>';
 
   // ⑤ FULI 에너지 흐름
@@ -28435,6 +28437,23 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
     +'</div>'
 
   body.innerHTML=scoreRing+barChart+radarSection+areaSection+flowSection+cardSection+goodBad+whySec+energySec;
+
+  // ★ innerHTML 삽입 후 직접 JS onclick 강제 바인딩 (테스트 검증된 방식)
+  setTimeout(function(){
+    var allKeys=['pop_total','pop_ohbal','pop_iljin','pop_space','pop_bio',
+                 'pop_work','pop_money','pop_love','pop_health','pop_social',
+                 'pop_legal','pop_career','pop_dir'];
+    allKeys.forEach(function(pk){
+      var el=document.getElementById('tf-mkbar-'+pk);
+      if(el){
+        el.style.cursor='pointer';
+        el.onclick=function(e){
+          if(e) e.stopPropagation();
+          cgoTfBarPopup(pk);
+        };
+      }
+    });
+  }, 300);
   var sc=document.getElementById('tf-total-score'); if(sc) sc.textContent=total;
   setTimeout(function(){body.querySelectorAll('[data-w]').forEach(function(el){el.style.width=Math.min(100,parseInt(el.getAttribute('data-w'))||0)+'%';});},150);
   if(result.csiNote&&engCount>1){var cd=document.getElementById('tf-csi-display');var ct=document.getElementById('tf-csi-txt');if(cd&&ct){cd.style.display='block';ct.textContent=result.csiNote;}}
@@ -29888,23 +29907,6 @@ window.addEventListener('load', function(){
   <div class="fortune-popup" id="fortunePopup" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
     <div class="fortune-popup-header" id="fpHeader"></div>
     <div class="fortune-popup-body" id="fpBody"></div>
-  </div>
-</div>
-
-<!-- ★ 세부 에너지 분석 팝업 — 고정 HTML 요소 (동적 생성 방식 대체) -->
-<div id="tf-bar-popup-ov" onclick="if(event.target===this)cgoTfBarPopupClose()"
-  style="display:none;position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center;">
-  <div id="tf-bar-popup-box"
-    style="width:100%;max-width:580px;height:90vh;background:linear-gradient(180deg,#0c1a2e,#08111e);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;display:flex;flex-direction:column;overflow:hidden;">
-    <div id="tf-bar-popup-header"
-      style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0;">
-      <div>
-        <div id="tf-bar-popup-title" style="font-size:15px;font-weight:800;color:#d4a843;"></div>
-        <div id="tf-bar-popup-sub" style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;"></div>
-      </div>
-      <button onclick="cgoTfBarPopupClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
-    </div>
-    <div id="tf-bar-popup-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;"></div>
   </div>
 </div>
 
@@ -45355,26 +45357,29 @@ function cgoTfBarPopup(key){
       '#fbbf24':'251,191,36','#4ade80':'74,222,128','#e2e8f0':'226,232,240'})[hex]||'212,168,67';
   }
 
-  // ★ 고정 HTML 요소 방식 (hlt-pop 패턴과 동일)
-  var ov = document.getElementById('tf-bar-popup-ov');
-  var titleEl = document.getElementById('tf-bar-popup-title');
-  var subEl   = document.getElementById('tf-bar-popup-sub');
-  var bodyEl  = document.getElementById('tf-bar-popup-body');
-  if(!ov || !bodyEl) return;
-
-  // 헤더 업데이트
-  if(titleEl){ titleEl.textContent=m.title; titleEl.style.color=m.color; }
-  if(subEl)   subEl.textContent='📚 '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  |  AI 심층 역학 분석';
-
-  // 로딩 표시
-  bodyEl.innerHTML='<div style="text-align:center;padding:36px 0">'
+  // 팝업 오버레이 (90vh 고정 + 스크롤)
+  var ov=document.getElementById('tf-bar-popup-ov');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='tf-bar-popup-ov';
+    ov.style.cssText='position:fixed;inset:0;z-index:10800;background:rgba(0,0,0,.88);backdrop-filter:blur(14px);display:flex;align-items:flex-end;justify-content:center;';
+    ov.onclick=function(e){if(e.target===ov)cgoTfBarPopupClose();};
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  ov.innerHTML=''
+    +'<div style="width:100%;max-width:580px;height:90vh;background:linear-gradient(180deg,#0c1a2e,#08111e);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;display:flex;flex-direction:column;">'
+    +'<div style="flex-shrink:0;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;border-radius:22px 22px 0 0">'
+    +'<div><div style="font-size:15px;font-weight:800;color:'+m.color+'">'+m.title+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px">📚 '+engNames+(engCount>3?' 외 '+(engCount-3)+'개':'')+'  |  AI 심층 역학 분석</div></div>'
+    +'<button onclick="cgoTfBarPopupClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0">✕</button>'
+    +'</div>'
+    +'<div id="tf-popup-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:18px">'
+    +'<div style="text-align:center;padding:36px 0">'
     +'<div style="font-size:44px;animation:spin 1s linear infinite">🔮</div>'
     +'<div style="color:'+m.color+';font-size:14px;font-weight:700;margin-top:16px">'+m.area+' 심층 역학 분석 중...</div>'
-    +'<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px">분석합니다</div>'
-    +'</div>';
-
-  // ★ display만 변경 (hlt-pop 패턴과 동일)
-  ov.style.display='flex';
+    +'<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px">토정비결·사주명리 수준의 깊이로 분석합니다</div>'
+    +'</div></div></div>';
 
   // AI 프롬프트 (토정비결 수준 분석 요청)
   var engList=selectedEngines.map(function(e){return e.name+'('+e.en+', '+e.w+'pt)';}).join(', ');
@@ -45585,9 +45590,6 @@ function cgoTfBarPopup(key){
 function cgoTfBarPopupClose(){
   var ov=document.getElementById('tf-bar-popup-ov');
   if(ov) ov.style.display='none';
-  // todayFortuneOverlay가 아직 열려있으면 overflow:hidden 유지
-  var tfo=document.getElementById('todayFortuneOverlay');
-  if(!tfo||tfo.style.display==='none') document.body.style.overflow='';
 }
 // ══════════════════════════════════════════════════════
 // 🧬 CGO-FULI rPPG 통합 분석 v1.0
@@ -46087,7 +46089,7 @@ function cgoRunRealtimeAnalysis(){
 
 
 function _cgoRenderDetailPopup(p, m, _rgb){
-  var body=document.getElementById('tf-bar-popup-body');
+  var body=document.getElementById('tf-popup-body');
   if(!body) return;
   var sc=Math.max(10,Math.min(99,p.score||m.score));
   var gc=sc>=80?'#34d399':sc>=65?'#d4a843':sc>=50?'#fbbf24':'#f87171';
