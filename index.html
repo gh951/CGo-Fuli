@@ -3642,7 +3642,286 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- 경계선 -->
-        <div style="margin:12px 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),transparent);"></div>
+        <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
+      <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
+      <div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
+
+        <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
+
+        <!-- ① 헤더 : COSMIC ORDER + 시계 한 줄 -->
+        <div style="position:relative;z-index:2;padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(212,168,67,0.12)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 7px #34d399;animation:pulse 2s infinite;flex-shrink:0"></div>
+            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">COSMIC ORDER</span>
+          </div>
+          <span id="cosmicTime" style="font-size:11px;color:#e2e8f0;font-weight:600;font-variant-numeric:tabular-nums"></span>
+        </div>
+
+        <!-- ② NASA 배너 : 한 줄 가로 — 절대 줄바꿈 없음 -->
+        <div style="position:relative;z-index:2;margin:10px 16px 0;padding:8px 14px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.22);border-radius:10px;display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow:hidden;white-space:nowrap">
+          <span style="font-size:15px;flex-shrink:0;margin-right:8px">🛰️</span>
+          <span style="font-size:13px;color:#ffffff;font-weight:800;flex-shrink:0;margin-right:4px">NASA</span>
+          <span style="font-size:11px;color:#e2e8f0;font-weight:500;flex-shrink:0;margin-right:10px" data-i18n="nasa_full">( 미 항공 우주국 )</span>
+          <span style="width:1px;height:14px;background:rgba(255,255,255,0.25);flex-shrink:0;margin-right:10px"></span>
+          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0;margin-right:6px" data-i18n="cosmic_subtitle">실시간 행성 항로</span>
+          <span style="font-size:12px;color:rgba(255,255,255,0.75);flex-shrink:0;margin-right:6px">/</span>
+          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0" data-i18n="word_time">시간</span>
+          <div style="flex:1;min-width:8px"></div>
+          <span style="font-size:9px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.35);border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0" data-i18n="lbl_live">● LIVE</span>
+        </div>
+
+        <!-- ③ 날짜/시간 카드 -->
+        <div style="position:relative;z-index:2;margin:8px 16px 0;padding:7px 12px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:8px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden">
+          <span style="font-size:13px;flex-shrink:0">📅</span>
+          <span id="cosmicDateLabel" style="font-size:11px;color:#e2e8f0;font-weight:700;flex-shrink:0">실시간 계산 기준</span>
+          <span id="cosmicDateSub" style="font-size:10px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis">⚡ 자동 계산 후 표시</span>
+        </div>
+
+        <!-- ④ 메인 콘텐츠 : 톱니 + 행성그리드 나란히 -->
+        <div style="position:relative;z-index:2;padding:12px 16px">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+
+            <!-- 톱니바퀴 -->
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div style="position:relative;width:96px;height:96px">
+                <canvas id="gearCanvas" width="96" height="96" style="position:absolute;inset:0;display:block"></canvas>
+                <div id="gearCenter" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2">
+                  <div id="cosmicZodiacSym" style="font-size:22px;animation:pulse 3s infinite">☯</div>
+                  <div id="cosmicZodiacName" style="font-size:8px;color:var(--gold);font-weight:700;text-align:center;margin-top:1px">운명의 중심</div>
+                </div>
+              </div>
+              <div style="font-size:9px;color:var(--text-3);text-align:center;line-height:1.4" id="cosmicGearDesc">사주&amp;행성<br>맞물림</div>
+            </div>
+
+            <!-- 행성 그리드 -->
+            <div style="flex:1;min-width:0">
+              <div style="font-size:10px;color:#e2e8f0;font-weight:700;margin-bottom:6px" data-i18n="cosmic_sky">🌌 지금 하늘의 상태</div>
+              <div id="cosmicPlanetGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                <div style="padding:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:7px;text-align:center;color:var(--text-3);font-size:10px;grid-column:1/-1">✨ 계산 버튼을 누르면 나와요</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤-0 천지인(天地人) 실시간 이모티콘 패널 -->
+          <div id="tianziren-panel" style="display:flex;gap:8px;margin:10px 0 8px;justify-content:center;flex-wrap:wrap;">
+
+            <!-- 天 우주 에너지 -->
+            <div id="tian-box" style="flex:1;min-width:80px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:12px;padding:10px 8px;text-align:center;">
+              <div style="font-size:9px;color:rgba(56,189,248,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="tian_label">天 우주</div>
+              <div id="tian-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🛸</div>
+              <div id="tian-txt" style="font-size:10px;color:#38bdf8;font-weight:700;">계산 중</div>
+              <div id="tian-sub" style="font-size:9px;color:rgba(56,189,248,.5);margin-top:2px;">우주 에너지</div>
+            </div>
+
+            <!-- 地 지상 날씨 -->
+            <div id="chi-box" style="flex:1;min-width:80px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;padding:10px 8px;text-align:center;">
+              <div style="font-size:9px;color:rgba(52,211,153,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="chi_label">地 지상</div>
+              <div id="chi-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🌍</div>
+              <div id="chi-txt" style="font-size:10px;color:#34d399;font-weight:700;">위치 확인중</div>
+              <div id="chi-sub" style="font-size:9px;color:rgba(52,211,153,.5);margin-top:2px;">지상 기운</div>
+            </div>
+
+            <!-- 人 인간 컨디션 -->
+            <div id="ren-box" style="flex:1;min-width:80px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;padding:10px 8px;text-align:center;">
+              <div style="font-size:9px;color:rgba(212,168,67,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="ren_label">人 인간</div>
+              <div id="ren-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🧬</div>
+              <div id="ren-txt" style="font-size:10px;color:#d4a843;font-weight:700;">스캔 대기</div>
+              <div id="ren-sub" style="font-size:9px;color:rgba(212,168,67,.5);margin-top:2px;">생체 에너지</div>
+            </div>
+
+          </div>
+
+          <!-- ⑤ 수신 버튼 -->
+          <div style="text-align:center;margin:14px 0 10px">
+            <button id="cosmicReceiveBtn" onclick="receiveCosmicOrder()" style="position:relative;padding:12px 32px;background:linear-gradient(135deg,#b8860b,var(--gold),#f0c060);border:none;border-radius:12px;color:#030818;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:.08em;box-shadow:0 0 28px rgba(212,168,67,0.4);transition:all .3s;overflow:hidden;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 36px rgba(212,168,67,0.6)'" onmouseout="this.style.transform='';this.style.boxShadow='0 0 28px rgba(212,168,67,0.4)'">
+              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">🚨 지금 내 행운 신호 받기!</span>
+              <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8" data-i18n="cosmic_btn_sub">NASA + 50대 역학 중 × 실시간 분석</span>
+              <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 2.5s infinite"></div>
+            </button>
+          </div>
+
+          <!-- ⑥ 칙령 리포트 -->
+          <div id="cosmicDecreeWrap" style="display:none">
+            <div id="cosmicDecree" style="position:relative;background:linear-gradient(135deg,rgba(10,8,2,0.97),rgba(20,16,4,0.97));border:2px solid var(--gold);border-radius:14px;padding:18px;overflow:hidden">
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.04;pointer-events:none;z-index:0"><div style="font-size:160px">👑</div></div>
+              <div style="position:relative;z-index:1;text-align:center;margin-bottom:12px">
+                <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border:2px solid var(--gold);border-radius:28px;background:rgba(212,168,67,0.08)">
+                  <span style="font-size:13px">👑</span>
+                  <span style="font-family:'Orbitron',sans-serif;font-size:9px;color:var(--gold);letter-spacing:.12em;font-weight:700">CGO-FULI 우주 신호</span>
+                  <span style="font-size:13px">👑</span>
+                </div>
+                <div id="decreeNo" style="font-size:10px;color:rgba(212,168,67,0.6);margin-top:4px;letter-spacing:.06em"></div>
+              </div>
+              <div id="decreeTitle" style="position:relative;z-index:1;text-align:center;font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;color:var(--gold);line-height:1.4;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.2)"></div>
+              <div id="decreeSteps" style="position:relative;z-index:1;display:flex;flex-direction:column;gap:9px;margin-bottom:12px"></div>
+              <div id="decreeMission" style="position:relative;z-index:1;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.2);border-radius:9px;padding:11px"></div>
+              <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(212,168,67,0.15)">
+                <div style="font-size:10px;color:rgba(212,168,67,0.5);font-family:'Orbitron',sans-serif;letter-spacing:.06em">CGo-Fuli × NASA JPL</div>
+                <button onclick="shareCosmicOrder()" style="padding:5px 12px;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.35);border-radius:7px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">📸 갤러리 공유</button>
+              </div>
+            </div>
+            <!-- 접기 버튼 -->
+            <div style="text-align:center;margin-top:10px">
+              <button onclick="(function(){document.getElementById('cosmicDecreeWrap').style.display='none';document.getElementById('cosmicRetention').style.display='none';})()" style="padding:7px 24px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);border-radius:10px;color:rgba(212,168,67,0.7);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">▲ 접기</button>
+            </div>
+          </div>
+
+          <!-- ⑦ 리텐션 -->
+          <div id="cosmicRetention" style="display:none;margin-top:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:rgba(99,130,201,0.06);border:1px solid rgba(99,130,201,0.15);border-radius:10px;padding:10px">
+                <div style="font-size:10px;color:var(--indigo);font-weight:700;margin-bottom:6px">🌍 실시간 동행자</div>
+                <div id="cosmicRanking" style="font-size:11px;color:var(--text-2);line-height:1.7"></div>
+              </div>
+              <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:10px;padding:10px">
+                <div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:6px">⭐ 우주 에너지 포인트</div>
+                <div id="cosmicPoints" style="font-size:22px;font-weight:900;color:#34d399;font-family:'Orbitron',sans-serif"></div>
+                <div id="cosmicPointDesc" style="font-size:10px;color:var(--text-3);margin-top:2px"></div>
+                <button onclick="claimCosmicMission()" id="cosmicClaimBtn" style="display:none;margin-top:6px;width:100%;padding:6px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.35);border-radius:6px;color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✅ 미션 완료 스탬프</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <!-- ═══ /COSMIC ORDER ═══ -->
+
+
+        <!-- ✦ Bio Sensor 경계선 ✦ -->
+        <div style="margin:22px 0;position:relative;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6));"></div>
+          <div style="padding:5px 14px;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(56,189,248,.1));border:1px solid rgba(52,211,153,.5);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;white-space:nowrap;">🧬 CGO-Bio Sensor v2.0</div>
+          <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(52,211,153,.6),transparent);"></div>
+        </div>
+
+        <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
+        <div style="margin:28px 0 10px;">
+          <!-- 섹션 레이블 -->
+          <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:600;">
+            <span data-i18n="bioScan">🧬 생체 스킨 분석</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
+            <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">20개 엔진 즉시 반영</span>
+          </div>
+
+          <!-- ★ 큰 통합 카드 -->
+          <div style="background:linear-gradient(160deg,rgba(10,20,45,.95),rgba(8,17,32,.98));border:1.5px solid rgba(52,211,153,.3);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4);">
+
+            <!-- 카드 헤더 -->
+            <div style="padding:16px 18px 14px;border-bottom:1px solid rgba(52,211,153,.15);background:linear-gradient(90deg,rgba(52,211,153,.07),rgba(56,189,248,.04));">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.15));border:1px solid rgba(52,211,153,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <span style="font-size:22px;">🔬</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">CGO-Bio Sensor v2.0</div>
+                  <div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px;">실측 분석 — rPPG · 호흡 · 생체신호 융합</div>
+                </div>
+                <div style="flex-shrink:0;padding:4px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:20px;">
+                  <span style="font-size:10px;font-weight:700;color:#34d399;white-space:nowrap;">● LIVE</span>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- 카드 푸터 -->
+            <div style="padding:10px 18px 14px;border-top:1px solid rgba(255,255,255,.05);">
+              <div style="font-size:11px;color:rgba(52,211,153,.85);display:flex;align-items:flex-start;gap:6px;line-height:1.8;">
+                <span style="flex-shrink:0;">🧬</span>
+                <span>얼굴·손금·혀는 수천 년 동양 의학이 증명한 <strong style="color:#34d399;">살아있는 생체 데이터</strong>입니다.<br>스캔 1회가 50대 역학 중 × NASA 위성 분석의 <strong style="color:#fbbf24;">정확도를 한 단계 끌어올립니다.</strong></span>
+              </div>
+
+              <!-- ★ Bio Sensor 상단 2종 (관상/손금) -->
+              <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button onclick="cgoIntroOpen('face', cgoFaceVisionAnalysis)"
+                  style="padding:12px;background:linear-gradient(135deg,rgba(99,130,201,.2),rgba(56,189,248,.1));border:1px solid rgba(99,130,201,.5);border-radius:12px;cursor:pointer;color:#93c5fd;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;"
+                  onmouseover="this.style.borderColor='rgba(99,130,201,.9)'" onmouseout="this.style.borderColor='rgba(99,130,201,.5)'">
+                  <span style="font-size:22px;">🧖</span>
+                  <span>관상 AI 분석</span>
+                  <span style="font-size:10px;color:rgba(147,197,253,.5);font-weight:400;">Groq Vision</span>
+                </button>
+                <button onclick="cgoIntroOpen('palm', cgoPalmVisionAnalysis)"
+                  style="padding:12px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(251,191,36,.1));border:1px solid rgba(212,168,67,.5);border-radius:12px;cursor:pointer;color:#fcd34d;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;"
+                  onmouseover="this.style.borderColor='rgba(212,168,67,.9)'" onmouseout="this.style.borderColor='rgba(212,168,67,.5)'">
+                  <span style="font-size:22px;">✋</span>
+                  <span>손금 AI 분석</span>
+                  <span style="font-size:10px;color:rgba(252,211,77,.5);font-weight:400;">Groq Vision</span>
+                </button>
+              </div>
+
+              <!-- ★ 관상/손금 인라인 결과 카드 -->
+              <div id="cgo-inline-vision-wait" style="margin-top:10px;padding:14px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1);border-radius:14px;text-align:center;">
+                <div style="font-size:20px;margin-bottom:6px;opacity:.4;">🔮</div>
+                <div style="font-size:11px;color:rgba(240,230,200,.3);line-height:1.7;">관상 또는 손금을 스캔하면<br>만세력 × 12궁 심층 분석이 여기에 표시됩니다</div>
+              </div>
+              <div id="cgo-inline-vision-result" style="margin-top:10px;display:none;"></div>
+
+              <!-- ★ Bio Sensor 하단 2종 (혀/호흡) -->
+              <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button onclick="cgoIntroOpen('tongue', cgoTongueVisionAnalysis)"
+                  style="padding:12px;background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(244,63,94,.1));border:1px solid rgba(248,113,113,.5);border-radius:12px;cursor:pointer;color:#fca5a5;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;"
+                  onmouseover="this.style.borderColor='rgba(248,113,113,.9)'" onmouseout="this.style.borderColor='rgba(248,113,113,.5)'">
+                  <span style="font-size:22px;">👅</span>
+                  <span>혀 스캔</span>
+                  <span style="font-size:10px;color:rgba(252,165,165,.5);font-weight:400;">설진 분석</span>
+                </button>
+                <button onclick="cgoIntroOpen('breath', _cgoBreathTimerShow)"
+                  style="padding:12px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(16,185,129,.1));border:1px solid rgba(52,211,153,.5);border-radius:12px;cursor:pointer;color:#6ee7b7;font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s;"
+                  onmouseover="this.style.borderColor='rgba(52,211,153,.9)'" onmouseout="this.style.borderColor='rgba(52,211,153,.5)'">
+                  <span style="font-size:22px;">🫁</span>
+                  <span>4-7-8 호흡</span>
+                  <span style="font-size:10px;color:rgba(110,231,183,.5);font-weight:400;">호흡 측정</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+          <!-- bioSkinResult 배너 제거 -->
+        </div>
+
+        <!-- ✦ 4-7-8 아래 ✦ -->
+
+        <!-- 1. 실시간 rPPG 데이터 연동 분석 -->
+        <div id="rppg-card" class="bio-locked" onclick="(function(){var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};var hasBio=(bfd.fci>0||bfd.hrv>0||bsd.tongue);if(!hasBio){var t=document.getElementById('rppg-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('rppg', cgoLaunchRppg);})()"
+                    style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
+          onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="font-size:30px;filter:drop-shadow(0 0 10px rgba(56,189,248,.7));animation:pulse 2s infinite;">🛰️</div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:800;color:#38bdf8;letter-spacing:.04em;">실시간 rPPG 데이터 연동 분석</div>
+              <div style="font-size:11px;color:rgba(56,189,248,.55);margin-top:3px;">NASA × 기상 실시간 데이터 — 생체 데이터 연동</div>
+            </div>
+            <div style="font-size:22px;color:rgba(56,189,248,.55);">›</div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap;">
+            <span style="padding:3px 10px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);border-radius:10px;font-size:10px;color:#38bdf8;">🛰️ NASA ON</span>
+            <span style="padding:3px 10px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:10px;font-size:10px;color:#a78bfa;">🌦️ 기상 연동</span>
+            <span style="padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:10px;color:#34d399;">🧭 방위</span>
+            <span style="padding:3px 10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:10px;font-size:10px;color:#f87171;">🧬 생체</span>
+          </div>
+        </div>
+
+        <!-- 4. 시간대별 운세 접이식 -->
+        <div class="bio-locked" style="margin-bottom:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div onclick="(function(){var b=document.getElementById('sijin4Body');var a=document.getElementById('sijin4Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
+               style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
+            <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
+            <span id="sijin4Arrow" style="font-size:11px;color:#a78bfa;">▼</span>
+          </div>
+          <div id="sijin4Body" style="display:none;padding:10px 12px;">
+            <div id="sijin4Content" style="color:rgba(240,220,160,.6);font-size:11px;text-align:center;padding:16px 0;">✨ 자동 계산 후 표시됩니다</div>
+          </div>
+        </div>
+
+        <!-- ▼ 이동: ILI / NBTI / COSMIC ORDER ▼ -->
+
+        <!-- ── 금색 구분선 ── -->
+        <div style="margin:20px 0 20px;position:relative;">
+          <div style="height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.7),rgba(251,191,36,.9),rgba(212,168,67,.7),transparent);border-radius:2px;"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card,#0d1829);padding:0 14px;">
+            <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.12em;">✦ ILI · BAI ✦</span>
+          </div>
+        </div>
+
 
         <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var el=document.getElementById('today-fortune-card');if(el){el.style.animation='shake .3s';setTimeout(function(){el.style.animation='';},400);}var t=document.getElementById('pure-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('pure', function(){ cgoOpenPureMetaphysics(); });})()" id="today-fortune-card" class="dash-card-locked"
           style="margin:20px 0 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(139,92,246,.1));border:2px solid rgba(212,168,67,.45);border-radius:18px;padding:18px 20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
@@ -3728,161 +4007,6 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <div id="rppg-lock-tip" style="display:none;margin-top:-12px;margin-bottom:8px;padding:8px 12px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:8px;font-size:11px;color:#f87171;text-align:center;">⚠️ 먼저 생체 스캔(관상·손금·혀)을 완료해 주세요</div>
-        <!-- ✦ 생체 스킨 3종 — 자동 계산과 역학 엔진 연동 -->
-        <div style="margin:28px 0 10px;">
-          <!-- 섹션 레이블 -->
-          <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:600;">
-            <span data-i18n="bioScan">🧬 생체 스킨 분석</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
-            <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">20개 엔진 즉시 반영</span>
-          </div>
-
-          <!-- ★ 큰 통합 카드 -->
-          <div style="background:linear-gradient(160deg,rgba(10,20,45,.95),rgba(8,17,32,.98));border:1.5px solid rgba(52,211,153,.3);border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4);">
-
-            <!-- 카드 헤더 -->
-            <div style="padding:16px 18px 14px;border-bottom:1px solid rgba(52,211,153,.15);background:linear-gradient(90deg,rgba(52,211,153,.07),rgba(56,189,248,.04));">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.15));border:1px solid rgba(52,211,153,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <span style="font-size:22px;">🔬</span>
-                </div>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">CGO-Bio Sensor v2.0</div>
-                  <div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px;">실측 분석 — rPPG · 호흡 · 생체신호 융합</div>
-                </div>
-                <div style="flex-shrink:0;padding:4px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:20px;">
-                  <span style="font-size:10px;font-weight:700;color:#34d399;white-space:nowrap;">● LIVE</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 음성 안내 -->
-            <div style="padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.05);">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <span id="ttsIconBadge" style="font-size:22px;flex-shrink:0;">🔊</span>
-                  <div>
-                    <div style="font-size:14px;font-weight:700;color:rgba(240,230,200,.95);" data-i18n="voice_guide">음성 안내</div>
-                    <div id="ttsStatusTxt" style="font-size:11px;color:rgba(52,211,153,.75);margin-top:1px;" data-i18n="voice_on_desc">켜짐 — 스캔 중 음성 지시 제공</div>
-                  </div>
-                </div>
-                <button id="ttsToggleBtn" onclick="cgoToggleTTS()" style="padding:8px 22px;border-radius:20px;border:1.5px solid rgba(52,211,153,.5);background:rgba(52,211,153,.12);color:#34d399;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap;flex-shrink:0;">ON</button>
-              </div>
-            </div>
-
-            <!-- 4개 측정 버튼 -->
-            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
-
-              <!-- 관상 rPPG -->
-              <button onclick="cgoScanGuide('face')"
-                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(99,130,201,.15),rgba(56,189,248,.08));border:1.5px solid rgba(99,130,201,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
-                onmouseover="this.style.borderColor='rgba(99,130,201,.7)'" onmouseout="this.style.borderColor='rgba(99,130,201,.35)'">
-                <span style="font-size:26px;flex-shrink:0;">🧖</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:14px;font-weight:800;color:#93c5fd;" data-i18n="scan_face_title">관상 &amp; rPPG 측정</div>
-                  <div style="font-size:11px;color:rgba(147,197,253,.6);font-weight:400;margin-top:3px;" data-i18n="scan_face_sub">33초 · 거치형 파지 (3초 딜레이)</div>
-                </div>
-                <span id="rppg-check-face" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
-                <span style="font-size:18px;color:rgba(147,197,253,.4);flex-shrink:0;">›</span>
-              </button>
-
-              <!-- 손금 -->
-              <button onclick="cgoScanGuide('palm')"
-                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(251,191,36,.08));border:1.5px solid rgba(212,168,67,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
-                onmouseover="this.style.borderColor='rgba(212,168,67,.7)'" onmouseout="this.style.borderColor='rgba(212,168,67,.35)'">
-                <span style="font-size:26px;flex-shrink:0;">✋</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:14px;font-weight:800;color:#fcd34d;" data-i18n="scan_palm_title">손금 측정</div>
-                  <div style="font-size:11px;color:rgba(252,211,77,.6);font-weight:400;margin-top:3px;" data-i18n="scan_palm_sub">33초 · 수직 투사 파지 (3초 딜레이)</div>
-                </div>
-                <span id="rppg-check-palm" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
-                <span style="font-size:18px;color:rgba(252,211,77,.4);flex-shrink:0;">›</span>
-              </button>
-
-              <!-- 혀 스캔 -->
-              <button onclick="cgoScanGuide('tongue')"
-                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(248,113,113,.15),rgba(240,100,150,.08));border:1.5px solid rgba(248,113,113,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
-                onmouseover="this.style.borderColor='rgba(248,113,113,.7)'" onmouseout="this.style.borderColor='rgba(248,113,113,.35)'">
-                <span style="font-size:26px;flex-shrink:0;">👅</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:14px;font-weight:800;color:#fca5a5;" data-i18n="scan_tongue_title">혀 스캔</div>
-                  <div style="font-size:11px;color:rgba(252,165,165,.6);font-weight:400;margin-top:3px;" data-i18n="scan_tongue_sub">15초 · 근접 단독 파지 (10초 딜레이)</div>
-                </div>
-                <span id="rppg-check-tongue" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
-                <span style="font-size:18px;color:rgba(252,165,165,.4);flex-shrink:0;">›</span>
-              </button>
-
-              <!-- 4-7-8 호흡 -->
-              <button onclick="cgoScanGuide('breath')"
-                style="width:100%;padding:14px 16px;background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(99,130,201,.08));border:1.5px solid rgba(56,189,248,.35);border-radius:14px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;box-sizing:border-box;"
-                onmouseover="this.style.borderColor='rgba(56,189,248,.7)'" onmouseout="this.style.borderColor='rgba(56,189,248,.35)'">
-                <span style="font-size:26px;flex-shrink:0;">🫁</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:14px;font-weight:800;color:#38bdf8;" data-i18n="scan_breath_title">4-7-8 호흡 측정</div>
-                  <div style="font-size:11px;color:rgba(56,189,248,.6);font-weight:400;margin-top:3px;" data-i18n="scan_breath_sub">19초 · 단자 직결 파지</div>
-                </div>
-                <span id="rppg-check-breath" style="display:none;font-size:18px;flex-shrink:0;">✅</span>
-                <span style="font-size:18px;color:rgba(56,189,248,.4);flex-shrink:0;">›</span>
-              </button>
-
-            </div>
-
-            <!-- 카드 푸터 -->
-            <div style="padding:10px 18px 14px;border-top:1px solid rgba(255,255,255,.05);">
-              <div style="font-size:11px;color:rgba(251,191,36,.75);display:flex;align-items:flex-start;gap:6px;line-height:1.6;">
-                <span style="flex-shrink:0;">⚠️</span>
-                <span data-i18n="bio_caution1">정확한 분석을 위해 안내된 지시 사항(호흡·파지·고정)을 엄격히 준수해 주세요.</span>
-              </div>
-            </div>
-
-          </div>
-          <!-- bioSkinResult 배너 제거 -->
-        </div>
-
-        <!-- ✦ 4-7-8 아래 ✦ -->
-
-        <!-- 1. 실시간 rPPG 데이터 연동 분석 -->
-        <div id="rppg-card" class="bio-locked" onclick="(function(){var bfd=window._bioFinalData||{};var bsd=window._bioSkinData||{};var hasBio=(bfd.fci>0||bfd.hrv>0||bsd.tongue);if(!hasBio){var t=document.getElementById('rppg-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}cgoIntroOpen('rppg', cgoLaunchRppg);})()"
-                    style="margin:20px 0 16px;padding:18px 20px;background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(139,92,246,.08));border:2px solid rgba(56,189,248,.42);border-radius:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;"
-          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(56,189,248,.25)'"
-          onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="font-size:30px;filter:drop-shadow(0 0 10px rgba(56,189,248,.7));animation:pulse 2s infinite;">🛰️</div>
-            <div style="flex:1;">
-              <div style="font-size:15px;font-weight:800;color:#38bdf8;letter-spacing:.04em;">실시간 rPPG 데이터 연동 분석</div>
-              <div style="font-size:11px;color:rgba(56,189,248,.55);margin-top:3px;">NASA × 기상 실시간 데이터 — 생체 데이터 연동</div>
-            </div>
-            <div style="font-size:22px;color:rgba(56,189,248,.55);">›</div>
-          </div>
-          <div style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap;">
-            <span style="padding:3px 10px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);border-radius:10px;font-size:10px;color:#38bdf8;">🛰️ NASA ON</span>
-            <span style="padding:3px 10px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:10px;font-size:10px;color:#a78bfa;">🌦️ 기상 연동</span>
-            <span style="padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:10px;color:#34d399;">🧭 방위</span>
-            <span style="padding:3px 10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:10px;font-size:10px;color:#f87171;">🧬 생체</span>
-          </div>
-        </div>
-
-        <!-- 4. 시간대별 운세 접이식 -->
-        <div class="bio-locked" style="margin-bottom:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
-          <div onclick="(function(){var b=document.getElementById('sijin4Body');var a=document.getElementById('sijin4Arrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
-               style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(99,130,201,.06);">
-            <div style="font-size:12px;font-weight:800;color:#a78bfa;letter-spacing:.06em;">🕐 시간대별 운세 (12시진)</div>
-            <span id="sijin4Arrow" style="font-size:11px;color:#a78bfa;">▼</span>
-          </div>
-          <div id="sijin4Body" style="display:none;padding:10px 12px;">
-            <div id="sijin4Content" style="color:rgba(240,220,160,.6);font-size:11px;text-align:center;padding:16px 0;">✨ 자동 계산 후 표시됩니다</div>
-          </div>
-        </div>
-
-        <!-- ▼ 이동: ILI / NBTI / COSMIC ORDER ▼ -->
-
-        <!-- ── 금색 구분선 ── -->
-        <div style="margin:20px 0 20px;position:relative;">
-          <div style="height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.7),rgba(251,191,36,.9),rgba(212,168,67,.7),transparent);border-radius:2px;"></div>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card,#0d1829);padding:0 14px;">
-            <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.12em;">✦ ILI · BAI ✦</span>
-          </div>
-        </div>
-
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <!-- 왼쪽: ILI/CEI 게이지 -->
@@ -4167,149 +4291,6 @@ function updateTransitSectionWithNASA(planets) {
         <div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
 
 
-
-      <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
-      <div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
-
-        <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
-
-        <!-- ① 헤더 : COSMIC ORDER + 시계 한 줄 -->
-        <div style="position:relative;z-index:2;padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(212,168,67,0.12)">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 7px #34d399;animation:pulse 2s infinite;flex-shrink:0"></div>
-            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">COSMIC ORDER</span>
-          </div>
-          <span id="cosmicTime" style="font-size:11px;color:#e2e8f0;font-weight:600;font-variant-numeric:tabular-nums"></span>
-        </div>
-
-        <!-- ② NASA 배너 : 한 줄 가로 — 절대 줄바꿈 없음 -->
-        <div style="position:relative;z-index:2;margin:10px 16px 0;padding:8px 14px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.22);border-radius:10px;display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow:hidden;white-space:nowrap">
-          <span style="font-size:15px;flex-shrink:0;margin-right:8px">🛰️</span>
-          <span style="font-size:13px;color:#ffffff;font-weight:800;flex-shrink:0;margin-right:4px">NASA</span>
-          <span style="font-size:11px;color:#e2e8f0;font-weight:500;flex-shrink:0;margin-right:10px" data-i18n="nasa_full">( 미 항공 우주국 )</span>
-          <span style="width:1px;height:14px;background:rgba(255,255,255,0.25);flex-shrink:0;margin-right:10px"></span>
-          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0;margin-right:6px" data-i18n="cosmic_subtitle">실시간 행성 항로</span>
-          <span style="font-size:12px;color:rgba(255,255,255,0.75);flex-shrink:0;margin-right:6px">/</span>
-          <span style="font-size:12px;color:#e2e8f0;font-weight:700;flex-shrink:0" data-i18n="word_time">시간</span>
-          <div style="flex:1;min-width:8px"></div>
-          <span style="font-size:9px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.35);border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0" data-i18n="lbl_live">● LIVE</span>
-        </div>
-
-        <!-- ③ 날짜/시간 카드 -->
-        <div style="position:relative;z-index:2;margin:8px 16px 0;padding:7px 12px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.15);border-radius:8px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden">
-          <span style="font-size:13px;flex-shrink:0">📅</span>
-          <span id="cosmicDateLabel" style="font-size:11px;color:#e2e8f0;font-weight:700;flex-shrink:0">실시간 계산 기준</span>
-          <span id="cosmicDateSub" style="font-size:10px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis">⚡ 자동 계산 후 표시</span>
-        </div>
-
-        <!-- ④ 메인 콘텐츠 : 톱니 + 행성그리드 나란히 -->
-        <div style="position:relative;z-index:2;padding:12px 16px">
-          <div style="display:flex;gap:14px;align-items:flex-start">
-
-            <!-- 톱니바퀴 -->
-            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px">
-              <div style="position:relative;width:96px;height:96px">
-                <canvas id="gearCanvas" width="96" height="96" style="position:absolute;inset:0;display:block"></canvas>
-                <div id="gearCenter" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2">
-                  <div id="cosmicZodiacSym" style="font-size:22px;animation:pulse 3s infinite">☯</div>
-                  <div id="cosmicZodiacName" style="font-size:8px;color:var(--gold);font-weight:700;text-align:center;margin-top:1px">운명의 중심</div>
-                </div>
-              </div>
-              <div style="font-size:9px;color:var(--text-3);text-align:center;line-height:1.4" id="cosmicGearDesc">사주&amp;행성<br>맞물림</div>
-            </div>
-
-            <!-- 행성 그리드 -->
-            <div style="flex:1;min-width:0">
-              <div style="font-size:10px;color:#e2e8f0;font-weight:700;margin-bottom:6px" data-i18n="cosmic_sky">🌌 지금 하늘의 상태</div>
-              <div id="cosmicPlanetGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-                <div style="padding:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:7px;text-align:center;color:var(--text-3);font-size:10px;grid-column:1/-1">✨ 계산 버튼을 누르면 나와요</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ⑤-0 천지인(天地人) 실시간 이모티콘 패널 -->
-          <div id="tianziren-panel" style="display:flex;gap:8px;margin:10px 0 8px;justify-content:center;flex-wrap:wrap;">
-
-            <!-- 天 우주 에너지 -->
-            <div id="tian-box" style="flex:1;min-width:80px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:12px;padding:10px 8px;text-align:center;">
-              <div style="font-size:9px;color:rgba(56,189,248,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="tian_label">天 우주</div>
-              <div id="tian-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🛸</div>
-              <div id="tian-txt" style="font-size:10px;color:#38bdf8;font-weight:700;">계산 중</div>
-              <div id="tian-sub" style="font-size:9px;color:rgba(56,189,248,.5);margin-top:2px;">우주 에너지</div>
-            </div>
-
-            <!-- 地 지상 날씨 -->
-            <div id="chi-box" style="flex:1;min-width:80px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;padding:10px 8px;text-align:center;">
-              <div style="font-size:9px;color:rgba(52,211,153,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="chi_label">地 지상</div>
-              <div id="chi-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🌍</div>
-              <div id="chi-txt" style="font-size:10px;color:#34d399;font-weight:700;">위치 확인중</div>
-              <div id="chi-sub" style="font-size:9px;color:rgba(52,211,153,.5);margin-top:2px;">지상 기운</div>
-            </div>
-
-            <!-- 人 인간 컨디션 -->
-            <div id="ren-box" style="flex:1;min-width:80px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;padding:10px 8px;text-align:center;">
-              <div style="font-size:9px;color:rgba(212,168,67,.6);letter-spacing:.1em;margin-bottom:4px;font-family:'Orbitron',monospace;" data-i18n="ren_label">人 인간</div>
-              <div id="ren-ico" style="font-size:22px;line-height:1;margin-bottom:3px;">🧬</div>
-              <div id="ren-txt" style="font-size:10px;color:#d4a843;font-weight:700;">스캔 대기</div>
-              <div id="ren-sub" style="font-size:9px;color:rgba(212,168,67,.5);margin-top:2px;">생체 에너지</div>
-            </div>
-
-          </div>
-
-          <!-- ⑤ 수신 버튼 -->
-          <div style="text-align:center;margin:14px 0 10px">
-            <button id="cosmicReceiveBtn" onclick="receiveCosmicOrder()" style="position:relative;padding:12px 32px;background:linear-gradient(135deg,#b8860b,var(--gold),#f0c060);border:none;border-radius:12px;color:#030818;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:.08em;box-shadow:0 0 28px rgba(212,168,67,0.4);transition:all .3s;overflow:hidden;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 36px rgba(212,168,67,0.6)'" onmouseout="this.style.transform='';this.style.boxShadow='0 0 28px rgba(212,168,67,0.4)'">
-              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">🚨 지금 내 행운 신호 받기!</span>
-              <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8" data-i18n="cosmic_btn_sub">NASA + 50대 역학 중 × 실시간 분석</span>
-              <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 2.5s infinite"></div>
-            </button>
-          </div>
-
-          <!-- ⑥ 칙령 리포트 -->
-          <div id="cosmicDecreeWrap" style="display:none">
-            <div id="cosmicDecree" style="position:relative;background:linear-gradient(135deg,rgba(10,8,2,0.97),rgba(20,16,4,0.97));border:2px solid var(--gold);border-radius:14px;padding:18px;overflow:hidden">
-              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.04;pointer-events:none;z-index:0"><div style="font-size:160px">👑</div></div>
-              <div style="position:relative;z-index:1;text-align:center;margin-bottom:12px">
-                <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border:2px solid var(--gold);border-radius:28px;background:rgba(212,168,67,0.08)">
-                  <span style="font-size:13px">👑</span>
-                  <span style="font-family:'Orbitron',sans-serif;font-size:9px;color:var(--gold);letter-spacing:.12em;font-weight:700">CGO-FULI 우주 신호</span>
-                  <span style="font-size:13px">👑</span>
-                </div>
-                <div id="decreeNo" style="font-size:10px;color:rgba(212,168,67,0.6);margin-top:4px;letter-spacing:.06em"></div>
-              </div>
-              <div id="decreeTitle" style="position:relative;z-index:1;text-align:center;font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;color:var(--gold);line-height:1.4;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,0.2)"></div>
-              <div id="decreeSteps" style="position:relative;z-index:1;display:flex;flex-direction:column;gap:9px;margin-bottom:12px"></div>
-              <div id="decreeMission" style="position:relative;z-index:1;background:rgba(212,168,67,0.05);border:1px solid rgba(212,168,67,0.2);border-radius:9px;padding:11px"></div>
-              <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(212,168,67,0.15)">
-                <div style="font-size:10px;color:rgba(212,168,67,0.5);font-family:'Orbitron',sans-serif;letter-spacing:.06em">CGo-Fuli × NASA JPL</div>
-                <button onclick="shareCosmicOrder()" style="padding:5px 12px;background:rgba(212,168,67,0.12);border:1px solid rgba(212,168,67,0.35);border-radius:7px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s">📸 갤러리 공유</button>
-              </div>
-            </div>
-            <!-- 접기 버튼 -->
-            <div style="text-align:center;margin-top:10px">
-              <button onclick="(function(){document.getElementById('cosmicDecreeWrap').style.display='none';document.getElementById('cosmicRetention').style.display='none';})()" style="padding:7px 24px;background:rgba(212,168,67,0.08);border:1px solid rgba(212,168,67,0.3);border-radius:10px;color:rgba(212,168,67,0.7);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">▲ 접기</button>
-            </div>
-          </div>
-
-          <!-- ⑦ 리텐션 -->
-          <div id="cosmicRetention" style="display:none;margin-top:10px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div style="background:rgba(99,130,201,0.06);border:1px solid rgba(99,130,201,0.15);border-radius:10px;padding:10px">
-                <div style="font-size:10px;color:var(--indigo);font-weight:700;margin-bottom:6px">🌍 실시간 동행자</div>
-                <div id="cosmicRanking" style="font-size:11px;color:var(--text-2);line-height:1.7"></div>
-              </div>
-              <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:10px;padding:10px">
-                <div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:6px">⭐ 우주 에너지 포인트</div>
-                <div id="cosmicPoints" style="font-size:22px;font-weight:900;color:#34d399;font-family:'Orbitron',sans-serif"></div>
-                <div id="cosmicPointDesc" style="font-size:10px;color:var(--text-3);margin-top:2px"></div>
-                <button onclick="claimCosmicMission()" id="cosmicClaimBtn" style="display:none;margin-top:6px;width:100%;padding:6px;background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.35);border-radius:6px;color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✅ 미션 완료 스탬프</button>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-      <!-- ═══ /COSMIC ORDER ═══ -->
 
         <!-- ── COSMIC ORDER / 전체메뉴 구분 카드 ── -->
         <div style="margin:22px 0 18px;padding:13px 20px;background:linear-gradient(90deg,rgba(212,168,67,.06),rgba(52,211,153,.05),rgba(56,189,248,.05),rgba(212,168,67,.06));border:1px solid rgba(212,168,67,.3);border-radius:40px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 0 18px rgba(212,168,67,.08);">
@@ -27399,6 +27380,556 @@ function _cgoBreathTimerStop(){
 }
 
 // ── 가이드 팝업 열기 ──
+// ══════════════════════════════════════════════════
+// ★ CGO-Bio Sensor v2.0 — Groq Vision 관상/손금 분석
+// ══════════════════════════════════════════════════
+function _cgoVisionPopup(title, color, emoji){
+  var ov = document.getElementById('cgo-vision-ov');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'cgo-vision-ov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.92);display:flex;align-items:flex-end;justify-content:center;';
+    ov.onclick = function(e){ if(e.target===ov) _cgoVisionClose(); };
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+  var rgb = color==='#93c5fd'?'147,197,253':color==='#fcd34d'?'252,211,77':color==='#fca5a5'?'252,165,165':'110,231,183';
+  ov.innerHTML =
+    '<div style="width:100%;max-width:540px;height:92vh;background:linear-gradient(180deg,#0a1628,#06101e);border-radius:22px 22px 0 0;border-top:2px solid '+color+';display:flex;flex-direction:column;overflow:hidden;">'
+    // ── 헤더
+    +'<div style="flex-shrink:0;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;">'
+    +'<div><div style="font-size:15px;font-weight:900;color:'+color+'">'+emoji+' '+title+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;">Groq Vision × 50대 역학 중 융합 분석</div></div>'
+    +'<button onclick="_cgoVisionClose()" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:16px;cursor:pointer;">✕</button>'
+    +'</div>'
+    // ── 카메라 영역
+    +'<div id="cgo-vision-cam" style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;">'
+    // 비디오
+    +'<video id="cgo-vision-video" autoplay playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>'
+    // 점선 가이드 프레임
+    +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">'
+    +'<div id="cgo-vision-frame" style="width:75%;aspect-ratio:3/4;border:2px dashed '+color+'88;border-radius:16px;"></div>'
+    +'</div>'
+    // 스캔라인
+    +'<div id="cgo-vision-scanline" style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,'+color+',transparent);display:none;animation:bsScanAnim 2s ease-in-out infinite;"></div>'
+    // 타이머 오버레이
+    +'<div id="cgo-vision-timer-box" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);display:none;background:rgba(0,0,0,.6);border:1px solid '+color+'55;border-radius:20px;padding:6px 18px;display:none;">'
+    +'<span id="cgo-vision-timer" style="font-size:22px;font-weight:900;color:'+color+';font-family:Orbitron,sans-serif;">33</span>'
+    +'<span style="font-size:11px;color:rgba(240,230,200,.5);margin-left:4px;">초</span>'
+    +'</div>'
+    // 카메라 권한 안내
+    +'<div id="cgo-vision-guide-box" style="position:absolute;bottom:80px;left:0;right:0;text-align:center;">'
+    +'<div id="cgo-vision-guide" style="display:inline-block;background:rgba(0,0,0,.7);border:1px solid '+color+'44;border-radius:12px;padding:10px 16px;font-size:12px;color:rgba(240,230,200,.85);line-height:1.7;"></div>'
+    +'</div>'
+    // 완료 메시지
+    +'<div id="cgo-vision-done" style="position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;">'
+    +'<div style="font-size:48px;">✅</div>'
+    +'<div style="color:'+color+';font-size:15px;font-weight:800;">촬영 완료!</div>'
+    +'<div style="color:rgba(240,230,200,.6);font-size:12px;">분석 중...</div>'
+    +'</div>'
+    +'</div>'
+    // ── 프로그레스바
+    +'<div style="flex-shrink:0;height:4px;background:rgba(255,255,255,.08);">'
+    +'<div id="cgo-vision-progress" style="height:100%;width:0%;background:linear-gradient(90deg,'+color+','+color+'88);transition:width .5s linear;"></div>'
+    +'</div>'
+    // ── 하단
+    +'<div style="flex-shrink:0;padding:14px 18px;background:rgba(6,10,20,.95);display:flex;flex-direction:column;gap:8px;">'
+    +'<div id="cgo-vision-status" style="font-size:11px;color:rgba(240,230,200,.5);text-align:center;"></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button id="cgo-vision-start" onclick="_cgoVisionStartScan()" style="flex:1;padding:14px;background:linear-gradient(135deg,rgba('+rgb+',.25),rgba('+rgb+',.1));border:2px solid rgba('+rgb+',.6);border-radius:14px;color:'+color+';font-size:14px;font-weight:900;cursor:pointer;">⚡ 스캔 시작</button>'
+    +'<button id="cgo-vision-shoot" onclick="_cgoVisionShoot()" style="flex:1;padding:14px;background:linear-gradient(135deg,'+color+','+color+'88);border:none;border-radius:14px;color:#000;font-size:14px;font-weight:900;cursor:pointer;display:none;">📸 촬영 & 분석</button>'
+    +'</div>'
+    +'</div>'
+    // ── 결과 영역
+    +'<div id="cgo-vision-result" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px;display:none;"></div>'
+    +'</div>';
+  return ov;
+}
+
+function _cgoVisionClose(){
+  var ov = document.getElementById('cgo-vision-ov');
+  if(ov) ov.style.display = 'none';
+  var v = document.getElementById('cgo-vision-video');
+  if(v && v.srcObject){ v.srcObject.getTracks().forEach(function(t){t.stop();}); v.srcObject=null; }
+  if(window._cgoVisionScanTimer){ clearInterval(window._cgoVisionScanTimer); window._cgoVisionScanTimer=null; }
+}
+
+window._cgoVisionMode = '';
+
+function cgoFaceVisionAnalysis(){
+  window._cgoVisionMode = 'face';
+  _cgoVisionPopup('관상 AI 분석', '#93c5fd', '🧖');
+  var guide = document.getElementById('cgo-vision-guide');
+  if(guide) guide.innerHTML = '얼굴 전체가 화면에 잘 보이도록<br>카메라 앞에 자연스럽게 위치해 주세요<br><span style="color:rgba(147,197,253,.6);">밝은 곳에서 정면을 바라봐 주세요</span>';
+  _cgoVisionStartCam();
+}
+
+function cgoPalmVisionAnalysis(){
+  window._cgoVisionMode = 'palm';
+  _cgoVisionPopup('손금 AI 분석', '#fcd34d', '✋');
+  var guide = document.getElementById('cgo-vision-guide');
+  if(guide) guide.innerHTML = '손바닥을 카메라 가까이 펼쳐<br>선이 잘 보이도록 해 주세요<br><span style="color:rgba(252,211,77,.6);">왼손 → 태어날 때 운명 | 오른손 → 현재 운명</span>';
+  _cgoVisionStartCam();
+}
+
+function cgoTongueVisionAnalysis(){
+  window._cgoVisionMode = 'tongue';
+  _cgoVisionPopup('혀 스캔 분석', '#fca5a5', '👅');
+  var guide = document.getElementById('cgo-vision-guide');
+  if(guide) guide.innerHTML = '입을 크게 벌리고 혀를 끝까지 내미세요<br><span style="color:rgba(252,165,165,.6);">밝은 곳에서 정면으로 촬영해 주세요</span>';
+  _cgoVisionStartCam();
+}
+
+function _cgoVisionStartCam(){
+  var mode = window._cgoVisionMode;
+  var facing = (mode === 'palm') ? 'environment' : 'user';
+  var statusEl = document.getElementById('cgo-vision-status');
+  if(statusEl) statusEl.textContent = '카메라 연결 중...';
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:640},height:{ideal:480}}})
+  .then(function(stream){
+    var v = document.getElementById('cgo-vision-video');
+    if(v){ v.srcObject = stream; }
+    var startBtn = document.getElementById('cgo-vision-start');
+    if(startBtn){ startBtn.style.display = 'block'; }
+    if(statusEl) statusEl.textContent = '준비 완료 — 스캔 시작을 눌러주세요';
+  })
+  .catch(function(){
+    var guide = document.getElementById('cgo-vision-guide');
+    if(guide) guide.innerHTML = '⚠️ 카메라 접근이 필요합니다.<br>브라우저 카메라 권한을 허용해 주세요.';
+  });
+}
+
+function _cgoVisionStartScan(){
+  var startBtn = document.getElementById('cgo-vision-start');
+  if(startBtn) startBtn.style.display = 'none';
+  var scanLine = document.getElementById('cgo-vision-scanline');
+  if(scanLine) scanLine.style.display = 'block';
+  var timerBox = document.getElementById('cgo-vision-timer-box');
+  if(timerBox) timerBox.style.display = 'block';
+  var statusEl = document.getElementById('cgo-vision-status');
+  var progress = document.getElementById('cgo-vision-progress');
+  var timerEl = document.getElementById('cgo-vision-timer');
+  var v = document.getElementById('cgo-vision-video');
+
+  var total = 33, remaining = total;
+  if(timerEl) timerEl.textContent = remaining;
+
+  // ★ 피사체 감지용 캔버스 (64x64 저해상도)
+  var _dc = document.createElement('canvas');
+  _dc.width = 64; _dc.height = 64;
+  var _dx = _dc.getContext('2d');
+
+  function _hasSubject(){
+    if(!v || !v.srcObject || v.readyState < 2) return false;
+    try {
+      // 화면 중앙 25% 영역만 체크 (얼굴/손이 있는 곳)
+      var sw = v.videoWidth * 0.5, sh = v.videoHeight * 0.5;
+      var sx = (v.videoWidth - sw) / 2, sy = (v.videoHeight - sh) / 2;
+      _dx.drawImage(v, sx, sy, sw, sh, 0, 0, 64, 64);
+      var d = _dx.getImageData(0, 0, 64, 64).data;
+      var sum = 0, cnt = 0;
+      // 중앙 32x32만 측정
+      for(var y=16; y<48; y++){
+        for(var x=16; x<48; x++){
+          var idx = (y*64+x)*4;
+          sum += d[idx]*0.299 + d[idx+1]*0.587 + d[idx+2]*0.114;
+          cnt++;
+        }
+      }
+      var avg = sum / cnt;
+      return avg > 80; // 임계값 80 (어두운 배경/빈 화면 제외)
+    } catch(e){ return false; }
+  }
+
+  var mode = window._cgoVisionMode;
+  var guideMsg = mode==='face'
+    ? '얼굴을 화면 가이드에 맞춰주세요'
+    : mode==='tongue'
+    ? '혀를 카메라에 가까이 보여주세요'
+    : '손바닥을 화면 가득 펼쳐주세요';
+
+  window._cgoVisionScanTimer = setInterval(function(){
+    if(!_hasSubject()){
+      // 피사체 없음 → 타이머 멈춤
+      if(scanLine) scanLine.style.animationPlayState = 'paused';
+      if(statusEl) statusEl.textContent = '⚠️ ' + guideMsg;
+      return;
+    }
+    // 피사체 감지됨 → 타이머 진행
+    if(scanLine) scanLine.style.animationPlayState = 'running';
+    remaining--;
+    if(timerEl) timerEl.textContent = remaining;
+    if(progress) progress.style.width = Math.round((total-remaining)/total*100) + '%';
+    if(statusEl) statusEl.textContent = '✅ 감지됨 — 움직이지 마세요 ('+ remaining +'초)';
+
+    if(remaining <= 0){
+      clearInterval(window._cgoVisionScanTimer);
+      window._cgoVisionScanTimer = null;
+      if(scanLine) scanLine.style.display = 'none';
+      var doneEl = document.getElementById('cgo-vision-done');
+      if(doneEl){ doneEl.style.display = 'flex'; }
+      setTimeout(function(){ _cgoVisionShoot(); }, 800);
+    }
+  }, 1000);
+}
+
+function _cgoVisionShoot(){
+  var v = document.getElementById('cgo-vision-video');
+  if(!v || !v.srcObject) return;
+
+  // 이미지 캡처 (240px 압축)
+  var c = document.createElement('canvas');
+  var maxW = 240;
+  var vw = v.videoWidth || 640, vh = v.videoHeight || 480;
+  if(vw > maxW){ vh = Math.round(vh * maxW / vw); vw = maxW; }
+  c.width = vw; c.height = vh;
+  c.getContext('2d').drawImage(v, 0, 0, vw, vh);
+  var b64 = c.toDataURL('image/jpeg', 0.4).split(',')[1];
+
+  var camDiv = document.getElementById('cgo-vision-cam');
+  var resDiv = document.getElementById('cgo-vision-result');
+  var mode   = window._cgoVisionMode;
+  var r      = window.calcResult || {};
+  var oh     = r.domOh || '토';
+  var name   = r.name || '사용자';
+  var dGJ    = r.dGJ || {};
+  var dGan   = dGJ.gan || '甲';
+  var dJi    = dGJ.ji  || '子';
+  var lifeNum= r.lifeNum || 5;
+  var tti    = r.tti || '';
+  var ohK    = {목:'木',화:'火',토:'土',금:'金',수:'水'};
+
+  if(camDiv) camDiv.style.display = 'none';
+  var pb = document.getElementById('cgo-vision-progress');
+  if(pb) pb.style.width = '100%';
+
+  var label = mode==='face'?'관상':mode==='tongue'?'혀 설진':'손금';
+
+  if(resDiv){
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = '<div style="text-align:center;padding:30px 0;">'
+      + '<div style="font-size:40px;animation:spin 1s linear infinite">🔮</div>'
+      + '<div style="color:#d4a843;font-size:13px;font-weight:700;margin-top:14px">1단계: '+label+' 특징 관찰 중...</div>'
+      + '<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:4px;">Vision AI 이미지 인식</div>'
+      + '</div>';
+  }
+  if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){t.stop();}); }
+
+  // ── 1단계: Vision → 특징 관찰 ─────────────────────────────
+  var step1Prompt = mode === 'face'
+    ? '이 얼굴 사진을 관찰하여 JSON만 반환 (코드블록 없이):\n{"face_shape":"얼굴형태(계란형/둥근형/각진형/역삼각형/갸름한형)","forehead":"이마특징(넓다/좁다/높다/낮다/평평하다/둥글다)","eyes":"눈특징(크다/작다/길다/쌍꺼풀/처졌다/올라갔다/빛난다)","nose":"코특징(높다/낮다/넓다/오뚝하다/뭉툭하다)","mouth":"입특징(크다/작다/두툼하다/얇다/올라갔다/내려갔다)","chin":"턱특징(둥글다/뾰족하다/넓다/짧다/길다)","skin":"피부혈색(밝다/붉다/어둡다/황색/창백하다)","eyebrows":"눈썹특징(진하다/얇다/아치형/일자형/올라갔다)","philtrum":"인중특징(깊다/얕다/길다/짧다)","ears":"귀특징(크다/작다/두껍다/붙어있다-보이면)"}\n실제 보이는 특징만 한국어로 간결하게.'
+    : '이 손바닥 사진을 관찰하여 JSON만 반환 (코드블록 없이):\n{"hand_shape":"손형태(길고가늘다/짧고넓다/정방형/원통형)","life_line":"생명선(깊다/얕다/길다/짧다/끊어졌다/굵다/가늘다)","heart_line":"감정선(길다/짧다/깊다/얕다/굴곡있다/직선이다)","head_line":"두뇌선(길다/짧다/깊다/굴곡있다/직선이다/내려간다)","fate_line":"운명선(있다/없다/깊다/얕다/중간에시작/손목부터시작)","sun_line":"태양선(있다/없다/뚜렷하다/약하다)","marriage_line":"결혼선(있다/없다/개수/뚜렷하다/약하다)","thumb":"엄지(길다/짧다/굵다)","fingers":"손가락전반(길다/짧다/가늘다/굵다)","skin":"손피부(밝다/붉다/황색/탄력있다)"}\n실제 보이는 특징만 한국어로 간결하게.';
+
+  fetch('/api/groq', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{role:'user', content:[
+        {type:'image_url', image_url:{url:'data:image/jpeg;base64,'+b64}},
+        {type:'text', text: step1Prompt}
+      ]}],
+      max_tokens: 400, temperature: 0.3
+    })
+  })
+  .then(function(res){return res.json();})
+  .then(function(data){
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'{}';
+    var clean = txt.replace(/```json|```/g,'').trim();
+    var m = clean.match(/\{[\s\S]*\}/);
+    var obs = m ? m[0] : '{}';
+
+    // 2단계 로딩 표시
+    if(resDiv){
+      resDiv.innerHTML = '<div style="text-align:center;padding:30px 0;">'
+        + '<div style="font-size:40px;animation:spin 1s linear infinite">⚡</div>'
+        + '<div style="color:#d4a843;font-size:13px;font-weight:700;margin-top:14px">2단계: 만세력 × '+label+' 심층 융합 분석 중...</div>'
+        + '<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:4px;">일주('+dGan+dJi+') × 오행('+oh+'·'+ohK[oh]+') × AI 역학 융합</div>'
+        + '</div>';
+    }
+
+    // ── 2단계: 텍스트 심층 분석 (만세력 완전 융합) ───────────
+    var step2Sys = mode === 'face'
+      ? '당신은 동양 관상학(面相學) × 만세력(사주명리) 전문가입니다. 관찰 결과와 만세력 데이터를 융합하여 JSON만 반환하세요 (한국어, 코드블록 없이). 반드시 모든 필드를 채우고 구체적으로 분석하세요.'
+      : '당신은 동양 수상학(手相學) × 만세력(사주명리) 전문가입니다. 관찰 결과와 만세력 데이터를 융합하여 JSON만 반환하세요 (한국어, 코드블록 없이). 반드시 모든 필드를 채우고 구체적으로 분석하세요.';
+
+    var mansData = '만세력 데이터: 이름('+name+') | 일주('+dGan+dJi+') | 일간('+dGan+') | 오행('+oh+'·'+ohK[oh]+') | 생명수('+lifeNum+'번) | 띠('+tti+')';
+
+    var step2Prompt = mode === 'face'
+      ? mansData+'\n1단계 관찰 결과: '+obs+'\n\n위 데이터로 아래 JSON 반환:\n'
+        + '{"face_type":"오행 면형(목형木/화형火/토형土/금형金/수형水 중 하나)","face_type_desc":"면형 특징과 성격 2문장","oh_match":"만세력 오행('+oh+')과 면형 관계(상생/상극/비화)","oh_match_desc":"관계 의미와 운세 영향 2문장","score":점수(0-100),'
+        + '"gung12":{"명궁":{"score":점수,"desc":"분석 2문장"},"재백궁":{"score":점수,"desc":"재물운 분석 2문장"},"관록궁":{"score":점수,"desc":"직업운 분석 2문장"},"복덕궁":{"score":점수,"desc":"복과 행복 분석 2문장"},"처첩궁":{"score":점수,"desc":"인연/부부운 분석 2문장"}},'
+        + '"parts":{"이마":"운명/관록궁 근거 포함 분석 2문장","눈":"감정/부부궁 근거 분석 2문장","코":"재물/재백궁 근거 분석 2문장","입":"복/언변 근거 분석 2문장","턱":"말년운/의지 근거 분석 2문장","눈썹":"형제/장수 근거 분석 1문장","인중":"자녀/수명 근거 분석 1문장"},'
+        + '"giSaek":"기색(氣色) 분석 — 현재 혈색과 오행 색상으로 건강/운기 2문장",'
+        + '"manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+') × 관상 오행 융합 — 길흉 판단과 이유 3문장",'
+        + '"today":"오늘 '+name+'님을 위한 구체적 행운 조언 2문장"}'
+      : mansData+'\n1단계 관찰 결과: '+obs+'\n\n위 데이터로 아래 JSON 반환:\n'
+        + '{"hand_type":"오행 수형(목형木/화형火/토형土/금형金/수형水 중 하나)","hand_type_desc":"수형 특징과 성격 2문장","oh_match":"만세력 오행('+oh+')과 수형 관계(상생/상극/비화)","oh_match_desc":"관계 의미와 운세 영향 2문장","score":점수(0-100),'
+        + '"lines":{"생명선":{"score":점수,"desc":"건강·활력·수명 근거 포함 분석 2문장"},"감정선":{"score":점수,"desc":"사랑·인간관계 근거 분석 2문장"},"두뇌선":{"score":점수,"desc":"지능·직관·결단력 근거 분석 2문장"},"운명선":{"score":점수,"desc":"직업·성공방향 근거 분석 2문장"},"태양선":{"score":점수,"desc":"명예·인기 근거 분석 1문장"},"재물선":{"score":점수,"desc":"금전·재물 근거 분석 1문장"},"결혼선":{"score":점수,"desc":"인연·결혼 근거 분석 1문장"}},'
+        + '"fingers":{"엄지":"의지력 분석 1문장","검지":"야망 분석 1문장","약지":"예술/행운 분석 1문장"},'
+        + '"manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+') × 수상 오행 융합 — 길흉 판단과 이유 3문장",'
+        + '"today":"오늘 '+name+'님을 위한 구체적 행운 조언 2문장"}';
+
+    return fetch('/api/groq', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {role:'system', content: step2Sys},
+          {role:'user', content: step2Prompt}
+        ],
+        max_tokens: 2000, temperature: 0.7
+      })
+    });
+  })
+  .then(function(res){return res.json();})
+  .then(function(data){
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var clean = txt.replace(/```json|```/g,'').trim();
+    var m = clean.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('no json');
+    _cgoVisionRenderDeep(JSON.parse(m[0]), mode);
+  })
+  .catch(function(e){
+    if(resDiv) resDiv.innerHTML =
+      '<div style="text-align:center;padding:30px;color:rgba(248,113,113,.8);">⚠️ 분석 중 오류<br><span style="font-size:10px;color:rgba(240,230,200,.3);">'+e.message+'</span></div>';
+  });
+}
+
+  // UI 전환
+  var camDiv = document.getElementById('cgo-vision-cam');
+  var resDiv = document.getElementById('cgo-vision-result');
+  var mode   = window._cgoVisionMode;
+  var r      = window.calcResult || {};
+  var oh     = (r.domOh || '토');
+  var name   = (r.name || '사용자');
+
+  if(camDiv) camDiv.style.display = 'none';
+  // 프로그레스/타이머 숨기기
+  var pb = document.getElementById('cgo-vision-progress');
+  var tb = document.getElementById('cgo-vision-timer-box');
+  if(pb) pb.style.width = '100%';
+  if(resDiv){
+    resDiv.style.display = 'block';
+    var label = mode==='face'?'관상':mode==='tongue'?'혀 설진':'손금';
+    resDiv.innerHTML = '<div style="text-align:center;padding:40px 0;">'
+      + '<div style="font-size:44px;animation:spin 1s linear infinite">🔮</div>'
+      + '<div style="color:#d4a843;font-size:14px;font-weight:700;margin-top:16px">'+label+' 심층 역학 분석 중...</div>'
+      + '<div style="font-size:11px;color:rgba(240,230,200,.4);margin-top:6px;">Groq Vision × 사주명리 융합</div>'
+      + '</div>';
+  }
+
+  // 카메라 스트림 종료
+  if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){t.stop();}); }
+
+  // 프롬프트 설정
+  var prompt = mode === 'face'
+    ? '당신은 동양 관상학(面相學) 전문가입니다. 이 얼굴 사진을 분석하여 아래 JSON만 반환하세요 (한국어, 코드블록 없이):\n'
+      + '{"이마":"이마 분석(운명·재물운)",\"눈":"눈 분석(감정·지혜)",\"코":"코 분석(재물·건강)",\"입":"입 분석(복·언변)",\"턱":"턱 분석(말년운·의지력)",\"전체":"종합 관상 평가 2-3문장","오늘의운":"오늘 '+oh+'('+{목:'木',화:'火',토:'土',금:'金',수:'水'}[oh]+') 오행 기운과 관상의 융합 분석","행운조언":"오늘 '+name+'님을 위한 구체적 행운 조언"}\n'
+      + '실제로 보이는 특징을 기반으로 긍정적이고 구체적으로 분석하세요.'
+    : mode === 'tongue'
+    ? '당신은 한의학 설진(舌診) 전문가입니다. 이 혀 사진을 분석하여 아래 JSON만 반환하세요 (한국어, 코드블록 없이):\n'
+      + '{"설색":"혀 색깔 분석(건강 상태)","설태":"혀 태 분석(소화·습기)","설형":"혀 모양 분석(기혈 상태)","전체":"종합 설진 평가 2-3문장","오행":"'+oh+' 오행 기준 오늘 건강 조언","건강조언":"오늘 '+name+'님을 위한 구체적 건강 조언"}\n'
+      + '실제로 보이는 혀의 특징을 기반으로 한의학적으로 분석하세요.'
+    : '당신은 동양 수상학(手相學) 전문가입니다. 이 손바닥 사진을 분석하여 아래 JSON만 반환하세요 (한국어, 코드블록 없이):\n'
+      + '{"생명선":"생명선 분석(건강·활력)",\"감정선":"감정선 분석(사랑·감성)",\"두뇌선":"두뇌선 분석(지능·직관)",\"운명선":"운명선 분석(성공·방향)",\"전체":"종합 손금 평가 2-3문장","오늘의운":"오늘 '+oh+'('+{목:'木',화:'火',토:'土',금:'金',수:'水'}[oh]+') 오행 기운과 손금의 융합 분석","행운조언":"오늘 '+name+'님을 위한 구체적 행운 조언"}\n'
+      + '실제로 보이는 선의 특징을 기반으로 긍정적이고 구체적으로 분석하세요.';
+
+  // Groq Vision API 호출
+// ══════════════════════════════════════════════════
+// ★ 관상/손금 심층 분석 렌더링 (B안 2단계)
+// ══════════════════════════════════════════════════
+function _cgoVisionRenderDeep(p, mode){
+  var resDiv = document.getElementById('cgo-vision-result');
+  var inlineRes = document.getElementById('cgo-inline-vision-result');
+  var inlineWait = document.getElementById('cgo-inline-vision-wait');
+
+  var isF = mode === 'face';
+  var color = isF ? '#93c5fd' : '#fcd34d';
+  var colorRgb = isF ? '147,197,253' : '252,211,77';
+  var title = isF ? '🧖 관상 심층 분석' : '✋ 손금 심층 분석';
+  var score = p.score || 75;
+  var scoreColor = score>=80?'#34d399':score>=65?'#d4a843':score>=50?'#fbbf24':'#f87171';
+
+  var h = '';
+
+  // ① 총점 + 오행 면형/수형
+  h += '<div style="background:linear-gradient(135deg,rgba('+colorRgb+',.1),rgba('+colorRgb+',.05));border:1px solid rgba('+colorRgb+',.3);border-radius:14px;padding:14px;margin-bottom:10px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<div><div style="font-size:13px;font-weight:900;color:'+color+';">'+title+'</div>'
+    + '<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:2px;">만세력 × 12궁 × 7대선 심층 분석</div></div>'
+    + '<div style="text-align:center;"><div style="font-size:36px;font-weight:900;color:'+scoreColor+';font-family:Orbitron,sans-serif;">'+score+'</div>'
+    + '<div style="font-size:9px;color:rgba(240,230,200,.4);">종합 점수</div></div>'
+    + '</div>'
+    // 오행 면형/수형
+    + (p.face_type||p.hand_type ? '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<div style="padding:4px 10px;background:rgba('+colorRgb+',.08);border:1px solid rgba('+colorRgb+',.25);border-radius:20px;font-size:11px;color:'+color+';font-weight:700;">'+(p.face_type||p.hand_type)+'</div>'
+      + (p.oh_match ? '<div style="padding:4px 10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:20px;font-size:11px;color:#34d399;font-weight:700;">'+p.oh_match+'</div>' : '')
+      + '</div>' : '')
+    + (p.face_type_desc||p.hand_type_desc ? '<div style="font-size:11px;color:rgba(240,230,200,.75);line-height:1.7;margin-top:8px;">'+(p.face_type_desc||p.hand_type_desc)+'</div>' : '')
+    + (p.oh_match_desc ? '<div style="font-size:11px;color:rgba(52,211,153,.8);line-height:1.7;margin-top:4px;padding:6px 8px;background:rgba(52,211,153,.05);border-radius:8px;">☯️ '+p.oh_match_desc+'</div>' : '')
+    + '</div>';
+
+  // ② 관상 12궁 / 손금 7대선
+  var sections = isF ? p.gung12 : p.lines;
+  if(sections){
+    var sTitle = isF ? '🏯 관상 12궁 분석' : '🌿 7대 주요선 분석';
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:.06em;margin-bottom:8px;">'+sTitle+'</div>'
+      + '<div style="display:flex;flex-direction:column;gap:8px;">';
+    Object.keys(sections).forEach(function(k){
+      var item = sections[k];
+      if(!item) return;
+      var sc = item.score||0;
+      var bc = sc>=80?'#34d399':sc>=65?'#d4a843':'#f87171';
+      h += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
+        + '<span style="font-size:12px;font-weight:700;color:rgba(240,230,200,.9);">'+k+'</span>'
+        + '<span style="font-size:14px;font-weight:900;color:'+bc+';">'+sc+'</span>'
+        + '</div>'
+        + '<div style="height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin-bottom:6px;">'
+        + '<div style="height:100%;width:'+sc+'%;background:'+bc+';border-radius:3px;transition:width 1s ease;"></div></div>'
+        + '<div style="font-size:11px;color:rgba(240,230,200,.65);line-height:1.7;">'+item.desc+'</div>'
+        + '</div>';
+    });
+    h += '</div></div>';
+  }
+
+  // ③ 관상: 부위별 / 손금: 손가락
+  if(isF && p.parts){
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:.06em;margin-bottom:8px;">👁️ 부위별 상세 분석</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+    var partEmoji = {이마:'🙆',눈:'👁️',코:'👃',입:'👄',턱:'🫒',눈썹:'〰️',인중:'💧'};
+    Object.keys(p.parts).forEach(function(k){
+      h += '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 10px;">'
+        + '<div style="font-size:11px;font-weight:700;color:'+color+';margin-bottom:4px;">'+(partEmoji[k]||'•')+' '+k+'</div>'
+        + '<div style="font-size:11px;color:rgba(240,230,200,.65);line-height:1.65;">'+p.parts[k]+'</div>'
+        + '</div>';
+    });
+    h += '</div></div>';
+  }
+  if(!isF && p.fingers){
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:.06em;margin-bottom:8px;">🖐️ 손가락 분석</div>'
+      + '<div style="display:flex;flex-direction:column;gap:5px;">';
+    Object.keys(p.fingers).forEach(function(k){
+      h += '<div style="padding:7px 10px;background:rgba(255,255,255,.03);border-radius:8px;border-left:2px solid rgba('+colorRgb+',.4);">'
+        + '<span style="font-size:11px;font-weight:700;color:'+color+';">'+k+'</span>'
+        + '<span style="font-size:11px;color:rgba(240,230,200,.65);"> — '+p.fingers[k]+'</span>'
+        + '</div>';
+    });
+    h += '</div></div>';
+  }
+
+  // ④ 기색 / 만세력 융합
+  if(p.giSaek){
+    h += '<div style="padding:10px 12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;margin-bottom:8px;">'
+      + '<div style="font-size:10px;font-weight:800;color:#38bdf8;margin-bottom:5px;">🎨 기색(氣色) 분석</div>'
+      + '<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.7;">'+p.giSaek+'</div></div>';
+  }
+  if(p.manSeLi){
+    h += '<div style="padding:10px 12px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.25);border-radius:10px;margin-bottom:8px;">'
+      + '<div style="font-size:10px;font-weight:800;color:#d4a843;margin-bottom:5px;">📜 만세력 융합 분석</div>'
+      + '<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.7;">'+p.manSeLi+'</div></div>';
+  }
+
+  // ⑤ 오늘 행운 조언
+  if(p.today){
+    h += '<div style="padding:10px 12px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:10px;margin-bottom:10px;">'
+      + '<div style="font-size:10px;font-weight:800;color:#34d399;margin-bottom:5px;">✨ 오늘의 행운 조언</div>'
+      + '<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.8;">'+p.today+'</div></div>';
+  }
+
+  // 다시 분석 버튼
+  var retryFn = isF ? 'cgoFaceVisionAnalysis()' : 'cgoPalmVisionAnalysis()';
+  h += '<button onclick="'+retryFn+'" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(240,230,200,.5);font-size:11px;cursor:pointer;">↺ 다시 분석</button>';
+
+  // 팝업에 표시
+  if(resDiv){ resDiv.innerHTML = h; }
+
+  // 인라인 카드에도 표시
+  if(inlineRes){
+    inlineRes.style.display = 'block';
+    inlineRes.innerHTML = '<div style="background:var(--bg-panel);border:1px solid rgba('+colorRgb+',.3);border-radius:16px;padding:16px;margin-top:2px;">'+h+'</div>';
+  }
+  if(inlineWait){ inlineWait.style.display = 'none'; }
+}
+
+function _cgoVisionRender(p, mode){
+  var resDiv = document.getElementById('cgo-vision-result');
+  if(!resDiv) return;
+
+  var isF = mode === 'face';
+  var isT = mode === 'tongue';
+  var color = isF ? '#93c5fd' : isT ? '#fca5a5' : '#fcd34d';
+  var keys  = isF
+    ? ['이마','눈','코','입','턱']
+    : isT
+    ? ['설색','설태','설형']
+    : ['생명선','감정선','두뇌선','운명선'];
+  var icons = isF
+    ? ['🙆','👁️','👃','👄','🫒']
+    : isT
+    ? ['🔴','🌿','📐']
+    : ['❤️','💙','🧠','⭐'];
+
+  var h = '<div style="display:flex;flex-direction:column;gap:12px;">';
+
+  // 세부 항목
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  keys.forEach(function(k, i){
+    if(!p[k]) return;
+    h += '<div style="background:rgba(255,255,255,.04);border:1px solid '+color+'33;border-radius:10px;padding:10px 12px;">'
+      + '<div style="font-size:11px;font-weight:800;color:'+color+';margin-bottom:4px;">'+icons[i]+' '+k+'</div>'
+      + '<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.7;">'+p[k]+'</div>'
+      + '</div>';
+  });
+  h += '</div>';
+
+  // 종합
+  if(p['전체']){
+    h += '<div style="background:rgba('+(isF?'147,197,253':'252,211,77')+',.06);border:1px solid '+color+'44;border-radius:12px;padding:14px;">'
+      + '<div style="font-size:11px;font-weight:800;color:'+color+';margin-bottom:7px;">📋 종합 '+(isF?'관상':'손금')+' 분석</div>'
+      + '<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:1.9;">'+p['전체']+'</div>'
+      + '</div>';
+  }
+
+  // 오늘의 운
+  if(p['오늘의운']){
+    h += '<div style="background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.3);border-radius:12px;padding:14px;">'
+      + '<div style="font-size:11px;font-weight:800;color:#d4a843;margin-bottom:7px;">☀️ 오늘의 역학 융합 분석</div>'
+      + '<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+p['오늘의운']+'</div>'
+      + '</div>';
+  }
+
+  // 행운/건강 조언
+  var advKey = (p['건강조언']) ? '건강조언' : '행운조언';
+  var advLabel = (p['건강조언']) ? '🌿 오늘의 건강 조언' : '✨ 오늘의 행운 조언';
+  if(p[advKey]){
+    h += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:12px;padding:14px;">'
+      + '<div style="font-size:11px;font-weight:800;color:#34d399;margin-bottom:7px;">'+advLabel+'</div>'
+      + '<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+p[advKey]+'</div>'
+      + '</div>';
+  }
+
+  // 오행 (혀 전용)
+  if(p['오행']){
+    h += '<div style="background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;padding:14px;">'
+      + '<div style="font-size:11px;font-weight:800;color:#d4a843;margin-bottom:7px;">☯️ 오행 건강 분석</div>'
+      + '<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+p['오행']+'</div>'
+      + '</div>';
+  }
+
+  var retryFn = mode==='face'?'cgoFaceVisionAnalysis()':mode==='tongue'?'cgoTongueVisionAnalysis()':'cgoPalmVisionAnalysis()';
+  h += '<button onclick="'+retryFn+'" style="padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(240,230,200,.6);font-size:12px;cursor:pointer;width:100%;">↺ 다시 분석</button>';
+  h += '</div>';
+
+  resDiv.innerHTML = h;
+}
+
 function cgoScanGuide(type){
   var d=_CGO_GUIDE_DATA[type]; if(!d) return;
   window._cgoCurrentGuideType = type; // SVG 애니메이션용
@@ -28436,7 +28967,8 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
     +'</div>'
     +'</div>'
 
-  body.innerHTML=scoreRing+barChart+radarSection+areaSection+flowSection+cardSection+goodBad+whySec+energySec;
+  var _srcMode = window._cgoInRppgMode ? 'rppg' : window._cgoInRealtimeMode ? 'realtime' : 'pure';
+  body.innerHTML=scoreRing+barChart+radarSection+areaSection+flowSection+cardSection+goodBad+whySec+energySec+_cgoSourceBadge(_srcMode);
 
   // ★ innerHTML 삽입 후 직접 JS onclick 강제 바인딩 (테스트 검증된 방식)
   setTimeout(function(){
@@ -29575,13 +30107,20 @@ function cgoTfAiChat(){
     var key = (window.CG_GEMINI_KEY||'').trim();
     if(!key){ try{ key=atob(''); }catch(e){} }
     var engList = (window._tfPopupData && window._tfPopupData.selectedEngines) ? window._tfPopupData.selectedEngines.map(function(e){return e.name;}).join('·') : '사주명리';
+    // ★ 만세력 데이터 추출
+    var _dGJ = r.dGJ || {}; var _yGJ = r.yGJ || {}; var _mGJ = r.mGJ || {};
+    var _dGan = _dGJ.gan||'甲'; var _dJi = _dGJ.ji||'子';
+    var _yGan = _yGJ.gan||'甲'; var _mGan = _mGJ.gan||'甲';
+    var _tti = r.tti||''; var _lifeNum = r.lifeNum||5;
+    var _wz = r.wz ? r.wz.name : '';
+    var _mansData = '만세력: 일주('+_dGan+_dJi+') | 일간('+_dGan+') | 오행('+oh+') | 생명수('+_lifeNum+'번) | 띠('+_tti+') | 별자리('+_wz+')';
     var sys;
     if(currentMode === 'rppg'){
-      sys = 'CGO-FULI 실시간 rPPG 생체 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 위성(NASA 30초 주기)·날씨(5분 주기)·방위 + rPPG 생체 신호(심박·스트레스)와 50개 역학을 융합한 천지인(天地人) 통합 분석을 담당합니다.\n\n규칙:\n1. 생체 데이터(심박·HRV·스트레스)와 우주·기상 데이터를 연결해서 구체적으로 설명\n2. 천지인 — 하늘(NASA 행성), 땅(날씨·방위), 사람(rPPG 생체) 3요소를 항상 언급\n3. 두리뭉실 금지 — 수치 근거 제시\n4. 반드시 100% 순수 한국어. 외국어 절대 금지. 중국어(稍微 등)·일본어(ように 등) 절대 금지.';
+      sys = 'CGO-FULI 실시간 rPPG 생체 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n'+_mansData+'\n\n이 AI는 위성(NASA 30초 주기)·날씨(5분 주기)·방위 + rPPG 생체 신호(심박·스트레스)와 50개 역학을 융합한 천지인(天地人) 통합 분석을 담당합니다.\n\n규칙:\n1. 만세력(일주·일간·오행)과 생체 데이터(심박·HRV)를 연결해서 구체적으로 설명\n2. 천지인 — 하늘(NASA 행성), 땅(날씨·방위), 사람(rPPG 생체) 3요소를 항상 언급\n3. 두리뭉실 금지 — 수치 근거 제시\n4. 반드시 100% 순수 한국어. 외국어 절대 금지.';
     } else if(currentMode === 'realtime'){
-      sys = 'CGO-FULI 실시간 데이터 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA 30초 주기 행성 궤도 데이터, 5분 주기 기상 데이터, 방위(선택) 데이터를 역학과 융합한 분석을 담당합니다.\n\n규칙:\n1. NASA 위성·날씨·방위 실시간 데이터가 역학에 어떻게 영향을 주는지 구체적으로 설명\n2. 전통 역학 + 현대 과학 데이터의 융합 관점으로 답변\n3. 두리뭉실 금지 — 오행·행성 근거 제시\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지. 중국어(稍微 등)·일본어(ように 등) 절대 금지.';
+      sys = 'CGO-FULI 실시간 데이터 연동 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n'+_mansData+'\n\n이 AI는 NASA 30초 주기 행성 궤도 데이터, 5분 주기 기상 데이터, 방위(선택) 데이터를 만세력·역학과 융합한 분석을 담당합니다.\n\n규칙:\n1. 만세력(일주·일간) × NASA 위성 데이터가 역학에 어떻게 영향을 주는지 구체적으로 설명\n2. 전통 역학 + 현대 과학 데이터의 융합 관점으로 답변\n3. 두리뭉실 금지 — 오행·행성 근거 제시\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지.';
     } else {
-      sys = 'CGO-FULI 순수 역학 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n\n이 AI는 NASA·날씨·생체 데이터 없이, 오직 선택된 역학 엔진(사주·자미두수·수비학 등)만으로 분석합니다.\n\n규칙:\n1. 두리뭉실 금지 — 선택 역학의 오행·천간·지지 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지. 중국어(稍微 등)·일본어(ように 등) 절대 금지.';
+      sys = 'CGO-FULI 순수 역학 AI 분석사.\n사용자: '+name+'님 | 오행: '+oh+' | 에너지: '+total+'점 | 역학: '+engList+'\n'+_mansData+'\n\n이 AI는 만세력(사주·일주·일간·오행)과 선택된 역학 엔진(사주·자미두수·수비학 등)으로 분석합니다.\n\n규칙:\n1. 두리뭉실 금지 — 만세력 일주('+_dGan+_dJi+')·오행('+oh+')·천간·지지 근거를 구체적으로 설명\n2. 50점=보통, 65↑=양호, 80↑=대길 기준 명시\n3. 전문용어는 쉬운 말로 풀어쓰기\n4. 실천 조언 1~2가지 포함\n5. 반드시 100% 순수 한국어. 외국어 절대 금지.';
     }
     fetch('/api/groq',{
       method:'POST',
@@ -29618,8 +30157,12 @@ function cgoTfAiChat(){
 var _cgoIntroCallback = null;
 var _cgoIntroContent = {
   pure:{badge:'📜 순수 역학 분석',badgeColor:'#d4a843',title:'지능형 멀티-엔진 역학 분석',subtitle:'Human-Intelligence',desc:'50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',body:'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 냅니다.',color:'rgba(212,168,67,.3)'},
-  realtime:{badge:'🛰️ 실시간 데이터 연동 분석',badgeColor:'#38bdf8',title:'하이브리드 환경 데이터 연동 분석',subtitle:'Nature-Intelligence',desc:'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',body:'인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다.',color:'rgba(56,189,248,.3)'},
-  rppg:{badge:'🧬 실시간 rPPG 데이터 연동 분석',badgeColor:'#34d399',title:"세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",subtitle:'Bio-Intelligence',desc:'바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',body:'CGO-FULI는 세계 최초로 첨단 rPPG 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화합니다.',color:'rgba(52,211,153,.3)'}
+  realtime:{badge:'🛸 실시간 데이터 연동 분석',badgeColor:'#38bdf8',title:'하이브리드 환경 데이터 연동 분석',subtitle:'Nature-Intelligence',desc:'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',body:'인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다.',color:'rgba(56,189,248,.3)'},
+  rppg:{badge:'🧬 실시간 rPPG 데이터 연동 분석',badgeColor:'#34d399',title:"세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",subtitle:'Bio-Intelligence',desc:'바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',body:'CGO-FULI는 세계 최초로 첨단 rPPG 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화합니다.',color:'rgba(52,211,153,.3)'},
+  face:{badge:'🧬 생체 스킨 분석',badgeColor:'#93c5fd',title:'관상 AI 분석 — 측정 전 필독',subtitle:'Face Bio-Scan',desc:'Groq Vision × 동양 관상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 밝은 곳에서 정면을 바라봐 주세요<br>② 카메라와 얼굴 거리 30~50cm 유지<br>③ 안경·모자 등 제거 후 촬영<br>④ 무표정으로 눈을 정면으로 응시<br>⑤ 33초간 얼굴을 고정해 주세요<br><br>⚠️ 얼굴이 감지되어야 타이머가 시작됩니다',color:'rgba(147,197,253,.3)'},
+  palm:{badge:'🧬 생체 스킨 분석',badgeColor:'#fcd34d',title:'손금 AI 분석 — 측정 전 필독',subtitle:'Palm Bio-Scan',desc:'Groq Vision × 동양 수상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 손바닥을 카메라 가까이 펼쳐 주세요<br>② 손금 선이 잘 보이도록 조명 확보<br>③ 왼손 → 태어날 때 운명<br>④ 오른손 → 현재 진행 중인 운명<br>⑤ 33초간 손바닥을 고정해 주세요<br><br>⚠️ 손바닥이 감지되어야 타이머가 시작됩니다',color:'rgba(252,211,77,.3)'},
+  tongue:{badge:'🧬 생체 스킨 분석',badgeColor:'#fca5a5',title:'혀 스캔 분석 — 측정 전 필독',subtitle:'Tongue Bio-Scan',desc:'Groq Vision × 한의학 설진 × 오행 건강 분석',body:'📋 측정 전 필독 지시사항<br><br>① 입을 크게 벌리고 혀를 끝까지 내미세요<br>② 밝은 곳에서 혀가 잘 보이도록 해 주세요<br>③ 혀를 가능한 한 편평하게 유지<br>④ 혀 표면 전체가 화면에 보이도록<br>⑤ 15초간 혀를 고정해 주세요<br><br>⚠️ 혀가 감지되어야 타이머가 시작됩니다',color:'rgba(252,165,165,.3)'},
+  breath:{badge:'🧬 생체 스킨 분석',badgeColor:'#6ee7b7',title:'4 · 7 · 8 호흡 측정 — 측정 전 필독',subtitle:'Breath Bio-Scan',desc:'자율신경 안정 × 산소 공급 × HRV 개선 호흡법',body:'📋 측정 전 필독 지시사항<br><br>① 편안한 자세로 앉거나 누워 주세요<br>② 코로 <strong style="color:#38bdf8;">흡입 4초</strong> — 깊게 천천히 들이마세요<br>③ <strong style="color:#d4a843;">참기 7초</strong> — 숨을 꾹 참으세요<br>④ 입으로 <strong style="color:#34d399;">내뱉기 8초</strong> — 슈우~ 천천히 내뱉으세요<br>⑤ 위 과정을 3회 반복하면 완료됩니다<br><br>💡 이 호흡법은 자율신경을 안정시키고 HRV(심박변이도)를 높여 역학 분석 정확도를 향상시킵니다',color:'rgba(52,211,153,.3)'}
 };
 function cgoIntroOpen(type,callback){
   var d=_cgoIntroContent[type]; if(!d){if(callback)callback();return;}
@@ -37843,6 +38386,29 @@ function updateCosmicPlanetGrid(planets) {
 }
 
 // 칙령 생성 엔진
+// ═══════════════════════════════════════════════
+// 📌 CGO-FULI 출처·근거 역학 공통 함수
+// ═══════════════════════════════════════════════
+function _cgoSourceBadge(mode){
+  var sources = {
+    cosmic:['📜 만세력 사주명리','🛸 NASA 위성 실시간','🗺️ 기문둔갑 팔문','⭕ 구성학 9궁','🔢 수비학 생명수','☯️ 오행 상생상극','🌙 달 위상','♈ 태양궁 점성술'],
+    pure:['📜 만세력 사주명리','🌀 자미두수','🗺️ 기문둔갑','⭕ 구성학','📖 주역 64괘','🔢 수비학','🏷️ 성명학','💞 합성 차트'],
+    realtime:['📜 만세력 사주명리','🛸 NASA 위성 실시간','🌡️ 실시간 기상','🧭 방위 에너지','🪐 행성 트랜짓','🌙 달 위상','☯️ 오행 실시간 교차','⚡ 육임신살'],
+    rppg:['📜 만세력 사주명리','🧬 rPPG 생체 신호','🛸 NASA 위성 실시간','❤️ 심박 BPM·HRV','👁️ 안면 혈색 FCI','🧭 방위 에너지','☯️ 천지인 융합','📋 50대 역학 중'],
+    detail:['📜 만세력 사주명리','🛸 NASA 위성 실시간','🧬 생체 에너지 지수','🗺️ 기문둔갑','🔢 수비학','☯️ 오행 교차분석','🌙 달 위상','✡️ 카발라']
+  };
+  var list = sources[mode] || sources.detail;
+  return '<div style="margin-top:16px;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;">'
+    + '<div style="font-size:10px;font-weight:800;color:rgba(212,168,67,.7);letter-spacing:.1em;margin-bottom:8px;">📌 분석 출처 · 근거 역학</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px;">'
+    + list.map(function(s){
+        return '<div style="padding:3px 8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;font-size:10px;color:rgba(240,230,200,.7);">'+s+'</div>';
+      }).join('')
+    + '</div>'
+    + '<div style="margin-top:8px;font-size:9px;color:rgba(255,255,255,.25);line-height:1.6;">© CGO-FULI 특허 10-2026-0060113 | 위 역학 데이터를 실시간 융합하여 도출한 분석입니다</div>'
+    + '</div>';
+}
+
 function receiveCosmicOrder() {
   if(!window._nasaPlanets || !window.calcResult) {
     alert('먼저 ⚡ 자동 계산 버튼을 눌러주세요!');
@@ -37877,6 +38443,43 @@ function receiveCosmicOrder() {
   var oh = r.domOh || '목';
   var ohIdx = {목:0,화:1,토:2,금:3,수:4}[oh]||0;
   var lifeNum = r.lifeNum || 5;
+
+  // ── 만세력 데이터 추출 ──────────────────────────────────────
+  var yGJ   = r.yGJ  || {};  // 년주
+  var mGJ   = r.mGJ  || {};  // 월주
+  var dGJ   = r.dGJ  || {};  // 일주
+  var hGJ   = r.hGJ  || {};  // 시주
+  var dGan  = dGJ.gan || '甲';  // 일간
+  var dJi   = dGJ.ji  || '子';  // 일지
+  var mGan  = mGJ.gan || '甲';  // 월간
+  var yGan  = yGJ.gan || '甲';  // 년간
+  var tti   = r.tti   || '';    // 띠
+  var zodiacKr = r.wz ? r.wz.name : '';  // 태양궁 별자리
+  var sajeMode = r.domOh || '목';
+  var ohK   = {목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var ohEng = {목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'};
+  var ohColor = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
+  // 일진 (오늘 날짜 기준 간지)
+  var todayGanIdx = (now.getDate() + now.getMonth()*30 + (r.d||15)*7) % 10;
+  var todayJiIdx  = (now.getDate() + now.getMonth()*30 + (r.d||15)*5) % 12;
+  var GANS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var JIS  = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var JIS_KR = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+  var GAN_OH = ['목','목','화','화','토','토','금','금','수','수'];
+  var todayGan = GANS[todayGanIdx];
+  var todayJi  = JIS[todayJiIdx];
+  var todayOhGan = GAN_OH[todayGanIdx]; // 오늘 일간 오행
+  // 일간 오행과 사용자 오행 관계
+  var ohRelMap = {
+    목:{목:'비화(比和)',화:'상생(相生)·木生火',토:'상극(相剋)·木剋土',금:'피극(被剋)·金剋木',수:'피생(被生)·水生木'},
+    화:{목:'피생(被生)·木生火',화:'비화(比和)',토:'상생(相生)·火生土',금:'상극(相剋)·火剋金',수:'피극(被剋)·水剋火'},
+    토:{목:'피극(被剋)·木剋土',화:'피생(被生)·火生土',토:'비화(比和)',금:'상생(相生)·土生金',수:'상극(相剋)·土剋水'},
+    금:{목:'상극(相剋)·金剋木',화:'피극(被剋)·火剋金',토:'피생(被生)·土生金',금:'비화(比和)',수:'상생(相生)·金生水'},
+    수:{목:'상생(相生)·水生木',화:'상극(相剋)·水剋火',토:'피극(被剋)·土剋水',금:'피생(被生)·金生水',수:'비화(比和)'}
+  };
+  var todayOhRel = (ohRelMap[oh] && ohRelMap[oh][todayOhGan]) || '교차 에너지';
+  var isGoodDay = (todayOhRel.indexOf('상생')>=0 || todayOhRel.indexOf('비화')>=0);
+
   var _seed = (r.y||1990)*7 + (r.m||1)*31 + (r.d||1)*17
     + now.getDate()*13 + now.getMonth()*11
     + now.getHours()*997 + Math.floor(now.getMinutes()/10)*101
@@ -38081,9 +38684,131 @@ function receiveCosmicOrder() {
     +'<div style="width:'+energyScore+'%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24,#fde68a);border-radius:4px;transition:width 1s ease"></div>'
     +'</div>'
     +'<div style="font-size:12px;color:#e2e8f0;font-weight:600">'+levelTxt+'</div>'
-    +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,0.15);font-size:10px;color:rgba(255,255,255,0.3)">NASA 실시간 인공위성 + 50대 역학 중 과학적 분석 | 상세 근거 보기 ▼</div>'
+    +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,0.15);font-size:10px;color:rgba(255,255,255,0.3)">NASA 실시간 인공위성 + 50대 역학 중 과학적 분석</div>'
     +'</div>'
-    + stepsHtml;
+
+    // ══ 전문가 분석 섹션 ══
+    +'<div style="margin-bottom:6px;padding:10px 14px;background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(139,92,246,.06));border:1px solid rgba(56,189,248,.3);border-radius:12px;display:flex;align-items:center;gap:8px;">'
+    +'<span style="font-size:16px;">🔬</span>'
+    +'<div><div style="font-size:12px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">전문가 분석</div>'
+    +'<div style="font-size:10px;color:rgba(56,189,248,.5);">만세력 × NASA 위성 × 역학 데이터 정밀 융합</div></div>'
+    +'</div>'
+
+    // 전문가 Step 0: 만세력 분석 ★ 신규
+    +'<div style="padding:12px 14px;background:rgba(212,168,67,0.05);border-left:3px solid #d4a843;border-radius:0 10px 10px 0;margin-bottom:6px">'
+    +'<div style="font-size:11px;color:#d4a843;font-weight:800;margin-bottom:6px;">📜 ① 만세력 × 사주 분석</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px;">일주(日柱) × 오행 × 일진 교차 분석</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">'
+    // 일주 카드
+    +'<div style="background:rgba(212,168,67,.07);border:1px solid rgba(212,168,67,.2);border-radius:8px;padding:8px;text-align:center;">'
+    +'<div style="font-size:9px;color:rgba(212,168,67,.6);margin-bottom:3px;">일주(日柱)</div>'
+    +'<div style="font-size:18px;font-weight:900;color:#d4a843;">'+dGan+dJi+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:2px;">일간 '+dGan+' — '+oh+'('+ohK[oh]+') 오행</div>'
+    +'</div>'
+    // 오늘 일진 카드
+    +'<div style="background:rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.07);border:1px solid rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.2);border-radius:8px;padding:8px;text-align:center;">'
+    +'<div style="font-size:9px;color:rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.6);margin-bottom:3px;">오늘 일진</div>'
+    +'<div style="font-size:18px;font-weight:900;color:'+(isGoodDay?'#34d399':'#f87171')+';">'+todayGan+todayJi+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:2px;">'+(isGoodDay?'✅ 길일':'⚠️ 주의일')+'</div>'
+    +'</div>'
+    +'</div>'
+    // 오행 관계 분석
+    +'<div style="padding:8px 10px;background:rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.06);border-radius:8px;">'
+    +'<div style="font-size:11px;color:'+(isGoodDay?'#34d399':'#f87171')+';font-weight:700;margin-bottom:3px;">'
+    +(isGoodDay?'🌟 오늘은 당신에게 좋은 날이에요!':'⚠️ 오늘은 신중하게 행동하세요')+'</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;">'
+    +'당신의 일간 <strong style="color:#d4a843;">'+dGan+'('+oh+'·'+ohK[oh]+')</strong>과 오늘 일진 <strong style="color:'+(isGoodDay?'#34d399':'#f87171')+';">'+todayGan+todayJi+'('+todayOhGan+'·'+ohK[todayOhGan]+')</strong>의 관계: <strong>'+todayOhRel+'</strong><br>'
+    +(isGoodDay
+      ?'오행이 상생·비화 관계입니다. 오늘은 새로운 시작, 중요한 결정, 핵심 미팅에 적합한 날이에요.'
+      :'오행이 상극·피극 관계입니다. 오늘은 신중하고 방어적으로 행동하며, 중요한 결정은 내일로 미루세요.')
+    +'</div>'
+    +'</div>'
+    +(tti?'<div style="margin-top:6px;font-size:11px;color:rgba(212,168,67,.7);padding:5px 8px;background:rgba(212,168,67,.05);border-radius:6px;">🐾 띠: '+tti+' | ⭐ 별자리: '+zodiacKr+' | 생명수: '+lifeNum+'번 에너지</div>':'')
+    +'</div>'
+
+    // 전문가 Step 1: NASA 행성
+    +'<div style="padding:12px 14px;background:rgba(56,189,248,0.04);border-left:3px solid #38bdf8;border-radius:0 10px 10px 0;margin-bottom:6px">'
+    +'<div style="font-size:11px;color:#38bdf8;font-weight:800;margin-bottom:6px;">📡 ② 천체 역학 분석 (NASA 실시간)</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px;">행성 궤도 × 12궁 × 오행 교차 분석</div>'
+    +'<div style="font-size:11px;color:var(--text-2);line-height:1.9">'+step1Msg+'</div>'
+    +'</div>'
+
+    // 전문가 Step 2: 기문둔갑 방위
+    +'<div style="padding:12px 14px;background:rgba(52,211,153,0.04);border-left:3px solid #34d399;border-radius:0 10px 10px 0;margin-bottom:6px">'
+    +'<div style="font-size:11px;color:#34d399;font-weight:800;margin-bottom:6px;">🗺️ ③ 기문둔갑 × 구성학 방위 분석</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px;">8문(八門) × 9궁(九宮) × 시진 에너지 교차</div>'
+    +'<div style="font-size:11px;color:var(--text-2);line-height:1.9">'+step2Msg+'</div>'
+    +'</div>'
+
+    // 전문가 Step 3: 역학 행동 지침
+    +'<div style="padding:12px 14px;background:rgba(212,168,67,0.04);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;margin-bottom:14px">'
+    +'<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">⚡ ④ 50대 역학 중 행동 분석</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px;">사주 × 수비학 × 풍수 × NASA 융합 도출</div>'
+    +'<div style="font-size:11px;color:var(--text-2);line-height:1.9">'+step3Msg+'</div>'
+    +'</div>'
+
+    // ══ 구분선 ══
+    +'<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),transparent);margin:16px 0;"></div>'
+
+    // ══ 일반인 분석 섹션 ══
+    +'<div style="margin-bottom:10px;padding:10px 14px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(251,191,36,.06));border:1px solid rgba(212,168,67,.3);border-radius:12px;display:flex;align-items:center;gap:8px;">'
+    +'<span style="font-size:16px;">😊</span>'
+    +'<div><div style="font-size:12px;font-weight:900;color:#fbbf24;letter-spacing:.08em;">일반인 분석</div>'
+    +'<div style="font-size:10px;color:rgba(251,191,36,.5);">누구나 쉽게 이해하는 오늘의 운세</div></div>'
+    +'</div>'
+
+    // 오늘 하늘 쉬운 설명
+    +'<div style="padding:12px 14px;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,.15);border-radius:12px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;font-weight:800;color:#38bdf8;margin-bottom:8px;">📡 오늘 하늘은 이래요!</div>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;">'
+    + planetPower.slice(0,3).map(function(pp){
+        return '<div style="font-size:12px;color:#e2e8f0;padding:6px 10px;background:rgba(56,189,248,.05);border-radius:8px;line-height:1.6">• '+pp+'</div>';
+      }).join('')
+    +'</div>'
+    +(moonSign?'<div style="margin-top:8px;font-size:11px;color:#a78bfa;padding:6px 10px;background:rgba(167,139,250,.06);border-radius:8px;">🌙 달이 '+moonSign+'에 있어요 — 감성과 직관이 살아있는 날이에요</div>':'')
+    +'</div>'
+
+    // 오늘 방향 쉬운 설명
+    +'<div style="padding:12px 14px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,.15);border-radius:12px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;font-weight:800;color:#34d399;margin-bottom:8px;">🗺️ 오늘 이쪽으로 가세요!</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
+    +'<div style="flex:1;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:10px;text-align:center;">'
+    +'<div style="font-size:11px;color:rgba(52,211,153,.6);margin-bottom:4px;">✅ 행운 방위</div>'
+    +'<div style="font-size:20px;margin-bottom:2px;">'+goodEmoji+'</div>'
+    +'<div style="font-size:14px;font-weight:800;color:#34d399;">'+goodDir+'쪽</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:3px;">'+goodGate+'</div>'
+    +'</div>'
+    +'<div style="flex:1;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:10px;text-align:center;">'
+    +'<div style="font-size:11px;color:rgba(248,113,113,.6);margin-bottom:4px;">⛔ 주의 방위</div>'
+    +'<div style="font-size:14px;font-weight:800;color:rgba(248,113,113,.8);margin-top:8px;">'+badDir+'쪽</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:3px;">오늘은 피하세요</div>'
+    +'</div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.7);line-height:1.7;padding:8px 10px;background:rgba(52,211,153,.04);border-radius:8px;">'
+    +'지금 이 시간대와 당신의 에너지(오행: <strong style="color:#34d399;">'+oh+'</strong>)가 맞물려서 <strong style="color:#34d399;">'+goodDir+'쪽</strong>에 찬스가 열렸어요! 이쪽으로 이동하거나 이쪽을 향해 앉아보세요 😊'
+    +'</div>'
+    +'</div>'
+
+    // 오늘 할 일 쉬운 설명
+    +'<div style="padding:12px 14px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,.15);border-radius:12px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:8px;">⚡ 오늘 이렇게 하면 대박이에요!</div>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;">'
+    +'<div style="padding:8px 12px;background:rgba(251,191,36,.07);border-radius:8px;border-left:2px solid #fbbf24;">'
+    +'<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:3px;">🧭 지금 당장 움직이세요!</div>'
+    +'<div style="font-size:12px;color:#e2e8f0;line-height:1.7"><strong style="color:#34d399;">'+goodDir+'쪽 방향</strong>으로 이동하거나, 그쪽을 향해 앉아서 오늘 가장 중요한 결정을 내리세요!</div>'
+    +'</div>'
+    +'<div style="padding:8px 12px;background:rgba(52,211,153,.07);border-radius:8px;border-left:2px solid #34d399;">'
+    +'<div style="font-size:12px;color:#34d399;font-weight:700;margin-bottom:3px;">💡 아이디어를 바로 실행하세요!</div>'
+    +'<div style="font-size:12px;color:#e2e8f0;line-height:1.7">'+(r18top[0]?'<strong style="color:#fbbf24;">'+r18top[0].nm.replace(/[\(\)\d점]/g,'')+'</strong> 에너지가 지금 최고! ':'')+'머뭇거리지 말고 바로 행동으로 옮기세요!</div>'
+    +'</div>'
+    +'<div style="padding:8px 12px;background:rgba(167,139,250,.07);border-radius:8px;border-left:2px solid #a78bfa;">'
+    +'<div style="font-size:12px;color:#a78bfa;font-weight:700;margin-bottom:3px;">🤝 사람을 만나세요!</div>'
+    +'<div style="font-size:12px;color:#e2e8f0;line-height:1.7">'+(jupRetro?'지금은 준비하는 시기예요. 믿을 수 있는 사람과 깊은 대화를 나눠보세요.':'목성 순행 중! 새로운 사람을 만나거나 협력 제안하기 딱 좋은 날이에요!')+'</div>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+
+  stepsHtml += _cgoSourceBadge('cosmic');
   document.getElementById('decreeSteps').innerHTML = stepsHtml;
 
   // ── 미션 (매번 다르게) ───────────────────────────────────────
@@ -41439,7 +42164,7 @@ async function foodAnalyzeWithAI(name, imageSrc) {
   // 0단계: 사진 → Google Gemini Flash 비전 (정확도 최상)
   if (imageSrc && imageSrc.startsWith('data:image')) {
     try {
-      document.getElementById('food-loading-msg').textContent = '🔍 Gemini AI가 음식을 인식 중...';
+      document.getElementById('food-loading-msg').textContent = '🔍 AI가 음식을 인식 중...';
       // 800px 압축
       var compressed = await new Promise(function(res) {
         var img = new Image();
@@ -41461,23 +42186,26 @@ async function foodAnalyzeWithAI(name, imageSrc) {
         + '※ 포장된 빵·과자·음료·식품 사진도 반드시 음식으로 분석하세요.\n'
         + '※ 포장지에 제품명이 보이면 그 이름을 사용하세요.\n'
         + '※ 음식이 전혀 아닌 경우(가방·사람·풍경 등)만 {"name":"비식품","cal":0} 반환.';
-      var gResp = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + _fgk(),
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            contents: [{parts: [
-              {inline_data: {mime_type: 'image/jpeg', data: b64}},
-              {text: vPrompt}
-            ]}],
-            generationConfig: {temperature: 0.1, maxOutputTokens: 250}
-          })
-        }
-      );
+      // ★ Groq Vision (무한정 사용 가능)
+      var gResp = await fetch('/api/groq', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              {type: 'image_url', image_url: {url: 'data:image/jpeg;base64,' + b64}},
+              {type: 'text', text: vPrompt}
+            ]
+          }],
+          max_tokens: 300,
+          temperature: 0.1
+        })
+      });
       var gData = await gResp.json();
-      if(gData.error){document.getElementById('food-loading-msg').textContent='⚠️ Gemini: '+(gData.error.message||'오류');}
-      var gTxt = (gData.candidates&&gData.candidates[0]&&gData.candidates[0].content&&gData.candidates[0].content.parts&&gData.candidates[0].content.parts[0]&&gData.candidates[0].content.parts[0].text)||'';
+      if(gData.error){document.getElementById('food-loading-msg').textContent='⚠️ AI: '+(gData.error.message||'오류');}
+      var gTxt = (gData.choices&&gData.choices[0]&&gData.choices[0].message&&gData.choices[0].message.content)||'';
       var gMatch = gTxt.replace(/```json\n?|```\n?/g,'').match(/\{[^{}]+\}/);
       if (gMatch) {
         try {
@@ -44473,10 +45201,12 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 
 <!-- ══ 전체화면 스캔 오버레이 (모바일 최적화) ══════════════ -->
-<div id="bsFullWrap" style="display:none;position:fixed;inset:0;z-index:10050;background:#000;flex-direction:column">
+<div id="bsFullWrap" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);flex-direction:column;align-items:center;justify-content:center;padding:16px;">
+  <!-- 팝업 컨테이너 -->
+  <div style="width:100%;max-width:520px;max-height:92vh;background:linear-gradient(180deg,#0d1829,#060f1e);border-radius:22px;border:1px solid rgba(212,168,67,.3);box-shadow:0 0 60px rgba(212,168,67,.15);overflow:hidden;display:flex;flex-direction:column;position:relative;">
   <!-- 상단 헤더 -->
-  <div id="bsFsHeader" style="position:absolute;top:0;left:0;right:0;z-index:10;
-    padding:12px 16px;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent);
+  <div id="bsFsHeader" style="position:relative;z-index:10;flex-shrink:0;
+    padding:12px 16px;background:rgba(6,13,26,.95);border-bottom:1px solid rgba(212,168,67,.2);
     display:flex;align-items:center;justify-content:space-between">
     <div style="display:flex;align-items:center;gap:10px">
       <div id="bsFsStepBadge" style="font-size:12px;font-weight:700;padding:4px 12px;
@@ -44490,6 +45220,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- 카메라 + 캔버스 -->
+  <div style="position:relative;flex:1;min-height:320px;background:#000;overflow:hidden;">
   <video id="bsFsVideo" autoplay playsinline muted
     style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9"></video>
   <canvas id="bsFsCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
@@ -44538,8 +45269,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="bsFsProgress" style="height:100%;width:0%;background:linear-gradient(90deg,#d4a843,#38bdf8);transition:width .9s linear"></div>
   </div>
 
+  </div><!-- /카메라 래퍼 -->
   <!-- 하단 버튼 -->
-  <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+  <div style="flex-shrink:0;padding:12px 16px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;background:rgba(6,13,26,.95);border-top:1px solid rgba(255,255,255,.08);">
     <button id="bsFsStartBtn" onclick="bsFsDoStart()"
       style="padding:14px 40px;background:linear-gradient(135deg,#d4a843,#fbbf24);
       border:none;border-radius:14px;color:#020817;font-weight:800;font-size:15px;cursor:pointer;
@@ -44557,7 +45289,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="color:#38bdf8;font-size:14px;font-weight:700">AI 얼굴 추적 엔진 로딩 중...</div>
     <div style="color:rgba(255,255,255,.4);font-size:11px;margin-top:6px">MediaPipe FaceMesh + Hands</div>
   </div>
-</div>
+  </div><!-- /팝업 컨테이너 -->
+</div><!-- /bsFullWrap -->
 <script>
 // VIP 버튼 직접 이벤트 등록 (페이지 완전 로드 후)
 document.addEventListener('DOMContentLoaded', function() {
@@ -46162,6 +46895,7 @@ function _cgoRenderDetailPopup(p, m, _rgb){
       +'<div style="font-size:11px;color:rgba(240,230,200,.88);line-height:1.75">'+p.luckyFactor+'</div></div>';
   }
 
+  h += _cgoSourceBadge('detail');
   body.innerHTML=h;
 }
 
