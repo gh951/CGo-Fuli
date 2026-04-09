@@ -3885,10 +3885,14 @@ function updateTransitSectionWithNASA(planets) {
 
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <!-- 왼쪽: ILI 게이지 -->
+          <!-- 왼쪽: ILI/CEI 게이지 -->
           <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
-            <div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:700;letter-spacing:.08em;margin-bottom:4px;">ILI</div>
-            <div style="font-size:11px;color:rgba(240,230,200,.6);margin-bottom:4px;">통합 라이프 인덱스</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+              <div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:700;letter-spacing:.08em;" id="dash-score-label">ILI</div>
+              <!-- 스캔 완료 시 CEI 배지 표시 -->
+              <div id="dash-cei-badge" style="display:none;font-size:9px;padding:2px 7px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);border-radius:8px;color:#34d399;font-weight:800;">🧬 CEI</div>
+            </div>
+            <div style="font-size:11px;color:rgba(240,230,200,.6);margin-bottom:4px;" id="dash-score-sublabel">통합 라이프 인덱스</div>
             <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px;">
               <span id="dash-ili-num" style="font-size:48px;font-weight:900;color:#d4a843;font-family:'Orbitron',monospace;line-height:1;">--</span>
               <span style="font-size:12px;color:rgba(240,230,200,.4);">/100</span>
@@ -3897,6 +3901,8 @@ function updateTransitSectionWithNASA(planets) {
               <div id="dash-ili-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#d4a843,#fbbf24);border-radius:3px;transition:width 1s;"></div>
             </div>
             <div id="dash-ili-grade" style="display:inline-block;padding:2px 10px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:10px;font-size:11px;color:#d4a843;font-weight:700;">--</div>
+            <!-- 점수 구성 설명 (스캔 완료 시 표시) -->
+            <div id="dash-score-breakdown" style="display:none;margin-top:8px;padding:7px 10px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:8px;font-size:10px;color:rgba(240,230,200,.6);line-height:1.7;white-space:pre-line;"></div>
           </div>
           <!-- 오른쪽: BAI 카드들 -->
           <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
@@ -10481,6 +10487,15 @@ function hltRunAnalysis(){
   var masterBAI = M ? M.bai : 0;
   var masterCEI = M ? M.cei : masterILI;
   var bioScanned = masterBio.scanned || window._baiScanned || false;
+
+  // ★ 신버전: _cgoGetScore()로 CEI 통합 점수 우선 적용
+  if(typeof _cgoGetScore === 'function'){
+    var _gsH = _cgoGetScore();
+    masterCEI = _gsH.score;  // CEI(스캔완료) 또는 ILI(미완료)
+    masterBAI = _gsH.bai;
+    masterILI = _gsH.ili;
+    bioScanned = _gsH.scanned;
+  }
 
   // 생체 실측값 (스캔 완료 시 우선 적용)
   var bioHRV = masterBio.hrv || (window.BS && window.BS.hrv) || 0;
@@ -22492,11 +22507,21 @@ function qtCallAI(userMsg,callback){
 
   var sysPrompt=[
     '당신은 CGO-FULI 40년 경력 타로 전문 AI 상담사입니다.',
-    '★언어규칙: 반드시 100% 순수 한국어. 중국어(真是·矛盾·您 등)·일본어·베트남어(nhìn 등) 절대 금지.',
+    '★언어규칙: 반드시 100% 순수 한국어. 전문 용어는 반드시 쉬운 말로 풀어서 설명하세요.',
     card?'✅선택카드:['+card.name+']('+card.id+'번) 키워드:'+card.key.join(','):'⚠️카드미선택—카드먼저선택안내',
     '규칙: 카드선택시 즉시분석. 카드이름임의생성금지. 구체적분석. 전문용어쉽게. 실천조언포함.',
     oh?'오행: '+oh:'',
     nbti?'NBTI: '+nbti:'',
+    // ★ 신버전 CEI 추가
+    (function(){
+      var _gsQ = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+      if(_gsQ && _gsQ.scanned){
+        return 'CEI(통합에너지): '+_gsQ.score+'점 ('+_gsQ.grade+' — '+_gsQ.gradeMsg+')\n'
+          +'심박수 '+_gsQ.bpm+'BPM / HRV '+_gsQ.hrv+'ms / 안면혈색 '+_gsQ.fci+'\n'
+          +'→ 카드 해석 시 이 생체 에너지를 반영하세요';
+      }
+      return '';
+    })(),
     card?'선택한 타로: '+card.name+' (키워드: '+card.key.join(', ')+')':'',
     sys?'연동 역학: '+sys:'',
     '',
@@ -23733,7 +23758,15 @@ function generateReport(r){
   '<span style="font-size:11px;font-weight:700;color:#38bdf8">CGO-MASTER 유기체 시스템 — 세계 최초 역학×과학 통합</span>'+
   '</div>'+
   '<div style="font-size:10px;color:rgba(240,230,200,.5)">'+
-  'ILI '+ili+(_masterBAI>0?' · BAI '+_masterBAI+' · CEI '+_masterCEI:'')+' · 20개 역학 100pt · NASA 실시간'+
+  (function(){
+    if(typeof _cgoGetScore === 'function'){
+      var _gs = _cgoGetScore();
+      if(_gs.scanned){
+        return '🧬 CEI '+_gs.score+'점 (생체'+_gs.bai+'×40% + 역학'+_gs.ili+'×35% + 공명×25%) · '+_gs.grade+' '+_gs.gradeMsg;
+      }
+    }
+    return 'ILI '+ili+(_masterBAI>0?' · BAI '+_masterBAI+' · CEI '+_masterCEI:'')+' · 20개 역학 100pt · NASA 실시간';
+  })()+
   '</div>'+
   '</div>'+
   '</div>'+ // 종합 요약 섹션 닫기
@@ -23907,7 +23940,20 @@ function runAiAnalysis(){
   up.push('주간 오행: ' + r.domOh);
   up.push('별자리: ' + (r.wz ? r.wz.name : ''));
   up.push('생명수: ' + r.lifeNum);
-  up.push('ILI 점수: ' + ili);
+  // ★ 신버전 — ILI 단독 → CEI 통합 점수로 교체
+  if(typeof _cgoGetScore === 'function'){
+    var _gsR = _cgoGetScore();
+    if(_gsR.scanned){
+      up.push('에너지 점수: CEI(통합) ' + _gsR.score + '점 = 생체(BAI) ' + _gsR.bai + '점×40% + 역학(ILI) ' + _gsR.ili + '점×35% + 공명×25%');
+      up.push('  → 생체 실측: BPM ' + _gsR.bpm + ' / HRV(심박변이도) ' + _gsR.hrv + 'ms / FCI(안면혈색) ' + _gsR.fci + ' / BLI(손금) ' + _gsR.bli);
+      up.push('  → 현재 등급: ' + _gsR.grade + ' — ' + _gsR.gradeMsg);
+      up.push('  → 분석 시 반드시 이 수치를 언급하며 일반인이 이해하기 쉽게 설명하세요.');
+    } else {
+      up.push('에너지 점수: ILI(역학) ' + _gsR.ili + '점 (생체 스캔 미완료 — 역학 50개 엔진 기반)');
+    }
+  } else {
+    up.push('ILI 점수: ' + ili);
+  }
   // MBTI 20번째 역학 정보 포함
   if (window._mbtiResult) {
     var _mu = window._mbtiResult;
@@ -24784,26 +24830,43 @@ function _updateScanMasterPanel(){
   var ohMap = {목:'🌳木',화:'🔥火',토:'⛰土',금:'⚔金',수:'💧水'};
   var bio  = M ? M.bio  : {};
 
+  // ★ _cgoGetScore() 로 신버전 통합 점수 획득
+  var gs = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  if(gs) {
+    ili = gs.ili;
+    bai = gs.bai;
+    cei = gs.cei;
+  }
+
   // 수치 업데이트
   var iel = document.getElementById('scanMasterILI'); if(iel) iel.textContent = ili||'--';
   var bel = document.getElementById('scanMasterBAI'); if(bel) bel.textContent = bai>0?bai:'--';
-  var cel = document.getElementById('scanMasterCEI'); if(cel) cel.textContent = cei||'--';
+  var cel = document.getElementById('scanMasterCEI');
+  if(cel){
+    cel.textContent = gs ? gs.score : (cei||'--');
+    // 스캔 완료 시 CEI 모드 표시, 미완료 시 ILI 표시
+    cel.title = gs ? gs.breakdown : '';
+  }
   var oel = document.getElementById('scanMasterOh');  if(oel) oel.textContent = ohMap[oh]||oh||'--';
 
-  // 생체 실측값 행
+  // 생체 실측값 행 — 자세한 설명 포함
   var bioRow = document.getElementById('scanMasterBioRow');
   var bioTxt = document.getElementById('scanMasterBioTxt');
   if(bio.scanned && (bio.hrv>0||bio.fci>0)){
     if(bioRow) bioRow.style.display = 'block';
     if(bioTxt) bioTxt.textContent =
-      'HRV:'+bio.hrv+'ms · FCI:'+bio.fci+' · BLI:'+bio.bli+' · BPM:'+bio.bpm;
+      'HRV(심박변이도):'+bio.hrv+'ms'
+      + ' · FCI(안면혈색):'+bio.fci
+      + ' · BLI(손금):'+bio.bli
+      + ' · BPM(심박수):'+bio.bpm;
   } else {
     if(bioRow) bioRow.style.display = 'none';
   }
 
   // CEI 배지 색상 (점수에 따라)
   var cEl = document.getElementById('scanMasterCEI');
-  if(cEl) cEl.style.color = cei>=85?'#34d399':cei>=70?'#38bdf8':cei>=55?'#fbbf24':'#f87171';
+  if(cEl && gs) cEl.style.color = gs.color;
+  else if(cEl) cEl.style.color = cei>=85?'#34d399':cei>=70?'#38bdf8':cei>=55?'#fbbf24':'#f87171';
 
   // 갱신 시각
   var timeEl = document.getElementById('scanMasterTime');
@@ -24812,22 +24875,23 @@ function _updateScanMasterPanel(){
     timeEl.textContent = t.getHours()+':'+String(t.getMinutes()).padStart(2,'0')+' 기준';
   }
 
-  // AI 퓨전 패널도 마스터 기반으로 업데이트
+  // AI 퓨전 패널 — _cgoGetScore 기반 신버전 반영
   if(ili > 0){
     var bsIli = document.getElementById('bsFIli');
     var bsYuk = document.getElementById('bsFYuk');
     var bsBio = document.getElementById('bsFBio');
     var bsGrd = document.getElementById('bsFGrade');
     var bsSub = document.getElementById('bsFIliSub');
+    var finalScore = gs ? gs.score : cei;
     if(bsIli && bsIli.textContent==='--'){
-      if(bsIli) bsIli.textContent = cei;
+      if(bsIli) bsIli.textContent = finalScore;
       if(bsYuk) bsYuk.textContent = Math.min(92,Math.round(ili*0.95));
       if(bsBio) bsBio.textContent = bai>0?bai:Math.min(88,Math.round(ili*0.85));
-      var grd = cei>=85?'S+':cei>=75?'A':cei>=65?'B':'C';
-      if(bsGrd) bsGrd.textContent = grd+(bio.scanned?' ★실측':'');
-      if(bsSub) bsSub.textContent = bio.scanned
-        ? '생체+역학 융합 CEI · HRV:'+bio.hrv+'ms'
-        : '역학 ILI 기반 예측 (스캔 시 정밀도 ↑)';
+      var grd = finalScore>=85?'S+':finalScore>=75?'A':finalScore>=65?'B':'C';
+      if(bsGrd) bsGrd.textContent = grd+(bio.scanned?' ★생체실측':'');
+      if(bsSub) bsSub.textContent = gs && gs.scanned
+        ? gs.mode+' '+gs.score+'점 — '+gs.gradeMsg
+        : '역학 ILI 기반 예측 (생체 스캔 시 CEI로 업그레이드)';
     }
   }
 }
@@ -26178,8 +26242,20 @@ function cplStartAnalysis(){
   if(bFace&&bFace.length>0) bioBonus+=3;
   if(bPalm&&bPalm.length>0) bioBonus+=3;
   // rPPG 스캔값 반영
+  // ★ 신버전 — _cgoGetScore() 기반 생체 보정
   var rppgA = window._bioFinalData&&window._bioFinalData.fci>0 ? window._bioFinalData.fci : 0;
-  if(rppgA>60) bioBonus += Math.round((rppgA-60)*0.05);
+  if(typeof _cgoGetScore === 'function'){
+    var _gsC = _cgoGetScore();
+    if(_gsC.scanned){
+      // CEI가 70 넘을수록 궁합 보정 강화 (최대 +8점)
+      bioBonus += Math.round((_gsC.score - 70) * 0.08);
+      bioBonus = Math.max(0, bioBonus); // 음수 방지
+    } else if(rppgA > 60){
+      bioBonus += Math.round((rppgA-60)*0.05);
+    }
+  } else if(rppgA > 60){
+    bioBonus += Math.round((rppgA-60)*0.05);
+  }
   result.total = Math.min(99, result.total + Math.round(bioBonus*0.5));
 
   // 화면 전환
@@ -28017,6 +28093,15 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   if(!body) return;
 
   var total=Math.max(40,Math.min(99,result.totalScore||65));
+  // ★ 신버전: CEI 완료 시 total 점수를 CEI 기반으로 보정
+  if(typeof _cgoGetScore === 'function'){
+    var _gsTF = _cgoGetScore();
+    if(_gsTF.scanned){
+      // AI 결과 + CEI를 6:4로 융합 (더 정확한 점수)
+      total = Math.round(total * 0.6 + _gsTF.score * 0.4);
+      total = Math.max(40, Math.min(99, total));
+    }
+  }
   var ms=Math.max(40,Math.min(99,(result.money&&result.money.score)||Math.round(total*.95)));
   var ls=Math.max(40,Math.min(99,(result.love&&result.love.score)||Math.round(total*.97)));
   var ws=Math.max(40,Math.min(99,(result.work&&result.work.score)||Math.round(total*1.02)));
@@ -30663,6 +30748,204 @@ function cpClose() {
 //  - 15초 자동 종료
 // ════════════════════════════════════════════
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🧬 CGO-FULI 통합 점수 엔진 — _cgoGetScore()
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// 📌 역할
+//   앱 전체 어디서든 이 함수 하나만 호출하면
+//   현재 사용자의 가장 정확한 점수를 돌려줍니다.
+//
+// 📌 점수 계산 방식
+//
+//   ① 생체 스캔을 완료했을 때  →  신버전 CEI
+//      CEI = BAI×40% + ILI×35% + 공명×25%
+//
+//      BAI (생체활성도): 카메라로 측정한 실제 몸 상태
+//          심박수(BPM) + 심박변이도(HRV) + 안면혈색(FCI) + 손금(BLI) + 혀(TLI)
+//          예) BPM 72 정상 → 8점 / HRV 55ms 양호 → 9점 ...
+//
+//      ILI (통합라이프인덱스): 50개 역학 엔진이 계산한 오늘의 운세 에너지
+//          사주명리 + NASA 행성 + 기문둔갑 + 베딕 + 구성학 등
+//
+//      공명: NASA 천문 + 날씨 + 방위가 역학과 얼마나 동조하는지
+//
+//   ② 생체 스캔을 안 했을 때  →  기존 ILI 그대로
+//      사용자 경험을 해치지 않고 자연스럽게 동작
+//
+// 📌 반환값 (객체)
+//   {
+//     score    : 최종 점수 (0~99)
+//     mode     : 'CEI' (스캔 완료) | 'ILI' (스캔 미완료)
+//     label    : 사용자에게 보여줄 점수 이름
+//     grade    : 'S+' / 'A' / 'B' / 'C'
+//     gradeMsg : 등급 설명 (예: "최상의 에너지 상태")
+//     ili      : 역학 ILI 점수
+//     bai      : 생체 BAI 점수 (스캔 전 0)
+//     cei      : CEI 점수 (스캔 전 ILI와 동일)
+//     scanned  : true/false (스캔 완료 여부)
+//     breakdown: 점수 구성 상세 (사용자 설명용)
+//     color    : 점수에 따른 색상 코드
+//   }
+//
+// 📌 사용 예시
+//   var s = _cgoGetScore();
+//   console.log(s.score);     // 82
+//   console.log(s.label);     // "CEI 통합 지수"
+//   console.log(s.breakdown); // "생체 88점×40% + 역학 75점×35% + 공명 83점×25%"
+//
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _cgoGetScore() {
+
+  // ── 1. 기초 데이터 수집 ──────────────────────────────────
+  var M   = window._CGO_MASTER || null;
+  var bfd = window._bioFinalData || {};
+  var cr  = window.calcResult || {};
+
+  // ILI: 역학 점수 (계산 안 됐으면 70 기본값)
+  var ili = (M && M.ili > 0) ? M.ili : (cr.ili || 70);
+
+  // 스캔 여부 확인 (얼굴·손금·혀 중 하나라도 실측되면 true)
+  var scanned = !!(window._baiScanned
+    || (bfd.fci > 0)
+    || (bfd.hrv > 0)
+    || (bfd.bli > 0)
+    || (window._bioSkinData && window._bioSkinData.tongue));
+
+  // ── 2. BAI 계산 (생체활성도 0~100) ──────────────────────
+  var bai = 0;
+  if (scanned) {
+    var parts = [];
+
+    // ① 심박수 BPM — 정상(60~80)이면 높은 점수
+    var bpm = bfd.bpm || (window.BS && window.BS.bpm) || 0;
+    if (bpm > 0) {
+      var bpmS = (bpm >= 60 && bpm <= 80) ? 90
+               : (bpm >= 50 && bpm <= 95) ? 75 : 60;
+      parts.push(bpmS);
+    }
+
+    // ② HRV 심박변이도 — 높을수록 자율신경 안정
+    var hrv = bfd.hrv || 0;
+    if (hrv > 0) {
+      var hrvS = hrv > 55 ? 92 : hrv > 40 ? 78 : hrv > 25 ? 65 : 52;
+      parts.push(hrvS);
+    }
+
+    // ③ FCI 안면혈색지수 — 혈류가 좋을수록 높은 점수
+    var fci = bfd.fci || 0;
+    if (fci > 0) {
+      var fciS = fci > 80 ? 90 : fci > 65 ? 78 : fci > 50 ? 65 : 52;
+      parts.push(fciS);
+    }
+
+    // ④ BLI 손금생명지수
+    var bli = bfd.bli || 0;
+    if (bli > 0) parts.push(Math.min(95, Math.max(40, bli)));
+
+    // ⑤ TLI 혀건강지수
+    var tli = (window.BS && window.BS.tongueData)
+            ? (window.BS.tongueData.tliScore || 0) : 0;
+    if (tli > 0) parts.push(Math.min(95, Math.max(40, tli)));
+
+    bai = parts.length > 0
+      ? Math.round(parts.reduce(function(s, v){ return s + v; }, 0) / parts.length)
+      : Math.round(ili * 0.85);
+  }
+
+  // ── 3. CEI 계산 (통합에너지지수) ─────────────────────────
+  var cei = ili; // 기본값: 스캔 전이면 ILI 그대로
+  var resonanceScore = ili; // 공명 점수 기본값
+
+  if (scanned) {
+    // 공명 점수: ILI + NASA·날씨·방위 보너스
+    var resBonus = window._cgoLastResonanceBonus || 0;
+    resonanceScore = Math.min(99, ili + resBonus);
+
+    // ★ 핵심 공식: BAI×40% + ILI×35% + 공명×25%
+    var raw = Math.round(bai * 0.40 + ili * 0.35 + resonanceScore * 0.25);
+    cei = Math.min(99, Math.max(40, raw));
+  }
+
+  // ── 4. 최종 점수 결정 ────────────────────────────────────
+  var score = scanned ? cei : ili;
+
+  // ── 5. 등급 계산 ─────────────────────────────────────────
+  var grade, gradeMsg, color;
+  if (score >= 90) {
+    grade = 'S+'; gradeMsg = '최상의 에너지 상태 — 오늘은 무엇이든 됩니다';
+    color = '#fbbf24'; // 금색
+  } else if (score >= 80) {
+    grade = 'A';  gradeMsg = '에너지 충만 — 적극적으로 움직이세요';
+    color = '#34d399'; // 초록
+  } else if (score >= 70) {
+    grade = 'B';  gradeMsg = '안정적인 흐름 — 꾸준히 나아가면 됩니다';
+    color = '#38bdf8'; // 파랑
+  } else if (score >= 55) {
+    grade = 'C';  gradeMsg = '에너지 보충 필요 — 무리하지 마세요';
+    color = '#f87171'; // 빨강
+  } else {
+    grade = 'D';  gradeMsg = '회복이 우선 — 충분한 휴식을 취하세요';
+    color = '#a78bfa'; // 보라
+  }
+
+  // ── 6. 점수 구성 설명 (사용자에게 보여줄 문장) ───────────
+  var breakdown = '';
+  var label = '';
+  if (scanned) {
+    label = 'CEI 통합 지수';
+    var measuredCount = [
+      bfd.bpm > 0, bfd.hrv > 0, bfd.fci > 0, bfd.bli > 0, tli > 0
+    ].filter(Boolean).length;
+    breakdown = [
+      '🧬 생체(BAI) ' + bai + '점 × 40%',
+      '🔮 역학(ILI) ' + ili + '점 × 35%',
+      '🌌 공명 ' + resonanceScore + '점 × 25%',
+      '→ 최종 CEI ' + cei + '점',
+      '📡 실측 항목: ' + measuredCount + '개 측정 완료'
+    ].join('\n');
+  } else {
+    label = 'ILI 역학 지수';
+    breakdown = [
+      '🔮 역학(ILI) ' + ili + '점',
+      '→ 50개 역학 엔진 종합 점수',
+      '💡 생체 스캔 완료 시 더 정밀한 CEI로 업그레이드됩니다'
+    ].join('\n');
+  }
+
+  // ── 7. 결과 반환 ─────────────────────────────────────────
+  return {
+    score    : score,
+    mode     : scanned ? 'CEI' : 'ILI',
+    label    : label,
+    grade    : grade,
+    gradeMsg : gradeMsg,
+    color    : color,
+    ili      : ili,
+    bai      : scanned ? bai : 0,
+    cei      : cei,
+    scanned  : scanned,
+    breakdown: breakdown,
+    // 개별 생체 수치도 포함 (팝업·카드에서 바로 사용 가능)
+    bpm      : bfd.bpm  || 0,
+    hrv      : bfd.hrv  || 0,
+    fci      : bfd.fci  || 0,
+    bli      : bfd.bli  || 0,
+    tli      : (window.BS && window.BS.tongueData) ? (window.BS.tongueData.tliScore || 0) : 0
+  };
+}
+
+// ── _cgoGetScore 단축 헬퍼들 ────────────────────────────────
+// 점수 숫자만 필요할 때: _cgoScore()
+function _cgoScore()    { return _cgoGetScore().score; }
+// 색상만 필요할 때: _cgoScoreColor()
+function _cgoScoreColor(){ return _cgoGetScore().color; }
+// 등급만 필요할 때: _cgoGrade()
+function _cgoGrade()    { return _cgoGetScore().grade; }
+// 설명 문장만 필요할 때: _cgoBreakdown()
+function _cgoBreakdown(){ return _cgoGetScore().breakdown; }
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 // ══ CGO-FULI 생체 데이터 단일 저장소 ══════════════════════
 // 3곳(대시보드 생체스킨/스캔페이지/자동계산) 모두 이 객체를 공유
 window._bioFinalData = window._bioFinalData || {
@@ -30742,6 +31025,51 @@ function _syncBioUI() {
 
   // ⑦ 건강 페이지 생체 카드 (hlt-bio-face/palm/tongue-score) 동기화
   if(typeof hltSyncBioCards==='function') hltSyncBioCards();
+
+  // ⑧ ★ 생체 스캔 완료 시 bio-locked 카드 잠금 해제
+  // rPPG 카드(ID 있음) 제외, 시진별 운세 등 class만 있는 카드 해제
+  var hasBio = (d.fci>0 || d.hrv>0 || (window._bioSkinData && window._bioSkinData.tongue));
+  if(hasBio || window._baiScanned){
+    document.querySelectorAll('.bio-locked').forEach(function(el){
+      // rPPG 카드는 자체 onclick 로직 유지 (id=rppg-card)
+      if(el.id === 'rppg-card') return;
+      el.classList.remove('bio-locked');
+      el.style.opacity = '1';
+      el.style.pointerEvents = 'auto';
+    });
+  }
+
+  // ⑨ ★ 대시보드 ILI 카드 → CEI 신버전으로 업그레이드 표시
+  if(typeof _cgoGetScore === 'function'){
+    var s = _cgoGetScore();
+    // 점수 숫자 (CEI or ILI)
+    var iliNumEl = document.getElementById('dash-ili-num');
+    if(iliNumEl) iliNumEl.textContent = s.score;
+    // 바
+    var iliBarEl = document.getElementById('dash-ili-bar');
+    if(iliBarEl) iliBarEl.style.width = s.score + '%';
+    // 등급
+    var iliGrEl = document.getElementById('dash-ili-grade');
+    if(iliGrEl){
+      iliGrEl.textContent = s.grade + ' — ' + s.gradeMsg;
+      iliGrEl.style.color = s.color;
+      iliGrEl.style.borderColor = s.color + '55';
+      iliGrEl.style.background = s.color + '18';
+    }
+    // 스캔 완료 시: CEI 뱃지 + 라벨 + 점수 구성 설명 표시
+    if(s.scanned){
+      var badge = document.getElementById('dash-cei-badge');
+      if(badge) badge.style.display = 'block';
+      var lbl = document.getElementById('dash-score-label');
+      if(lbl){ lbl.textContent = 'CEI'; lbl.style.color = '#34d399'; }
+      var sub = document.getElementById('dash-score-sublabel');
+      if(sub) sub.textContent = '생체×역학×공명 통합 에너지 지수';
+      var brk = document.getElementById('dash-score-breakdown');
+      if(brk){ brk.style.display = 'block'; brk.textContent = s.breakdown; }
+      // 바 색상도 초록으로 변경
+      if(iliBarEl) iliBarEl.style.background = 'linear-gradient(90deg,#34d399,#38bdf8)';
+    }
+  }
 }
 
 
@@ -38818,9 +39146,9 @@ function cgInit() {
   var oh   = r.domOh || '';
   var ohK  = {목:'木',화:'火',토:'土',금:'金',수:'水'};
   var ohEmoji = {목:'🌿',화:'🔥',토:'🟤',금:'✨',수:'💧'}[oh] || '🔮';
-  var ili  = 0;
-  var bsFEl = document.getElementById('bsFIli');
-  if (bsFEl) ili = parseInt(bsFEl.textContent)||0;
+  // ★ 신버전 CEI
+  var _gsW = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var ili  = _gsW ? _gsW.score : 0;
   var scores = window._HV && window._HV.scores ? window._HV.scores : [];
   var healthAvg = 0;
   if (scores.length) {
@@ -38836,7 +39164,12 @@ function cgInit() {
     '📋 분석된 역학 데이터'
   ];
   if (oh) lines.push('  '+ohEmoji+' 지배 오행: '+oh+'('+( ohK[oh]||'')+')');
-  if (ili > 0) lines.push('  📊 생체 에너지 ILI: '+ili+'점');
+  if (_gsW && _gsW.scanned){
+    lines.push('  🧬 CEI(통합에너지): '+_gsW.score+'점 ('+_gsW.grade+' — '+_gsW.gradeMsg+')');
+    lines.push('  💓 심박수 '+_gsW.bpm+'BPM · HRV '+_gsW.hrv+'ms · 안면혈색 '+_gsW.fci);
+  } else if (ili > 0){
+    lines.push('  📊 역학 에너지 ILI: '+ili+'점');
+  }
   if (r.lifeNum) lines.push('  🔢 수비학 생명수: '+r.lifeNum);
   if (healthAvg > 0) lines.push('  🩺 20대 역학 건강 평균: '+healthAvg+'점');
   lines.push('');
@@ -38936,9 +39269,17 @@ function cgCallClaude(userText, sendBtn) {
   var ohK       = {목:'木',화:'火',토:'土',금:'金',수:'水'};
   var np        = window._nasaPlanets || {};
   var scores    = window._HV && window._HV.scores ? window._HV.scores : [];
-  var ili       = 0;
-  var bsFEl     = document.getElementById('bsFIli');
-  if (bsFEl) ili = parseInt(bsFEl.textContent)||0;
+  // ★ 신버전: _cgoGetScore() 통합 점수 우선 사용
+  var _gsCG = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var ili       = _gsCG ? _gsCG.score : 0;
+  var _cCEI = _gsCG ? _gsCG.cei : 0;
+  var _cBAI = _gsCG ? _gsCG.bai : 0;
+  var _cBio = window._bioFinalData || {};
+  var _cgBioLine = _gsCG && _gsCG.scanned
+    ? '- 신버전 CEI: '+_gsCG.score+'점 ('+_gsCG.grade+' — '+_gsCG.gradeMsg+')\n'
+      +'  생체 실측: 심박수 '+_gsCG.bpm+'BPM / HRV(심박변이도) '+_gsCG.hrv+'ms / 안면혈색 '+_gsCG.fci+' / 손금 '+_gsCG.bli+'\n'
+      +'  (이 수치를 상담에 자연스럽게 반영하고 쉽게 설명하세요)\n'
+    : (ili > 0 ? '- ILI(역학에너지): '+ili+'점\n' : '');
   var healthAvg = 0;
   if (scores.length) {
     var valid = scores.filter(function(v){return v>0;});
@@ -38977,10 +39318,8 @@ function cgCallClaude(userText, sendBtn) {
     '- 이름: ' + name + '\n' +
     (oh ? '- 지배 오행: ' + oh + '(' + (ohK[oh]||'') + ')\n' : '') +
     (ln ? '- 수비학 생명수: ' + ln + '\n' : '') +
-    (ili>0 ? '- ILI: ' + ili + '점\n' : '') +
-    (_cCEI>0 ? '- CEI(역학+생체 융합): ' + _cCEI + '점\n' : '') +
-    (_cBAI>0 ? '- BAI(생체 활성도): ' + _cBAI + '점\n' : '') +
-    (_cBio.scanned ? '- 생체 실측: HRV ' + (_cBio.hrv||0) + 'ms · FCI ' + (_cBio.fci||0) + '\n' : '') +
+    _cgBioLine +
+    (_cCEI>0 && !(_gsCG && _gsCG.scanned) ? '- CEI(역학+생체 융합): ' + _cCEI + '점\n' : '') +
     (healthAvg>0 ? '- 20대 역학 종합 에너지: ' + healthAvg + '점\n' : '') +
     (weakOrgList.length ? '- 주의 장기 TOP3: ' + weakOrgList.join(', ') + '\n' : '') +
     (r.y ? '- 생년: ' + r.y + '년 ' + (r.m||'') + '월 ' + (r.d||'') + '일\n' : '') +
@@ -41668,7 +42007,21 @@ function foodAskAI(userText) {
     ctx+='위험병명: '+(d.data.risk&&d.data.risk.length?d.data.risk.join(','):'없음')+'\n';
   }else{ctx+='아직 음식 미분석\n';}
   ctx+='\n## 사용자\n이름:'+myName+' / 오행:'+myOh+'\n병명:'+(profile.diseases||'없음')+'\n기피성분:'+(profile.avoid||'없음')+'\n';
-  var sys='당신은 CGO-FULI 전속 AI 음식·영양 상담사입니다. 동양 오행 역학과 현대 영양학을 융합합니다.\n\n'+ctx+'\n## 원칙\n- 위 사용자 정보 반드시 반영\n- 오행 관점+영양학 관점 동시 제시\n- 병명 있으면 주의사항 포함\n- 대체 음식 추천 시 오행 궁합 설명\n- 간결 실용적 답변 (300자 이내)\n- 한국어 답변';
+  // ★ 신버전 CEI 생체 컨텍스트 추가
+  var _bioCtxFood = '';
+  if(typeof _cgoGetScore === 'function'){
+    var _gsF = _cgoGetScore();
+    if(_gsF.scanned){
+      _bioCtxFood = '\n## 현재 생체 상태 (실측)\n'
+        + '에너지지수(CEI) '+_gsF.score+'점 · 등급: '+_gsF.grade+' ('+_gsF.gradeMsg+')\n'
+        + '심박수(BPM): '+_gsF.bpm+' / 심박변이도(HRV): '+_gsF.hrv+'ms\n'
+        + '안면혈색(FCI): '+_gsF.fci+' / 손금생명지수(BLI): '+_gsF.bli+'\n'
+        + '→ 이 생체 수치와 음식의 관계를 쉽게 설명해주세요.\n';
+    }
+  }
+  var sys='당신은 CGO-FULI 전속 AI 음식·영양 상담사입니다. 동양 오행 역학과 현대 영양학을 융합합니다.\n\n'
+    +ctx+_bioCtxFood
+    +'\n## 원칙\n- 위 사용자 정보 반드시 반영\n- 오행 관점+영양학 관점 동시 제시\n- 병명 있으면 주의사항 포함\n- 대체 음식 추천 시 오행 궁합 설명\n- 일반인도 이해하기 쉬운 쉬운 언어 사용\n- 간결 실용적 답변 (300자 이내)\n- 한국어 답변';
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -42998,9 +43351,12 @@ function sptAskAI(userText, isAuto) {
 
   var myOh = (window.calcResult && window.calcResult.domOh) || '목';
   var myName = (window.calcResult && window.calcResult.name) || '사용자';
-  var ili = 70;
-  var bsFEl = document.getElementById('bsFIli');
-  if (bsFEl) ili = parseInt(bsFEl.textContent)||70;
+  // ★ 신버전: ILI 단독 → CEI 통합 점수
+  var _gsSpt = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var ili = _gsSpt ? _gsSpt.score : 70;
+  var _sptBioLine = _gsSpt && _gsSpt.scanned
+    ? '\n## 생체 실측 (CEI 신버전)\nCEI '+_gsSpt.score+'점('+_gsSpt.grade+') = BAI '+_gsSpt.bai+'×40% + ILI '+_gsSpt.ili+'×35% + 공명×25%\n심박수 '+_gsSpt.bpm+'BPM / HRV '+_gsSpt.hrv+'ms / FCI '+_gsSpt.fci+'\n'
+    : '';
 
   // ── JS 계산 수치 미리 확정 ──────────────────────────────
   var _fixedScores = '';
@@ -43055,7 +43411,9 @@ function sptAskAI(userText, isAuto) {
 
   var systemPrompt =
     '당신은 CGO-FULI 스포츠 에너지 분석 AI입니다. 이름은 "스포츠 에너지 AI"입니다.\n' +
-    '사용자 정보: 이름=' + myName + ', 지배오행=' + myOh + ', 에너지 지수(ILI)=' + ili + ', 오늘=' + sptDateStr + '\n\n' +
+    '사용자: 이름=' + myName + ', 지배오행=' + myOh + ', 에너지지수(CEI/ILI)=' + ili + '점, 오늘=' + sptDateStr + '\n' +
+    _sptBioLine +
+    '※ 전문 용어는 쉬운 말로 풀어서 일반인도 이해할 수 있게 설명하세요.\n\n' +
     '## ⚙️ 20개 역학 엔진 실시간 수치 (CGO 독자 알고리즘)\n' + _engSummary + '\n\n' +
     '## 🪐 NASA JPL 실시간 행성 위치\n' + _nasaSummary + _cosmoWarn + '\n\n' +
 
@@ -43656,8 +44014,14 @@ function stkAiCallApi(userText) {
   var myName = r.name || '투자자';
   var myOh   = r.domOh || '목';
   var lifeNum = r.lifeNum || 5;
-  var ili = 70;
-  try { var bEl = document.getElementById('bsFIli'); if (bEl) ili = parseInt(bEl.textContent) || 70; } catch(e){}
+  // ★ 신버전: ILI 단독 → CEI 통합 점수
+  var _gsStk = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var ili = _gsStk ? _gsStk.score : 70;
+  var _stkBioLine = _gsStk && _gsStk.scanned
+    ? '- 신버전 CEI: '+_gsStk.score+'점 ('+_gsStk.grade+' — '+_gsStk.gradeMsg+')\n'
+      +'  생체 실측: 심박수 '+_gsStk.bpm+'BPM / HRV '+_gsStk.hrv+'ms / 안면혈색 '+_gsStk.fci+'\n'
+      +'  (이 수치를 투자 에너지 분석에 반영하세요)\n'
+    : '- 에너지지수(ILI): '+ili+'점\n';
 
   // 종목 데이터
   var coCtx = '(분석 종목 미선택)';
@@ -43706,12 +44070,13 @@ function stkAiCallApi(userText) {
   var _ohOver = _ohRelOver[myOh] || '';
 
   var systemPrompt =
-    '당신은 CGO-FULI 주식 에너지 AI 어드바이저입니다.\n\n' +
+    '당신은 CGO-FULI 주식 에너지 AI 어드바이저입니다.\n' +
+    '※ 전문 용어는 쉬운 말로 풀어 일반인도 이해할 수 있게 설명하세요.\n\n' +
     '## 사용자 역학 프로필\n' +
     '- 이름: ' + myName + (r.y ? ' (' + r.y + '년생)' : '') + '\n' +
     '- 지배 오행: ' + myOh + '\n' +
     '- 생명수(수비학): ' + lifeNum + '\n' +
-    '- 생체 에너지 ILI: ' + ili + '점\n' +
+    _stkBioLine +
     (_r18Detail ? '\n### 20대 역학 개별 점수\n' + _r18Detail : '') +
     '\n### 오행 에너지 관계\n' +
     '- 상생: ' + _ohGen + '\n' +
@@ -44632,6 +44997,18 @@ function vipAskAI(userText) {
     '4️⃣ 종합 판단 및 구체적 행동 지침\n\n' +
     '## 사용자 정보\n' +
     '- 이름: '+myName+', 지배오행: '+myOh+', 날짜: '+dateStr+'\n\n' +
+    // ★ 신버전 CEI 추가
+    (function(){
+      var _gsV = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+      if(_gsV && _gsV.scanned){
+        return '## 신버전 CEI 통합 에너지 지수\n'
+          +'- CEI(통합): '+_gsV.score+'점 ('+_gsV.grade+' — '+_gsV.gradeMsg+')\n'
+          +'- 생체(BAI) '+_gsV.bai+'점×40% + 역학(ILI) '+_gsV.ili+'점×35% + 공명×25%\n'
+          +'- 심박수 '+_gsV.bpm+'BPM / HRV '+_gsV.hrv+'ms / FCI '+_gsV.fci+' / BLI '+_gsV.bli+'\n'
+          +'→ 위 수치를 분석에 적극 반영하고 일반인이 이해하기 쉽게 설명하세요\n\n';
+      }
+      return '## 에너지 지수: ILI '+(_gsV?_gsV.ili:70)+'점 (생체 스캔 미완료)\n\n';
+    })() +
     '## 20대 역학 엔진 실시간 수치\n'+engLines+'\n\n' +
     '## NASA JPL 실시간 행성 위치\n'+nasaLines.join('\n')+'\n\n' +
     '## 언어 규칙\n' +
@@ -45393,15 +45770,26 @@ function cgoRunRppgAnalysis(){
   var promptLines2 = [
     sysRole,
     '⚠️ 선택된 역학('+selectedEngines.map(function(e){return e.name;}).join(', ')+')의 이론·용어만 사용하세요.',
+    '※ 전문용어 사용 후 반드시 쉬운 말로 풀어주세요. 일반인도 이해할 수 있어야 합니다.',
     '',
     '## 분석 대상자',
     '이름:'+r.name+' | 오행:'+oh+'('+ohK[oh]+') | 생명수:'+(r.lifeNum||1),
     '',
+    '## 신버전 CEI 통합 점수',
+    (function(){
+      var _gsRPPG = (typeof _cgoGetScore==='function') ? _cgoGetScore() : null;
+      if(_gsRPPG && _gsRPPG.scanned){
+        return 'CEI(통합에너지지수): '+_gsRPPG.score+'점 (등급: '+_gsRPPG.grade+' — '+_gsRPPG.gradeMsg+')\n'
+          +'  = 생체(BAI) '+_gsRPPG.bai+'점×40% + 역학(ILI) '+_gsRPPG.ili+'점×35% + 공명×25%';
+      }
+      return 'ILI(역학점수): '+((window._CGO_MASTER&&window._CGO_MASTER.ili)||70)+'점 (생체 스캔 미완료)';
+    })(),
+    '',
     '## rPPG 생체 측정값 (지금 이 순간)',
-    '❤️ 심박수 BPM: '+(bpmVal>0?bpmVal+'bpm('+bA0+'/8점)':'미측정'),
-    '🫀 호흡 HRV: '+(hrvVal>0?hrvVal+'ms('+bA+'/12점)':'미측정'),
-    '👁️ 관상 FCI: '+(fciVal>0?fciVal+'%('+bB+'/10점)':'미측정'),
-    '✋ 손금 BLI: '+(bliVal>0?bliVal+'%('+bC+'/5점)':'미측정'),
+    '❤️ 심박수 BPM: '+(bpmVal>0?bpmVal+'bpm('+bA0+'/8점) — 심장이 1분에 '+bpmVal+'번 뜁니다':'미측정'),
+    '🫀 HRV(심박변이도): '+(hrvVal>0?hrvVal+'ms('+bA+'/12점) — 자율신경 안정도 수치':'미측정'),
+    '👁️ FCI(안면혈색): '+(fciVal>0?fciVal+'%('+bB+'/10점) — 얼굴 혈류 상태':'미측정'),
+    '✋ BLI(손금생명지수): '+(bliVal>0?bliVal+'%('+bC+'/5점)':'미측정'),
     '👅 혀 설진: '+(bD>0?bD+'/5점':'미측정'),
     '📊 생체 총점: '+bioTotal+'/40점 ('+bioCount+'개 측정)';
     '🔄 바이오리듬: 신체'+bio1.toFixed(2)+' | 감성'+bio2.toFixed(2)+' | 지성'+bio3.toFixed(2),
@@ -45612,14 +46000,26 @@ function cgoRunRealtimeAnalysis(){
     ?'당신은 조티쉬·나크샤트라 베딕 전문가입니다. 나바그라하·다샤·라시 용어만.'
     :'당신은 사주명리·기문둔갑 동양 역학 전문가입니다. 천간·지지·오행·괘 용어만.';
 
+  // ★ 신버전 CEI 컨텍스트 수집
+  var _gsP = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var _ceiContext = _gsP && _gsP.scanned
+    ? '\n## 생체 실측 데이터 (CEI 신버전)\n'
+      + 'CEI(통합에너지지수): '+_gsP.score+'점 = 생체(BAI) '+_gsP.bai+'점×40% + 역학(ILI) '+_gsP.ili+'점×35% + 공명×25%\n'
+      + '등급: '+_gsP.grade+' — '+_gsP.gradeMsg+'\n'
+      + '심박수(BPM): '+_gsP.bpm+' / HRV(심박변이도): '+_gsP.hrv+'ms / FCI(안면혈색): '+_gsP.fci+' / BLI(손금): '+_gsP.bli+'\n'
+      + '→ 반드시 이 수치를 언급하며 일반인이 이해하기 쉽게 설명하세요.\n'
+    : '\n## 에너지 상태: ILI(역학) '+(_gsP ? _gsP.ili : 70)+'점 (생체 스캔 미완료)\n';
+
   var prompt=[
     sysRole,
     '⚠️ 선택된 역학('+selectedEngines.map(function(e){return e.name;}).join(', ')+') 이론·용어만 사용하세요.',
     '## 분석 대상: '+r.name+' | 오행:'+oh+'('+ohK[oh]+')',
+    _ceiContext,
     '## 실시간 데이터: ILS='+( ils.total||'계산중')+'점 | 화성역행='+(np.mars&&np.mars.retro?'예':'아니오'),
     '## 선택 역학('+engCount+'개): '+selectedEngines.map(function(e){return e.name;}).join(', '),
+    '※ 모든 설명은 전문 용어 사용 후 반드시 쉬운 말로 풀어주세요. 예) "HRV 45ms — 자율신경이 안정적입니다(심장이 규칙적으로 뛰고 있어요)"',
     '반드시 아래 JSON만 출력:',
-    '{"totalScore":숫자,"grade":"총평","summary":"2문장","money":{"score":숫자,"msg":"조언"},"love":{"score":숫자,"msg":"조언"},"work":{"score":숫자,"msg":"조언"},"health":{"score":숫자,"msg":"조언"},"legal":{"score":숫자,"msg":"조언"},"social":{"score":숫자,"msg":"조언"},"factBomb":"실시간+역학 핵심메시지","whyMoney":"근거","whyDate":"날짜근거","calcExplain":"계산설명","food":"음식","luckyDir":"방위","luckyColor":"색상","luckyNum":숫자,"energyGuide":"활용법","csiNote":"역학궁합"}'
+    '{"totalScore":숫자,"grade":"총평","summary":"2문장(생체수치 언급 포함)","money":{"score":숫자,"msg":"쉬운말 조언"},"love":{"score":숫자,"msg":"쉬운말 조언"},"work":{"score":숫자,"msg":"쉬운말 조언"},"health":{"score":숫자,"msg":"HRV·FCI 수치 언급한 건강 조언"},"legal":{"score":숫자,"msg":"쉬운말 조언"},"social":{"score":숫자,"msg":"쉬운말 조언"},"factBomb":"생체+우주+역학 핵심(수치 포함)","whyMoney":"근거","whyDate":"날짜근거","calcExplain":"CEI/ILI 계산 쉽게 설명","food":"음식","luckyDir":"방위","luckyColor":"색상","luckyNum":숫자,"energyGuide":"생체 상태 기반 에너지 활용법","csiNote":"역학궁합"}'
   ].join('\n');
 
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
