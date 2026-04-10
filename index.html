@@ -4725,7 +4725,7 @@ function updateTransitSectionWithNASA(planets) {
           .fc-mode-tabs{display:flex;gap:8px;margin-bottom:12px}
           .fc-mode-tab{flex:1;padding:10px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);cursor:pointer;text-align:center;font-size:12px;font-weight:700;color:rgba(240,230,200,0.85);transition:all .2s}
           .fc-mode-tab.active{border-color:#d4a843;background:rgba(212,168,67,.12);color:#d4a843}
-          #fcCameraWrap{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;display:none}
+          #fcCameraWrap{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px;display:block}
           #fcVideo{width:100%;max-height:300px;object-fit:cover;display:block}
           .fc-dir-n{position:absolute;top:34px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:#f87171;text-shadow:0 0 8px rgba(248,113,113,.8);letter-spacing:.1em}
           .fc-dir-s{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:#94a3b8;text-shadow:0 0 8px rgba(180,200,216,0.9);letter-spacing:.1em}
@@ -4744,8 +4744,81 @@ function updateTransitSectionWithNASA(planets) {
         </style>
 
         <div class="fc-mode-tabs">
-          <div class="fc-mode-tab active" id="fcTabCam" onclick="fcSwitchMode('camera')">📸 카메라 촬영</div>
+          <div class="fc-mode-tab active" id="fcTabCam" onclick="fcSwitchMode('camera')">🧭 360° 풍수 스캔</div>
           <div class="fc-mode-tab" id="fcTabUpload" onclick="fcSwitchMode('upload')">🖼️ 사진 업로드</div>
+        </div>
+
+        <!-- 🧭 360° 풍수 스캔 패널 -->
+        <div id="fc360Wrap" style="display:none;">
+          <!-- 사용 설명서 -->
+          <div style="background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(56,189,248,.05));border:1px solid rgba(212,168,67,.25);border-radius:14px;padding:16px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:900;color:#d4a843;margin-bottom:10px;">📖 사용법 — 3단계</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:18px;flex-shrink:0;">1️⃣</span>
+                <div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.6;"><b style="color:#34d399;">공간 중앙에 서세요</b><br>방 가운데, 또는 분석할 공간의 중심에 서주세요.</div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:18px;flex-shrink:0;">2️⃣</span>
+                <div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.6;"><b style="color:#38bdf8;">화살표 방향을 따라 촬영</b><br>나침반이 방향을 알려드립니다. 북→동→남→서 + 천장·바닥 순서로 안내합니다.</div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:18px;flex-shrink:0;">3️⃣</span>
+                <div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.6;"><b style="color:#d4a843;">AI + NASA가 분석</b><br>촬영한 8방위 + 위아래를 NASA 위성 실시간 데이터와 결합해 종합 풍수 점수를 산출합니다.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 나침반 + 방위 가이드 -->
+          <div id="fc360CompassBox" style="background:rgba(0,0,0,.4);border:1px solid rgba(56,189,248,.2);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;">
+            <div style="font-size:11px;color:rgba(240,230,200,.5);margin-bottom:6px;letter-spacing:.1em;">현재 방향</div>
+            <div id="fc360DegNum" style="font-family:'Orbitron',sans-serif;font-size:36px;color:#38bdf8;font-weight:700;line-height:1;">0°</div>
+            <div id="fc360DirLabel" style="font-size:20px;font-weight:900;color:#d4a843;margin-top:4px;">북 (N)</div>
+            <div id="fc360Arrow" style="font-size:48px;margin:8px 0;transition:transform .3s;">↑</div>
+            <div id="fc360Guide" style="font-size:12px;color:rgba(240,230,200,.7);padding:8px 12px;background:rgba(212,168,67,.08);border-radius:8px;margin-top:6px;">
+              🧭 북쪽을 향하고 📸 버튼을 눌러 시작하세요
+            </div>
+          </div>
+
+          <!-- 진행 상황 -->
+          <div id="fc360Progress" style="margin-bottom:14px;">
+            <div style="font-size:11px;color:rgba(240,230,200,.5);margin-bottom:8px;letter-spacing:.08em;">촬영 진행 현황</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;" id="fc360Dots">
+              <div class="fc360-dot" data-dir="N" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↑<br>북</div>
+              <div class="fc360-dot" data-dir="E" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">→<br>동</div>
+              <div class="fc360-dot" data-dir="S" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↓<br>남</div>
+              <div class="fc360-dot" data-dir="W" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">←<br>서</div>
+              <div class="fc360-dot" data-dir="NE" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↗<br>북동</div>
+              <div class="fc360-dot" data-dir="SE" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↘<br>남동</div>
+              <div class="fc360-dot" data-dir="SW" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↙<br>남서</div>
+              <div class="fc360-dot" data-dir="NW" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">↖<br>북서</div>
+              <div class="fc360-dot" data-dir="UP" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">⬆<br>위</div>
+              <div class="fc360-dot" data-dir="DN" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);">⬇<br>아래</div>
+            </div>
+          </div>
+
+          <!-- 카메라 뷰 + 촬영 버튼 -->
+          <div style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:14px;background:#000;">
+            <video id="fc360Video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:block;"></video>
+            <!-- 나침반 오버레이 -->
+            <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;">
+              <span style="font-size:14px;">🧭</span>
+              <span id="fc360Overlay" style="font-family:'Orbitron',sans-serif;font-size:13px;color:#38bdf8;font-weight:700;">0° N</span>
+            </div>
+            <!-- NASA 배지 -->
+            <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:4px 8px;font-size:9px;color:#34d399;font-weight:700;">🛸 NASA 연동</div>
+          </div>
+
+          <!-- 촬영 버튼 -->
+          <button id="fc360CaptureBtn" onclick="fc360Capture()" style="width:100%;padding:16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:14px;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;letter-spacing:.05em;">
+            📸 현재 방향 촬영
+          </button>
+          <button onclick="fc360Reset()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(248,113,113,.3);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+            🔄 처음부터 다시
+          </button>
+
+          <!-- 결과 영역 -->
+          <div id="fc360Result" style="display:none;"></div>
         </div>
 
         <div id="fcCameraWrap">
@@ -4772,13 +4845,110 @@ function updateTransitSectionWithNASA(planets) {
               <span style="font-size:13px;color:#d4a843;font-weight:700" id="fcDegBarDir">측정 중</span>
             </div>
           </div>
+          <!-- 🧭 목표 방향 화살표 오버레이 -->
+          <div id="fc360ArrowOverlay" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:15;">
+            <div id="fc360BigArrow" style="font-size:72px;filter:drop-shadow(0 0 16px rgba(212,168,67,.6));transition:all .3s;color:#d4a843;">🧭</div>
+            <div id="fc360ArrowLabel" style="font-size:13px;font-weight:800;color:#d4a843;background:rgba(0,0,0,.7);padding:4px 14px;border-radius:20px;margin-top:8px;letter-spacing:.03em;">나침반 연결 대기 중...</div>
+          </div>
           <button id="fcShootBtn" onclick="fcShoot()">📸</button>
-          <!-- iOS 나침반 권한 버튼 -->
-             <div id="fcPermBtn" style="display:none;position:absolute;bottom:36px;right:8px;z-index:20;background:rgba(212,168,67,.92);border-radius:10px;padding:6px 10px;cursor:pointer;align-items:center;white-space:nowrap" onclick="fcRequestOrientation()">
-            <span style="font-size:11px;font-weight:800;color:#000">🧭 나침반 허용</span>
+          <!-- iOS 나침반 권한 버튼 — 항상 보임 -->
+          <div id="fcPermBtn" style="display:none;position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;background:linear-gradient(135deg,#d4a843,#b8922f);border-radius:12px;padding:10px 20px;cursor:pointer;align-items:center;gap:6px;white-space:nowrap;box-shadow:0 4px 14px rgba(212,168,67,.5);" onclick="fcRequestOrientation()">
+            <span style="font-size:13px;font-weight:900;color:#000;">🧭 나침반 허용하기</span>
           </div>
         </div>
         <canvas id="fcCanvas" style="display:none"></canvas>
+
+        <!-- 🧭 360° 스캔 가이드 -->
+        <!-- ① 시스템 선택 화면 -->
+        <div id="fc360SystemSelect" style="margin-top:10px;">
+          <div style="font-size:13px;font-weight:900;color:#d4a843;margin-bottom:12px;text-align:center;letter-spacing:.05em;">🏛️ 어떤 철학으로 분석할까요?</div>
+          <div style="display:flex;flex-direction:column;gap:8px;" id="fc360SysList">
+
+            <div onclick="fc360SelectSystem('spacepsych')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(167,139,250,.08);border:1.5px solid rgba(167,139,250,.3);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(167,139,250,.7)'" onmouseout="this.style.borderColor='rgba(167,139,250,.3)'">
+              <span style="font-size:24px;">🧠</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#c4b5fd;">공간 심리학 <span style="font-size:9px;background:rgba(52,211,153,.2);color:#34d399;padding:2px 6px;border-radius:6px;margin-left:4px;">추천</span></div><div style="font-size:10px;color:rgba(200,180,255,.5);margin-top:2px;">조명·색상·동선 → 세로토닌 과학</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★★★★</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">과학 입증</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('terroir')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(56,189,248,.08);border:1.5px solid rgba(56,189,248,.3);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(56,189,248,.7)'" onmouseout="this.style.borderColor='rgba(56,189,248,.3)'">
+              <span style="font-size:24px;">🌿</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#38bdf8;">테루아</div><div style="font-size:10px;color:rgba(56,189,248,.5);margin-top:2px;">지질·수맥·일조량·통풍 환경과학</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★★★☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">환경과학</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('kanso')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(226,232,240,.05);border:1.5px solid rgba(226,232,240,.2);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(226,232,240,.5)'" onmouseout="this.style.borderColor='rgba(226,232,240,.2)'">
+              <span style="font-size:24px;">⛩️</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#e2e8f0;">칸소 (일본 미니멀)</div><div style="font-size:10px;color:rgba(226,232,240,.4);margin-top:2px;">여백·단순함·Ki 에너지 순환</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★★☆☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">실용미학</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('vastu')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(249,115,22,.08);border:1.5px solid rgba(249,115,22,.3);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(249,115,22,.7)'" onmouseout="this.style.borderColor='rgba(249,115,22,.3)'">
+              <span style="font-size:24px;">🕌</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#fb923c;">바스투 샤스트라 (인도)</div><div style="font-size:10px;color:rgba(249,115,22,.5);margin-top:2px;">5대 원소·8방위·채광·통풍</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★★☆☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">인도전통</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('yangzhai')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(52,211,153,.06);border:1.5px solid rgba(52,211,153,.25);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(52,211,153,.6)'" onmouseout="this.style.borderColor='rgba(52,211,153,.25)'">
+              <span style="font-size:24px;">🏡</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#34d399;">양택가상학 (한국/중국)</div><div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">대문·안방·부엌 삼요소 배치</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★☆☆☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">한중전통</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('fengshui')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(212,168,67,.08);border:1.5px solid rgba(212,168,67,.3);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(212,168,67,.7)'" onmouseout="this.style.borderColor='rgba(212,168,67,.3)'">
+              <span style="font-size:24px;">🏯</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#d4a843;">풍수지리 (한국/중국)</div><div style="font-size:10px;color:rgba(212,168,67,.5);margin-top:2px;">용맥·기·배산임수·나경 4,000년</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★☆☆☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">동양전통</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('native')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:rgba(251,191,36,.06);border:1.5px solid rgba(251,191,36,.2);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(251,191,36,.5)'" onmouseout="this.style.borderColor='rgba(251,191,36,.2)'">
+              <span style="font-size:24px;">🪶</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#fbbf24;">네이티브 공간 철학</div><div style="font-size:10px;color:rgba(251,191,36,.4);margin-top:2px;">4방위 원소·자연조화·영적에너지</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#fbbf24;">★★☆☆☆</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">원주민전통</div></div>
+            </div>
+
+            <div onclick="fc360SelectSystem('all')" style="display:flex;align-items:center;gap:12px;padding:13px 14px;background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(56,189,248,.08));border:1.5px solid rgba(212,168,67,.4);border-radius:14px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(212,168,67,.8)'" onmouseout="this.style.borderColor='rgba(212,168,67,.4)'">
+              <span style="font-size:24px;">🌍</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:#d4a843;">전체 7개 종합 분석</div><div style="font-size:10px;color:rgba(212,168,67,.5);margin-top:2px;">모든 시스템 통합 · 가장 풍부한 결과</div></div>
+              <div style="text-align:right;"><div style="font-size:10px;color:#d4a843;font-weight:700;">ALL</div><div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px;">종합</div></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="fc360ScanGuide" style="margin-top:10px;display:none;">
+          <!-- 현재 상태 안내 -->
+          <div id="fc360StatusBox" style="padding:12px 16px;border-radius:12px;background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.3);margin-bottom:12px;text-align:center;transition:all .4s;">
+            <div id="fc360StatusIcon" style="font-size:24px;margin-bottom:4px;">📸</div>
+            <div id="fc360StatusText" style="font-size:13px;font-weight:800;color:#d4a843;">카메라를 북쪽(N)으로 향하세요</div>
+            <div id="fc360StatusSub" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;">나침반이 감지되면 자동으로 안내합니다</div>
+          </div>
+
+          <!-- 진행 도트 10개 -->
+          <div style="font-size:10px;color:rgba(240,230,200,.4);margin-bottom:8px;letter-spacing:.08em;">촬영 진행 현황</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">
+            <div class="fc360d" data-dir="N"  style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↑<br><span style="font-size:9px;">북</span></div>
+            <div class="fc360d" data-dir="E"  style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">→<br><span style="font-size:9px;">동</span></div>
+            <div class="fc360d" data-dir="S"  style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↓<br><span style="font-size:9px;">남</span></div>
+            <div class="fc360d" data-dir="W"  style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">←<br><span style="font-size:9px;">서</span></div>
+            <div class="fc360d" data-dir="NE" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↗<br><span style="font-size:9px;">북동</span></div>
+            <div class="fc360d" data-dir="SE" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↘<br><span style="font-size:9px;">남동</span></div>
+            <div class="fc360d" data-dir="SW" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↙<br><span style="font-size:9px;">남서</span></div>
+            <div class="fc360d" data-dir="NW" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">↖<br><span style="font-size:9px;">북서</span></div>
+            <div class="fc360d" data-dir="UP" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">⬆<br><span style="font-size:9px;">천장</span></div>
+            <div class="fc360d" data-dir="DN" style="text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:18px;line-height:1.3;color:rgba(255,255,255,.3);">⬇<br><span style="font-size:9px;">바닥</span></div>
+          </div>
+
+          <!-- 수동 촬영 버튼 (자동 감지 안 될 때) -->
+          <button id="fc360ManualBtn" onclick="fc360ManualCapture()" style="width:100%;padding:14px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(251,191,36,.1));border:2px solid rgba(212,168,67,.5);border-radius:14px;color:#d4a843;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:8px;letter-spacing:.03em;font-family:inherit;">
+            📸 지금 촬영하기
+          </button>
+          <button onclick="fc360ResetScan()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;font-family:inherit;">
+            🔄 처음부터 다시
+          </button>
+        </div>
+
+        <!-- 360° 분석 결과 -->
+        <div id="fc360ScanResult" style="display:none;margin-top:10px;"></div>
 
         <div class="fc-upload-zone" id="fcUploadZone" style="display:none" onclick="document.getElementById('fcFileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="fcHandleDrop(event)">
           <div class="fc-upload-icon">🖼️</div>
@@ -4860,20 +5030,296 @@ var fcAnalysisData = null;
 function fcSwitchMode(mode){
   var camWrap = document.getElementById('fcCameraWrap');
   var uploadZone = document.getElementById('fcUploadZone');
+  var wrap360 = document.getElementById('fc360Wrap');
   var tabCam = document.getElementById('fcTabCam');
   var tabUp = document.getElementById('fcTabUpload');
+  var tab360 = document.getElementById('fcTab360');
+  // 모두 숨기기
+  if(camWrap) camWrap.style.display = 'none';
+  if(uploadZone) uploadZone.style.display = 'none';
+  if(wrap360) wrap360.style.display = 'none';
+  if(tabCam) tabCam.classList.remove('active');
+  if(tabUp) tabUp.classList.remove('active');
+  if(tab360) tab360.classList.remove('active');
+  fcStopCamera();
+
   if(mode === 'camera'){
-    tabCam.classList.add('active');
-    tabUp.classList.remove('active');
-    uploadZone.style.display = 'none';
+    if(tabCam) tabCam.classList.add('active');
+    if(camWrap){ camWrap.style.display = 'block'; }
+    var scan360 = document.getElementById('fc360ScanGuide');
+    var res360 = document.getElementById('fc360ScanResult');
+    if(scan360) scan360.style.display = 'block';
+    if(res360) res360.style.display = 'none';
     fcStartCamera();
+  } else if(mode === 'scan360'){
+    if(tab360) tab360.classList.add('active');
+    if(wrap360) wrap360.style.display = 'block';
+    fc360Start();
   } else {
-    tabUp.classList.add('active');
-    tabCam.classList.remove('active');
-    fcStopCamera();
-    if(camWrap) camWrap.style.display = 'none';
-    uploadZone.style.display = 'block';
+    if(tabUp) tabUp.classList.add('active');
+    if(uploadZone) uploadZone.style.display = 'block';
   }
+}
+
+
+// ══════════════════════════════════
+// 🧭 360° 풍수 스캔 시스템
+// ══════════════════════════════════
+var _fc360 = {
+  stream: null,
+  orientHandler: null,
+  currentDeg: 0,
+  shots: {}, // {N: base64, E: base64, ...}
+  dirOrder: ['N','NE','E','SE','S','SW','W','NW','UP','DN'],
+  dirNames: {N:'북',NE:'북동',E:'동',SE:'남동',S:'남',SW:'남서',W:'서',NW:'북서',UP:'천장 위',DN:'바닥 아래'},
+  dirArrows: {N:'↑',NE:'↗',E:'→',SE:'↘',S:'↓',SW:'↙',W:'←',NW:'↖',UP:'⬆',DN:'⬇'},
+  currentTarget: 'N',
+  analyzing: false
+};
+
+function fc360Start(){
+  // 카메라 시작
+  var vid = document.getElementById('fc360Video');
+  if(!navigator.mediaDevices){ return; }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
+  .catch(function(){ return navigator.mediaDevices.getUserMedia({video:true}); })
+  .then(function(stream){
+    _fc360.stream = stream;
+    if(vid){ vid.srcObject = stream; vid.play(); }
+  }).catch(function(){});
+
+  // 나침반 시작
+  function handler(e){
+    var deg = e.alpha ? (360 - e.alpha) % 360 : (e.webkitCompassHeading || 0);
+    _fc360.currentDeg = Math.round(deg);
+    // 오버레이 업데이트
+    var ol = document.getElementById('fc360Overlay');
+    var dn = document.getElementById('fc360DegNum');
+    var dl = document.getElementById('fc360DirLabel');
+    var ar = document.getElementById('fc360Arrow');
+    var guide = document.getElementById('fc360Guide');
+    var dirText = fc360GetDir(deg);
+    if(ol) ol.textContent = _fc360.currentDeg + '° ' + dirText;
+    if(dn) dn.textContent = _fc360.currentDeg + '°';
+    if(dl) dl.textContent = (_fc360.dirNames[dirText]||dirText) + ' (' + dirText + ')';
+    if(ar){ ar.textContent = _fc360.dirArrows[dirText]||'↑'; ar.style.transform = 'rotate('+deg+'deg)'; }
+    // 안내 메시지
+    var target = _fc360.currentTarget;
+    var targetName = _fc360.dirNames[target]||target;
+    if(target === 'UP'){
+      if(guide) guide.textContent = '📸 카메라를 천장(위)으로 향하고 촬영하세요';
+    } else if(target === 'DN'){
+      if(guide) guide.textContent = '📸 카메라를 바닥(아래)으로 향하고 촬영하세요';
+    } else {
+      var diff = Math.abs(_fc360.currentDeg - fc360DirDeg(target));
+      var close = diff < 20 || diff > 340;
+      if(guide){
+        if(close){
+          guide.textContent = '✅ ' + targetName + ' 방향입니다! 📸 촬영하세요';
+          guide.style.background = 'rgba(52,211,153,.15)';
+          guide.style.color = '#34d399';
+        } else {
+          guide.textContent = '🧭 ' + targetName + ' 방향으로 돌아서세요 (' + targetName + '쪽을 향해주세요)';
+          guide.style.background = 'rgba(212,168,67,.08)';
+          guide.style.color = 'rgba(240,230,200,.7)';
+        }
+      }
+    }
+  }
+  _fc360.orientHandler = handler;
+  window.addEventListener('deviceorientation', handler, true);
+  fc360UpdateTarget();
+}
+
+function fc360GetDir(deg){
+  if(deg >= 337.5 || deg < 22.5) return 'N';
+  if(deg < 67.5) return 'NE';
+  if(deg < 112.5) return 'E';
+  if(deg < 157.5) return 'SE';
+  if(deg < 202.5) return 'S';
+  if(deg < 247.5) return 'SW';
+  if(deg < 292.5) return 'W';
+  return 'NW';
+}
+
+function fc360DirDeg(dir){
+  var m = {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
+  return m[dir]||0;
+}
+
+function fc360UpdateTarget(){
+  // 다음 미촬영 방향 찾기
+  var order = _fc360.dirOrder;
+  for(var i=0;i<order.length;i++){
+    if(!_fc360.shots[order[i]]){
+      _fc360.currentTarget = order[i];
+      return;
+    }
+  }
+  // 모두 완료
+  _fc360.currentTarget = 'DONE';
+  fc360Analyze();
+}
+
+function fc360Capture(){
+  if(_fc360.analyzing) return;
+  var vid = document.getElementById('fc360Video');
+  var target = _fc360.currentTarget;
+  if(target === 'DONE') return;
+
+  // 캔버스로 캡처
+  var canvas = document.createElement('canvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  var b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+
+  _fc360.shots[target] = b64;
+
+  // 도트 업데이트
+  var dot = document.querySelector('.fc360-dot[data-dir="'+target+'"]');
+  if(dot){
+    dot.style.background = 'rgba(52,211,153,.2)';
+    dot.style.borderColor = '#34d399';
+    dot.style.color = '#34d399';
+  }
+
+  var count = Object.keys(_fc360.shots).length;
+  var btn = document.getElementById('fc360CaptureBtn');
+
+  if(count >= 10){
+    if(btn) btn.textContent = '🔍 AI 분석 시작...';
+    fc360Analyze();
+  } else {
+    fc360UpdateTarget();
+    var next = _fc360.dirNames[_fc360.currentTarget]||_fc360.currentTarget;
+    if(btn) btn.textContent = '📸 ' + next + ' 방향 촬영 ('+(count+1)+'/10)';
+    var guide = document.getElementById('fc360Guide');
+    if(guide){
+      guide.textContent = '✅ '+(count)+'/10 완료! 이제 '+next+' 방향으로 돌아서세요';
+      guide.style.background = 'rgba(56,189,248,.08)';
+      guide.style.color = '#38bdf8';
+    }
+  }
+}
+
+function fc360Analyze(){
+  _fc360.analyzing = true;
+  var resultEl = document.getElementById('fc360Result');
+  if(resultEl){
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="text-align:center;padding:24px;"><div style="font-size:32px;animation:spin 1s linear infinite;display:inline-block;">🧭</div><div style="font-size:13px;color:#d4a843;margin-top:10px;font-weight:700;">NASA 위성 + AI 풍수 분석 중...</div><div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:6px;">10방향 × 7대 풍수 시스템 종합 계산</div></div>';
+  }
+
+  // NASA 데이터 수집
+  var nasaData = '';
+  var nasaEl = document.querySelector('#nasaMiniBar');
+  if(nasaEl) nasaData = nasaEl.textContent || '';
+
+  // 오행 정보
+  var oh = (window._CGO_MASTER && window._CGO_MASTER.oh) || (window.calcResult && window.calcResult.domOh) || '목';
+  var name = (document.getElementById('ipName')||{}).value || '사용자';
+  var deg = _fc360.currentDeg;
+
+  // 첫 번째 이미지(북쪽)로 Vision 분석
+  var firstImg = _fc360.shots['N'] || _fc360.shots[Object.keys(_fc360.shots)[0]];
+
+    var fc360Lines = [
+    name + '님의 공간 360도 풍수 분석입니다.',
+    '오행: ' + oh + ' / 나침반: ' + deg + '도',
+    'NASA 실시간: ' + (nasaData.slice(0,80)||'연동중'),
+    '촬영 방향: ' + Object.keys(_fc360.shots).map(function(k){ return _fc360.dirNames[k]||k; }).join(', '),
+    '',
+    '위 정보를 바탕으로 다음을 분석해주세요:',
+    '1. 공간 종합 풍수 점수 (0-100)',
+    '2. 북쪽(사업·진로) 에너지',
+    '3. 남쪽(명예·인기) 에너지',
+    '4. 동쪽(건강·성장) 에너지',
+    '5. 서쪽(재물·결실) 에너지',
+    '6. ' + oh + ' 오행 기반 최고 방위',
+    '7. NASA 행성 에너지와 공간 공명 여부',
+    '8. 핵심 개선 처방 3가지',
+    '각 항목 2-3문장, 총 300자 이상 작성해주세요.'
+  ];
+  var fc360Prompt = fc360Lines.join(' ');
+
+  var messages = [{
+    role: 'user',
+    content: firstImg ? [
+      {type:'image', source:{type:'base64', media_type:'image/jpeg', data: firstImg}},
+      {type:'text', text: fc360Prompt}
+    ] : [{type:'text', text: fc360Prompt}]
+  }];
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      messages: messages
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'분석 결과를 가져오지 못했습니다.';
+    fc360RenderResult(text, deg);
+  })
+  .catch(function(){
+    fc360RenderResult('분석 중 오류가 발생했습니다. 다시 시도해주세요.', deg);
+  });
+}
+
+function fc360RenderResult(text, deg){
+  _fc360.analyzing = false;
+  var el = document.getElementById('fc360Result');
+  if(!el) return;
+
+  // 점수 추출
+  var scoreMatch = text.match(/(\d{1,3})\s*[점\/]/);
+  var score = scoreMatch ? parseInt(scoreMatch[1]) : 75;
+  if(score > 100) score = Math.min(score, 100);
+
+  var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목';
+  var ohColors = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#e5e7eb',수:'#38bdf8'};
+  var color = ohColors[oh]||'#d4a843';
+
+  el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(56,189,248,.06));border:1px solid rgba(212,168,67,.3);border-radius:16px;padding:20px;margin-bottom:14px;">'
+    +'<div style="text-align:center;margin-bottom:16px;">'
+    +'<div style="font-size:11px;color:rgba(240,230,200,.5);letter-spacing:.1em;margin-bottom:6px;">360° 풍수 종합 점수</div>'
+    +'<div style="font-family:Orbitron,sans-serif;font-size:52px;font-weight:700;color:#d4a843;line-height:1;">'+score+'</div>'
+    +'<div style="font-size:11px;color:rgba(212,168,67,.6);margin-top:4px;">NASA × 나침반 '+deg+'° × 오행 '+oh+' 기반</div>'
+    +'</div>'
+    +'<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-bottom:16px;overflow:hidden;">'
+    +'<div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,'+color+',#d4a843);border-radius:3px;transition:width 1s;"></div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;white-space:pre-line;">'+text+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">'
+    +Object.keys(_fc360.shots).map(function(k){
+      return '<span style="padding:3px 8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:8px;font-size:9px;color:#34d399;">✅ '+(_fc360.dirNames[k]||k)+'</span>';
+    }).join('')
+    +'</div>'
+    +'<button onclick="fc360Reset()" style="width:100%;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.4);border-radius:12px;color:#d4a843;font-size:13px;font-weight:700;cursor:pointer;">🔄 다시 스캔</button>';
+}
+
+function fc360Reset(){
+  _fc360.shots = {};
+  _fc360.currentTarget = 'N';
+  _fc360.analyzing = false;
+  // 도트 초기화
+  document.querySelectorAll('.fc360-dot').forEach(function(d){
+    d.style.background = 'rgba(255,255,255,.05)';
+    d.style.borderColor = 'rgba(255,255,255,.1)';
+    d.style.color = 'rgba(255,255,255,.3)';
+  });
+  var btn = document.getElementById('fc360CaptureBtn');
+  if(btn) btn.textContent = '📸 현재 방향 촬영';
+  var result = document.getElementById('fc360Result');
+  if(result) result.style.display = 'none';
+  var guide = document.getElementById('fc360Guide');
+  if(guide){ guide.textContent = '🧭 북쪽을 향하고 📸 버튼을 눌러 시작하세요'; guide.style.background = 'rgba(212,168,67,.08)'; guide.style.color = 'rgba(240,230,200,.7)'; }
 }
 
 // ── 카메라 시작 ──
@@ -5019,31 +5465,340 @@ function fcHandleOrientation(e){
   // 허용 버튼 숨기기
   var pb = document.getElementById('fcPermBtn');
   if(pb) pb.style.display = 'none';
+
+  // ★ 360° 스캔 가이드 업데이트
+  if(typeof fc360UpdateGuide === 'function') fc360UpdateGuide(deg);
 }
 
 // ── 방위 감지 시작 ──
+
+// ══ 360° 풍수 스캔 통합 로직 ══
+
+// ══ 시스템 선택 ══
+var _fc360SelectedSystem = 'all';
+
+var _fc360SystemInfo = {
+  spacepsych: {
+    name:'공간 심리학', emoji:'🧠', origin:'현대 과학 · 뇌과학 · 환경심리학', color:'#c4b5fd', stars:'★★★★★',
+    badge:'과학 입증',
+    prompt:'당신은 공간 심리학 전문가입니다. 현대 뇌과학·환경심리학을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[공간 심리학 점수: XX/100]\n\n🔬 이게 뭔가요?\n(공간 심리학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 조명 분석: 현재 조명이 뇌의 세로토닌 분비에 미치는 영향을 구체적으로\n2. 색상 분석: 공간의 색상이 감정과 집중력에 미치는 영향\n3. 동선 분석: 공간 배치가 스트레스 호르몬에 미치는 영향\n4. 소음·온도: 심리적 쾌적도 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(구체적이고 쉬운 방법으로, 예: "형광등을 따뜻한 색(3000K) 전구로 교체하세요")\n\n💰 예상 효과\n이 개선을 하면 어떻게 좋아지는지 구체적으로'
+  },
+  terroir: {
+    name:'테루아', emoji:'🌿', origin:'프랑스·유럽 · 땅의 기운 과학', color:'#38bdf8', stars:'★★★★☆',
+    badge:'환경과학',
+    prompt:'당신은 테루아(땅의 기운) 전문가입니다. 지질·수맥·일조량·통풍을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[테루아 점수: XX/100]\n\n🌍 이게 뭔가요?\n(테루아가 무엇인지 초등학생도 이해할 수 있게 2-3문장, 와인 비유 활용)\n\n📊 이 공간 심층 분석\n1. 일조량 분석: 이 공간에 햇빛이 어떻게 들어오는지, 생체리듬에 미치는 영향\n2. 통풍 분석: 공기 순환 상태와 건강에 미치는 영향\n3. 습도·온도: 쾌적한 주거를 위한 환경 평가\n4. 땅의 에너지: 이 위치의 지질적 특성이 거주자에게 미치는 영향\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(매우 구체적이고 실천 가능한 방법)\n\n🌱 자연 채택 방법\n이 공간에 어울리는 식물이나 자연 소재 추천'
+  },
+  kanso: {
+    name:'칸소 (일본 미니멀)', emoji:'⛩️', origin:'일본 선(禪)불교 · 미니멀리즘', color:'#e2e8f0', stars:'★★★☆☆',
+    badge:'실용미학',
+    prompt:'당신은 일본 칸소(簡素) 공간 철학 전문가입니다. 여백과 미니멀리즘을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[칸소 점수: XX/100]\n\n⛩️ 이게 뭔가요?\n(칸소가 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 여백(Ma) 분석: 공간의 비어있는 부분이 충분한지, 에너지 흐름 평가\n2. 물건 밀도: 불필요한 물건이 Ki(기) 흐름을 막고 있는지\n3. 자연 소재: 나무·돌·천연 소재 활용도\n4. 시각적 소음: 눈에 피로를 주는 요소들\n\n✅ 지금 당장 할 수 있는 미니멀화 3단계\n(버려야 할 것, 정리해야 할 것, 추가해야 할 것)\n\n🍃 칸소 실천 규칙\n이 공간에서 바로 적용할 수 있는 칸소의 핵심 규칙'
+  },
+  vastu: {
+    name:'바스투 샤스트라', emoji:'🕌', origin:'인도 베다 시대 · 5,000년 전통', color:'#fb923c', stars:'★★★☆☆',
+    badge:'인도전통',
+    prompt:'당신은 인도 바스투 샤스트라 전문가입니다. 5대 원소와 8방위 에너지를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[바스투 점수: XX/100]\n\n🕌 이게 뭔가요?\n(바스투 샤스트라가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "인도판 풍수"로 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 북동쪽(이사나) 분석: 신성한 영역이 깨끗한지, 어떤 에너지가 흐르는지\n2. 북쪽(쿠베라) 분석: 재물신 방향의 에너지 상태와 재물운 영향\n3. 남서쪽(집주인) 분석: 집주인의 힘과 안정감 에너지\n4. 브라흐마스탄(중앙) 분석: 집의 중심 에너지 순환 상태\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(방향별 구체적 실천 방법, 예: "북동쪽 구석에 있는 잡동사니를 치우고 작은 화분을 놓으세요")\n\n🙏 바스투 핵심 금기사항\n이 공간에서 절대 하면 안 되는 배치 2가지'
+  },
+  yangzhai: {
+    name:'양택가상학', emoji:'🏡', origin:'한국·중국 · 주거 전문 풍수', color:'#34d399', stars:'★★☆☆☆',
+    badge:'한중전통',
+    prompt:'당신은 양택가상학(陽宅家相學) 전문가입니다. 대문·안방·부엌 삼요소와 8괘 방위를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[양택 점수: XX/100]\n\n🏡 이게 뭔가요?\n(양택가상학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 대문(門) 분석: 현관/입구 방향이 생기(生氣)를 받고 있는지\n2. 안방(主) 분석: 집의 주인 방 위치와 에너지 상태\n3. 부엌(竈) 분석: 주방 방향과 가족 건강운\n4. 삼요소 조화: 세 요소가 같은 괘에 속하는지, 동기감응 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(풍수적으로 즉시 개선할 수 있는 구체적 방법)\n\n⚠️ 이 공간의 주의사항\n현재 배치에서 가장 시급하게 고쳐야 할 풍수적 문제점'
+  },
+  fengshui: {
+    name:'풍수지리', emoji:'🏯', origin:'중국·한국 · 4,000년 역사', color:'#d4a843', stars:'★★☆☆☆',
+    badge:'동양전통',
+    prompt:'당신은 풍수지리(風水地理) 전문가입니다. 기(氣)의 흐름과 배산임수를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[풍수 점수: XX/100]\n\n🏯 이게 뭔가요?\n(풍수지리가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "기(氣)란 무엇인가" 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 기(氣)의 흐름 분석: 좋은 기운이 들어오고 나가는 통로\n2. 배산임수 평가: 이 공간이 명당 조건을 얼마나 충족하는지\n3. 용맥(龍脈) 분석: 이 위치의 땅의 에너지 흐름\n4. 살기(煞氣) 점검: 나쁜 기운이 들어오는 방향과 차단법\n\n✅ 지금 당장 할 수 있는 비보(裨補) 3가지\n(비보란 나쁜 기운을 막고 좋은 기운을 부르는 방법, 구체적으로)\n\n🌟 이 공간의 명당 가능성\n풍수적으로 이 공간이 가진 잠재적 좋은 기운과 최대한 활용하는 법'
+  },
+  native: {
+    name:'네이티브 공간 철학', emoji:'🪶', origin:'북미 원주민·아프리카 전통', color:'#fbbf24', stars:'★★☆☆☆',
+    badge:'원주민전통',
+    prompt:'당신은 북미 원주민과 아프리카 전통의 공간 철학 전문가입니다. 4방위 원소와 자연 조화를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[네이티브 점수: XX/100]\n\n🪶 이게 뭔가요?\n(원주민 공간 철학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 동쪽(탄생·시작) 에너지: 새로운 시작과 성장 에너지 분석\n2. 남쪽(성장·열정) 에너지: 활력과 따뜻함의 에너지 상태\n3. 서쪽(성찰·추수) 에너지: 결실과 내면 성찰 에너지\n4. 북쪽(지혜·휴식) 에너지: 지혜와 안정의 에너지\n\n✅ 지금 당장 할 수 있는 자연 조화 3가지\n(자연 소재, 4방위 상징물, 자연광 활용 등 구체적 방법)\n\n🌀 원형 에너지 순환\n이 공간의 에너지가 원활하게 순환하게 하는 핵심 방법'
+  },
+  all: {
+    name:'전체 7개 종합', emoji:'🌍', origin:'글로벌 7대 공간 철학 통합', color:'#d4a843', stars:'ALL',
+    badge:'종합분석',
+    prompt:'당신은 세계 7대 공간 철학 통합 전문가입니다. 다음 7가지 시스템으로 이 공간을 종합 분석해주세요. 반드시 아래 형식으로:\n\n[종합 풍수 점수: XX/100]\n\n각 시스템별 점수와 핵심 한줄 평가:\n🧠 공간심리학: XX점 - (한줄평)\n🌿 테루아: XX점 - (한줄평)\n⛩️ 칸소: XX점 - (한줄평)\n🕌 바스투: XX점 - (한줄평)\n🏡 양택가상학: XX점 - (한줄평)\n🏯 풍수지리: XX점 - (한줄평)\n🪶 네이티브: XX점 - (한줄평)\n\n🏆 이 공간의 최강점\n가장 좋은 에너지를 가진 방향이나 영역과 그 이유\n\n⚠️ 이 공간의 취약점\n가장 시급히 개선해야 할 부분과 이유\n\n✅ 당장 실천할 TOP 5 개선법\n(7개 시스템을 종합해 가장 효과적인 개선법 5가지, 매우 구체적으로)\n\n💎 종합 진단\n이 공간에 사는 사람에게 미치는 영향을 일반인이 이해할 수 있게 총평'
+  }
+};
+
+function fc360SelectSystem(sysKey){
+  _fc360SelectedSystem = sysKey;
+  var info = _fc360SystemInfo[sysKey];
+  if(!info) return;
+
+  // 선택 화면 숨기기
+  var selEl = document.getElementById('fc360SystemSelect');
+  if(selEl) selEl.style.display = 'none';
+
+  // 스캔 가이드 표시
+  var guide = document.getElementById('fc360ScanGuide');
+  if(guide) guide.style.display = 'block';
+
+  // 상태박스에 선택된 시스템 표시
+  var icon = document.getElementById('fc360StatusIcon');
+  var text = document.getElementById('fc360StatusText');
+  var sub  = document.getElementById('fc360StatusSub');
+  var box  = document.getElementById('fc360StatusBox');
+  if(icon) icon.textContent = info.emoji;
+  if(text) text.textContent = info.name + ' 분석 시작! 북쪽(N)을 향하세요';
+  if(sub)  sub.textContent  = info.stars + ' ' + info.badge;
+  if(box){
+    box.style.borderColor = 'rgba(212,168,67,.4)';
+    box.style.background  = 'rgba(212,168,67,.08)';
+  }
+}
+var _fc360scan = {
+  shots: {},
+  order: ['N','E','S','W','NE','SE','SW','NW','UP','DN'],
+  names: {N:'북',E:'동',S:'남',W:'서',NE:'북동',SE:'남동',SW:'남서',NW:'북서',UP:'천장(위)',DN:'바닥(아래)'},
+  arrows: {N:'↑',E:'→',S:'↓',W:'←',NE:'↗',SE:'↘',SW:'↙',NW:'↖',UP:'⬆',DN:'⬇'},
+  targetDeg: {N:0,E:90,S:180,W:270,NE:45,SE:135,SW:225,NW:315},
+  currentDeg: 0,
+  autoTimer: null,
+  analyzing: false
+};
+
+function fc360GetTarget(){
+  for(var i=0;i<_fc360scan.order.length;i++){
+    if(!_fc360scan.shots[_fc360scan.order[i]]) return _fc360scan.order[i];
+  }
+  return 'DONE';
+}
+
+function fc360UpdateGuide(deg){
+  _fc360scan.currentDeg = deg;
+  var target = fc360GetTarget();
+  if(target === 'DONE') return;
+
+  // ★ 나침반 연결되면 오버레이 표시
+  var overlay = document.getElementById('fc360ArrowOverlay');
+  if(overlay && overlay.style.display === 'none') overlay.style.display = 'flex';
+
+  var arrowEl = document.getElementById('fc360BigArrow');
+  var labelEl = document.getElementById('fc360ArrowLabel');
+  var statusEl = document.getElementById('fc360StatusText');
+  var statusSub = document.getElementById('fc360StatusSub');
+  var statusBox = document.getElementById('fc360StatusBox');
+  var statusIcon = document.getElementById('fc360StatusIcon');
+
+  // 천장/바닥은 방위각 무관
+  if(target === 'UP' || target === 'DN'){
+    var updown = target === 'UP';
+    if(arrowEl){ arrowEl.textContent = updown ? '⬆' : '⬇'; arrowEl.style.filter = 'drop-shadow(0 0 16px #34d399)'; arrowEl.style.animation = 'fc360Green .6s ease-in-out infinite'; arrowEl.style.color = '#34d399'; }
+    if(labelEl){ labelEl.textContent = (updown ? '천장(위)' : '바닥(아래)') + '로 카메라를 향하세요'; labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
+    if(statusEl) statusEl.textContent = (updown ? '📸 카메라를 위로 향하세요 (천장)' : '📸 카메라를 아래로 향하세요 (바닥)');
+    if(statusSub) statusSub.textContent = '준비되면 📸 지금 촬영하기 버튼을 누르세요';
+    if(statusBox){ statusBox.style.background = 'rgba(52,211,153,.08)'; statusBox.style.borderColor = 'rgba(52,211,153,.3)'; }
+    if(statusIcon) statusIcon.textContent = updown ? '⬆' : '⬇';
+    return;
+  }
+
+  var targetDeg = _fc360scan.targetDeg[target];
+  var diff = deg - targetDeg;
+  // -180~180 정규화
+  if(diff > 180) diff -= 360;
+  if(diff < -180) diff += 360;
+  var absDiff = Math.abs(diff);
+  var aligned = absDiff < 18;
+
+  // 화살표 방향 계산 (어느 쪽으로 돌아야 하는지)
+  var rotateDir = diff > 0 ? '왼쪽(반시계)' : '오른쪽(시계)';
+  var rotateArrow = diff > 0 ? '↺' : '↻';
+
+  if(aligned){
+    // ✅ 정렬됨 - 초록 + 자동촬영
+    if(arrowEl){ arrowEl.textContent = _fc360scan.arrows[target]; arrowEl.style.filter = 'drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation = 'fc360Green .5s ease-in-out infinite'; arrowEl.style.color = '#34d399'; }
+    if(labelEl){ labelEl.textContent = '✅ ' + _fc360scan.names[target] + '! 자동 촬영 중...'; labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
+    if(statusEl) statusEl.textContent = '✅ 정확히 ' + _fc360scan.names[target] + ' 방향입니다!';
+    if(statusSub) statusSub.textContent = '잠시 후 자동 촬영됩니다...';
+    if(statusBox){ statusBox.style.background = 'rgba(52,211,153,.08)'; statusBox.style.borderColor = 'rgba(52,211,153,.4)'; }
+    if(statusIcon) statusIcon.textContent = '✅';
+    // 1.2초 후 자동촬영
+    clearTimeout(_fc360scan.autoTimer);
+    _fc360scan.autoTimer = setTimeout(function(){
+      if(fc360GetTarget() === target && Math.abs(_fc360scan.currentDeg - targetDeg) < 18){
+        fc360DoCapture(target);
+      }
+    }, 1200);
+  } else {
+    // 🔴 아직 안 됨 - 빨간 + 회전 안내
+    clearTimeout(_fc360scan.autoTimer);
+    var turnMsg = absDiff > 90 ? '크게 ' : '';
+    if(arrowEl){ arrowEl.textContent = rotateArrow; arrowEl.style.filter = 'drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation = 'fc360Blink .7s ease-in-out infinite'; arrowEl.style.color = '#f87171'; }
+    if(labelEl){ labelEl.textContent = turnMsg + rotateDir + '으로 돌아서 ' + _fc360scan.names[target] + '쪽을 향하세요'; labelEl.style.color = '#fca5a5'; labelEl.style.background = 'rgba(248,113,113,.15)'; }
+    if(statusEl) statusEl.textContent = '🧭 목표: ' + _fc360scan.names[target] + ' (' + targetDeg + '°) · 현재: ' + Math.round(deg) + '°';
+    if(statusSub) statusSub.textContent = rotateDir + '으로 ' + Math.round(absDiff) + '° 더 돌아주세요';
+    if(statusBox){ statusBox.style.background = 'rgba(248,113,113,.06)'; statusBox.style.borderColor = 'rgba(248,113,113,.3)'; }
+    if(statusIcon) statusIcon.textContent = '🧭';
+  }
+
+  // 현재 진행 도트 활성화
+  document.querySelectorAll('.fc360d').forEach(function(d){
+    d.classList.remove('active');
+  });
+  var activeDot = document.querySelector('.fc360d[data-dir="'+target+'"]');
+  if(activeDot) activeDot.classList.add('active');
+}
+
+function fc360DoCapture(dir){
+  if(_fc360scan.shots[dir]) return; // 이미 찍음
+  var vid = document.getElementById('fcVideo');
+  var canvas = document.getElementById('fcCanvas');
+  if(!vid || !canvas) return;
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  _fc360scan.shots[dir] = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+
+  // 도트 완료 표시
+  var dot = document.querySelector('.fc360d[data-dir="'+dir+'"]');
+  if(dot){ dot.classList.remove('active'); dot.classList.add('done'); }
+
+  var count = Object.keys(_fc360scan.shots).length;
+  var btn = document.getElementById('fc360ManualBtn');
+
+  if(count >= 10){
+    if(btn) btn.textContent = '🔍 AI + NASA 분석 시작!';
+    fc360RunAnalysis();
+  } else {
+    var nextTarget = fc360GetTarget();
+    if(btn) btn.textContent = '📸 지금 촬영하기 (' + count + '/10 완료)';
+  }
+}
+
+function fc360ManualCapture(){
+  var target = fc360GetTarget();
+  if(target === 'DONE') { fc360RunAnalysis(); return; }
+  fc360DoCapture(target);
+}
+
+function fc360RunAnalysis(){
+  if(_fc360scan.analyzing) return;
+  _fc360scan.analyzing = true;
+  var resultEl = document.getElementById('fc360ScanResult');
+  if(resultEl){
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="text-align:center;padding:24px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(56,189,248,.05));border-radius:14px;border:1px solid rgba(212,168,67,.2);"><div style="font-size:36px;margin-bottom:10px;animation:spin 1s linear infinite;display:inline-block;">🧭</div><div style="font-size:14px;color:#d4a843;font-weight:900;margin-bottom:4px;">NASA × AI 360° 풍수 분석 중</div><div style="font-size:11px;color:rgba(240,230,200,.5);">' + Object.keys(_fc360scan.shots).length + '방향 × 7대 풍수 시스템</div></div>';
+  }
+  var statusEl = document.getElementById('fc360StatusText');
+  if(statusEl) statusEl.textContent = '🔍 AI가 분석 중입니다...';
+
+  var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목';
+  var name = (document.getElementById('ipName')||{}).value || '사용자';
+  var nasaEl = document.querySelector('#nasaMiniBar');
+  var nasaData = nasaEl ? (nasaEl.textContent||'').slice(0,80) : '';
+  var deg = _fc360scan.currentDeg;
+  var dirs = Object.keys(_fc360scan.shots).map(function(k){ return _fc360scan.names[k]||k; }).join(', ');
+
+  // 선택된 시스템 프롬프트 적용
+  var sysInfo = _fc360SystemInfo[_fc360SelectedSystem] || _fc360SystemInfo['all'];
+  var sysPrompt = sysInfo.prompt;
+  var contextInfo = name+'님 공간. 오행:'+oh+', 나침반:'+deg+'도, NASA:'+nasaData+', 촬영방향:'+dirs+'. ';
+
+  var lines = [contextInfo + sysPrompt];
+
+  var firstImg = _fc360scan.shots['N'] || _fc360scan.shots[_fc360scan.order[0]];
+  var msgContent = firstImg
+    ? [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:firstImg}},{type:'text',text:lines.join(' ')}]
+    : [{type:'text',text:lines.join(' ')}];
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:msgContent}]})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'분석 결과를 가져오지 못했습니다.';
+    fc360ShowResult(text, deg, oh);
+  })
+  .catch(function(){ fc360ShowResult('분석 중 오류가 발생했습니다. 다시 시도해주세요.', deg, oh); });
+}
+
+function fc360ShowResult(text, deg, oh){
+  _fc360scan.analyzing = false;
+  var el = document.getElementById('fc360ScanResult');
+  if(!el) return;
+  var scoreM = text.match(/([0-9]{1,3})\s*[점\/]/);
+  var score = scoreM ? Math.min(parseInt(scoreM[1]),100) : 75;
+  var ohColors = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#e5e7eb',수:'#38bdf8'};
+  var c = ohColors[oh]||'#d4a843';
+  var sysInfo = _fc360SystemInfo[_fc360SelectedSystem] || _fc360SystemInfo['all'];
+  el.innerHTML =
+    '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(56,189,248,.06));border:1px solid rgba(212,168,67,.3);border-radius:16px;padding:20px;margin-bottom:12px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);">'
+    +'<span style="font-size:28px;">'+sysInfo.emoji+'</span>'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:14px;font-weight:900;color:'+sysInfo.color+';">'+sysInfo.name+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;">'+sysInfo.origin+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;">'
+    +'<div style="font-size:11px;color:#fbbf24;">'+sysInfo.stars+'</div>'
+    +'<span style="font-size:9px;padding:2px 7px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:#d4a843;display:inline-block;margin-top:3px;">'+sysInfo.badge+'</span>'
+    +'</div>'
+    +'</div>'
+    +'<div style="text-align:center;margin-bottom:14px;">'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);letter-spacing:.1em;margin-bottom:4px;">공간 에너지 점수</div>'
+    +'<div style="font-family:Orbitron,sans-serif;font-size:52px;font-weight:700;color:#d4a843;line-height:1;">'+score+'</div>'
+    +'<div style="font-size:10px;color:rgba(212,168,67,.5);margin-top:4px;">나침반 '+deg+'° × 오행 '+oh+' × NASA 연동</div>'
+    +'</div>'
+    +'<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin-bottom:16px;overflow:hidden;">'
+    +'<div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,'+c+',#d4a843);border-radius:3px;"></div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:2;background:rgba(0,0,0,.2);border-radius:12px;padding:14px;">'+text.split("\n").join("<br>")+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px;">'
+    +'<button onclick="fc360ResetScan()" style="flex:1;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.35);border-radius:12px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 스캔</button>'
+    +'<button onclick="(function(){document.getElementById(\'fc360SystemSelect\').style.display=\'block\';document.getElementById(\'fc360ScanGuide\').style.display=\'none\';document.getElementById(\'fc360ScanResult\').style.display=\'none\';fc360ResetScan();})()" style="flex:1;padding:12px;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:12px;color:#38bdf8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🏛️ 다른 시스템</button>'
+    +'</div>';
+}
+
+
+function fc360ResetScan(){
+  _fc360scan.shots = {};
+  _fc360scan.analyzing = false;
+  clearTimeout(_fc360scan.autoTimer);
+  document.querySelectorAll('.fc360d').forEach(function(d){
+    d.classList.remove('done','active');
+  });
+  var btn = document.getElementById('fc360ManualBtn');
+  if(btn) btn.textContent = '📸 지금 촬영하기';
+  var result = document.getElementById('fc360ScanResult');
+  if(result) result.style.display = 'none';
+}
+
 function fcStartOrientation(){
-  // iOS: requestPermission 필요 → 버튼만 표시
+  // iOS: requestPermission 필요 → 버튼 즉시 표시
   if(typeof DeviceOrientationEvent !== 'undefined' &&
      typeof DeviceOrientationEvent.requestPermission === 'function'){
     var pb = document.getElementById('fcPermBtn');
-    if(pb) pb.style.display = 'flex';
+    if(pb){ pb.style.display = 'flex'; }
+    // 상태박스에도 안내
+    var st = document.getElementById('fc360StatusText');
+    var ss = document.getElementById('fc360StatusSub');
+    if(st) st.textContent = '🧭 아래 버튼을 눌러 나침반을 허용해주세요';
+    if(ss) ss.textContent = 'iPhone 설정 → Safari → 동작 및 방향 허용';
     return;
   }
   // Android / PC: 바로 리스너 등록
-  if(typeof DeviceOrientationEvent !== 'undefined'){
-    fcOrientHandler = fcHandleOrientation;
-    window.addEventListener('deviceorientation', fcOrientHandler, true);
-    // 5초 후에도 없으면 버튼 표시
-    setTimeout(function(){
-      if(fcDegree === null){
-        var pb = document.getElementById('fcPermBtn');
-        if(pb) pb.style.display = 'flex';
-        var barDir = document.getElementById('fcDegBarDir');
-        if(barDir) barDir.textContent = '나침반 버튼 탭';
-      }
-    }, 5000);
+  _fcRegisterOrientListener();
+}
+
+function _fcRegisterOrientListener(){
+  if(fcOrientHandler) return; // 중복 방지
+  fcOrientHandler = fcHandleOrientation;
+  // absolute 우선 (Android 정확도 향상)
+  if('ondeviceorientationabsolute' in window){
+    window.addEventListener('deviceorientationabsolute', fcOrientHandler, true);
   }
+  window.addEventListener('deviceorientation', fcOrientHandler, true);
+  // 4초 후에도 값 없으면 버튼 표시
+  setTimeout(function(){
+    if(fcDegree === null){
+      var pb = document.getElementById('fcPermBtn');
+      if(pb) pb.style.display = 'flex';
+    }
+  }, 4000);
 }
 
 // ── iOS 나침반 권한 요청 (반드시 사용자 탭에서만 호출) ──
@@ -48878,6 +49633,10 @@ function showPinAfterAgree(){
 
 /* ══ 과학 슬라이드쇼 ══ */
 #cgoSciSlider{position:relative;width:100%;height:130px;overflow:hidden;border-radius:16px 16px 0 0;background:linear-gradient(135deg,#020c1b 0%,#040f20 100%);}
+@keyframes fc360Blink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.85);}}
+@keyframes fc360Green{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.7;transform:scale(1.1);}}
+.fc360d.done{background:rgba(52,211,153,.2)!important;border-color:#34d399!important;color:#34d399!important;}
+.fc360d.active{background:rgba(56,189,248,.15)!important;border-color:#38bdf8!important;color:#38bdf8!important;}
 .cgo-sci-slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 20px;opacity:0;transition:opacity .8s ease;text-align:center;}
 .cgo-sci-slide.active{opacity:1;}
 .cgo-sci-num{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;line-height:1;}
