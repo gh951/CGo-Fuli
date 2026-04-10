@@ -5443,6 +5443,12 @@ function fcHandleOrientation(e){
   deg = Math.round(deg) % 360;
   if(isNaN(deg)) return;
   fcDegree = deg;
+
+  // ★ beta 값으로 UP/DN 감지 (천장/바닥)
+  // beta: 90° = 천장 향함, -90° = 바닥 향함
+  var beta = e.beta != null ? e.beta : null;
+  if(beta !== null) _fc360scan.currentBeta = beta;
+
   var dirText = fcDegToDir(deg);
 
   // ✅ 대시보드 나침반 위젯 실시간 연동
@@ -5553,6 +5559,7 @@ var _fc360scan = {
   arrows: {N:'↑',E:'→',S:'↓',W:'←',NE:'↗',SE:'↘',SW:'↙',NW:'↖',UP:'⬆',DN:'⬇'},
   targetDeg: {N:0,E:90,S:180,W:270,NE:45,SE:135,SW:225,NW:315},
   currentDeg: 0,
+  currentBeta: 0,
   autoTimer: null,
   analyzing: false
 };
@@ -5582,13 +5589,48 @@ function fc360UpdateGuide(deg){
 
   // 천장/바닥은 방위각 무관
   if(target === 'UP' || target === 'DN'){
-    var updown = target === 'UP';
-    if(arrowEl){ arrowEl.textContent = updown ? '⬆' : '⬇'; arrowEl.style.filter = 'drop-shadow(0 0 16px #34d399)'; arrowEl.style.animation = 'fc360Green .6s ease-in-out infinite'; arrowEl.style.color = '#34d399'; }
-    if(labelEl){ labelEl.textContent = (updown ? '천장(위)' : '바닥(아래)') + '로 카메라를 향하세요'; labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
-    if(statusEl) statusEl.textContent = (updown ? '📸 카메라를 위로 향하세요 (천장)' : '📸 카메라를 아래로 향하세요 (바닥)');
-    if(statusSub) statusSub.textContent = '준비되면 📸 지금 촬영하기 버튼을 누르세요';
-    if(statusBox){ statusBox.style.background = 'rgba(52,211,153,.08)'; statusBox.style.borderColor = 'rgba(52,211,153,.3)'; }
-    if(statusIcon) statusIcon.textContent = updown ? '⬆' : '⬇';
+    var isUP = target === 'UP';
+    var beta = _fc360scan.currentBeta;
+    var tiltAligned = false;
+    var tiltDeg = beta !== undefined ? Math.round(beta) : null;
+
+    // beta > 60 → 천장 향함 / beta < -60 → 바닥 향함
+    if(isUP){
+      tiltAligned = (tiltDeg !== null && tiltDeg > 60);
+    } else {
+      tiltAligned = (tiltDeg !== null && tiltDeg < -60);
+    }
+
+    if(tiltAligned){
+      // ✅ 올바른 방향 - 초록
+      if(arrowEl){ arrowEl.textContent = isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation='fc360Green .5s ease-in-out infinite'; arrowEl.style.color='#34d399'; }
+      if(labelEl){ labelEl.textContent='✅ '+(isUP?'천장':'바닥')+' 방향! 자동 촬영 중...'; labelEl.style.color='#34d399'; labelEl.style.background='rgba(52,211,153,.2)'; }
+      if(statusEl) statusEl.textContent='✅ '+(isUP?'천장(위)':'바닥(아래)')+' 감지됨! (기울기 '+tiltDeg+'°)';
+      if(statusSub) statusSub.textContent='잠시 후 자동 촬영됩니다...';
+      if(statusBox){ statusBox.style.background='rgba(52,211,153,.08)'; statusBox.style.borderColor='rgba(52,211,153,.4)'; }
+      if(statusIcon) statusIcon.textContent= isUP ? '⬆' : '⬇';
+      // 1.2초 후 자동촬영
+      clearTimeout(_fc360scan.autoTimer);
+      _fc360scan.autoTimer = setTimeout(function(){
+        var curTgt = fc360GetTarget();
+        if(curTgt === target){
+          var curBeta = _fc360scan.currentBeta;
+          var stillAligned = isUP ? (curBeta > 60) : (curBeta < -60);
+          if(stillAligned) fc360DoCapture(target);
+        }
+      }, 1200);
+    } else {
+      // 🔴 아직 안됨 - 빨간 + 기울기 안내
+      clearTimeout(_fc360scan.autoTimer);
+      var tiltMsg = isUP ? '폰을 위로 기울여 천장을 향하세요' : '폰을 아래로 기울여 바닥을 향하세요';
+      var tiltSub = tiltDeg !== null ? ('현재 기울기: '+tiltDeg+'° → '+(isUP ? '60° 이상':'−60° 이하')+' 필요') : '기울기 감지 중...';
+      if(arrowEl){ arrowEl.textContent= isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation='fc360Blink .7s ease-in-out infinite'; arrowEl.style.color='#f87171'; }
+      if(labelEl){ labelEl.textContent= tiltMsg; labelEl.style.color='#fca5a5'; labelEl.style.background='rgba(248,113,113,.15)'; }
+      if(statusEl) statusEl.textContent='📱 '+ tiltMsg;
+      if(statusSub) statusSub.textContent= tiltSub;
+      if(statusBox){ statusBox.style.background='rgba(248,113,113,.06)'; statusBox.style.borderColor='rgba(248,113,113,.3)'; }
+      if(statusIcon) statusIcon.textContent= isUP ? '📱' : '📱';
+    }
     return;
   }
 
