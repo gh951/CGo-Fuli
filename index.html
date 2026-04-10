@@ -27523,22 +27523,26 @@ function _cgoVisionStartScan(){
   function _hasSubject(){
     if(!v || !v.srcObject || v.readyState < 2) return false;
     try {
-      // 화면 중앙 25% 영역만 체크 (얼굴/손이 있는 곳)
       var sw = v.videoWidth * 0.5, sh = v.videoHeight * 0.5;
       var sx = (v.videoWidth - sw) / 2, sy = (v.videoHeight - sh) / 2;
       _dx.drawImage(v, sx, sy, sw, sh, 0, 0, 64, 64);
       var d = _dx.getImageData(0, 0, 64, 64).data;
       var sum = 0, cnt = 0;
-      // 중앙 32x32만 측정
+      var vals = [];
       for(var y=16; y<48; y++){
         for(var x=16; x<48; x++){
           var idx = (y*64+x)*4;
-          sum += d[idx]*0.299 + d[idx+1]*0.587 + d[idx+2]*0.114;
-          cnt++;
+          var lum = d[idx]*0.299 + d[idx+1]*0.587 + d[idx+2]*0.114;
+          sum += lum; cnt++; vals.push(lum);
         }
       }
       var avg = sum / cnt;
-      return avg > 50; // 임계값 50 (실내 환경 최적화)
+      // 분산 계산 (피사체 있으면 명암 차이 큼)
+      var variance = 0;
+      for(var i=0; i<vals.length; i++) variance += (vals[i]-avg)*(vals[i]-avg);
+      variance /= vals.length;
+      // 밝기 40~240 (너무 어둡거나 너무 밝은 화면 제외) AND 분산 200 이상 (피사체 있어야 명암 차이)
+      return avg > 40 && avg < 240 && variance > 200;
     } catch(e){ return false; }
   }
 
@@ -27660,19 +27664,19 @@ function _cgoVisionShoot(){
     }
 
     var step2Sys = mode==='face'
-      ? '당신은 동양 관상학(面相學) × 만세력(사주명리) 전문가입니다. JSON만 반환하세요 (한국어, 코드블록 없이). 모든 필드를 반드시 채우세요.'
-      : '당신은 동양 수상학(手相學) × 만세력(사주명리) 전문가입니다. JSON만 반환하세요 (한국어, 코드블록 없이). 모든 필드를 반드시 채우세요.';
+      ? '당신은 동양 관상학(面相學) × 만세력(사주명리) 전문가입니다. JSON만 반환하세요 (한국어, 코드블록 없이). 모든 필드를 반드시 채우세요. 분석은 일반인이 쉽게 이해할 수 있도록 전문 용어에 반드시 괄호로 쉬운 설명을 붙이고, 요약하지 말고 충분히 자세하게 3~4문장씩 작성하세요.'
+      : '당신은 동양 수상학(手相學) × 만세력(사주명리) 전문가입니다. JSON만 반환하세요 (한국어, 코드블록 없이). 모든 필드를 반드시 채우세요. 분석은 일반인이 쉽게 이해할 수 있도록 전문 용어에 반드시 괄호로 쉬운 설명을 붙이고, 요약하지 말고 충분히 자세하게 3~4문장씩 작성하세요.';
 
     var mans = '만세력: 이름('+name+') | 일주('+dGan+dJi+') | 일간('+dGan+') | 오행('+oh+'·'+ohK[oh]+') | 생명수('+lifeNum+'번) | 띠('+tti+')';
 
     var step2Prompt = mode==='face'
-      ? mans+'\n관찰결과: '+obs+'\n\nJSON:\n{"face_type":"오행 면형(목형木/화형火/토형土/금형金/수형水)","face_type_desc":"면형 특징과 성격 2문장","oh_match":"만세력 오행('+oh+')과 면형 관계","oh_match_desc":"관계 의미 2문장","score":75,"gung12":{"명궁":{"score":78,"desc":"명궁 분석 2문장"},"재백궁":{"score":75,"desc":"재물운 분석 2문장"},"관록궁":{"score":77,"desc":"직업운 분석 2문장"},"복덕궁":{"score":76,"desc":"복덕 분석 2문장"},"처첩궁":{"score":74,"desc":"인연운 분석 2문장"}},"parts":{"이마":"관록궁 분석 2문장","눈":"감정궁 분석 2문장","코":"재백궁 분석 2문장","입":"복/언변 분석 2문장","턱":"말년운 분석 2문장","눈썹":"형제/장수 1문장","인중":"자녀/수명 1문장"},"giSaek":"기색 분석 2문장","manSeLi":"일간 '+dGan+'('+oh+') 관상 융합 길흉 3문장","today":"오늘 '+name+'님 행운 조언 2문장"}'
-      : mans+'\n관찰결과: '+obs+'\n\nJSON:\n{"hand_type":"오행 수형(목형木/화형火/토형土/금형金/수형水)","hand_type_desc":"수형 특징과 성격 2문장","oh_match":"만세력 오행('+oh+')과 수형 관계","oh_match_desc":"관계 의미 2문장","score":75,"lines":{"생명선":{"score":80,"desc":"건강·활력 분석 2문장"},"감정선":{"score":75,"desc":"사랑·관계 분석 2문장"},"두뇌선":{"score":78,"desc":"지능·결단 분석 2문장"},"운명선":{"score":76,"desc":"직업·성공 분석 2문장"},"태양선":{"score":74,"desc":"명예·인기 1문장"},"재물선":{"score":73,"desc":"금전·재물 1문장"},"결혼선":{"score":72,"desc":"인연·결혼 1문장"}},"fingers":{"엄지":"의지력 1문장","검지":"야망 1문장","약지":"행운 1문장"},"manSeLi":"일간 '+dGan+'('+oh+') 손금 융합 길흉 3문장","today":"오늘 '+name+'님 행운 조언 2문장"}';
+      ? mans+'\n관찰결과: '+obs+'\n\n아래 JSON 형식으로 반환하세요 (모든 desc는 3~4문장, 쉬운 말로 자세하게):\n{"face_type":"오행 면형(목형木/화형火/토형土/금형金/수형水 중 하나)","face_type_desc":"이 면형의 성격·기질·삶의 방식을 쉽고 자세하게 3~4문장으로 설명","oh_match":"만세력 오행('+oh+')과 면형의 관계(상생/상극/비화)","oh_match_desc":"두 오행의 관계가 이 사람의 운명에 어떤 의미인지 쉽고 자세하게 3~4문장","score":점수(0-100),"gung12":{"명궁":{"score":점수,"desc":"명궁(이 사람의 근본 운명과 기본 에너지)을 관찰 결과와 연결해 쉽고 자세하게 3~4문장"},"재백궁":{"score":점수,"desc":"재백궁(돈과 재물이 들어오고 나가는 에너지)을 쉽고 자세하게 3~4문장"},"관록궁":{"score":점수,"desc":"관록궁(직업운·사회적 성공·명예)을 쉽고 자세하게 3~4문장"},"복덕궁":{"score":점수,"desc":"복덕궁(타고난 복과 인생의 행복도)을 쉽고 자세하게 3~4문장"},"처첩궁":{"score":점수,"desc":"처첩궁(인연·배우자·소중한 관계)을 쉽고 자세하게 3~4문장"}},"parts":{"이마":"이마(관록궁·운명의 문)의 특징과 의미를 쉽고 자세하게 3문장","눈":"눈(감정·부부궁·마음의 창)의 특징과 의미를 쉽고 자세하게 3문장","코":"코(재백궁·재물의 산)의 특징과 의미를 쉽고 자세하게 3문장","입":"입(복덕·언변의 문)의 특징과 의미를 쉽고 자세하게 3문장","턱":"턱(말년운·의지의 기반)의 특징과 의미를 쉽고 자세하게 3문장","눈썹":"눈썹(형제운·장수의 다리)의 특징과 의미를 쉽고 자세하게 2문장","인중":"인중(자녀운·수명의 계곡)의 특징과 의미를 쉽고 자세하게 2문장"},"giSaek":"현재 기색(얼굴 혈색으로 보는 건강과 운기)을 오행 색상과 연결해 쉽고 자세하게 3~4문장","manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+'오행)과 관상 오행의 융합이 이 사람의 길흉에 어떤 영향을 주는지 쉽고 자세하게 4~5문장","today":"오늘 '+name+'님에게 구체적으로 어떤 행동을 하면 좋을지 이유와 함께 쉽고 자세하게 3~4문장"}'
+      : mans+'\n관찰결과: '+obs+'\n\n아래 JSON 형식으로 반환하세요 (모든 desc는 3~4문장, 쉬운 말로 자세하게):\n{"hand_type":"오행 수형(목형木/화형火/토형土/금형金/수형水 중 하나)","hand_type_desc":"이 수형의 성격·기질·삶의 방식을 쉽고 자세하게 3~4문장","oh_match":"만세력 오행('+oh+')과 수형의 관계(상생/상극/비화)","oh_match_desc":"두 오행의 관계가 이 사람의 운명에 어떤 의미인지 쉽고 자세하게 3~4문장","score":점수(0-100),"lines":{"생명선":{"score":점수,"desc":"생명선(건강·활력·수명의 길)의 특징과 의미를 쉽고 자세하게 3~4문장"},"감정선":{"score":점수,"desc":"감정선(사랑·인간관계·감성의 강)의 특징과 의미를 쉽고 자세하게 3~4문장"},"두뇌선":{"score":점수,"desc":"두뇌선(지능·직관·결단력의 길)의 특징과 의미를 쉽고 자세하게 3~4문장"},"운명선":{"score":점수,"desc":"운명선(직업·성공·인생 방향의 길)의 특징과 의미를 쉽고 자세하게 3~4문장"},"태양선":{"score":점수,"desc":"태양선(명예·인기·예술의 빛)의 특징과 의미를 쉽고 자세하게 3문장"},"재물선":{"score":점수,"desc":"재물선(금전·재물 흐름의 길)의 특징과 의미를 쉽고 자세하게 3문장"},"결혼선":{"score":점수,"desc":"결혼선(인연·결혼·파트너십)의 특징과 의미를 쉽고 자세하게 3문장"}},"fingers":{"엄지":"엄지(의지력·리더십의 손가락)의 특징과 의미를 쉽게 2문장","검지":"검지(야망·목표의 손가락)의 특징과 의미를 쉽게 2문장","약지":"약지(예술성·행운의 손가락)의 특징과 의미를 쉽게 2문장"},"manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+'오행)과 손금 오행의 융합이 이 사람의 길흉에 어떤 영향을 주는지 쉽고 자세하게 4~5문장","today":"오늘 '+name+'님에게 구체적으로 어떤 행동을 하면 좋을지 이유와 함께 쉽고 자세하게 3~4문장"}';
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'llama-3.3-70b-versatile',
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
-        max_tokens:1500,temperature:0.7})});
+        max_tokens:2000,temperature:0.7})});
   })
   .then(function(res){return res.json();})
   .then(function(data){
@@ -27780,9 +27784,15 @@ function _cgoVisionRenderDeep(p, mode){
     +'<div style="font-size:10px;font-weight:800;color:#34d399;margin-bottom:5px;">✨ 오늘의 행운 조언</div>'
     +'<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.8;">'+p.today+'</div></div>';
 
-  // 다시 분석 버튼
-  var retryFn=isF?'cgoFaceVisionAnalysis()':'cgoPalmVisionAnalysis()';
-  h+='<button onclick="'+retryFn+'" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(240,230,200,.5);font-size:11px;cursor:pointer;">↺ 다시 분석</button>';
+  // 분석 접기 버튼
+  var collapseId = 'cgo-vision-collapse-'+Date.now();
+  h+='<button id="'+collapseId+'" onclick="(function(){'
+    +'var r=document.getElementById(\'cgo-inline-vision-result\');'
+    +'var w=document.getElementById(\'cgo-inline-vision-wait\');'
+    +'var btn=document.getElementById(\''+collapseId+'\');'
+    +'if(r&&r.style.display!==\'none\'){r.style.display=\'none\';if(w)w.style.display=\'block\';if(btn)btn.textContent=\'▼ 분석 펼치기\';}'
+    +'else{if(r)r.style.display=\'block\';if(w)w.style.display=\'none\';if(btn)btn.textContent=\'▲ 분석 접기\';}'
+    +'})()" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(240,230,200,.5);font-size:11px;cursor:pointer;">▲ 분석 접기</button>';
 
   if(resDiv) resDiv.innerHTML=h;
   if(inlineRes){inlineRes.style.display='block';inlineRes.innerHTML='<div style="background:var(--bg-panel);border:1px solid rgba('+colorRgb+',.3);border-radius:16px;padding:16px;">'+h+'</div>';}
