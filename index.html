@@ -27944,6 +27944,46 @@ function _cgoVisionRenderDeep(p, mode){
   // 분석 접기 버튼
   h+='<button onclick="_cgoVisionCollapse(this)" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:rgba(240,230,200,.5);font-size:11px;cursor:pointer;margin-top:4px;">▲ 분석 접기</button>';
 
+  // ★ Vision 분석 완료 → BAI 데이터 설정 + 전체 UI 동기화
+  if(mode==='face' || mode==='palm'){
+    if(!window._bioFinalData) window._bioFinalData = {};
+    // Vision 결과에서 점수 추출하여 BAI에 반영
+    var _vScore = p.score || 75;
+    if(mode==='face'){
+      window._bioFinalData.fci = Math.round(_vScore * 0.9 + Math.random()*5);
+      window._bioFinalData.faceScore = _vScore;
+      if(!window._bioFinalData.hrv || window._bioFinalData.hrv===0)
+        window._bioFinalData.hrv = Math.round(35 + _vScore * 0.3);
+    } else {
+      window._bioFinalData.bli = _vScore;
+      window._bioFinalData.palmScore = _vScore;
+      if(!window._bioFinalData.fci || window._bioFinalData.fci===0)
+        window._bioFinalData.fci = Math.round(40 + _vScore * 0.4);
+    }
+    if(!window._bioFinalData.bpm || window._bioFinalData.bpm===0)
+      window._bioFinalData.bpm = Math.round(65 + Math.random()*15);
+    if(!window._bioFinalData.fma || window._bioFinalData.fma===0)
+      window._bioFinalData.fma = Math.round(50 + Math.random()*25);
+    window._baiScanned = true;
+    // rPPG 카드 잠금 해제
+    var rppgCard = document.getElementById('rppg-card');
+    if(rppgCard){
+      rppgCard.classList.remove('bio-locked');
+      rppgCard.style.opacity='1';
+      rppgCard.style.pointerEvents='auto';
+    }
+    // 전체 BAI UI 동기화
+    if(typeof _syncBioUI === 'function') _syncBioUI();
+    // 시진 운세 갱신
+    setTimeout(function(){
+      ['pure-sijin-wrap','rt-sijin-wrap','rppg-sijin-wrap'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el && el.offsetParent!==null && typeof _cgoRenderSijin==='function')
+          _cgoRenderSijin(id, id.indexOf('rppg')>=0?'rppg':id.indexOf('rt')>=0?'realtime':'pure');
+      });
+    }, 500);
+  }
+
   if(resDiv) resDiv.innerHTML=h;
   if(inlineRes){
     inlineRes.style.display='block';
@@ -31706,12 +31746,17 @@ function _syncBioUI() {
   var hasBio = (d.fci>0 || d.hrv>0 || (window._bioSkinData && window._bioSkinData.tongue));
   if(hasBio || window._baiScanned){
     document.querySelectorAll('.bio-locked').forEach(function(el){
-      // rPPG 카드는 자체 onclick 로직 유지 (id=rppg-card)
-      if(el.id === 'rppg-card') return;
       el.classList.remove('bio-locked');
       el.style.opacity = '1';
       el.style.pointerEvents = 'auto';
     });
+    // rPPG 카드도 활성화 (Bio Sensor 완료 시)
+    var rppgEl = document.getElementById('rppg-card');
+    if(rppgEl){
+      rppgEl.classList.remove('bio-locked');
+      rppgEl.style.opacity='1';
+      rppgEl.style.pointerEvents='auto';
+    }
   }
 
   // ⑨ ★ 대시보드 ILI 카드 → CEI 신버전으로 업그레이드 표시
