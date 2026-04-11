@@ -50816,13 +50816,28 @@ var _unlockTimer=setInterval(function(){
   💬 CGO-FULI 메신저
 ══════════════════════════════════════════ -->
 <div class="page" id="page-chat" style="display:flex;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;">
-  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:72px;height:40px;padding:0 14px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 0 14px rgba(52,211,153,.35);font-family:inherit;">🏠</button>
+  <button id="cgmHomeBtn" onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:29999;min-width:72px;height:40px;padding:0 14px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 0 14px rgba(52,211,153,.35);font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">🏠</button>
 
   <style>
     .cgm-screen{display:none;flex-direction:column;height:100%;overflow:hidden;}
     .cgm-screen.active{display:flex;}
+    /* ★ 네온 간판 글씨 효과 */
+    @keyframes cgmNeonChar {
+      0%,100% { opacity:1; text-shadow:0 0 4px currentColor; }
+      50%      { opacity:0.05; text-shadow:none; }
+    }
+    .cgm-flow-text .cgm-char {
+      display:inline;
+      animation: cgmNeonChar 2.5s ease-in-out infinite;
+    }
+    /* 각 글자 딜레이로 순서대로 깜빡임 */
+    /* 기울기 비활성 시 블러 */
+    #cgmMessages.tilt-lock { filter:blur(12px); transition:filter .2s; pointer-events:none; }
+    #cgmMessages.tilt-ok   { filter:none; transition:filter .2s; }
     .cgm-bubble-me{align-self:flex-start;background:linear-gradient(135deg,#d4a843,#b8922f);color:#000;border-radius:4px 18px 18px 18px;padding:10px 14px;max-width:72%;font-size:13px;line-height:1.6;margin-bottom:4px;}
     .cgm-bubble-you{align-self:flex-start;background:rgba(255,255,255,.1);color:rgba(240,230,200,.9);border-radius:4px 18px 18px 18px;padding:10px 14px;max-width:72%;font-size:13px;line-height:1.6;margin-bottom:4px;}
+    .cgm-bubble-sejong{align-self:center;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(251,191,36,.08));border:1.5px solid rgba(212,168,67,.4);color:#f0e0a0;border-radius:14px;padding:10px 16px;max-width:88%;font-size:12px;line-height:1.8;margin:8px 0;text-align:left;position:relative;}
+    .cgm-bubble-sejong::before{content:'👑';position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:18px;}
     .cgm-bubble-ai{align-self:center;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c4b5fd;border-radius:14px;padding:8px 14px;max-width:85%;font-size:11px;line-height:1.6;margin:6px 0;text-align:center;}
     .cgm-time{font-size:9px;color:rgba(255,255,255,.3);margin-bottom:8px;}
     .cgm-read{font-size:9px;color:rgba(212,168,67,.6);margin-top:2px;text-align:right;}
@@ -50849,9 +50864,7 @@ var _unlockTimer=setInterval(function(){
     <div style="margin-bottom:16px;">
       <button onclick="cgmQuickConnect()" style="width:100%;padding:16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:14px;color:#000;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;margin-bottom:8px;">⚡ CGo-Life 바로 연결!</button>
     </div>
-    <!-- 데모 모드 -->
-    <div style="text-align:center;margin-bottom:6px;font-size:11px;color:rgba(255,255,255,.3);">또는</div>
-    <button onclick="cgmDemoMode()" style="width:100%;padding:12px;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:10px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🎮 데모 모드 (이 기기에서만)</button>
+
   </div>
 
   <!-- ── SCREEN 1: 닉네임 설정 ── -->
@@ -50879,7 +50892,7 @@ var _unlockTimer=setInterval(function(){
         <div style="font-size:15px;font-weight:900;color:#d4a843;">CGO 메신저</div>
         <div id="cgmMyInfo" style="font-size:10px;color:rgba(212,168,67,.5);"></div>
       </div>
-      <button onclick="cgmOpenAddRoom()" style="background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:20px;padding:6px 14px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ 새 채팅</button>
+      <button onclick="cgmOpenUserPanel()" style="background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:20px;padding:6px 14px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">👥 사용자 목록</button>
     </div>
     <!-- 내 코드 공유 -->
     <div id="cgmMyCodeBar" style="padding:10px 16px;background:rgba(56,189,248,.06);border-bottom:1px solid rgba(56,189,248,.1);display:flex;align-items:center;gap:8px;">
@@ -50887,6 +50900,26 @@ var _unlockTimer=setInterval(function(){
       <span id="cgmMyCode" style="font-family:Orbitron,sans-serif;font-size:14px;color:#38bdf8;font-weight:700;letter-spacing:.1em;"></span>
       <button onclick="cgmCopyCode()" style="margin-left:auto;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:8px;padding:3px 10px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">복사</button>
     </div>
+    <!-- CGO 사용자 목록 슬라이드 패널 -->
+    <div id="cgmUserPanel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,8,23,.98);z-index:100;flex-direction:column;overflow:hidden;">
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(212,168,67,.2);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <button onclick="cgmCloseUserPanel()" style="background:transparent;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;padding:0;line-height:1;">‹</button>
+        <div style="flex:1;font-size:15px;font-weight:900;color:#d4a843;">💬 CGO 사용자 목록</div>
+        <div style="font-size:10px;color:rgba(212,168,67,.4);">클릭하면 바로 채팅!</div>
+      </div>
+      <!-- 검색 -->
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.06);">
+        <input id="cgmUserSearch" placeholder="🔍 이름으로 검색..." oninput="cgmSearchUsers(this.value)" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#f0ece0;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;">
+      </div>
+      <!-- 사용자 목록 -->
+      <div id="cgmUserList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <div id="cgmUserEmpty" style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.3);">
+          <div style="font-size:36px;margin-bottom:10px;">👥</div>
+          <div style="font-size:13px;">사용자 목록 불러오는 중...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 채팅방 목록 -->
     <div id="cgmRoomList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <div id="cgmEmptyList" style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.3);">
@@ -50909,6 +50942,7 @@ var _unlockTimer=setInterval(function(){
       </div>
       <button onclick="cgmAskAI()" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:16px;padding:5px 12px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🤖 AI 코치</button>
       <button id="cgmShieldBtn" onclick="cgmToggleShield()" style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);border-radius:16px;padding:5px 10px;color:rgba(52,211,153,.6);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="rPPG 캡처방지">🛡️</button>
+      <button id="cgmTiltBtn" onclick="cgmToggleTilt()" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:16px;padding:5px 10px;color:rgba(56,189,248,.6);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="기울기 보안">📐</button>
     </div>
     <!-- 오행 궁합 바 -->
     <div id="cgmCompatBar" style="padding:8px 14px;background:rgba(212,168,67,.05);border-bottom:1px solid rgba(212,168,67,.1);display:flex;align-items:center;gap:8px;font-size:11px;flex-shrink:0;">
@@ -51894,6 +51928,9 @@ function cgmShowScreen(id){
   document.querySelectorAll('.cgm-screen').forEach(function(s){ s.classList.remove('active'); });
   var el = document.getElementById(id);
   if(el) el.classList.add('active');
+  // 채팅방 안에서는 집 버튼 숨김 (‹ 뒤로가기로 대체)
+  var homeBtn = document.getElementById('cgmHomeBtn');
+  if(homeBtn) homeBtn.style.display = (id==='cgmRoom') ? 'none' : 'flex';
 }
 
 function cgmGenCode(){
@@ -52030,6 +52067,7 @@ function cgmEnterList(){
   if(savedRooms){ _cgm.rooms = JSON.parse(savedRooms); }
   cgmRenderRoomList();
   cgmShowScreen('cgmList');
+  cgmRegisterToFirebase();
 
   // Firebase 리스닝
   if(_cgm.mode==='firebase' && _cgm.db){
@@ -52147,8 +52185,9 @@ function cgmOpenRoom(code){
 
   cgmRenderMessages(code);
   cgmShowScreen('cgmRoom');
-  // 채팅방 진입 시 rPPG 방어막 자동 ON
   setTimeout(cgmAutoShield, 300);
+  // 양방향 보안 신호 리스닝 시작
+  setTimeout(cgmListenSecuritySignal, 500);
 
   // Firebase 실시간 수신
   if(_cgm.mode==='firebase' && _cgm.db){
@@ -52183,18 +52222,20 @@ function cgmRenderMessages(code){
   msgs.forEach(function(msg){
     var isMe = msg.from===_cgm.myCode;
     var time = msg.t ? new Date(msg.t).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}) : '';
-    if(msg.type==='ai'){
+    if(msg.type==='sejong'){
+      html += '<div class="cgm-bubble-sejong">'+cgmEscape(msg.text)+'</div>';
+    } else if(msg.type==='ai'){
       html += '<div class="cgm-bubble-ai">🤖 '+msg.text+'</div>';
     } else if(isMe){
       html += '<div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;">'
         +'<div style="font-size:9px;color:rgba(212,168,67,.5);margin-bottom:2px;">나</div>'
-        +'<div class="cgm-bubble-me">'+cgmEscape(msg.text)+'</div>'
+        +'<div class="cgm-bubble-me">'+cgmNeonWrap(msg.text)+'</div>'
         +'<div class="cgm-read" style="text-align:left;">'+time+' '+(msg.read?'✓✓':'✓')+'</div>'
         +'</div>';
     } else {
       html += '<div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;">'
         +'<div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:2px;">'+room.nick+'</div>'
-        +'<div class="cgm-bubble-you">'+cgmEscape(msg.text)+'</div>'
+        +'<div class="cgm-bubble-you">'+cgmNeonWrap(msg.text)+'</div>'
         +'<div class="cgm-time">'+time+'</div>'
         +'</div>';
     }
@@ -52215,28 +52256,29 @@ function cgmSendMsg(){
   inp.value='';
 
   var msg = { from:_cgm.myCode, text:text, t:Date.now(), read:false };
-  // ★ 10개 초과 시 오래된 메시지 자동 삭제
   if(!_cgm.rooms[_cgm.currentRoom].msgs) _cgm.rooms[_cgm.currentRoom].msgs=[];
   if(_cgm.rooms[_cgm.currentRoom].msgs.length >= 10){
     _cgm.rooms[_cgm.currentRoom].msgs = _cgm.rooms[_cgm.currentRoom].msgs.slice(-9);
   }
 
+  // ★ 메시지는 로컬만 저장 — Firebase에 내용 저장 안 함 (완전 비밀 보장)
+  if(!_cgm.rooms[_cgm.currentRoom].msgs) _cgm.rooms[_cgm.currentRoom].msgs=[];
+  _cgm.rooms[_cgm.currentRoom].msgs.push(msg);
+  _cgm.rooms[_cgm.currentRoom].lastMsg = '새 메시지';
+  _cgm.rooms[_cgm.currentRoom].lastTime = Date.now();
+  localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+  cgmRenderMessages(_cgm.currentRoom);
+
+  // Firebase: 알림 신호만 (내용 없음)
   if(_cgm.mode==='firebase' && _cgm.db){
     var roomId = [_cgm.myCode, _cgm.currentRoom].sort().join('_');
-    _cgm.db.ref('chats/'+roomId+'/msgs').push(msg);
-    // 상대방에게 알림
+    _cgm.db.ref('signals/'+roomId).set({t:Date.now(), from:_cgm.myCode});
     _cgm.db.ref('users/'+_cgm.myCode).set({nick:_cgm.myNick, oh:_cgm.myOh, code:_cgm.myCode});
-  } else {
-    // 데모 모드: 로컬 저장
-    if(!_cgm.rooms[_cgm.currentRoom].msgs) _cgm.rooms[_cgm.currentRoom].msgs=[];
-    _cgm.rooms[_cgm.currentRoom].msgs.push(msg);
-    _cgm.rooms[_cgm.currentRoom].lastMsg = text;
-    _cgm.rooms[_cgm.currentRoom].lastTime = Date.now();
-    localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
-    cgmRenderMessages(_cgm.currentRoom);
+  }
 
-    // 데모: 3초 후 AI 자동 응답
-    setTimeout(function(){ cgmDemoAutoReply(_cgm.currentRoom); }, 2000);
+  // 세종 호출 감지
+  if(text.indexOf('세종') !== -1){
+    setTimeout(function(){ cgmSejongReply(text); }, 1200);
   }
 }
 
@@ -52350,6 +52392,284 @@ function cgmShowShieldToast(msg){
 // 채팅방 진입 시 자동 ON
 function cgmAutoShield(){
   if(!_cgmShieldOn) cgmToggleShield();
+}
+
+
+// ══ CGO 사용자 목록 ══
+var _cgmAllUsers = [];
+
+function cgmOpenUserPanel(){
+  var panel = document.getElementById('cgmUserPanel');
+  if(panel){ panel.style.display='flex'; }
+  cgmLoadUsers();
+}
+
+function cgmCloseUserPanel(){
+  var panel = document.getElementById('cgmUserPanel');
+  if(panel) panel.style.display='none';
+}
+
+function cgmLoadUsers(){
+  var listEl = document.getElementById('cgmUserList');
+  var emptyEl = document.getElementById('cgmUserEmpty');
+
+  if(_cgm.mode==='firebase' && _cgm.db){
+    // Firebase에서 전체 사용자 불러오기
+    _cgm.db.ref('users').once('value').then(function(snap){
+      var users = snap.val() || {};
+      _cgmAllUsers = Object.values(users).filter(function(u){
+        return u.code && u.code !== _cgm.myCode; // 나 제외
+      });
+      cgmRenderUserList(_cgmAllUsers);
+    }).catch(function(){
+      if(emptyEl) emptyEl.style.display='block';
+    });
+  } else {
+    // 데모: 샘플 사용자
+    _cgmAllUsers = [
+      {code:'DEMO01', nick:'김영희', oh:'화'},
+      {code:'DEMO02', nick:'박철수', oh:'수'},
+      {code:'DEMO03', nick:'이지은', oh:'금'},
+      {code:'DEMO04', nick:'최민준', oh:'토'},
+      {code:'DEMO05', nick:'정수연', oh:'목'}
+    ];
+    cgmRenderUserList(_cgmAllUsers);
+  }
+}
+
+function cgmRenderUserList(users){
+  var listEl = document.getElementById('cgmUserList');
+  var emptyEl = document.getElementById('cgmUserEmpty');
+  if(!listEl) return;
+
+  if(users.length===0){
+    listEl.innerHTML = '<div style="text-align:center;padding:40px 20px;color:rgba(255,255,255,.3);"><div style="font-size:36px;margin-bottom:10px;">👥</div><div style="font-size:13px;">아직 다른 사용자가 없어요</div><div style="font-size:11px;margin-top:6px;color:rgba(255,255,255,.2);">친구에게 앱을 공유해보세요!</div></div>';
+    return;
+  }
+
+  var html = '';
+  users.forEach(function(user){
+    var ohEmoji = _cgmOhEmoji[user.oh]||'✨';
+    var ohColor = _cgmOhColor[user.oh]||'#d4a843';
+    var ohRgb = _cgmOhColorRgb(user.oh);
+    var compat = (_cgmOhCompat[_cgm.myOh]||{})[user.oh]||'★★★☆';
+    // 이미 채팅 중인지 확인
+    var isChatting = !!_cgm.rooms[user.code];
+
+    html += '<div onclick="cgmStartFromList(this.dataset.code)" data-code="'+user.code+'" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;transition:background .2s;">'
+      // 아바타
+      +'<div style="width:46px;height:46px;border-radius:50%;background:rgba('+ohRgb+',.15);border:2px solid rgba('+ohRgb+',.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">'+ohEmoji+'</div>'
+      // 정보
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:14px;font-weight:800;color:#f0ece0;margin-bottom:3px;">'+user.nick+'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px;">'
+      +'<span style="font-size:10px;color:'+ohColor+';">'+ohEmoji+' '+user.oh+'행</span>'
+      +'<span style="font-size:9px;color:rgba(212,168,67,.5);">· 궁합 '+compat+'</span>'
+      +'</div>'
+      +'</div>'
+      // 버튼
+      +'<div style="font-size:12px;font-weight:700;'+(isChatting?'color:#34d399':'color:rgba(212,168,67,.6)')+'">'+(isChatting?'💬 채팅중':'💬 대화')+'</div>'
+      +'</div>';
+  });
+
+  listEl.innerHTML = html;
+}
+
+function cgmSearchUsers(keyword){
+  if(!keyword.trim()){
+    cgmRenderUserList(_cgmAllUsers);
+    return;
+  }
+  var filtered = _cgmAllUsers.filter(function(u){
+    return u.nick && u.nick.includes(keyword);
+  });
+  cgmRenderUserList(filtered);
+}
+
+function cgmStartFromList(code){
+  var user = _cgmAllUsers.find(function(u){ return u.code===code; });
+  if(!user) return;
+  cgmCloseUserPanel();
+  // 이미 채팅방 있으면 바로 열기
+  if(_cgm.rooms[code]){
+    cgmOpenRoom(code);
+  } else {
+    cgmCreateRoom(code, user.nick, user.oh);
+  }
+}
+
+// Firebase에 내 정보 등록 (로그인 시)
+function cgmRegisterToFirebase(){
+  if(_cgm.mode==='firebase' && _cgm.db && _cgm.myCode){
+    _cgm.db.ref('users/'+_cgm.myCode).set({
+      code: _cgm.myCode,
+      nick: _cgm.myNick,
+      oh: _cgm.myOh,
+      lastSeen: Date.now()
+    });
+  }
+}
+
+
+// ══ 👑 세종 AI — 3자 대화 시스템 ══
+function cgmSejongReply(userText){
+  var room = _cgm.rooms[_cgm.currentRoom];
+  if(!room) return;
+
+  // 세종 말투로 로딩 메시지
+  var loadMsg = {type:'sejong', text:'👑 세종: 잠시 생각해보겠나이다...', t:Date.now()};
+  if(!room.msgs) room.msgs=[];
+  room.msgs.push(loadMsg);
+  localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+  cgmRenderMessages(_cgm.currentRoom);
+
+  var oh1 = _cgm.myOh||'목';
+  var oh2 = room.oh||'화';
+  var compat = (_cgmOhCompat[oh1]||{})[oh2]||'★★★☆';
+  var nasaEl = document.querySelector('#nasaMiniBar');
+  var nasa = nasaEl ? nasaEl.textContent.slice(0,50) : '';
+
+  var q = '당신은 세종대왕입니다. CGO-FULI 메신저에서 두 사용자의 AI 파트너로 활동합니다.'
+    +' 말투: 고풍스럽지만 친근하게 (~이옵니다, ~하시겠나이까, ~로다 등).'
+    +' 역할: 오행/역학/NASA 분석뿐 아니라 요리, 법률, 의학, 여행, 연애, 직장 등 일반 질문도 모두 답변합니다.'
+    +' 사용자: '+_cgm.myNick+'('+oh1+'행) × '+room.nick+'('+oh2+'행), 궁합:'+compat
+    +' NASA:'+nasa
+    +' 질문: '+userText
+    +' 답변 규칙: 3문장 이내, 핵심만, 마지막엔 두 분에 대한 따뜻한 한마디 필수!'
+    +' 중요: 메시지는 절대 저장되지 않으니 솔직하고 진심으로 답해주세요.';
+
+  fetch('/api/groq',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:[{role:'user',content:q}],
+      max_tokens:200,
+      temperature:0.9
+    })
+  }).then(function(r){return r.json();})
+  .then(function(data){
+    var reply = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'과인이 살펴보니 두 분의 기운이 매우 좋사옵니다! 🏆';
+    loadMsg.text = '👑 세종: ' + reply;
+    localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+    cgmRenderMessages(_cgm.currentRoom);
+    // ★ 세종 답변도 로컬만 — Firebase 저장 안 함
+  }).catch(function(){
+    loadMsg.text = '👑 세종: 과인이 지금 당장은 답하기 어렵사옵니다. 잠시 후 다시 불러주시겠나이까! 🙏';
+    localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+    cgmRenderMessages(_cgm.currentRoom);
+  });
+}
+
+
+// ══ ② 글자 흐름 + ④ 기울기 감지 융합 보안 ══
+var _cgmTiltOn = false;
+var _cgmTiltHandler = null;
+var _cgmTiltOk = false;
+
+function cgmToggleTilt(){
+  _cgmTiltOn = !_cgmTiltOn;
+  var btn = document.getElementById('cgmTiltBtn');
+  var msgs = document.getElementById('cgmMessages');
+
+  if(_cgmTiltOn){
+    // ON: 기울기 감지 시작
+    if(btn){
+      btn.style.background='rgba(56,189,248,.25)';
+      btn.style.borderColor='rgba(56,189,248,.7)';
+      btn.style.color='#38bdf8';
+      btn.textContent='📐 ON';
+    }
+    cgmShowShieldToast('📐 기울기 보안 ON  폰을 45도 기울일 때만 내용 표시'); cgmSendSecuritySignal('tilt', true);
+    cgmStartTiltWatch();
+  } else {
+    // OFF: 기울기 감지 중단
+    cgmStopTiltWatch();
+    if(btn){
+      btn.style.background='rgba(56,189,248,.1)';
+      btn.style.borderColor='rgba(56,189,248,.25)';
+      btn.style.color='rgba(56,189,248,.6)';
+      btn.textContent='📐';
+    }
+    if(msgs){ msgs.classList.remove('tilt-lock','tilt-ok'); }
+    cgmShowShieldToast('📐 기울기 보안 OFF'); cgmSendSecuritySignal('tilt', false);
+  }
+}
+
+function cgmStartTiltWatch(){
+  var msgs = document.getElementById('cgmMessages');
+  // 초기 잠금
+  if(msgs){ msgs.classList.add('tilt-lock'); msgs.classList.remove('tilt-ok'); }
+
+  _cgmTiltHandler = function(e){
+    if(!_cgmTiltOn) return;
+    var beta = e.beta != null ? e.beta : 0;
+    // 35°~65° 범위일 때만 표시 (45° ±15°)
+    var inRange = (beta >= 35 && beta <= 65);
+    if(inRange !== _cgmTiltOk){
+      _cgmTiltOk = inRange;
+      if(msgs){
+        if(inRange){
+          msgs.classList.remove('tilt-lock');
+          msgs.classList.add('tilt-ok');
+        } else {
+          msgs.classList.add('tilt-lock');
+          msgs.classList.remove('tilt-ok');
+        }
+      }
+    }
+  };
+  window.addEventListener('deviceorientation', _cgmTiltHandler, true);
+}
+
+function cgmStopTiltWatch(){
+  if(_cgmTiltHandler){
+    window.removeEventListener('deviceorientation', _cgmTiltHandler, true);
+    _cgmTiltHandler = null;
+  }
+  _cgmTiltOk = false;
+}
+
+
+// ══ 네온 글씨 효과 ══
+function cgmNeonWrap(text){
+  // 각 글자를 span으로 감싸고 딜레이 설정
+  var result = '<span class="cgm-flow-text">';
+  var chars = Array.from(text);
+  chars.forEach(function(ch, i){
+    var delay = (i * 0.15) % 2.5;
+    result += '<span class="cgm-char" style="animation-delay:'+delay.toFixed(2)+'s">'+
+      ch.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>';
+  });
+  result += '</span>';
+  return result;
+}
+
+// ══ 양방향 보안 신호 ══
+function cgmSendSecuritySignal(type, val){
+  if(_cgm.mode!=='firebase' || !_cgm.db || !_cgm.currentRoom) return;
+  var roomId = [_cgm.myCode, _cgm.currentRoom].sort().join('_');
+  _cgm.db.ref('security/'+roomId).set({type:type, val:val, from:_cgm.myCode, t:Date.now()});
+}
+
+function cgmListenSecuritySignal(){
+  if(_cgm.mode!=='firebase' || !_cgm.db || !_cgm.currentRoom) return;
+  var roomId = [_cgm.myCode, _cgm.currentRoom].sort().join('_');
+  _cgm.db.ref('security/'+roomId).on('value', function(snap){
+    var sig = snap.val();
+    if(!sig || sig.from === _cgm.myCode) return; // 내가 보낸 것 무시
+    // 상대방이 보낸 보안 신호 자동 적용
+    if(sig.type==='tilt'){
+      if(sig.val && !_cgmTiltOn) cgmToggleTilt();
+      if(!sig.val && _cgmTiltOn) cgmToggleTilt();
+      cgmShowShieldToast('📐 상대방이 기울기 보안 '+(sig.val?'ON':'OFF')+'했습니다');
+    }
+    if(sig.type==='shield'){
+      if(sig.val && !_cgmShieldOn) cgmToggleShield();
+      if(!sig.val && _cgmShieldOn) cgmToggleShield();
+      cgmShowShieldToast('🛡️ 상대방이 rPPG 방어막 '+(sig.val?'ON':'OFF')+'했습니다');
+    }
+  });
 }
 
 function cgmUpdateBadge(){
