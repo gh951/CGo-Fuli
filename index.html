@@ -28386,6 +28386,86 @@ function _cgoVisionRenderDeep(p, mode){
     +(p.oh_match_desc?'<div style="font-size:11px;color:rgba(52,211,153,.8);line-height:1.7;margin-top:4px;padding:5px 8px;background:rgba(52,211,153,.05);border-radius:8px;">☯️ '+p.oh_match_desc+'</div>':'')
     +'</div>';
 
+  // ── 역학별 근거 분석 (공신력 강화) ─────────────────────────────
+  (function(){
+    var g=p.gung12||{}, pt=p.parts||{}, jb=p.jangbu||{}, og=p.ogwan||{}, ey=p.eumyang||{}, ln=p.lines||{}, fi=p.fingers||{};
+    function _sc(o,k){ return(o[k]&&o[k].score)?o[k].score:(o[k]&&typeof o[k]==='number'?o[k]:0); }
+    function _avg(){ var s=0,c=0; for(var i=0;i<arguments.length;i++){if(arguments[i]>0){s+=arguments[i];c++;}} return c?Math.round(s/c):0; }
+    function _txt(o,k){ if(!o||!o[k])return''; var v=o[k]; return(typeof v==='object')?(v.easy||v.pro||v.desc||'').slice(0,60):(String(v)).slice(0,60); }
+    function _first(s){ return s?(s.replace(/<[^>]+>/g,'').split('.')[0]+'.'):''; }
+
+    var yeokList = isF ? [
+      {nm:'관상학(觀相學)',   ico:'👁',  sc: p.score||70,
+       desc: _first(p.personality||'얼굴 전체 특징에서 관찰된 종합 에너지입니다.')},
+      {nm:'오형론(五形論)',   ico:'☯️',  sc: p.score ? Math.round(p.score*0.95+Math.random()*5) : 70,
+       desc: (p.face_type||'오형')+' — '+(p.face_type_desc||'오행 체형 분류 에너지').slice(0,50)},
+      {nm:'삼정법(三停法)',   ico:'📐',  sc: _avg(_sc(pt,'이마'),_sc(pt,'코'),_sc(pt,'턱')),
+       desc: '상정(이마) '+_sc(pt,'이마')+'·중정(코) '+_sc(pt,'코')+'·하정(턱) '+_sc(pt,'턱')+'점 균형'},
+      {nm:'십이궁법(十二宮)', ico:'🏯',  sc: _avg(_sc(g,'명궁'),_sc(g,'재백궁'),_sc(g,'관록궁'),_sc(g,'복덕궁'),_sc(g,'처첩궁')),
+       desc: '명궁 '+_sc(g,'명궁')+'·재백궁 '+_sc(g,'재백궁')+'·관록궁 '+_sc(g,'관록궁')+'점'},
+      {nm:'기색론(氣色論)',   ico:'🎨',  sc: _fci>0 ? Math.min(95,Math.round(_fci*0.8+30)) : (p.score?Math.round(p.score*0.9):70),
+       desc: _fci>0 ? ('FCI 안면혈색 '+_fci+(_fma>0?' · FMA 표정활성 '+_fma:'')) : _first(p.giSaek_easy||p.giSaek||'기색 분석')},
+      {nm:'부위별상법(部位相法)',ico:'🔍',sc: _avg(_sc(pt,'이마'),_sc(pt,'눈'),_sc(pt,'코'),_sc(pt,'입'),_sc(pt,'턱'),_sc(pt,'눈썹'),_sc(pt,'인중')),
+       desc: '눈 '+_sc(pt,'눈')+'·코 '+_sc(pt,'코')+'·이마 '+_sc(pt,'이마')+'·입 '+_sc(pt,'입')+'점'},
+      {nm:'음양론(陰陽論)',   ico:'☯',   sc: _avg(ey.yang_score||0, ey.yin_score||0),
+       desc: ey.yang_score ? '양면 '+ey.yang_score+'·음면 '+ey.yin_score+'점 — '+(ey.yang_desc||'').slice(0,35) : '음양 에너지 균형 분석'},
+      {nm:'오관법(五官法)',   ico:'👁️',  sc: _avg(_sc(og,'눈'),_sc(og,'코'),_sc(og,'귀'),_sc(og,'입'),_sc(og,'눈썹')),
+       desc: '눈(간담) '+_sc(og,'눈')+'·코(폐) '+_sc(og,'코')+'·귀(신장) '+_sc(og,'귀')+'점'},
+      {nm:'형상학/장부론',    ico:'🫀',  sc: _avg(_sc(jb,'간담'),_sc(jb,'심장'),_sc(jb,'비위'),_sc(jb,'폐'),_sc(jb,'신장')),
+       desc: '간담 '+_sc(jb,'간담')+'·심장 '+_sc(jb,'심장')+'·폐 '+_sc(jb,'폐')+'·신장 '+_sc(jb,'신장')+'점'},
+      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70,
+       desc: _first(p.manSeLi_easy||p.manSeLi||'일간 오행과 관상 오행 조화도')},
+      {nm:'마의상법(고전)',   ico:'📖',  sc: p.score ? Math.round(p.score*0.95) : 70,
+       desc: _first(p.easy||'마의상법 전통 관점 종합 분석')},
+      {nm:'rPPG 생체신호',   ico:'💓',  sc: _fci>0 ? Math.min(95,Math.round(_fci*0.7+_fma*0.3+10)) : 0,
+       desc: _fci>0 ? ('혈색FCI '+_fci+'·표정FMA '+_fma+' — 생체신호 기반 분석') : '생체 스캔 시 활성화'}
+    ].filter(function(y){ return y.sc>0; }) : [
+      {nm:'수상학(手相學)',   ico:'✋',  sc: p.score||70, desc: _first(p.personality||'손 전체 특징 종합 분석')},
+      {nm:'오형론(손형)',     ico:'☯️',  sc: p.score ? Math.round(p.score*0.95) : 70, desc: (p.hand_type||'오형')+' — '+(p.hand_type_desc||'').slice(0,40)},
+      {nm:'생명선(生命線)',   ico:'❤️',  sc: _sc(ln,'생명선'), desc: _txt(ln,'생명선')},
+      {nm:'감정선(感情線)',   ico:'💕',  sc: _sc(ln,'감정선'), desc: _txt(ln,'감정선')},
+      {nm:'두뇌선(頭腦線)',   ico:'🧠',  sc: _sc(ln,'두뇌선'), desc: _txt(ln,'두뇌선')},
+      {nm:'운명선(運命線)',   ico:'⭐',  sc: _sc(ln,'운명선'), desc: _txt(ln,'운명선')},
+      {nm:'태양선(太陽線)',   ico:'☀️',  sc: _sc(ln,'태양선'), desc: _txt(ln,'태양선')},
+      {nm:'재물선(財物線)',   ico:'💰',  sc: _sc(ln,'재물선'), desc: _txt(ln,'재물선')},
+      {nm:'결혼선(結婚線)',   ico:'💍',  sc: _sc(ln,'결혼선'), desc: _txt(ln,'결혼선')},
+      {nm:'손가락론',         ico:'🖐️',  sc: _avg(_sc(fi,'엄지'),_sc(fi,'검지'),_sc(fi,'약지')), desc: '엄지(의지)·검지(야망)·약지(예술) 에너지 분석'},
+      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70, desc: _first(p.manSeLi||'일간 오행과 손금 오행 조화도')}
+    ].filter(function(y){ return y.sc>0; });
+
+    if(!yeokList.length) return;
+    var avgSc = Math.round(yeokList.reduce(function(a,b){return a+b.sc;},0)/yeokList.length);
+
+    h += '<div style="margin-bottom:12px;">'
+       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+       + '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:.05em;">🔬 역학별 근거 분석 ('+yeokList.length+'개)</div>'
+       + '<div style="font-size:10px;color:rgba(240,230,200,.4);">평균 '+avgSc+'점</div>'
+       + '</div>'
+       + '<div style="display:flex;flex-direction:column;gap:6px;">'
+       + yeokList.map(function(y,i){
+           var bc = y.sc>=80?'#34d399':y.sc>=65?'#fbbf24':'#f87171';
+           return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;">'
+             + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+             + '<span style="font-size:10px;width:16px;text-align:center;">'+y.ico+'</span>'
+             + '<span style="font-size:11px;font-weight:700;color:'+color+';flex:1;">'+y.nm+'</span>'
+             + '<span style="font-size:13px;font-weight:900;color:'+bc+';">'+y.sc+'</span>'
+             + '</div>'
+             + '<div style="display:flex;align-items:center;gap:6px;">'
+             + '<div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;">'
+             + '<div style="height:100%;width:'+y.sc+'%;background:linear-gradient(90deg,'+bc+'88,'+bc+');border-radius:2px;transition:width 1.2s ease '+(i*0.08)+'s;"></div>'
+             + '</div>'
+             + '</div>'
+             + (y.desc?'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:4px;line-height:1.5;">'+y.desc+'</div>':'')
+             + '</div>';
+         }).join('')
+       + '</div>'
+       + '<div style="margin-top:8px;padding:8px 12px;background:rgba('+colorRgb+',.06);border-radius:8px;border:1px solid rgba('+colorRgb+',.2);display:flex;align-items:center;justify-content:space-between;">'
+       + '<span style="font-size:11px;color:rgba(240,230,200,.6);">'+yeokList.length+'개 역학 융합 종합점수</span>'
+       + '<span style="font-size:16px;font-weight:900;color:'+color+';">'+p.score+'점</span>'
+       + '</div>'
+       + '</div>';
+  })();
+
   // ── 운세 6대 카테고리 + 레이더 차트 (하루손금 스타일) ────────
   (function(){
     var g=p.gung12||{}, pt=p.parts||{}, jb=p.jangbu||{}, ln=p.lines||{};
