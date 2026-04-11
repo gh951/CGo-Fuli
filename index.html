@@ -4462,10 +4462,13 @@ function updateTransitSectionWithNASA(planets) {
   <div id="bsMusicBox" style="background:var(--bg-panel);border:1px solid rgba(56,189,248,.25);border-radius:16px;padding:18px;display:block">
     <!-- 헤더 -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <div style="display:flex;align-items:center;gap:7px">
-        <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 6px #34d399;animation:pulse 2s infinite"></div>
-        <span style="font-size:12px;color:rgba(56,189,248,.9);letter-spacing:.08em;font-weight:700">🎵 50대 역학 중 × NASA — 실시간 운 상승 음악 처방</span>
-      <span id="musicRefreshTime" style="font-size:10px;color:rgba(56,189,248,.5);margin-left:8px"></span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 6px #34d399;animation:pulse 2s infinite"></div>
+          <span style="font-size:12px;color:rgba(56,189,248,.9);letter-spacing:.08em;font-weight:700">🎵 50대 역학 중 × NASA — 실시간 운 상승 음악 처방</span>
+        </div>
+        <div id="_musicStageLabel" style="font-size:10px;color:#d4a843;font-weight:700;padding-left:14px;">📜 1단계: 만세력 × NASA 실시간 기반 처방</div>
+      </div>
       <span id="musicAutoStatus" style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;margin-left:6px;display:none;">⟳ 자동갱신 ON</span>
       </div>
       <span style="font-size:9px;color:rgba(240,230,200,.35);font-style:italic">음악을 듣는 것만으로도 운이 좋아진다</span>
@@ -22130,6 +22133,13 @@ function calcAstro() {
   setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }, 500);
   generateGMD(calcResult);
   generateReport(calcResult);
+  // ── 1단계 음악 자동 처방: 정보 입력 완료 시 → 주파수 음악 페이지에 있으면 즉시 실행 ──
+  setTimeout(function(){
+    var _scanPg = document.getElementById('page-scan');
+    if(_scanPg && _scanPg.classList.contains('active')){
+      if(typeof bsMusicRecommend==='function') bsMusicRecommend(calcResult.ili||70);
+    }
+  }, 800);
 
   // ★ calcDone 이벤트 발생 + 시진 직접 렌더링
   setTimeout(function(){
@@ -25182,14 +25192,26 @@ function goScan(){
   document.getElementById('page-scan').classList.add('active');
   var _sTxt=document.getElementById('pageTitleText'); if(_sTxt){_sTxt.style.display='block';_sTxt.textContent='🎵 나의 주파수 음악';}
 
-  // Bio Sensor 완료 여부 체크
+  // ── 2단계 음악 처방 구조 ──
+  // 1단계: calcResult(정보입력) → 만세력+NASA 기반 음악
+  // 2단계: _baiScanned(생체스캔) → 생체신호 추가 정밀 음악
   var bfd = window._bioFinalData||{};
   var scanned = window._baiScanned || (bfd.fci>0 || bfd.hrv>0);
+  var hasCalc = !!(window.calcResult && window.calcResult.domOh);
   var lockNotice = document.getElementById('music-lock-notice');
   var musicBox = document.getElementById('bsMusicBox');
-  if(scanned){
+  var _musicStageEl = document.getElementById('_musicStageLabel');
+
+  if(hasCalc || scanned){
     if(lockNotice) lockNotice.style.display='none';
     if(musicBox) musicBox.style.display='block';
+    // 단계 레이블 업데이트
+    if(_musicStageEl){
+      _musicStageEl.textContent = scanned
+        ? '🧬 2단계: 생체신호 × 역학 융합 정밀 처방'
+        : '📜 1단계: 만세력 × NASA 실시간 기반 처방';
+      _musicStageEl.style.color = scanned ? '#34d399' : '#d4a843';
+    }
     // 음악 추천 실행
     if(typeof bsMusicRecommend==='function' && window._lastMusicILI)
       bsMusicRecommend(window._lastMusicILI);
@@ -37339,6 +37361,16 @@ function bsMusicRecommend(ili){
   var mlist=document.getElementById('bsMusicList');
   if(!box||!cards||!mlist) return;
   box.style.display='block';
+  // ── 1단계/2단계 레이블 자동 업데이트 ──
+  var _bfd = window._bioFinalData||{};
+  var _isStage2 = window._baiScanned || (_bfd.fci>0 || _bfd.hrv>0);
+  var _stageEl = document.getElementById('_musicStageLabel');
+  if(_stageEl){
+    _stageEl.textContent = _isStage2
+      ? '🧬 2단계: 생체신호 × 역학 융합 정밀 처방'
+      : '📜 1단계: 만세력 × NASA 실시간 기반 처방';
+    _stageEl.style.color = _isStage2 ? '#34d399' : '#d4a843';
+  }
   // 갱신 시각 표시
   var _mrt = document.getElementById('musicRefreshTime');
   if(_mrt){
