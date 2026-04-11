@@ -50969,6 +50969,25 @@ var _unlockTimer=setInterval(function(){
     </div>
   </div>
 
+  <!-- ── 초대 수신 모달 ── -->
+  <div id="cgmInviteModal" style="display:none;position:fixed;inset:0;z-index:29000;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;">
+    <div style="width:88%;max-width:340px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px;padding:28px 22px;border:1.5px solid rgba(212,168,67,.35);box-shadow:0 0 40px rgba(212,168,67,.15);">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div id="cgmInviteAvatar" style="font-size:44px;margin-bottom:8px;">🌿</div>
+        <div id="cgmInviteName" style="font-size:18px;font-weight:900;color:#f0ece0;margin-bottom:4px;"></div>
+        <div id="cgmInviteOh" style="font-size:12px;color:rgba(212,168,67,.6);margin-bottom:8px;"></div>
+        <div id="cgmInviteCompat" style="font-size:13px;color:#fbbf24;font-weight:700;"></div>
+      </div>
+      <div style="font-size:13px;color:rgba(240,230,200,.7);text-align:center;margin-bottom:20px;line-height:1.6;">
+        대화를 요청합니다 💬
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="cgmRejectInvite()" style="flex:1;padding:14px;background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.3);border-radius:12px;color:#f87171;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">❌ 거절</button>
+        <button onclick="cgmAcceptInvite()" style="flex:1;padding:14px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:12px;color:#000;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">✅ 수락</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── 새 채팅 모달 ── -->
   <div id="cgmAddModal" style="display:none;position:fixed;inset:0;z-index:20400;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center;">
     <div style="width:100%;max-width:480px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px 20px 0 0;padding:24px 20px;border:1px solid rgba(212,168,67,.2);">
@@ -52099,6 +52118,8 @@ function cgmEnterList(){
   cgmRenderRoomList();
   cgmShowScreen('cgmList');
   cgmRegisterToFirebase();
+  // 초대 수신 감지 시작
+  setTimeout(cgmListenInvites, 800);
 
   // Firebase 리스닝
   if(_cgm.mode==='firebase' && _cgm.db){
@@ -52811,6 +52832,122 @@ function cgmSoundSend(){
   gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
   osc.connect(gain); gain.connect(ctx.destination);
   osc.start(t); osc.stop(t + 0.12);
+}
+
+
+// ══ 초대 요청 시스템 ══
+var _cgmPendingInvite = null;
+
+// 사용자 목록에서 클릭 → 초대 요청 전송
+function cgmStartFromList(code){
+  var user = _cgmAllUsers.find(function(u){ return u.code===code; });
+  if(!user) return;
+  cgmCloseUserPanel();
+
+  // 이미 채팅방 있으면 바로 열기
+  if(_cgm.rooms[code]){
+    cgmOpenRoom(code);
+    return;
+  }
+
+  // Firebase 연결 시 → 초대 요청 전송
+  if(_cgm.mode==='firebase' && _cgm.db){
+    _cgm.db.ref('invites/'+code+'/'+_cgm.myCode).set({
+      from: _cgm.myCode,
+      nick: _cgm.myNick,
+      oh: _cgm.myOh,
+      t: Date.now(),
+      status: 'pending'
+    });
+    // 내 화면에 대기 토스트
+    cgmShowShieldToast('💬 '+user.nick+'님께 대화 요청을 보냈습니다!');
+    // 수락/거절 결과 감지
+    cgmListenInviteResult(code, user.nick, user.oh);
+  } else {
+    // 데모 모드: 바로 생성
+    cgmCreateRoom(code, user.nick, user.oh);
+  }
+}
+
+// 초대 수신 감지
+function cgmListenInvites(){
+  if(_cgm.mode!=='firebase' || !_cgm.db || !_cgm.myCode) return;
+  _cgm.db.ref('invites/'+_cgm.myCode).on('child_added', function(snap){
+    var inv = snap.val();
+    if(!inv || inv.status !== 'pending') return;
+    // 초대 모달 표시
+    cgmShowInviteModal(snap.key, inv);
+  });
+}
+
+function cgmShowInviteModal(fromCode, inv){
+  _cgmPendingInvite = {code: fromCode, nick: inv.nick, oh: inv.oh};
+  var ohEmoji = _cgmOhEmoji[inv.oh]||'✨';
+  var ohColor = _cgmOhColor[inv.oh]||'#d4a843';
+  var compat = (_cgmOhCompat[_cgm.myOh]||{})[inv.oh]||'★★★☆';
+
+  var avatarEl = document.getElementById('cgmInviteAvatar');
+  var nameEl = document.getElementById('cgmInviteName');
+  var ohEl = document.getElementById('cgmInviteOh');
+  var compatEl = document.getElementById('cgmInviteCompat');
+  var modal = document.getElementById('cgmInviteModal');
+
+  if(avatarEl) avatarEl.textContent = ohEmoji;
+  if(nameEl) nameEl.textContent = inv.nick + '님';
+  if(ohEl) ohEl.style.color = ohColor; if(ohEl) ohEl.textContent = ohEmoji+' '+inv.oh+'행';
+  if(compatEl) compatEl.textContent = '오행 궁합: ' + compat;
+  if(modal){ modal.style.display='flex'; }
+
+  // 수신음
+  cgmSoundMessage();
+}
+
+function cgmAcceptInvite(){
+  if(!_cgmPendingInvite) return;
+  var inv = _cgmPendingInvite;
+  _cgmPendingInvite = null;
+  document.getElementById('cgmInviteModal').style.display='none';
+
+  // 채팅방 생성
+  cgmCreateRoom(inv.code, inv.nick, inv.oh);
+
+  // Firebase 수락 신호
+  if(_cgm.mode==='firebase' && _cgm.db){
+    _cgm.db.ref('invites/'+_cgm.myCode+'/'+inv.code).update({status:'accepted'});
+    // 상대방에게 수락 알림
+    _cgm.db.ref('invites/'+inv.code+'/'+_cgm.myCode+'/status').set('accepted');
+  }
+  cgmShowShieldToast('✅ '+inv.nick+'님과 채팅을 시작합니다!');
+}
+
+function cgmRejectInvite(){
+  if(!_cgmPendingInvite) return;
+  var inv = _cgmPendingInvite;
+  _cgmPendingInvite = null;
+  document.getElementById('cgmInviteModal').style.display='none';
+
+  // Firebase 거절 신호
+  if(_cgm.mode==='firebase' && _cgm.db){
+    _cgm.db.ref('invites/'+_cgm.myCode+'/'+inv.code).update({status:'rejected'});
+    _cgm.db.ref('invites/'+inv.code+'/'+_cgm.myCode+'/status').set('rejected');
+  }
+  cgmShowShieldToast('❌ '+inv.nick+'님의 요청을 거절했습니다');
+}
+
+// 수락/거절 결과 감지 (요청 보낸 사람)
+function cgmListenInviteResult(targetCode, targetNick, targetOh){
+  if(_cgm.mode!=='firebase' || !_cgm.db) return;
+  _cgm.db.ref('invites/'+targetCode+'/'+_cgm.myCode+'/status').on('value', function(snap){
+    var status = snap.val();
+    if(status==='accepted'){
+      cgmShowShieldToast('✅ '+targetNick+'님이 수락했습니다!');
+      cgmCreateRoom(targetCode, targetNick, targetOh);
+      _cgm.db.ref('invites/'+targetCode+'/'+_cgm.myCode).remove();
+    } else if(status==='rejected'){
+      cgmShowShieldToast('❌ '+targetNick+'님이 거절했습니다');
+      _cgm.db.ref('invites/'+targetCode+'/'+_cgm.myCode).remove();
+    }
+  });
 }
 
 function cgmUpdateBadge(){
