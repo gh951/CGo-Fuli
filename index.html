@@ -5324,26 +5324,24 @@ function fc360Analyze(){
   ];
   var fc360Prompt = fc360Lines.join(' ');
 
-  var messages = [{
+  // Groq Vision으로 교체 (Anthropic → llama-4-scout)
+  var groqMsgs = [{
     role: 'user',
-    content: firstImg ? [
-      {type:'image', source:{type:'base64', media_type:'image/jpeg', data: firstImg}},
-      {type:'text', text: fc360Prompt}
-    ] : [{type:'text', text: fc360Prompt}]
+    content: firstImg
+      ? [{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+firstImg}},{type:'text',text:fc360Prompt}]
+      : fc360Prompt
   }];
 
-  fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      model:'claude-sonnet-4-20250514',
-      max_tokens:1000,
-      messages: messages
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model: firstImg ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile',
+      max_tokens:1000, temperature:0.7,
+      messages: groqMsgs
     })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
-    var text = (data.content&&data.content[0]&&data.content[0].text)||'분석 결과를 가져오지 못했습니다.';
+    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'분석 결과를 가져오지 못했습니다.';
     fc360RenderResult(text, deg);
   })
   .catch(function(){
@@ -5824,14 +5822,20 @@ function fc360RunAnalysis(){
     ? [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:firstImg}},{type:'text',text:lines.join(' ')}]
     : [{type:'text',text:lines.join(' ')}];
 
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:msgContent}]})
+  // Groq Vision으로 교체
+  var groqContent = firstImg
+    ? [{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+firstImg}},{type:'text',text:lines.join(' ')}]
+    : lines.join(' ');
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model: firstImg ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile',
+      max_tokens:1000, temperature:0.7,
+      messages:[{role:'user',content:groqContent}]
+    })
   })
   .then(function(r){return r.json();})
   .then(function(data){
-    var text = (data.content&&data.content[0]&&data.content[0].text)||'분석 결과를 가져오지 못했습니다.';
+    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'분석 결과를 가져오지 못했습니다.';
     fc360ShowResult(text, deg, oh);
   })
   .catch(function(){ fc360ShowResult('분석 중 오류가 발생했습니다. 다시 시도해주세요.', deg, oh); });
@@ -28156,13 +28160,18 @@ function _cgoVisionShoot(){
         +'"manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+') 오행과 손금 오행의 충돌·조화. 인생에서 가장 조심해야 할 것과 가장 잘 될 분야. 4문장",'
         +'"today":"오늘 '+name+'님 손금+만세력 기반 구체적 행동 지침. 오늘 해야 할 것과 하면 안 되는 것. 행운을 부르는 색상·방향·음식. 3문장"}';
 
+    // 25초 타임아웃 안전장치
+    var _ctrl = new AbortController();
+    var _timer = setTimeout(function(){ console.warn('[CGO관상] 25초 타임아웃'); _ctrl.abort(); }, 25000);
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+      signal: _ctrl.signal,
       body:JSON.stringify({model:'llama-3.3-70b-versatile',
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
         max_tokens:3500,temperature:0.85})});
   })
   .then(function(res){ return res.json(); })
   .then(function(data){
+    if(typeof _timer!=='undefined') clearTimeout(_timer);
     var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
     if(!txt){ console.error('[CGO관상] 2단계 응답 없음:', JSON.stringify(data).slice(0,200)); throw new Error('no_content'); }
     var clean=txt.replace(/```json|```/g,'').trim();
@@ -28422,15 +28431,15 @@ function _cgoVisionRenderDeep(p, mode){
     ].filter(function(y){ return y.sc>0; }) : [
       {nm:'수상학(手相學)',   ico:'✋',  sc: p.score||70, desc: _first(p.personality||'손 전체 특징 종합 분석')},
       {nm:'오형론(손형)',     ico:'☯️',  sc: p.score ? Math.round(p.score*0.95) : 70, desc: (p.hand_type||'오형')+' — '+(p.hand_type_desc||'').slice(0,40)},
-      {nm:'생명선(生命線)',   ico:'❤️',  sc: _sc(ln,'생명선'), desc: _txt(ln,'생명선')},
-      {nm:'감정선(感情線)',   ico:'💕',  sc: _sc(ln,'감정선'), desc: _txt(ln,'감정선')},
-      {nm:'두뇌선(頭腦線)',   ico:'🧠',  sc: _sc(ln,'두뇌선'), desc: _txt(ln,'두뇌선')},
-      {nm:'운명선(運命線)',   ico:'⭐',  sc: _sc(ln,'운명선'), desc: _txt(ln,'운명선')},
-      {nm:'태양선(太陽線)',   ico:'☀️',  sc: _sc(ln,'태양선'), desc: _txt(ln,'태양선')},
-      {nm:'재물선(財物線)',   ico:'💰',  sc: _sc(ln,'재물선'), desc: _txt(ln,'재물선')},
-      {nm:'결혼선(結婚線)',   ico:'💍',  sc: _sc(ln,'결혼선'), desc: _txt(ln,'결혼선')},
-      {nm:'손가락론',         ico:'🖐️',  sc: _avg(_sc(fi,'엄지'),_sc(fi,'검지'),_sc(fi,'약지')), desc: '엄지(의지)·검지(야망)·약지(예술) 에너지 분석'},
-      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70, desc: _first(p.manSeLi||'일간 오행과 손금 오행 조화도')}
+      {nm:'생명선(生命線)',   ico:'❤️',  sc: _sc(ln,'생명선'), desc: ln['생명선']&&ln['생명선'].desc?ln['생명선'].desc.slice(0,80):'', easy: ln['생명선']&&ln['생명선'].easy?ln['생명선'].easy:''},
+      {nm:'감정선(感情線)',   ico:'💕',  sc: _sc(ln,'감정선'), desc: ln['감정선']&&ln['감정선'].desc?ln['감정선'].desc.slice(0,80):'', easy: ln['감정선']&&ln['감정선'].easy?ln['감정선'].easy:''},
+      {nm:'두뇌선(頭腦線)',   ico:'🧠',  sc: _sc(ln,'두뇌선'), desc: ln['두뇌선']&&ln['두뇌선'].desc?ln['두뇌선'].desc.slice(0,80):'', easy: ln['두뇌선']&&ln['두뇌선'].easy?ln['두뇌선'].easy:''},
+      {nm:'운명선(運命線)',   ico:'⭐',  sc: _sc(ln,'운명선'), desc: ln['운명선']&&ln['운명선'].desc?ln['운명선'].desc.slice(0,80):'', easy: ln['운명선']&&ln['운명선'].easy?ln['운명선'].easy:''},
+      {nm:'태양선(太陽線)',   ico:'☀️',  sc: _sc(ln,'태양선'), desc: ln['태양선']&&ln['태양선'].desc?ln['태양선'].desc.slice(0,80):'', easy: ln['태양선']&&ln['태양선'].easy?ln['태양선'].easy:''},
+      {nm:'재물선(財物線)',   ico:'💰',  sc: _sc(ln,'재물선'), desc: ln['재물선']&&ln['재물선'].desc?ln['재물선'].desc.slice(0,80):'', easy: ln['재물선']&&ln['재물선'].easy?ln['재물선'].easy:''},
+      {nm:'결혼선(結婚線)',   ico:'💍',  sc: _sc(ln,'결혼선'), desc: ln['결혼선']&&ln['결혼선'].desc?ln['결혼선'].desc.slice(0,80):'', easy: ln['결혼선']&&ln['결혼선'].easy?ln['결혼선'].easy:''},
+      {nm:'손가락론(指論)',   ico:'🖐️',  sc: _avg(_sc(fi,'엄지'),_sc(fi,'검지'),_sc(fi,'약지')), desc: '엄지(의지)·검지(야망)·약지(예술) 에너지 분석', easy: p.fingers?('엄지 '+_txt(fi,'엄지').slice(0,25)):''},
+      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70, desc: (p.manSeLi||'').slice(0,80), easy: p.manSeLi_easy||''}
     ].filter(function(y){ return y.sc>0; });
 
     if(!yeokList.length) return;
@@ -28455,7 +28464,8 @@ function _cgoVisionRenderDeep(p, mode){
              + '<div style="height:100%;width:'+y.sc+'%;background:linear-gradient(90deg,'+bc+'88,'+bc+');border-radius:2px;transition:width 1.2s ease '+(i*0.08)+'s;"></div>'
              + '</div>'
              + '</div>'
-             + (y.desc?'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-top:4px;line-height:1.5;">'+y.desc+'</div>':'')
+             + (y.desc?'<div style="font-size:10px;color:rgba(240,230,200,.55);margin-top:5px;line-height:1.6;">🔬 '+y.desc+'</div>':'')
+             + (y.easy?'<div style="font-size:10px;color:rgba(52,211,153,.75);margin-top:3px;line-height:1.6;background:rgba(52,211,153,.04);border-radius:5px;padding:3px 6px;">😊 '+y.easy+'</div>':'')
              + '</div>';
          }).join('')
        + '</div>'
@@ -28526,8 +28536,8 @@ function _cgoVisionRenderDeep(p, mode){
       +'</div></div>';
   })();
 
-  // 관상 12궁 / 손금 7대선
-  var secs = isF?p.gung12:p.lines;
+  // 관상 12궁 (손금 7대선은 역학별 근거 분석에 통합)
+  var secs = isF?p.gung12:null;
   if(secs){
     var secLabel = isF?'🏯 관상 12궁 분석':'🌿 7대 주요선 분석 <span style="font-size:9px;color:rgba(240,230,200,.3);font-weight:400;">(항목 탭 → 위 손금 반짝임)</span>';
     h+='<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:.06em;margin-bottom:8px;">'+secLabel+'</div>'
