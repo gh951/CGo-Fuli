@@ -52261,13 +52261,13 @@ function cgmRenderMessages(code){
     } else if(isMe){
       html += '<div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;">'
         +'<div style="font-size:9px;color:rgba(212,168,67,.5);margin-bottom:2px;">나</div>'
-        +'<div class="cgm-bubble-me">'+(_cgmShieldOn||_cgmTiltOn?cgmNeonWrap(msg.text):cgmEscape(msg.text))+'</div>'
+        +'<div class="cgm-bubble-me">'+(_cgmShieldOn?cgmNeonWrap(msg.text):cgmEscape(msg.text))+'</div>'
         +'<div class="cgm-read" style="text-align:left;">'+time+' '+(msg.read?'✓✓':'✓')+'</div>'
         +'</div>';
     } else {
       html += '<div style="align-self:flex-start;display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;">'
         +'<div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:2px;">'+room.nick+'</div>'
-        +'<div class="cgm-bubble-you">'+(_cgmShieldOn||_cgmTiltOn?cgmNeonWrap(msg.text):cgmEscape(msg.text))+'</div>'
+        +'<div class="cgm-bubble-you">'+(_cgmShieldOn?cgmNeonWrap(msg.text):cgmEscape(msg.text))+'</div>'
         +'<div class="cgm-time">'+time+'</div>'
         +'</div>';
     }
@@ -52583,27 +52583,24 @@ function cgmSejongReply(userText){
     body:JSON.stringify({
       model:'llama-3.3-70b-versatile',
       messages:[
-        {role:'system', content:'당신은 세종대왕입니다. 반드시 한국어로 답하고 (~이옵니다, ~하시겠나이까, ~로다) 말투를 사용하세요. 3문장 이내로 핵심만 답하세요.'},
+        {role:'system', content:'너는 CGO 메신저의 AI 파트너 세종이야. 한국어로 짧고 명확하게 답해. 고풍스러운 말투 필요없고 그냥 친근하게 답해줘. 오행/역학 질문엔 전문적으로, 일상 질문엔 편하게. 3문장 이내로 핵심만. 이모지 1-2개 사용.'},
         {role:'user', content:q}
       ],
       max_tokens:300,
-      temperature:0.85
+      temperature:0.8
     })
   }).then(function(r){ return r.json(); })
   .then(function(data){
     var reply = '';
-    if(data && data.choices && data.choices[0]){
-      reply = data.choices[0].message && data.choices[0].message.content || '';
-    }
-    if(!reply && data && data.content && data.content[0]){
-      reply = data.content[0].text || '';
-    }
-    if(!reply) reply = '질문을 살펴보았사옵니다. 더 자세히 여쭤주시겠나이까? 🙏';
+    try{
+      reply = data.choices[0].message.content || '';
+    }catch(e){ reply=''; }
+    if(!reply) reply = '다시 한번 말씀해주세요! 🙏';
     loadMsg.text = '👑 세종: ' + reply.trim();
     localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
     cgmRenderMessages(_cgm.currentRoom);
-  }).catch(function(err){
-    loadMsg.text = '👑 세종: 과인이 지금 당장은 답하기 어렵사옵니다. 잠시 후 다시 불러주시겠나이까! 🙏';
+  }).catch(function(){
+    loadMsg.text = '👑 세종: 잠시 후 다시 불러주세요! 🙏';
     localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
     cgmRenderMessages(_cgm.currentRoom);
   });
