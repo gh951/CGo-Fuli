@@ -28161,13 +28161,28 @@ function _cgoVisionShoot(){
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
         max_tokens:3500,temperature:0.85})});
   })
-  .then(function(res){ return res.json(); })  // ② .json() 파싱 버그 수정
+  .then(function(res){ return res.json(); })
   .then(function(data){
     var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    if(!txt){ console.error('[CGO관상] 2단계 응답 없음:', JSON.stringify(data).slice(0,200)); throw new Error('no_content'); }
     var clean=txt.replace(/```json|```/g,'').trim();
-    var mm=clean.match(/\{[\s\S]*\}/);
-    if(!mm) throw new Error('parse');
-    _cgoVisionRenderDeep(JSON.parse(mm[0]),mode);
+    // ── 강화된 JSON 파싱: 잘린 JSON도 복구 시도 ──
+    var result = null;
+    var mm = clean.match(/\{[\s\S]*\}/);
+    if(mm){
+      try { result = JSON.parse(mm[0]); } catch(e){
+        // 잘린 JSON 복구: 열린 중괄호 수만큼 닫기
+        var attempt = mm[0];
+        var opens = (attempt.match(/\{/g)||[]).length;
+        var closes = (attempt.match(/\}/g)||[]).length;
+        attempt += '}'.repeat(Math.max(0, opens-closes));
+        try { result = JSON.parse(attempt); } catch(e2){
+          console.error('[CGO관상] JSON 파싱 실패:', e2.message, txt.slice(0,300));
+        }
+      }
+    }
+    if(!result) throw new Error('parse_failed');
+    _cgoVisionRenderDeep(result, mode);
   })
   .catch(function(){
     var ohK2={목:'木',화:'火',토:'土',금:'金',수:'水'};
@@ -28190,7 +28205,10 @@ function _cgoVisionShoot(){
                입:'언변이 뛰어납니다.',턱:'의지력이 강합니다.',눈썹:'형제운이 좋습니다.',인중:'자녀운이 안정적입니다.'},
         giSaek:'현재 기색이 안정적입니다. '+oh+' 오행 에너지가 활성화되어 있습니다.',
         manSeLi:'일간 '+dGan+'('+oh+'·'+ohK2[oh]+') 기운이 오늘 좋은 흐름을 만들고 있습니다. 적극적으로 행동하기 좋은 날입니다.',
-        today:'오늘 '+name+'님께는 '+oh+' 오행 방향이 행운을 가져다줍니다. 긍정적인 마음으로 하루를 시작하세요.'}
+        today:'오늘 '+name+'님께는 '+oh+' 오행 방향이 행운을 가져다줍니다. 긍정적인 마음으로 하루를 시작하세요.',
+        timeline:{past:'얼굴에는 살아온 시간의 흔적이 담겨 있습니다. 지나온 경험들이 지금의 '+name+'님을 만들었습니다.',present:'현재 '+oh+' 오행 에너지가 활성화되어 있습니다. 눈빛과 피부색에서 지금의 에너지 상태가 읽힙니다.',future:'삼정의 흐름을 보면 앞으로의 운세가 점차 상승하는 흐름입니다. 꾸준한 노력이 결실을 맺을 시기가 다가오고 있습니다.'},
+        owak:{score:_rs,desc:'얼굴 오악(五嶽)의 균형이 비교적 안정적입니다. 중악(코)을 중심으로 전체적인 조화를 이루고 있으며 '+oh+' 오행 에너지가 균형을 지지하고 있습니다.'},
+        simsang:'상(相)은 마음이 만드는 것입니다. 지금 '+name+'님의 관상에서 가장 발전시킬 수 있는 부분은 마음의 여유와 긍정적 에너지입니다. '+oh+' 오행의 긍정 에너지를 매일 의식적으로 키워가면 1년 안에 얼굴에서 그 변화가 나타납니다.'}
       :{hand_type:['목형木','화형火','토형土','금형金','수형水'][Math.floor(Math.random()*5)],
         hand_type_desc:'카메라 환경으로 인해 상세 분석이 제한되었습니다. 손바닥을 카메라에 가까이 대고 재스캔을 권장합니다.',
         oh_match:'오행 '+oh+'('+ohK2[oh]+')',oh_match_desc:'만세력 일간 '+dGan+' 기운과 손금이 조화롭습니다.',
