@@ -28386,6 +28386,66 @@ function _cgoVisionRenderDeep(p, mode){
     +(p.oh_match_desc?'<div style="font-size:11px;color:rgba(52,211,153,.8);line-height:1.7;margin-top:4px;padding:5px 8px;background:rgba(52,211,153,.05);border-radius:8px;">☯️ '+p.oh_match_desc+'</div>':'')
     +'</div>';
 
+  // ── 운세 6대 카테고리 + 레이더 차트 (하루손금 스타일) ────────
+  (function(){
+    var g=p.gung12||{}, pt=p.parts||{}, jb=p.jangbu||{}, ln=p.lines||{};
+    function _sc(o,k){ return(o[k]&&o[k].score)?o[k].score:(o[k]&&typeof o[k]==='number'?o[k]:0); }
+    function _avg(){ var s=0,c=0; for(var i=0;i<arguments.length;i++){if(arguments[i]>0){s+=arguments[i];c++;}} return c?Math.round(s/c):70; }
+    var cats = isF ? [
+      {nm:'재물운',ico:'💰',color:'#fbbf24',sc:_avg(_sc(g,'재백궁'),_sc(pt,'코'))},
+      {nm:'연애운',ico:'💕',color:'#f472b6',sc:_avg(_sc(g,'처첩궁'),_sc(pt,'입'))},
+      {nm:'건강운',ico:'🌿',color:'#34d399',sc:_avg(_sc(g,'복덕궁'),_sc(jb,'간담'),_sc(jb,'신장'))},
+      {nm:'직업운',ico:'💼',color:'#38bdf8',sc:_avg(_sc(g,'관록궁'),_sc(pt,'이마'))},
+      {nm:'대인운',ico:'🤝',color:'#a78bfa',sc:_avg(_sc(g,'명궁'),_sc(pt,'눈'))},
+      {nm:'수명운',ico:'⏳',color:'#fb923c',sc:_avg(_sc(pt,'인중'),_sc(pt,'턱'),_sc(jb,'심장'))}
+    ] : [
+      {nm:'재물운',ico:'💰',color:'#fbbf24',sc:_avg(_sc(ln,'재물선'),_sc(ln,'운명선'))},
+      {nm:'연애운',ico:'💕',color:'#f472b6',sc:_avg(_sc(ln,'감정선'),_sc(ln,'결혼선'))},
+      {nm:'건강운',ico:'🌿',color:'#34d399',sc:_avg(_sc(ln,'생명선'))},
+      {nm:'직업운',ico:'💼',color:'#38bdf8',sc:_avg(_sc(ln,'태양선'),_sc(ln,'운명선'))},
+      {nm:'지혜운',ico:'🧠',color:'#a78bfa',sc:_avg(_sc(ln,'두뇌선'))},
+      {nm:'활력운',ico:'⚡',color:'#fb923c',sc:_avg(_sc(ln,'생명선'),_sc(ln,'두뇌선'))}
+    ];
+    cats = cats.map(function(c){if(!c.sc||c.sc<30)c.sc=70;return c;});
+
+    // 레이더 차트
+    var n=6,cx=120,cy=115,maxR=82;
+    var angs=cats.map(function(_,i){return(Math.PI*2*i/n)-Math.PI/2;});
+    var grids=[0.25,0.5,0.75,1.0].map(function(r){
+      return '<polygon points="'+angs.map(function(a){return[(cx+maxR*r*Math.cos(a)).toFixed(1),(cy+maxR*r*Math.sin(a)).toFixed(1)].join(',');}).join(' ')+'" fill="none" stroke="rgba(255,255,255,'+(r===1.0?'.15':'.06')+')" stroke-width="1"/>';
+    }).join('');
+    var axes=angs.map(function(a){return '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+maxR*Math.cos(a)).toFixed(1)+'" y2="'+(cy+maxR*Math.sin(a)).toFixed(1)+'" stroke="rgba(255,255,255,.1)" stroke-width="1"/>';}).join('');
+    var dataPts=cats.map(function(c,i){var r=maxR*c.sc/100;return[(cx+r*Math.cos(angs[i])).toFixed(1),(cy+r*Math.sin(angs[i])).toFixed(1)].join(',');}).join(' ');
+    var dots=cats.map(function(c,i){var r=maxR*c.sc/100;return '<circle cx="'+(cx+r*Math.cos(angs[i])).toFixed(1)+'" cy="'+(cy+r*Math.sin(angs[i])).toFixed(1)+'" r="3.5" fill="'+c.color+'" stroke="rgba(0,0,0,.3)" stroke-width="1"/>';}).join('');
+    var lbls=cats.map(function(c,i){
+      var lr=maxR+24;
+      return '<text x="'+(cx+lr*Math.cos(angs[i])).toFixed(1)+'" y="'+(cy+lr*Math.sin(angs[i])).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="rgba(240,230,200,.75)">'+c.ico+' '+c.nm+'</text>';
+    }).join('');
+    var radarSvg='<svg viewBox="0 0 240 234" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:260px;display:block;margin:0 auto;">'+grids+axes+'<polygon points="'+dataPts+'" fill="rgba('+colorRgb+',.15)" stroke="'+color+'" stroke-width="2"/>'+dots+lbls+'</svg>';
+
+    function _stars(sc){var s=Math.round(sc/20);return'⭐'.repeat(s)+'☆'.repeat(5-s);}
+
+    h+='<div style="background:linear-gradient(135deg,rgba('+colorRgb+',.07),rgba('+colorRgb+',.03));border:1px solid rgba('+colorRgb+',.25);border-radius:14px;padding:14px;margin-bottom:12px;">'
+      +'<div style="font-size:12px;font-weight:900;color:'+color+';letter-spacing:.06em;margin-bottom:12px;text-align:center;">📊 6대 운세 종합 레이더 분석</div>'
+      +radarSvg
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px;">'
+      +cats.map(function(c){
+        var gc=c.sc>=80?'#34d399':c.sc>=65?'#fbbf24':'#f87171';
+        var filled=Math.round(c.sc/20), empty=5-filled;
+        return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 11px;">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
+          +'<span style="font-size:12px;font-weight:700;color:'+c.color+';">'+c.ico+' '+c.nm+'</span>'
+          +'<span style="font-size:14px;font-weight:900;color:'+gc+';">'+c.sc+'</span>'
+          +'</div>'
+          +'<div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-bottom:5px;">'
+          +'<div style="height:100%;width:'+c.sc+'%;background:linear-gradient(90deg,'+c.color+'aa,'+c.color+');border-radius:3px;transition:width 1.2s ease;"></div>'
+          +'</div>'
+          +'<div style="font-size:10px;letter-spacing:1px;">'+('⭐'.repeat(filled)+'☆'.repeat(empty))+'</div>'
+          +'</div>';
+      }).join('')
+      +'</div></div>';
+  })();
+
   // 관상 12궁 / 손금 7대선
   var secs = isF?p.gung12:p.lines;
   if(secs){
