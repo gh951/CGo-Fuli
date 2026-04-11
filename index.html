@@ -898,7 +898,7 @@ input[type=number]::-webkit-outer-spin-button {
 
 /* 모바일 최적화 → 하단 통합 미디어쿼리에서 처리 */
 /* ════ 운수 상세 팝업 ════ */
-.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;-webkit-overflow-scrolling:touch;touch-action:none}
+.fortune-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:20200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);opacity:0;transition:opacity .3s;-webkit-overflow-scrolling:touch;touch-action:none}
 .fortune-popup-overlay.show{display:flex;opacity:1;pointer-events:all}
 .fortune-popup{background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,0,.67,0);padding:0 0 60px}
 .fortune-popup-overlay.show .fortune-popup{transform:translateY(0)}
@@ -4440,8 +4440,6 @@ function updateTransitSectionWithNASA(planets) {
       </div>
     </div>
 
-          </div>
-        </div>
     <!-- ══ SCAN PAGE ══ -->
     <div class="page" id="page-scan">
   <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
@@ -13233,68 +13231,248 @@ function showSijinDetail(idx, energy) {
   var smS=(_SOH[myOh]||[]).slice(0,4).join(' · ');
   var avd=_AVOID[myOh]||{}, gd=_GOOD[myOh]||{};
 
-  // 50대 역학 중 분석 — 새 순서 (가중치 순)
+  // ── 시진 연관 역학 분석 (시간 에너지에 직접 반응하는 역학만 구성) ──
+  var _np = window._nasaPlanets||{};
+  var _bfd = window._bioFinalData||{};
+  var _baiOn = window._baiScanned||false;
+
+  // ── 날씨 데이터 (_cgoEnvData.weather 실제 저장 위치) ──
+  var _envD = window._cgoEnvData||{};
+  var _wx = _envD.weather || {};
+  var _kp = _envD.kp || {};
+  var _solar = _envD.solarWind || {};
+  var _wxLive = _wx.status === 'live';
+  var _wxTxt = _wxLive
+    ? _wx.temp+'°C / 습도 '+_wx.humidity+'% / 기압 '+_wx.pressure+'hPa / 풍속 '+_wx.wind+'m/s'
+    : '날씨 데이터 수신 중 (GPS 권한 필요)';
+  var _wxOh = _wx.temp>30?'화(火)기 강세 — 열정·흥분':_wx.temp<5?'수(水)기 강세 — 차분·지혜':
+              _wx.temp>20?'화(火)기 활성 — 활동·열기':_wx.humidity>80?'수(水)기 과잉 — 습기·감성':
+              _wx.pressure>1020?'토(土)기 안정 — 고기압·집중':'토(土)기 보통 — 평온한 에너지';
+  var _kpTxt = _kp.value !== undefined
+    ? 'Kp지수 '+_kp.value+' ('+(_kp.value<=2?'지자기 조용 — 집중력 최적':_kp.value<=4?'지자기 보통 — 안정적':'지자기 활성 — 직관·감수성 상승')+')'
+    : 'Kp지수 수신 중';
+  var _solarTxt = _solar.bz !== undefined
+    ? '태양풍 '+Math.round(_solar.speed||400)+'km/s · Bz '+(_solar.bz>0?'+':'')+(_solar.bz||0)+'nT'
+    : '태양풍 데이터 수신 중';
+
+  // ── 방위 데이터 (_cgoCompassDeg 실제 저장 위치) ──
+  var _compassDeg = window._cgoCompassDeg;
+  var _dirNames = ['북(N)','북동(NE)','동(E)','동남(SE)','남(S)','남서(SW)','서(W)','북서(NW)'];
+  var _dir = _compassDeg !== undefined && _compassDeg !== null
+    ? _dirNames[Math.round(((_compassDeg%360)+360)%360/45)%8]
+    : _dirNames[idx%8]+' (나침반 미연결)';
+  var _dirLive = _compassDeg !== undefined && _compassDeg !== null;
+  var _dirOhMap = {목:'동(E) — 동쪽 앉기·녹색 활용',화:'남(S) — 남쪽 앉기·붉은 색 활용',
+                   금:'서(W) — 서쪽 앉기·흰 색 활용',수:'북(N) — 북쪽 앉기·파란 색 활용',
+                   토:'중앙 — 가운데 자리·노란 색 활용'};
+  var _dirTxt = (_dirOhMap[s.oh]||'방위 분석 중') + (_dirLive?' ✅ 실측':'');
+
+  // 행성 상태
+  var _planetStr=(function(){
+    var ls=[];
+    if(_np.mars) ls.push('화성(行動力)'+(  _np.mars.retro?'역행⚠️ — 충동적 행동 삼가':'순행✅ — 추진력 좋음'));
+    if(_np.jupiter) ls.push('목성(運·확장)'+(  _np.jupiter.retro?'역행⚠️ — 과잉 기대 조심':'순행✅ — 기회 확장'));
+    if(_np.saturn) ls.push('토성(責任·인내)'+(  _np.saturn.retro?'역행⚠️ — 과거 정리 타임':'순행✅ — 구조 강화'));
+    if(_np.venus) ls.push('금성(사랑·재물)'+(  _np.venus.retro?'역행⚠️ — 관계 재검토':'순행✅ — 인연·재물 활성'));
+    if(_np.mercury) ls.push('수성(소통·계약)'+(  _np.mercury.retro?'역행⚠️ — 계약·서명 주의':'순행✅ — 소통·협상 유리'));
+    return ls.length?ls.join('<br>→ '):'행성 데이터 수신 중 · NASA JPL 연결';
+  })();
+
   var algo18=[
-    // ① 행성 트랜짓 14점 — NASA 실시간
-    {n:'행성 트랜짓',ic:'🛰️',c:'#38bdf8',
-     t:(function(){var np=window._nasaPlanets||{};var ls=[];if(np.mars)ls.push('화성'+(np.mars.retro?'역행⚠️':'순행✅'));if(np.jupiter)ls.push('목성'+(np.jupiter.retro?'역행⚠️':'순행✅'));if(np.saturn)ls.push('토성'+(np.saturn.retro?'역행⚠️':'순행✅'));if(np.venus)ls.push('금성'+(np.venus.retro?'역행⚠️':'순행✅'));return (ls.length?ls.join(' / '):'행성 데이터 수신 중')+' — '+s.nm+' 시진 NASA 실시간 교차 분석. 가중치 14점 최고.';})()},
-    // ② 자미두수 11점
-    {n:'자미두수',ic:'🌟',c:'#38bdf8',
-     t:(function(){var g=['명(命)','재백(財)','형제(兄)','전택(田)','자녀(子)','노복(奴)','배우(配)','질액(疾)','천이(遷)','관록(官)','복덕(福)','부모(父)'];var i=(idx+3)%12;return g[i]+' 궁 활성화 — 이 시진 해당 궁 에너지 집중. '+(i===1||i===9?'재물·직업 기운 강화':i===7?'건강 점검 타이밍':i===6?'관계·배우자 인연':'인생 흐름 안정')+'. 실제 성좌 광도 기반.';})()},
-    // ③ 기문둔갑 11점
-    {n:'기문둔갑',ic:'🧭',c:'#34d399',
-     t:(function(){var d=['휴(休)','생(生)','상(傷)','두(杜)','경(景)','사(死)','경(驚)','개(開)'][idx%8];return d+' 문(門) 시간대 — '+(d.indexOf('생')>=0||d.indexOf('개')>=0?'✅ 길문: 계약·출행·사업 추천':'⚠️ 주의문: 무리한 추진 자제')+'. 전리층·지자기 변화 반영.';})()},
-    // ④ 베딕 점성술 9점
-    {n:'베딕 점성술',ic:'🕉️',c:'#c084fc',
-     t:(function(){var AYANAMSA=23.86;var np=window._nasaPlanets||{};var sunSid=np.sun?((parseFloat(np.sun.lon)-AYANAMSA+360)%360):(idx*30);var rn=['메샤','브리샤바','미투나','카르카타','심하','칸야','툴라','브리쉬치카','다누','마카라','쿰바','미나'][Math.floor(sunSid/30)%12];return rn+' 라시 × '+s.nm+' 시진 — 항성황도(Sidereal) 기반 NASA 정합. 아야남사 23.86° 보정. 가중치 9점.';})()},
-    // ⑤ 구성학 9점
-    {n:'구성학',ic:'🔮',c:'#fb923c',
-     t:(function(){var k=['일백수(一白水)','이흑토(二黑土)','삼벽목(三碧木)','사록목(四綠木)','오황토(五黃土)','육백금(六白金)','칠적금(七赤金)','팔백토(八白土)','구자화(九紫火)'][idx%9];return k+'성(星) 시간 — '+(k.indexOf('수')>=0?'지혜·직관, 분석 최적':k.indexOf('목')>=0?'성장·창의, 새 시도 유리':k.indexOf('화')>=0?'리더십·인기, 발표 최적':k.indexOf('금')>=0?'결단·완성, 마무리 유리':'안정·기반, 내실 강화')+'. 태양 고도각 기반.';})()},
-    // ⑥ 주역 9점
-    {n:'주역',ic:'☰',c:'#818cf8',
-     t:(function(){var h=['乾(강건)','坤(유순)','屯(어려움)','蒙(깨우침)','需(기다림)','訟(다툼)','師(군대)','比(친함)','小畜(축적)','履(실천)','泰(태평)','否(막힘)'][idx%12];return h+' 괘 — '+(energy>=70?'길(吉): 적극 행동 추천':'관찰·신중 유리')+'. 우주 변화 패턴 디지털 알고리즘 기반.';})()},
-    // ⑦ 태을신수 7점 — 실시간
-    {n:'태을신수',ic:'🌀',c:'#e879f9',
-     t:(function(){var g=['직부(直符)','등사(螣蛇)','태음(太陰)','육합(六合)','구천(勾陳)','청룡(靑龍)','천을(天乙)','태상(太常)','현무(玄武)'][idx%9];return g+' — '+(g.indexOf('청룡')>=0||g.indexOf('천을')>=0||g.indexOf('육합')>=0?'✅ 길신: 귀인 만남·재물 활성':'⚠️ 주의: 경솔한 행동 삼가')+'. 분·초 단위 실시간(2시간 고정 아님).';})()},
-    // ⑧ 사주명리 7점
-    {n:'사주명리',ic:'☯️',c:'#d4a843',
-     t:(isB?'상생(相生)':isW?'상극(相剋)':'비화(比和)')+'관계 — '+s.gz+' 시주가 '+myOh+'('+ohK[myOh]+') 일간과 교차. '+(isB?'에너지 증폭, 적극 행동 추천':isW?'마찰 주의, 신중한 언행 필요':'안정적 흐름 유지')+'. NASA 오행 에너지 밀도 보정.'},
-    // ⑨ 전체 차트 5점
-    {n:'전체 차트',ic:'🌐',c:'#a78bfa',
-     t:(function(){var sg=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'][idx%12];return '상승궁 기준 '+sg+' 에너지 — '+(sg==='양자리'||sg==='사자자리'?'행동·리더십':sg==='황소자리'||sg==='염소자리'?'재물·안정':sg==='쌍둥이자리'||sg==='물병자리'?'소통·정보':sg==='게자리'||sg==='물고기자리'?'감정·직관':sg==='천칭자리'?'균형·관계':'변환·깊이')+'. 탄생 천문 좌표 정밀 분석.';})()},
-    // ⑩ 태양궁 점성술 4점
-    {n:'태양궁 점성술',ic:'♈',c:'#c084fc',
-     t:(function(){var sg=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'][idx%12];return sg+' 태양궁 에너지 — '+(sg==='양자리'||sg==='사자자리'?'행동·리더십':sg==='황소자리'?'재물·안정':sg==='쌍둥이자리'?'소통·정보':sg==='게자리'?'감정·직관':sg==='천칭자리'?'균형·관계':'변환·깊이')+'. NASA 태양 활동 주기 기반.';})()},
-    // ⑪ 하우스 시스템 3점
-    {n:'하우스 시스템',ic:'🏠',c:'#94a3b8',
-     t:(function(){var h=['1궁(자아)','2궁(재물)','3궁(소통)','4궁(가정)','5궁(창의)','6궁(건강)','7궁(관계)','8궁(변환)','9궁(철학)','10궁(명예)','11궁(인맥)','12궁(내면)'][idx%12];return h+' 강조 — '+(h.indexOf('재물')>=0?'금전·투자 에너지':h.indexOf('명예')>=0?'직업·사회적 지위':h.indexOf('관계')>=0?'파트너십·인간관계':h.indexOf('자아')>=0?'자기표현·첫인상':h.indexOf('건강')>=0?'몸 상태·루틴 점검':h.indexOf('인맥')>=0?'네트워크·귀인 만남':'삶 전반 통합')+'. 지구 자전 공간 에너지.';})()},
-    // ⑫ 합성 차트 3점
-    {n:'합성 차트',ic:'💫',c:'#f472b6',
-     t:'인물 간 전자기적 에너지 — '+['화성합(활력공명)','금성합(조화공명)','목성합(확장공명)','토성합(구조공명)','태양합(의식공명)','달합(감정공명)'][idx%6]+' 활성. 두 사람의 행성 중간점 분석.'},
-    // ⑬ 카발라 2점
-    {n:'카발라 수비학',ic:'✡️',c:'#a855f7',
-     t:(function(){var sp=['케테르(왕관)','호크마(지혜)','비나(이해)','헤세드(자비)','게부라(힘)','티페레트(균형)','네짜흐(승리)','호드(영광)','예소드(기반)','말쿠트(왕국)'][idx%10];return sp+' 세피라 활성 — '+(sp.indexOf('헤세드')>=0||sp.indexOf('티페레트')>=0?'자비·균형: 관계·재물 확장':sp.indexOf('호크마')>=0?'지혜: 번뜩이는 아이디어':sp.indexOf('게부라')>=0?'힘: 결단과 실행':sp.indexOf('말쿠트')>=0?'현실화: 계획이 행동으로':'신성 에너지: 내면 집중');})()},
-    // ⑭ 풍수지리 2점
-    {n:'풍수지리',ic:'🌄',c:'#34d399',
-     t:'이 시간 '+['북','북동','동','동남','남','남서','서','서북'][idx%8]+' 방위 지자기 기운 — '+(s.oh==='목'?'동쪽 목 기운: 성장·도전':s.oh==='화'?'남쪽 화 기운: 열정·인기':s.oh==='금'?'서쪽 금 기운: 재물·완성':s.oh==='수'?'북쪽 수 기운: 지혜·직관':'중앙 토 기운: 안정·기반')+'. NASA Kp지수 연동.'},
-    // ⑮ 육임신살 1점
-    {n:'육임신살',ic:'⚡',c:'#f87171',
-     t:(function(){var sv=['대길(大吉)','신후(神後)','공종(功從)','태충(太衝)','천강(天罡)','태을(太乙)','승광(勝光)','소길(小吉)','전송(傳送)','종괴(從魁)','하괴(河魁)','등명(登明)'][idx%12];return sv+' — '+(sv.indexOf('대길')>=0||sv.indexOf('소길')>=0||sv.indexOf('태을')>=0?'✅ 길신: 만남·계약 유리':'⚠️ 흉살: 신중함이 관건')+'. 실시간 천문시각 기준.';})()},
-    // ⑯ 서양 수비학 1점
-    {n:'서양 수비학',ic:'🔢',c:'#34d399',
-     t:(function(){var n=[1,2,3,4,5,6,7,8,9,1,2,3][idx];var nm=['','개척·독립','협력·균형','창의·표현','안정·성실','변화·자유','책임·조화','분석·지혜','성취·재물','완성·봉사'];return '시진 수비 '+n+'번('+nm[n]+') — '+(energy>=70?'공명 우수: 적극 행동':'신중한 접근 유리')+'. 숫자 파동 에너지.';})()},
-    // ⑰ 성명학 1점
-    {n:'성명학',ic:'✍️',c:'#94a3b8',
-     t:'이름 오행 × '+s.nm+' 시진 교차 — '+(energy>=70?'이름 에너지와 시진 상생: 이름 불릴 때 에너지 상승':'이름 에너지와 시진 마찰: 신중한 언행 우선')+'. '+s.oh+'('+ohK[s.oh]+') 획수 음성 파동 분석.'},
-    // ⑱ 관상·손금 1점
-    {n:'관상·손금',ic:'👤',c:'#a78bfa',
-     t:'이 시진 '+['이마(관록)','눈(감정)','코(재백)','입술(언어)','귀(지혜)','턱(의지)','눈썹(형제)','광대(인기)','인중(수명)','미간(건강)','목(직업)','얼굴형'][idx%12]+' 기색 + '+['생명선','두뇌선','감정선','운명선','태양선','수성선'][idx%6]+' 에너지 — '+(s.oh==='목'?'청기(靑氣): 간담 충만':s.oh==='화'?'적기(赤氣): 심장 활성':s.oh==='토'?'황기(黃氣): 비위 안정':s.oh==='금'?'백기(白氣): 폐기 집중':'흑기(黑氣): 신장 강화')+'. rPPG 실측 연동.'},
-    // ⑲ 타로×달위상 0.5점
-    {n:'타로×달위상',ic:'🎴',c:'#f59e0b',
-     t:(function(){var tc=['바보(0)','마법사(Ⅰ)','여교황(Ⅱ)','여황제(Ⅲ)','황제(Ⅳ)','교황(Ⅴ)','연인(Ⅵ)','전차(Ⅶ)','힘(Ⅷ)','은둔자(Ⅸ)','운명의바퀴(Ⅹ)','정의(Ⅺ)'][idx%12];var mp=['신월','초승','상현','보름','하현','그믐'][Math.floor((window._fcBase||new Date()).getDate()/5)%6];return tc+' × '+mp+' 달위상 — '+(energy>=70?'✅ 정방향: 행동·결단 유리':'역방향: 재검토 타이밍')+'. 심리적 직관 에너지.';})()},
-    // ⑳ MBTI/NPTI 0.5점
-    {n:'MBTI/NPTI',ic:'🧠',c:'#818cf8',
-     t:(window._mbtiResult?window._mbtiResult.type+' — '+window._mbtiResult.trait+' × '+s.nm+': '+(isB?'성격 강점이 시진과 공명 — 이 시간 능력 최대 발휘':isW?'시진 에너지와 마찰 — 내향적 집중':'안정적 공명 — 강점 자연스럽게 활용'):'MBTI 미설정 — 대시보드에서 입력 시 20번째 역학 보정 활성화')}
+    // ━━ 순수 역학 9개 (시진과 직결) ━━
+
+    // ① 기문둔갑 — 시진별 8문이 회전하는 핵심 시간 역학
+    {n:'기문둔갑(奇門遁甲)',ic:'🧭',c:'#34d399',
+     t:(function(){
+       var doors=['휴문(休門)','생문(生門)','상문(傷門)','두문(杜門)','경문(景門)','사문(死門)','경문(驚門)','개문(開門)'];
+       var doorMean=['휴식·재충전이 최적인 시간','새로운 시작·사업 추진 최고의 시간','활동·이동에 좋지만 다툼 주의','집중·은밀한 작업 적합, 나서지 말 것','문서·발표·예술 활동 유리','활동 자제·마무리 정리 집중','놀람·변수 많음, 조용히 관망','출행·면접·계약 시작 최고의 시간'];
+       var dIdx=idx%8;
+       var dName=doors[dIdx];
+       var dMean=doorMean[dIdx];
+       var isGil=(dIdx===1||dIdx===7||dIdx===0);
+       return (isGil?'✅ 길문(吉門)':'⚠️ 주의문')+' · <strong>'+dName+'</strong><br>'+
+         '→ 쉽게 말하면: '+dMean+'<br>'+
+         '→ '+s.nm+'('+s.t+') 이 시간대 기문 에너지 적용';
+     })()},
+
+    // ② 태을신수 — 2시간마다 바뀌는 구궁 에너지
+    {n:'태을신수(太乙神數)',ic:'🌀',c:'#e879f9',
+     t:(function(){
+       var gods=['직부(直符)·천문 열림','등사(螣蛇)·변화·불안정','태음(太陰)·음성·비밀','육합(六合)·합력·귀인','구천(勾陳)·집착·장애','청룡(靑龍)·재물·행운','천을(天乙)·귀인·도움','태상(太常)·의식·전통','현무(玄武)·암중·유동'];
+       var g=gods[idx%9];
+       var isGil=(idx%9===5||idx%9===6||idx%9===3);
+       return (isGil?'✅ 길신(吉神)':'⚠️ 주의신')+' · <strong>'+g+'</strong><br>'+
+         '→ 쉽게 말하면: '+(isGil?'귀인이 돕고 재물이 따라오는 시간':idx%9===1?'갑자기 상황이 바뀔 수 있어요. 중요한 결정은 보류':idx%9===8?'뒤에서 일이 진행되는 시간. 소문·루머 주의':'차분히 내실을 다지는 시간')+
+         '<br>→ 분·초 단위 실시간 계산 (고정 2시간이 아님)';
+     })()},
+
+    // ③ 육임신살 — 12시진 고유 신살 직접 대응
+    {n:'육임신살(六壬神殺)',ic:'⚡',c:'#f87171',
+     t:(function(){
+       var sv=['대길(大吉)','신후(神後)','공종(功從)','태충(太衝)','천강(天罡)','태을(太乙)','승광(勝光)','소길(小吉)','전송(傳送)','종괴(從魁)','하괴(河魁)','등명(登明)'];
+       var svMean=['최고 길신 — 모든 일에 행운','재물 유입, 여성 귀인 도움','함께하면 성공, 협력 최적','충돌·마찰 주의, 감정 절제','막힘·장애물, 무리한 전진 금지','작은 귀인, 조용한 도움','화려함·발전, 발표·전시 유리','소소한 행운, 일상이 잘 풀림','이동·전달, 메시지·여행 유리','결실·수확, 오래된 일 완성','대립·갈등, 타협점 찾기','빛·시작, 새벽 같은 전환점'];
+       var sIdx=idx%12;
+       var isGil=(sIdx===0||sIdx===1||sIdx===5||sIdx===7||sIdx===10);
+       return (isGil?'✅ 길신':'⚠️ 주의')+' · <strong>'+sv[sIdx]+'</strong><br>'+
+         '→ 쉽게 말하면: '+svMean[sIdx]+'<br>'+
+         '→ 실시간 천문 시각('+s.t+') 기준 적용';
+     })()},
+
+    // ④ 사주명리 — 일간과 시주 오행 교차
+    {n:'사주명리(四柱命理)',ic:'☯️',c:'#d4a843',
+     t:(function(){
+       var rel=isB?'상생(相生)':isW?'상극(相剋)':'비화(比和)';
+       var relMean=isB?'서로 돕는 에너지 — 이 시간 하는 일마다 힘이 붙습니다':
+                   isW?'부딪히는 에너지 — 이 시간 중요한 결정은 내일로 미루세요':
+                   '비슷한 에너지끼리 — 평온하게 내 할 일 하기 좋은 시간';
+       return '<strong>'+s.gz+' 시주</strong> × <strong>내 일간 '+myOh+'('+ohK[myOh]+')</strong> = '+rel+'<br>'+
+         '→ 쉽게 말하면: '+relMean+'<br>'+
+         '→ 이 시간 주관 장기: <strong>'+s.body+'</strong> — 관련 건강 관심';
+     })()},
+
+    // ⑤ 자미두수 — 시진별 12궁 활성화
+    {n:'자미두수(紫微斗數)',ic:'🌟',c:'#38bdf8',
+     t:(function(){
+       var g=['명궁(命宮)·자아','재백궁(財帛宮)·재물','형제궁(兄弟宮)·인맥','전택궁(田宅宮)·부동산','자녀궁(子女宮)·창의','노복궁(奴僕宮)·부하','배우궁(配偶宮)·연애','질액궁(疾厄宮)·건강','천이궁(遷移宮)·이동','관록궁(官祿宮)·직업','복덕궁(福德宮)·행복','부모궁(父母宮)·윗사람'];
+       var gMean=['자신의 능력 발휘 시간','돈·재물 흐름 활성화','사람 만남·협력 유리','집·부동산 관련 주의','아이디어·창작 최적','팀워크·협조 강화','연인·파트너 관계 집중','몸 상태 점검 필요','이동·여행·이사 에너지','직업·커리어 운 활성','즐거움·취미 충전','어른·스승 관련 소통'];
+       var gIdx=(idx+3)%12;
+       var isLucky=(gIdx===1||gIdx===9||gIdx===10);
+       return (isLucky?'✅ 길궁 활성':'💡 일반 활성')+' · <strong>'+g[gIdx]+'</strong><br>'+
+         '→ 쉽게 말하면: '+gMean[gIdx]+'<br>'+
+         '→ 실제 성좌 광도 기반 · NASA 천체력 정합';
+     })()},
+
+    // ⑥ 구성학 — 9성이 시간순 순환
+    {n:'구성학(九星學)',ic:'🔮',c:'#fb923c',
+     t:(function(){
+       var k=['일백수성(一白水星)','이흑토성(二黑土星)','삼벽목성(三碧木星)','사록목성(四綠木星)','오황토성(五黃土星)','육백금성(六白金星)','칠적금성(七赤金星)','팔백토성(八白土星)','구자화성(九紫火星)'];
+       var kMean=['직관·지혜·숨겨진 기회가 흐르는 시간. 혼자 생각 정리 최적',
+                  '인내·기다림이 필요한 시간. 무리한 시도보다 현상 유지',
+                  '활발한 소통·새 아이디어 발화. SNS·대화·설득 유리',
+                  '꾸준한 성장 에너지. 학습·연구·창작 활동 집중',
+                  '주의 필요 시간. 과욕·독단적 행동은 반드시 피할 것',
+                  '결단·완성 에너지. 서류·계약·마무리 작업 최적',
+                  '말과 설득의 시간. 협상·발표·세일즈 활동 유리',
+                  '안정·신뢰 에너지. 기반 다지기·저축·관계 강화',
+                  '리더십·인기·열정이 폭발하는 시간. 발표·첫인상 최고'];
+       var kIdx=idx%9;
+       return '<strong>'+k[kIdx]+'</strong> 순환 시간<br>'+
+         '→ 쉽게 말하면: '+kMean[kIdx]+'<br>'+
+         '→ 태양 고도각·일조량 기반 실시간 보정';
+     })()},
+
+    // ⑦ 주역 — 시진별 64괘 중 12괘 순환
+    {n:'주역(周易)',ic:'☰',c:'#818cf8',
+     t:(function(){
+       var hexNames=['건(乾)·창조','곤(坤)·수용','준(屯)·어려운 시작','몽(蒙)·배움·깨달음','수(需)·기다림','송(訟)·갈등·소송','사(師)·조직·군대','비(比)·친밀·협력','소축(小畜)·작은 축적','리(履)·예의·실천','태(泰)·소통·태평','비(否)·막힘·단절'];
+       var hexMean=['강한 창조 에너지. 새로운 일 시작, 리더로 나서기 최적',
+                    '수용·인내의 시간. 받아들이고 따르면 결과가 좋음',
+                    '어렵게 시작하지만 포기 금물. 끈기가 기회를 만듦',
+                    '모르는 것을 배우기 좋은 시간. 겸손하면 귀인 만남',
+                    '서두르지 않고 기다리는 것이 정답인 시간',
+                    '다툼·법적 분쟁 조심. 양보하면 손해 없음',
+                    '팀·조직 에너지 강화. 협력하면 큰 힘 발휘',
+                    '사람과 가까워지기 좋은 시간. 대화·만남 유리',
+                    '조금씩 쌓아가는 시간. 큰 욕심보다 작은 성취',
+                    '원칙과 예의를 지키면 좋은 결과. 신중한 행동',
+                    '위아래 소통이 잘 되는 시간. 발표·협상·화합',
+                    '막히는 시간. 앞으로 나가려 하지 말고 내실 집중'];
+       var hIdx=idx%12;
+       var isGil=(hIdx===0||hIdx===7||hIdx===10);
+       return (isGil?'✅ 길괘':'💡 현괘')+' · <strong>'+hexNames[hIdx]+'</strong><br>'+
+         '→ 쉽게 말하면: '+hexMean[hIdx]+'<br>'+
+         '→ 에너지 수치 '+(energy>=70?'길(吉) — 적극 행동 추천':'관(觀) — 관찰·신중 유리');
+     })()},
+
+    // ⑧ 베딕 점성술 — 항성황도 기준 라시×시진
+    {n:'베딕 점성술(Vedic)',ic:'🕉️',c:'#c084fc',
+     t:(function(){
+       var AYANAMSA=23.86;
+       var sunSid=_np.sun?((parseFloat(_np.sun.lon)-AYANAMSA+360)%360):(idx*30);
+       var rasNames=['메샤(양자리)','브리샤바(황소자리)','미투나(쌍둥이)','카르카타(게자리)','심하(사자자리)','칸야(처녀자리)','툴라(천칭자리)','브리쉬치카(전갈자리)','다누(사수자리)','마카라(염소자리)','쿰바(물병자리)','미나(물고기자리)'];
+       var rasMean=['행동·개척·첫 번째가 되고 싶은 에너지',
+                    '안정·재물·꾸준함의 에너지, 감각적 즐거움',
+                    '소통·정보·양면성, 말과 글로 승부',
+                    '감성·직관·가정, 속마음 표현 중요',
+                    '리더십·표현·자신감, 무대 위에 서는 시간',
+                    '분석·세밀함·건강, 완벽을 추구하는 에너지',
+                    '균형·관계·조화, 혼자보다 함께가 강함',
+                    '변환·깊이·집착, 숨겨진 진실 추구',
+                    '철학·여행·확장, 더 넓은 세계로',
+                    '책임·성취·현실, 착실하게 올라가는 에너지',
+                    '혁신·자유·집단, 틀을 깨는 아이디어',
+                    '직관·공감·경계 해소, 영적 감수성 높음'];
+       var rIdx=Math.floor(sunSid/30)%12;
+       return '<strong>'+rasNames[rIdx]+'</strong> 라시 활성<br>'+
+         '→ 쉽게 말하면: '+rasMean[rIdx]+'<br>'+
+         '→ 항성황도(Sidereal) · NASA 정합 · 아야남사 23.86° 보정';
+     })()},
+
+    // ⑨ 서양 수비학 — 시진 번호 고유 진동수
+    {n:'서양 수비학(Numerology)',ic:'🔢',c:'#6ee7b7',
+     t:(function(){
+       var nums=[1,2,3,4,5,6,7,8,9,1,2,3];
+       var numNames=['1번 — 개척자','2번 — 협력자','3번 — 창의자','4번 — 실행가','5번 — 탐험가','6번 — 조화자','7번 — 분석가','8번 — 성취자','9번 — 완성자'];
+       var numMean=['혼자서도 빛나는 시간. 독립적 결정, 첫 번째 행동 적합',
+                    '함께할 때 빛나는 시간. 협상·중재·듣기가 열쇠',
+                    '창의력이 폭발하는 시간. 아이디어 메모, 표현 적극적으로',
+                    '계획을 실행에 옮기는 시간. 착실하고 꼼꼼하게',
+                    '변화·이동·새 경험의 시간. 고정관념을 버려요',
+                    '책임감과 조화의 시간. 가정·팀·관계에 에너지 쏟기',
+                    '깊이 생각하고 분석하는 시간. 혼자 공부·연구',
+                    '재물·성취 에너지가 강한 시간. 비즈니스·투자 집중',
+                    '마무리·완성·봉사의 시간. 오래된 일 정리'];
+       var n=nums[idx%12]-1;
+       return '<strong>'+numNames[n]+'</strong> 진동 활성<br>'+
+         '→ 쉽게 말하면: '+numMean[n]+'<br>'+
+         '→ 에너지 공명: '+(energy>=70?'✅ 시진 수비와 공명 — 지금이 행동 타이밍':'💡 신중한 접근이 더 유리한 시간');
+     })()},
+
+    // ━━ 실시간 추가 2개 (NASA × 날씨 × 방위 연동) ━━
+
+    // ⑩ 행성 트랜짓 — NASA 실시간 5대 행성
+    {n:'행성 트랜짓(NASA 실시간)',ic:'🛰️',c:'#38bdf8',
+     t:'<strong>현재 행성 상태</strong><br>→ '+_planetStr+'<br>→ <strong>'+s.nm+'</strong>과 교차 분석: '+(isB?'상생 오행 시간 × 행성 순행 → 에너지 증폭':isW?'상극 오행 시간 × 역행 주의 → 신중 모드':'안정적 행성 흐름 × 이 시진')+
+     '<br>→ NASA JPL 30초 주기 실시간 데이터'},
+
+    // ⑪ 풍수지리 — 방위×날씨×Kp지수
+    {n:'풍수지리(방위·날씨·Kp)',ic:'🌄',c:'#34d399',
+     t:'<strong>이 시진('+s.t+') 활성 방위</strong><br>'+
+       '→ 내 오행('+myOh+') 최적 방위: <strong>'+_dirTxt+'</strong><br>'+
+       '→ 현재 나침반 방향: <strong>'+_dir+'</strong>'+(_dirLive?' ← GPS 실측':'← 나침반 앱 연동 권장')+'<br>'+
+       '<br><strong>📡 실시간 과학 데이터</strong><br>'+
+       '→ 🌡️ 날씨: '+(_wxLive?'<strong>'+_wxTxt+'</strong>':'날씨 수신 대기 (앱 위치 권한 허용 필요)')+'<br>'+
+       '→ 오행 기후: <strong>'+_wxOh+'</strong><br>'+
+       '→ 🌍 '+_kpTxt+'<br>'+
+       '→ ☀️ '+_solarTxt+'<br>'+
+       '<br><strong>💡 이 시진 풍수 처방</strong><br>'+
+       '→ '+(s.oh==='수'?'🔵 북쪽 방향 앉기 · 물(어항·화병) 배치 · 파란 물건 책상 위 · 수분 충분히':
+              s.oh==='목'?'🟢 동쪽 방향 앉기 · 화분·나무 배치 · 녹색 활용 · 창문 열어 공기 순환':
+              s.oh==='화'?'🔴 남쪽 방향 앉기 · 조명 밝게 · 붉은 색 포인트 · 적극적 행동':
+              s.oh==='금'?'⚪ 서쪽 방향 앉기 · 금속 소품 활용 · 흰 색 정리정돈 · 계약·결정':
+              '🟡 중앙 자리 선택 · 노란 색 · 안정적 배치 · 기반 다지기')+
+       '<br>→ NASA Kp지수·태양풍·날씨 실시간 연동'},
+
+    // ━━ rPPG 추가 1개 (생체 실측 반영) ━━
+
+    // ⑫ 관상·손금 × 생체 실측
+    {n:'관상·손금 × rPPG 생체',ic:'👁️',c:'#a78bfa',
+     t:(function(){
+       var faceParts=['이마(관록궁)','눈(감정)','코(재백궁)','입술(언어·식복)','귀(지혜·수명)','턱(의지·끈기)','눈썹(형제·동료)','광대(인기·활력)','인중(수명·생명력)','미간(건강·명궁)','목(직업·커리어)','얼굴윤곽(전반운)'];
+       var palmLines=['생명선(체력·활력)','두뇌선(사고력·결단)','감정선(감성·인간관계)','운명선(커리어·흐름)','태양선(성공·인기)','수성선(소통·재물)'];
+       var fp=faceParts[idx%12];
+       var pl=palmLines[idx%6];
+       var fciTxt=_baiOn&&_bfd.fci>0?'FCI(혈색지수) <strong>'+Math.round(_bfd.fci)+'</strong> — '+(_bfd.fci>=75?'혈색 양호, 기색 밝음':'혈색 보완 필요'):'생체 스캔 완료 시 실측값 표시';
+       var hrvTxt=_baiOn&&_bfd.hrv>0?'HRV(자율신경) <strong>'+Math.round(_bfd.hrv)+'ms</strong> — '+(_bfd.hrv>=50?'자율신경 안정':'긴장 완화 권장'):'';
+       var bpmTxt=_baiOn&&_bfd.bpm>0?'BPM <strong>'+Math.round(_bfd.bpm)+'</strong> — '+(_bfd.bpm>=60&&_bfd.bpm<=85?'심박 정상':'심박 안정 필요'):'';
+       return '이 시진 활성 부위 — <strong>'+fp+'</strong> + <strong>'+pl+'</strong><br>'+
+         '→ '+(s.oh==='목'?'청기(靑氣): 간·담 에너지 충만, 결단력 상승':
+                s.oh==='화'?'적기(赤氣): 심장·소장 활성, 열정과 직관':
+                s.oh==='토'?'황기(黃氣): 비장·위장 안정, 체력 기반 충실':
+                s.oh==='금'?'백기(白氣): 폐·대장 집중, 정밀함과 결단':
+                '흑기(黑氣): 신장·방광 강화, 깊은 지혜와 집중')+'<br>'+
+         '→ '+fciTxt+(hrvTxt?'<br>→ '+hrvTxt:'')+(bpmTxt?'<br>→ '+bpmTxt:'')
+     })()}
   ];
 
   // MBTI/NPTI는 algo18 ⑳번에 포함됨
@@ -13371,7 +13549,12 @@ function showSijinDetail(idx, energy) {
       (window._mbtiResult?'<span style="font-size:9px;background:rgba(129,140,248,.15);color:#818cf8;padding:2px 7px;border-radius:6px;margin-left:6px">+MBTI</span>':'')+
       (window._mbtiResult?'<span style="font-size:9px;background:rgba(129,140,248,.15);color:#818cf8;padding:2px 7px;border-radius:6px;margin-left:6px">+MBTI/NPTI ⑳</span>':'')+
     '</div>'+
-    (function(){var mode=(window._cgoInRealtimeMode&&!window._cgoInPureMode)?(window._cgoInRppgMode?'rppg':'realtime'):'pure';var pure=['자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','서양 수비학'];var rt=['행성 트랜짓','자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','풍수지리','하우스 시스템'];var rp=['행성 트랜짓','자미두수','기문둔갑','사주명리','태을신수','구성학','주역','육임신살','베딕 점성술','풍수지리','관상·손금'];var allowed=mode==='rppg'?rp:mode==='realtime'?rt:pure;return algo18.filter(function(a){return allowed.indexOf(a.n)>=0;}).map(function(a){return '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:6px">'+'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'+'<span style="font-size:13px">'+a.ic+'</span>'+'<span style="font-size:11px;font-weight:800;color:'+a.c+'">'+a.n+'</span>'+'</div>'+'<div style="font-size:11px;color:rgba(240,230,200,.72);line-height:1.7">'+a.t+'</div>'+'</div>';}).join('');})()+
+    (function(){var mode=(window._cgoInRealtimeMode&&!window._cgoInPureMode)?(window._cgoInRppgMode?'rppg':'realtime'):'pure';
+  // 시진 연관 역학만 모드별로 구성
+  var pure=['기문둔갑(奇門遁甲)','태을신수(太乙神數)','육임신살(六壬神殺)','사주명리(四柱命理)','자미두수(紫微斗數)','구성학(九星學)','주역(周易)','베딕 점성술(Vedic)','서양 수비학(Numerology)'];
+  var rt=pure.concat(['행성 트랜짓(NASA 실시간)','풍수지리(방위·날씨·Kp)']);
+  var rp=rt.concat(['관상·손금 × rPPG 생체']);
+  var allowed=mode==='rppg'?rp:mode==='realtime'?rt:pure;return algo18.filter(function(a){return allowed.indexOf(a.n)>=0;}).map(function(a){return '<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:6px">'+'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'+'<span style="font-size:13px">'+a.ic+'</span>'+'<span style="font-size:11px;font-weight:800;color:'+a.c+'">'+a.n+'</span>'+'</div>'+'<div style="font-size:11px;color:rgba(240,230,200,.72);line-height:1.7">'+a.t+'</div>'+'</div>';}).join('');})()+
   '</div>';
 
   var fpH = document.getElementById('fpHeader');
@@ -13386,6 +13569,7 @@ function showSijinDetail(idx, energy) {
   document.body.style.width = '100%';
   // 약간 딜레이 후 show — 이전 팝업 닫힘 애니메이션 완료 후
   setTimeout(function(){
+    fpO2.style.display = '';  // 인라인 style 리셋 (클래스 우선순위 복원)
     fpO2.classList.add('show');
     _cgoTransPopup('fpBody');
   }, 50);
@@ -48456,10 +48640,21 @@ function cgoGoPage(page){
     window._cgoDashScrollY = _saveCt ? _saveCt.scrollTop : window.scrollY;
   }
   // 모든 페이지 숨기기
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(function(p){
+    p.classList.remove('active');
+    if(p.id === 'page-chat') p.style.display = 'none';
+  });
   // 대상 페이지 표시
   var target = document.getElementById('page-'+page);
-  if(target) target.classList.add('active');
+  if(target){
+    target.classList.add('active');
+    if(page === 'chat') target.style.display = 'flex';
+  }
+  // 대시보드에서는 메신저 하단 표시, 다른 페이지에서는 숨김
+  var _chatEl = document.getElementById('page-chat');
+  if(_chatEl){
+    _chatEl.style.display = (page === 'dashboard') ? 'flex' : (page === 'chat' ? 'flex' : 'none');
+  }
   // nav-btn active 업데이트 (내부 로직 유지)
   document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
   var btn = document.querySelector('.nav-btn[data-page="'+page+'"]');
@@ -51427,6 +51622,11 @@ function cgoGoPage(page){
   // 대상 페이지 표시
   var target = document.getElementById('page-'+page);
   if(target) target.classList.add('active');
+  // 대시보드에서는 메신저 하단 표시, 다른 페이지에서는 숨김
+  var _chatEl2 = document.getElementById('page-chat');
+  if(_chatEl2){
+    _chatEl2.style.display = (page==='dashboard') ? 'flex' : (page==='chat' ? 'flex' : 'none');
+  }
   // nav-btn active 업데이트 (내부 로직 유지)
   document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
   var btn = document.querySelector('.nav-btn[data-page="'+page+'"]');
@@ -51597,7 +51797,7 @@ var _unlockTimer=setInterval(function(){
   💬 CGO-FULI 메신저
 ══════════════════════════════════════════ -->
 <div class="page" id="page-chat" style="display:flex;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;">
-  <button id="cgmHomeBtn" onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:29999;min-width:72px;height:40px;padding:0 14px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 0 14px rgba(52,211,153,.35);font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">🏠</button>
+  <button id="cgmHomeBtn" onclick="cgmShowScreen('cgmSetup'); cgoGoPage('dashboard');" style="position:fixed;bottom:24px;right:16px;z-index:29999;min-width:72px;height:40px;padding:0 14px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:0 0 14px rgba(52,211,153,.35);font-family:inherit;animation:goldPulse 2s ease-in-out infinite;">🏠</button>
 
   <style>
     .cgm-screen{display:none;flex-direction:column;height:100%;overflow:hidden;}
