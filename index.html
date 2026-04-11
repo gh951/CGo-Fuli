@@ -52025,24 +52025,49 @@ function cgmGoToNickname(){
   // 정보 입력에서 자동 불러오기
   var name = (document.getElementById('ipName')||{}).value||'';
   var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'';
+  var byEl = document.getElementById('ipBirthY');
+  var by = byEl ? byEl.value : '';
+
+  // ★ 정보 입력 안 됐으면 → 안내 후 대시보드로
+  if(!name || !by){
+    var goBack = confirm('메신저를 사용하려면 먼저 정보 입력이 필요합니다!\n\n대시보드로 이동하여 이름과 생년월일을 입력해주세요 🙏');
+    if(goBack) cgoGoPage('dashboard');
+    return;
+  }
+
   var autoEl = document.getElementById('cgmAutoInfo');
-  if(autoEl) autoEl.textContent = name ? name+' · 오행 '+oh : '정보 입력 후 자동 불러옵니다';
+  if(autoEl) autoEl.textContent = name+' · 오행 '+(oh||'계산중');
 
   var nickEl = document.getElementById('cgmMyNick');
   var ohEl = document.getElementById('cgmMyOh');
-  if(nickEl && name) nickEl.value = name;
+  if(nickEl) nickEl.value = name;
   if(ohEl && oh) ohEl.value = oh;
 
-  // 저장된 프로필 있으면 바로 목록으로
+  // 저장된 프로필 있으면 → 이름/오행 업데이트 후 바로 목록으로
   var saved = localStorage.getItem('cgm_profile');
   if(saved){
     var p = JSON.parse(saved);
     _cgm.myCode = p.code;
-    _cgm.myNick = p.nick;
-    _cgm.myOh = p.oh;
+    // 이름/오행은 항상 최신 정보 입력값으로 업데이트
+    _cgm.myNick = name || p.nick;
+    _cgm.myOh = oh || p.oh;
+    p.nick = _cgm.myNick;
+    p.oh = _cgm.myOh;
+    localStorage.setItem('cgm_profile', JSON.stringify(p));
     cgmEnterList();
     return;
   }
+
+  // 오행 있으면 자동으로 프로필 생성 (닉네임 화면 스킵)
+  if(name && oh){
+    _cgm.myCode = cgmGenCode();
+    _cgm.myNick = name;
+    _cgm.myOh = oh;
+    localStorage.setItem('cgm_profile', JSON.stringify({code:_cgm.myCode, nick:name, oh:oh}));
+    cgmEnterList();
+    return;
+  }
+
   cgmShowScreen('cgmNickname');
 }
 
