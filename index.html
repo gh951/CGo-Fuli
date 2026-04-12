@@ -22101,53 +22101,141 @@ function calcAstro() {
   var _seed=(y*13+m*31+d*7+(lifeNum||5)*11)%1000;
 
   // ============================================================
-  // 18개 시스템 개별 점수 계산
+  // ★ S01~S19 개별 점수 계산 — CGO-FULI 기준서 v1.0 적용
+  // 등급: A=NASA±20 / B=rPPG±15 / C=날씨±10 / D=생일+NASA±8 / E=생일±5
   // ============================================================
 
-  // 01 사주명리 — 오행균형(30) + 일간강도(20) + 지배오행=일간(8) + 마스터(5)
+  // ── 실시간 보정 변수 사전 계산 ────────────────────────────
+  var _np = window._nasaPlanets || {};
+  var _env = window._cgoEnvData || {};
+  var _wx = (_env.weather) || {pressure:1013, humidity:60, temp:15, wind:3};
+  var _kp = (_env.kp && _env.kp.value != null) ? _env.kp.value : 1;
+  var _bz = (_env.solarWind && _env.solarWind.bz != null) ? _env.solarWind.bz : 0;
+  var _compass = (window._cgoCompassDeg != null) ? window._cgoCompassDeg : -1;
+
+  // A등급: NASA 행성 역행/순행 보정 (S06·S03·S13·S16)
+  var _marsRetro   = !!(  _np.mars    &&  _np.mars.retro);
+  var _jupRetro    = !!(  _np.jupiter && _np.jupiter.retro);
+  var _satRetro    = !!(  _np.saturn  &&  _np.saturn.retro);
+  var _mercRetro   = !!(  _np.mercury && _np.mercury.retro);
+  var _jupGood     = !!( !_jupRetro   &&  _np.jupiter);
+
+  // S06 행성 트랜짓 — NASA 9행성 역행/순행 실시간 (±20)
+  var _S06nasa = 0;
+  if(_jupGood)    _S06nasa += 8;    // 목성 순행 ★ 최고 길성
+  if(_jupRetro)   _S06nasa -= 6;    // 목성 역행: 내적 성찰 주의
+  if(_satRetro)   _S06nasa -= 5;    // 토성 역행: 구조화 필요
+  if(_marsRetro)  _S06nasa -= 8;    // 화성 역행: 행동력 저하 주의
+  if(_mercRetro)  _S06nasa -= 4;    // 수성 역행: 소통·계약 주의
+  _S06nasa = Math.max(-20, Math.min(20, _S06nasa));
+
+  // S03 태양궁·베딕 — NASA 태양 실제 황도 위치 (±15)
+  var _S03nasa = 0;
+  if(_np.sun) {
+    var _sunLon = parseFloat(_np.sun.lon) || 0;
+    var _wzLon  = (zodiacIdx * 30) + 15;  // 사용자 별자리 중심각
+    var _sDiff  = Math.abs((_sunLon - _wzLon + 360) % 360);
+    if(_sDiff > 180) _sDiff = 360 - _sDiff;
+    // 태양이 내 별자리 구간: +10, 반대 구간: -8
+    _S03nasa = _sDiff < 30 ? 10 : _sDiff > 150 ? -8
+             : Math.round(Math.cos(_sDiff * Math.PI / 180) * 7);
+  }
+  var _S03kp = _kp > 5 ? -4 : _kp > 3 ? -2 : _kp <= 1 ? 3 : 0;
+  _S03nasa = Math.max(-15, Math.min(15, _S03nasa + _S03kp));
+
+  // S13 태을신수 — 지자기 Kp + 태양풍 Bz (±12)
+  var _S13geo = 0;
+  if     (_kp >= 6)   _S13geo = -10; // 강한 지자기 폭풍
+  else if(_kp >= 4)   _S13geo = -6;  // 보통 지자기 활동
+  else if(_kp >= 2.5) _S13geo = -2;
+  else if(_bz < -15)  _S13geo = -8;  // 강한 Bz남향
+  else if(_bz < -8)   _S13geo = -4;
+  else if(_kp <= 1)   _S13geo = 7;   // 매우 조용한 지자기 ★
+  else if(_kp <= 2)   _S13geo = 4;
+  _S13geo = Math.max(-12, Math.min(12, _S13geo));
+
+  // S16 타로×달위상 — NASA 달 실제 위상각 (±12)
+  var _S16moon = 0;
+  if(_np.moon && _np.sun) {
+    var _mPhase = ((parseFloat(_np.moon.lon||0) - parseFloat(_np.sun.lon||0)) + 360) % 360;
+    // 보름달(180°)=+12 최고, 신월(0°)=새시작+5, 그믐=흉
+    _S16moon = Math.round(Math.sin(_mPhase * Math.PI / 180) * 12);
+    if(_mPhase < 15 || _mPhase > 345) _S16moon = 5; // 신월: 새시작 에너지
+  }
+  _S16moon = Math.max(-12, Math.min(12, _S16moon));
+
+  // D등급: NASA 목성·토성 복합 보정 (±8, S02·S04·S12·S14·S15)
+  var _jupD = _np.jupiter ? (_jupGood ? 5 : -4) : 0;
+  var _satD = _np.saturn  ? (_satRetro ? -3 : 2) : 0;
+  var _nasaD = Math.max(-8, Math.min(8, _jupD + _satD));
+  // S04·S12: 달 위치 추가 보정
+  var _moonD = 0;
+  if(_np.moon) {
+    var _mLon4 = parseFloat(_np.moon.lon || 0);
+    _moonD = Math.round(Math.sin(_mLon4 * Math.PI / 180) * 4);
+  }
+
+  // C등급: 날씨·기압·방위 보정 (±10, S05·S09·S19)
+  // 기압: 1013 정상, 낮으면 저기압(흉), 높으면 고기압(길)
+  var _presAdj = Math.max(-6, Math.min(6, Math.round((_wx.pressure - 1013) * 0.06)));
+  // 습도 보정: 40~70% 최적
+  var _humAdj = (_wx.humidity >= 40 && _wx.humidity <= 70) ? 2
+              : (_wx.humidity > 85 || _wx.humidity < 20)   ? -3 : 0;
+  // 나침반 방위 — 오행별 길방
+  var _ohDegMap = {목:90, 화:180, 토:45, 금:270, 수:0};
+  var _compassAdj = 0;
+  if(_compass >= 0) {
+    var _idealDeg = _ohDegMap[domOh] != null ? _ohDegMap[domOh] : 0;
+    var _degDiff  = Math.abs((_compass - _idealDeg + 360) % 360);
+    if(_degDiff > 180) _degDiff = 360 - _degDiff;
+    _compassAdj = _degDiff < 30 ? 6 : _degDiff < 60 ? 3
+                : _degDiff > 150 ? -6 : _degDiff > 120 ? -3 : 0;
+  }
+  var _envC = Math.max(-10, Math.min(10, _presAdj + _humAdj + _compassAdj));
+
+  // ── S01~S19 개별 점수 ───────────────────────────────────────
+
+  // S01 사주명리 【E등급 ±5】 — 생년월일 고정, 오행균형·일간강도
   var S01=_sc(45 + _bal*22 + (_dpw-1)*18 + (_doh===domOh?6:0) + (isM?4:0));
 
-  // 02 자미두수 — 명궁(출생시에 따른 강조궁) + 대운 상승/하강 + 오행균형
-  var _PAL={0:74,1:70,2:65,3:63}; // 재백>관록>부처>복덕
+  // S02 자미두수 【D등급 ±8】 — 명궁·대운 + NASA 목성·토성 복합
+  var _PAL={0:74,1:70,2:65,3:63};
   var _dwp=((y-(gender==='M'?1:0))%10+10)%10;
-  var S02=_sc(_PAL[shiIdx%4] + (_dwp<=4?6:-4) + _bal*10 + (isM?4:0));
+  var S02=_sc(_PAL[shiIdx%4] + (_dwp<=4?6:-4) + _bal*10 + (isM?4:0) + _nasaD);
 
-  // 03 태양궁 점성술 — 별자리 기본 + 계절일치 + 일간 오행 연동
-  var S03=_sc(_wze + (_seaOk?7:0) + (_dpw-1)*5);
+  // S03 태양궁·베딕 【A등급 ±15】 — NASA 태양 실제 황도 위치
+  var S03=_sc(_wze + (_seaOk?7:0) + (_dpw-1)*5 + _S03nasa);
 
-  // 04 전체 차트 — 상승궁(출생시) + 달별자리(월일 기반) + 별자리 시너지
+  // S04 전체 차트 【D등급 ±8】 — 출생지 + NASA 달·전행성
   var _ASC=[84,77,79,73,87,78,76,81,82,79,80,72];
   var _MON=[79,74,82,71,85,77,75,79,80,76,81,73];
   var S04=_sc((_ASC[h%12]+_MON[(m+d+lifeNum)%12]+_wze)/3
-             +((h%12===(m+d+lifeNum)%12)?6:0)+_geoB);
+             +((h%12===(m+d+lifeNum)%12)?6:0)+_geoB + _nasaD + _moonD);
 
-  // 05 기문둔갑 — 길문 종류(생>개>경>휴) + 방위 + 시간 에너지 + 거주지
-  var _GIM={0:71,1:58,2:67,3:63}; // 생문>개문>경문>휴문
+  // S05 기문둔갑 【C등급 ±10】 — 길문·방위·기압·나침반
+  var _GIM={0:71,1:58,2:67,3:63};
   var _DIR={0:76,1:79,2:73,3:72,4:70};
-  var S05=_sc((_GIM[(m+lifeNum)%4]+_DIR[(m+d)%5])/2+_hm*0.6+_bal*8+_geo);
+  var S05=_sc((_GIM[(m+lifeNum)%4]+_DIR[(m+d)%5])/2 + _hm*0.6 + _bal*8 + _geo + _envC);
 
-  // 06 행성 트랜짓 — 목성12년 + 토성29년 보정 + 개인연도수 상승기
-  var _JUP=[64,66,69,71,74,73,71,69,66,64,62,63];
-  var _sat=((y-2000)%29+29)%29;
-  var _satM=_sat<=7?5:_sat<=14?1:_sat<=21?-4:2;
-  var S06=_sc(_JUP[((y-2000)%12+12)%12]+_satM+(_pyn>=7?4:0)+(_seaOk?2:0));
+  // S06 행성 트랜짓 【A등급 ±20】 — NASA JPL 9행성 역행/순행 실시간 ★
+  var S06=_sc(70 + _S06nasa + (_seaOk?2:0) + (isM?2:0));
 
-  // 07 육임신살 — 길신 종류 + 흉살 차감 + 오행균형
-  var _GLS={0:68,1:63,2:65,3:61}; // 천을>천덕>월덕>문창
+  // S07 육임신살 【E등급 ±5】 — 시진·월건 고정값
+  var _GLS={0:68,1:63,2:65,3:61};
   var _HYG={0:-9,1:-5,2:-11,3:-7};
   var S07=_sc(52+_GLS[(m+lifeNum)%4]*0.22+_HYG[(d+lifeNum)%4]+_bal*8);
 
-  // 08 서양 수비학 — 생명수 에너지 + 개인연도수 사이클 + 마스터 보너스
+  // S08 서양 수비학 【E등급 ±3】 — 생명수 고유 진동수 고정
   var S08=_sc(_lne+_pym+(isM?7:0));
 
-  // 09 풍수지리 — 오행-방위 일치 + 지리 보정 + 일간강도
-  var S09=_sc(52+_bal*12+_geo*1.5+_geoB+(_dpw-1)*4);
+  // S09 풍수지리 【C등급 ±10】 — 방위·지자기·기압·나침반
+  var S09=_sc(52 + _bal*12 + _geo*1.5 + _geoB + (_dpw-1)*4 + _envC);
 
-  // 10 카발라 — 10세피라 위치(생명수 기반) + 진동수 + 균형
-  var _SEF=[77,72,68,71,66,75,67,69,64,73]; // 케테르→말쿠트
+  // S10 카발라 【E등급 ±5】 — 이름 히브리 수비·세피로트 고정
+  var _SEF=[77,72,68,71,66,75,67,69,64,73];
   var S10=_sc(_SEF[(lifeNum-1+10)%10]+(isM?5:0)+(_bal-0.5)*9+_pym*0.4);
 
-  // 11 성명학 — 이름-일간 오행 관계(상생>동일>중립>상극) + 81수리
+  // S11 성명학 【E등급 ±3】 — 이름 획수·음양 오행 고정
   var _noh=['목','화','토','금','수'][name.length%5];
   var _nrl=_noh===_doh?'same':_noh===_OH[_doh].생?'gen':
            _noh===_OH[_doh].피극?'clash':'neutral';
@@ -22155,34 +22243,36 @@ function calcAstro() {
   var _SUR=[83,72,85,70,80,76,87,89,74];
   var S11=_sc((_NRE[_nrl]+_SUR[((name.length*8+lifeNum)%81)%9])/2);
 
-  // 12 하우스 시스템 — 강조하우스 + 출생지 정확도 + 계절 보너스
+  // S12 하우스 시스템 【D등급 ±8】 — 출생지·NASA 달·하우스
   var _HSE=[67,59,61,55,64,60,58,64,62,68,61,53];
-  var S12=_sc(_HSE[h%12]+_geoB*1.2+(_seaOk?3:0)+(isM?2:0));
+  var S12=_sc(_HSE[h%12] + _geoB*1.2 + (_seaOk?3:0) + (isM?2:0) + _nasaD + _moonD);
 
-  // 13 태을신수 — 구성학 궁 + 개인연도수 사이클 + 오행 균형
-  var S13=_sc(_kje+(_pyn<=4?7:-5)+(_bal-0.5)*9+_hm*0.3);
+  // S13 태을신수 【A등급 ±12】 — 지자기 Kp·태양풍 Bz 실시간
+  var S13=_sc(_kje + (_pyn<=4?7:-5) + (_bal-0.5)*9 + _hm*0.3 + _S13geo);
 
-  // 14 합성 차트 — 오행 시너지 + 원소삼각 + 생명수 짝수보너스
+  // S14 합성 차트 【D등급 ±8】 — NASA 금성·화성 각도 보정
   var _SYN={목:70,화:73,토:67,금:68,수:65};
   var _eTri=['♈♌♐','♊♎♒','♋♏♓','♉♍♑'];
-  var S14=_sc((_SYN[domOh]||80)+(_eTri.some(function(t){return t.indexOf(wz.sym)>=0;})?5:0)
-             +(lifeNum%2===0?3:0)+_pym*0.3);
+  var _S14venus = (_np.venus && _np.venus.lon)
+    ? Math.round(Math.sin(parseFloat(_np.venus.lon) * Math.PI / 180) * 4) : 0;
+  var S14=_sc((_SYN[domOh]||80)
+             +(_eTri.some(function(t){return t.indexOf(wz.sym)>=0;})?5:0)
+             +(lifeNum%2===0?3:0)+_pym*0.3 + _nasaD + _S14venus);
 
-  // 15 주역 — 64괘 결정론적 도출(시드) + 효 단계 + 오행균형
+  // S15 주역 64괘 【D등급 ±8】 — 동적 시드·날씨 보정
   var _HEX=[77,68,70,63,72,66,69,74,65,71];
-  var _YAO=[2,4,7,9,6,3]; // 초효~상효 에너지
-  var S15=_sc(_HEX[_seed%10]+_YAO[_seed%6]+(_bal-0.5)*6);
+  var _YAO=[2,4,7,9,6,3];
+  var _S15wx = Math.max(-4, Math.min(4, Math.round((_wx.pressure - 1013) * 0.04)));
+  var S15=_sc(_HEX[_seed%10]+_YAO[_seed%6]+(_bal-0.5)*6 + _nasaD*0.5 + _S15wx);
 
-  // 16 타로×달위상 — 메이저 아르카나(시드) + 정역방향 + 마스터보너스
+  // S16 타로×달위상 【A등급 ±12】 — NASA 달 실제 위상각
   var _TAR=[73,67,65,61,71,70,64,72,68,64,75,61,67,63,73,60,68,65,71,64,73,68];
-  var S16=_sc(_TAR[_seed%22]+((y+m+d+lifeNum)%2===0?4:-3)+(isM?3:0));
+  var S16=_sc(_TAR[_seed%22] + (isM?3:0) + _S16moon);
 
-  // 17 관상학 — 생체스캔 최우선, 없으면 오행 예측
-  // _bioFinalData 우선 → _HV 동기화 (모든 페이지 값 일치)
+  // S17 관상(rPPG) 【B등급 ±20】 — FCI 안면혈색 실측값 우선
   if (window._bioFinalData) {
     if (window._bioFinalData.faceScore > 0 && window._HV) window._HV.v4 = window._bioFinalData.faceScore;
     if (window._bioFinalData.palmScore > 0 && window._HV) window._HV.v5 = window._bioFinalData.palmScore;
-    // appState.bio도 최신값으로 덮어씀
     if (window.appState) {
       window.appState.bio = window.appState.bio || {};
       if (window._bioFinalData.fci) window.appState.bio.fci = window._bioFinalData.fci;
@@ -22190,28 +22280,20 @@ function calcAstro() {
       if (window._bioFinalData.bli) window.appState.bio.bli = window._bioFinalData.bli;
     }
   }
-    var _hvF=(window._HV&&window._HV.v4)?window._HV.v4:0;
-  var S17=_hvF>0?_sc(_hvF):_sc(61+_bal*22+(_dpw-1)*9+(_seed%12));
+  var _hvF=(window._HV&&window._HV.v4)?window._HV.v4:0;
+  var S17=_hvF>0 ? _sc(_hvF) : _sc(61+_bal*22+(_dpw-1)*9+(_seed%12));
 
-  // 18 손금학 — 생체스캔 최우선, 없으면 오행 예측
+  // S18 손금(BLI) 【B등급 ±15】 — BLI 손금분기지수 실측값 우선
   var _hvP=(window._HV&&window._HV.v5)?window._HV.v5:0;
-  var S18=_hvP>0?_sc(_hvP):_sc(59+_bal*19+(lifeNum%9)*2+(_seed%10));
+  var S18=_hvP>0 ? _sc(_hvP) : _sc(59+_bal*19+(lifeNum%9)*2+(_seed%10));
 
-  // 19 구성학 — 본명성(1~9성) + 자전축·태양 고도각 + 오행균형 + 계절
-  // 지구 자전축(23.5°) 기울기 × 본명성 주기 × 태양 고도각 실시간 보정
-  var _KJS=[0,74,65,70,68,72,66,69,67,73]; // 1백수성~9자화성 기본 에너지
-  var _kn=((kujusei||5)-1)%9+1; // kujusei는 이미 14943에서 정의됨
-  var _solAdj=m>=4&&m<=8?4:m>=10||m<=2?-2:1; // 하지+4, 동지-2, 춘추분+1
+  // S19 구성기학 【C등급 ±8】 — 본명성·태양고도각·나침반·기압
+  var _KJS=[0,74,65,70,68,72,66,69,67,73];
+  var _kn=((kujusei||5)-1)%9+1;
+  var _solAdj=m>=4&&m<=8?4:m>=10||m<=2?-2:1;
   var _kBonus=(_kn===5)?-8:(_kn===1||_kn===9)?6:(_kn===3||_kn===4)?4:0;
-  var S19=_sc((_KJS[_kn]||78)+_solAdj+_kBonus+_bal*8+(_seaOk?2:0));
+  var S19=_sc((_KJS[_kn]||78)+_solAdj+_kBonus+_bal*8+(_seaOk?2:0) + _envC*0.7);
 
-  // ============================================================
-  // ILI 가중 통합 공식 — 50대 역학 중 × 정확히 100점
-  // ILI = Σ(Wi × Si) / ΣWi  +  BAI 보정(±5)
-  //
-  // 50대 역학 중 가중치 설계 v2.0 (이주원×Claude 2026):
-  //   핵심천문  행성트랜짓·자미·기문·베딕통합  → 46pt
-  //   역학기반  주역·태을·사주                 → 24pt
   //   서양역학  전체차트·하우스·합성·점성       → 11pt
   //   환경기운  풍수·카발라·수비·성명·육임      →  7pt
   //   생체실시간 관상·손금                     → 11pt
@@ -22831,7 +22913,8 @@ function tarotChatSend(){
     '1. 근거 없는 % 수치 절대 사용 금지',
     '2. 단정 표현 금지',
     '3. 쉽고 따뜻하게 2~4문장으로 답변',
-    '4. 필요하면 역으로 질문해서 더 정밀한 분석 유도'
+    '4. 필요하면 역으로 질문해서 더 정밀한 분석 유도',
+    '5. 점수 언급 시: A(NASA±20)·B(생체±15)·C(날씨±10)·D/E(생일±5~8) 등급으로 이유 설명 필수'
   ].join('\n');
 
   var messages = [{role:'system', content:systemPrompt}];
@@ -24480,13 +24563,9 @@ function generateReport(r){
       var _mbtiDiv = document.createElement('div');
       _mbtiDiv.style.cssText = 'background:rgba(168,85,247,.05);border:1px dashed rgba(168,85,247,.35);border-radius:14px;padding:16px;text-align:center;cursor:pointer;';
       _mbtiDiv.innerHTML =
-        '<div style="font-size:14px;margin-bottom:6px">🧠</div>'+
-        '<div style="font-size:12px;font-weight:700;color:rgba(168,85,247,.7);margin-bottom:4px">역학 20개 정밀 분석 보기 ↓</div>'+
-        '<div style="font-size:11px;color:rgba(240,230,200,.4)">클릭하면 AI 정밀 풀이가 시작됩니다</div>';
-      _mbtiDiv.addEventListener('click', function(){
-        var btn = document.getElementById('aiAnalysisBtn');
-        if(btn){ btn.scrollIntoView({behavior:'smooth'}); btn.click(); }
-      });
+        '<div style="font-size:12px;color:rgba(168,85,247,.6);margin-bottom:8px;line-height:1.6">🧠 MBTI 미입력 — 17개 역학 적용 중</div>'+
+        '<div style="display:inline-block;padding:10px 22px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:10px;font-size:12px;font-weight:800;color:#c4b5fd">🤖 AI 역학 통합 분석 시작 ↓</div>';
+      _mbtiDiv.onclick = function(){ runAiAnalysis(); };
       mbtiRepSec.appendChild(_mbtiDiv);
     }
     c.appendChild(mbtiRepSec);
@@ -24501,7 +24580,7 @@ function generateReport(r){
     // AI 정밀 풀이 섹션 추가
     var aiSec = document.createElement('div');
     aiSec.id = 'aiAnalysisSection';
-    aiSec.style.cssText = 'margin-top:20px;';
+    aiSec.style.cssText = 'margin-top:20px;display:none;';  // 팝업 방식 — 숨김
     aiSec.innerHTML =
       '<div style="background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(99,130,201,.06));border:1px solid rgba(212,168,67,.3);border-radius:16px;overflow:hidden">'
       +'<div style="padding:18px 20px;border-bottom:1px solid rgba(212,168,67,.15);display:flex;align-items:center;justify-content:space-between;gap:12px">'
@@ -24531,631 +24610,399 @@ function generateReport(r){
 }
 
 // ── AI 정밀 풀이 엔진 ──────────────────────────────────────
+function _raiMainClose(){
+  var p = document.getElementById('_raiMainPop');
+  if(p) p.remove();
+  document.body.style.overflow = '';
+  var btn = document.getElementById('aiAnalysisBtn');
+  if(btn){ btn.disabled=false; btn.textContent='🔄 다시 분석'; btn.style.opacity='1'; }
+}
 function runAiAnalysis(){
   var r = window.calcResult;
-  if(!r){ alert('대시보드에서 먼저 자동 계산을 실행해주세요.'); return; }
-
-  var btn = document.getElementById('aiAnalysisBtn');
-  var body = document.getElementById('aiAnalysisBody');
-  if(!btn || !body) return;
-
-  // 로딩 상태
-  btn.disabled = true;
-  btn.textContent = '⏳ 분석 중...';
-  btn.style.opacity = '.6';
-  body.innerHTML =
-    '<div style="text-align:center;padding:40px">'
-    +'<div id="aiLoadDots" style="font-size:28px;margin-bottom:14px">🔮</div>'
-    +'<div style="font-size:13px;color:rgba(240,230,200,.7);margin-bottom:6px" id="aiLoadMsg">동양 역학 데이터 분석 중...</div>'
-    +'<div style="width:100%;height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-top:16px">'
-      +'<div id="aiLoadBar" style="height:100%;width:0%;background:linear-gradient(90deg,#d4a843,#38bdf8);border-radius:2px;transition:width 1.5s ease"></div>'
-    +'</div>'
-    +'</div>';
-
-  // 로딩 애니메이션
-  var msgs = ['동양 역학 데이터 분석 중...','사주팔자 · 자미두수 · 기문둔갑 해석...','서양 점성술 · 카발라 분석 중...','동양 55% · 서양 45% 비중 계산 중...','ILI 통합 결론 도출 중...'];
-  var mi = 0;
-  var msgTimer = setInterval(function(){
-    var el = document.getElementById('aiLoadMsg');
-    if(el) el.textContent = msgs[Math.min(mi, msgs.length-1)];
-    var bar = document.getElementById('aiLoadBar');
-    if(bar) bar.style.width = Math.min(90, (mi+1)*18) + '%';
-    mi++;
-  }, 3000);
-
-  // 사주 데이터 → 프롬프트 구성
-  var ili = r.ili || 72;
-  var cat=r.scores&&r.scores.cat?r.scores.cat
-         :[Math.min(99,ili+3),Math.min(99,ili+1),Math.min(99,ili+2),Math.min(99,ili-1)];
-  var eastScore = Math.round(cat[0]*0.30 + cat[1]*0.20 + cat[2]*0.25 + cat[3]*0.25);
-  var westScore = Math.round(cat[2]*0.35 + cat[1]*0.25 + cat[3]*0.25 + ili*0.15);
-  var finalIli  = Math.round(eastScore*0.55 + westScore*0.45);
-
-  var systemPrompt =
-    '당신은 동양·서양 역학 전문가이자 AI 운세 분석가입니다. '
-    +'일반인도 완전히 이해할 수 있는 쉬운 언어로 풀이하되, 전문성과 깊이는 반드시 유지하세요. '
-    +'각 역학을 실제 생활에 적용 가능한 조언과 함께 설명하세요. '
-    +'HTML 형식으로 출력하되, Markdown이나 코드블록은 절대 사용하지 마세요.';
-
-  // 프롬프트 배열 구성 (한글 멀티라인 이슈 방지)
-  var up = [];
-  up.push('다음 사용자의 역학 데이터를 분석해주세요.');
-  up.push('');
-  up.push('[사용자 정보]');
-  up.push('이름: ' + r.name);
-  up.push('생년월일: ' + r.y + '년 ' + r.m + '월 ' + r.d + '일');
-  up.push('일간(日干): ' + r.dGJ.gan + ' (' + r.dGJ.ji + ')');
-  up.push('연간(年干): ' + r.yGan + ' (' + r.yJi + ')');
-  up.push('월주: ' + r.mGJ.gan + r.mGJ.ji);
-  up.push('시주: ' + (r.sGan||'?') + (r.sJi||'?'));
-  up.push('주간 오행: ' + r.domOh);
-  up.push('별자리: ' + (r.wz ? r.wz.name : ''));
-  up.push('생명수: ' + r.lifeNum);
-  // ★ 신버전 — ILI 단독 → CEI 통합 점수로 교체
-  if(typeof _cgoGetScore === 'function'){
-    var _gsR = _cgoGetScore();
-    if(_gsR.scanned){
-      up.push('에너지 점수: CEI(통합) ' + _gsR.score + '점 = 생체(BAI) ' + _gsR.bai + '점×40% + 역학(ILI) ' + _gsR.ili + '점×35% + 공명×25%');
-      up.push('  → 생체 실측: BPM ' + _gsR.bpm + ' / HRV(심박변이도) ' + _gsR.hrv + 'ms / FCI(안면혈색) ' + _gsR.fci + ' / BLI(손금) ' + _gsR.bli);
-      up.push('  → 현재 등급: ' + _gsR.grade + ' — ' + _gsR.gradeMsg);
-      up.push('  → 분석 시 반드시 이 수치를 언급하며 일반인이 이해하기 쉽게 설명하세요.');
-    } else {
-      up.push('에너지 점수: ILI(역학) ' + _gsR.ili + '점 (생체 스캔 미완료 — 역학 50개 엔진 기반)');
-    }
-  } else {
-    up.push('ILI 점수: ' + ili);
+  if(!r){
+    if(typeof calcAstro==='function'){ calcAstro(); setTimeout(runAiAnalysis,1200); }
+    return;
   }
-  // MBTI 20번째 역학 정보 포함
-  if (window._mbtiResult) {
-    var _mu = window._mbtiResult;
-    var _mrAdj2 = Math.round((getMbtiCorrection(r.domOh||'목')-1.0)*50);
-    _mrAdj2 = Math.min(4,Math.max(-4,_mrAdj2));
-    up.push('MBTI 유형: ' + _mu.type + ' (' + (MBTI_TYPES[_mu.type]||{name:''}).name + ') — ' + _mu.oh + ' 오행 친화');
-    up.push('MBTI 핵심 성격: ' + _mu.trait);
-    up.push('MBTI × 사주 오행 ILI 보정: ' + (_mrAdj2>=0?'+':'')+_mrAdj2+'pts');
-    up.push('검사 방법: ' + (_mu.source||'직접선택'));
-  } else {
-    up.push('MBTI: 미입력 (50대 역학 중 적용)');
-  }
-  up.push('사주명리: ' + cat[0] + '점 / 수비학: ' + cat[1] + '점 / 점성술: ' + cat[2] + '점 / 구성학: ' + cat[3] + '점');
-  up.push('');
-  up.push('아래 구조로 분석해주세요. HTML 형식으로 작성하되 각 섹션에 class 속성을 포함하세요:');
-  up.push('');
-  up.push('섹션1 — 동양 역학 분석 (55% 비중):');
-  up.push('<div class="ai-section east-section"> 태그로 시작하세요.');
-  up.push('사주명리(일간/오행/용신/실생활조언), 자미두수(명궁/재백궁/대운), 기문둔갑(방위에너지/길방), 육임신살(길흉/주의시기), 풍수지리(공간에너지), 성명학(이름오행), 태을신수(운기흐름) 순서로 각각 3~5문장 이상 상세히 풀이.');
-  up.push('각 역학 항목 점수 100점 기준 표시. 동양 종합 운수: ' + eastScore + '%');
-  up.push('');
-  up.push('섹션2 — 서양 역학 분석 (45% 비중):');
-  up.push('<div class="ai-section west-section"> 태그로 시작하세요.');
-  up.push('태양궁점성술(별자리특성/현재에너지), 전체차트점성술(상승궁/달위치), NASA 행성 흐름(현재영향행성), 서양수비학(생명수' + r.lifeNum + '/상세), 카발라점성술(영적성장경로), 점성술하우스(주요하우스), 합성차트(인간관계에너지) 순서로 각각 3~5문장 이상 상세히 풀이.');
-  up.push('각 역학 항목 점수 100점 기준 표시. 서양 종합 운수: ' + westScore + '%');
-  up.push('');
-  up.push('섹션3 — 통합 ILI 최종 결론:');
-  up.push('<div class="ai-section final-section"> 태그로 시작하세요.');
-  up.push('동양 ' + eastScore + '%(55%) + 서양 ' + westScore + '%(45%) = 최종 ILI ' + finalIli);
-  up.push('강점, 주의점, 실행가능한 구체적 조언, 이번달/올해 에너지 흐름, 핵심 한줄 메시지 포함.');
-  up.push('일반인도 완전히 이해할 수 있는 쉬운 언어로 작성하되 전문성은 유지하세요.');
-  up.push('');
-  up.push('HTML 스타일: 섹션제목은 <div style="font-size:14px;font-weight:800;color:#d4a843;margin:16px 0 10px"> 사용.');
-  up.push('역학항목은 <div style="margin-bottom:14px;padding:12px;background:rgba(255,255,255,.04);border-radius:10px;border-left:3px solid [색상]"> 사용.');
-  up.push('동양강조색:#34d399 / 서양강조색:#38bdf8 / 통합강조색:#d4a843');
-  up.push('점수표시: <span style="font-family:Orbitron,sans-serif;color:#d4a843;font-size:15px;font-weight:700">[점수]%</span>');
-  var userPrompt = up.join('\n');
 
-    // Claude API 호출
-  // ── 샘플 풀이 엔진 (AI 실시간 생성 방식) ──────────────────
-  var oh = r.domOh || '목';
-  var nm = r.name || '사용자';
-  var ln = r.lifeNum || 5;
-  var wz = (r.wz && r.wz.name) || '양자리';
-  var gan = (r.dGJ && r.dGJ.gan) || '甲';
+  // ── 팝업 오버레이 생성 ────────────────────────────────────
+  var _existPop = document.getElementById('_raiMainPop');
+  if(_existPop) _existPop.remove();
 
-  // 오행별 동양 역학 풀이
-  var eastData = {
-    목: {
-      saju: '甲木·乙木의 생명 에너지가 강하게 흐르는 명식입니다. 봄의 새싹처럼 끊임없이 성장하려는 본능이 핵심 동력입니다. 교육·창작·기획 분야에서 탁월한 역량을 발휘하며, 새로운 프로젝트를 시작하는 것을 두려워하지 않습니다. 용신은 水木으로, 배움과 성장의 환경이 운을 열어줍니다. 실생활 조언: 아침 루틴을 만들고 꾸준한 자기계발에 투자하세요.',
-      jami: '자미두수 명궁에 천기성(天機星)이 위치하여 지혜롭고 변화에 민감한 성향입니다. 재백궁에 녹존성이 동궁하여 노력한 만큼 재물이 따라옵니다. 대운 흐름은 현재 상승기로, 35~45세 사이 인생 최대 전환점이 예고됩니다.',
-      gmd: '기문둔갑 분석 결과 동쪽과 남동쪽이 현재 가장 강력한 길방입니다. 생문(生門)과 경문(景門)이 활성화되어 새로운 시작과 확장에 유리한 시기입니다. 중요한 미팅이나 계약은 오전 7~11시 사이를 권장합니다.',
-      yukim: '육임신살 분석에서 현재 대길(大吉)의 기운이 강합니다. 다만 음력 4월과 10월은 신중한 결정이 필요한 시기입니다. 귀인(貴人)의 도움을 받을 수 있는 시기로, 인맥 확장에 집중하세요.',
-      fengshui: '풍수지리적으로 동쪽 창문을 열어 목(木) 기운을 집 안으로 유입시키세요. 식물을 동쪽에 배치하고 초록색 계열 인테리어가 운기를 높입니다. 침실은 동쪽 방향, 책상은 북동쪽을 바라보도록 배치하면 집중력이 향상됩니다.',
-      name: '이름의 오행 분석 결과 木·水 기운이 조화롭게 배치되어 있습니다. 한자 획수의 합이 길수(吉數)에 해당하여 사회적 성공을 지지합니다. 현재 이름은 목(木) 오행을 강화하는 구조로 직업운과 성장운에 긍정적입니다.',
-      taeul: '태을신수 현재 운기는 5궁(五宮) 태을천(太乙天) 단계로 변화와 도전의 시기입니다. 3년 내 큰 도약의 기회가 예고되며, 준비된 자에게 천운(天運)이 열립니다. 현재는 씨앗을 심는 단계로 인내와 준비가 핵심입니다.',
-      score: 73
-    },
-    화: {
-      saju: '丙火·丁火의 태양 에너지가 넘치는 명식입니다. 카리스마와 열정이 주변을 밝히는 존재로, 리더십과 표현력이 최고의 강점입니다. 홍보·영업·예술·교육 분야에서 두각을 나타냅니다. 용신은 木火로, 열정을 지속할 수 있는 환경이 운을 열어줍니다. 실생활 조언: 아이디어를 바로 실행하되 지구력을 기르는 루틴을 만드세요.',
-      jami: '자미두수 명궁에 태양성(太陽星)이 위치하여 밝고 활달하며 사람들에게 영향력을 미치는 성향입니다. 재백궁에 화록이 들어 재물운이 강하며 사업 확장에 유리합니다. 대운 흐름상 현재 최전성기로 적극적인 도전이 결실을 맺는 시기입니다.',
-      gmd: '기문둔갑 분석 결과 남쪽과 남서쪽이 최고의 길방입니다. 개문(開門)과 생문(生門)이 활성화되어 새로운 사업과 인간관계 확장에 최적의 시기입니다. 중요한 발표와 미팅은 오전 11시~오후 1시 사이가 최길(最吉)입니다.',
-      yukim: '육임신살에서 현재 천을귀인(天乙貴人)이 동행하는 대길의 시기입니다. 귀인의 도움으로 뜻밖의 기회가 찾아올 수 있습니다. 다만 지나친 자신감으로 인한 실수를 주의하세요.',
-      fengshui: '남쪽 방향에 붉은색 계열 소품을 배치하면 화(火) 기운이 증폭됩니다. 거실에 조명을 밝게 유지하고 캔들이나 난롯불 이미지를 활용하세요. 침실은 남향이 가장 이상적이며 빨강·주황 계열 포인트 색상이 에너지를 높입니다.',
-      name: '이름의 오행 분석 결과 火·木 기운이 강하게 배치되어 있습니다. 사회적 인지도와 명예운을 지지하는 구조입니다. 이름 획수의 오행이 명식의 용신과 일치하여 전체적인 운기를 상승시킵니다.',
-      taeul: '태을신수 현재 운기는 1궁(一宮) 태을천(太乙天) 단계로 최고의 상승 에너지입니다. 지금 시작하는 모든 일에 천운이 따르는 황금기입니다. 큰 결정과 새로운 시작을 두려워하지 마세요.',
-      score: 78
-    },
-    토: {
-      saju: '戊土·己土의 대지 에너지가 안정적으로 흐르는 명식입니다. 신뢰와 포용력이 핵심 에너지로, 중재자이자 든든한 버팀목 역할을 자연스럽게 수행합니다. 부동산·금융·교육·의료 분야에서 강점이 두드러집니다. 용신은 火土로, 안정적인 기반 위에 열정이 더해질 때 최고의 결과가 납니다.',
-      jami: '자미두수 명궁에 천부성(天府星)이 위치하여 안정적이고 포용력이 넓은 성향입니다. 재백궁이 강하게 활성화되어 꾸준한 재물 축적이 가능합니다. 대운 흐름은 40대 이후 완숙기로 접어들며 인생 후반부가 더욱 빛나는 명식입니다.',
-      gmd: '기문둔갑 분석 결과 중앙과 남서쪽이 안정적인 길방입니다. 천부(天符)의 기운이 강하게 작용하여 현재 하고 있는 일의 완성도를 높이는 시기입니다. 새로운 시작보다 기존 사업의 내실을 다지는 것이 유리합니다.',
-      yukim: '육임신살에서 현재 육합(六合)의 기운이 강하여 협력과 합병에 최적의 시기입니다. 파트너십과 팀워크에서 큰 성과가 예고됩니다. 신중하게 준비한 일들이 결실을 맺기 시작하는 때입니다.',
-      fengshui: '집 중앙에 황색·베이지 계열 소품을 배치하여 토(土) 기운을 안정시키세요. 도자기나 돌·흙 소재 인테리어가 운기를 강화합니다. 거실 중심에 황금색 소품을 두면 재물운과 안정운이 상승합니다.',
-      name: '이름의 오행 분석 결과 土·金 기운이 균형 있게 배치되어 있습니다. 재물운과 직업운을 강화하는 안정적인 이름 구조입니다. 사회적 신뢰도를 높이는 획수 배열로 대인관계에서 긍정적인 인상을 줍니다.',
-      taeul: '태을신수 현재 운기는 8궁(八宮) 단계로 내실을 다지고 준비하는 시기입니다. 겉으로 드러나는 성과보다 내부 역량 강화에 집중하면 다음 상승기에 폭발적인 결과가 나옵니다.',
-      score: 70
-    },
-    금: {
-      saju: '庚金·辛金의 정밀한 에너지가 흐르는 명식입니다. 원칙과 정의감, 완벽주의적 성향이 핵심입니다. 법률·금융·의료·엔지니어링 분야에서 탁월합니다. 용신은 土金으로, 체계적인 환경과 명확한 목표가 운을 열어줍니다. 실생활 조언: 완벽을 추구하되 80% 완성 후 실행하는 습관을 기르세요.',
-      jami: '자미두수 명궁에 천상성(天相星)이 위치하여 체계적이고 공정한 성향입니다. 재백궁에 보좌성이 동궁하여 안정적인 재물 흐름이 예고됩니다. 대운은 현재 준비기로, 5년 내 큰 도약의 기반을 닦는 시기입니다.',
-      gmd: '기문둔갑 분석 결과 서쪽과 북서쪽이 최고의 길방입니다. 경문(景門)과 휴문(休門)이 활성화되어 학습과 계획 수립에 최적의 시기입니다. 중요한 계약과 협상은 오후 3~7시 사이가 유리합니다.',
-      yukim: '육임신살에서 현재 등명(登明)의 기운이 작용하여 숨겨진 재능이 드러나는 시기입니다. 전문성을 인정받고 권위를 확립할 기회가 찾아옵니다. 자격증 취득이나 전문 교육 투자가 큰 수익으로 돌아옵니다.',
-      fengshui: '서쪽 방향에 흰색·은색 계열 소품을 배치하여 금(金) 기운을 강화하세요. 금속 소재 인테리어와 크리스탈 소품이 운기를 높입니다. 침실 서쪽에 거울을 두면 재물운이 증폭됩니다.',
-      name: '이름의 오행 분석 결과 金·水 기운이 강하게 배치되어 지혜와 실행력이 조화롭습니다. 전문직과 권위 있는 직업에 유리한 이름 구조입니다. 이름 획수의 총합이 길수로 사회적 성공을 지지합니다.',
-      taeul: '태을신수 현재 운기는 6궁(六宮) 단계로 전문성과 권위가 빛나는 시기입니다. 지금까지 쌓아온 실력이 외부에서 인정받기 시작합니다. 네트워크 확장과 전문성 마케팅에 집중하세요.',
-      score: 75
-    },
-    수: {
-      saju: '壬水·癸水의 깊은 지혜 에너지가 흐르는 명식입니다. 직관과 통찰, 유연한 적응력이 핵심입니다. 연구·철학·예술·심리·상담 분야에서 탁월합니다. 용신은 金水로, 고독한 사색과 깊은 학습이 운을 열어줍니다. 실생활 조언: 혼자만의 충전 시간을 충분히 확보하고 직관을 믿으세요.',
-      jami: '자미두수 명궁에 천동성(天同星)이 위치하여 유연하고 철학적인 성향입니다. 재백궁에 과문성이 동궁하여 지식과 창의성으로 재물을 만드는 구조입니다. 대운은 현재 심화기로, 내면의 깊이가 쌓일수록 외적 성취가 따라오는 명식입니다.',
-      gmd: '기문둔갑 분석 결과 북쪽과 북서쪽이 최고의 길방입니다. 휴문(休門)과 생문(生門)이 활성화되어 창의적 작업과 깊은 사색에 최적의 시기입니다. 중요한 창작과 기획은 밤 9시~12시 사이가 가장 영감이 풍부합니다.',
-      yukim: '육임신살에서 현재 신후(神後)의 기운이 작용하여 숨겨진 지혜가 드러나는 시기입니다. 직관적인 판단이 놀라울 정도로 정확하게 맞아떨어지는 때입니다. 큰 결정은 이성보다 직관을 따르는 것이 유리합니다.',
-      fengshui: '북쪽 방향에 검정·네이비 계열 소품을 배치하여 수(水) 기운을 강화하세요. 수족관이나 분수 소품이 운기를 높이며, 물 흐르는 소리는 창의력을 자극합니다. 침실은 북향이 이상적이며 파란색 계열 침구가 깊은 수면과 직관력을 높입니다.',
-      name: '이름의 오행 분석 결과 水·木 기운이 풍부하게 배치되어 지혜와 성장이 조화롭습니다. 학문과 예술 분야에 유리한 이름 구조이며, 장기적으로 명성을 쌓는 흐름입니다.',
-      taeul: '태을신수 현재 운기는 3궁(三宮) 단계로 지혜와 통찰이 절정에 달하는 시기입니다. 오랫동안 준비해온 아이디어를 세상에 내놓을 최적의 때입니다. 글쓰기, 강연, 콘텐츠 창작이 큰 반향을 일으킬 수 있습니다.',
-      score: 71
-    }
-  };
+  var _pop = document.createElement('div');
+  _pop.id = '_raiMainPop';
+  _pop.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10700;'+
+    'background:rgba(6,13,26,0.97);backdrop-filter:blur(16px);'+
+    'overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  _pop.innerHTML =
+    '<div style="max-width:580px;margin:0 auto;padding:16px 16px 40px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 12px;border-bottom:1px solid rgba(212,168,67,.2);margin-bottom:16px">'+
+        '<div>'+
+          '<div style="font-size:14px;font-weight:800;color:#d4a843">🤖 AI 역학 통합 분석</div>'+
+          '<div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px">동양 7역학 · 서양 7역학 · 통합 ILI</div>'+
+        '</div>'+
+        '<button onclick="_raiMainClose()" '+
+          'style="background:rgba(255,255,255,.1);border:none;border-radius:50%;width:36px;height:36px;'+
+          'color:#f0e6c8;font-size:18px;cursor:pointer;flex-shrink:0">✕</button>'+
+      '</div>'+
+      '<div id="_raiBody">'+
+        '<div style="text-align:center;padding:48px 20px">'+
+          '<div id="_raiDot" style="font-size:36px;margin-bottom:16px">🔮</div>'+
+          '<div id="_raiMsg" style="font-size:13px;color:rgba(212,168,67,.9);font-weight:600;margin-bottom:18px">데이터 수집 중...</div>'+
+          '<div style="width:100%;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden">'+
+            '<div id="_raiBar" style="height:100%;width:0%;background:linear-gradient(90deg,#34d399,#38bdf8,#d4a843);border-radius:2px;transition:width .8s ease"></div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(_pop);
+  document.body.style.overflow = 'hidden';
+  _pop.scrollTop = 0;
 
-  // 서양 역학 풀이 (별자리별)
-  var westBySign = {
-    '양자리': {sc:74, planet:'화성', trait:'개척과 용기', advice:'새로운 도전을 두려워하지 마세요. 화성의 에너지가 당신의 행동력을 극대화합니다.'},
-    '황소자리': {sc:72, planet:'금성', trait:'안정과 풍요', advice:'금성의 축복으로 아름다움과 재물이 따릅니다. 꾸준함이 최고의 전략입니다.'},
-    '쌍둥이자리': {sc:76, planet:'수성', trait:'소통과 지성', advice:'수성의 날카로운 지성으로 정보를 빠르게 흡수하고 표현하세요.'},
-    '게자리': {sc:70, planet:'달', trait:'감성과 보호', advice:'달의 직관력을 믿으세요. 감정적 지혜가 최고의 나침반입니다.'},
-    '사자자리': {sc:78, planet:'태양', trait:'카리스마와 창의', advice:'태양처럼 빛나는 존재감으로 무대 중심에 서세요.'},
-    '처녀자리': {sc:73, planet:'수성', trait:'분석과 완성', advice:'완벽한 준비가 완벽한 결과를 만듭니다. 디테일이 승부를 결정합니다.'},
-    '천칭자리': {sc:75, planet:'금성', trait:'균형과 조화', advice:'금성의 외교적 에너지로 모든 관계에서 윈윈을 만들어내세요.'},
-    '전갈자리': {sc:77, planet:'명왕성', trait:'변환과 통찰', advice:'심층적인 통찰력이 강점입니다. 위기 속에서 오히려 강해지는 불사조입니다.'},
-    '사수자리': {sc:76, planet:'목성', trait:'자유와 철학', advice:'목성의 확장 에너지로 더 넓은 세계로 나아가세요.'},
-    '염소자리': {sc:74, planet:'토성', trait:'인내와 성취', advice:'토성의 엄격한 훈련이 진짜 성공을 만듭니다. 장기 전략에 집중하세요.'},
-    '물병자리': {sc:77, planet:'천왕성', trait:'혁신과 독창', advice:'천왕성의 혁신 에너지로 세상에 없던 새로운 것을 만들어내세요.'},
-    '물고기자리': {sc:71, planet:'해왕성', trait:'직관과 영성', advice:'해왕성의 신비로운 직관을 믿으세요. 꿈이 현실을 앞서 보여줍니다.'}
-  };
+  // aiAnalysisBtn 도 업데이트 (있으면)
+  var btn  = document.getElementById('aiAnalysisBtn');
+  var body = document.getElementById('_raiBody');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ 분석 중...'; btn.style.opacity='.6'; }
 
-  var wzInfo = westBySign[wz] || westBySign['양자리'];
-
-  // 수비학 풀이
-  var lifeNumDesc = {
-    1:'독립적 선구자 에너지입니다. 리더십과 창조적 시작이 핵심입니다.',
-    2:'협력과 조화의 외교관 에너지입니다. 파트너십에서 최고의 역량이 발휘됩니다.',
-    3:'창의적 표현의 예술가 에너지입니다. 소통과 창작에서 빛을 발합니다.',
-    4:'체계적 성실함의 건축가 에너지입니다. 인내와 꾸준함이 최고의 자산입니다.',
-    5:'자유로운 탐험가 에너지입니다. 다양한 경험을 통해 성장합니다.',
-    6:'책임감 있는 보호자 에너지입니다. 가족과 공동체를 위한 헌신이 행복의 원천입니다.',
-    7:'깊은 철학자 에너지입니다. 진리를 탐구하고 영적 성장을 추구합니다.',
-    8:'강력한 CEO 에너지입니다. 물질적·사회적 성공을 이끄는 타고난 경영자입니다.',
-    9:'인류를 향한 인도주의자 에너지입니다. 경험에서 쌓은 지혜로 많은 이에게 영감을 줍니다.',
-    11:'마스터 넘버 — 영적 스승의 에너지입니다. 강렬한 직관과 영감으로 세상을 밝힙니다.',
-    22:'마스터 넘버 — 꿈을 현실로 만드는 마스터 건축가입니다.',
-    33:'마스터 넘버 — 무조건적 사랑으로 세상을 치유하는 마스터 교사입니다.'
-  };
-
-  var lnDesc = lifeNumDesc[ln] || lifeNumDesc[5];
-  var ed = eastData[oh] || eastData['목'];
-  // ILI 엔진 v2.0 — 규칙 기반 점수 수신
-  var _cr=window.calcResult||{}; var _csc=_cr.scores||{};
-  var _s18a=_csc.s18||{};
-  var eastScore2=_csc.eastRB||ed.score;
-  var westScore2=_csc.westRB||wzInfo.sc;
-  var finalIli2=_csc.eastRB?ili:Math.round(eastScore2*0.55+westScore2*0.45);
-
-  // 로딩 시뮬레이션 후 결과 표시
-  var delay = 0;
-  var steps = [
-    {t:200,  msg:'동양 역학 데이터 분석 중...', pct:20},
-    {t:600,  msg:'사주팔자 · 자미두수 · 기문둔갑 해석...', pct:45},
-    {t:1000, msg:'서양 점성술 · 수비학 · 카발라 계산...', pct:70},
-    {t:1400, msg:'동양 55% · 서양 45% 통합 ILI 도출...', pct:90},
-    {t:1800, msg:'최종 결론 생성 완료!', pct:100}
+  // 로딩 메시지 시퀀스
+  var _steps = [
+    {t:100,  p:12,  msg:'🛰️ NASA JPL 행성 데이터 연동 중...'},
+    {t:500,  p:28,  msg:'☯ 동양 7역학 계산 중...'},
+    {t:900,  p:48,  msg:'⭐ 서양 7역학 분석 중...'},
+    {t:1300, p:68,  msg:'🧬 생체 스캔 데이터 융합 중...'},
+    {t:1700, p:85,  msg:'⚡ 통합 ILI 도출 중...'},
+    {t:2100, p:100, msg:'✅ 분석 완료!'}
   ];
-
-  steps.forEach(function(s){
+  _steps.forEach(function(s){
     setTimeout(function(){
-      var el=document.getElementById('aiLoadMsg'); if(el) el.textContent=s.msg;
-      var bar=document.getElementById('aiLoadBar'); if(bar) bar.style.width=s.pct+'%';
+      var m=document.getElementById('_raiMsg'); if(m) m.textContent=s.msg;
+      var b=document.getElementById('_raiBar'); if(b) b.style.width=s.p+'%';
     }, s.t);
   });
 
+  // ── 2.5초 후 결과 표시 ────────────────────────────────────
   setTimeout(function(){
-    // 팝업 데이터 정의
-    var popupData = {
-      saju: {
-        title:'📊 사주명리 (四柱八字)',
-        subtitle:'동양 최고의 운명학 — 태어난 년·월·일·시의 에너지 분석',
-        color:'#34d399',
-        easy:'사주명리는 쉽게 말해 "태어난 순간의 우주 에너지를 분석하는 것"입니다. 마치 씨앗이 어떤 계절에 심어졌느냐에 따라 자라는 방향이 다르듯, 사람도 태어난 년·월·일·시에 따라 타고난 성향과 운의 흐름이 다릅니다. 일간은 나의 핵심 본질을, 월주는 부모와 형제, 년주는 조상과 사회적 환경을 나타냅니다.',
-        getDetail: function(){ return ed.saju; },
-        advice:'용신 에너지를 일상에서 활용하세요. 오행이 강한 환경에 있을 때 최고의 에너지가 나옵니다. 매일 아침 오늘의 일진을 확인하고 중요한 일을 길한 날에 배치하는 습관을 들이세요.'
-      },
-      jami: {
-        title:'⭐ 자미두수 (紫微斗數)',
-        subtitle:'중국 황실 운명학 — 108개 별자리로 운명을 읽는 동양 점성술',
-        color:'#34d399',
-        easy:'자미두수는 쉽게 말해 "동양판 별자리 운세"입니다. 서양 점성술처럼 별의 위치를 분석하는데, 무려 108개의 별을 사용합니다. 황제의 별인 자미성을 중심으로 12궁에 별들을 배치해서 성격·재물·건강·인간관계를 모두 분석합니다. 사주명리보다 더 세밀하게 인생의 각 영역을 분석할 수 있습니다.',
-        getDetail: function(){ return ed.jami; },
-        advice:'자미두수에서 나온 귀인의 방향으로 인맥을 넓히세요. 대운의 흐름을 알면 언제 적극적으로 행동하고 언제 기다려야 하는지를 알 수 있습니다. 재백궁 분석을 통해 재물이 들어오는 방식도 파악할 수 있습니다.'
-      },
-      gmd: {
-        title:'🧭 기문둔갑 (奇門遁甲)',
-        subtitle:'중국 군사 전략에서 유래 — 시간·공간 에너지 분석법',
-        color:'#34d399',
-        easy:'기문둔갑은 "어떤 시간에, 어떤 방향으로 행동하면 가장 유리한가"를 알려주는 학문입니다. 옛날 전쟁에서 장군들이 언제 공격하고 어느 방향으로 진격할지를 결정할 때 사용했습니다. 지금은 중요한 미팅 타이밍, 이사 방향, 사업 시작 날짜를 잡는 데 활용합니다.',
-        getDetail: function(){ return ed.gmd; },
-        advice:'오늘 중요한 일정이 있다면 길방(吉方) 방향에 있는 장소에서 미팅을 잡으세요. 기문둔갑 앱이나 사이트를 활용해 매일 길한 시간대와 방향을 확인하는 것도 좋습니다.'
-      },
-      yukim: {
-        title:'⚡ 육임신살 (六壬神煞)',
-        subtitle:'고대 중국 점술 — 12신장으로 현재 운기 분석',
-        color:'#34d399',
-        easy:'육임신살은 쉽게 말해 "현재 나에게 어떤 기운이 작용하고 있는가"를 보는 것입니다. 오늘의 날씨예보처럼 현재 운기의 흐름을 알려줍니다. 좋은 기운이 올 때는 적극적으로 행동하고, 조심해야 할 기운이 올 때는 중요한 결정을 미루는 지혜가 필요합니다.',
-        getDetail: function(){ return ed.yukim; },
-        advice:'길한 시기에는 적극적으로 행동하고, 흉한 시기에는 새로운 시작보다 기존 일의 마무리에 집중하세요. 음력 날짜를 기준으로 중요한 결정 날짜를 잡으면 더 효과적입니다.'
-      },
-      fengshui: {
-        title:'🏡 풍수지리 (風水地理)',
-        subtitle:'공간 에너지 흐름 분석 — 삶의 환경을 최적화하는 학문',
-        color:'#34d399',
-        easy:'풍수지리는 쉽게 말해 "좋은 에너지가 흐르는 공간 배치"입니다. 물과 바람이 어떻게 흐르느냐에 따라 그 공간에 사는 사람의 운이 달라진다는 학문입니다. 집의 방향, 가구 배치, 색상 하나로도 에너지 흐름을 바꿀 수 있습니다. 당장 오늘 집 현관을 깨끗이 청소하는 것이 가장 기본적인 풍수 실천입니다.',
-        getDetail: function(){ return ed.fengshui; },
-        advice:'당장 오늘 할 수 있는 것: 집 현관을 깨끗하게 청소하고 밝은 조명을 켜두세요. 현관은 에너지가 들어오는 입구입니다. 책상을 문을 바라보는 방향으로 배치하면 주도권과 집중력이 높아집니다.'
-      },
-      name_analysis: {
-        title:'✍️ 성명학 (姓名學)',
-        subtitle:'이름의 오행·획수·음양으로 운명적 에너지 분석',
-        color:'#34d399',
-        easy:'성명학은 "이름이 운명에 영향을 미친다"는 학문입니다. 이름을 매일 수천 번씩 듣고 부르다 보면 그 이름의 에너지가 사람의 삶에 스며든다고 봅니다. 한자의 획수, 오행, 음양의 균형을 분석해서 이름이 삶에 미치는 긍정적·부정적 영향을 파악합니다.',
-        getDetail: function(){ return ed.name; },
-        advice:'현재 이름의 오행이 불균형하다면 닉네임이나 호(號)를 사용해 보완할 수 있습니다. SNS 활동명이나 브랜드명을 지을 때도 성명학적 분석을 활용하면 더 강력한 에너지를 만들 수 있습니다.'
-      },
-      taeul: {
-        title:'🔮 태을신수 (太乙神數)',
-        subtitle:'동양 3대 예측학 중 하나 — 72년 주기 우주 에너지 분석',
-        color:'#34d399',
-        easy:'태을신수는 "72년을 한 주기로 우주 에너지의 흐름을 분석하는 학문"입니다. 기문둔갑·육임과 함께 동양 3대 예측학 중 하나로, 국가 대사부터 개인 운명까지 큰 흐름을 읽는 데 사용합니다. 지금 내가 72년 주기의 어느 시점에 있는지를 알면 큰 그림에서 전략을 세울 수 있습니다.',
-        getDetail: function(){ return ed.taeul; },
-        advice:'태을신수에서 나온 현재 운기 단계에 맞게 행동 전략을 세우세요. 상승기에는 확장하고, 하강기에는 내실을 다지는 것이 천운을 활용하는 지혜입니다. 큰 결정을 앞두고 있다면 현재 태을 단계를 꼭 확인하세요.'
-      },
-      zodiac: {
-        title:'별자리 태양궁 점성술',
-        subtitle:'서양 점성술 — 태어난 날의 태양 위치로 기본 에너지 분석',
-        color:'#38bdf8',
-        easy:'태양궁 점성술은 쉽게 말해 "내가 어떤 별자리에서 태어났느냐"입니다. 신문이나 앱에서 보는 12별자리 운세의 기반입니다. 태양이 어느 별자리에 위치한 날 태어났느냐에 따라 기본적인 성격과 에너지 패턴이 결정됩니다. 별자리는 겉으로 드러나는 자아와 인생의 방향을 나타냅니다.',
-        getDetail: function(){ return wzInfo.planet+'의 지배를 받는 '+wz+'는 '+wzInfo.trait+' 에너지가 핵심입니다. 이 에너지는 직업 선택, 인간관계, 의사결정 방식 모두에 영향을 미칩니다. 별자리 에너지를 이해하면 자신의 자연스러운 강점과 패턴을 파악할 수 있습니다.'; },
-        advice: wzInfo.advice+' 매달 보름달과 신월에 의도를 설정하면 별자리 에너지를 최대로 활용할 수 있습니다. 수호 행성인 '+wzInfo.planet+'이 강한 날에 중요한 결정을 내리세요.'
-      },
-      fullchart: {
-        title:'🌍 전체 차트 점성술 (네이탈 차트)',
-        subtitle:'출생 시간·장소 기반 — 모든 행성의 위치를 완전 분석',
-        color:'#38bdf8',
-        easy:'네이탈 차트는 쉽게 말해 "태어난 순간의 하늘 지도"입니다. 태어날 때 태양·달·수성·금성·화성 등 모든 행성이 어느 위치에 있었는지를 나타냅니다. 태양자리가 겉모습이라면, 달자리는 내면의 감정을, 상승궁(Rising Sign)은 사람들이 처음 보는 인상을 나타냅니다.',
-        getDetail: function(){ return '출생 차트에서 상승궁은 사회적 이미지와 첫인상을 결정합니다. 달의 위치가 감정 패턴과 무의식적 습관을 지배하고 있으며, 전반적으로 내면의 성장과 외적 표현이 균형을 이루는 차트 구조입니다. 10하우스에 강한 행성 배치가 커리어 성공을 지지합니다.'; },
-        advice:'정확한 출생 시간을 알면 더 정밀한 분석이 가능합니다. 출생 증명서나 부모님께 정확한 시간을 확인해두세요. Astro.com에서 무료로 전체 네이탈 차트를 그릴 수 있습니다.'
-      },
-      transit: {
-        title:'🪐 행성 트랜짓 (현재 행성 영향)',
-        subtitle:'지금 하늘의 행성이 내 운명에 미치는 실시간 영향 분석',
-        color:'#38bdf8',
-        easy:'트랜짓은 쉽게 말해 "지금 하늘의 행성이 내 운명에 어떤 영향을 주고 있는가"입니다. 날씨처럼 행성의 위치는 매일 바뀌고, 그 행성이 내 출생 차트의 특정 지점을 지나갈 때 강한 영향을 미칩니다. 목성이 지나가면 행운과 확장, 토성이 지나가면 시련과 성장이 옵니다.',
-        getDetail: function(){ return '현재 목성이 순행하며 확장과 행운의 에너지를 보내고 있습니다. 토성의 구조화 에너지가 장기적 계획에 안정성을 더하며, 화성의 움직임이 행동력과 추진력을 자극합니다. 향후 6개월은 적극적인 도전이 결실을 맺는 시기입니다.'; },
-        advice:'목성 트랜짓 기간에는 새로운 도전과 확장에 적극적으로 투자하세요. 토성 트랜짓 기간에는 기초를 다지고 규율을 세우는 것이 현명합니다. 지금은 목성의 도움을 받는 시기이므로 두려움 없이 도전하세요.'
-      },
-      numerology: {
-        title:'🔢 서양 수비학 — 생명수',
-        subtitle:'생년월일 숫자에서 영혼의 진동수를 읽는 학문',
-        color:'#38bdf8',
-        easy:'수비학은 쉽게 말해 "숫자에는 각각의 에너지가 있다"는 학문입니다. 생년월일의 모든 숫자를 더해 한 자리가 될 때까지 줄이면 나오는 것이 생명수입니다. 이 숫자가 이 생에서 걸어가야 할 길과 타고난 에너지를 나타냅니다. 1은 리더, 2는 협력자, 7은 철학자, 8은 CEO 에너지입니다.',
-        getDetail: function(){ return '생명수 '+ln+'은 '+lnDesc+' 이 숫자는 삶의 주제와 강점, 극복해야 할 과제를 모두 담고 있습니다. 개인년도 계산으로 올해의 주제도 파악할 수 있습니다.'; },
-        advice:'생명수 에너지를 의식적으로 활용하세요. 매년 생일 이후 새로운 에너지 사이클이 시작됩니다. 올해 개인년도는 생년월일 앞 두 자리를 올해 연도로 바꿔 계산하면 알 수 있습니다.'
-      },
-      kabbalah: {
-        title:'✡️ 카발라 점성술',
-        subtitle:'유대 신비주의 생명나무 기반 영적 성장 경로 분석',
-        color:'#38bdf8',
-        easy:'카발라는 쉽게 말해 "영혼의 성장 지도"입니다. 유대 신비주의에서 유래한 생명나무는 10개의 영적 단계로 이루어져 있습니다. 지금 내 영혼이 어느 단계에 있는지, 어떤 영적 과제를 완수해야 하는지를 알려줍니다. 마돈나, 브리트니 스피어스 등 많은 유명인이 카발라를 공부한 것으로 유명합니다.',
-        getDetail: function(){ return nm+'님은 현재 티파렛 — 아름다움과 균형의 세피라 에너지 안에 있습니다. 티파렛은 생명나무의 중심으로, 영적 성장과 물질적 성공이 동시에 이루어지는 황금 균형점입니다. 이 단계에서는 자기 본연의 빛을 발산하는 것이 핵심 과제입니다.'; },
-        advice:'카발라적 성장을 위해 매일 아침 5분간 자신의 핵심 강점을 의식하는 시간을 가지세요. 티파렛 에너지는 봉사와 나눔을 통해 더욱 강화됩니다. 재능을 나누는 것이 영적 성장과 물질적 성공을 동시에 가져오는 열쇠입니다.'
-      },
-      houses: {
-        title:'🏠 점성술 하우스 시스템',
-        subtitle:'인생 12영역에서 행성 에너지가 작용하는 방식 분석',
-        color:'#38bdf8',
-        easy:'하우스 시스템은 쉽게 말해 "인생을 12개 방으로 나누어 각 방에 어떤 에너지가 있는지 보는 것"입니다. 1번 방은 나 자신, 2번 방은 돈과 재물, 4번 방은 가족과 집, 7번 방은 결혼과 파트너십, 10번 방은 커리어와 명성입니다. 행성이 어느 방에 있느냐에 따라 그 분야의 운이 결정됩니다.',
-        getDetail: function(){ return '현재 1하우스와 10하우스에 강한 에너지가 집중되어 있습니다. 개인적 정체성을 강화하면서 사회적 성취를 동시에 추구할 수 있는 최적의 시기입니다. 7하우스도 활성화되어 중요한 관계가 형성될 수 있습니다.'; },
-        advice:'10하우스 에너지가 활성화된 지금이 승진·사업·브랜딩에 최적의 타이밍입니다. 자신을 적극적으로 알리고 전문성을 드러내는 행동이 큰 결과로 이어집니다. 중요한 파트너십 협의도 함께 진행하세요.'
-      },
-      synastry: {
-        title:'💑 합성 차트 — 인간관계 에너지',
-        subtitle:'두 사람의 차트를 겹쳐 관계의 에너지와 궁합 분석',
-        color:'#38bdf8',
-        easy:'합성 차트는 쉽게 말해 "두 사람의 별자리 궁합을 보는 것"입니다. 두 사람의 출생 차트를 겹쳐 금성·화성·달의 상호작용을 분석합니다. 금성이 잘 맞으면 서로 매력을 느끼고, 화성이 잘 맞으면 함께 행동할 때 시너지가 납니다. 연인, 비즈니스 파트너, 친구 관계 모두에 적용됩니다.',
-        getDetail: function(){ return nm+'님의 관계 에너지 차트에서 금성과 화성의 조화로운 배치가 두드러집니다. 매력과 추진력이 균형을 이루어 새로운 인연을 끌어당기는 에너지가 강합니다. 비슷한 가치관을 가진 사람과의 만남이 예고됩니다.'; },
-        advice:'현재 금성 에너지가 강하게 활성화되어 있어 새로운 만남과 기존 관계 강화 모두에 유리합니다. 중요한 관계에서는 상대방의 달자리를 이해하려는 노력이 관계의 깊이를 더합니다. 중요한 비즈니스 파트너와의 합성 차트도 분석해보세요.'
-      },
-      strength: {
-        title:'💪 핵심 강점 종합 분석',
-        subtitle:'동양 55% + 서양 45% 에너지 통합 — 나만의 최강 무기',
-        color:'#d4a843',
-        easy:'동양 역학과 서양 역학이 동시에 가리키는 강점이 진짜 강점입니다. 두 시스템이 모두 동의하는 특성은 삶 전체에 걸쳐 지속적으로 발현되는 핵심 에너지입니다. 이 강점을 의식하고 활용하는 것이 운을 여는 가장 빠른 길입니다.',
-        getDetail: function(){ return nm+'님의 가장 큰 강점은 '+oh+' 오행의 에너지와 '+wz+' '+wzInfo.trait+'의 시너지입니다. 동서양 에너지가 조화롭게 작용하여 어떤 분야에서든 독보적인 역량을 발휘할 수 있습니다. ILI '+finalIli2+'는 이 두 에너지의 완벽한 조화를 수치로 나타낸 것입니다.'; },
-        advice:'강점을 활용하는 가장 좋은 방법은 그것이 자연스럽게 발휘되는 환경을 만드는 것입니다. 억지로 약점을 보완하기보다 강점에 집중하는 전략이 훨씬 효과적입니다. 강점이 빛나는 환경과 역할에 의도적으로 자신을 배치하세요.'
-      },
-      caution: {
-        title:'⚠️ 주의사항 & 개선점',
-        subtitle:'에너지 과부하 방지 — 지속 가능한 성장을 위한 전략',
-        color:'#d4a843',
-        easy:'강한 에너지는 양날의 검입니다. 잘 활용하면 최고의 무기지만, 관리하지 않으면 스스로를 소진시킵니다. 번아웃은 에너지가 없는 사람이 아니라 에너지가 너무 많은 사람에게 찾아옵니다. 브레이크가 없는 스포츠카는 결국 사고가 납니다.',
-        getDetail: function(){ return '에너지가 강한 만큼 과부하에 주의하세요. 모든 것을 혼자 해결하려는 경향이 번아웃으로 이어질 수 있습니다. 정기적인 휴식과 에너지 충전이 지속적인 성과의 핵심입니다. 중요한 결정 전 충분한 숙려 기간을 두세요.'; },
-        advice:'주 1회 디지털 디톡스 시간을 만들고, 하루 10분이라도 혼자만의 조용한 시간을 확보하세요. 거절하는 법을 배우는 것도 에너지 관리의 핵심입니다. "아니오"라고 말할 수 있어야 진짜 "예스"에 집중할 수 있습니다.'
-      },
-      today: {
-        title:'☀️ 오늘 에너지 흐름 — 50대 역학 중 총력 분석',
-        subtitle:'오늘 하루 시간대별 에너지 지도 · 행동 전략 가이드',
-        color:'#38bdf8',
-        easy:(function(){
-          var now=new Date();
-          var dowArr=['일','월','화','수','목','금','토'];
-          var dow=dowArr[now.getDay()];
-          return '오늘('+(now.getMonth()+1)+'월 '+now.getDate()+'일 '+dow+'요일)은 50대 역학 중이 동시에 가리키는 에너지 방향이 있습니다. 마치 20개의 나침반이 모두 같은 방향을 가리킬 때 그 방향으로 움직이면 최소 에너지로 최대 결과를 얻습니다. 오늘의 흐름을 이해하고 활용하세요.';
-        })(),
-        getDetail: function(){
-          var r=window._pajR||window.calcResult||{};
-          var oh=r.domOh||'목';
-          var lifeNum=r.lifeNum||5;
-          var m=r.m||(new Date().getMonth()+1);
-          var d=r.d||(new Date().getDate());
-          var now=new Date();
-          var td=now.getDate();
-          var tm=now.getMonth()+1;
-          var todaySeed=(td*7+tm*13+(lifeNum||5)*3)%100;
 
-          // 미리 변수로 뽑아두기 — 배열[인덱스] 중첩 제거
-          var gatesArr=['생문(生門) — 새로운 시작에 길함','휴문(休門) — 휴식·내적 충전 최적','개문(開門) — 개혁·도전에 길함','경문(景門) — 문서·계획·소통에 길함'];
-          var todayGate=gatesArr[(m+lifeNum)%4];
+    // 실측 데이터
+    var _s = r.scores && r.scores.s18 ? r.scores.s18 : {};
+    var _np  = window._nasaPlanets || {};
+    var _env = window._cgoEnvData  || {};
+    var _wx  = (_env.weather) || {pressure:1013};
+    var _kp  = (_env.kp && _env.kp.value != null) ? _env.kp.value : -1;
+    var _hvF = (window._HV && window._HV.v4) ? window._HV.v4 : 0;
+    var _hvP = (window._HV && window._HV.v5) ? window._HV.v5 : 0;
+    var _ili = r.ili || 70;
+    var _oh  = r.domOh || '목';
+    var _nm  = r.name  || '사용자';
+    var _wz  = (r.wz && r.wz.name) || '양자리';
+    var _ln  = r.lifeNum || 5;
+    var _gan = (r.dGJ && r.dGJ.gan) || '甲';
+    var _s18s = r.scores || {};
+    var _east = _s18s.eastRB || 70;
+    var _west = _s18s.westRB || 70;
+    var _final= Math.round(_east*0.55+_west*0.45);
 
-          var spiritsArr=['천을귀인 활성 — 귀인 만남 가능성','문창성 활성 — 학습·창작 에너지 상승','천덕귀인 활성 — 예상치 못한 도움','월덕귀인 활성 — 재물 흐름 원활'];
-          var todaySpirit=spiritsArr[(m+lifeNum)%4];
-
-          var dirArr=['동방(東方) — 창의적 시작에 길함','남방(南方) — 사회적 활동·명예에 길함','서방(西方) — 결실·마무리에 길함','북방(北方) — 지혜·내성·준비에 길함','중앙 — 균형 잡힌 종합 판단에 최적'];
-          var todayDir=dirArr[(m+d)%5];
-
-          var moonArr=['양자리 — 충동적 행동보다 계획적 접근','황소자리 — 안정과 실질적 가치에 집중','쌍둥이자리 — 소통·학습·새로운 정보 수집','게자리 — 감정과 직관을 믿는 날','사자자리 — 자신감 있게 표현하고 도전','처녀자리 — 세부사항 점검·분석 최적','천칭자리 — 균형·조화·협력 관계 구축','전갈자리 — 깊은 통찰·변화·혁신의 날'];
-          var todayMoon=moonArr[(tm+td)%8];
-
-          var marsArr=['오전 집중 — 오전 업무 효율 최고','오후 집중 — 오후 이후 에너지 상승','저녁 집중 — 저녁 시간대 창의력 극대화','전일 균등 — 하루 내내 균형적 에너지'];
-          var todayMars=marsArr[todaySeed%4];
-
-          var hexNamesArr=['건(乾)·하늘','곤(坤)·땅','감(坎)·물','이(離)·불','진(震)·천둥','손(巽)·바람','간(艮)·산','태(兌)·연못','수천수·訟','지수사·師'];
-          var todayHex=hexNamesArr[todaySeed%10];
-
-          var hexMsgArr=['하늘의 강건한 창조 에너지가 오늘을 주도합니다. 모든 일에 당당하고 적극적으로 임하세요.','대지의 포용 에너지가 오늘을 감쌉니다. 수용하고 협력하는 자세가 최대 성과를 가져옵니다.','물처럼 유연하고 끊임없이 흘러야 합니다. 어떤 장애물도 돌아가면 결국 목적지에 도달합니다.','불처럼 밝고 열정적으로 빛을 발하세요. 오늘 당신의 존재가 주변을 밝힙니다.','천둥처럼 빠른 행동이 필요합니다. 오래 생각하지 말고 직관을 믿고 움직이세요.','바람처럼 스며들고 침투하세요. 강한 설득보다 부드러운 영향력이 오늘 더 효과적입니다.','산처럼 멈추고 현재에 집중하세요. 기다리는 것이 가장 강력한 전략인 날입니다.','연못처럼 기쁨을 나누세요. 오늘 베푸는 것이 내일 몇 배로 돌아옵니다.','다툼 에너지가 있습니다. 먼저 시비를 걸지 말고 조용히 자신의 일에 집중하세요.','전진의 에너지입니다. 군대처럼 체계적으로 조직하고 목표를 향해 전진하세요.'];
-          var todayHexMsg=hexMsgArr[todaySeed%10];
-
-          var tarotArr=['⚡ 탑 — 기존의 틀을 깨는 변화를 두려워하지 마세요. 무너지는 것은 더 나은 것을 위한 공간 확보입니다.','🌟 별 — 희망을 잃지 마세요. 어두운 밤에도 별은 방향을 알려줍니다.','☀️ 태양 — 오늘은 모든 것이 밝게 빛나는 날입니다. 자신감을 갖고 나아가세요.','🌙 달 — 직관을 믿으세요. 눈에 보이지 않는 것들이 중요한 진실을 담고 있습니다.','🔮 마법사 — 당신에게 필요한 모든 자원이 이미 있습니다. 실행에 옮기세요.','👑 황제 — 체계와 규율로 상황을 통제하세요. 리더십을 발휘할 때입니다.','⚖️ 정의 — 모든 결정을 공정하게 내리세요. 진실은 결국 드러납니다.','🎪 광대 — 새로운 것에 도전하는 순수한 열정을 믿으세요. 시작이 반입니다.'];
-          var todayTarot=tarotArr[todaySeed%8];
-
-          var houseArr=['1번 하우스(자아·외모) — 자신을 적극적으로 표현하고 새로운 첫인상을 심어주세요','2번 하우스(재물·가치관) — 재정 계획 수립과 가치 있는 것에 투자하세요','3번 하우스(소통·이동) — 연락·미팅·이동이 좋은 결과를 낳습니다','4번 하우스(가정·뿌리) — 가족과의 시간과 내면 안정에 집중하세요','5번 하우스(창의·연애) — 창의적 프로젝트와 즐거운 활동에 집중','6번 하우스(건강·일과) — 루틴 점검과 건강 관리가 장기 성과를 만듭니다','7번 하우스(파트너십) — 중요한 협력·계약·파트너 관계에 최적의 날','8번 하우스(변화·공동재) — 깊은 변화와 공동 투자에 유리한 에너지','9번 하우스(철학·여행) — 배움·여행·넓은 시야로 사고를 확장하세요','10번 하우스(커리어·명성) — 사회적 활동과 커리어 행동이 빛을 발합니다','11번 하우스(인맥·희망) — 네트워킹과 그룹 활동에서 귀인을 만납니다','12번 하우스(영성·잠재의식) — 혼자만의 시간과 내면 탐색이 통찰을 가져옵니다'];
-          var todayHouse=houseArr[(r.h||12)%12];
-
-          var jungArr=['재백궁(財帛宮) — 돈·재물 에너지 흐름 집중','관록궁(官祿宮) — 직업·사회적 성취 에너지 활성','부처궁(夫妻宮) — 대인관계·파트너십 에너지','복덕궁(福德宮) — 정신 에너지·행복 지수 상승'];
-          var jungActionArr=['재정 관련 결정과 협상에 적극적으로 임하세요.','커리어 관련 행동이 특히 효과적인 날입니다.','소중한 사람과의 대화와 교류에 투자하세요.','내면의 목소리에 귀 기울이고 휴식을 취하세요.'];
-          var todayJung=jungArr[todaySeed%4];
-          var todayJungAction=jungActionArr[todaySeed%4];
-
-          var hexsalArr=['겁살(劫煞) — 갑작스러운 변수 주의, 계획 변경 가능성','화개살(華蓋煞) — 혼자 모든 것을 해결하려 말고 협력 요청','백호살(白虎煞) — 교통·안전·신체에 각별히 주의','도화살(桃花煞) — 인간관계에서 경계를 명확히 하세요'];
-          var todaySal=hexsalArr[(d+lifeNum)%4];
-
-          var numArr=['1번 — 독립·시작·리더십의 날. 새로운 프로젝트나 아이디어를 시작하기 최적.','2번 — 협력·조화·직관의 날. 혼자보다 함께할 때 시너지가 극대화됩니다.','3번 — 창의·표현·소통의 날. 글쓰기·발표·창작 활동이 빛을 발합니다.','4번 — 노력·기반·실행의 날. 꼼꼼한 실무와 시스템 구축에 집중하세요.','5번 — 변화·자유·모험의 날. 새로운 경험과 유연한 대응이 핵심.','6번 — 책임·돌봄·균형의 날. 가족·팀·주변 사람들에게 관심을 기울이세요.','7번 — 내성·분석·직관의 날. 조용히 생각하고 연구하는 시간이 황금.','8번 — 성취·권력·재물의 날. 비즈니스·협상·재정 결정에 최적.','9번 — 완성·나눔·봉사의 날. 마무리 짓고 베풀 때 큰 보상이 따릅니다.'];
-          var todayNumIdx=((td+tm+lifeNum)%9||9)-1;
-          var todayNum=numArr[todayNumIdx];
-
-          var kabArr=['케테르(왕관) — 영적 연결·순수의식 최고조','호크마(지혜) — 직관적 통찰력 극대화','비나(이해) — 심층 분석·논리력 강화','헤세드(자비) — 관대함·인간관계 확장','게부라(힘) — 결단력·실행력 강화','티페레트(아름다움) — 균형·조화·창의 에너지','네짜흐(승리) — 열정·예술·감성 에너지','호드(영광) — 언어·소통·지식 에너지','예소드(기초) — 잠재의식·직관·꿈 에너지','말쿠트(왕국) — 현실화·물질적 성취 에너지'];
-          var todayKab=kabArr[(lifeNum-1)%10];
-
-          var synArr=['양자리·사수자리·사자자리','황소자리·처녀자리·염소자리','쌍둥이자리·천칭자리·물병자리','게자리·전갈자리·물고기자리'];
-          var todaySyn=synArr[(tm+lifeNum)%4];
-
-          var palmArr=['생명선 에너지 — 손바닥이 따뜻하고 핑크빛이면 오늘 생명 에너지 충만. 차갑고 창백하면 생명선 에너지 보강 필요.','두뇌선 에너지 — 손가락 마디가 유연하면 오늘 두뇌 회전 좋음. 뻣뻣하다면 스트레칭과 충분한 수분으로 뇌 혈류 개선.','감정선 에너지 — 손 전체 혈색이 균일하면 감정 안정. 손끝이 특히 차갑다면 심폐 순환 개선이 필요합니다.','운명선 에너지 — 오늘 손에 힘이 느껴지면 운명선 활성화 상태. 손에 힘이 없다면 의욕과 목표 재설정이 필요합니다.'];
-          var todayPalm=palmArr[todaySeed%4];
-
-          var ohKeyArr={목:'창의·성장·시작',화:'열정·표현·인정',토:'안정·신뢰·준비',금:'결단·정리·수확',수:'지혜·유연·소통'};
-          var ohKey=ohKeyArr[oh]||'균형·조화';
-
-          var ohSpaceArr={목:'동쪽에 식물이나 녹색 소품 배치, 창을 열어 신선한 공기 유입',화:'남쪽에 조명 밝게, 빨간 소품이나 꽃으로 열정 에너지 증폭',토:'중앙에 황토색 소품, 정돈된 환경으로 안정 에너지 강화',금:'서쪽에 금속 소품이나 흰색 장식, 깔끔한 정리 정돈',수:'북쪽에 수족관이나 물 관련 소품, 파란 계열로 지혜 에너지 활성화'};
-          var todaySpace=ohSpaceArr[oh]||'균형 잡힌 공간 배치';
-
-          var ohFaceArr={목:'간 기운이 눈에 나타납니다. 눈에 충혈이나 건조함이 있다면 간 기운 보강이 필요한 신호입니다. 오늘은 눈 주변을 따뜻하게 해주고 충분한 수분을 섭취하세요.',화:'심장 에너지가 이마와 얼굴색에 나타납니다. 오늘 안색이 지나치게 붉다면 과부하 신호입니다. 심호흡으로 화 기운을 조절하세요.',토:'비위 기운이 입술 주변에 나타납니다. 오늘 소화가 잘 된다면 토 기운이 강한 날, 더부룩하다면 위장 에너지를 보강하세요.',금:'폐 기운이 피부와 코에 나타납니다. 오늘 피부가 건조하거나 코가 막힌다면 폐 기운 보강이 필요합니다. 깊은 호흡 운동을 해보세요.',수:'신장 에너지가 눈 아래와 귀에 나타납니다. 오늘 다크서클이 짙다면 신장 에너지 보강 신호입니다. 충분한 수면이 최고의 처방입니다.'};
-          var todayFace=ohFaceArr[oh]||'오늘 얼굴 기색이 밝고 생기 있으면 에너지 충만 상태입니다.';
-
-          var nameOhArr=['목(木)·창조','화(火)·열정','토(土)·안정','금(金)·결단','수(水)·지혜'];
-          var nameOh=r.name?nameOhArr[r.name.length%5]:'에너지';
-          var ohArr=['목','화','토','금','수'];
-          var nameRelation=(r.name&&r.name.length%5===ohArr.indexOf(oh))?'상생 관계 — 이름의 파동이 오늘 에너지를 강화합니다. 자신의 이름을 당당히 알리는 활동이 유리합니다.':'보완 관계 — 이름의 파동이 오늘 빠진 에너지를 채웁니다. 새로운 인연과의 만남에서 강점이 발휘됩니다.';
-
-          var ohSynArr={목:'수(水) 또는 화(火) 기운의 사람',화:'목(木) 또는 토(土) 기운의 사람',토:'화(火) 또는 금(金) 기운의 사람',금:'토(土) 또는 수(水) 기운의 사람',수:'금(金) 또는 목(木) 기운의 사람'};
-          var todayOhSyn=ohSynArr[oh]||'상생 오행의 사람';
-
-          var taeulMsg=(r.y&&r.y%9<=4)?'상승 사이클 진행 중 — 오늘 하루 무엇을 시작해도 앞으로 나아가는 힘이 뒤에서 밉니다. 과감한 결정도 이 사이클에서는 성공률이 높습니다.':'내실 사이클 진행 중 — 새로운 시작보다 현재 진행 중인 일을 완성하는 데 에너지를 집중하세요. 준비가 완벽할수록 다음 상승기에서 큰 도약이 가능합니다.';
-
-          var txt='';
-          txt+='【01 ☯️ 사주명리 — 오늘 일진(日辰)】\n';
-          txt+='오늘의 천간·지지 에너지: 일간 '+(r.dGJ?r.dGJ.gan:'甲')+'과 오늘 날짜 에너지가 '+(todaySeed%2===0?'상생(相生) 관계 — 추진하는 일마다 순조롭게 풀립니다':'상극(相剋) 관계 — 무리한 추진보다 신중한 검토가 유리합니다')+'. 오행 '+oh+' 기운이 오늘 날 에너지와 만나 '+ohKey+' 에너지가 극대화됩니다.\n\n';
-          txt+='【02 ⭐ 태양궁 점성술 — 오늘 태양 트랜짓】\n';
-          txt+='태양이 현재 '+(r.wz?r.wz.name:'쌍둥이자리')+' 구역을 통과하며 에너지를 증폭시키고 있습니다. 오늘 특히 오전 10시~오후 2시 사이에 태양 에너지가 절정에 달해 창의적 사고와 의사결정력이 강화됩니다.\n\n';
-          txt+='【03 ⭐ 자미두수 — 오늘 활성 명궁】\n';
-          txt+='오늘은 '+todayJung+'. '+todayJungAction+'\n\n';
-          txt+='【04 🌌 전체 차트 — 오늘 달의 위치】\n';
-          txt+='달이 오늘 '+todayMoon+' 구역에 위치합니다.\n\n';
-          txt+='【05 🗺️ 기문둔갑 — 오늘 길문(吉門)】\n';
-          txt+='오늘의 길문: '+todayGate+'. 현재 가장 유리한 방위는 '+todayDir+'. 중요한 미팅이나 이동 시 참고하세요.\n\n';
-          txt+='【06 🪐 행성 트랜짓 — 오늘 행성 영향】\n';
-          txt+='목성(확장·기회): '+(tm<=6?'상승기 — 새로운 기회에 YES':'결실기 — 현재 진행 사항 마무리 집중')+'. 토성(구조·책임): '+(todaySeed%2===0?'순행 — 꾸준한 노력이 실력으로 쌓이는 날':'역행 준비 — 과거 결정 재검토 권장')+'. 화성(에너지·추진): '+todayMars+'.\n\n';
-          txt+='【07 ⚔️ 육임신살 — 오늘 길신·흉살】\n';
-          txt+='오늘의 길신: '+todaySpirit+'. 오늘의 주의 흉살: '+todaySal+'. 흉살 에너지는 인지하고 있으면 피해갈 수 있습니다.\n\n';
-          txt+='【08 🔢 서양 수비학 — 오늘 개인일수(個人日數)】\n';
-          txt+='오늘 개인일수: '+((td+tm+lifeNum)%9||9)+'번. '+todayNum+'\n\n';
-          txt+='【09 🏡 풍수지리 — 오늘 공간 에너지】\n';
-          txt+='오늘 '+oh+' 오행 기운을 강화하는 실내 배치: '+todaySpace+'. 오늘 이동 시 '+todayDir.split(' — ')[0]+' 이동이 기운을 보탭니다.\n\n';
-          txt+='【10 ✡️ 카발라 — 오늘 세피라 활성】\n';
-          txt+='오늘 활성화되는 세피라: '+todayKab+'. 이 에너지에 맞는 활동을 오늘 배치하면 2배 효과를 얻습니다.\n\n';
-          txt+='【11 📝 성명학 — 오늘 이름 에너지 공명】\n';
-          txt+='오늘 이름 '+(r.name||'당신')+'의 음령오행 '+nameOh+' 에너지가 오늘 '+oh+' 일진과 '+nameRelation+' 중요한 자리에서 명함 교환이나 자기소개가 특히 효과적인 날입니다.\n\n';
-          txt+='【12 🏠 하우스 시스템 — 오늘 활성 하우스】\n';
-          txt+='오늘 활성화되는 인생 영역: '+todayHouse+'.\n\n';
-          txt+='【13 🌀 태을신수 — 오늘 우주 에너지 위치】\n';
-          txt+=(r.y||'?')+'년생 기준 현재 태을 사이클 '+((r.y?r.y%9+1:5))+'궁 에너지. 오늘의 거시 에너지: '+taeulMsg+' 72년 주기 관점에서 오늘은 전체 우주 흐름의 작은 일부이며, 큰 그림 안에서 오늘의 선택이 의미를 가집니다.\n\n';
-          txt+='【14 💑 합성 차트 — 오늘 인간관계 에너지】\n';
-          txt+='오늘 만나면 시너지가 높은 오행: '+todayOhSyn+'. 오늘 별자리 시너지가 높은 대상: '+todaySyn+' 생. 오늘 중요한 미팅이나 비즈니스 협의가 있다면 이런 에너지의 사람과 함께할 때 가장 좋은 결과가 납니다.\n\n';
-          txt+='【15 🀄 주역 — 오늘의 괘(卦)】\n';
-          txt+='오늘의 주역 에너지: '+todayHex+' — '+todayHexMsg+' 이 에너지를 의식하며 하루를 보내면 더 큰 흐름을 탈 수 있습니다.\n\n';
-          txt+='【16 🃏 타로 — 오늘의 조언 카드】\n';
-          txt+='오늘 하루를 위한 타로 메시지: '+todayTarot+'\n\n';
-          txt+='【17 👤 관상학 — 오늘 얼굴 에너지 상태】\n';
-          txt+='오늘 '+oh+' 오행 기운에서 얼굴 관리 포인트: '+todayFace+' 밝은 표정과 미소가 오늘의 관상 에너지를 최고로 만드는 가장 쉬운 방법입니다.\n\n';
-          txt+='【18 🤚 손금학 — 오늘 손 에너지 상태】\n';
-          txt+='오늘 아침 손을 따뜻하게 비비며 점검하세요. '+oh+' 오행 '+todayPalm+' 오늘 손을 활용하는 활동(글쓰기·악기·요리·운동)이 손금 에너지를 강화하고 운명선을 선명하게 만드는 데 도움이 됩니다.';
-          return txt;
-        },
-        advice:(function(){
-          var now=new Date(); var h=now.getHours();
-          var timeAdvice=h<6?'새벽 시간대 — 명상과 계획 수립에 최적. 고요한 에너지를 활용해 하루 의도를 설정하세요.':h<12?'오전 시간대 — 창의적 사고와 중요한 결정의 골든 타임. 핵심 업무를 오전에 배치하세요.':h<18?'오후 시간대 — 소통과 협력의 에너지. 미팅·협의·네트워킹에 최적입니다.':'저녁 시간대 — 정리와 회복의 에너지. 하루를 돌아보고 내일을 준비하세요.';
-          return '⏰ 현재 시간대 에너지: '+timeAdvice+' 오늘 가장 중요한 한 가지 행동: 50대 역학 중이 공통으로 가리키는 방향인 \'지금 당장 가장 미루고 있는 일을 30분만 시작하기\'입니다. 에너지가 방향을 알려줬으면 행동이 결과를 만듭니다.';
-        })()
-      },
-      thismonth: {
-        title:'📅 이번 달 에너지 흐름',
-        subtitle:'월간 에너지 패턴 — 언제 행동하고 언제 기다릴지 전략 수립',
-        color:'#d4a843',
-        easy:'이번 달은 에너지의 파도가 있습니다. 파도가 높을 때 서핑을 해야 하듯, 에너지가 높은 시기에 중요한 행동을 해야 합니다. 억지로 흐름에 역행하면 두 배의 에너지가 필요하지만, 흐름을 타면 절반의 노력으로 두 배의 결과가 납니다.',
-        getDetail: function(){ return '이번 달은 새로운 시작과 관계 형성에 유리한 에너지가 흐릅니다. 특히 중반부(15일~25일)에 중요한 기회가 찾아올 가능성이 높습니다. 직관적으로 끌리는 제안은 적극적으로 검토하세요. 재정적 결정은 월말보다 월초가 유리합니다.'; },
-        advice:'이번 달 캘린더에 표시할 것: 1~14일 준비와 계획, 15~25일 적극적 행동과 도전, 26일 이후 마무리와 정리. 중요한 미팅과 계약은 15~22일 사이에 배치하면 가장 좋습니다.'
-      },
-      thisyear: {
-        title:'🗓️ 올해 연간 에너지 흐름',
-        subtitle:'2026년 전체 에너지 지도 — 분기별 전략 가이드',
-        color:'#d4a843',
-        easy:'올해는 씨앗을 심고 수확하는 해입니다. 상반기에 기반을 닦고 새로운 것을 시작하면, 하반기에 그 결과가 나타납니다. 지금 하는 선택과 행동이 연말의 모습을 결정합니다. 지금(3월)은 2분기 진입 시점으로 행동 시작에 가장 좋은 타이밍입니다.',
-        getDetail: function(){ return '올해는 전반적으로 상승 에너지가 강한 해입니다. 상반기에 씨앗을 심고 하반기에 수확하는 구조로, 지금 시작하는 일들이 연말에 결실을 맺습니다. 특히 7월~9월이 핵심 전환점으로 중요한 결정과 행동이 장기적 운명을 바꿀 수 있습니다.'; },
-        advice:'분기별 전략: 1분기(1~3월) 계획 수립, 2분기(4~6월) 적극적 행동, 3분기(7~9월) 핵심 도전과 전환, 4분기(10~12월) 결실 수확. 지금 당장 올해 목표를 구체적으로 적고 분기별 행동 계획을 세우세요.'
+    // ── 점수별 이유 계산 ──────────────────────────────────────
+    function _reason(key){
+      var np=_np, kp=_kp, wx=_wx;
+      if(key==='s06'){
+        if(np.mars && np.mars.retro)    return '화성 역행 -8';
+        if(np.jupiter && np.jupiter.retro) return '목성 역행 -6';
+        if(np.jupiter && !np.jupiter.retro) return '목성 순행 +8 ★';
+        return 'NASA 행성 데이터';
       }
+      if(key==='s03'){
+        if(np.sun){ var d=Math.abs(((parseFloat(np.sun.lon)||0)-(r.zodiacIdx*30+15)+360)%360); if(d>180)d=360-d; return d<30?'태양 내 별자리 구간 +10':d>150?'태양 반대 구간 -8':'태양 황경 '+Math.round(parseFloat(np.sun.lon)||0)+'°'; }
+        return '태양 위치 기반';
+      }
+      if(key==='s13'){
+        if(kp>=6) return 'Kp'+kp.toFixed(1)+' 지자기 폭풍 -10';
+        if(kp>=4) return 'Kp'+kp.toFixed(1)+' 지자기 활동 -6';
+        if(kp<=1&&kp>=0) return 'Kp'+kp.toFixed(1)+' 조용한 우주 +7';
+        if(kp<=2&&kp>=0) return 'Kp'+kp.toFixed(1)+' 안정 지자기 +4';
+        return '지자기 Kp 기반';
+      }
+      if(key==='s16'){
+        if(np.moon&&np.sun){ var ph=((parseFloat(np.moon.lon||0)-parseFloat(np.sun.lon||0))+360)%360; if(ph>165&&ph<195)return '보름달 ★ +12'; if(ph<15||ph>345)return '신월 새시작 +5'; return '달 위상 '+Math.round(ph)+'°'; }
+        return '달 위상 기반';
+      }
+      if(key==='s17'){
+        if(_hvF>0) return 'rPPG 실측 FCI '+Math.round(_hvF);
+        return '생체 스캔 대기';
+      }
+      if(key==='s18'){
+        if(_hvP>0) return 'rPPG 실측 BLI '+Math.round(_hvP);
+        return '생체 스캔 대기';
+      }
+      if(key==='s05'||key==='s09'||key==='s19'){
+        var p=wx.pressure||1013; var adj=Math.round((p-1013)*0.06);
+        if(adj>3) return '고기압('+Math.round(p)+'hPa) +'+adj;
+        if(adj<-3) return '저기압('+Math.round(p)+'hPa) '+adj;
+        return '기압 '+Math.round(p)+'hPa';
+      }
+      if(key==='s02'||key==='s04'||key==='s12'||key==='s14'||key==='s15'){
+        if(np.jupiter&&!np.jupiter.retro) return '목성 순행 보정 +5';
+        if(np.jupiter&&np.jupiter.retro)  return '목성 역행 보정 -4';
+        return '생년월일+NASA';
+      }
+      return '생년월일 기반';
+    }
+
+    // 점수 없으면 "—" (S17·S18은 실측 스캔 완료 시만 표시)
+    function _sc(key){
+      if(key==='s17') return _hvF>0 ? (_s[key]||'—') : '—';
+      if(key==='s18') return _hvP>0 ? (_s[key]||'—') : '—';
+      var v=_s[key]; return (v&&v>0)?v:'—';
+    }
+
+    // 행 생성 — onclick 인라인
+    function _row(key, icon, title, sub, color){
+      var sc = _sc(key);
+      var rs = _reason(key);
+      var scStr = sc==='—' ? '<span style="color:rgba(240,230,200,.3);font-size:13px">—</span>'
+                : '<span style="font-family:Orbitron,sans-serif;font-size:17px;font-weight:700;color:'+color+'">'+sc+'</span>';
+      var rsColor = (rs.indexOf('+')>=0)?'#34d399':(rs.indexOf('-')>=0)?'#f87171':'rgba(240,230,200,.45)';
+      return '<div onclick="window._raiDetail(\''+key+'\')" style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,.04);border-radius:10px;cursor:pointer;border:1px solid transparent;margin-bottom:8px;-webkit-tap-highlight-color:rgba(212,168,67,.2)" onmouseover="this.style.background=\'rgba(255,255,255,.09)\';this.style.borderColor=\'rgba(212,168,67,.25)\'" onmouseout="this.style.background=\'rgba(255,255,255,.04)\';this.style.borderColor=\'transparent\'">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:800;color:'+color+';margin-bottom:2px">'+icon+' '+title+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+            '<span style="font-size:10px;color:rgba(240,230,200,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">'+sub+'</span>'+
+            '<span style="font-size:10px;color:'+rsColor+';font-weight:600;white-space:nowrap">'+rs+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+scStr+
+          '<span style="font-size:11px;color:rgba(212,168,67,.45)">자세히 ›</span>'+
+        '</div>'+
+      '</div>';
+    }
+
+    // 동양 7역학
+    var _eastHtml =
+      _row('s01','📊','사주명리 (四柱八字)','일간 '+_gan+' · '+_oh+' 오행','#34d399')+
+      _row('s02','⭐','자미두수 (紫微斗數)','명궁·재백궁·대운','#34d399')+
+      _row('s05','🧭','기문둔갑 (奇門遁甲)','길방·길시·방위','#34d399')+
+      _row('s07','⚡','육임신살 (六壬神煞)','운기 흐름·길흉','#34d399')+
+      _row('s09','🏡','풍수지리 (風水地理)','공간 에너지','#34d399')+
+      _row('s11','✍️','성명학 (姓名學)','이름 오행·획수','#34d399')+
+      _row('s13','🔮','태을신수 (太乙神數)','72년 주기·지자기','#34d399')+
+      _row('s19','🔯','구성기학 (九星氣學)','본명성·태양고도·방위','#34d399');
+
+    // 서양 7+2역학 (S15 주역·S16 타로 포함)
+    var _westHtml =
+      _row('s03','♈',_wz+' 태양궁','NASA 태양 황도','#38bdf8')+
+      _row('s04','🌍','전체 차트 점성술','상승궁·달 위치','#38bdf8')+
+      _row('s06','🪐','행성 트랜짓 ★','NASA 9행성 실시간','#38bdf8')+
+      _row('s08','🔢','서양 수비학 '+_ln,'생명수 진동수','#38bdf8')+
+      _row('s10','✡️','카발라 점성술','세피로트 에너지','#38bdf8')+
+      _row('s12','🏠','하우스 시스템','12궁 에너지','#38bdf8')+
+      _row('s14','💑','합성 차트','금성·화성 각도','#38bdf8')+
+      _row('s15','☰','주역 64괘','동적 시드·날씨 연동','#38bdf8')+
+      _row('s16','🃏','타로 × 달위상','NASA 달 실제 위상각','#38bdf8');
+
+    // 생체 스캔 (B등급 — 스캔 시 실측값)
+    var _bioHtml =
+      _row('s17','🧬','관상 rPPG','FCI 안면혈색 실측','#c4b5fd')+
+      _row('s18','✋','손금 BLI','손금분기 실측','#c4b5fd');
+
+    // 통합 결론 (MBTI 포함 여부 표시)
+    var _finalHtml = '';
+
+    // 팝업 오버레이 — DOM에 먼저 삽입
+    var _popHtml =
+      '<div id="_raiPop" onclick="if(event.target.id===\'_raiPop\')window._raiClose()" '+
+      'style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10600;'+
+      'background:rgba(0,0,0,.9);backdrop-filter:blur(12px);padding:16px;'+
+      'overflow-y:auto;-webkit-overflow-scrolling:touch">'+
+        '<div id="_raiPopBd" style="max-width:560px;margin:0 auto;'+
+        'background:linear-gradient(160deg,#0a1628,#0d1f3c);'+
+        'border:1px solid rgba(212,168,67,.35);border-radius:20px;padding:20px"></div>'+
+      '</div>';
+
+    // 팝업 body에 결과 주입
+    var body = document.getElementById('_raiBody');
+    if(!body) return;
+    body.innerHTML = _popHtml +
+
+    // MBTI 상태
+    (window._mbtiResult
+      ? '<div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.35);border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:16px">🧠</span><div><div style="font-size:12px;font-weight:700;color:#c4b5fd">MBTI '+window._mbtiResult.type+' 적용 — 20개 역학 완전 활성화</div><div style="font-size:10px;color:rgba(240,230,200,.45)">'+window._mbtiResult.oh+' 오행 친화 · 생체스캔 완료 시 최대 20개</div></div></div>'
+      : '<div style="background:rgba(168,85,247,.05);border:1px dashed rgba(168,85,247,.25);border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:16px">🧠</span><div><div style="font-size:12px;font-weight:700;color:rgba(168,85,247,.65)">MBTI 미입력 — 17개 역학 적용 중</div><div style="font-size:10px;color:rgba(240,230,200,.4)">생체스캔 시 +2개(19개) · MBTI 입력 시 +1개(20개)</div></div></div>'
+    )+
+
+    // 동양 역학 섹션
+    '<div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.2);border-radius:14px;margin-bottom:14px;overflow:hidden">'+
+      '<div style="padding:10px 16px;background:rgba(52,211,153,.08);border-bottom:1px solid rgba(52,211,153,.12)">'+
+        '<span style="font-size:12px;font-weight:800;color:#34d399">☯ 동양 역학 정밀 분석 (55%) — 종합 '+_east+'%</span>'+
+      '</div>'+
+      '<div style="padding:10px">'+_eastHtml+'</div>'+
+    '</div>'+
+
+    // 서양 역학 섹션
+    '<div style="background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.2);border-radius:14px;margin-bottom:14px;overflow:hidden">'+
+      '<div style="padding:10px 16px;background:rgba(56,189,248,.08);border-bottom:1px solid rgba(56,189,248,.12)">'+
+        '<span style="font-size:12px;font-weight:800;color:#38bdf8">⭐ 서양 역학 정밀 분석 (45%) — 종합 '+_west+'%</span>'+
+      '</div>'+
+      '<div style="padding:10px">'+_westHtml+'</div>'+
+    '</div>'+
+
+    // 생체 스캔 섹션
+    '<div style="background:rgba(196,181,253,.04);border:1px solid rgba(196,181,253,.2);border-radius:14px;margin-bottom:14px;overflow:hidden">'+
+      '<div style="padding:10px 16px;background:rgba(196,181,253,.08);border-bottom:1px solid rgba(196,181,253,.12);display:flex;align-items:center;justify-content:space-between">'+
+        '<span style="font-size:12px;font-weight:800;color:#c4b5fd">🧬 생체 스캔 — rPPG 실측 (B등급 ±20)</span>'+
+        '<span style="font-size:10px;color:rgba(196,181,253,.5)">'+(_hvF>0?'✅ 실측 완료':'스캔 시 활성화')+'</span>'+
+      '</div>'+
+      '<div style="padding:10px">'+_bioHtml+'</div>'+
+    '</div>'+
+
+    // 통합 ILI 결론
+    '<div style="background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(99,130,201,.05));border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:14px;margin-bottom:14px">'+
+      '<div style="font-size:12px;font-weight:800;color:#d4a843;margin-bottom:8px">⚡ 통합 ILI 최종 결론 — ILI <span style="font-family:Orbitron,sans-serif;font-size:18px">'+_final+'</span></div>'+
+      '<div style="font-family:monospace;font-size:10px;color:#d4a843;background:rgba(0,0,0,.3);border-radius:8px;padding:8px;line-height:1.9;margin-bottom:10px">'+
+        'ILI = Σ(W×S)/(ΣW) × (1+W_bio×k)<br>'+
+        '<span style="color:#34d399">= 동양:'+_east+'(55%) + 서양:'+_west+'(45%) → ILI <b>'+_final+'</b></span>'+
+      '</div>'+
+      '<div style="padding:10px">'+_finalHtml+'</div>'+
+      '<div style="margin-top:10px;padding:14px;background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(99,130,201,.07));border-radius:10px;border:1px solid rgba(212,168,67,.25);text-align:center">'+
+        '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:6px;letter-spacing:.1em">✨ 핵심 한 줄 메시지</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#f0e6c8;line-height:1.8">"'+_nm+'님의 에너지는 준비된 자에게만 보이는<br>기회를 먼저 포착합니다. 지금 이 순간, 직관을 믿으세요."</div>'+
+      '</div>'+
+    '</div>';
+
+    // ── 팝업 함수 (전역 등록) ────────────────────────────────
+    var _detailDB = {
+      s01:{icon:'📊',title:'사주명리 (四柱八字)',sub:'일간·오행·용신',color:'#34d399',
+           easy:'사주명리는 태어난 년·월·일·시의 에너지를 분석합니다. 씨앗이 어떤 계절에 심어졌느냐처럼, 태어난 순간의 에너지가 성향과 운을 결정합니다.',
+           detail:'일간 '+_gan+' 기반 오행균형과 일간강도로 계산됩니다. E등급(±5)으로 생년월일 고정값이 핵심이며 오늘의 외부 데이터와 거의 무관합니다. 당신의 근본 에너지 기준값입니다.',
+           advice:'이 점수가 당신의 기본 에너지 베이스입니다. 외부 점수들이 이 값을 중심으로 오르내립니다.'},
+      s02:{icon:'⭐',title:'자미두수 (紫微斗數)',sub:'명궁·재백궁·대운',color:'#34d399',
+           easy:'자미두수는 108개 별을 사용해 인생 전 영역을 분석하는 동양 고급 역학입니다. 명궁에 어떤 별이 있느냐에 따라 성격과 재물운이 결정됩니다.',
+           detail:'D등급(±8): 명궁 배치·대운 주기가 기본이며 NASA 목성·토성 위치로 보정됩니다. '+_reason('s02'),
+           advice:'귀인 방향으로 인맥을 넓히세요. 재백궁 분석으로 재물이 들어오는 방식을 파악할 수 있습니다.'},
+      s03:{icon:'♈',title:_wz+' 태양궁 점성술',sub:'NASA 태양 황도 위치',color:'#38bdf8',
+           easy:'태양궁 점성술은 태어날 때 태양이 있던 별자리로 기본 성격을 분석합니다. A등급으로 오늘 태양의 실제 황도 위치가 점수에 직접 영향을 줍니다.',
+           detail:'A등급(±15): NASA JPL 태양 실제 황도 위치 기반. 현재 상태: '+_reason('s03'),
+           advice:'태양이 내 별자리 구간을 통과하는 날은 에너지가 최고조입니다. 중요한 일을 그 날에 집중하세요.'},
+      s04:{icon:'🌍',title:'전체 차트 점성술',sub:'상승궁·달 위치',color:'#38bdf8',
+           easy:'네이탈 차트는 태어난 순간의 하늘 지도입니다. 달자리는 내면 감정, 상승궁은 첫인상을 나타냅니다.',
+           detail:'D등급(±8): 출생지 좌표와 NASA 전행성 배치 기반. '+_reason('s04'),
+           advice:'정확한 출생 시간을 알면 더 정밀한 분석이 가능합니다.'},
+      s05:{icon:'🧭',title:'기문둔갑 (奇門遁甲)',sub:'길방·길시·방위·기압',color:'#34d399',
+           easy:'기문둔갑은 어떤 시간에 어떤 방향으로 행동하면 유리한지를 알려줍니다. C등급으로 오늘의 기압·날씨·나침반 방위가 점수에 반영됩니다.',
+           detail:'C등급(±10): 현재 기상 상태. '+_reason('s05'),
+           advice:'길방 방향의 장소에서 중요한 미팅을 하면 에너지가 강화됩니다.'},
+      s06:{icon:'🪐',title:'행성 트랜짓 분석 ★',sub:'NASA 9행성 역행/순행',color:'#38bdf8',
+           easy:'행성 트랜짓은 지금 하늘의 행성이 내 운에 미치는 영향을 봅니다. A등급(±20) 최고 변동폭으로 NASA 실시간 데이터가 직접 점수를 결정합니다.',
+           detail:'A등급(±20) ★최고★: NASA JPL 실시간 역행/순행 직접 반영. 현재: '+_reason('s06')+'. 이것이 시뮬레이션이 아닌 실시간 과학의 증거입니다.',
+           advice:'행성 역행 기간에는 새로운 시작보다 기존 일의 마무리에 집중하세요. 역행이 끝나면 강하게 전진하세요.'},
+      s07:{icon:'⚡',title:'육임신살 (六壬神煞)',sub:'시진·월건 고정값',color:'#34d399',
+           easy:'육임신살은 현재 어떤 기운이 작용하는지 알려주는 운기 예보입니다.',
+           detail:'E등급(±5): 시진·월건 기반 고정값. 오늘의 외부 데이터와 거의 무관한 안정적 기준값입니다.',
+           advice:'길한 시기에는 적극 행동하고, 흉한 시기에는 기존 일의 마무리에 집중하세요.'},
+      s08:{icon:'🔢',title:'서양 수비학 (생명수 '+_ln+')',sub:'생명수 고유 진동수',color:'#38bdf8',
+           easy:'수비학은 태어난 날짜 숫자에서 삶의 에너지 패턴을 읽습니다. 생명수는 인생 전체를 관통하는 핵심 에너지입니다.',
+           detail:'E등급(±3): 생명수 '+_ln+' 고유 진동수 기반. 가장 안정적인 고정값입니다.',
+           advice:'생명수 '+_ln+'이 들어간 날짜에 중요한 일을 배치하면 좋습니다.'},
+      s09:{icon:'🏡',title:'풍수지리 (風水地理)',sub:'공간 에너지·기압',color:'#34d399',
+           easy:'풍수지리는 좋은 에너지가 흐르는 공간 배치를 분석합니다. C등급으로 현재 날씨·기압·방위가 반영됩니다.',
+           detail:'C등급(±10): 방위 스캔·지자기·기상 데이터 기반. '+_reason('s09'),
+           advice:'지금 당장 집 현관을 청소하고 밝은 조명을 켜두세요. 현관은 에너지가 들어오는 입구입니다.'},
+      s10:{icon:'✡️',title:'카발라 (Kabbalah)',sub:'세피로트 에너지',color:'#38bdf8',
+           easy:'카발라는 유대 신비주의 생명나무로 영적 에너지 흐름을 분석합니다.',
+           detail:'E등급(±5): 이름 히브리 수비·세피로트 기반 고정값입니다.',
+           advice:'명상과 내면 탐구로 카발라 에너지를 깨우세요.'},
+      s11:{icon:'✍️',title:'성명학 (姓名學)',sub:'이름 획수·음양',color:'#34d399',
+           easy:'성명학은 이름의 획수와 오행 에너지로 운명을 분석합니다.',
+           detail:'E등급(±3): 이름 획수·음양 오행 기반 고정값. 오늘의 외부 데이터와 무관합니다.',
+           advice:'이름 오행이 불균형하다면 닉네임이나 호를 사용해 보완하세요.'},
+      s12:{icon:'🏠',title:'하우스 시스템',sub:'12궁 에너지 배치',color:'#38bdf8',
+           easy:'점성술 하우스는 인생을 12개 영역으로 나눠 각 영역의 에너지를 분석합니다.',
+           detail:'D등급(±8): 출생지·NASA 하우스 커스프 기반. '+_reason('s12'),
+           advice:'현재 강화된 하우스 영역에 에너지를 집중 투자하세요.'},
+      s13:{icon:'🔮',title:'태을신수 (太乙神數)',sub:'72년 주기·지자기 Kp',color:'#34d399',
+           easy:'태을신수는 72년을 한 주기로 우주 에너지 흐름을 분석합니다. A등급으로 지자기 Kp 지수와 태양풍 데이터가 실시간 반영됩니다.',
+           detail:'A등급(±12): 지자기 Kp·태양풍 Bz 실시간 기반. 현재: '+_reason('s13'),
+           advice:'지자기가 조용한 날(Kp≤1)은 최고의 에너지 날입니다. 중요한 결정을 그 날에 내리세요.'},
+      s14:{icon:'💑',title:'합성 차트',sub:'금성·화성 각도',color:'#38bdf8',
+           easy:'합성 차트는 두 사람의 차트를 합성해 관계 에너지를 분석합니다. D등급으로 NASA 금성·화성 실제 위치가 반영됩니다.',
+           detail:'D등급(±8): NASA 금성·화성 황도각 기반. '+_reason('s14'),
+           advice:'금성·화성 에너지가 조화로운 날에 중요한 만남을 가지세요.'},
+      s15:{icon:'☰',title:'주역 64괘',sub:'동적 시드·날씨',color:'#38bdf8',
+           easy:'주역은 64개의 괘로 변화의 패턴을 읽는 동양 철학의 근본입니다.',
+           detail:'D등급(±8): 동적 시드·현재 시진·날씨 데이터 기반. '+_reason('s15'),
+           advice:'주역의 괘는 현재 상황의 패턴을 알려줍니다. 흐름에 맞게 행동하는 것이 지혜입니다.'},
+      s16:{icon:'🃏',title:'타로 × 달 위상',sub:'NASA 달 실제 위상각',color:'#38bdf8',
+           easy:'타로는 22장 메이저 아르카나로 현재 흐름을 읽습니다. A등급으로 NASA 달의 실제 위상이 점수를 결정합니다.',
+           detail:'A등급(±12): NASA 달 실제 위상각 직접 반영. 현재: '+_reason('s16'),
+           advice:'보름달(+12) 기간에는 직관이 가장 강합니다. 이 시기에 중요한 결정을 내리세요.'},
+      s17:{icon:'🧬',title:'관상 · rPPG 실측',sub:'FCI 안면혈색 실측',color:'#c4b5fd',
+           easy:'관상학은 얼굴의 기색으로 건강과 운을 분석합니다. B등급으로 rPPG 카메라 실측값이 직접 반영됩니다.',
+           detail:'B등급(±20): FCI 안면혈색·BPM·HRV 실측값 기반. '+_reason('s17')+'. 생체 스캔 완료 시 가장 정확한 실측 점수입니다.',
+           advice:'Bio Sensor 스캔을 완료하면 이 점수가 실측값으로 바뀝니다. 스캔 전후 점수 변화를 확인해보세요.'},
+      s18:{icon:'✋',title:'손금 · BLI 실측',sub:'손금분기지수 실측',color:'#c4b5fd',
+           easy:'수상학은 손바닥의 선으로 건강·재물·수명을 분석합니다. B등급으로 rPPG BLI 실측값이 반영됩니다.',
+           detail:'B등급(±15): BLI 손금분기지수 rPPG 실측 기반. '+_reason('s18')+'. 손금 스캔 완료 시 실측값으로 업데이트됩니다.',
+           advice:'손금 스캔을 완료하면 이 점수가 실측값으로 바뀝니다.'},
+      s19:{icon:'🔯',title:'구성기학 (九星氣學)',sub:'본명성·태양고도·방위',color:'#34d399',
+           easy:'구성기학은 9개의 별과 방위를 조합해 일상의 운세와 길방을 판단하는 일본 실전 역학입니다. C등급으로 태양 고도각·방위·날씨가 반영됩니다.',
+           detail:'C등급(±8): 본명성(1~9성) 기반에 태양 고도각·방위 스캔·기압 보정. '+_reason('s19'),
+           advice:'본명성에 따라 오늘 유리한 방위와 색상이 다릅니다. 구성기학 달력으로 이사·개업 날짜를 잡으면 좋습니다.'},
+      s15:{icon:'☰',title:'주역 64괘',sub:'동적 시드·날씨 연동',color:'#38bdf8',
+           easy:'주역은 64개의 괘로 만물의 변화 패턴을 읽는 동양 철학의 근본입니다. D등급으로 오늘의 날씨와 시진이 반영됩니다.',
+           detail:'D등급(±8): 동적 시드·현재 시진·날씨 기압 데이터 기반. '+_reason('s15')+'. NASA 목성·토성 위치로 추가 보정됩니다.',
+           advice:'주역의 괘는 현재 상황의 패턴을 알려줍니다. 흐름에 맞게 행동하는 것이 지혜입니다.'},
+      s16:{icon:'🃏',title:'타로 × 달 위상',sub:'NASA 달 실제 위상각',color:'#38bdf8',
+           easy:'타로는 22장 메이저 아르카나로 현재 흐름을 읽습니다. A등급으로 NASA 달의 실제 위상이 점수를 결정합니다.',
+           detail:'A등급(±12): NASA 달 실제 위상각 직접 반영. 현재: '+_reason('s16')+'. 보름달(180°)=+12, 신월=+5, 그믐=-12.',
+           advice:'보름달 기간에는 직관이 가장 강합니다. 중요한 결정은 보름달 전후로 내리세요.'}
     };
 
-    body.innerHTML =
-      '<style>'
-      +'.ais{margin-bottom:18px;border-radius:12px;overflow:hidden}'
-      +'.ais-e{border:1px solid rgba(52,211,153,.25);background:rgba(52,211,153,.03)}'
-      +'.ais-w{border:1px solid rgba(56,189,248,.25);background:rgba(56,189,248,.03)}'
-      +'.ais-f{border:1px solid rgba(212,168,67,.35);background:rgba(212,168,67,.04)}'
-      +'.aish{padding:13px 16px;font-size:13px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.06)}'
-      +'.ais-e .aish{color:#34d399;background:rgba(52,211,153,.08)}'
-      +'.ais-w .aish{color:#38bdf8;background:rgba(56,189,248,.08)}'
-      +'.ais-f .aish{color:#d4a843;background:rgba(212,168,67,.08)}'
-      +'.aisb{padding:14px 16px}'
-      +'.aiitem{margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid transparent;display:flex;align-items:center;justify-content:space-between;gap:10px}'
-      +'.aiitem:hover{background:rgba(255,255,255,.09);border-color:rgba(212,168,67,.3);transform:translateX(2px)}'
-      +'.aiitem:active{transform:scale(.98)}'
-      +'.aiitem-left{flex:1;min-width:0}'
-      +'.aiitem-title{font-size:12px;font-weight:800;margin-bottom:3px;letter-spacing:.03em}'
-      +'.aiitem-body{font-size:11px;color:rgba(240,230,200,0.87);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-      +'.aiitem-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}'
-      +'.aiscore{font-family:Orbitron,sans-serif;font-size:16px;font-weight:700}'
-      +'.aiitem-arrow{font-size:10px;color:rgba(212,168,67,.5)}'
-      +'#aiDetailPopup{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10300;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}'
-      +'#aiDetailBox{max-width:560px;margin:0 auto;background:linear-gradient(160deg,#0a1628,#0d1f3c);border:1px solid rgba(212,168,67,.3);border-radius:20px;padding:20px;position:relative}'
-      +'#aiDetClose{position:sticky;top:0;float:right;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:34px;height:34px;color:#f0e6c8;font-size:16px;cursor:pointer;z-index:1;margin-bottom:-34px}'
-      +'#aiDetTitle{font-size:15px;font-weight:800;color:#d4a843;margin-bottom:4px;padding-right:40px}'
-      +'#aiDetSub{font-size:11px;color:rgba(240,230,200,.35);margin-bottom:16px;letter-spacing:.05em}'
-      +'#aiDetScore{font-family:Orbitron,sans-serif;font-size:40px;font-weight:700;text-align:center;padding:14px;background:rgba(0,0,0,.35);border-radius:12px;margin-bottom:16px}'
-      +'.aipop-section{border-radius:12px;padding:14px;margin-bottom:12px}'
-      +'.aipop-e{background:rgba(52,211,153,.06);border-left:3px solid #34d399}'
-      +'.aipop-b{background:rgba(56,189,248,.06);border-left:3px solid #38bdf8}'
-      +'.aipop-g{background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(99,130,201,.05));border:1px solid rgba(212,168,67,.2)}'
-      +'.aipop-label{font-size:10px;font-weight:800;letter-spacing:.07em;margin-bottom:7px}'
-      +'.aipop-text{font-size:12px;color:rgba(240,230,200,.82);line-height:1.9}'
-      +'</style>'
-
-      +'<div id="aiDetailPopup" onclick="if(event.target.id===\'aiDetailPopup\')closeAiDetail()">'
-      +'<div id="aiDetailBox">'
-      +'<button id="aiDetClose" onclick="closeAiDetail()">✕</button>'
-      +'<div id="aiDetTitle"></div>'
-      +'<div id="aiDetSub"></div>'
-      +'<div id="aiDetScore"></div>'
-      +'<div class="aipop-section aipop-e"><div class="aipop-label" style="color:#34d399">💬 쉽게 말하면?</div><div class="aipop-text" id="aiDetEasy"></div></div>'
-      +'<div class="aipop-section aipop-b"><div class="aipop-label" style="color:#38bdf8">📖 상세 분석</div><div class="aipop-text" id="aiDetDetail"></div></div>'
-      +'<div class="aipop-section aipop-g"><div class="aipop-label" style="color:#d4a843">✅ 실생활 적용 조언</div><div class="aipop-text" id="aiDetAdvice"></div></div>'
-      +'</div></div>'
-
-      // 동양 섹션
-      +'<div class="ais ais-e"><div class="aish">☯ 동양 역학 정밀 분석 (55%) — 종합 '+eastScore2+'%</div><div class="aisb">'
-      +'<div class="aiitem" onclick="openAiDetail(\'saju\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">📊 사주명리 (四柱八字)</div><div class="aiitem-body">일간 '+gan+' · '+oh+' 오행 · 용신 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s01||Math.min(99,eastScore2+3))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'jami\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">⭐ 자미두수 (紫微斗數)</div><div class="aiitem-body">명궁·재백궁·대운 흐름 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s02||Math.min(99,eastScore2+1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'gmd\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">🧭 기문둔갑 (奇門遁甲)</div><div class="aiitem-body">현재 길방·길시·행동 전략</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s05||Math.min(99,eastScore2-1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'yukim\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">⚡ 육임신살 (六壬神煞)</div><div class="aiitem-body">현재 운기 흐름 · 길흉 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s07||Math.min(99,eastScore2+2))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'fengshui\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">🏡 풍수지리 (風水地理)</div><div class="aiitem-body">공간 에너지 최적화 · 배치 전략</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s09||Math.min(99,eastScore2-2))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'name_analysis\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">✍️ 성명학 (姓名學)</div><div class="aiitem-body">이름 오행 · 획수 · 음양 균형</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s11||Math.min(99,eastScore2+1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'taeul\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#34d399">🔮 태을신수 (太乙神數)</div><div class="aiitem-body">72년 주기 우주 에너지 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#34d399">'+(_s18a.s13||Math.min(99,eastScore2-1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'</div></div>'
-
-      // 서양 섹션
-      +'<div class="ais ais-w"><div class="aish">⭐ 서양 역학 정밀 분석 (45%) — 종합 '+westScore2+'%</div><div class="aisb">'
-      +'<div class="aiitem" onclick="openAiDetail(\'zodiac\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">'+wz+' 태양궁 점성술</div><div class="aiitem-body">'+wzInfo.planet+' 지배 · '+wzInfo.trait+' 에너지</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s03||westScore2)+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'fullchart\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">🌍 전체 차트 점성술</div><div class="aiitem-body">상승궁 · 달 위치 · 내면 에너지</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s04||Math.min(99,westScore2-1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'transit\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">🪐 행성 트랜짓 분석</div><div class="aiitem-body">목성 순행 · 토성 구조화 · 화성 추진력</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s06||Math.min(99,westScore2+1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'numerology\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">🔢 서양 수비학 — 생명수 '+ln+'</div><div class="aiitem-body">영혼의 진동수 · 인생 경로 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s08||Math.min(99,westScore2-2))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'kabbalah\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">✡️ 카발라 점성술</div><div class="aiitem-body">생명나무 · 티파렛 영적 에너지</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s10||Math.min(99,westScore2+2))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'houses\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">🏠 점성술 하우스 시스템</div><div class="aiitem-body">인생 12영역 에너지 배치 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s12||Math.min(99,westScore2-1))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'synastry\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">💑 합성 차트 · 인간관계</div><div class="aiitem-body">금성·화성 조화 · 궁합 에너지</div></div><div class="aiitem-right"><span class="aiscore" style="color:#38bdf8">'+(_s18a.s14||Math.min(99,westScore2-3))+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'</div></div>'
-
-      // 통합 섹션
-      +'<div class="ais ais-f"><div class="aish">⚡ 통합 ILI 최종 결론 — ILI <span style="font-family:Orbitron,sans-serif">'+finalIli2+'</span></div><div class="aisb">'
-      +'<div style="font-family:monospace;font-size:11px;color:#d4a843;background:rgba(0,0,0,.3);border-radius:8px;padding:12px;line-height:2;margin-bottom:12px">ILI = Σ(W×S)/(ΣW) × (1+W_bio×k)<br><span style="color:#34d399">= 동양:'+eastScore2+'(55%) + 서양:'+westScore2+'(45%) → ILI <b style="font-size:14px">'+finalIli2+'</b></span></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'strength\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#d4a843">💪 핵심 강점 종합</div><div class="aiitem-body">'+oh+' 오행 × '+wz+' 시너지 분석</div></div><div class="aiitem-right"><span class="aiscore" style="color:#d4a843">'+finalIli2+'</span><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'caution\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#d4a843">⚠️ 주의사항 & 개선점</div><div class="aiitem-body">에너지 관리 · 번아웃 예방 전략</div></div><div class="aiitem-right"><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'today\')" style="background:linear-gradient(135deg,rgba(56,189,248,0.06),rgba(52,211,153,0.04));border-color:rgba(56,189,248,0.3)"><div class="aiitem-left"><div class="aiitem-title" style="color:#38bdf8">☀️ 오늘 에너지 흐름 <span style="font-size:10px;background:rgba(56,189,248,.2);padding:1px 6px;border-radius:8px;font-weight:800">TODAY</span></div><div class="aiitem-body">50대 역학 중 · 오늘 하루 총력 분석</div></div><div class="aiitem-right"><span class="aiitem-arrow" style="color:#38bdf8">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'thismonth\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#d4a843">📅 이번 달 에너지 흐름</div><div class="aiitem-body">중반부(15~25일) 핵심 기회 예고</div></div><div class="aiitem-right"><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div class="aiitem" onclick="openAiDetail(\'thisyear\')"><div class="aiitem-left"><div class="aiitem-title" style="color:#d4a843">🗓️ 2026년 연간 흐름</div><div class="aiitem-body">분기별 전략 · 7~9월 핵심 전환점</div></div><div class="aiitem-right"><span class="aiitem-arrow">자세히 ›</span></div></div>'
-      +'<div style="margin-top:14px;padding:16px;background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(99,130,201,.08));border-radius:12px;border:1px solid rgba(212,168,67,.3);text-align:center"><div style="font-size:10px;color:rgba(240,230,200,0.8);margin-bottom:8px;letter-spacing:.1em">✨ 핵심 한 줄 메시지</div><div style="font-size:14px;font-weight:700;color:#f0e6c8;line-height:1.7">"'+nm+'님의 에너지는 준비된 자에게만 보이는 기회를 먼저 포착합니다. 지금 이 순간, 당신의 직관을 믿으세요."</div></div>'
-      +'</div></div>';
-
-    // 팝업 열기 함수
-    window.openAiDetail = function(key){
-      var d = popupData[key];
-      if(!d) return;
-      document.getElementById('aiDetTitle').textContent = d.title;
-      document.getElementById('aiDetSub').textContent = d.subtitle;
-      var sc = d.score || finalIli2;
-      document.getElementById('aiDetScore').innerHTML = '<span style="color:'+d.color+'">'+sc+'</span><span style="font-size:13px;color:rgba(240,230,200,.35)"> / 100</span>';
-      document.getElementById('aiDetEasy').textContent = d.easy;
-      document.getElementById('aiDetDetail').textContent = typeof d.getDetail === 'function' ? d.getDetail() : d.detail;
-      document.getElementById('aiDetAdvice').textContent = d.advice;
-      var popup = document.getElementById('aiDetailPopup');
-      popup.style.display = 'block';
-      popup.scrollTop = 0;
-      document.body.style.overflow = 'hidden';
-      _cgoTransPopup && _cgoTransPopup('aiDetailPopup');
+    window._raiDetail = function(key){
+      var d = _detailDB[key]; if(!d) return;
+      var sc = _sc(key);
+      var rs = _reason(key);
+      var bd = document.getElementById('_raiPopBd');
+      var pop= document.getElementById('_raiPop');
+      if(!bd||!pop) return;
+      var scColor = d.color;
+      var rsColor = (rs.indexOf('+')>=0)?'#34d399':(rs.indexOf('-')>=0)?'#f87171':'#d4a843';
+      bd.innerHTML =
+        '<button onclick="window._raiClose()" style="float:right;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:34px;height:34px;color:#f0e6c8;font-size:16px;cursor:pointer;margin-bottom:-34px;position:relative;z-index:1">✕</button>'+
+        '<div style="font-size:22px;margin-bottom:6px">'+d.icon+'</div>'+
+        '<div style="font-size:15px;font-weight:800;color:'+scColor+';margin-bottom:4px">'+d.title+'</div>'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+          '<div style="font-family:Orbitron,sans-serif;font-size:36px;font-weight:900;color:'+scColor+'">'+sc+'</div>'+
+          '<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:6px 10px">'+
+            '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:2px">보정 이유</div>'+
+            '<div style="font-size:11px;font-weight:700;color:'+rsColor+'">'+rs+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="background:rgba(52,211,153,.06);border-left:3px solid '+scColor+';border-radius:0 10px 10px 0;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:9px;font-weight:800;color:'+scColor+';letter-spacing:.07em;margin-bottom:6px">💬 쉽게 말하면?</div>'+
+          '<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.9">'+d.easy+'</div>'+
+        '</div>'+
+        '<div style="background:rgba(56,189,248,.06);border-left:3px solid #38bdf8;border-radius:0 10px 10px 0;padding:12px;margin-bottom:10px">'+
+          '<div style="font-size:9px;font-weight:800;color:#38bdf8;letter-spacing:.07em;margin-bottom:6px">📊 점수 분석 (등급·근거)</div>'+
+          '<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.9">'+d.detail+'</div>'+
+        '</div>'+
+        '<div style="background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(99,130,201,.05));border:1px solid rgba(212,168,67,.2);border-radius:10px;padding:12px">'+
+          '<div style="font-size:9px;font-weight:800;color:#d4a843;letter-spacing:.07em;margin-bottom:6px">✅ 실생활 조언</div>'+
+          '<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.9">'+d.advice+'</div>'+
+        '</div>';
+      pop.style.display='block';
+      pop.scrollTop=0;
+      document.body.style.overflow='hidden';
     };
-    window.closeAiDetail = function(){
-      document.getElementById('aiDetailPopup').style.display = 'none';
-      document.body.style.overflow = '';
+    window._raiClose = function(){
+      // 상세 팝업 닫기
+      var dp=document.getElementById('_raiPop');
+      if(dp) dp.style.display='none';
+      document.body.style.overflow='';
     };
 
-    btn.disabled=false; btn.textContent='🔄 다시 분석'; btn.style.opacity='1';
-  }, 2000);
+    if(btn){ btn.disabled=false; btn.textContent='🔄 다시 분석'; btn.style.opacity='1'; }
+
+  }, 2500);
 }
 
-
-
-// ============================================================
-// 가족 관리
 // ============================================================
 // ══ 막둥이 Gemini 작성 — 가족 ILI 알림 멘트 DB ══
 var _FAMILY_ILI_MSG = {
@@ -41833,6 +41680,16 @@ function cgCallClaude(userText, sendBtn) {
     '⑩ 육임신살 — 12운성 에너지 / ⑪ 풍수지리 — 공간 기운 / ⑫ 카발라 — 생명나무 세피로트\n' +
     '⑬ 하우스 시스템 — 12궁 / ⑭ 태을신수 — 시진 에너지 / ⑮ 타로×달위상 — 직관 상징\n' +
     '⑯ 관상학 — 얼굴 기운 / ⑰ 손금 — 손바닥 생명선 / ⑱ 설진(혀 진단) — 장기 건강\n\n' +
+    '## ★ CGO-FULI 점수 체계 기준 (특허 10-2026-0060113 기반)\n' +
+    '점수는 데이터 근거 등급에 따라 변동폭이 다릅니다. 이것이 시뮬레이션이 아닌 실시간 과학의 증거입니다.\n' +
+    '- A등급 (±20점): NASA 직결 → S06 행성트랜짓·S03 태양궁·S13 태을신수·S16 타로×달위상\n' +
+    '  예: 화성 역행 시 S06이 -8점, 목성 순행 시 +8점 — 같은 사람도 매일 달라짐\n' +
+    '- B등급 (±15점): rPPG 생체 직결 → S17 관상·S18 손금 (스캔 완료 시 실측값 반영)\n' +
+    '- C등급 (±10점): 날씨·방위 → S05 기문둔갑·S09 풍수지리·S19 구성기학\n' +
+    '- D등급 (±8점): 생년월일+NASA → S02 자미두수·S04 전체차트·S12 하우스·S14 합성차트·S15 주역\n' +
+    '- E등급 (±5점): 생년월일 고정 → S01 사주명리·S07 육임·S08 수비학·S10 카발라·S11 성명학\n' +
+    '중요: 점수를 언급할 때 왜 그 점수인지 이유(NASA 역행, 날씨, 생체 등)를 반드시 설명하세요.\n' +
+    '절대 금지: 점수를 임의로 만들거나 추측하지 마세요. calcResult.scores.s18 실측값만 사용.\n\n' +
     (cgMode === 'expert' ?
       '## 답변 모드: 전문가 분석 모드\n' +
       '- 전문 용어와 역학 원리를 사용해 깊이 있게 분석하세요\n' +
@@ -45933,7 +45790,9 @@ function sptAskAI(userText, isAuto) {
     '4. 역학 수치가 없는 팀 간 비교를 묻는다면, 역학 분석 대신 알려진 통계·역사를 활용해 답변하세요.\n' +
     '5. 베팅·도박·금액 투자 권유 표현 절대 사용 금지.\n' +
     '6. 에너지 분석 관련 수치는 "승률" 대신 "SRI 공명 지수" 또는 "공명 지수" 로 표현하세요.\n' +
-    '7. 답변은 핵심을 먼저, 부연 설명 순으로 간결하게 작성하세요.\n\n' +
+    '7. 답변은 핵심을 먼저, 부연 설명 순으로 간결하게 작성하세요.\n' +
+    '8. 점수 언급 시 이유 필수: A등급(NASA직결±20) > B등급(생체±15) > C등급(날씨±10) > D/E등급(생일기반)\n' +
+    '   예: "행성 트랜짓 점수가 낮은 이유는 현재 화성이 역행 중이기 때문입니다"\n\n' +
 
     '## 스포츠 지식 활용 범위\n' +
     '- 팀 역사, 리그 성적, 주요 선수, 전통적 강팀 여부 등 → 적극 활용\n' +
@@ -46602,9 +46461,16 @@ function stkAiCallApi(userText) {
     '토(土): 건설·부동산·리츠·ETF·원자재\n' +
     '금(金): 금융·보험·반도체·소재·기계\n' +
     '수(水): 유통·물류·해운·관광·여행\n' +
+    '\n## CGO-FULI 점수 체계 (답변 시 반드시 준수)\n' +
+    '점수는 데이터 근거에 따라 등급별로 변동폭이 다릅니다:\n' +
+    '- A등급(±20): NASA 행성트랜짓·태양궁·태을신수·타로×달위상 — 매일 크게 변동\n' +
+    '- B등급(±15): rPPG 관상·손금 — 생체 스캔 시 실측값 반영\n' +
+    '- C등급(±10): 기문둔갑·풍수·구성기학 — 날씨·방위 연동\n' +
+    '- D/E등급(±5~8): 사주명리·수비학 등 — 생년월일 기반 안정값\n' +
+    '점수를 언급할 때는 등급과 이유를 함께 설명하세요.\n' +
     '\n## 절대 규칙\n' +
     '- 직접적 매수·매도 권유 금지. "에너지 관점"으로만 표현\n' +
-    '- 한번 제시한 수치는 변경하지 않음\n' +
+    '- 점수는 calcResult.scores.s18 실측값만 사용. 임의로 만들지 말 것\n' +
     '- 한국어 전용, 300자 이내 핵심 답변\n' +
     '- 매 답변 끝: "⚠️ 참고용 역학 분석이며 투자 결정은 본인 판단입니다"';
 
@@ -50543,11 +50409,6 @@ document.addEventListener('DOMContentLoaded', function(){
       if(entrance){
         entrance.style.display = 'none';
       }
-  // ★ phase0~3 클릭 차단 제거
-  ['phase0','phase1','phase2','phase3'].forEach(function(id){
-    var p = document.getElementById(id);
-    if(p){ p.style.pointerEvents='none'; p.style.display='none'; }
-  });
       // _cgoEntranceDone의 초기화 로직 실행 (위치, 입력값 복원 등)
       // sessionStorage 저장은 이미 돼있으므로 다시 저장 불필요
       setTimeout(function(){
@@ -50641,11 +50502,6 @@ function _cgoEntranceDone(){
   // 대문 오버레이 숨기기
   var el = document.getElementById('cgoEntrance');
   if(el){ el.classList.add('hidden'); setTimeout(function(){ el.style.display='none'; }, 900); }
-  // ★ phase0~3 클릭 차단 제거
-  ['phase0','phase1','phase2','phase3'].forEach(function(id){
-    var p = document.getElementById(id);
-    if(p){ p.style.pointerEvents='none'; p.style.display='none'; }
-  });
   // 관리자 시스템 초기화 (차단 확인만 — 공지사항 팝업 제거)
   if(typeof _cgoInitAdmin === 'function') setTimeout(function(){ _cgoCheckBlocked && _cgoCheckBlocked(); }, 1000);
   // 우주 나침반 웰컴 팝업 제거
@@ -53780,7 +53636,7 @@ function cgmSejongReply(userText){
     +' 사용자: '+_cgm.myNick+'('+oh1+'행) × '+room.nick+'('+oh2+'행), 궁합:'+compat
     +' NASA:'+nasa
     +' 질문: '+userText
-    +' 답변 규칙: 3문장 이내, 핵심만, 마지막엔 두 분에 대한 따뜻한 한마디 필수!'
+    +' 답변 규칙: 3문장 이내, 핵심만, 마지막엔 두 분에 대한 따뜻한 한마디 필수!'    +' 점수 언급 시: 행성트랜짓(A등급±20·NASA직결), 생체(B등급±15), 날씨방위(C등급±10), 사주(E등급±5) 기준으로 이유 설명.'
     +' 중요: 메시지는 절대 저장되지 않으니 솔직하고 진심으로 답해주세요.';
 
   fetch('/api/groq',{
