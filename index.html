@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2584,7 +2585,7 @@ document.addEventListener('DOMContentLoaded', function(){
     </div>
 
     <!-- 📲 앱 설치 버튼 (PWA) — 1분 후 자동 사라짐 -->
-    <div id="pwaInstallWrap" style="margin-bottom:10px;display:block;">
+    <div id="pwaInstallWrap" style="margin-bottom:10px;display:none;">
       <button id="pwaInstallBtn" onclick="cgoPwaInstall()" style="width:100%;padding:13px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:1.5px solid rgba(52,211,153,.6);border-radius:14px;color:#34d399;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:8px;animation:goldPulse 2s ease-in-out infinite;">
         📲 앱으로 설치하기 (무료)
       </button>
@@ -24476,12 +24477,17 @@ function generateReport(r){
           : '')+
         '</div>';
     } else {
-      mbtiRepSec.innerHTML =
-        '<div style="background:rgba(168,85,247,.05);border:1px dashed rgba(168,85,247,.25);border-radius:14px;padding:16px;text-align:center">'+
-          '<div style="font-size:14px;margin-bottom:6px">🧠</div>'+
-          '<div style="font-size:12px;font-weight:700;color:rgba(168,85,247,.7);margin-bottom:4px">MBTI 미입력 — 50대 역학 중 적용됨</div>'+
-          '<div style="font-size:11px;color:rgba(240,230,200,.4)">대시보드에서 MBTI를 입력하면 20번째 역학으로 정밀도가 높아집니다</div>'+
-        '</div>';
+      var _mbtiDiv = document.createElement('div');
+      _mbtiDiv.style.cssText = 'background:rgba(168,85,247,.05);border:1px dashed rgba(168,85,247,.35);border-radius:14px;padding:16px;text-align:center;cursor:pointer;';
+      _mbtiDiv.innerHTML =
+        '<div style="font-size:14px;margin-bottom:6px">🧠</div>'+
+        '<div style="font-size:12px;font-weight:700;color:rgba(168,85,247,.7);margin-bottom:4px">역학 20개 정밀 분석 보기 ↓</div>'+
+        '<div style="font-size:11px;color:rgba(240,230,200,.4)">클릭하면 AI 정밀 풀이가 시작됩니다</div>';
+      _mbtiDiv.addEventListener('click', function(){
+        var btn = document.getElementById('aiAnalysisBtn');
+        if(btn){ btn.scrollIntoView({behavior:'smooth'}); btn.click(); }
+      });
+      mbtiRepSec.appendChild(_mbtiDiv);
     }
     c.appendChild(mbtiRepSec);
 
@@ -52052,32 +52058,14 @@ window.addEventListener('beforeinstallprompt', function(e){
 });
 
 function cgoPwaInstall(){
-  if(!_cgoPwaPrompt){
-    // 브라우저 자동 설치 불가 → 수동 안내 팝업
-    var t = document.createElement('div');
-    t.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;';
-    t.innerHTML = '<div style="background:linear-gradient(135deg,#0a1628,#0d1f3c);border:1.5px solid rgba(52,211,153,.5);border-radius:20px;padding:24px;max-width:320px;width:100%;text-align:center;">'
-      +'<div style="font-size:36px;margin-bottom:12px;">📲</div>'
-      +'<div style="font-size:16px;font-weight:900;color:#34d399;margin-bottom:16px;">앱 설치 방법</div>'
-      +'<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:14px;margin-bottom:10px;text-align:left;">'
-      +'<div style="font-size:13px;font-weight:800;color:#38bdf8;margin-bottom:8px;">🤖 안드로이드 (크롬)</div>'
-      +'<div style="font-size:12px;color:rgba(240,230,200,.8);line-height:1.8;">① 주소창 오른쪽 ⋮ 메뉴<br>② "홈 화면에 추가" 클릭<br>③ "추가" 클릭</div>'
-      +'</div>'
-      +'<div style="background:rgba(255,255,255,.05);border-radius:12px;padding:14px;margin-bottom:16px;text-align:left;">'
-      +'<div style="font-size:13px;font-weight:800;color:#a78bfa;margin-bottom:8px;">🍎 아이폰 (사파리)</div>'
-      +'<div style="font-size:12px;color:rgba(240,230,200,.8);line-height:1.8;">① 하단 공유 버튼 □↑<br>② "홈 화면에 추가" 클릭<br>③ "추가" 클릭</div>'
-      +'</div>'
-      +'<button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:12px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:14px;font-weight:900;cursor:pointer;">확인</button>'
-      +'</div>';
-    document.body.appendChild(t);
-    return;
-  }
+  if(!_cgoPwaPrompt) return;
   _cgoPwaPrompt.prompt();
   _cgoPwaPrompt.userChoice.then(function(result){
     var wrap = document.getElementById('pwaInstallWrap');
     if(wrap) wrap.style.display = 'none';
     _cgoPwaPrompt = null;
     if(result.outcome === 'accepted'){
+      // 설치 완료 토스트
       var t = document.createElement('div');
       t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#34d399,#38bdf8);color:#000;padding:16px 28px;border-radius:20px;font-size:15px;font-weight:900;z-index:99999;text-align:center;';
       t.innerHTML = '🎉 CGO-FULI 설치 완료!<br><span style="font-size:12px;font-weight:700;">바탕화면 아이콘을 확인하세요!</span>';
