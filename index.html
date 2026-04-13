@@ -3706,6 +3706,80 @@ function updateTransitSectionWithNASA(planets) {
       </style>
 
       
+<!-- ★ 퀵 네비 탭 (실시간 바 아래) -->
+<style>
+#cgoQuickNav{display:flex;gap:5px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0;}
+#cgoQuickNav::-webkit-scrollbar{display:none;}
+.cgo-qnav{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.15);border-radius:10px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.cgo-qnav:active,.cgo-qnav.active{background:rgba(212,168,67,.18);border-color:rgba(212,168,67,.5);}
+.cgo-qnav .qico{font-size:16px;line-height:1;}
+.cgo-qnav .qtxt{font-size:8px;color:rgba(240,230,200,.5);white-space:nowrap;letter-spacing:.02em;}
+.cgo-qnav.active .qtxt{color:#d4a843;font-weight:700;}
+</style>
+<div id="cgoQuickNav">
+  <div class="cgo-qnav active" id="qnav1" onclick="cgoQuickJump(1)">
+    <span class="qico">📋</span><span class="qtxt">정보입력</span>
+  </div>
+  <div class="cgo-qnav" id="qnav2" onclick="cgoQuickJump(2)">
+    <span class="qico">🌌</span><span class="qtxt">천지인</span>
+  </div>
+  <div class="cgo-qnav" id="qnav3" onclick="cgoQuickJump(3)">
+    <span class="qico">🧬</span><span class="qtxt">생체센서</span>
+  </div>
+  <div class="cgo-qnav" id="qnav4" onclick="cgoQuickJump(4)">
+    <span class="qico">📊</span><span class="qtxt">ILI점수</span>
+  </div>
+  <div class="cgo-qnav" id="qnav5" onclick="cgoQuickJump(5)">
+    <span class="qico">✦</span><span class="qtxt">에너지의서</span>
+  </div>
+  <div class="cgo-qnav" id="qnav6" onclick="cgoQuickJump(6)">
+    <span class="qico">💬</span><span class="qtxt">메신저</span>
+  </div>
+  <div class="cgo-qnav" id="qnav7" onclick="cgoQuickJump(7)">
+    <span class="qico">✦</span><span class="qtxt">전체기능</span>
+  </div>
+</div>
+<script>
+function cgoQuickJump(n){
+  var body = document.getElementById('cgoB'+n);
+  var arrow = document.getElementById('cgoA'+n);
+  if(!body) return;
+
+  // 섹션 펼치기 (닫혀있으면)
+  if(body.classList.contains('closed')){
+    cgoBarToggle('cgoB'+n,'cgoA'+n);
+  }
+
+  // 스크롤 이동
+  setTimeout(function(){
+    var target=document.getElementById('cgoB'+n);
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+  },150);
+
+  // 네비 탭 활성화
+  for(var i=1;i<=7;i++){
+    var q=document.getElementById('qnav'+i);
+    if(q) q.classList.toggle('active', i===n);
+  }
+}
+
+// 스크롤 감지 → 현재 섹션 네비 강조
+window.addEventListener('scroll', function(){
+  for(var i=1;i<=7;i++){
+    var b=document.getElementById('cgoB'+i);
+    if(!b) continue;
+    var rect=b.getBoundingClientRect();
+    if(rect.top<=150 && rect.bottom>0){
+      for(var j=1;j<=7;j++){
+        var q=document.getElementById('qnav'+j);
+        if(q) q.classList.toggle('active',j===i);
+      }
+      break;
+    }
+  }
+},{passive:true});
+</script>
+
 <div class="cgo-bar" onclick="cgoBarToggle('cgoB1','cgoA1')"><span class="cgo-bar-title">📋 정보 입력</span><span class="cgo-bar-arrow" id="cgoA1">▼</span></div><div id="cgoB1" class="cgo-collapsible">
 <div class="input-panel">
         <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
@@ -51817,6 +51891,7 @@ var _unlockTimer=setInterval(function(){
         <div id="cgmRoomOhBadge" style="font-size:10px;color:rgba(212,168,67,.6);margin-top:1px;"></div>
       </div>
       <button onclick="cgmAskAI()" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:16px;padding:5px 12px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🤖 AI 코치</button>
+      <button onclick="cgmToggleSecPanel()" style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:16px;padding:5px 10px;color:rgba(212,168,67,.7);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="보안 설정">⚙️</button>
       <button id="cgmShieldBtn" onclick="cgmToggleShield()" style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);border-radius:16px;padding:5px 10px;color:rgba(52,211,153,.6);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="rPPG 캡처방지">🛡️</button>
       <button id="cgmTiltBtn" onclick="cgmToggleTilt()" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:16px;padding:5px 10px;color:rgba(56,189,248,.6);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="기울기 보안">📐</button>
     </div>
@@ -51836,6 +51911,52 @@ var _unlockTimer=setInterval(function(){
     <div style="padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
       <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}" onfocus="setTimeout(function(){var el=document.getElementById('cgmMessages');if(el)el.scrollTop=el.scrollHeight;},300);"></textarea>
       <button onclick="cgmSendMsg()" style="width:42px;height:42px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:50%;color:#000;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
+    </div>
+
+    <style>
+    .cgm-preset{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 4px;color:rgba(240,230,200,.6);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+    .cgm-preset.active{background:rgba(212,168,67,.2);border-color:rgba(212,168,67,.5);color:#d4a843;}
+    </style>
+
+    <!-- ★ 보안 설정 슬라이더 -->
+    <div id="cgmSecurityPanel" style="display:none;padding:12px 14px;background:rgba(0,0,0,.5);border-top:1px solid rgba(255,255,255,.06);">
+      <div style="font-size:10px;color:rgba(212,168,67,.7);font-weight:700;margin-bottom:10px;letter-spacing:.05em;">⚙️ 보안 강도 설정</div>
+
+      <!-- 프리셋 버튼 -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <button onclick="cgmSetPreset('off')"   id="cgmPreOff"  class="cgm-preset" style="flex:1;">🟢 일반</button>
+        <button onclick="cgmSetPreset('mid')"   id="cgmPreMid"  class="cgm-preset" style="flex:1;">🟡 보안</button>
+        <button onclick="cgmSetPreset('high')"  id="cgmPreHigh" class="cgm-preset" style="flex:1;">🔴 기밀</button>
+        <button onclick="cgmSetPreset('max')"   id="cgmPreMax"  class="cgm-preset" style="flex:1;">🛡️ 최강</button>
+      </div>
+
+      <!-- 글자 수 슬라이더 -->
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:rgba(240,230,200,.6);">📏 스크롤 글자 수</span>
+          <span id="cgmWinVal" style="font-size:11px;font-weight:800;color:#34d399;">6자</span>
+        </div>
+        <input type="range" id="cgmWinSlider" min="4" max="15" value="6" step="1"
+          oninput="cgmSliderChange()"
+          style="width:100%;height:4px;accent-color:#34d399;cursor:pointer;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.25);margin-top:2px;">
+          <span>4자 (최강)</span><span>15자 (여유)</span>
+        </div>
+      </div>
+
+      <!-- 삭제 시간 슬라이더 -->
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:rgba(240,230,200,.6);">⏱️ 자동 삭제 시간</span>
+          <span id="cgmExpVal" style="font-size:11px;font-weight:800;color:#f87171;">7초</span>
+        </div>
+        <input type="range" id="cgmExpSlider" min="3" max="30" value="7" step="1"
+          oninput="cgmSliderChange()"
+          style="width:100%;height:4px;accent-color:#f87171;cursor:pointer;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.25);margin-top:2px;">
+          <span>3초 (최강)</span><span>30초 (여유)</span>
+        </div>
+      </div>
     </div>
     <!-- ★ 특허 번호 -->
     <div style="text-align:center;padding:5px 0 6px;background:rgba(0,0,0,.4);font-size:9px;color:rgba(212,168,67,.25);letter-spacing:.12em;font-family:'Orbitron',monospace;flex-shrink:0;">
@@ -53260,8 +53381,8 @@ function cgmCleanupMessages(code){
   var room = _cgm.rooms[code];
   if(!room || !room.msgs) return;
   var now = Date.now();
-  var EXPIRE_MS = 30000; // 30초
-  var MAX_VIEWS = 2;     // 2회 조회
+  var EXPIRE_MS = (window._cgmExpireSec||7)*1000; // 사용자 설정 (기본 7초)
+  var MAX_VIEWS = 2; // 2회 조회 고정
   var changed = false;
   var remaining = [];
 
@@ -53490,6 +53611,68 @@ function cgmListenFirebase(){
 //       사람 눈(60fps 한계) → 정상 인식
 //       카메라 셔터 → 어두운 프레임 캡처 → 흐릿
 var _cgmShieldOn = false;
+
+
+// ★ 보안 설정 슬라이더 시스템
+window._cgmScrollWin = 6;  // 기본 6자
+window._cgmExpireSec = 7;  // 기본 7초
+
+function cgmToggleSecPanel(){
+  var p=document.getElementById('cgmSecurityPanel');
+  if(!p)return;
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function cgmSliderChange(){
+  var ws=document.getElementById('cgmWinSlider');
+  var es=document.getElementById('cgmExpSlider');
+  var wv=document.getElementById('cgmWinVal');
+  var ev=document.getElementById('cgmExpVal');
+  if(ws){ window._cgmScrollWin=parseInt(ws.value); if(wv) wv.textContent=ws.value+'자'; }
+  if(es){ window._cgmExpireSec=parseInt(es.value); if(ev) ev.textContent=es.value+'초'; }
+  // 프리셋 버튼 해제
+  ['Off','Mid','High','Max'].forEach(function(p){
+    var b=document.getElementById('cgmPre'+p);
+    if(b) b.classList.remove('active');
+  });
+}
+
+function cgmSetPreset(type){
+  var presets={
+    'off': {win:15,sec:30},   // 🟢 일반 — Shield OFF 효과
+    'mid': {win:8, sec:15},   // 🟡 보안
+    'high':{win:6, sec:7},    // 🔴 기밀
+    'max': {win:4, sec:3}     // 🛡️ 최강
+  };
+  var p=presets[type]; if(!p)return;
+  window._cgmScrollWin=p.win;
+  window._cgmExpireSec=p.sec;
+
+  // 슬라이더 값 업데이트
+  var ws=document.getElementById('cgmWinSlider');
+  var es=document.getElementById('cgmExpSlider');
+  var wv=document.getElementById('cgmWinVal');
+  var ev=document.getElementById('cgmExpVal');
+  if(ws){ws.value=p.win; if(wv) wv.textContent=p.win+'자';}
+  if(es){es.value=p.sec; if(ev) ev.textContent=p.sec+'초';}
+
+  // 프리셋 버튼 활성화
+  ['off','mid','high','max'].forEach(function(k){
+    var b=document.getElementById('cgmPre'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(b) b.classList.toggle('active', k===type);
+  });
+
+  // Shield 자동 ON (일반 제외)
+  if(type!=='off' && !_cgmShieldOn) cgmToggleShield();
+  if(type==='off' && _cgmShieldOn)  cgmToggleShield();
+
+  cgmShowShieldToast({
+    'off':'🟢 일반 모드 — 편하게 대화하세요',
+    'mid':'🟡 보안 모드 — 8자/15초',
+    'high':'🔴 기밀 모드 — 6자/7초',
+    'max':'🛡️ 최강 모드 — 4자/3초 폭파!'
+  }[type]);
+}
 
 function cgmToggleShield(){
   _cgmShieldOn = !_cgmShieldOn;
@@ -53783,7 +53966,7 @@ function cgmStopTiltWatch(){
 // ══ 네온 글씨 효과 ══
 function cgmNeonWrap(text){
   // ★ 모든 글자 — 스크롤 + 네온 깜빡임 동시 적용
-  var WIN = 3; // 3자 이하=깜빡임만, 4자 이상=스크롤+깜빡임
+  var WIN = window._cgmScrollWin||6; // 사용자 설정값 (기본 6자)
   var chars = Array.from(text);
   var esc = function(c){ return c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
