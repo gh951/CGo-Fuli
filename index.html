@@ -2332,6 +2332,166 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 </style>
 <!-- PeerJS WebRTC — 커플 실시간 영상 연결 -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<style>
+/* ═══ 접기 시스템 ═══ */
+.cgo-section-bar {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 16px;
+  background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(6,13,26,.95));
+  border:1px solid rgba(212,168,67,.2);
+  border-radius:12px;
+  cursor:pointer;
+  margin-bottom:6px;
+  transition:all .25s;
+  user-select:none;
+}
+.cgo-section-bar:hover { border-color:rgba(212,168,67,.45); background:rgba(212,168,67,.1); }
+.cgo-section-bar .cgo-bar-title { font-size:13px;font-weight:700;color:rgba(240,230,200,.85); }
+.cgo-section-bar .cgo-bar-arrow { font-size:14px;color:#d4a843;transition:transform .3s; }
+.cgo-section-bar.collapsed .cgo-bar-arrow { transform:rotate(-90deg); }
+.cgo-section-body { transition:max-height .4s ease, opacity .3s ease; overflow:hidden; }
+.cgo-section-body.collapsed { max-height:0!important; opacity:0; pointer-events:none; }
+
+/* 카운트다운 오버레이 */
+#cgoAutoCollapseOverlay {
+  display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  z-index:99999;background:linear-gradient(135deg,rgba(6,13,26,.97),rgba(13,21,38,.95));
+  border:1.5px solid rgba(212,168,67,.5);border-radius:20px;padding:16px 24px;
+  text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:220px;
+}
+#cgoAutoCollapseOverlay .cgo-cd-num {
+  font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#d4a843;
+  line-height:1;margin-bottom:6px;
+}
+#cgoAutoCollapseOverlay .cgo-cd-msg {
+  font-size:11px;color:rgba(240,230,200,.6);margin-bottom:12px;
+}
+#cgoAutoCollapseOverlay button {
+  padding:9px 24px;background:linear-gradient(135deg,#d4a843,#f59e0b);
+  border:none;border-radius:10px;color:#020817;font-size:13px;font-weight:800;
+  cursor:pointer;font-family:inherit;
+}
+</style>
+
+<script>
+// ═══ CGO-FULI 접기 시스템 ═══
+var _cgoCollapseTimers = {};
+var _cgoUserLastActive = Date.now();
+var _cgoCountdownTimer = null;
+var _cgoCountdownVal = 15;
+var CGO_AUTO_COLLAPSE_MS = 20 * 60 * 1000; // 20분
+var CGO_COUNTDOWN_SEC = 15;
+
+// 사용자 활동 감지 — 활동하면 타이머 리셋
+['click','touchstart','scroll','keydown'].forEach(function(ev){
+  document.addEventListener(ev, function(){
+    _cgoUserLastActive = Date.now();
+    _cgoCancelCountdown();
+    _cgoResetAllTimers();
+  }, {passive:true});
+});
+
+// 섹션 토글 함수
+function cgoToggleSection(bodyId, arrowId){
+  var body = document.getElementById(bodyId);
+  var arrow = document.getElementById(arrowId);
+  if(!body) return;
+  var isOpen = !body.classList.contains('collapsed');
+  if(isOpen){
+    body.style.maxHeight = body.scrollHeight+'px';
+    requestAnimationFrame(function(){
+      body.classList.add('collapsed');
+      body.style.maxHeight = '0px';
+    });
+  } else {
+    body.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight+'px';
+    setTimeout(function(){ body.style.maxHeight='none'; }, 420);
+  }
+  if(arrow){
+    var barEl = arrow.closest('.cgo-section-bar');
+    if(barEl) barEl.classList.toggle('collapsed', isOpen);
+  }
+}
+
+// 섹션 자동 접기 타이머 설정
+function _cgoSetAutoCollapse(bodyId, arrowId, msDelay){
+  if(_cgoCollapseTimers[bodyId]) clearTimeout(_cgoCollapseTimers[bodyId]);
+  _cgoCollapseTimers[bodyId] = setTimeout(function(){
+    var body = document.getElementById(bodyId);
+    if(body && !body.classList.contains('collapsed')){
+      _cgoStartCountdown(bodyId, arrowId);
+    }
+  }, msDelay - CGO_COUNTDOWN_SEC * 1000);
+}
+
+// 카운트다운 시작
+function _cgoStartCountdown(bodyId, arrowId){
+  _cgoCountdownVal = CGO_COUNTDOWN_SEC;
+  var ov = document.getElementById('cgoAutoCollapseOverlay');
+  if(!ov) return;
+  ov.style.display = 'block';
+  document.getElementById('cgoCdNum').textContent = _cgoCountdownVal;
+  document.getElementById('cgoCdBodyId').value = bodyId;
+  document.getElementById('cgoCdArrowId').value = arrowId;
+
+  if(_cgoCountdownTimer) clearInterval(_cgoCountdownTimer);
+  _cgoCountdownTimer = setInterval(function(){
+    _cgoCountdownVal--;
+    var numEl = document.getElementById('cgoCdNum');
+    if(numEl) numEl.textContent = _cgoCountdownVal;
+    if(_cgoCountdownVal <= 0){
+      clearInterval(_cgoCountdownTimer);
+      ov.style.display = 'none';
+      // 접기 실행
+      var body = document.getElementById(bodyId);
+      if(body && !body.classList.contains('collapsed')){
+        cgoToggleSection(bodyId, arrowId);
+      }
+    }
+  }, 1000);
+}
+
+// 카운트다운 취소 (사용자 활동 감지 시)
+function _cgoCancelCountdown(){
+  if(_cgoCountdownTimer){ clearInterval(_cgoCountdownTimer); _cgoCountdownTimer=null; }
+  var ov = document.getElementById('cgoAutoCollapseOverlay');
+  if(ov) ov.style.display='none';
+}
+
+// 지속 버튼 클릭
+function cgoContinueSession(){
+  _cgoCancelCountdown();
+  _cgoResetAllTimers();
+}
+
+// 모든 타이머 리셋
+function _cgoResetAllTimers(){
+  Object.keys(_cgoCollapseTimers).forEach(function(id){
+    clearTimeout(_cgoCollapseTimers[id]);
+  });
+  // 20분 후 자동 접기 재설정
+  _cgoSetAutoCollapse('inputPanelBody','inputPanelArrow', CGO_AUTO_COLLAPSE_MS);
+  _cgoSetAutoCollapse('cosmicBody','cosmicArrow', CGO_AUTO_COLLAPSE_MS);
+  _cgoSetAutoCollapse('iliBody','iliArrow', CGO_AUTO_COLLAPSE_MS);
+  _cgoSetAutoCollapse('menuBody','menuArrow', CGO_AUTO_COLLAPSE_MS);
+}
+
+// 페이지 로드 후 타이머 시작
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(_cgoResetAllTimers, 2000);
+});
+</script>
+
+<!-- 카운트다운 오버레이 -->
+<div id="cgoAutoCollapseOverlay">
+  <div class="cgo-cd-num" id="cgoCdNum">15</div>
+  <div class="cgo-cd-msg">화면이 곧 접힙니다<br>계속 사용하시려면 아래 버튼을 눌러주세요</div>
+  <button onclick="cgoContinueSession()">⏸️ 계속 진행</button>
+  <input type="hidden" id="cgoCdBodyId" value="">
+  <input type="hidden" id="cgoCdArrowId" value="">
+</div>
 </head>
 <body>
 <script>
@@ -3629,8 +3789,13 @@ function updateTransitSectionWithNASA(planets) {
       @keyframes rtWeather{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
       </style>
 
-      <div class="input-panel">
-        <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
+      <div class="input-panel" id="inputPanelWrap">
+        <!-- 접기 헤더 -->
+        <div onclick="cgoToggleSection('inputPanelBody','inputPanelArrow')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 4px;margin-bottom:4px;">
+          <div class="ip-title" data-i18n="ipTitle" style="margin:0;">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
+          <span id="inputPanelArrow" style="color:#d4a843;font-size:18px;transition:transform .3s;">▼</span>
+        </div>
+        <div id="inputPanelBody">
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
@@ -3738,16 +3903,23 @@ function updateTransitSectionWithNASA(planets) {
 
         <!-- 경계선 -->
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
+        </div><!-- /inputPanelBody -->
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
+      <!-- 천지인 에너지 세로 바 -->
+      <div class="cgo-section-bar" onclick="cgoToggleSection('cosmicBody','cosmicArrow')">
+        <span class="cgo-bar-title">🌌 천지인 에너지</span>
+        <span class="cgo-bar-arrow" id="cosmicArrow">▼</span>
+      </div>
+      <div id="cosmicBody" style="max-height:none;">
       <div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
 
         <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
 
-        <!-- ① 헤더 : COSMIC ORDER + 시계 한 줄 -->
+        <!-- ① 헤더 : 천지인 에너지 + 시계 한 줄 -->
         <div style="position:relative;z-index:2;padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(212,168,67,0.12)">
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 7px #34d399;animation:pulse 2s infinite;flex-shrink:0"></div>
-            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">COSMIC ORDER</span>
+            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">천지인 에너지</span>
           </div>
           <span id="cosmicTime" style="font-size:11px;color:#e2e8f0;font-weight:600;font-variant-numeric:tabular-nums"></span>
         </div>
@@ -3829,7 +4001,7 @@ function updateTransitSectionWithNASA(planets) {
           <!-- ⑤ 수신 버튼 -->
           <div style="text-align:center;margin:14px 0 10px">
             <button id="cosmicReceiveBtn" onclick="receiveCosmicOrder()" style="position:relative;padding:12px 32px;background:linear-gradient(135deg,#b8860b,var(--gold),#f0c060);border:none;border-radius:12px;color:#030818;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:.08em;box-shadow:0 0 28px rgba(212,168,67,0.4);transition:all .3s;overflow:hidden;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 36px rgba(212,168,67,0.6)'" onmouseout="this.style.transform='';this.style.boxShadow='0 0 28px rgba(212,168,67,0.4)'">
-              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">🚨 지금 내 행운 신호 받기!</span>
+              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">👆 결과 보기</span>
               <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8" data-i18n="cosmic_btn_sub">NASA + 50대 역학 중 × 실시간 분석</span>
               <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 2.5s infinite"></div>
             </button>
@@ -3879,7 +4051,7 @@ function updateTransitSectionWithNASA(planets) {
 
         </div>
       </div>
-      <!-- ═══ /COSMIC ORDER ═══ -->
+      <!-- ═══ /천지인 에너지 ═══ -->
 
 
         <!-- ✦ Bio Sensor 경계선 ✦ -->
@@ -3974,7 +4146,13 @@ function updateTransitSectionWithNASA(planets) {
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <!-- 왼쪽: ILI/CEI 게이지 -->
-          <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
+          <!-- ILI 점수 세로 바 -->
+      <div class="cgo-section-bar" onclick="cgoToggleSection('iliBody','iliArrow')">
+        <span class="cgo-bar-title">📊 ILI 점수</span>
+        <span class="cgo-bar-arrow" id="iliArrow">▼</span>
+      </div>
+      <div id="iliBody" style="max-height:none;">
+      <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
               <div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:700;letter-spacing:.08em;" id="dash-score-label">ILI</div>
               <!-- 스캔 완료 시 CEI 배지 표시 -->
@@ -4292,7 +4470,7 @@ function updateTransitSectionWithNASA(planets) {
 
 
 
-        <!-- ── COSMIC ORDER / 전체메뉴 구분 카드 ── -->
+        <!-- ── 천지인 에너지 / 전체메뉴 구분 카드 ── -->
         <div style="margin:22px 0 18px;padding:13px 20px;background:linear-gradient(90deg,rgba(212,168,67,.06),rgba(52,211,153,.05),rgba(56,189,248,.05),rgba(212,168,67,.06));border:1px solid rgba(212,168,67,.3);border-radius:40px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 0 18px rgba(212,168,67,.08);">
           <div style="height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(212,168,67,.5));"></div>
           <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.18em;white-space:nowrap;">📋 전체 메뉴</span>
@@ -4300,7 +4478,13 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
-        <div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
+        <div <!-- 메뉴 세로 바 -->
+          <div class="cgo-section-bar" onclick="cgoToggleSection('menuBody','menuBarArrow')">
+            <span class="cgo-bar-title">📋 기능 메뉴</span>
+            <span class="cgo-bar-arrow" id="menuBarArrow">▼</span>
+          </div>
+          <div id="menuBody" style="max-height:none;">
+          <div id="menuSection" style="margin-bottom:20px;">
 
           <!-- 📋 전체 기능 모음 — 접이식 책 카드 -->
           <div onclick="(function(){var b=document.getElementById('menuListBody');var a=document.getElementById('menuArrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
@@ -13746,7 +13930,7 @@ var _I18N = {
     mbti_know:'내 MBTI 알아요', mbti_dontknow:'내 MBTI 몰라요',
     mbti_direct:'직접 선택 → 즉시 적용', mbti_test:'검사로 찾기',
     cosmic_subtitle:'실시간 행성 항로', cosmic_sky:'🌌 지금 하늘의 상태',
-    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
+    lbl_live:'LIVE', cosmic_order:'천지인 에너지',
     nasa_full:'( 미 항공 우주국 )', nasa_subtitle:'실시간 행성 항로 / 시간',
     word_time:'시간', lbl_live:'● LIVE',
     cosmic_btn:'🚨 지금 내 행운 신호 받기!', cosmic_btn_sub:'NASA + 50대 역학 중 × 실시간 분석',
@@ -13863,7 +14047,7 @@ var _I18N = {
     mbti_know:'I know my MBTI', mbti_dontknow:"I don't know my MBTI",
     mbti_direct:'Select directly → Apply now', mbti_test:'Find by test',
     cosmic_subtitle:'Real-time Planetary Path', cosmic_sky:'🌌 Sky Status Now',
-    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
+    lbl_live:'LIVE', cosmic_order:'천지인 에너지',
     nasa_full:'( NASA )', nasa_subtitle:'Real-time Planetary Path / Time',
     word_time:'Time', lbl_live:'● LIVE',
     cosmic_btn:'🚨 Get My Lucky Signal Now!', cosmic_btn_sub:'NASA + 20 Engines × Live Analysis',
@@ -40207,7 +40391,7 @@ function shopSync(){
 </div>
 <script>
 /* ============================================================
-   🌌 COSMIC ORDER — 실시간 우주 명령 시스템 JS
+   🌌 천지인 에너지 — 실시간 우주 명령 시스템 JS
    ============================================================ */
 
 var _cosmicPoints = parseInt(localStorage.getItem('cosmicPoints')||'0');
