@@ -2332,166 +2332,82 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 </style>
 <!-- PeerJS WebRTC — 커플 실시간 영상 연결 -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-
 <style>
-/* ═══ 접기 시스템 ═══ */
-.cgo-section-bar {
-  display:flex;align-items:center;justify-content:space-between;
-  padding:11px 16px;
-  background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(6,13,26,.95));
-  border:1px solid rgba(212,168,67,.2);
-  border-radius:12px;
-  cursor:pointer;
-  margin-bottom:6px;
-  transition:all .25s;
-  user-select:none;
-}
-.cgo-section-bar:hover { border-color:rgba(212,168,67,.45); background:rgba(212,168,67,.1); }
-.cgo-section-bar .cgo-bar-title { font-size:13px;font-weight:700;color:rgba(240,230,200,.85); }
-.cgo-section-bar .cgo-bar-arrow { font-size:14px;color:#d4a843;transition:transform .3s; }
-.cgo-section-bar.collapsed .cgo-bar-arrow { transform:rotate(-90deg); }
-.cgo-section-body { transition:max-height .4s ease, opacity .3s ease; overflow:hidden; }
-.cgo-section-body.collapsed { max-height:0!important; opacity:0; pointer-events:none; }
-
-/* 카운트다운 오버레이 */
-#cgoAutoCollapseOverlay {
-  display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  z-index:99999;background:linear-gradient(135deg,rgba(6,13,26,.97),rgba(13,21,38,.95));
-  border:1.5px solid rgba(212,168,67,.5);border-radius:20px;padding:16px 24px;
-  text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:220px;
-}
-#cgoAutoCollapseOverlay .cgo-cd-num {
-  font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#d4a843;
-  line-height:1;margin-bottom:6px;
-}
-#cgoAutoCollapseOverlay .cgo-cd-msg {
-  font-size:11px;color:rgba(240,230,200,.6);margin-bottom:12px;
-}
-#cgoAutoCollapseOverlay button {
-  padding:9px 24px;background:linear-gradient(135deg,#d4a843,#f59e0b);
-  border:none;border-radius:10px;color:#020817;font-size:13px;font-weight:800;
-  cursor:pointer;font-family:inherit;
-}
+.cgo-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:11px;cursor:pointer;margin-bottom:8px;transition:background .2s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.cgo-bar:active{background:rgba(212,168,67,.13);}
+.cgo-bar-title{font-size:12px;font-weight:700;color:rgba(240,230,200,.82);letter-spacing:.02em;}
+.cgo-bar-arrow{font-size:13px;color:#d4a843;transition:transform .3s;flex-shrink:0;}
+.cgo-bar-arrow.closed{transform:rotate(-90deg);}
+.cgo-collapsible{overflow:hidden;transition:max-height .4s ease,opacity .3s ease;}
+.cgo-collapsible.closed{max-height:0px!important;opacity:0!important;pointer-events:none!important;}
+#cgoCdToast{display:none;position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:99990;background:linear-gradient(135deg,rgba(6,13,26,.97),rgba(13,21,38,.95));border:1.5px solid rgba(212,168,67,.5);border-radius:18px;padding:14px 22px;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.55);min-width:200px;}
+#cgoCdToast .n{font-family:'Orbitron',monospace;font-size:34px;font-weight:900;color:#d4a843;line-height:1;margin-bottom:5px;}
+#cgoCdToast .t{font-size:10px;color:rgba(240,230,200,.55);margin-bottom:10px;line-height:1.5;}
+#cgoCdToast button{padding:8px 22px;background:linear-gradient(135deg,#d4a843,#f59e0b);border:none;border-radius:9px;color:#020817;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;}
 </style>
-
 <script>
-// ═══ CGO-FULI 접기 시스템 ═══
-var _cgoCollapseTimers = {};
-var _cgoUserLastActive = Date.now();
-var _cgoCountdownTimer = null;
-var _cgoCountdownVal = 15;
-var CGO_AUTO_COLLAPSE_MS = 20 * 60 * 1000; // 20분
-var CGO_COUNTDOWN_SEC = 15;
-
-// 사용자 활동 감지 — 활동하면 타이머 리셋
-['click','touchstart','scroll','keydown'].forEach(function(ev){
-  document.addEventListener(ev, function(){
-    _cgoUserLastActive = Date.now();
-    _cgoCancelCountdown();
-    _cgoResetAllTimers();
-  }, {passive:true});
-});
-
-// 섹션 토글 함수
-function cgoToggleSection(bodyId, arrowId){
-  var body = document.getElementById(bodyId);
-  var arrow = document.getElementById(arrowId);
-  if(!body) return;
-  var isOpen = !body.classList.contains('collapsed');
-  if(isOpen){
-    body.style.maxHeight = body.scrollHeight+'px';
+var _CB={IDLE:20*60*1000,CD:15,_t:{},_ci:null,_cs:15,_pid:null};
+['click','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,function(){_CB._cancel();_cgoBarResetAll();},{passive:true});});
+function cgoBarToggle(bId,aId){
+  var b=document.getElementById(bId),a=document.getElementById(aId);
+  if(!b)return;
+  var isClosed=b.classList.contains('closed');
+  if(isClosed){
+    // 열기
+    b.classList.remove('closed');
+    b.style.maxHeight='0px';
+    b.style.opacity='0';
     requestAnimationFrame(function(){
-      body.classList.add('collapsed');
-      body.style.maxHeight = '0px';
+      requestAnimationFrame(function(){
+        b.style.maxHeight=b.scrollHeight+'px';
+        b.style.opacity='1';
+        setTimeout(function(){
+          if(!b.classList.contains('closed')){
+            b.style.maxHeight='none';
+          }
+        },420);
+      });
     });
   } else {
-    body.classList.remove('collapsed');
-    body.style.maxHeight = body.scrollHeight+'px';
-    setTimeout(function(){ body.style.maxHeight='none'; }, 420);
+    // 닫기
+    b.style.maxHeight=b.scrollHeight+'px';
+    b.style.opacity='1';
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        b.style.maxHeight='0px';
+        b.style.opacity='0';
+        setTimeout(function(){ b.classList.add('closed'); },380);
+      });
+    });
   }
-  if(arrow){
-    var barEl = arrow.closest('.cgo-section-bar');
-    if(barEl) barEl.classList.toggle('collapsed', isOpen);
-  }
+  if(a)a.classList.toggle('closed',!isClosed);
 }
-
-// 섹션 자동 접기 타이머 설정
-function _cgoSetAutoCollapse(bodyId, arrowId, msDelay){
-  if(_cgoCollapseTimers[bodyId]) clearTimeout(_cgoCollapseTimers[bodyId]);
-  _cgoCollapseTimers[bodyId] = setTimeout(function(){
-    var body = document.getElementById(bodyId);
-    if(body && !body.classList.contains('collapsed')){
-      _cgoStartCountdown(bodyId, arrowId);
+function _cgoBarSet(bId,aId){
+  if(_CB._t[bId])clearTimeout(_CB._t[bId]);
+  _CB._t[bId]=setTimeout(function(){
+    var b=document.getElementById(bId);
+    if(b&&!b.classList.contains('closed')){_CB._pid={b:bId,a:aId};_CB._start();}
+  },_CB.IDLE-_CB.CD*1000);
+}
+_CB._start=function(){
+  _CB._cs=_CB.CD;var t=document.getElementById('cgoCdToast');
+  if(!t)return;t.style.display='block';document.getElementById('cgoCdN').textContent=_CB._cs;
+  if(_CB._ci)clearInterval(_CB._ci);
+  _CB._ci=setInterval(function(){
+    _CB._cs--;var n=document.getElementById('cgoCdN');if(n)n.textContent=_CB._cs;
+    if(_CB._cs<=0){clearInterval(_CB._ci);t.style.display='none';
+      if(_CB._pid){var p=_CB._pid;var b=document.getElementById(p.b);if(b&&!b.classList.contains('closed'))cgoBarToggle(p.b,p.a);_CB._pid=null;}
     }
-  }, msDelay - CGO_COUNTDOWN_SEC * 1000);
+  },1000);
+};
+_CB._cancel=function(){if(_CB._ci){clearInterval(_CB._ci);_CB._ci=null;}var t=document.getElementById('cgoCdToast');if(t)t.style.display='none';_CB._pid=null;};
+function cgoContinue(){_CB._cancel();_cgoBarResetAll();}
+function _cgoBarResetAll(){
+  [['cgoB1','cgoA1'],['cgoB2','cgoA2'],['cgoB3','cgoA3'],['cgoB4','cgoA4'],['cgoB5','cgoA5'],['cgoB6','cgoA6'],['cgoB7','cgoA7']].forEach(function(p){_cgoBarSet(p[0],p[1]);});
 }
-
-// 카운트다운 시작
-function _cgoStartCountdown(bodyId, arrowId){
-  _cgoCountdownVal = CGO_COUNTDOWN_SEC;
-  var ov = document.getElementById('cgoAutoCollapseOverlay');
-  if(!ov) return;
-  ov.style.display = 'block';
-  document.getElementById('cgoCdNum').textContent = _cgoCountdownVal;
-  document.getElementById('cgoCdBodyId').value = bodyId;
-  document.getElementById('cgoCdArrowId').value = arrowId;
-
-  if(_cgoCountdownTimer) clearInterval(_cgoCountdownTimer);
-  _cgoCountdownTimer = setInterval(function(){
-    _cgoCountdownVal--;
-    var numEl = document.getElementById('cgoCdNum');
-    if(numEl) numEl.textContent = _cgoCountdownVal;
-    if(_cgoCountdownVal <= 0){
-      clearInterval(_cgoCountdownTimer);
-      ov.style.display = 'none';
-      // 접기 실행
-      var body = document.getElementById(bodyId);
-      if(body && !body.classList.contains('collapsed')){
-        cgoToggleSection(bodyId, arrowId);
-      }
-    }
-  }, 1000);
-}
-
-// 카운트다운 취소 (사용자 활동 감지 시)
-function _cgoCancelCountdown(){
-  if(_cgoCountdownTimer){ clearInterval(_cgoCountdownTimer); _cgoCountdownTimer=null; }
-  var ov = document.getElementById('cgoAutoCollapseOverlay');
-  if(ov) ov.style.display='none';
-}
-
-// 지속 버튼 클릭
-function cgoContinueSession(){
-  _cgoCancelCountdown();
-  _cgoResetAllTimers();
-}
-
-// 모든 타이머 리셋
-function _cgoResetAllTimers(){
-  Object.keys(_cgoCollapseTimers).forEach(function(id){
-    clearTimeout(_cgoCollapseTimers[id]);
-  });
-  // 20분 후 자동 접기 재설정
-  _cgoSetAutoCollapse('inputPanelBody','inputPanelArrow', CGO_AUTO_COLLAPSE_MS);
-  _cgoSetAutoCollapse('cosmicBody','cosmicArrow', CGO_AUTO_COLLAPSE_MS);
-  _cgoSetAutoCollapse('iliBody','iliArrow', CGO_AUTO_COLLAPSE_MS);
-  _cgoSetAutoCollapse('menuBody','menuArrow', CGO_AUTO_COLLAPSE_MS);
-}
-
-// 페이지 로드 후 타이머 시작
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(_cgoResetAllTimers, 2000);
-});
+window.addEventListener('load',function(){setTimeout(_cgoBarResetAll,1500);});
 </script>
-
-<!-- 카운트다운 오버레이 -->
-<div id="cgoAutoCollapseOverlay">
-  <div class="cgo-cd-num" id="cgoCdNum">15</div>
-  <div class="cgo-cd-msg">화면이 곧 접힙니다<br>계속 사용하시려면 아래 버튼을 눌러주세요</div>
-  <button onclick="cgoContinueSession()">⏸️ 계속 진행</button>
-  <input type="hidden" id="cgoCdBodyId" value="">
-  <input type="hidden" id="cgoCdArrowId" value="">
-</div>
+<div id="cgoCdToast"><div class="n" id="cgoCdN">15</div><div class="t">화면이 곧 접힙니다<br>계속 사용하시려면 눌러주세요</div><button onclick="cgoContinue()">⏸ 계속 진행</button></div>
 </head>
 <body>
 <script>
@@ -3789,13 +3705,10 @@ function updateTransitSectionWithNASA(planets) {
       @keyframes rtWeather{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
       </style>
 
-      <div class="input-panel" id="inputPanelWrap">
-        <!-- 접기 헤더 -->
-        <div onclick="cgoToggleSection('inputPanelBody','inputPanelArrow')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 4px;margin-bottom:4px;">
-          <div class="ip-title" data-i18n="ipTitle" style="margin:0;">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
-          <span id="inputPanelArrow" style="color:#d4a843;font-size:18px;transition:transform .3s;">▼</span>
-        </div>
-        <div id="inputPanelBody">
+      
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB1','cgoA1')"><span class="cgo-bar-title">📋 정보 입력</span><span class="cgo-bar-arrow" id="cgoA1">▼</span></div><div id="cgoB1" class="cgo-collapsible">
+<div class="input-panel">
+        <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
@@ -3903,15 +3816,10 @@ function updateTransitSectionWithNASA(planets) {
 
         <!-- 경계선 -->
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
-        </div><!-- /inputPanelBody -->
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
-      <!-- 천지인 에너지 세로 바 -->
-      <div class="cgo-section-bar" onclick="cgoToggleSection('cosmicBody','cosmicArrow')">
-        <span class="cgo-bar-title">🌌 천지인 에너지</span>
-        <span class="cgo-bar-arrow" id="cosmicArrow">▼</span>
-      </div>
-      <div id="cosmicBody" style="max-height:none;">
-      <div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
+      
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB2','cgoA2')"><span class="cgo-bar-title">🌌 천지인 에너지 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA2" class="closed">▼</span></div><div id="cgoB2" class="cgo-collapsible closed">
+<div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
 
         <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
 
@@ -4001,7 +3909,7 @@ function updateTransitSectionWithNASA(planets) {
           <!-- ⑤ 수신 버튼 -->
           <div style="text-align:center;margin:14px 0 10px">
             <button id="cosmicReceiveBtn" onclick="receiveCosmicOrder()" style="position:relative;padding:12px 32px;background:linear-gradient(135deg,#b8860b,var(--gold),#f0c060);border:none;border-radius:12px;color:#030818;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:.08em;box-shadow:0 0 28px rgba(212,168,67,0.4);transition:all .3s;overflow:hidden;white-space:nowrap" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 36px rgba(212,168,67,0.6)'" onmouseout="this.style.transform='';this.style.boxShadow='0 0 28px rgba(212,168,67,0.4)'">
-              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">👆 결과 보기</span>
+              <span style="position:relative;z-index:1" data-i18n="cosmic_btn">🚨 지금 내 행운 신호 받기!</span>
               <span style="position:relative;z-index:1;display:block;font-family:'Noto Sans KR',sans-serif;font-size:9px;font-weight:400;letter-spacing:.03em;margin-top:2px;opacity:.8" data-i18n="cosmic_btn_sub">NASA + 50대 역학 중 × 실시간 분석</span>
               <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);animation:shimmer 2.5s infinite"></div>
             </button>
@@ -4054,18 +3962,20 @@ function updateTransitSectionWithNASA(planets) {
       <!-- ═══ /천지인 에너지 ═══ -->
 
 
-        <!-- ✦ Bio Sensor 경계선 ✦ -->
+        
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB3','cgoA3')"><span class="cgo-bar-title">🧬 생체 센서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA3" class="closed">▼</span></div><div id="cgoB3" class="cgo-collapsible closed">
+<!-- ✦ Bio Sensor 경계선 ✦ -->
         <div style="margin:22px 0;position:relative;display:flex;align-items:center;gap:12px;">
           <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6));"></div>
-          <div style="padding:5px 14px;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(56,189,248,.1));border:1px solid rgba(52,211,153,.5);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;white-space:nowrap;">🧬 CGO-Bio Sensor v2.0</div>
+          <div style="padding:5px 14px;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(56,189,248,.1));border:1px solid rgba(52,211,153,.5);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;white-space:nowrap;">🧬 생체 센서</div>
           <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(52,211,153,.6),transparent);"></div>
         </div>
 
-        <!-- ✦ CGO-Bio Sensor v2.0 — 관상/손금/혀/호흡 -->
+        <!-- ✦ 생체 센서 — 관상/손금/혀/호흡 -->
         <div style="margin:28px 0 10px;">
           <!-- 섹션 레이블 -->
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:600;">
-            <span data-i18n="bioScan">🧬 CGO-Bio Sensor v2.0</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
+            <span data-i18n="bioScan">🧬 생체 센서</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
             <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">20개 엔진 즉시 반영</span>
           </div>
 
@@ -4079,7 +3989,7 @@ function updateTransitSectionWithNASA(planets) {
                   <span style="font-size:22px;">🔬</span>
                 </div>
                 <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">CGO-Bio Sensor v2.0</div>
+                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">생체 센서</div>
                   <div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px;">실측 분석 — rPPG · 호흡 · 생체신호 융합</div>
                 </div>
                 <div style="flex-shrink:0;padding:4px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:20px;">
@@ -4144,15 +4054,11 @@ function updateTransitSectionWithNASA(planets) {
           <!-- bioSkinResult 배너 제거 -->
         </div>
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB4','cgoA4')"><span class="cgo-bar-title">📊 ILI 점수 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA4" class="closed">▼</span></div><div id="cgoB4" class="cgo-collapsible closed">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <!-- 왼쪽: ILI/CEI 게이지 -->
-          <!-- ILI 점수 세로 바 -->
-      <div class="cgo-section-bar" onclick="cgoToggleSection('iliBody','iliArrow')">
-        <span class="cgo-bar-title">📊 ILI 점수</span>
-        <span class="cgo-bar-arrow" id="iliArrow">▼</span>
-      </div>
-      <div id="iliBody" style="max-height:none;">
-      <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
+          <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
               <div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:700;letter-spacing:.08em;" id="dash-score-label">ILI</div>
               <!-- 스캔 완료 시 CEI 배지 표시 -->
@@ -4205,7 +4111,9 @@ function updateTransitSectionWithNASA(planets) {
 
         <!-- ✦ 4-7-8 아래 ✦ -->
 
-        <!-- ══ CGO-FULI 3권의 서 ══ -->
+        
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB5','cgoA5')"><span class="cgo-bar-title">✦ CGO-FULI 에너지의 서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA5" class="closed">▼</span></div><div id="cgoB5" class="cgo-collapsible closed">
+<!-- ══ CGO-FULI 3권의 서 ══ -->
         <div style="margin:32px 0 16px;">
           <!-- 상단 구분선 -->
           <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),rgba(167,139,250,.3),transparent);margin-bottom:18px;"></div>
@@ -4466,7 +4374,9 @@ function updateTransitSectionWithNASA(planets) {
         <!-- CGO-MASTER 유기체 상태 -->
         </div>
 
-        <div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
+        
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB6','cgoA6')"><span class="cgo-bar-title">💬 CGO 메신저 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA6" class="closed">▼</span></div><div id="cgoB6" class="cgo-collapsible closed">
+<div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
 
 
 
@@ -4478,13 +4388,9 @@ function updateTransitSectionWithNASA(planets) {
         </div>
 
         <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
-        <div <!-- 메뉴 세로 바 -->
-          <div class="cgo-section-bar" onclick="cgoToggleSection('menuBody','menuBarArrow')">
-            <span class="cgo-bar-title">📋 기능 메뉴</span>
-            <span class="cgo-bar-arrow" id="menuBarArrow">▼</span>
-          </div>
-          <div id="menuBody" style="max-height:none;">
-          <div id="menuSection" style="margin-bottom:20px;">
+        
+<div class="cgo-bar" onclick="cgoBarToggle('cgoB7','cgoA7')"><span class="cgo-bar-title">✦ CGO-FULI 전체 기능 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA7" class="closed">▼</span></div><div id="cgoB7" class="cgo-collapsible closed">
+<div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
 
           <!-- 📋 전체 기능 모음 — 접이식 책 카드 -->
           <div onclick="(function(){var b=document.getElementById('menuListBody');var a=document.getElementById('menuArrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
@@ -4546,10 +4452,18 @@ function updateTransitSectionWithNASA(planets) {
           <div id="menuListBody" style="display:none;margin-top:6px;">
           <div style="display:flex;flex-direction:column;gap:6px;">
 
-            <div onclick="cgoGoPage('scan')" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(168,85,247,.08)';this.style.borderColor='rgba(168,85,247,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+            <div onclick="cgoGoPage('music')" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(56,189,248,.08)';this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
               <span style="font-size:22px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border-radius:12px;flex-shrink:0;">🔬</span>
               <div style="flex:1"><div style="font-size:14px;font-weight:800;color:rgba(245,230,175,1);letter-spacing:.02em;">🎵 나의 주파수 음악</div><div style="font-size:11px;color:rgba(200,185,140,.55);margin-top:3px;line-height:1.4;">CGO-Bio Sensor × 50대 역학 × NASA 운 상승 음악</div></div>
               <span style="color:rgba(212,168,67,.7);font-size:18px;font-weight:300;">›</span>
+            </div>
+            <div onclick="cgoGoPage('c13')" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(168,85,247,.08)';this.style.borderColor='rgba(168,85,247,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <div style="width:42px;height:42px;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(168,85,247,.08));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🌙</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:800;color:rgba(240,230,200,.92);margin-bottom:2px;">C-13 꿈 해몽</div>
+                <div style="font-size:11px;color:rgba(240,230,200,.4);">미신 · 과학 · C-13 역학 융합</div>
+              </div>
+              <div style="font-size:9px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:6px;padding:3px 8px;color:#c4b5fd;font-weight:700;">C-13</div>
             </div>
 
             <div onclick="cgoGoPage('algo')" class="menu-lock-item" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(56,189,248,.08)';this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
@@ -4688,7 +4602,7 @@ function updateTransitSectionWithNASA(planets) {
   <!-- Bio Sensor 미완료 안내 -->
   <div id="music-lock-notice" style="display:none;margin:20px 0;padding:20px;background:rgba(52,211,153,.05);border:1px dashed rgba(52,211,153,.3);border-radius:16px;text-align:center;">
     <div style="font-size:32px;margin-bottom:10px;">🔒</div>
-    <div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:6px;">CGO-Bio Sensor v2.0 스캔 완료 후 활성화</div>
+    <div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:6px;">생체 센서 스캔 완료 후 활성화</div>
     <div style="font-size:11px;color:rgba(240,230,200,.5);line-height:1.7;">대시보드의 관상·손금 스캔을 완료하면<br>나만의 주파수 음악이 처방됩니다 🎵</div>
     <button onclick="cgoGoPage('dashboard')" style="margin-top:14px;padding:10px 24px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.1));border:1.5px solid rgba(52,211,153,.5);border-radius:14px;color:#34d399;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">→ Bio Sensor 스캔하러 가기</button>
   </div>
@@ -4756,6 +4670,223 @@ function updateTransitSectionWithNASA(planets) {
 
 
 </div>
+
+<!-- ═══ PAGE-MUSIC : 나의 주파수 음악 (NEW) ═══ -->
+<div class="page" id="page-music">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(56,189,248,.25),rgba(52,211,153,.15));border:2px solid rgba(56,189,248,.75);border-radius:22px;color:#38bdf8;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(56,189,248,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+
+  <!-- 헤더 -->
+  <div style="background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(52,211,153,.05));border:1px solid rgba(56,189,248,.2);border-radius:20px;padding:20px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+      <div style="font-size:40px;line-height:1">🎵</div>
+      <div>
+        <div style="font-size:18px;font-weight:900;color:#38bdf8;letter-spacing:.03em;margin-bottom:3px">나의 주파수 음악</div>
+        <div style="font-size:11px;color:rgba(240,230,200,.55)">50대 역학 중 × NASA × rPPG 생체 실시간 융합</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:10px;padding:8px 14px;flex:1;min-width:110px">
+        <div style="font-size:9px;color:rgba(212,168,67,.7);font-weight:700;margin-bottom:3px">📜 1단계</div>
+        <div style="font-size:11px;color:rgba(240,230,200,.85);font-weight:600">이름·생년월일 입력</div>
+        <div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:1px">만세력 × NASA 기반</div>
+      </div>
+      <div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:8px 14px;flex:1;min-width:110px">
+        <div style="font-size:9px;color:rgba(52,211,153,.7);font-weight:700;margin-bottom:3px">🧬 2단계</div>
+        <div style="font-size:11px;color:rgba(240,230,200,.85);font-weight:600">Bio Sensor 스캔 후</div>
+        <div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:1px">생체신호 × 역학 정밀처방</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 잠금 안내 (정보 미입력 시) -->
+  <div id="pm-lock" style="display:none;padding:28px 20px;background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(52,211,153,.04));border:1.5px dashed rgba(56,189,248,.35);border-radius:18px;text-align:center;margin-bottom:16px;">
+    <div style="font-size:40px;margin-bottom:14px">🎵</div>
+    <div style="font-size:15px;font-weight:800;color:#38bdf8;margin-bottom:10px;">이름과 생년월일을 입력하면<br>나만의 주파수 음악이 처방됩니다</div>
+    <div style="font-size:11px;color:rgba(240,230,200,.5);line-height:1.9;margin-bottom:4px;">
+      📜 <b style="color:rgba(212,168,67,.8)">1단계</b>: 만세력 × NASA 기반 음악 처방<br>
+      🧬 <b style="color:rgba(52,211,153,.8)">2단계</b>: Bio Sensor 스캔 후 정밀 처방
+    </div>
+    <button onclick="cgoGoPage('dashboard')" style="margin-top:14px;padding:12px 30px;background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(52,211,153,.12));border:1.5px solid rgba(56,189,248,.5);border-radius:14px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">→ 대시보드에서 정보 입력</button>
+  </div>
+
+  <!-- 음악 콘텐츠 -->
+  <div id="pm-box" style="display:none;">
+
+    <!-- 단계 레이블 -->
+    <div id="pm-stage" style="display:inline-block;font-size:11px;font-weight:800;color:#d4a843;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:8px;padding:5px 14px;margin-bottom:14px;">📜 1단계: 만세력 × NASA 실시간 기반 처방</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;padding-left:2px;">
+      <div style="width:7px;height:7px;background:#34d399;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0"></div>
+      <span id="pm-refresh" style="font-size:10px;color:rgba(56,189,248,.5);"></span>
+    </div>
+
+    <!-- 시진 선택 -->
+    <div style="margin-bottom:14px;padding:12px 14px;background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.15);border-radius:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:10px;color:#d4a843;font-weight:700;">⏰ 시·때 선택 — 시간이 바뀌면 음악도 바뀝니다</span>
+        <span id="pm-time" style="font-size:11px;color:#34d399;font-weight:700;"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:8px;">
+        <button onclick="pmSetSiJin(0)"  id="pmSj0"  class="msj-btn">🌑 자시<br><span>23-01</span></button>
+        <button onclick="pmSetSiJin(1)"  id="pmSj1"  class="msj-btn">🌒 축시<br><span>01-03</span></button>
+        <button onclick="pmSetSiJin(2)"  id="pmSj2"  class="msj-btn">🐅 인시<br><span>03-05</span></button>
+        <button onclick="pmSetSiJin(3)"  id="pmSj3"  class="msj-btn">🌅 묘시<br><span>05-07</span></button>
+        <button onclick="pmSetSiJin(4)"  id="pmSj4"  class="msj-btn">☀️ 진시<br><span>07-09</span></button>
+        <button onclick="pmSetSiJin(5)"  id="pmSj5"  class="msj-btn">🌤 사시<br><span>09-11</span></button>
+        <button onclick="pmSetSiJin(6)"  id="pmSj6"  class="msj-btn">🌞 오시<br><span>11-13</span></button>
+        <button onclick="pmSetSiJin(7)"  id="pmSj7"  class="msj-btn">🌻 미시<br><span>13-15</span></button>
+        <button onclick="pmSetSiJin(8)"  id="pmSj8"  class="msj-btn">🌆 신시<br><span>15-17</span></button>
+        <button onclick="pmSetSiJin(9)"  id="pmSj9"  class="msj-btn">🌇 유시<br><span>17-19</span></button>
+        <button onclick="pmSetSiJin(10)" id="pmSj10" class="msj-btn">🌃 술시<br><span>19-21</span></button>
+        <button onclick="pmSetSiJin(11)" id="pmSj11" class="msj-btn">🌙 해시<br><span>21-23</span></button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+        <button onclick="pmSetSeason('봄')"  id="pmSs봄"  class="mss-btn">🌸 봄<br><span>목(木)</span></button>
+        <button onclick="pmSetSeason('여름')" id="pmSs여름" class="mss-btn">☀️ 여름<br><span>화(火)</span></button>
+        <button onclick="pmSetSeason('가을')" id="pmSs가을" class="mss-btn">🍂 가을<br><span>금(金)</span></button>
+        <button onclick="pmSetSeason('겨울')" id="pmSs겨울" class="mss-btn">❄️ 겨울<br><span>수(水)</span></button>
+      </div>
+    </div>
+
+    <!-- 역학 카드 -->
+    <div id="pm-cards" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+
+    <!-- 음악 추천 리스트 -->
+    <div id="pm-list" style="display:none;"></div>
+  </div>
+</div>
+<!-- ═══ PAGE-MUSIC END ═══ -->
+
+
+<!-- ═══ PAGE-C13 : 꿈 해몽 (C-13 전용) ═══ -->
+<div class="page" id="page-c13">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(196,181,253,.15));border:2px solid rgba(168,85,247,.75);border-radius:22px;color:#c4b5fd;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(168,85,247,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+
+  <!-- ★ 고급 헤더 -->
+  <div style="position:relative;background:linear-gradient(160deg,#0a0618,#120825,#0d1230);border:1px solid rgba(168,85,247,.25);border-radius:24px;padding:24px 20px 20px;margin-bottom:18px;overflow:hidden;">
+    <!-- 배경 별빛 효과 -->
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(168,85,247,.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(99,130,201,.06) 0%,transparent 50%);pointer-events:none;"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <div style="font-size:48px;line-height:1;filter:drop-shadow(0 0 12px rgba(168,85,247,.6));">🌙</div>
+      <div>
+        <div style="font-size:22px;font-weight:900;color:#c4b5fd;letter-spacing:.05em;margin-bottom:4px;">C-13 꿈 해몽</div>
+        <div style="font-size:11px;color:rgba(196,181,253,.55);letter-spacing:.08em;">똑딱이 · 꿈의 모든 것을 한 번에</div>
+      </div>
+      <div style="margin-left:auto;text-align:center;">
+        <div style="font-size:9px;background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,130,201,.2));border:1px solid rgba(168,85,247,.5);border-radius:10px;padding:5px 12px;color:#c4b5fd;font-weight:800;letter-spacing:.1em;">C-13</div>
+        <div style="font-size:8px;color:rgba(196,181,253,.3);margin-top:3px;">특허</div>
+      </div>
+    </div>
+    <!-- 3가지 역학 배지 -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;position:relative;">
+      <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:5px 10px;font-size:10px;color:#fbbf24;font-weight:700;">🔮 전통 해몽</div>
+      <div style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:8px;padding:5px 10px;font-size:10px;color:#38bdf8;font-weight:700;">🧠 과학 해몽</div>
+      <div style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:8px;padding:5px 10px;font-size:10px;color:#c4b5fd;font-weight:700;">👑 C-13 해몽</div>
+    </div>
+  </div>
+
+  <!-- ★ 꿈 입력 카드 -->
+  <div style="background:linear-gradient(160deg,rgba(168,85,247,.06),rgba(99,130,201,.03));border:1.5px solid rgba(168,85,247,.2);border-radius:20px;padding:20px;margin-bottom:16px;">
+    <div style="font-size:12px;color:rgba(196,181,253,.7);font-weight:700;margin-bottom:12px;letter-spacing:.05em;">🌙 어떤 꿈을 꾸셨나요?</div>
+    <textarea id="c13DreamInput"
+      placeholder="꿈 내용을 자유롭게 입력하세요&#10;&#10;예) 돼지가 집으로 들어오는 꿈&#10;     하늘을 날아다니는 꿈&#10;     이가 빠지는 꿈&#10;     용을 만난 꿈"
+      rows="5"
+      style="width:100%;background:rgba(2,8,23,.6);border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:14px 16px;color:#f0ece0;font-size:13px;resize:none;font-family:inherit;outline:none;line-height:1.8;box-sizing:border-box;transition:border-color .2s;"
+      onfocus="this.style.borderColor='rgba(168,85,247,.5)'"
+      onblur="this.style.borderColor='rgba(168,85,247,.2)'"></textarea>
+
+    <!-- 해몽 버튼 -->
+    <button onclick="c13Analyze()" id="c13Btn"
+      style="width:100%;margin-top:14px;padding:16px;background:linear-gradient(135deg,#6d28d9,#7c3aed,#a855f7);border:none;border-radius:16px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.08em;box-shadow:0 6px 24px rgba(168,85,247,.45);transition:all .2s;position:relative;overflow:hidden;">
+      <span id="c13BtnTxt">🌙 똑딱! 해몽 시작</span>
+    </button>
+    <div style="text-align:center;margin-top:8px;font-size:9px;color:rgba(196,181,253,.3);">
+      특허 10-2026-0060113 · NASA × 50대 역학 중 × 뇌과학 융합<br>
+      <span style="color:rgba(168,85,247,.25);font-size:8px;letter-spacing:.08em;">🌙 C-13 똑딱이가 만든 페이지 · 어떤 꿈이든 똑딱 해결</span>
+    </div>
+  </div>
+
+  <!-- ★ 팝업: 3가지 해몽 카드 -->
+  <div id="c13Popup" style="display:none;position:fixed;inset:0;z-index:29500;background:rgba(2,4,15,.97);backdrop-filter:blur(20px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div style="max-width:580px;margin:0 auto;padding:20px 16px 80px;">
+
+      <!-- 팝업 헤더 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 16px;border-bottom:1px solid rgba(168,85,247,.15);margin-bottom:20px;">
+        <div>
+          <div style="font-size:16px;font-weight:900;color:#c4b5fd;letter-spacing:.03em;">🌙 꿈 해몽 결과</div>
+          <div id="c13PopupDream" style="font-size:11px;color:rgba(196,181,253,.45);margin-top:4px;font-style:italic;"></div>
+        </div>
+        <button onclick="c13ClosePopup()" style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:50%;width:38px;height:38px;color:#c4b5fd;font-size:18px;cursor:pointer;flex-shrink:0;">✕</button>
+      </div>
+
+      <!-- 로딩 -->
+      <div id="c13Loading" style="text-align:center;padding:48px 20px;display:none;">
+        <div style="font-size:48px;margin-bottom:16px;animation:pulse 1.5s ease-in-out infinite;">🌙</div>
+        <div style="font-size:13px;color:rgba(196,181,253,.8);font-weight:600;margin-bottom:8px;">C-13 똑딱이 분석 중...</div>
+        <div id="c13LoadMsg" style="font-size:11px;color:rgba(196,181,253,.4);">전통·과학·NASA 역학 교차 중</div>
+        <div style="width:100%;height:3px;background:rgba(168,85,247,.1);border-radius:2px;margin-top:16px;overflow:hidden;">
+          <div id="c13Bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#c4b5fd);border-radius:2px;transition:width .6s ease;"></div>
+        </div>
+      </div>
+
+      <!-- 결과 카드들 -->
+      <div id="c13Cards" style="display:none;">
+
+        <!-- 카드1: 순수 해몽 -->
+        <div style="background:linear-gradient(160deg,#0f0a00,#1a1000);border:1.5px solid rgba(251,191,36,.3);border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 4px 20px rgba(251,191,36,.08);">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:44px;height:44px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.1));border:1px solid rgba(251,191,36,.35);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;">🔮</div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:900;color:#fbbf24;margin-bottom:2px;">순수 해몽</div>
+              <div style="font-size:10px;color:rgba(251,191,36,.5);">전통 · 민간 · 동양 역학 기반</div>
+            </div>
+            <div id="c13Luck1" style="font-size:11px;font-weight:800;color:#fbbf24;"></div>
+          </div>
+          <div id="c13Card1" style="font-size:13px;color:rgba(240,230,200,.88);line-height:1.9;"></div>
+        </div>
+
+        <!-- 카드2: 과학 해몽 -->
+        <div style="background:linear-gradient(160deg,#00080f,#001520);border:1.5px solid rgba(56,189,248,.3);border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 4px 20px rgba(56,189,248,.08);">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            <div style="width:44px;height:44px;background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(99,130,201,.1));border:1px solid rgba(56,189,248,.35);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;">🧠</div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:900;color:#38bdf8;margin-bottom:2px;">과학 해몽</div>
+              <div style="font-size:10px;color:rgba(56,189,248,.5);">뇌과학 · 심리학 · 융 분석</div>
+            </div>
+            <div style="font-size:9px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:6px;padding:3px 8px;color:#38bdf8;">SCIENCE</div>
+          </div>
+          <div id="c13Card2" style="font-size:13px;color:rgba(240,230,200,.88);line-height:1.9;"></div>
+        </div>
+
+        <!-- 카드3: C-13 해몽 (하이라이트) -->
+        <div style="position:relative;background:linear-gradient(160deg,#08021a,#0d0520);border:2px solid rgba(168,85,247,.5);border-radius:20px;padding:20px;box-shadow:0 0 30px rgba(168,85,247,.2),0 4px 20px rgba(168,85,247,.1);">
+          <div style="position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#6d28d9,#a855f7);border-radius:0 0 12px 12px;padding:4px 16px;font-size:9px;font-weight:800;color:#fff;letter-spacing:.1em;">★ C-13 EXCLUSIVE</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;margin-top:8px;">
+            <div style="width:44px;height:44px;background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(99,130,201,.15));border:1.5px solid rgba(168,85,247,.5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 12px rgba(168,85,247,.3);">👑</div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:900;color:#c4b5fd;margin-bottom:2px;">C-13 해몽</div>
+              <div style="font-size:10px;color:rgba(196,181,253,.5);">NASA × ILI × 50대 역학 중 융합</div>
+            </div>
+          </div>
+          <div id="c13Card3" style="font-size:13px;color:rgba(240,230,200,.88);line-height:1.9;"></div>
+          <div id="c13IliBar" style="margin-top:14px;display:none;">
+            <div style="font-size:9px;color:rgba(196,181,253,.4);margin-bottom:6px;letter-spacing:.05em;">오늘 ILI 기반 역학 점수</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;" id="c13ScoreTags"></div>
+          </div>
+          <div style="margin-top:14px;text-align:center;font-size:8px;color:rgba(168,85,247,.25);font-family:'Orbitron',monospace;letter-spacing:.12em;">
+            특허 10-2026-0060113 · CGO-FULI
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <style>
+    #c13DreamInput::placeholder{color:rgba(196,181,253,.25);}
+  </style>
+</div>
+<!-- ═══ PAGE-C13 END ═══ -->
+
 <div class="page" id="page-family">
   <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
       <div class="family-header">
@@ -6685,6 +6816,7 @@ var fcSystems = {
       ✦ 별 기능은 GPS·카메라 권한이 필요합니다
     </div>
   </div>
+
 
 </div>
 </div>
@@ -9175,12 +9307,19 @@ function trvRenderLodge(region){
   var now=new Date();
   var timeSeed=Math.floor((now.getHours()*60+now.getMinutes())/3);
   var ohColors={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
+  // ★ 기준서 v1.0: S06(행성트랜짓±20) + S13(태을신수±12) → 주식 에너지 보정
+  var _stkS18 = (window.calcResult&&window.calcResult.scores&&window.calcResult.scores.s18)||{};
+  var _stkS06 = _stkS18.s06 ? (_stkS18.s06 - 70) * 0.15 : 0; // S06 기준 70, 편차를 주식 보정으로
+  var _stkS13 = _stkS18.s13 ? (_stkS18.s13 - 70) * 0.10 : 0; // S13 기준 70
+  var _stkPersonal = Math.max(-8, Math.min(8, Math.round(_stkS06 + _stkS13)));
+
   var scored=data.map(function(d,i){
     var ohs=d.oh.split('·');
     var ohBonus=ohs.reduce(function(max,o){return Math.max(max,(ohMatch[oh]||{})[o]||0);},0);
     // 종목별 고유 파동 (각 숙소마다 다른 주기)
     var wave=Math.round(Math.sin((timeSeed+i*1.7)*0.4)*4);
-    var finalScore=Math.min(95,Math.max(40,d.score+ohBonus+nasaBonus+wave));
+    // ★ s18 기준서 행성에너지 + 개인 점수 반영
+    var finalScore=Math.min(95,Math.max(40,d.score+ohBonus+nasaBonus+wave+_stkPersonal));
     return Object.assign({},d,{finalScore:finalScore,ohBonus:ohBonus,wave:wave});
   }).sort(function(a,b){return b.finalScore-a.finalScore;}).slice(0,30);
   var topScore=scored[0]?scored[0].finalScore:99;
@@ -13918,14 +14057,14 @@ var _I18N = {
     ph_name:'예: 이주원',
     lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀', lbl_tap_scan:'탭하여 스캔', mbtiLabel:'MBTI 성격 유형', mbti_19th:'20번째 역학 보정', labelName:'이름 (성명)', labelTime:'출생 시간', labelGender:'성별', ipTitle:'📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)',
     btn_18engine:'20개 엔진 즉시 반영',
-    lbl_bioskin:'CGO-Bio Sensor v2.0',
+    lbl_bioskin:'생체 센서',
     lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀',
     lbl_tap_scan:'탭하여 스캔',
     lbl_birth_label:'생년월일', lbl_solar:'양력', lbl_lunar:'음력',
     lbl_birth_place:'출생지', lbl_birth_hint:'동 단위 → 정밀 좌표', lbl_cur_place:'현재 거주지', lbl_cur_hint:'동 단위 → 정밀 방위',
     banner1:'🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된', banner2:'50대 역학 중 엔진', banner3:'을 융합하여', banner4:'당신만의 인생 지수', banner5:'를 계산합니다.',
     btnSolar:'양력', btnLunar:'음력', optMale:'남성 (男)', optFemale:'여성 (女)', auto_loc:'📡 현재 위치 자동',
-    nasaLive:'NASA JPL', bioScan:'🧬 CGO-Bio Sensor v2.0', btn_18engine:'20개 엔진 즉시 반영',
+    nasaLive:'NASA JPL', bioScan:'🧬 생체 센서', btn_18engine:'20개 엔진 즉시 반영',
     fortune_ttl:'오늘 내 에너지는 어떤가요?',
     mbti_know:'내 MBTI 알아요', mbti_dontknow:'내 MBTI 몰라요',
     mbti_direct:'직접 선택 → 즉시 적용', mbti_test:'검사로 찾기',
@@ -18348,6 +18487,33 @@ function runCouple(){
   var lnDesc={1:'독립적 에너지 — 각자의 목표를 존중하는 관계',2:'감성적 교류 — 섬세한 소통이 필요합니다',3:'창의적 조합 — 함께하면 즐거운 에너지',4:'안정 추구 — 현실적 토대를 함께 쌓아가는 관계',5:'변화와 모험 — 역동적이고 자유로운 관계',6:'책임과 사랑 — 가정을 중시하는 이상적 궁합',7:'지성의 만남 — 정신적 교류가 깊은 관계',8:'물질적 성공 — 함께 부를 이루는 현실적 궁합',9:'완성의 에너지 — 인도주의적 가치를 공유',11:'마스터 궁합 — 특별한 영적 연결이 있습니다',22:'위대한 건축가 — 함께 큰일을 이룰 수 있는 궁합'}[lnSum]||'균형잡힌 에너지 조합입니다';
 
   // 최종 총점 (가중치)
+  // ★ CGO-FULI 기준서 v1.0 — s18 실측값 보정
+  var _s18c = (window.calcResult&&window.calcResult.scores&&window.calcResult.scores.s18)||{};
+  var s18Love   = _s18c.s16&&_s18c.s14&&_s18c.s03 ? Math.round((_s18c.s16+_s18c.s14+_s18c.s03)/3) : 0;
+  var s18Money  = _s18c.s01&&_s18c.s02 ? Math.round((_s18c.s01+_s18c.s02)/2) : 0;
+  var s18Career = _s18c.s06&&_s18c.s05 ? Math.round((_s18c.s06+_s18c.s05)/2) : 0;
+  var s18Health = _s18c.s17&&_s18c.s18&&_s18c.s09 ? Math.round((_s18c.s17+_s18c.s18+_s18c.s09)/3) : 0;
+
+  // ★ 직업 오행 보정
+  var jobOhMap={의사:'금',간호사:'금',교사:'목',교수:'목',개발자:'수',프로그래머:'수',
+    요리사:'화',사업가:'토',CEO:'토',공무원:'토',예술가:'목',디자이너:'목',
+    금융:'금',투자:'금',상담사:'수',농업:'목',영업:'화',군인:'금',경찰:'금'};
+  function getJobOh(job){if(!job)return null;var keys=Object.keys(jobOhMap);for(var i=0;i<keys.length;i++){if(job.indexOf(keys[i])>-1)return jobOhMap[keys[i]];}return null;}
+  var aJobEl=document.getElementById('cpl-a-job');
+  var bJobEl=document.getElementById('cpl-b-job');
+  var aJob=aJobEl?aJobEl.value.trim():'';
+  var bJob=bJobEl?bJobEl.value.trim():'';
+  var aJobOh=getJobOh(aJob), bJobOh=getJobOh(bJob);
+  var jobBonus=0;
+  if(aJobOh&&bJobOh){
+    var OH_SANG={목:'화',화:'토',토:'금',금:'수',수:'목'};
+    var OH_GEUK={목:'토',화:'금',토:'수',금:'목',수:'화'};
+    if(OH_SANG[aJobOh]===bJobOh||OH_SANG[bJobOh]===aJobOh) jobBonus=6;
+    else if(aJobOh===bJobOh) jobBonus=3;
+    else if(OH_GEUK[aJobOh]===bJobOh||OH_GEUK[bJobOh]===aJobOh) jobBonus=-4;
+    else jobBonus=1;
+  }
+
   var finalScore=Math.round(
     kjScore*0.20 +
     sajoScore*0.30 +
@@ -18356,7 +18522,9 @@ function runCouple(){
     lnScore*0.10 +
     dGanRel.score*0.10
   );
-  finalScore=Math.min(99,Math.max(40,finalScore));
+  // s18 기준서 보정 적용
+  if(s18Love>0) finalScore = Math.round(finalScore*0.6 + s18Love*0.4);
+  finalScore = Math.min(99,Math.max(40, finalScore + Math.round(jobBonus*0.5)));
 
   // 궁합 등급
   var grade=finalScore>=90?{g:'천생연분 💫',c:'var(--gold)',desc:'하늘이 맺어준 특별한 인연입니다. 서로의 에너지가 완벽하게 조화를 이루는 최고의 궁합입니다.'}:
@@ -18472,13 +18640,64 @@ function runCouple(){
   // 🔬 8개 역학+NASA 심층 분석 클릭 패널
   html += buildDeepPanel('couple', {ohA:ohA, ohB:ohB, lnA:lnA, lnB:lnB, finalScore:finalScore, nameA:nameA, nameB:nameB, context:'커플'});
 
+  // ★ Groq AI — 시기별 인생지도 + 합충분석 (10섹션)
+  var np=window._nasaPlanets||{};
+  var jupOk=!!(np.jupiter&&!np.jupiter.retro);
+  var kp=(window._cgoEnvData&&window._cgoEnvData.kp&&window._cgoEnvData.kp.value)||0;
+  var myIli=(window.calcResult&&window.calcResult.ili)||70;
+
+  var _sysP='당신은 CGO-FULI 최고급 커플 궁합 AI입니다. 특허 10-2026-0060113.\n'+
+    '규칙:①초등학생도 이해하는 쉬운 말투 ②각 항목 300자 이상 ③이모지 풍부하게 ④구체적 실천법 포함 ⑤JSON만 반환\n'+
+    'JSON:{"love":"연애결혼","life":"시기별인생지도(초년결혼초기→중년절정기→노년황혼기)","money":"재물경제","comm":"소통성격","career":"직업사업(면접포함)","health":"건강체질","special":"합충시기+공망분석+위기극복력","summary":"전체요약+실천법3가지","warning":"주의사항+갈등해결법"}';
+
+  var _userP=nameA+'('+ohA+(aJob?'/'+aJob:'')+'/'+yA+'년) × '+nameB+'('+ohB+(bJob?'/'+bJob:'')+'/'+yB+'년)\n'+
+    '궁합:'+finalScore+'점 | 오행공명:'+Math.round(dGanRel.score)+'pt | 직업보정:'+jobBonus+'pt\n'+
+    'NASA목성:'+(jupOk?'순행★':'역행')+' Kp:'+kp+' ILI:'+myIli+'점\n'+
+    's18: 연애'+(s18Love||'-')+' 재물'+(s18Money||'-')+' 직업'+(s18Career||'-')+'\n'+
+    '시기별 인생 지도·합충시기·공망분석·위기극복력 포함. JSON만 반환.';
+
+  // AI 분석 영역 추가
+  var _aiBox = document.createElement('div');
+  _aiBox.style.cssText='margin-top:16px;background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(99,130,201,.04));border:1.5px solid rgba(168,85,247,.3);border-radius:18px;padding:18px;';
+  _aiBox.innerHTML='<div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:10px;">🤖 C-13 AI 정밀 분석 중...</div>'+
+    '<div style="font-size:11px;color:rgba(196,181,253,.5);">시기별 인생 지도 · 합충 시기 · 공망 · 위기 극복력 분석</div>';
+
   var rc=document.getElementById('coupleResult');
   if(rc){
     rc.innerHTML=html;
+    rc.appendChild(_aiBox);
     setTimeout(function(){
       rc.querySelectorAll('[data-w]').forEach(function(b){b.style.width=b.getAttribute('data-w')+'%';});
     },200);
   }
+
+  // ★ Groq AI 호출
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:3000,temperature:0.78,
+      messages:[{role:'system',content:_sysP},{role:'user',content:_userP}]})
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var res;
+    try{ res=JSON.parse(raw.replace(/```json|```/g,'').trim()); } catch(e){ res=null; }
+    var sections=[
+      {k:'love',ico:'💕',t:'연애·결혼'},{k:'life',ico:'🌅',t:'시기별 인생 지도'},
+      {k:'money',ico:'💰',t:'재물·경제'},{k:'comm',ico:'🗣️',t:'소통·성격'},
+      {k:'career',ico:'💼',t:'직업·사업'},{k:'health',ico:'🏥',t:'건강·체질'},
+      {k:'special',ico:'⚡',t:'합충·공망·위기극복'},{k:'summary',ico:'🎯',t:'종합 요약'},
+      {k:'warning',ico:'⚠️',t:'주의사항'}
+    ];
+    var txt='';
+    if(res){
+      sections.forEach(function(s){ if(res[s.k]) txt+='━━━━━━━━━━━━\n'+s.ico+' '+s.t+'\n'+res[s.k]+'\n\n'; });
+    } else { txt=raw; }
+    _aiBox.innerHTML='<div style="font-size:12px;font-weight:700;color:#c4b5fd;margin-bottom:12px;">🤖 C-13 AI 정밀 분석</div>'+
+      '<div style="font-size:12px;color:rgba(240,230,200,.88);line-height:1.9;white-space:pre-line;">'+txt+'</div>';
+  })
+  .catch(function(){
+    _aiBox.innerHTML='<div style="font-size:11px;color:rgba(196,181,253,.5);">네트워크 연결 후 다시 시도해주세요.</div>';
+  });
 
   if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-couple');if(_pg)_cgoAiTranslatePage(window._LANG,_I18N[window._LANG]||{},_pg);},700);}}
 
@@ -26975,7 +27194,7 @@ var _LANG_PACK = {
     scanWarn: '⚠️ 생체 스캔이 완료되지 않았습니다!\n\n관상·손금·혀를 먼저 분석하고\n자동 계산을 클릭해주세요.\n\n(계속 진행하려면 확인을 누르세요)',
     birthPlaceholder: '년도',
     pages: {
-      dashboard:'', scan:'실시간 생체 스캔', family:'가족 ILI 관리',
+      dashboard:'', music:'🎵 나의 주파수 음악', c13:'🌙 C-13 꿈 해몽', scan:'실시간 생체 스캔', family:'가족 ILI 관리',
       algo:'🩺 AI 통합 건강 예측', report:'정밀 분석 리포트', profile:'프로필·설정',
       gmd:'📸 풍수 카메라', naming:'✍️ 작명 서비스', consult:'🔮 1대1 고민 상담',
       lotto:'🎰 행운 번호', sports:'⚽ 스포츠 에너지 궁합',
@@ -26988,7 +27207,7 @@ var _LANG_PACK = {
       sports:'스포츠', stock:'주식', lotto:'행운번호'
     },
     ili: '통합 라이프 인덱스', grade: '등급', energy: '에너지',
-    fortune: '오늘의 운수', bioScan: 'CGO-Bio Sensor v2.0',
+    fortune: '오늘의 운수', bioScan: '생체 센서',
     face: '관상', palm: '손금', tongue: '혀',
     algo18: '50대 역학 중 × NASA 실시간 분석',
     nasaLive: 'NASA JPL 실시간',
@@ -27220,1607 +27439,423 @@ document.addEventListener('DOMContentLoaded', function(){
   })();
 });
 
-var pageTitles={dashboard:'',scan:'실시간 생체 스캔',family:'가족 ILI 관리',algo:'🩺 AI 통합 건강 예측',report:'정밀 분석 리포트',profile:'프로필·설정',gmd:'📸 풍수 카메라',fengcam:'📸 풍수 카메라',naming:'✍️ 작명 서비스',consult:'🔮 1대1 고민 상담',lotto:'🎰 행운 번호',sports:'⚽ 스포츠 에너지 궁합',stock:'📈 주식 에너지 예측',shop:'🛍️ 오행 맞춤 쇼핑',vip:'💎 VVIP 프리미엄 분석',star:'⭐ 별 충전소',mai:'💄 화장 흡수 분석',svi:'💪 피부 탄력 분석'};
-// i18n 페이지 타이틀 오버라이드
-function getPageTitle(pageId) {
-  if(window._pageTitleI18N && window._pageTitleI18N[pageId]) return window._pageTitleI18N[pageId];
-  return pageTitles[pageId] || '';
-}
-document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var page=this.getAttribute('data-page');
 
-    // ── VIP 페이지 처리 ──
-    if (page === 'vip') {
-      if (typeof window.cgoVipEntry === 'function') window.cgoVipEntry();
-      return;
+// ══ goMusic — 나의 주파수 음악 전용 진입 함수 ══
+var _pmSiJin = 0;
+var _pmSeason = '봄';
+
+function goMusic(){
+  // 페이지 전환
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  var _nb=document.querySelector('[data-page="music"]');
+  if(_nb) _nb.classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var _pg=document.getElementById('page-music');
+  if(_pg) _pg.classList.add('active');
+  var _tx=document.getElementById('pageTitleText');
+  if(_tx){_tx.style.display='block';_tx.textContent='🎵 나의 주파수 음악';}
+  var _nb2=document.getElementById('nasaMiniBar');
+  if(_nb2) _nb2.style.display='none';
+
+  // 시진·계절 초기화
+  _pmSiJin = getCurrentSiJin ? getCurrentSiJin() : Math.floor((new Date().getHours()+1)/2)%12;
+  _pmSeason = getCurrentSeason ? getCurrentSeason() : '봄';
+  pmUpdateSiJinUI(); pmUpdateSeasonUI(); pmUpdateTimeLabel();
+
+  // 잠금 결정
+  var bfd=window._bioFinalData||{};
+  var scanned=window._baiScanned||(bfd.fci>0||bfd.hrv>0);
+  var hasCalc=!!(window.calcResult&&window.calcResult.domOh);
+  var lock=document.getElementById('pm-lock');
+  var box=document.getElementById('pm-box');
+  var stage=document.getElementById('pm-stage');
+
+  if(hasCalc||scanned){
+    if(lock) lock.style.display='none';
+    if(box)  box.style.display='block';
+    if(stage){
+      if(scanned){
+        stage.textContent='🧬 2단계: 생체신호 × 역학 융합 정밀 처방';
+        stage.style.color='#34d399';
+        stage.style.background='rgba(52,211,153,.1)';
+        stage.style.borderColor='rgba(52,211,153,.3)';
+      } else {
+        stage.textContent='📜 1단계: 만세력 × NASA 실시간 기반 처방';
+        stage.style.color='#d4a843';
+        stage.style.background='rgba(212,168,67,.1)';
+        stage.style.borderColor='rgba(212,168,67,.25)';
+      }
     }
-
-    // ── 소프트 안내 배너 ──
-    if (page === 'stock') {
-      setTimeout(function(){ cgoShowSoftBanner(page); }, 50);
+    var _rt=document.getElementById('pm-refresh');
+    if(_rt){
+      var _n=new Date();
+      var _sjn=['자시(23~1)','축시(1~3)','인시(3~5)','묘시(5~7)','진시(7~9)','사시(9~11)','오시(11~13)','미시(13~15)','신시(15~17)','유시(17~19)','술시(19~21)','해시(21~23)'];
+      _rt.textContent=_n.getHours()+':'+String(_n.getMinutes()).padStart(2,'0')+' · '+_sjn[Math.floor((_n.getHours()+1)/2)%12]+' 기준';
     }
-
-    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
-    this.classList.add('active');
-    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-    document.getElementById('page-'+page).classList.add('active');
-    var _ptEl = document.getElementById('pageTitle');
-    var _ptTxt = document.getElementById('pageTitleText');
-    var _nasaBar = document.getElementById('nasaMiniBar');
-    var _title = pageTitles[page]||page;
-    if(page === 'dashboard'){
-      if(_nasaBar) _nasaBar.style.display = 'flex';
-      if(_ptTxt)  { _ptTxt.style.display = 'none'; _ptTxt.textContent = ''; }
-    } else {
-      if(_nasaBar) _nasaBar.style.display = 'none';
-      if(_ptTxt)  { _ptTxt.style.display = 'block'; _ptTxt.textContent = _title; }
-      if(_ptEl && !_ptTxt) _ptEl.textContent = _title;
-    }
-    if(page==='family'){
-      if(!selectedFamilyId&&familyData.length>0)selectedFamilyId=familyData[0].id;
-      renderFamily();
-    }
-    // 건강 페이지 진입 시 생체 카드 즉시 동기화
-    if(page==='algo'){
-      setTimeout(function(){
-        if(typeof hltSyncBioCards==='function') hltSyncBioCards();
-      }, 200);
-    }
-    if(page==='scan')drawRPPG();
-    if(page==='shop'&&typeof shopInit==='function')shopInit();
-
-    // ★ 리포트 페이지 진입 시 - 자동계산 없어도 생체 데이터로 열기
-    if(page==='report'){
-      setTimeout(function(){
-        var r = window.calcResult;
-        var bfd = window._bioFinalData || {};
-        var hasBio = bfd.fci>0 || bfd.bli>0 || bfd.hrv>0;
-
-        if(r && r.y){
-          // 자동계산 있으면 정상 리포트
-          if(typeof generateReport==='function') generateReport(r);
-        } else if(hasBio){
-          // 자동계산 없어도 생체 데이터 있으면 생체 기반 리포트
-          var nm=(document.getElementById('ipName')||{}).value||'사용자';
-          var by=parseInt((document.getElementById('ipBirthY')||{}).value)||1990;
-          var bm=parseInt((document.getElementById('ipBirthM')||{}).value)||1;
-          var bd=parseInt((document.getElementById('ipBirthD')||{}).value)||1;
-          var oh=['목','화','토','금','수'][(by+bm)%5];
-          var lifeNum=((by%9)+(bm%9)+(bd%9))%9+1;
-          var M=window._CGO_MASTER;
-          var ili=(M&&M.ili)||(window.calcResult&&window.calcResult.ili)||65;
-
-          // 최소한의 calcResult 생성
-          var bioR = {
-            name: nm, y: by, m: bm, d: bd, h: -1,
-            gender: (document.getElementById('ipGender')||{}).value||'M',
-            birthPlace: (document.getElementById('ipBirthPlace')||{}).value||'',
-            curPlace:   (document.getElementById('ipCurPlace')||{}).value||'',
-            domOh: oh, lifeNum: lifeNum, ili: ili,
-            dGJ:{gan:'甲',ji:'子'}, mGJ:{gan:'甲',ji:'子'},
-            yGan:'甲', yJi:'子', sGan:'甲', sJi:'子',
-            kujusei: 5,
-            scores:{
-              cat:[Math.min(99,ili+3),Math.min(99,ili+1),Math.min(99,ili+2),Math.min(99,ili-1)],
-              s18:{}
-            },
-            bioHrv: bfd.hrv||0, bioFci: bfd.fci||0,
-            bioFma: bfd.fma||0, bioBli: bfd.bli||0
-          };
-
-          // 리포트 컨테이너에 생체 기반 안내 표시
-          var rc = document.getElementById('reportContainer');
-          if(rc){
-            var bioSummary = [
-              bfd.fci>0 ? '관상 FCI: '+bfd.fci+'%' : null,
-              bfd.bli>0 ? '손금 BLI: '+bfd.bli+'%' : null,
-              bfd.hrv>0 ? 'HRV: '+bfd.hrv+'ms' : null,
-              bfd.fma>0 ? 'FMA: '+bfd.fma+'%' : null
-            ].filter(Boolean).join(' | ');
-
-            rc.innerHTML = '<div style="padding:20px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:14px;margin-bottom:16px;">'
-              +'<div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:8px;">🧬 생체 데이터 기반 분석 모드</div>'
-              +'<div style="font-size:11px;color:rgba(240,220,160,.75);line-height:1.7;">'+bioSummary+'</div>'
-              +'<div style="font-size:10px;color:rgba(240,220,160,.45);margin-top:6px;">💡 대시보드에서 ⚡ 자동 계산을 누르면 사주 기반 완전 리포트가 생성됩니다.</div>'
-              +'</div>';
-
-            // generateReport 호출 (최소 데이터로)
-            if(typeof generateReport==='function'){
-              try{ generateReport(bioR); }catch(e){
-                console.warn('생체 기반 리포트 생성 오류:', e);
-              }
-            }
-          }
-        }
-        // 아무 데이터도 없으면 → 이름+생년월일 있으면 calcAstro 자동 실행
-        var _nm2 = (document.getElementById('ipName')||{}).value||'';
-        var _by2 = parseInt((document.getElementById('ipBirthY')||{}).value)||0;
-        var _bm2 = parseInt((document.getElementById('ipBirthM')||{}).value)||0;
-        var _bd2 = parseInt((document.getElementById('ipBirthD')||{}).value)||0;
-        if(_nm2 && _by2>1900 && _bm2>0 && _bd2>0){
-          // ★ 정보입력 → calcAstro 자동 실행 → 리포트 생성
-          if(typeof calcAstro==='function') calcAstro();
-          setTimeout(function(){
-            var r2=window.calcResult;
-            if(r2&&r2.y&&typeof generateReport==='function') generateReport(r2);
-          }, 1200);
-        }
-      }, 300);
-    }
-    // ✅ 커플 페이지 진입 시 대시보드 자동 연동
-    if(page==='couple'){
-      setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); }, 300);
-    }
-    if(page==='gmd'){
-      setTimeout(function(){ fcSwitchMode('camera'); }, 300);
-    } else {
-      if(typeof fcStopCamera === 'function') fcStopCamera();
-    }
-    // ✅ 페이지 이동 시 선택 언어로 자동 번역
-    if(window._LANG && window._LANG !== 'ko'){
-      var _pNav = _I18N[window._LANG]||{};
-      setTimeout(function(){
-        if(typeof _cgoApplyAllDynamicTexts==='function') _cgoApplyAllDynamicTexts(window._LANG, _pNav);
-        var _activePg = document.getElementById('page-'+page);
-        if(_activePg && typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG, _pNav, _activePg);
-      }, 300);
-    }
-  });
-});
-
-// 알림 토글
-document.getElementById('notifBtn').addEventListener('click',function(e){
-  e.stopPropagation();
-  document.getElementById('notifPanel').classList.toggle('open');
-});
-document.addEventListener('click',function(){document.getElementById('notifPanel').classList.remove('open');});
-
-// ESC / 모달 배경 닫기
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
-document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
-
-// 엔터키
-['ipName','ipBirth','ipTime'].forEach(function(id){
-  var el=document.getElementById(id);
-  if(el)el.addEventListener('keypress',function(e){if(e.key==='Enter')calcAstro();});
-});
-
-// ============================================================
-// 초기화 (단일 load 이벤트)
-// ============================================================
-// ══ 커플 궁합 엔진 ══════════════════════════════════════════
-var _cplGender = {a:'남', b:'여'};
-var _cplRPPGTimer = null;
-var _cplScoreA = 50, _cplScoreB = 50;
-var _cplResonanceTimer = null;
-
-function cplSetGender(who, gender){
-  _cplGender[who] = gender;
-  var male  = document.getElementById('cpl-'+who+'-male');
-  var female= document.getElementById('cpl-'+who+'-female');
-  var color = who==='a' ? '#38bdf8' : '#f472b6';
-  var dim   = who==='a' ? 'rgba(56,189,248,.5)' : 'rgba(244,114,182,.5)';
-  var bgOn  = who==='a' ? 'rgba(56,189,248,.15)' : 'rgba(244,114,182,.15)';
-  if(gender==='남'){
-    if(male){male.style.background=bgOn;male.style.color=color;male.style.borderColor=color;}
-    if(female){female.style.background='transparent';female.style.color=dim;female.style.borderColor=dim;}
+    pmRender();
   } else {
-    if(female){female.style.background=bgOn;female.style.color=color;female.style.borderColor=color;}
-    if(male){male.style.background='transparent';male.style.color=dim;male.style.borderColor=dim;}
+    if(lock) lock.style.display='block';
+    if(box)  box.style.display='none';
   }
 }
 
-// 난수 시드 기반 궁합 계산
-function _cplRng(seed){ return ((seed*1103515245+12345)&0x7fffffff); }
-function _cplCalcScore(aY,aM,aD,aT,bY,bM,bD,bT,aG,bG,aName,bName){
-  var seed = ((aY*7+aM*13+aD*3) ^ (bY*11+bM*17+bD*5)) >>> 0;
-  function rng(s){ return _cplRng(s); }
-  var r1=rng(seed),r2=rng(r1),r3=rng(r2),r4=rng(r3),r5=rng(r4),r6=rng(r5),r7=rng(r6),r8=rng(r7),r9=rng(r8);
-
-  // 오행 매트릭스
-  var ohArr=['목','화','토','금','수'];
-  var ohA=ohArr[(aY+aM)%5]; var ohB=ohArr[(bY+bM)%5];
-  var ohMat={목:{목:72,화:88,토:50,금:42,수:85},화:{목:88,화:68,토:85,금:52,수:38},
-    토:{목:50,화:85,토:70,금:88,수:52},금:{목:42,화:52,토:88,금:65,수:85},
-    수:{목:85,화:38,토:52,금:85,수:68}};
-  var ohScore = ohMat[ohA][ohB]||70;
-  var gBonus = (aG!==bG)?8:0;
-  var tBonus = (aT&&bT)?(Math.abs(parseInt(aT||0)-parseInt(bT||0))%6<3?7:-4):0;
-
-  // ── 중추 신경계: NASA & 천문 (40pt) ──
-  var np = window._nasaPlanets||{};
-  var sunLon = np.sun ? parseFloat(np.sun.lon||0) : (seed%360);
-  var jupLon = np.jupiter ? parseFloat(np.jupiter.lon||0) : ((seed*7)%360);
-  var venLon = np.venus ? parseFloat(np.venus.lon||0) : ((seed*13)%360);
-  // 행성 트랜짓 궁합 (두 사람의 출생 행성 각도 차이)
-  var aLon = (aY*30+aM*2.5+aD*.08)%360;
-  var bLon = (bY*30+bM*2.5+bD*.08)%360;
-  var angDiff = Math.abs(aLon-bLon)%180;
-  var transitScore = angDiff<30?90:angDiff<60?80:angDiff<90?65:angDiff<120?72:60;
-  transitScore = Math.min(98,Math.max(42,Math.round(transitScore + ohScore*.08 + (r1%12))));
-
-  // 태양궁 궁합 (원소 기반)
-  var aSign=Math.floor((aM-1)/3); var bSign=Math.floor((bM-1)/3);
-  var elemComp=[1,0.5,0.8,0.6]; // 같은원소=1, 다음=0.5, 조화=0.8, 도전=0.6
-  var elemScore = Math.round(75*(elemComp[Math.abs(aSign-bSign)%4]||0.7)+(r2%18));
-  elemScore = Math.min(98,Math.max(42,elemScore));
-
-  // ── 내장 기관: 동서양 고전 (44pt) ──
-  // 자미두수 (11pt) — 명반 교차
-  var ziwei = Math.min(98,Math.max(42, 55+(r3%35)+ohScore*.12+gBonus));
-  // 사주명리 (7pt) — 오행 상생
-  var saju = Math.min(98,Math.max(42, 50+(r4%30)+ohScore*.2+gBonus+tBonus));
-  // 주역 (9pt) — 괘 조합
-  var hexA=(aD+aM)%64, hexB=(bD+bM)%64;
-  var hexScore = Math.abs(hexA-hexB)<10?88:Math.abs(hexA-hexB)<20?76:Math.abs(hexA-hexB)<32?65:55;
-  var juyeok = Math.min(98,Math.max(42, Math.round(hexScore+(r5%18))));
-  // 성명학 (1pt) — 이름 획수 파동
-  var nameScore = Math.min(98,Math.max(42, 60+(r6%28)+((aName.length+bName.length)%10)*2));
-
-  // ── 말초 신경: 심리 & 생체 (16pt) ──
-  // 하우스/합성 차트 (6pt)
-  var houseScore = Math.min(98,Math.max(42, 58+(r7%32)+ohScore*.06));
-  // 관상/타로 (1pt)
-  var kanso = Math.min(98,Math.max(42, 62+(r8%28)));
-  // MBTI/심리 (1pt)
-  var mbti = Math.min(98,Math.max(42, 60+(r9%30)));
-  // rPPG 생체 (8pt) — 실시간 스캔값 반영
-  var rppgBonus = (window._cplScoreA&&window._cplScoreA>50)?Math.round((window._cplScoreA-50)*0.4):0;
-  var rppgScore = Math.min(98,Math.max(42, 65+rppgBonus+(r1%22)));
-
-  // 가중치 통합 (100pt)
-  var scores = {
-    '🛰️ 행성 트랜짓': {score:transitScore, w:22, group:'중추'},
-    '☀️ 태양궁 점성술': {score:elemScore,   w:18, group:'중추'},
-    '🌟 자미두수':     {score:ziwei,        w:13, group:'내장'},
-    '☯️ 사주명리':     {score:saju,         w:12, group:'내장'},
-    '☰ 주역':         {score:juyeok,       w:11, group:'내장'},
-    '✍️ 성명학':       {score:nameScore,    w:8,  group:'내장'},
-    '🏠 하우스/합성':  {score:houseScore,   w:8,  group:'말초'},
-    '👁️ 관상·타로':    {score:kanso,        w:4,  group:'말초'},
-    '🧠 MBTI·심리':   {score:mbti,         w:4,  group:'말초'},
-    '💓 rPPG 생체':   {score:rppgScore,    w:8,  group:'말초'},
-  };
-
-  // 가중 평균
-  var totalW=0, totalS=0;
-  Object.values(scores).forEach(function(v){ totalW+=v.w; totalS+=v.score*v.w; });
-  var total = Math.round(totalS/totalW);
-
-  // 그룹별 점수
-  var groups={중추:0,중추W:0,내장:0,내장W:0,말초:0,말초W:0};
-  Object.values(scores).forEach(function(v){
-    groups[v.group]+=v.score*v.w; groups[v.group+'W']+=v.w;
-  });
-
-  return {
-    total:total, scores:scores,
-    ohA:ohA, ohB:ohB, ohScore:ohScore,
-    chuchu: Math.round(groups.중추/groups.중추W),
-    naejang: Math.round(groups.내장/groups.내장W),
-    malcho: Math.round(groups.말초/groups.말초W)
-  };
+function pmSetSiJin(idx){
+  _pmSiJin=idx;
+  pmUpdateSiJinUI();
+  pmRender();
 }
-
-function cplStartAnalysis(){
-  // ── 입력값 수집 ──
-  var aY=parseInt(document.getElementById('cpl-a-y').value)||0;
-  var aM=parseInt(document.getElementById('cpl-a-m').value)||0;
-  var aD=parseInt(document.getElementById('cpl-a-d').value)||0;
-  var bY=parseInt(document.getElementById('cpl-b-y').value)||0;
-  var bM=parseInt(document.getElementById('cpl-b-m').value)||0;
-  var bD=parseInt(document.getElementById('cpl-b-d').value)||0;
-  var aT=document.getElementById('cpl-a-time').value||'';
-  var bT=document.getElementById('cpl-b-time').value||'';
-  var aName=(document.getElementById('cpl-a-name').value||'나').trim();
-  var bName=(document.getElementById('cpl-b-name').value||'상대방').trim();
-  var aJob=(document.getElementById('cpl-a-job').value||'').trim();
-  var bJob=(document.getElementById('cpl-b-job').value||'').trim();
-  var aFaceEl=document.getElementById('cpl-a-face');
-  var aPalmEl=document.getElementById('cpl-a-palm');
-  var bFaceEl=document.getElementById('cpl-b-face');
-  var bPalmEl=document.getElementById('cpl-b-palm');
-  var aHasFace=aFaceEl&&aFaceEl.value&&aFaceEl.value.length>10;
-  var aHasPalm=aPalmEl&&aPalmEl.value&&aPalmEl.value.length>10;
-  var bHasFace=bFaceEl&&bFaceEl.value&&bFaceEl.value.length>10;
-  var bHasPalm=bPalmEl&&bPalmEl.value&&bPalmEl.value.length>10;
-
-  if(!aY||!aM||!aD||!bY||!bM||!bD){
-    alert('두 분의 생년월일을 모두 입력해주세요 🙏'); return;
-  }
-
-  // ── CGO-FULI 기준서 v1.0 — s18 실측값 ──
-  var r18 = (window.calcResult&&window.calcResult.scores&&window.calcResult.scores.s18)||{};
-  var myIli = (window.calcResult&&window.calcResult.ili)||70;
-  var myOh  = (window.calcResult&&window.calcResult.domOh)||'목';
-  var myNm  = (window.calcResult&&window.calcResult.name)||aName;
-
-  // ── 직업 오행 매핑 ──
-  var jobOhMap = {
-    의사:'금',간호사:'금',약사:'금',의료:'금',
-    교사:'목',교수:'목',강사:'목',선생:'목',교육:'목',
-    개발자:'수',프로그래머:'수',IT:'수',엔지니어:'금',
-    요리사:'화',셰프:'화',조리:'화',음식:'화',
-    예술가:'목',디자이너:'목',작가:'목',음악:'화',
-    사업가:'토',CEO:'토',경영:'토',대표:'토',
-    공무원:'토',군인:'금',경찰:'금',소방:'화',
-    금융:'금',투자:'금',회계:'토',
-    상담사:'수',심리사:'수',사회복지:'토',
-    농업:'목',자영업:'토',판매:'화',영업:'화'
-  };
-  function getJobOh(job){
-    if(!job) return null;
-    var keys=Object.keys(jobOhMap);
-    for(var i=0;i<keys.length;i++){
-      if(job.indexOf(keys[i])>-1) return jobOhMap[keys[i]];
+function pmSetSeason(s){
+  _pmSeason=s;
+  pmUpdateSeasonUI();
+  pmRender();
+}
+function pmUpdateSiJinUI(){
+  for(var i=0;i<12;i++){
+    var b=document.getElementById('pmSj'+i);
+    if(b){
+      b.style.background=i===_pmSiJin?'rgba(212,168,67,.2)':'rgba(255,255,255,.04)';
+      b.style.borderColor=i===_pmSiJin?'rgba(212,168,67,.6)':'rgba(255,255,255,.1)';
+      b.style.color=i===_pmSiJin?'#d4a843':'rgba(240,230,200,.5)';
     }
-    return null;
   }
-  var aJobOh = getJobOh(aJob);
-  var bJobOh = getJobOh(bJob);
+}
+function pmUpdateSeasonUI(){
+  ['봄','여름','가을','겨울'].forEach(function(s){
+    var b=document.getElementById('pmSs'+s);
+    if(b){
+      b.style.background=s===_pmSeason?'rgba(56,189,248,.15)':'rgba(255,255,255,.04)';
+      b.style.borderColor=s===_pmSeason?'rgba(56,189,248,.5)':'rgba(255,255,255,.1)';
+      b.style.color=s===_pmSeason?'#38bdf8':'rgba(240,230,200,.5)';
+    }
+  });
+}
+function pmUpdateTimeLabel(){
+  var _t=document.getElementById('pm-time');
+  if(!_t) return;
+  var _n=new Date();
+  _t.textContent=_n.getHours()+':'+String(_n.getMinutes()).padStart(2,'0');
+}
 
-  // ── 기본 궁합 계산 ──
-  var baseResult = _cplCalcScore(aY,aM,aD,aT,bY,bM,bD,bT,_cplGender.a,_cplGender.b,aName,bName);
+function pmRender(){
+  var r=window.calcResult; if(!r) return;
+  if(!window.MUSIC_DB) return;
+  var cards=document.getElementById('pm-cards');
+  var mlist=document.getElementById('pm-list');
+  if(!cards||!mlist) return;
 
-  // ── s18 기준서 보정 ──
-  // A의 실측 점수로 s18 기반 보정 (연애=s16+s14+s03 / 재물=s01+s02 / 직업=s06+s05)
-  var s18Love   = r18.s16&&r18.s14&&r18.s03 ? Math.round((r18.s16+r18.s14+r18.s03)/3) : 0;
-  var s18Money  = r18.s01&&r18.s02 ? Math.round((r18.s01+r18.s02)/2) : 0;
-  var s18Career = r18.s06&&r18.s05 ? Math.round((r18.s06+r18.s05)/2) : 0;
-  var s18Health = r18.s17&&r18.s18&&r18.s09 ? Math.round((r18.s17+r18.s18+r18.s09)/3) : 0;
-  var s18Comm   = r18.s11&&r18.s10 ? Math.round((r18.s11+r18.s10)/2) : 0;
-
-  // ── 직업 궁합 보정 ──
-  var jobBonus = 0;
-  if(aJobOh && bJobOh){
-    var OH_SANG = {목:'화',화:'토',토:'금',금:'수',수:'목'};
-    var OH_GEUK = {목:'토',화:'금',토:'수',금:'목',수:'화'};
-    if(OH_SANG[aJobOh]===bJobOh || OH_SANG[bJobOh]===aJobOh) jobBonus = 6;
-    else if(aJobOh===bJobOh) jobBonus = 3;
-    else if(OH_GEUK[aJobOh]===bJobOh || OH_GEUK[bJobOh]===aJobOh) jobBonus = -4;
-    else jobBonus = 1;
-  } else if(aJobOh || bJobOh){
-    jobBonus = 2; // 한 명만 직업 있어도 소폭 보정
-  }
-
-  // ── 관상/손금 보정 ──
-  var bioBonus = 0;
-  if(aHasFace) bioBonus += 4;
-  if(aHasPalm) bioBonus += 4;
-  if(bHasFace) bioBonus += 4;
-  if(bHasPalm) bioBonus += 4;
-  // rPPG 실측값 반영
-  var rppgFci = window._bioFinalData&&window._bioFinalData.fci>0?window._bioFinalData.fci:0;
-  var rppgBli = window._bioFinalData&&window._bioFinalData.bli>0?window._bioFinalData.bli:0;
-  if(rppgFci>60) bioBonus += Math.round((rppgFci-60)*0.08);
-  if(rppgBli>60) bioBonus += Math.round((rppgBli-60)*0.06);
-  bioBonus = Math.min(15, bioBonus);
-
-  // ── 6가지 영역별 점수 계산 ──
-  var base = baseResult.total;
-  function area(base, s18val, extra, min, max){
-    var v = s18val>0 ? Math.round(base*0.6 + s18val*0.4 + extra) : Math.round(base + extra);
-    return Math.min(max||97, Math.max(min||35, v));
-  }
-
-  var scores6 = {
-    love:    area(Math.round(baseResult.chuchu*0.6+baseResult.ohScore*0.4), s18Love,    bioBonus*0.3,  35, 97),
-    money:   area(Math.round(baseResult.naejang*0.5+base*0.5),              s18Money,   jobBonus*0.4,  30, 95),
-    comm:    area(Math.round(baseResult.malcho*0.6+baseResult.naejang*0.4), s18Comm,    bioBonus*0.2,  35, 97),
-    career:  area(Math.round(base*0.5+baseResult.chuchu*0.5),               s18Career,  jobBonus*0.8,  30, 97),
-    health:  area(Math.round(base*0.7+baseResult.ohScore*0.3),              s18Health,  bioBonus*0.5,  35, 95),
-    family:  area(Math.round(baseResult.naejang*0.6+base*0.4),              s18Love*0.8,bioBonus*0.2,  30, 97)
-  };
-
-  // ── 최종 총점 ──
-  var finalTotal = Math.round(
-    scores6.love   * 0.25 +
-    scores6.money  * 0.15 +
-    scores6.comm   * 0.20 +
-    scores6.career * 0.15 +
-    scores6.health * 0.10 +
-    scores6.family * 0.15
+  var oh=r.domOh||'목';
+  var bfd=window._bioFinalData||{};
+  var bpm=(bfd.bpm||72), hrv=(bfd.hrv||45), fci=(bfd.fci||80), bli=(bfd.bli||75);
+  var eng=r.ili||70, ili=r.ili||70;
+  var _now=new Date();
+  var _slot=_now.getHours()*6+Math.floor(_now.getMinutes()/10);
+  var _seed=rng(
+    (_now.getFullYear()*10000+(_now.getMonth()+1)*100+_now.getDate())
+    +_pmSiJin*4999+_slot*997
+    +(bpm*13+fci*7)|0
   );
-  finalTotal = Math.min(99, Math.max(35, finalTotal + Math.round(jobBonus*0.3) + Math.round(bioBonus*0.2)));
+  var bs={bpm:bpm,hrv:hrv,fci:fci,eng:eng,ili:ili,oh:oh,
+          dateSeed:_seed,siJin:_pmSiJin,season:_pmSeason,bli:bli,timeSlot:_slot};
 
-  // ── 화면 전환 ──
-  document.getElementById('cpl-input-section').style.display='none';
-  document.getElementById('cpl-live-section').style.display='block';
+  cards.innerHTML='<div style="font-size:12px;color:rgba(240,230,200,.6);text-align:center;padding:12px">⏰ '+_pmSeason+' · 역학 분석 중...</div>';
+  mlist.style.display='none'; mlist.innerHTML='';
 
-  // 총점 카운트업
-  var scoreEl=document.getElementById('cpl-total-score');
-  var count=0;
-  var countUp=setInterval(function(){
-    count+=2; if(count>=finalTotal){count=finalTotal;clearInterval(countUp);}
-    if(scoreEl) scoreEl.textContent=count;
-  },18);
+  var scores=[];
+  // ★ 기준서 v1.0 — YEOKAK ID → s01~s19 매핑 테이블
+  var _s18map = {
+    saju:'s01', jami:'s02', gim:'s05',  gusung:'s19', iching:'s15',
+    numer:'s08', naming:'s11', solar:'s03', transit:'s06', yuk:'s07',
+    feng:'s09', kabala:'s10', house:'s12', taeeul:'s13', taro:'s16',
+    synastry:'s14', gwan:'s17', palm:'s18'
+  };
+  var _s18 = (r.scores && r.scores.s18) ? r.scores.s18 : {};
 
-  // 등급
-  var gradeEl=document.getElementById('cpl-grade-txt');
-  var grade = finalTotal>=90?'🔥 천생연분 — 우주가 정한 운명적 만남':
-              finalTotal>=80?'💫 최상 궁합 — 서로를 완성시키는 관계':
-              finalTotal>=70?'✨ 좋은 인연 — 노력으로 빛나는 사랑':
-              finalTotal>=60?'🌙 성장형 궁합 — 함께 커가는 관계':'🌱 도전적 인연 — 다름이 강점이 되는 관계';
-  if(gradeEl) gradeEl.textContent=grade;
-
-  // 오행 정보
-  var ohEl=document.getElementById('cpl-oh-info');
-  if(ohEl) ohEl.innerHTML=
-    '<span style="color:#38bdf8">'+aName+'('+baseResult.ohA+')</span>'+
-    '<span style="color:rgba(212,168,67,.5)"> × </span>'+
-    '<span style="color:#f472b6">'+bName+'('+baseResult.ohB+')</span>'+
-    '<span style="color:#34d399;font-size:10px;"> 오행공명 '+baseResult.ohScore+'pt</span>'+
-    (aJob?'<span style="color:rgba(240,230,200,.4);font-size:9px;"> · '+aName+':'+aJob+'</span>':'')+
-    (bJob?'<span style="color:rgba(240,230,200,.4);font-size:9px;"> · '+bName+':'+bJob+'</span>':'');
-
-  // ── 4대 지표 업데이트 ──
-  var indEl;
-  indEl=document.getElementById('cpl-ind-compat'); if(indEl) indEl.textContent=scores6.love;
-  indEl=document.getElementById('cpl-ind-marry');  if(indEl) indEl.textContent=scores6.family;
-  indEl=document.getElementById('cpl-ind-child');  if(indEl) indEl.textContent=scores6.health;
-  indEl=document.getElementById('cpl-ind-total');  if(indEl) indEl.textContent=finalTotal;
-
-  // ── 세부 역학 바 그래프 ──
-  var barsEl=document.getElementById('cpl-detail-bars');
-  if(barsEl){
-    barsEl.innerHTML='';
-    // 6가지 영역 바
-    var areaMap=[
-      {nm:'💕 연애·결혼',sc:scores6.love},
-      {nm:'💰 재물·경제',sc:scores6.money},
-      {nm:'🗣️ 소통·성격',sc:scores6.comm},
-      {nm:'💼 직업·사업',sc:scores6.career},
-      {nm:'🏥 건강·체질',sc:scores6.health},
-      {nm:'👨‍👩‍👧 가정·자녀',sc:scores6.family}
-    ];
-    areaMap.forEach(function(a){
-      var sc=a.sc;
-      var color=sc>=80?'#34d399':sc>=65?'#38bdf8':sc>=50?'#fbbf24':'#f87171';
-      var barW=Math.round(sc);
-      barsEl.innerHTML+=
-        '<div style="margin-bottom:10px;">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
-            '<span style="font-size:11px;color:rgba(240,230,200,.7);">'+a.nm+'</span>'+
-            '<span style="font-size:12px;font-weight:800;color:'+color+';">'+sc+'점</span>'+
-          '</div>'+
-          '<div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;">'+
-            '<div style="height:100%;background:'+color+';border-radius:4px;width:0%;transition:width 1.2s ease;" data-w="'+barW+'%" class="cpl-area-bar"></div>'+
-          '</div>'+
-        '</div>';
-    });
-    // 역학 점수 바
-    Object.entries(baseResult.scores).forEach(function(entry){
-      var nm=entry[0], v=entry[1];
-      var sc=Math.round(v.score);
-      var color=sc>=75?'#38bdf8':sc>=55?'#60c0e8':sc>=45?'#fbbf24':'#f87171';
-      barsEl.innerHTML+=
-        '<div style="margin-bottom:7px;">'+
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">'+
-            '<div style="font-size:9px;color:rgba(240,220,160,.5);width:90px;flex-shrink:0;">'+nm+'</div>'+
-            '<div style="flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;">'+
-              '<div style="height:100%;background:'+color+';border-radius:3px;width:0%;transition:width 1.1s;" data-w="'+sc+'%" class="cpl-area-bar"></div>'+
-            '</div>'+
-            '<div style="font-size:9px;font-weight:700;color:'+color+';width:24px;text-align:right;">'+sc+'</div>'+
-          '</div>'+
-        '</div>';
-    });
+  // ★ 스캔 미완료 시 관상·손금 카드 제외 (사실 기반 원칙)
+  var _scanned = window._baiScanned || (bfd.fci>0 || bfd.hrv>0);
+  var _yeokak = MUSIC_DB.YEOKAK.filter(function(yk){
+    if(!_scanned && (yk.id==='gwan' || yk.id==='palm')) return false;
+    return true;
+  });
+  _yeokak.forEach(function(yk,i){
     setTimeout(function(){
-      barsEl.querySelectorAll('.cpl-area-bar').forEach(function(el){
-        el.style.width=el.getAttribute('data-w');
-      });
-    },200);
-  }
-
-  // 공명 메시지
-  var rmEl=document.getElementById('cpl-resonance-msg');
-  var rtEl=document.getElementById('cpl-resonance-txt');
-  if(finalTotal>=75&&rmEl){
-    rmEl.style.display='block';
-    if(rtEl) rtEl.textContent='✨ '+aName+' × '+bName+' — 우주적 공명 지수 '+finalTotal+'pt';
-  } else if(rmEl){ rmEl.style.display='none'; }
-
-  // ── 상세 분석 저장 ──
-  _cplDetailData={aName:aName,bName:bName,ohA:baseResult.ohA,ohB:baseResult.ohB,
-    aJob:aJob,bJob:bJob,aJobOh:aJobOh,bJobOh:bJobOh,
-    scores6:scores6,total:finalTotal,ohScore:baseResult.ohScore,
-    hasFace:{a:aHasFace,b:bHasFace},hasPalm:{a:aHasPalm,b:bHasPalm},
-    jobBonus:jobBonus,bioBonus:bioBonus,s18:{love:s18Love,money:s18Money,career:s18Career}};
-
-  // ── B 바 초기값 ──
-  var _bOhScore={목:68,화:75,토:65,금:70,수:72}[baseResult.ohB]||65;
-  var _bDays=Math.floor((new Date()-new Date(bY,bM-1,bD))/86400000);
-  var _bBio=Math.sin(2*Math.PI*_bDays/28);
-  var _bBioBonus=Math.round(_bBio*8);
-  var _bCompatBonus=Math.round((baseResult.ohScore-50)*0.15);
-  var _bInitScore=Math.min(88,Math.max(30,Math.round(_bOhScore+_bBioBonus+_bCompatBonus)));
-  _cplScoreB=_bInitScore;
-  _cplUpdateBar('a',_cplScoreA);
-  _cplUpdateBar('b',_bInitScore);
-
-  // ── Groq AI 상세 분석 ──
-  var adviceBox=document.getElementById('cpl-advice-box');
-  var adviceTxt=document.getElementById('cpl-advice-txt');
-  if(adviceBox&&adviceTxt){
-    adviceBox.style.display='block';
-    adviceTxt.textContent='🤖 C-13 똑딱이 분석 중... (약 5초)';
-    adviceTxt.style.color='rgba(212,168,67,.7)';
-    adviceTxt.style.whiteSpace='pre-line';
-
-    var np=window._nasaPlanets||{};
-    var jupOk=!!(np.jupiter&&!np.jupiter.retro);
-    var kp=(window._cgoEnvData&&window._cgoEnvData.kp&&window._cgoEnvData.kp.value)||0;
-
-    var sysP='당신은 CGO-FULI 최고급 궁합 전문 AI입니다. 특허 10-2026-0060113.\n'+
-      '당신은 4,500년 동양 역학(사주명리·자미두수·주역)과 서양 점성술·뇌과학·NASA를 융합한 세계 최고 수준의 궁합 분석가입니다.\n'+
-      '규칙:\n'+
-      '①초등학생도 이해하는 쉬운 말투 (어려운 한자어는 반드시 풀어서 설명)\n'+
-      '②각 항목 최소 300자 이상, 이모지 풍부하게, 구체적 예시 포함\n'+
-      '③사용자가 궁금해할 것을 미리 찾아서 분석 (결혼·재물·건강·노후·갈등 등)\n'+
-      '④실생활 실천 방법을 반드시 3가지 이상 포함\n'+
-      '⑤결혼 궁합 + 직장 면접 파트너십 + 사업 동반자 모두 활용 가능하게\n'+
-      '⑥JSON만 반환 (코드블록·설명 없이)\n\n'+
-      'JSON 형식:\n'+
-      '{"love":"💕연애결혼궁합(설레는감정+결혼후변화+성격맞춤법)","life":"🌅시기별인생지도(초년결혼초기~중년가정절정~노년황혼기 각각분석)","money":"💰재물경제궁합(수입방식+지출습관+함께부자되는법)","comm":"🗣️소통성격궁합(대화스타일+싸울때패턴+화해법)","career":"💼직업사업궁합(면접활용+사업파트너+각자강점)","health":"🏥건강체질궁합(각자취약장기+함께건강관리법)","family":"👨‍👩‍👧가정자녀궁합(자녀운+육아스타일+노후동반자)","special":"⚡특수분석(합충시기+공망+위기극복력+천생연분근거)","summary":"🎯전체요약+오늘당장실천법3가지","warning":"⚠️주의사항+갈등해결법+절대하면안되는것"}';
-
-    var userP=
-      '【분석 대상】\n'+
-      aName+'님: 오행('+baseResult.ohA+') | 성별('+(_cplGender.a||'미입력')+') | 직업('+( aJob||'미입력')+') | 생('+aY+'년'+aM+'월'+aD+'일)\n'+
-      bName+'님: 오행('+baseResult.ohB+') | 성별('+(_cplGender.b||'미입력')+') | 직업('+(bJob||'미입력')+') | 생('+bY+'년'+bM+'월'+bD+'일)\n\n'+
-      '【CGO-FULI 역학 점수】\n'+
-      '총합: '+finalTotal+'점 | 연애:'+scores6.love+' 재물:'+scores6.money+' 소통:'+scores6.comm+' 직업:'+scores6.career+' 건강:'+scores6.health+' 가정:'+scores6.family+'\n'+
-      '오행공명: '+baseResult.ohScore+'pt | 사주점수: '+Math.round(baseResult.naejang)+'pt | 행성점수: '+Math.round(baseResult.chuchu)+'pt\n'+
-      'NASA 목성: '+(jupOk?'순행★(행운에너지강함)':'역행(신중필요)')+' | 지자기Kp: '+kp+'\n'+
-      (aHasFace?'관상 rPPG 스캔 완료 ✅ ':'')+
-      (aHasPalm?'손금 BLI 스캔 완료 ✅ ':'')+
-      (bHasFace?'상대 관상 스캔 완료 ✅ ':'')+
-      (bHasPalm?'상대 손금 스캔 완료 ✅ ':'')+'\n\n'+
-      '【반드시 포함할 분석】\n'+
-      '1. 시기별 운의 변화: 결혼초기(초년)→가정절정기(중년)→황혼기(노년) 각각 구체적으로\n'+
-      '2. 합(合)과 충(沖): 특정 나이대에 갈등이나 이별수가 들어오는 시기 예측\n'+
-      '3. 공망(空亡): 서로의 부족한 구멍을 상대방이 채워주는지 분석\n'+
-      '4. 위기 극복력: 한쪽 운이 꺾일 때 상대방이 받쳐주는 상생 에너지\n'+
-      '5. 면접/사업 파트너: '+aName+'와 '+bName+'의 직업 오행 시너지\n\n'+
-      '각 항목을 초등학생도 이해하게, 아주 자세하고 길게 분석해주세요. JSON만 반환.';
-
-    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:4000,temperature:0.78,
-        messages:[{role:'system',content:sysP},{role:'user',content:userP}]})
-    })
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-      var res;
-      try{ res=JSON.parse(raw.replace(/```json|```/g,'').trim()); }
-      catch(e){ res=null; }
-      if(res){
-        var html='';
-        var sections=[
-          {k:'love',    ico:'💕',title:'연애·결혼 궁합',    sc:scores6.love},
-          {k:'life',    ico:'🌅',title:'시기별 인생 지도',   sc:null},
-          {k:'money',   ico:'💰',title:'재물·경제 궁합',    sc:scores6.money},
-          {k:'comm',    ico:'🗣️',title:'소통·성격 궁합',    sc:scores6.comm},
-          {k:'career',  ico:'💼',title:'직업·사업 궁합',    sc:scores6.career},
-          {k:'health',  ico:'🏥',title:'건강·체질 궁합',    sc:scores6.health},
-          {k:'family',  ico:'👨‍👩‍👧',title:'가정·자녀 궁합',  sc:scores6.family},
-          {k:'special', ico:'⚡',title:'특수 분석 (합충·공망·위기)',sc:null},
-          {k:'summary', ico:'🎯',title:'종합 요약 + 실천법 3가지',sc:finalTotal},
-          {k:'warning', ico:'⚠️',title:'주의사항 + 갈등 해결법',sc:null}
-        ];
-        sections.forEach(function(sec){
-          if(res[sec.k]){
-            html+='━━━━━━━━━━━━━━━━\n'+sec.ico+' '+sec.title+(sec.sc?' ('+sec.sc+'점)':'')+'\n'+res[sec.k]+'\n\n';
-          }
-        });
-        adviceTxt.textContent=html||raw;
-        adviceTxt.style.color='rgba(240,230,200,.9)';
-      } else {
-        adviceTxt.textContent=raw||'분석 완료. 네트워크 상태를 확인해주세요.';
-        adviceTxt.style.color='rgba(240,230,200,.7)';
+      var res=yk.analyze(bs);
+      // ★ 기준서 v1.0 점수 우선 적용 (없으면 음악 자체 계산값)
+      var _sKey = _s18map[yk.id];
+      var _baseScore = _sKey && _s18[_sKey] ? _s18[_sKey] : res.score;
+      scores.push(_baseScore);
+      var sc=_baseScore;
+      var scc=sc>=85?'#34d399':sc>=75?'#d4a843':'#94a3b8';
+      var card=document.createElement('div');
+      card.className='bsmc-card';
+      card.innerHTML=
+        '<div class="bsmc-head">'+
+          '<div class="bsmc-ico" style="background:'+yk.bg+';border:1px solid '+yk.border+'">'+yk.emoji+'</div>'+
+          '<div style="flex:1"><div class="bsmc-title">'+yk.name+'</div><div class="bsmc-sub">'+yk.sub+'</div></div>'+
+          '<div class="bsmc-score"><div class="bsmc-score-v" style="color:'+scc+'">'+sc+'</div><div class="bsmc-score-l">운 지수</div></div>'+
+        '</div>'+
+        '<div class="bsmc-body">'+
+          '<div class="bsmc-analysis">'+res.detail+'</div>'+
+          res.rows.map(function(row){return'<div class="bsmc-row"><div class="bsmc-row-i">'+row.i+'</div><div class="bsmc-row-t">'+row.t+'</div></div>';}).join('')+
+        '</div>';
+      card.querySelector('.bsmc-head').addEventListener('click',function(){card.classList.toggle('open');});
+      if(i===0) cards.innerHTML='';
+      cards.appendChild(card);
+      if(i===_yeokak.length-1){
+        setTimeout(function(){
+          var avg=Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length);
+          pmShowList(mlist,bs,avg);
+        },600);
       }
-    })
-    .catch(function(){
-      // 폴백: 기존 오행 충고
-      var ohColors={목:'초록',화:'빨강',토:'노랑',금:'흰색',수:'파랑'};
-      var ohKey=baseResult.ohA+'-'+baseResult.ohB;
-      var advText='💕 연애·결혼\n'+
-        aName+'님('+baseResult.ohA+')과 '+bName+'님('+baseResult.ohB+')의 오행 공명 점수는 '+baseResult.ohScore+'점입니다.\n\n'+
-        '💰 재물·경제\n직업 정보를 입력하면 더 정확한 재물 궁합을 확인할 수 있어요.\n\n'+
-        '🎯 실천 방법\n· 보름달 전후 3일이 대화하기 최적의 시간이에요.\n'+
-        '· 상대방 오행('+baseResult.ohB+')의 색상인 '+(ohColors[baseResult.ohB]||'금색')+'을 선물에 활용해보세요.\n'+
-        '· 인터넷 연결 후 다시 시도하면 더 자세한 AI 분석을 받을 수 있어요.';
-      adviceTxt.textContent=advText;
-      adviceTxt.style.color='rgba(240,230,200,.7)';
-    });
-  }
-}
-
-
-// rPPG 실시간 관심도 스캔
-// ── 카메라 토글 (A/B 각각 독립) ──
-var _cplStreams = {a:null, b:null};
-var _cplTimers  = {a:null, b:null};
-
-function cplToggleCam(who){
-  if(_cplStreams[who]){
-    _cplStreams[who].getTracks().forEach(function(t){t.stop();});
-    _cplStreams[who]=null;
-    if(_cplTimers[who]){clearInterval(_cplTimers[who]);_cplTimers[who]=null;}
-    var vid=document.getElementById('cpl-video-'+who);
-    if(vid){ vid.srcObject=null; vid.style.display='none'; }
-    var ph=document.getElementById('cpl-ph-'+who);
-    if(ph) ph.style.display='flex';
-    var badge=document.getElementById('cpl-badge-'+who);
-    if(badge) badge.style.display='none';
-    var btn=document.getElementById('cpl-btn-'+who);
-    var color=who==='a'?'#38bdf8':'#f472b6';
-    var bg=who==='a'?'rgba(56,189,248,.1)':'rgba(244,114,182,.1)';
-    var bc=who==='a'?'rgba(56,189,248,.3)':'rgba(244,114,182,.3)';
-    if(btn){btn.textContent='📷 카메라 켜기';btn.style.background=bg;btn.style.borderColor=bc;btn.style.color=color;}
-    if(!_cplTimers.a&&!_cplTimers.b){
-      var ico=document.getElementById('cpl-status-ico');
-      var txt=document.getElementById('cpl-status-txt');
-      if(ico) ico.textContent='💫';
-      if(txt) txt.textContent='카메라를 켜면 실시간 분석이 시작됩니다';
-    }
-    return;
-  }
-  // A=전면, B=후면 (혼자 테스트 시 전/후면 동시 사용)
-  var facingMode = who==='a' ? 'user' : 'environment';
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    alert('카메라를 지원하지 않는 환경입니다.\nHTTPS 환경에서만 카메라가 작동합니다.');
-    return;
-  }
-
-  // iOS Safari 호환 constraints
-  var constraints = {
-    video: {
-      facingMode: {ideal: facingMode},
-      width: {ideal: 640},
-      height: {ideal: 480}
-    },
-    audio: false
-  };
-
-  navigator.mediaDevices.getUserMedia(constraints)
-  .then(function(stream){
-    _cplStreams[who]=stream;
-    var vid=document.getElementById('cpl-video-'+who);
-    if(vid){
-      vid.srcObject=stream;
-      vid.style.display='block';
-      // iOS Safari 필수: play() 명시 호출
-      vid.play().catch(function(e){ console.log('video play:', e); });
-    }
-    var ph=document.getElementById('cpl-ph-'+who);
-    if(ph) ph.style.display='none';
-    var photo=document.getElementById('cpl-photo-'+who);
-    if(photo) photo.style.display='none';
-    var badge=document.getElementById('cpl-badge-'+who);
-    if(badge) badge.style.display='block';
-    var btn=document.getElementById('cpl-btn-'+who);
-    if(btn){btn.textContent='■ 끄기';btn.style.background='rgba(248,113,113,.15)';btn.style.borderColor='rgba(248,113,113,.4)';btn.style.color='#f87171';}
-    _cplTimers[who]=setInterval(function(){
-      // isSkin 픽셀 감지
-      var vid2=document.getElementById('cpl-video-'+who);
-      var measured=null;
-      if(vid2&&vid2.videoWidth){
-        var oc2=document.createElement('canvas');
-        oc2.width=64;oc2.height=48;
-        var ox2=oc2.getContext('2d');
-        ox2.drawImage(vid2,0,0,64,48);
-        var px2=ox2.getImageData(0,0,64,48).data;
-        var rS=0,gS=0,bS=0,cnt2=0,skinCnt2=0;
-        for(var i2=0;i2<px2.length;i2+=4){
-          var pr=px2[i2],pg=px2[i2+1],pb=px2[i2+2];
-          rS+=pr;gS+=pg;bS+=pb;cnt2++;
-          var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
-          var sv2=mx2>0?(mx2-mn2)/mx2:0;
-          if(pr>80&&pg>50&&pb>30&&pr>pg&&pr>pb&&(pr-pg)>15&&sv2>0.18&&sv2<0.65) skinCnt2++;
-        }
-        if(cnt2&&skinCnt2/cnt2>=0.15){
-          var gAvg=gS/cnt2,rAvg=rS/cnt2;
-          var fci2=Math.min(100,Math.max(0,(rAvg-gAvg)*2.5));
-          var bright=(rAvg+gAvg+(bS/cnt2))/3;
-          measured=Math.round(fci2*0.6+Math.min(100,Math.max(0,(bright-60)*1.2))*0.4);
-        }
-      }
-      // 감정 관성 7:3
-      var curScore=who==='a'?_cplScoreA:_cplScoreB;
-      // B 카메라 없을 때 → 바이오리듬 기반 자연 변동 (50 고정 방지)
-      var target;
-      if(measured !== null){
-        target = Math.min(95, Math.max(15, measured+30));
-      } else if(who==='b'){
-        // B 카메라 없음 → 시간 기반 미세 변동 (±3 범위)
-        var _bDrift = Math.sin(Date.now()/8000)*3 + Math.cos(Date.now()/5000)*2;
-        target = Math.min(88, Math.max(28, curScore + _bDrift));
-      } else {
-        target = 50;
-      }
-      var inertia=curScore*0.7+target*0.3;
-      // 등급별 변화폭
-      var maxD=inertia>=85?3:inertia>=70?5:inertia>=55?7:inertia>=45?5:inertia>=30?7:5;
-      var diff=inertia-curScore;
-      if(Math.abs(diff)>maxD) diff=diff>0?maxD:-maxD;
-      var newScore=Math.min(95,Math.max(15,Math.round(curScore+diff)));
-      if(who==='a'){_cplScoreA=newScore;_cplUpdateBar('a',_cplScoreA);}
-      else{_cplScoreB=newScore;_cplUpdateBar('b',_cplScoreB);}
-      if(_cplTimers.a&&_cplTimers.b){
-        var avg=(_cplScoreA+_cplScoreB)/2;
-        var diff2=Math.abs(_cplScoreA-_cplScoreB);
-        var ico2,txt2;
-        if(avg>=75&&diff2<=15){ico2='🔥';txt2='💞 서로 공명 최고조 — 감정 동기화!';}
-        else if(avg>=75&&diff2>15){ico2='💫';txt2='⚡ 한쪽이 더 흥분 상태';}
-        else if(avg>=60&&diff2<=20){ico2='✨';txt2='💕 서로 관심 상승 중';}
-        else if(avg>=60&&diff2>20){ico2='🌀';txt2='🤔 감정 온도차 있음';}
-        else if(avg>=50){ico2='🌸';txt2='😌 안정적 공명 유지';}
-        else{ico2='💧';txt2='😶 관심도 확인 필요';}
-        var icoEl=document.getElementById('cpl-status-ico');
-        var txtEl=document.getElementById('cpl-status-txt');
-        if(icoEl) icoEl.textContent=ico2;
-        if(txtEl) txtEl.textContent=txt2;
-      } else {
-        var txtEl=document.getElementById('cpl-status-txt');
-        if(txtEl) txtEl.textContent = who==='a'
-          ? '나(A) 스캔 중... B 카메라도 켜면 실시간 감정 감지'
-          : '상대(B) 역학 에너지 추정 중... B 사진 업로드 시 더 정확';
-      }
-    },1200);
-  }).catch(function(err){
-    console.log('카메라 오류:', err);
-    // 폴백: 제약 없이 재시도
-    navigator.mediaDevices.getUserMedia({video:true, audio:false})
-    .then(function(s){
-      _cplStreams[who]=s;
-      var v=document.getElementById('cpl-video-'+who);
-      if(v){ v.srcObject=s; v.style.display='block'; v.play().catch(function(){}); }
-      var p=document.getElementById('cpl-ph-'+who);
-      if(p) p.style.display='none';
-      var btn2=document.getElementById('cpl-btn-'+who);
-      if(btn2){btn2.textContent='■ 끄기';btn2.style.background='rgba(248,113,113,.15)';btn2.style.borderColor='rgba(248,113,113,.4)';btn2.style.color='#f87171';}
-    })
-    .catch(function(){
-      alert('카메라 권한이 필요합니다.\n브라우저 설정에서 카메라 권한을 허용해주세요.');
-    });
+    },i*350+300);
   });
 }
 
-function cplStartRPPG(){ cplToggleCam('a'); }
-function cplStopRPPG(){
-  if(_cplStreams.a) cplToggleCam('a');
-  if(_cplStreams.b) cplToggleCam('b');
-}
-
-function _cplUpdateBar(who, score){
-  var barUp=document.getElementById('cpl-bar-'+who);
-  var barDn=document.getElementById('cpl-bar-'+who+'-down');
-  var scoreEl=document.getElementById('cpl-score-'+who);
-  if(!barUp||!barDn) return;
-  if(score>=50){
-    barUp.style.height=(score-50)*2+'%';
-    barDn.style.height='0%';
-  } else {
-    barUp.style.height='0%';
-    barDn.style.height=(50-score)*2+'%';
-  }
-  if(scoreEl) scoreEl.textContent=score;
-}
-
-
-// ── 대시보드 자동 연동 ──
-// ── 4대 지표 상세 분석 팝업 ──
-var _cplDetailData = {};
-function cplShowDetail(type){
-  var d = _cplDetailData;
-  if(!d.aName) return;
-  var panel = document.getElementById('cpl-detail-panel');
-  var title = document.getElementById('cpl-detail-title');
-  var body  = document.getElementById('cpl-detail-body');
-  if(!panel||!title||!body) return;
-
-  var ohDesc = {
-    '목':'목(木) — 성장·창의·인자함의 기운',
-    '화':'화(火) — 열정·표현·활기의 기운',
-    '토':'토(土) — 안정·신뢰·포용의 기운',
-    '금':'금(金) — 결단·의리·정밀함의 기운',
-    '수':'수(水) — 지혜·유연·감수성의 기운'
-  };
-  var np = window._nasaPlanets||{};
-  var weather = window._weatherData||{};
-  var nasaNote = np.venus ? '금성(사랑의 행성) 황경 '+parseFloat(np.venus.lon||0).toFixed(1)+'° — 현재 인연의 파장이 활성화됨.' : 'NASA 행성 데이터 기반 분석.';
-  var weatherNote = weather.temp ? '현재 기온 '+weather.temp+'°C · 날씨 에너지가 두 분의 공명에 영향을 줍니다.' : '날씨·지자기 데이터 반영.';
-  var rppgNote = (window._bioFinalData&&window._bioFinalData.fci>0) ? 'rPPG 실측 FCI '+window._bioFinalData.fci+'% — 생체 에너지 반영.' : 'rPPG 생체 스캔 완료 시 더 정확해집니다.';
-
-  var texts = {
-    compat: {
-      title: '💞 상호 보완성 '+d.compat+'% — CGO-FULI 상세 분석',
-      body: [
-        '【오행 상생·상극 분석】',
-        d.aName+'님의 오행: '+ohDesc[d.ohA],
-        d.bName+'님의 오행: '+ohDesc[d.ohB],
-        '오행 공명 점수: '+d.ohScore+'pt',
-        '',
-        '【CGO-FULI 분석】',
-        _cplCompatText(d.ohA, d.ohB, d.aName, d.bName, d.compat),
-        '',
-        '【근거 데이터】',
-        '· '+nasaNote,
-        '· '+weatherNote,
-        '· '+rppgNote,
-        '· 4,500년 동양 오행 상생 매트릭스 + 2,500년 서양 점성술 원소 궁합',
-        '',
-        d.compat>=80?'✅ 두 분은 자연스럽게 서로를 보완하는 관계입니다.':
-        d.compat>=65?'⚡ 노력하면 서로의 부족함을 채울 수 있습니다.':
-        '⚠️ 오행 차이가 크니 서로의 다름을 인정하는 것이 핵심입니다.'
-      ].join('\n')
-    },
-    marry: {
-      title: '💍 결혼운 '+d.marry+'% — CGO-FULI 상세 분석',
-      body: [
-        '【사주명리 + 자미두수 분석】',
-        d.aName+'님('+d.ohA+') × '+d.bName+'님('+d.ohB+') 결혼 궁합',
-        '',
-        '【CGO-FULI 분석】',
-        _cplMarryText(d.ohA, d.ohB, d.aName, d.bName, d.marry),
-        '',
-        '【근거 데이터】',
-        '· 사주명리 오행 배합 (가중치 40%)',
-        '· 자미두수 명반 교차 분석 (가중치 40%)',
-        '· '+nasaNote,
-        '· '+rppgNote,
-        '',
-        d.marry>=80?'✅ 결혼 후 안정적이고 행복한 가정을 이룰 가능성이 높습니다.':
-        d.marry>=65?'⚡ 결혼을 위해 서로의 가치관을 충분히 나누는 시간이 필요합니다.':
-        '⚠️ 결혼 전 충분한 대화와 서로의 생활 방식을 맞춰가는 과정이 중요합니다.'
-      ].join('\n')
-    },
-    child: {
-      title: '👶 자식운 '+d.child+'% — CGO-FULI 상세 분석',
-      body: [
-        '【주역 + 행성 트랜짓 분석】',
-        d.aName+'님('+d.ohA+') × '+d.bName+'님('+d.ohB+') 자식 인연',
-        '',
-        '【CGO-FULI 분석】',
-        _cplChildText(d.ohA, d.ohB, d.aName, d.bName, d.child),
-        '',
-        '【근거 데이터】',
-        '· 주역 64괘 자식 인연 분석 (가중치 50%)',
-        '· '+nasaNote,
-        '· '+weatherNote,
-        '· 생체 에너지: '+rppgNote,
-        '',
-        d.child>=80?'✅ 자식 인연이 강합니다. 건강하고 훌륭한 자녀를 기대할 수 있습니다.':
-        d.child>=65?'⚡ 자식 인연은 있으나 건강 관리와 생체 에너지 스캔을 권장합니다.':
-        '⚠️ 자식운을 높이기 위해 두 분 모두 건강한 생활 습관이 중요합니다.'
-      ].join('\n')
-    },
-    total: {
-      title: '✨ 궁합 완성도 '+d.total+'% — CGO-FULI 종합 분석',
-      body: [
-        '【50대 역학 중 통합 분석 결과】',
-        d.aName+'('+d.ohA+') × '+d.bName+'('+d.ohB+')',
-        '우주적 공명 점수: '+d.total+'pt',
-        '',
-        '【CGO-FULI 종합 분석】',
-        _cplTotalText(d.ohA, d.ohB, d.aName, d.bName, d.total, d.compat, d.marry, d.child),
-        '',
-        '【반영된 50대 역학 중 엔진】',
-        '· NASA 실시간 행성 트랜짓 (22pt)',
-        '· 태양궁 점성술 원소 궁합 (18pt)',
-        '· 자미두수 명반 교차 (13pt)',
-        '· 사주명리 오행 배합 (12pt)',
-        '· 주역 64괘 조합 (11pt)',
-        '· 성명학 획수 파동 (8pt)',
-        '· 하우스/합성 차트 (8pt)',
-        '· rPPG 생체 파동 (8pt)',
-        '· '+nasaNote,
-        '· '+weatherNote,
-        '',
-        d.total>=90?'🔥 천생연분입니다! CGO-FULI 50대 역학 중이 모두 두 분의 인연을 증명합니다.':
-        d.total>=80?'💫 강한 공명의 인연입니다. 서로를 더 알아갈수록 깊어집니다.':
-        d.total>=70?'✨ 좋은 인연입니다. 노력하면 반드시 완성되는 사랑입니다.':
-        '🌱 두 분의 다름이 오히려 서로를 성장시키는 특별한 인연입니다.'
-      ].join('\n')
-    }
-  };
-
-  var t = texts[type];
-  if(!t) return;
-  title.textContent = t.title;
-  body.textContent  = t.body;
-  panel.style.display = 'block';
-  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
-  if (window._LANG && window._LANG !== 'ko') {
-    var _cplEl = document.getElementById('cplDetailPanel');
-    if (_cplEl) _cgoTransPopup && setTimeout(function(){ _cgoTransPopup('cplDetailPanel'); }, 150);
+function pmShowList(el,bs,avg){
+  // _showMusicList 재활용
+  if(typeof _showMusicList==='function'){
+    _showMusicList(el,bs,avg);
+    el.style.display='block';
   }
 }
 
-function _cplCompatText(ohA,ohB,nA,nB,sc){
-  var pairs = {
-    '목화':'목(木)이 화(火)를 살리는 상생 관계입니다. '+nA+'님의 창의적 아이디어가 '+nB+'님의 열정에 불을 붙입니다. 함께할수록 시너지가 커집니다.',
-    '화토':'화(火)가 토(土)를 만드는 상생입니다. '+nA+'님의 활기가 '+nB+'님의 안정감을 강화합니다. 서로의 역할이 명확해 균형잡힌 관계입니다.',
-    '토금':'토(土)가 금(金)을 낳는 상생입니다. '+nA+'님의 포용력이 '+nB+'님의 결단력을 빛나게 합니다. 신뢰를 쌓으면 최강의 파트너가 됩니다.',
-    '금수':'금(金)이 수(水)를 만드는 상생입니다. '+nA+'님의 명확함이 '+nB+'님의 지혜로운 흐름을 만듭니다. 대화가 두 분의 강점입니다.',
-    '수목':'수(水)가 목(木)을 키우는 이상적 상생입니다. '+nA+'님의 감수성이 '+nB+'님의 성장을 돕습니다. 천천히 깊어지는 인연입니다.',
-    '화금':'화(火)와 금(金)은 상극이지만 — 열정과 절제가 만나 서로를 단련시킵니다. 초반 갈등을 넘으면 단단한 관계가 됩니다.',
-    '금목':'금(金)과 목(木)의 긴장 관계 — 원칙과 자유의 충돌입니다. 서로의 다름을 존중하는 훈련이 필요합니다.',
-    '목토':'목(木)과 토(土) — 성장 욕구와 안정 욕구의 조화. 서로의 페이스를 맞추는 노력이 관계를 풍요롭게 합니다.',
-    '토수':'토(土)와 수(水) — 안정과 유연함의 긴장. 서로 다른 생활 방식을 인정하면 완벽한 보완이 됩니다.',
-    '수화':'수(水)와 화(火) — 강한 에너지의 충돌이지만 열정과 지혜가 합쳐지면 폭발적인 시너지가 납니다.',
-  };
-  var key = ohA+ohB;
-  return pairs[key]||('두 분의 오행('+ohA+','+ohB+')은 '+sc+'%의 보완성을 지닙니다. 서로의 차이를 이해하고 인정하면 더욱 깊은 관계가 됩니다.');
+
+// ═══════════════════════════════════════════════════
+// ★ C-13 꿈 해몽 시스템
+// 특허 10-2026-0060113
+// ═══════════════════════════════════════════════════
+
+var _c13Time = '자시';
+
+// ── 꿈 키워드 → 오행·의미 DB ──────────────────────
+var C13_DREAM_DB = {
+  돼지: {oh:'토',luck:9,
+    trad:'🐷 돼지꿈은 동양 최고의 재물 길몽이에요!\n\n옛날부터 돼지는 "복덩이"라고 불렸어요. 뚱뚱하고 살찐 돼지일수록, 여러 마리일수록 재물운이 더 크게 들어온다고 해요.\n\n✔ 돼지가 집 안으로 들어오는 꿈 → 횡재수! 기회가 문을 두드리고 있어요.\n✔ 돼지를 잡는 꿈 → 노력한 만큼의 결실이 딱 들어오는 시기예요.\n✔ 돼지가 쫓아오는 꿈 → 겁먹지 마세요! 재물이 따라오는 것과 같아요.\n\n👉 오늘 중요한 계획이 있었다면 미루지 말고 진행하세요!',
+    sci:'🧬 뇌과학적으로 돼지꿈은 "풍요 회로"가 활성화된 신호예요!\n\n잠을 자는 동안 우리 뇌(특히 해마와 편도체)는 낮 동안 받은 감정을 정리해요. 돼지처럼 크고 풍성한 이미지가 꿈에 나타난다는 것은, 지금 내 마음 깊은 곳에서 "풍요로워지고 싶다"는 강한 욕구가 활성화되어 있다는 뜻이에요.\n\n심리학자 칼 융은 이런 꿈을 "무의식이 보내는 긍정 신호"라고 했어요. 실제로 꿈에서 좋은 감정(기쁨·안도)을 느꼈다면, 현실에서도 그 방향으로 에너지가 흐르고 있는 것이에요.\n\n👉 지금 당신의 잠재력이 깨어나고 있어요!',
+    c13:'🛰️ NASA와 사주가 함께 분석한 결과예요!\n\n지금 하늘의 에너지(토성 오행)가 돼지꿈의 토(土) 에너지와 딱 맞아떨어지고 있어요. 사주명리 분석에서 재물을 뜻하는 "재성(財星)"이 활성화된 상태예요.\n\n✔ 사주명리(s01): 재성 활성 → 재물 기회의 문이 열려 있어요\n✔ 자미두수(s02): 재백궁 에너지 상승 → 금전 흐름이 좋아지는 시기\n✔ 기문둔갑(s05): 길방 에너지 → 서쪽이나 북쪽에서 기회가 와요\n\n🎯 오늘 행동 포인트: 미뤄두었던 금전 관련 일(보험·투자·계약)을 오늘 안에 결정하면 최고의 타이밍이에요!'},
+
+  용: {oh:'화',luck:9,
+    trad:'🐉 용꿈은 동양에서 최고 중의 최고 길몽이에요!\n\n용은 하늘과 땅을 모두 다스리는 신성한 존재예요. 예로부터 왕이나 큰 인물을 상징했죠.\n\n✔ 용이 하늘로 올라가는 꿈 → 엄청난 출세·승진·합격 예고!\n✔ 용이 나에게 오는 꿈 → 귀인(나를 도와줄 사람)이 나타나요\n✔ 용을 잡는 꿈 → 큰 기회를 내 손으로 직접 잡는 것을 뜻해요\n✔ 황금 용 꿈 → 재물과 명예가 동시에 들어오는 최고의 꿈!\n\n👉 지금 도전하고 싶은 것이 있다면 망설이지 마세요!',
+    sci:'🧬 용꿈은 "자아실현 본능"이 폭발하는 신호예요!\n\n심리학자 에이브러햄 매슬로우의 "욕구 5단계"에서 가장 꼭대기에 있는 것이 "자아실현 욕구"예요. 용처럼 강하고 위엄 있는 존재가 꿈에 나타났다는 것은, 지금 내 안의 잠재력이 최고조에 달해 있다는 뜻이에요.\n\n뇌과학적으로는 도파민(기쁨·보상 호르몬)이 평소보다 높게 분비되는 상태예요. 이런 상태에서는 실제로 더 자신감 있게 행동하고, 더 좋은 결과를 만들어낼 수 있어요.\n\n👉 자신감을 갖고 앞으로 나아갈 최고의 타이밍!',
+    c13:'🛰️ NASA 행성 에너지가 용꿈을 확인해줘요!\n\n용은 화(火) 오행의 에너지예요. 지금 하늘에서 목성(행운의 행성)이 순행하고 있다면, 이 화(火) 에너지가 더욱 강하게 증폭되는 최고의 조합이에요!\n\n✔ 행성 트랜짓(s06): 목성 순행 = 확장·행운·새 기회\n✔ 태양궁 점성(s03): 화(火) 에너지 극대화 구간\n✔ 태을신수(s13): 72년 주기 상승기와 일치\n\n🎯 오늘 행동 포인트: 가장 도전하고 싶었던 일을 오늘 시작하세요. 첫걸음을 내딛는 것만으로 용꿈의 에너지가 현실로 연결돼요!'},
+
+  뱀: {oh:'화',luck:7,
+    trad:'🐍 뱀꿈, 무서워하지 마세요! 사실 좋은 꿈이에요!\n\n동양에서 뱀은 "지혜"와 "재물"의 상징이에요. 허물을 벗고 새로워지는 뱀의 특성처럼, 변화와 탈바꿈을 예고해요.\n\n✔ 뱀이 나를 무는 꿈 → 재물이 들어오는 신호 (아프지만 좋은 꿈!)\n✔ 큰 뱀 꿈 → 큰 행운이나 중요한 인물과의 만남\n✔ 뱀이 집에 들어오는 꿈 → 집안에 좋은 일이 생겨요\n✔ 황금 뱀 꿈 → 재물운 최고!\n\n👉 변화가 두렵더라도 새로운 기회를 받아들이세요!',
+    sci:'🧬 뱀꿈은 "변화 준비 완료" 신호예요!\n\n심리학의 아버지 칼 융은 뱀을 "변환(Transformation)의 원형"이라고 했어요. 뱀이 꿈에 나타나면, 우리 무의식이 "지금 변화할 준비가 됐어!"라고 신호를 보내는 거예요.\n\n뇌과학적으로는 편도체(감정 중추)가 새로운 환경에 적응하기 위한 준비 단계에 있어요. 무섭게 느껴지는 꿈도 사실은 뇌가 "새로운 도전을 연습하는 시뮬레이션"이에요.\n\n👉 지금 망설이고 있는 변화가 있다면 이제 행동할 때예요!',
+    c13:'🛰️ 뱀의 탈바꿈 에너지가 역학과 공명해요!\n\n뱀은 화(火)와 수(水)를 동시에 품은 특별한 오행 에너지예요. 지금 타로×달 역학에서 "변환" 카드 에너지가 활성화되어 있어요.\n\n✔ 타로×달(s16): 달의 위상이 변환 에너지 증폭 중\n✔ 합성 차트(s14): 새로운 인연·파트너십 에너지 활성\n✔ 주역(s15): 변화와 전환을 뜻하는 괘 활성화\n\n🎯 오늘 행동 포인트: 오래 고민해왔던 변화(직업·관계·환경)를 결정할 최적의 타이밍이에요. 뱀이 허물을 벗듯 과감하게!'},
+
+  물: {oh:'수',luck:7,
+    trad:'💧 물꿈은 마음의 상태를 그대로 보여줘요!\n\n물의 상태가 중요해요. 맑고 깨끗한 물은 좋은 신호, 흐리고 탁한 물은 주의 신호예요.\n\n✔ 맑은 물, 흐르는 물 → 재물과 건강운 상승!\n✔ 물속에서 수영하는 꿈 → 어려운 상황을 내 힘으로 극복해요\n✔ 폭포나 비 꿈 → 새로운 기회가 쏟아져요\n✔ 탁한 물, 범람하는 물 → 감정적으로 힘든 일이 있을 수 있으니 조심해요\n✔ 생수·깨끗한 샘물 꿈 → 건강이 좋아지는 신호!\n\n👉 꿈속 물이 맑았나요? 그렇다면 좋은 일이 기다리고 있어요!',
+    sci:'🧬 물꿈은 "감정 정화 중"이라는 뇌의 메시지예요!\n\n물은 심리학에서 "무의식"과 "감정"을 상징해요. 프로이트는 물꿈을 "감정의 흐름을 나타내는 꿈"이라고 했고, 융은 "집단 무의식과 연결되는 통로"라고 했어요.\n\n뇌과학적으로는 잠자는 동안 편도체(감정 처리 센터)가 낮 동안 쌓인 스트레스를 물처럼 씻어내는 과정이에요. 맑은 물꿈은 이 정화 작업이 잘 이루어지고 있다는 신호예요.\n\n👉 깨고 나서 마음이 가벼웠나요? 그럼 감정이 잘 정화된 거예요!',
+    c13:'🛰️ 물의 수(水) 에너지가 NASA 데이터와 공명해요!\n\n수(水) 오행은 지혜·직관·귀인운을 담당해요. 지금 우주의 지자기(Kp) 지수가 낮고 조용하다면, 수(水) 에너지가 최고조로 맑게 흐르고 있는 거예요.\n\n✔ 태을신수(s13): Kp 지자기 낮음 = 수(水) 에너지 선명\n✔ 육임신살(s07): 귀인 시간대 활성\n✔ 수비학(s08): 지혜와 통찰의 에너지 상승\n\n🎯 오늘 행동 포인트: 오늘은 직관을 믿으세요! 물처럼 유연하게 흐르되, 중요한 결정은 느낌이 맑을 때 내리세요.'},
+
+  불: {oh:'화',luck:6,
+    trad:'🔥 불꿈은 열정과 에너지의 신호예요!\n\n불은 상황에 따라 의미가 달라요. 활활 타는 불은 에너지 충전, 집이 타는 불은 조심이 필요한 신호예요.\n\n✔ 모닥불, 따뜻한 불꿈 → 열정·희망·새로운 시작의 에너지\n✔ 촛불꿈 → 섬세한 능력과 통찰력이 빛나는 시기\n✔ 집이 타는 꿈 → 큰 변화·이사·직업 변동 예고 (반드시 나쁜 건 아니에요)\n✔ 불을 끄는 꿈 → 문제를 해결하는 능력이 있어요\n✔ 불 속에서 안 타는 꿈 → 어떤 어려움도 이겨낼 수 있는 강한 힘!\n\n👉 꿈속에서 불이 무섭지 않았다면 좋은 변화의 전조예요!',
+    sci:'🧬 불꿈은 "억눌린 에너지 폭발 직전" 신호예요!\n\n심리학에서 불은 "억압된 욕구와 에너지"를 상징해요. 불꿈을 꿨다는 것은 평소에 참고 억눌러왔던 감정이나 욕구가 이제 표출될 준비가 됐다는 뜻이에요.\n\n뇌과학적으로는 교감신경계(흥분·활동 담당)가 활성화된 상태예요. 실제로 불꿈을 꾼 다음 날은 에너지가 넘치고 활동적인 경우가 많아요. 이 에너지를 긍정적인 방향으로 써보세요!\n\n👉 오늘은 에너지가 넘칠 거예요. 운동이나 창의적 활동에 써보세요!',
+    c13:'🛰️ 화성(火星) 에너지가 불꿈과 딱 맞아떨어져요!\n\n불은 화(火) 오행이에요. 지금 하늘에서 화성(Mars)이 어떤 상태인지에 따라 불꿈의 의미가 달라져요.\n\n✔ 화성 순행 중 → 불꿈의 열정 에너지가 현실로 연결돼요. 적극적으로 도전!\n✔ 화성 역행 중 → 에너지를 내부로 집중해서 기획·준비에 써요\n✔ 행성 트랜짓(s06): 지금 행동력 에너지 상승 중\n✔ 기문둔갑(s05): 남쪽 방위 에너지 활성\n\n🎯 오늘 행동 포인트: 오랫동안 미뤄왔던 도전을 오늘 시작해보세요. 불꿈의 에너지가 당신 뒤에서 밀어주고 있어요!'},
+
+  하늘: {oh:'금',luck:8,
+    trad:'☁️ 하늘을 나는 꿈은 자유와 성공의 상징이에요!\n\n하늘을 나는 꿈은 세계 어디서나 긍정적인 신호로 해석해요.\n\n✔ 높이높이 날아오르는 꿈 → 현재 하고 있는 일이 크게 성공해요\n✔ 자유롭게 날아다니는 꿈 → 억눌렸던 것에서 해방되는 시기\n✔ 새처럼 나는 꿈 → 승진·합격·도약의 기회가 와요\n✔ 구름 위로 올라가는 꿈 → 목표가 이루어지는 것을 예고해요\n✔ 날다가 떨어지는 꿈 → 너무 무리하지 말라는 경고예요\n\n👉 지금 목표가 있다면 포기하지 마세요. 날아오를 준비가 됐어요!',
+    sci:'🧬 하늘 나는 꿈은 "해방 욕구"의 표현이에요!\n\n심리학에서 하늘 나는 꿈은 가장 흔하면서도 가장 긍정적인 꿈이에요. 이 꿈은 현실에서 느끼는 제약이나 압박감에서 벗어나고 싶은 무의식적 욕구를 나타내요.\n\n뇌과학적으로는 렘수면 중에 신체의 움직임을 담당하는 운동피질이 활성화되는데, 실제 몸은 못 움직이니까 "날아다니는" 감각으로 나타나는 거예요. 이 상태는 창의력과 문제 해결 능력이 최고조인 상태예요!\n\n👉 오늘은 창의적인 아이디어가 샘솟을 거예요. 꼭 기록해두세요!',
+    c13:'🛰️ 금(金) 에너지가 하늘 높이 날아올라요!\n\n하늘을 나는 꿈은 금(金) 오행의 "상승·명예·도약" 에너지예요. 지금 사주 분석에서 어떤 에너지가 강한지 확인해볼게요.\n\n✔ 하우스 시스템(s12): 10하우스(커리어·명예) 에너지 강하게 활성\n✔ 태양궁 점성(s03): 상승하는 별자리 에너지 확인\n✔ 구성기학(s19): 육백금성 방위 에너지 도움\n\n🎯 오늘 행동 포인트: 커리어와 관련된 중요한 연락·미팅·제안을 오늘 적극적으로 받아보세요. 하늘이 기회를 열어주고 있어요!'},
+
+  이빨: {oh:'금',luck:3,
+    trad:'🦷 이 빠지는 꿈, 너무 걱정하지 마세요!\n\n이 빠지는 꿈은 흉몽으로 알려져 있지만, 정확히 이해하면 충분히 대비할 수 있어요.\n\n✔ 이가 저절로 빠지는 꿈 → 주변 가족이나 가까운 사람 건강 체크 필요\n✔ 이가 부러지는 꿈 → 중요한 약속이나 계획에 차질이 생길 수 있어요\n✔ 이를 뽑는 꿈 → 오히려 문제가 해결되는 신호일 수도 있어요\n✔ 새 이가 나는 꿈 → 새로운 시작·건강 회복의 좋은 신호!\n\n👉 가족 건강을 한번 살펴보고, 중요한 약속은 두 번 확인하세요!',
+    sci:'🧬 이 빠지는 꿈은 "스트레스 과부하" 경보예요!\n\n전 세계 사람들이 가장 많이 꾸는 꿈 중 하나가 이 빠지는 꿈이에요. 심리학 연구에 따르면 이 꿈은 "현재 삶에서 무언가를 통제하지 못한다는 느낌"과 관련이 깊어요.\n\n뇌과학적으로는 수면 중 이를 갈거나 턱에 힘이 들어가는 신체적 자극이 "이 빠지는" 꿈으로 변환되기도 해요. 또한 극도의 피로나 스트레스 상태에서 자주 나타나요.\n\n👉 지금 무리하고 있지 않나요? 오늘은 충분히 쉬어주세요!',
+    c13:'🛰️ 금(金) 에너지 균형을 맞춰드릴게요!\n\n이와 뼈는 금(金) 오행이에요. 이 빠지는 꿈은 금(金) 에너지가 일시적으로 약해진 신호일 수 있어요.\n\n✔ 풍수지리(s09): 현재 생활 공간의 금(金) 에너지 재정렬 필요\n✔ 구성기학(s19): 방위 에너지 보완 — 서쪽 방위 강화 권장\n✔ 성명학(s11): 이름 에너지 점검\n\n🎯 오늘 행동 포인트: ① 가족 안부 연락 한 번 ② 중요한 계약·약속 재확인 ③ 충분한 수면. 이 세 가지만 실천해도 꿈의 부정 에너지를 해소할 수 있어요!'},
+
+  죽음: {oh:'수',luck:5,
+    trad:'💀 죽는 꿈, 사실 나쁜 꿈이 아니에요!\n\n역설적이지만 동양에서 본인이 죽는 꿈은 오히려 대길몽으로 봐요!\n\n✔ 내가 죽는 꿈 → 새로운 나로 다시 태어나는 신호! 큰 변화의 시작\n✔ 죽었다가 살아나는 꿈 → 재기·역전·기적의 예고!\n✔ 가까운 사람이 죽는 꿈 → 그 사람의 건강이나 상황이 오히려 좋아질 수 있어요\n✔ 장례식 꿈 → 오래된 문제가 마무리되고 새 출발을 해요\n\n👉 무서운 꿈이었더라도 새로운 시작의 에너지를 받은 것이에요!',
+    sci:'🧬 죽음 꿈은 "자아 변환"의 가장 강력한 신호예요!\n\n심리학자 칼 융은 꿈속의 죽음을 "개성화 과정(Individuation)"이라고 했어요. 쉽게 말해 "낡은 나"가 사라지고 "새로운 나"로 성장하는 과정이에요.\n\n나비가 번데기에서 나오려면 그 안에서 완전히 녹아야 해요. 죽음 꿈은 바로 그 "번데기 속 녹아내림" 과정이에요. 뇌가 기존의 사고방식과 습관을 해체하고 새로운 회로를 만들고 있는 거예요.\n\n👉 지금 힘든 시기를 보내고 있다면, 곧 새로운 국면이 열려요!',
+    c13:'🛰️ 수(水) 재생 에너지가 새로운 사이클을 열어요!\n\n죽음과 재생은 수(水) 오행의 핵심 에너지예요. 주역 64괘에서 복괘(復卦)는 "되돌아옴·재생·새 시작"을 뜻해요.\n\n✔ 주역(s15): 복괘 에너지 — 원점에서 새롭게 시작하는 최적기\n✔ 태을신수(s13): 72년 주기 전환점 — 새로운 에너지 사이클 시작\n✔ 합성차트(s14): 새로운 인연의 에너지 태동\n\n🎯 오늘 행동 포인트: 오래된 것을 정리하고 새로운 것을 시작하세요. 버리기 어려웠던 습관·관계·물건을 오늘 정리하면 새로운 에너지가 들어와요!'},
+
+  쫓김: {oh:'토',luck:3,
+    trad:'😰 쫓기는 꿈, 어떤 스트레스가 있나요?\n\n쫓기는 꿈은 현실의 부담감을 그대로 반영해요. 무엇이(누가) 쫓는지가 중요해요.\n\n✔ 사람에게 쫓기는 꿈 → 현실에서 갈등이나 경쟁이 있어요\n✔ 동물에게 쫓기는 꿈 → 두려운 상황을 피하려는 심리\n✔ 모르는 존재에게 쫓기는 꿈 → 막연한 불안감의 표출\n✔ 쫓기다가 도망친 꿈 → 문제를 피하는 방법을 찾고 있어요\n✔ 쫓기다가 맞서는 꿈 → 오히려 좋은 신호! 문제를 극복할 준비가 됐어요\n\n👉 지금 어떤 것이 부담스러운지 솔직하게 들여다보세요!',
+    sci:'🧬 쫓기는 꿈은 뇌의 "위협 대응 시뮬레이션"이에요!\n\n쫓기는 꿈은 전 세계에서 가장 흔한 꿈 중 하나예요. 뇌의 편도체(공포 반응 센터)가 과활성화될 때 나타나요.\n\n진화적으로 우리 조상들은 맹수에게 쫓기는 상황을 자주 겪었어요. 뇌는 이런 위험 상황을 꿈으로 연습해서 실제 상황에 대비해요. 현대인의 "맹수"는 직장 상사, 시험, 마감일, 인간관계 갈등이에요.\n\n👉 현실에서 피하고 있는 문제를 직면해보세요. 꿈에서 도망칠 필요가 없어질 거예요!',
+    c13:'🛰️ 토(土) 불안 에너지를 해소해드릴게요!\n\n쫓기는 꿈은 토(土) 오행의 불안 에너지가 쌓인 신호예요. 지금 역학 점수를 보면 어디서 에너지가 막혀있는지 알 수 있어요.\n\n✔ 육임신살(s07): 흉살 활성 여부 체크 — 중요 결정 30일 보류 권장\n✔ 풍수지리(s09): 생활 공간 에너지 순환 점검\n✔ 기문둔갑(s05): 이동 방위 에너지 — 동쪽·북쪽으로 잠시 나들이\n\n🎯 오늘 행동 포인트: ① 오늘은 새로운 결정을 미루세요 ② 가벼운 산책으로 기(氣) 순환 ③ 지금 가장 스트레스받는 것을 종이에 적고 태우거나 찢어보세요. 감정이 정화돼요!'},
+
+  시험: {oh:'금',luck:4,
+    trad:'📝 시험 꿈, 아직도 시험이 두렵다는 신호예요!\n\n시험 꿈은 어른이 되어서도 자주 꾸는 꿈이에요. 학교 다닐 때 긴장했던 기억이 남아있기 때문이에요.\n\n✔ 시험 준비가 안 된 꿈 → 현실에서 어떤 준비나 대비가 필요한 일이 있어요\n✔ 시험에 합격하는 꿈 → 실제로 좋은 결과가 나올 수 있어요!\n✔ 시험 문제를 다 푸는 꿈 → 현재 문제를 해결할 능력이 충분해요\n✔ 같은 시험 꿈이 반복된다면 → 아직 해결 못 한 중요한 과제가 있어요\n\n👉 지금 준비해야 할 것이 있다면 미루지 말고 시작하세요!',
+    sci:'🧬 시험 꿈은 뇌의 "수행 불안 리허설"이에요!\n\n시험 꿈은 실제로 시험을 보지 않는 어른들도 자주 꿔요. 하버드 의대 연구에 따르면 이 꿈은 "아직 해결되지 않은 과제나 도전"과 관련된 뇌의 리허설이에요.\n\nNEXTUP 이론에서는 뇌가 꿈을 통해 "만약 이런 상황이 생기면 어떻게 할까?"를 미리 연습한다고 해요. 즉, 시험 꿈은 뇌가 당신을 돕기 위해 미리 연습하는 거예요!\n\n👉 꿈이 알려준 "약한 부분"을 실제로 보완해보세요!',
+    c13:'🛰️ 금(金) 판단 에너지로 준비 상태를 분석해요!\n\n시험과 판단은 금(金) 오행이에요. 지금 어떤 "시험(도전·평가)"이 앞에 있는지 역학으로 봐드릴게요.\n\n✔ 수비학(s08): 생명수 에너지와 중요 날짜 맞추기\n✔ 성명학(s11): 이름 에너지 활성화 — 이름을 또렷이 쓰는 것만으로도 자신감 UP\n✔ 사주명리(s01): 현재 운의 흐름 — 준비하기 좋은 시기인지 확인\n\n🎯 오늘 행동 포인트: 가장 중요한 준비 사항 딱 한 가지만 오늘 완성해보세요. 작은 완성 하나가 자신감을 키우고, 시험 꿈에서 벗어나게 해줘요!'},
+
+  돈: {oh:'토',luck:8,
+    trad:'💰 돈꿈은 생각과 반대인 경우가 많아요!\n\n동양 해몽에서 돈 꿈은 액수와 상황에 따라 의미가 달라요.\n\n✔ 돈을 줍는 꿈 → 예상치 못한 수입이 들어와요 (최고!)\n✔ 돈을 잃거나 도둑맞는 꿈 → 역설적으로 재물이 들어오는 신호!\n✔ 돈을 세는 꿈 → 현재 재정 상황을 정리할 시기\n✔ 다른 사람에게 돈을 주는 꿈 → 나에게 더 큰 재물이 돌아와요\n✔ 황금·금덩이 꿈 → 대박 재물운의 신호!\n\n👉 돈 꿈 꿨다면 오늘 재정 관련 행동을 적극적으로 해보세요!',
+    sci:'🧬 돈꿈은 "물질적 안정 욕구"가 활성화된 신호예요!\n\n매슬로우 욕구 5단계에서 2번째인 "안전 욕구(재정·주거 안정)"가 꿈으로 나타나는 거예요. 현재 재정에 대한 걱정이나 더 나아지고 싶은 욕구가 무의식에서 신호를 보내는 것이에요.\n\n실제로 돈 꿈을 꾼 다음 날은 재정에 대한 동기가 높아지고, 더 적극적으로 기회를 찾는 경향이 있어요. 뇌가 이미 재물 레이더를 켜놓은 상태예요!\n\n👉 오늘 재정 관련 기회를 놓치지 마세요. 뇌가 이미 준비됐어요!',
+    c13:'🛰️ 토(土) 재물 에너지가 최고조예요!\n\n돈은 토(土) 오행의 핵심 에너지예요. 지금 역학 분석에서 재물과 관련된 어떤 에너지가 흐르는지 확인해볼게요.\n\n✔ 사주명리(s01): 재성(財星) 활성 여부 — 재물 들어오는 타이밍\n✔ 자미두수(s02): 재백궁 에너지 — 어떤 방식으로 돈이 들어오는지\n✔ 행성 트랜짓(s06): 목성 순행 시 재물운 극대화\n✔ 기문둔갑(s05): 길방 방위 — 재물 에너지 강한 방향\n\n🎯 오늘 행동 포인트: ① 지갑을 정리하고 ② 수입을 늘릴 수 있는 아이디어를 메모하고 ③ 미루던 금전 관련 결정을 오늘 내리세요!'},
+
+  산: {oh:'토',luck:7,
+    trad:'⛰️ 산꿈은 목표와 도전을 이야기해요!\n\n산의 상태와 내가 어디 있느냐에 따라 의미가 달라요.\n\n✔ 높은 산을 오르는 꿈 → 지금 하는 일이 반드시 성공해요!\n✔ 산 정상에 서는 꿈 → 목표 달성·최고의 자리 예고!\n✔ 험한 산을 힘들게 오르는 꿈 → 과정은 힘들지만 결국 성공해요\n✔ 산에서 내려오는 꿈 → 한 단계 마무리하고 새 도전을 준비해요\n✔ 아름다운 산 풍경 꿈 → 평화와 안정, 건강 회복의 신호!\n\n👉 지금 목표가 있다면 포기하지 마세요. 정상은 반드시 있어요!',
+    sci:'🧬 산꿈은 "성취 동기"가 활활 타오르는 신호예요!\n\n심리학에서 산은 "도전과 목표"를 상징해요. 산을 오르는 꿈은 성취 욕구(Achievement Motivation)가 활성화된 것이에요.\n\n뇌과학적으로는 전두엽(목표 설정·계획 담당)이 잠을 자는 동안에도 활발하게 활동하고 있는 것이에요. 즉, 자는 동안에도 뇌가 "어떻게 목표를 달성할까?"를 고민하고 있어요.\n\n👉 오늘 아침에 목표를 다시 한번 적어보세요. 뇌가 도와줄 준비가 됐어요!',
+    c13:'🛰️ 토(土) 안정 에너지가 든든하게 받쳐줘요!\n\n산은 토(土) 오행 중에서도 가장 안정적인 에너지예요. 지금 CGO-FULI 분석에서 어떤 에너지가 받쳐주고 있는지 볼게요.\n\n✔ 풍수지리(s09): 산 에너지 — 든든한 배산임수(背山臨水) 기운\n✔ 구성기학(s19): 팔백토성 에너지 — 안정·전환·새 출발의 에너지\n✔ 자미두수(s02): 재백궁 에너지 — 노력이 결실로 이어지는 시기\n\n🎯 오늘 행동 포인트: 지금 가장 중요한 목표 하나를 골라서 오늘 한 걸음만 내딛어보세요. 산 정상도 첫걸음에서 시작해요!'},
+
+  바다: {oh:'수',luck:7,
+    trad:'🌊 바다꿈은 무한한 가능성의 상징이에요!\n\n바다의 상태가 꿈의 의미를 결정해요.\n\n✔ 맑고 잔잔한 바다 → 평화·기회·새로운 시작의 길몽!\n✔ 파도가 치는 바다 → 변화와 도전이 오지만 충분히 이겨낼 수 있어요\n✔ 바다에서 수영하는 꿈 → 어떤 상황도 헤쳐나가는 능력이 있어요\n✔ 바다에 빠지는 꿈 → 감정이 과부하 상태. 잠시 쉬어가세요\n✔ 보물을 발견하는 꿈 → 숨겨진 재능이나 기회가 드러나요!\n\n👉 바다처럼 넓은 마음으로 새로운 기회를 받아들이세요!',
+    sci:'🧬 바다꿈은 "집단 무의식"과 연결되는 순간이에요!\n\n칼 융은 바다를 "집단 무의식(Collective Unconscious)"의 상징이라고 했어요. 인류 수천 년의 지혜와 경험이 쌓인 무의식의 깊은 바다에 접근하는 순간이에요.\n\n뇌과학적으로는 깊은 렘수면 상태에서 뇌의 디폴트 모드 네트워크(Default Mode Network)가 활성화되는데, 이 상태에서 창의적인 아이디어와 통찰이 샘솟아요.\n\n👉 오늘은 직관이 강해요. 떠오르는 아이디어를 모두 메모해두세요!',
+    c13:'🛰️ 수(水) 확장 에너지가 우주와 공명해요!\n\n바다는 수(水) 오행의 가장 강력한 형태예요. 달(Moon)의 인력이 바다의 조수를 만들듯, NASA의 달 위상 데이터가 바다꿈의 에너지와 직접 연결돼요.\n\n✔ 타로×달(s16): 달 위상 에너지 — 보름달에 가까울수록 바다꿈의 직관력 강화\n✔ 태을신수(s13): Kp 지자기 — 우주가 조용할수록 바다꿈의 예지력 UP\n✔ 카발라(s10): 수(水) 생명나무 에너지 — 깊은 내면의 지혜 활성\n\n🎯 오늘 행동 포인트: 창의적인 프로젝트나 아이디어 발상에 집중하세요. 바다처럼 넓은 가능성이 열려있는 날이에요!'},
+
+  아기: {oh:'목',luck:9,
+    trad:'👶 아기꿈은 최고의 길몽이에요!\n\n아기꿈은 동서양을 막론하고 새로운 시작과 생명력의 상징이에요.\n\n✔ 귀여운 아기를 안는 꿈 → 새로운 기회·프로젝트·관계가 시작돼요!\n✔ 아기가 태어나는 꿈 → 오랫동안 준비해온 일이 빛을 봐요\n✔ 아기가 웃는 꿈 → 기쁜 소식이 와요. 행운이 함께해요!\n✔ 아기에게 젖을 먹이는 꿈 → 사랑과 돌봄의 에너지. 좋은 인간관계!\n✔ 쌍둥이 아기 꿈 → 두 배의 행운과 기회!\n\n👉 지금 새로운 것을 시작할 최고의 타이밍이에요!',
+    sci:'🧬 아기꿈은 "창조 본능"이 깨어나는 신호예요!\n\n심리학에서 아기는 "순수한 잠재력"과 "새로운 자아"를 상징해요. 아기꿈은 내 안에 새로운 능력이나 아이디어가 탄생하려는 신호예요.\n\n뇌과학적으로는 창의성과 학습을 담당하는 뇌의 가소성(Neuroplasticity)이 활성화된 상태예요. 마치 아기의 뇌처럼 새로운 것을 빠르게 배우고 창의적으로 생각할 수 있는 최고의 상태예요.\n\n👉 지금 새로운 것을 배우거나 시작하면 빠르게 성장해요!',
+    c13:'🛰️ 목(木) 생명 에너지가 폭발해요!\n\n아기는 목(木) 오행의 "새 생명·성장·창의" 에너지예요. 사주명리에서 식신(食神)과 상관(傷官)이 활성화된 시기에 아기꿈을 많이 꿔요.\n\n✔ 사주명리(s01): 식신·상관 에너지 — 창의적 재능이 빛을 발하는 시기\n✔ 자미두수(s02): 자녀궁 에너지 활성 — 새로운 프로젝트·아이디어\n✔ 주역(s15): 둔괘(屯卦) — 새 생명의 탄생, 어렵지만 반드시 성공하는 시작\n\n🎯 오늘 행동 포인트: 오랫동안 마음속에 품어왔던 아이디어나 계획을 오늘 실제로 시작해보세요. 아기꿈은 그 시작이 반드시 잘 될 것이라는 우주의 허락이에요!'},
+
+  집: {oh:'토',luck:6,
+    trad:'🏠 집꿈은 나 자신과 삶의 기반을 보여줘요!\n\n집의 상태가 내 현재 상황을 그대로 반영해요.\n\n✔ 새 집으로 이사하는 꿈 → 새로운 시작·환경 변화·발전의 신호!\n✔ 크고 좋은 집 꿈 → 재물·명예 상승의 길몽\n✔ 집이 넓어지는 꿈 → 사업·일·가정이 번창해요\n✔ 낡고 무너진 집 꿈 → 현재 기반을 점검하고 보완할 시기\n✔ 집을 청소하는 꿈 → 복이 들어오는 신호! (실제로도 청소 추천)\n\n👉 집 꿈을 꿨다면 실제 집을 한번 청소해보세요. 기운이 달라져요!',
+    sci:'🧬 집꿈은 "자아의 현재 상태"를 보여주는 거울이에요!\n\n심리학에서 꿈속의 집은 "자아(Self)"를 상징해요. 집의 각 공간은 자아의 다른 측면을 나타내요: 거실은 사회적 자아, 침실은 내밀한 자아, 지하실은 무의식이에요.\n\n집이 넓고 밝은 꿈은 자아가 건강하고 확장되고 있다는 신호예요. 반대로 집이 좁고 어두운 꿈은 스스로를 제한하고 있다는 신호예요. 꿈속 집을 어떻게 느꼈나요?\n\n👉 꿈속 집을 돌아보면 지금 내 마음의 상태가 보여요!',
+    c13:'🛰️ 토(土) 안정 에너지로 생활 기반을 점검해요!\n\n집은 토(土) 오행의 "안정·기반·뿌리" 에너지예요. 풍수지리에서 집은 에너지가 모이고 머무는 가장 중요한 공간이에요.\n\n✔ 풍수지리(s09): 주거 에너지 점검 — 현관을 청소하면 기운이 활성화\n✔ 하우스 시스템(s12): 4하우스(가정·뿌리) 에너지 활성\n✔ 구성기학(s19): 방위별 에너지 — 안방 방향에 따른 운세 변화\n\n🎯 오늘 행동 포인트: ① 집 현관을 깨끗이 청소하고 ② 창문을 열어 신선한 공기를 순환시키고 ③ 가족과 따뜻한 대화 한 번. 이 세 가지가 집 에너지를 최고로 만들어요!'}
+};
+
+var _c13TimeData = {
+  자시:{desc:'자정(23~01시) — 수(水) 에너지 최고. 직관적 꿈이 가장 정확한 시간대.', oh:'수'},
+  축시:{desc:'새벽(01~03시) — 토(土) 에너지. 현실적 고민이 꿈으로 표출.', oh:'토'},
+  인시:{desc:'새벽(03~05시) — 목(木) 에너지. 창의적 해결책이 꿈에 나타나는 시간.', oh:'목'},
+  묘시:{desc:'새벽(05~07시) — 목(木) 에너지. 렘수면 마지막 단계. 가장 생생한 꿈.', oh:'목'},
+  진시:{desc:'아침(07~09시) — 토(土) 에너지. 현실과의 경계가 가장 얇은 시간.', oh:'토'},
+  사시:{desc:'오전(09~11시) — 화(火) 에너지. 낮잠 꿈. 강렬한 감정 처리.', oh:'화'}
+};
+
+function goC13(){
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var pg=document.getElementById('page-c13');
+  if(pg) pg.classList.add('active');
+  var tx=document.getElementById('pageTitleText');
+  if(tx){tx.style.display='block';tx.textContent='🌙 C-13 꿈 해몽';}
+  var nb=document.getElementById('nasaMiniBar');
+  if(nb) nb.style.display='none';
+  // 시진 자동 설정 (내부적으로만)
+  var h=new Date().getHours();
+  _c13Time=h>=23||h<1?'자시':h<3?'축시':h<5?'인시':h<7?'묘시':h<9?'진시':'사시';
 }
 
-function _cplMarryText(ohA,ohB,nA,nB,sc){
-  if(sc>=85) return nA+'님과 '+nB+'님의 사주 배합은 매우 안정적입니다. 자미두수 명반 분석에서 두 분의 관성(官星)과 재성(財星)이 조화롭게 배치되어 있습니다. 결혼 후 경제적 안정과 가정의 화목을 함께 이룰 수 있습니다. NASA 금성 위치가 현재 두 분의 인연을 강하게 지지하고 있습니다.';
-  if(sc>=70) return nA+'님과 '+nB+'님은 서로 다른 생활 리듬을 가지고 있습니다. 결혼 전 충분한 동거 생활이나 여행을 통해 서로의 습관을 이해하는 시간이 필요합니다. 사주명리상 두 분의 일주(日柱) 조합은 초반 2~3년의 적응 기간이 중요합니다. 이 시기를 잘 넘기면 매우 안정적인 부부가 됩니다.';
-  return nA+'님과 '+nB+'님의 결혼운은 노력이 필요한 조합입니다. 자미두수에서 두 분의 명궁(命宮)이 서로 다른 방향을 향하고 있습니다. 그러나 이는 극복 불가능한 것이 아닙니다 — 서로의 가치관(돈, 자녀, 생활방식)에 대해 결혼 전 깊은 대화를 나누세요. 준비된 결혼일수록 행복합니다.';
+function c13ClosePopup(){
+  var p=document.getElementById('c13Popup');
+  if(p) p.style.display='none';
+  document.body.style.overflow='';
+  // 버튼 복원
+  var btn=document.getElementById('c13BtnTxt');
+  if(btn) btn.textContent='🌙 똑딱! 해몽 시작';
+  var b=document.getElementById('c13Btn');
+  if(b) b.disabled=false;
 }
 
-function _cplChildText(ohA,ohB,nA,nB,sc){
-  if(sc>=85) return '주역 64괘 분석에서 두 분의 조합은 자식 인연이 매우 강한 괘가 나왔습니다. NASA 목성(성장·자녀의 행성)이 현재 두 분의 합산 천궁도에 길한 위치에 있습니다. 자녀는 두 분의 오행('+ohA+'+'+ohB+')의 장점을 모두 물려받아 뛰어난 재능을 보일 것입니다.';
-  if(sc>=65) return '두 분의 자식 인연은 보통 수준입니다. 주역 분석상 자녀와의 인연이 있으나 건강 관리가 중요합니다. CGO-FULI 생체 스캔(rPPG·체온)을 완료하면 더 정확한 분석이 가능합니다. 규칙적인 생활과 건강한 식습관이 자식운을 높이는 핵심입니다.';
-  return '현재 자식운이 다소 낮게 나왔습니다. 그러나 CGO-FULI는 이것이 영구적인 것이 아님을 강조합니다. 두 분 모두 생체 에너지 스캔을 완료하고, 스트레스 관리와 건강 개선에 집중하세요. 자연의 리듬에 맞춰 생활하면 자식 인연이 열립니다.';
-}
+function c13Analyze(){
+  var inp = document.getElementById('c13DreamInput');
+  var text = (inp&&inp.value||'').trim();
+  if(!text){ alert('꿈 내용을 입력해 주세요!'); return; }
 
-function _cplTotalText(ohA,ohB,nA,nB,sc,compat,marry,child){
-  var strong=[], weak=[];
-  if(compat>=75) strong.push('상호보완성'); else weak.push('상호보완성('+compat+'%)');
-  if(marry>=75) strong.push('결혼운'); else weak.push('결혼운('+marry+'%)');
-  if(child>=75) strong.push('자식운'); else weak.push('자식운('+child+'%)');
-  var txt = '50대 역학 중 엔진의 종합 분석 결과, '+nA+'('+ohA+') x '+nB+'('+ohB+')의 우주적 공명은 '+sc+'점입니다.\n\n';
-  if(strong.length>0) txt += '✅ 강점: '+strong.join(', ')+'이 두 분의 인연을 지지합니다.\n';
-  if(weak.length>0)   txt += '⚡ 보완 필요: '+weak.join(', ')+'에 집중하면 궁합이 올라갑니다.\n\n';
-  if(sc>=80) txt += 'CGO-FULI 종합 판정: NASA 실시간 데이터와 4,500년 역학이 모두 두 분의 강한 인연을 증명합니다. 이 만남을 소중히 여기세요.';
-  else if(sc>=70) txt += 'CGO-FULI 종합 판정: 충분한 가능성을 가진 인연입니다. rPPG 생체 스캔을 완료하면 점수가 더 정확해집니다. 서로를 알아가는 시간에 투자하세요.';
-  else txt += 'CGO-FULI 종합 판정: 두 분의 다름이 오히려 성장의 동력입니다. 서로의 오행을 이해하고 NASA 에너지 주기에 맞춰 함께하는 시간을 늘리세요.';
-  return txt;
-}
+  var pop=document.getElementById('c13Popup'), loading=document.getElementById('c13Loading'), cards=document.getElementById('c13Cards');
+  if(!pop) return;
+  pop.style.display='block'; pop.scrollTop=0; document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden';
+  if(loading) loading.style.display='block';
+  if(cards)   cards.style.display='none';
+  var btn=document.getElementById('c13Btn'), btnTxt=document.getElementById('c13BtnTxt');
+  if(btn) btn.disabled=true;
+  if(btnTxt) btnTxt.textContent='⏳ 분석 중...';
+  var dEl=document.getElementById('c13PopupDream');
+  if(dEl) dEl.textContent='"'+text.substring(0,30)+(text.length>30?'...':'')+'"';
 
-function cplAutoFill(){
-  var r = window.calcResult;
-  if(!r||!r.y) return;
-  var nameEl=document.getElementById('cpl-a-name');
-  var yEl=document.getElementById('cpl-a-y');
-  var mEl=document.getElementById('cpl-a-m');
-  var dEl=document.getElementById('cpl-a-d');
-  var tEl=document.getElementById('cpl-a-time');
-  var birthEl=document.getElementById('cpl-a-birth');
-  var jobEl=document.getElementById('cpl-a-job');
-  var faceEl=document.getElementById('cpl-a-face');
-  var palmEl=document.getElementById('cpl-a-palm');
+  var steps=[{t:300,p:15,msg:'🔮 전통 역학 해석 중...'},{t:800,p:30,msg:'🧠 뇌과학·심리학 분석 중...'},{t:1400,p:50,msg:'🛰️ NASA 행성 에너지 교차 중...'},{t:2000,p:70,msg:'👑 C-13 통합 해몽 도출 중...'},{t:2600,p:88,msg:'✨ AI 해몽 완성 중...'}];
+  steps.forEach(function(s){ setTimeout(function(){
+    var bar=document.getElementById('c13Bar'), msg=document.getElementById('c13LoadMsg');
+    if(bar) bar.style.width=s.p+'%'; if(msg) msg.textContent=s.msg;
+  },s.t); });
 
-  // ✅ 이름 — 대시보드 자동 연동 (항상)
-  if(nameEl&&r.name&&r.name!=='사용자') nameEl.value=r.name;
-  // ✅ 생년월일 항상 연동
-  if(yEl) yEl.value=r.y;
-  if(mEl) mEl.value=r.m;
-  if(dEl) dEl.value=r.d;
-  // 시간 → 지지 시간 값으로 변환
-  if(tEl&&r.h!==undefined&&r.h>=0){
-    var hVal = String(Math.floor(r.h/2)*2);
-    tEl.value=hVal;
-  }
-  // ✅ 출생지 — 대시보드 자동 연동 (항상)
-  if(birthEl&&r.birthPlace) birthEl.value=r.birthPlace;
+  var r=window.calcResult||{}, np=window._nasaPlanets||{}, env=window._cgoEnvData||{};
+  var kp=(env.kp&&env.kp.value!=null)?env.kp.value:-1;
+  var ili=r.ili||70, oh=r.domOh||'목', nm=r.name||'사용자';
+  var wz=(r.wz&&r.wz.name)||'양자리', ln=r.lifeNum||5, gan=(r.dGJ&&r.dGJ.gan)||'甲';
+  var jupOk=!!(np.jupiter&&!np.jupiter.retro), marsRetro=!!(np.mars&&np.mars.retro);
+  var h=new Date().getHours();
+  var siJin=h>=23||h<1?'자시(23~01시)':h<3?'축시(01~03시)':h<5?'인시(03~05시)':h<7?'묘시(05~07시)':h<9?'진시(07~09시)':h<11?'사시(09~11시)':h<13?'오시(11~13시)':h<15?'미시(13~15시)':h<17?'신시(15~17시)':h<19?'유시(17~19시)':h<21?'술시(19~21시)':'해시(21~23시)';
 
-  // ✅ 직업 — 직접 입력 (자동 연동 안 함)
+  var sysPrompt='당신은 CGO-FULI C-13 똑딱이 꿈 해몽 AI입니다. 특허 10-2026-0060113. 세계 최고 해몽 시스템.\n규칙:①초등생도 이해하는 친근한 말투(어려운 말 금지) ②카드당 반드시 400자 이상 ③이모지 풍부하게 ④구체적 행동 포인트 3가지 이상 ⑤\\n줄바꿈 사용 ⑥JSON만 반환(설명 없이)\ncard1(순수해몽):전통·민간·동양역학 기반. 길흉판단+꿈 상징 상세설명+구체적 의미+오늘 할 일\ncard2(과학해몽):프로이트 무의식+융 집단무의식+뇌과학 렘수면+현실 심리 분석+실생활 적용법\ncard3(C-13해몽):사용자 오행·일간·ILI점수·NASA행성상태·시진 모두 활용한 맞춤 역학 분석+오행별 구체적 행동 포인트+오늘의 운세 방향\n형식:{"luck":1~9,"luckText":"大吉★★★★★","oh":"목/화/토/금/수","card1":"내용","card2":"내용","card3":"내용"}';
 
-  // ✅ 관상 FCI% 연동
-  var _bfd=window._bioFinalData||{};
-  var _bsd=window._bioSkinData||{};
-  var _bs=window.BS||{};
-  if(faceEl){  // 관상 항상 연동
-    var fciVal=_bfd.fci||_bs.fci||0;
-    var gwanStr=(_bsd.face&&_bsd.face.gwan)||'';
-    if(fciVal>0) faceEl.value=(gwanStr?gwanStr+' ':'')+'FCI '+fciVal+'%';
-    else if(gwanStr) faceEl.value=gwanStr;
-  }
-  // ✅ 손금 BLI% 연동
-  if(palmEl){  // 손금 항상 연동
-    var bliVal=_bfd.bli||(_bs.palmData&&_bs.palmData.bliScore)||0;
-    var lineStr=(_bsd.palm&&_bsd.palm.line)||'';
-    if(bliVal>0) palmEl.value=(lineStr?lineStr+' ':'')+'BLI '+Math.round(bliVal)+'%';
-    else if(lineStr) palmEl.value=lineStr;
-  }
-  // ✅ 성별 자동 설정 (M/F → 남/여)
-  var _gVal = r.gender==='M'?'남':r.gender==='F'?'여':(r.gender||'');
-  if(_gVal==='남'||_gVal==='여') cplSetGender('a',_gVal);
-}
+  var userPrompt='꿈: "'+text+'" | '+nm+' | 오행:'+oh+' | 일간:'+gan+' | 별자리:'+wz+' | 생명수:'+ln+' | ILI:'+ili+'점 | 시진:'+siJin+' | 목성:'+(jupOk?'순행★':'역행')+(marsRetro?' 화성역행⚠️':'')+' | Kp:'+(kp>=0?kp.toFixed(1):'?')+' | JSON만 반환하세요.';
 
-// ── 사진 불러오기 ──
-function cplLoadPhoto(who, input){
-  var file=input.files[0]; if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var ph=document.getElementById('cpl-photo-'+who);
-    var phEl=document.getElementById('cpl-ph-'+who);
-    var vid=document.getElementById('cpl-video-'+who);
-    if(ph){ ph.src=e.target.result; ph.style.display='block'; }
-    if(phEl) phEl.style.display='none';
-    if(vid) vid.style.display='none';
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── 암호 방 시스템 ──
-// ══ 궁합방 매뉴얼 토글 ══
-function cplToggleManual(){
-  var body=document.getElementById('cpl-manual-body');
-  var arrow=document.getElementById('cpl-manual-arrow');
-  if(!body) return;
-  var open=body.style.display==='block';
-  body.style.display=open?'none':'block';
-  if(arrow) arrow.textContent=open?'▼':'▲';
-}
-
-// ══ 암호 복사 ══
-function cplCopyRoomCode(){
-  var box = document.getElementById('cpl-room-code-box');
-  // 전체 Peer ID 복사 (연결에 필요)
-  var fullId = box ? box.getAttribute('data-full-id') : null;
-  var copyText = fullId || (document.getElementById('cpl-room-code-txt')||{}).textContent || '';
-  if(!copyText) return;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(copyText).then(function(){
-      var btn=event.target;
-      btn.textContent='✅ 복사됨!';
-      setTimeout(function(){btn.textContent='📋 복사';},2000);
-    });
-  } else {
-    // 폴백
-    var ta=document.createElement('textarea');
-    ta.value=copyText; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta);
-  }
-}
-
-// ══ 직업 입력 → 황금 테두리 ══
-function cplJobComplete(who){
-  var inp=document.getElementById('cpl-'+who+'-job');
-  if(!inp) return;
-  var card=inp.closest('.cpl-card')||inp.parentElement;
-  // 이름+생년월일+직업 모두 입력됐는지
-  var name=document.getElementById('cpl-'+who+'-name');
-  var y=document.getElementById('cpl-'+who+'-y');
-  var done=name&&name.value.trim()&&y&&y.value&&inp.value.trim();
-  if(done){
-    var wrap=inp.closest('[id^="cpl-"]')||inp.parentElement;
-    // 부모 카드 찾기
-    var el=inp;
-    for(var i=0;i<8;i++){
-      if(el&&el.style&&el.style.border!==undefined){
-        el.style.border='1.5px solid rgba(212,168,67,.8)';
-        el.style.boxShadow='0 0 14px rgba(212,168,67,.25)';
-        break;
-      }
-      el=el.parentElement;
-    }
-    inp.style.borderColor='rgba(212,168,67,.8)';
-    inp.style.background='rgba(212,168,67,.05)';
-  } else {
-    inp.style.borderColor='';
-    inp.style.background='';
-  }
-  // 양쪽 완성 시 궁합 준비 메시지
-  _cplCheckBothReady();
-}
-
-// ══ 양쪽 정보 완성 체크 → 궁합 시작 카운트다운 ══
-var _cplCountTimer=null;
-function _cplCheckBothReady(){
-  var aN=document.getElementById('cpl-a-name');
-  var aY=document.getElementById('cpl-a-y');
-  var aJ=document.getElementById('cpl-a-job');
-  var bN=document.getElementById('cpl-b-name');
-  var bY=document.getElementById('cpl-b-y');
-  var bJ=document.getElementById('cpl-b-job');
-  var aReady=aN&&aN.value.trim()&&aY&&aY.value&&aJ&&aJ.value.trim();
-  var bReady=bN&&bN.value.trim()&&bY&&bY.value&&bJ&&bJ.value.trim();
-  if(aReady&&bReady&&!_cplCountTimer){
-    _cplStartCountdown();
-  }
-}
-
-function _cplStartCountdown(){
-  // 이미 진행 중이면 패스
-  if(_cplCountTimer) return;
-  var msg=document.getElementById('cpl-ready-msg');
-  if(!msg){
-    msg=document.createElement('div');
-    msg.id='cpl-ready-msg';
-    msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10300;background:rgba(2,8,20,.96);border:2px solid rgba(244,114,182,.6);border-radius:20px;padding:28px 36px;text-align:center;box-shadow:0 0 60px rgba(244,114,182,.3);';
-    document.body.appendChild(msg);
-  }
-  var count=10;
-  msg.style.display='block';
-  function tick(){
-    msg.innerHTML='<div style="font-size:13px;font-weight:700;color:#f472b6;letter-spacing:.1em;margin-bottom:10px;">💑 두 분의 정보가 완성되었습니다!</div>'
-      +'<div style="font-size:48px;font-weight:900;color:#f472b6;font-family:Orbitron,monospace;margin:8px 0;">'+count+'</div>'
-      +'<div style="font-size:12px;color:rgba(240,220,160,.7);margin-bottom:16px;">📷 카메라에 얼굴·상반신을 비추며<br>서로 이야기를 나누세요!</div>'
-      +'<div style="font-size:11px;color:rgba(244,114,182,.6);">잠시 후 궁합 분석이 시작됩니다...</div>';
-    if(count<=0){
-      clearInterval(_cplCountTimer);
-      _cplCountTimer=null;
-      msg.style.display='none';
-      // 궁합 분석 자동 시작
-      if(typeof cplStartAnalysis==='function') cplStartAnalysis();
-      return;
-    }
-    count--;
-  }
-  tick();
-  _cplCountTimer=setInterval(tick,1000);
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 💑 CGO-FULI WebRTC 커플 영상 연결 (PeerJS)
-// A(방장): Peer 생성 → ID = 방 코드 → B에게 공유
-// B(입장): ID 입력 → A에게 영상 연결
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var _cplPeer = null;          // PeerJS 인스턴스
-var _cplConn = null;          // DataChannel (텍스트 동기화)
-var _cplCall = null;          // MediaConnection (영상)
-var _cplLocalStream = null;   // 내 카메라 스트림
-var _cplRoomCode = null;
-var _cplIsHost = false;
-
-function _cplSetStatus(txt, color){
-  var dot = document.getElementById('cpl-room-status-dot');
-  var el  = document.getElementById('cpl-room-status-txt');
-  if(el) el.textContent = txt;
-  if(dot) dot.style.background = color||'#34d399';
-}
-
-// ── 내 카메라 미리 켜기 ──
-function _cplGetLocalStream(cb){
-  if(_cplLocalStream){ cb(_cplLocalStream); return; }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false})
-  .then(function(s){
-    _cplLocalStream = s;
-    // 내 화면(A 슬롯)에 표시
-    var vA = document.getElementById('cpl-video-a');
-    if(vA){ vA.srcObject=s; vA.style.display='block'; }
-    var phA = document.getElementById('cpl-ph-a');
-    if(phA) phA.style.display='none';
-    var badge = document.getElementById('cpl-badge-a');
-    if(badge) badge.style.display='block';
-    cb(s);
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:3000,temperature:0.78,
+      messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}]})
   })
-  .catch(function(e){
-    alert('카메라 권한이 필요합니다.\n설정에서 카메라를 허용해 주세요.');
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var res;
+    try{ var cl=raw.replace(/```json|```/g,'').trim(); res=JSON.parse(cl); }
+    catch(e){
+      res={luck:5,luckText:'平★★★',oh:oh,
+        card1:'🔮 '+raw.substring(0,300)||'해몽 결과를 가져오지 못했어요. 다시 시도해주세요.',
+        card2:'🧠 네트워크 상태를 확인하고 다시 시도해주세요.',
+        card3:'👑 C-13 분석을 위해 잠시 후 다시 시도해주세요.'};
+    }
+    c13ShowResult(res,ili,oh,jupOk,marsRetro,kp);
+  })
+  .catch(function(){
+    // 네트워크 오류 시 DB 폴백
+    var matched=null, keys=Object.keys(C13_DREAM_DB);
+    for(var i=0;i<keys.length;i++){ if(text.indexOf(keys[i])>-1){matched={data:C13_DREAM_DB[keys[i]]};break;} }
+    var d=matched?matched.data:{oh:'토',luck:5,trad:'인터넷 연결을 확인하고 다시 시도해주세요! 꿈은 무의식이 보내는 소중한 메시지예요.',sci:'네트워크 오류가 발생했어요.',c13:'잠시 후 다시 시도해주세요.'};
+    c13ShowResult({luck:d.luck,luckText:d.luck>=8?'大吉★★★★★':d.luck>=6?'吉★★★★':'平★★★',oh:d.oh,card1:d.trad,card2:d.sci,card3:d.c13},ili,oh,jupOk,marsRetro,kp);
   });
 }
 
-// ── 상대방 영상 수신 처리 ──
-function _cplShowRemote(stream){
-  var vB = document.getElementById('cpl-video-b-remote');
-  if(vB){
-    vB.srcObject = stream;
-    vB.style.display = 'block';
-    vB.play().catch(function(){});
-  }
-  var phB = document.getElementById('cpl-ph-b');
-  if(phB) phB.style.display = 'none';
-  // B 카메라 활성 → B바 카메라 모드로 전환
-  _cplTimers.b = _cplTimers.b || setInterval(function(){
-    var vid2 = document.getElementById('cpl-video-b-remote');
-    var measured = null;
-    if(vid2 && vid2.videoWidth){
-      var oc2=document.createElement('canvas'); oc2.width=64; oc2.height=48;
-      var ox2=oc2.getContext('2d');
-      ox2.drawImage(vid2,0,0,64,48);
-      var px2=ox2.getImageData(0,0,64,48).data;
-      var rS=0,gS=0,bS=0,cnt2=0,skinCnt2=0;
-      for(var i2=0;i2<px2.length;i2+=4){
-        var pr=px2[i2],pg=px2[i2+1],pb=px2[i2+2];
-        rS+=pr; gS+=pg; bS+=pb; cnt2++;
-        var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
-        var sv2=mx2>0?(mx2-mn2)/mx2:0;
-        if(pr>80&&pg>50&&pb>30&&pr>pg&&pr>pb&&(pr-pg)>15&&sv2>0.18&&sv2<0.65) skinCnt2++;
-      }
-      if(cnt2&&skinCnt2/cnt2>=0.12){
-        var gAvg=gS/cnt2, rAvg=rS/cnt2;
-        var fci2=Math.min(100,Math.max(0,(rAvg-gAvg)*2.5));
-        var bright=(rAvg+gAvg+(bS/cnt2))/3;
-        measured=Math.round(fci2*0.6+Math.min(100,Math.max(0,(bright-60)*1.2))*0.4);
-      }
-    }
-    var curScore = _cplScoreB;
-    var target = measured!==null ? Math.min(95,Math.max(15,measured+30))
-               : Math.min(88,Math.max(28,curScore+Math.sin(Date.now()/8000)*3));
-    var inertia=curScore*0.7+target*0.3;
-    var maxD=inertia>=85?3:inertia>=70?5:7;
-    var dif=inertia-curScore;
-    if(Math.abs(dif)>maxD) dif=dif>0?maxD:-maxD;
-    _cplScoreB=Math.min(95,Math.max(15,Math.round(curScore+dif)));
-    _cplUpdateBar('b',_cplScoreB);
-  },1200);
-  _cplSetStatus('🔴 LIVE — 상대방 영상 연결됨!','#d4a843');
-}
+function c13ShowResult(res,ili,oh,jupOk,marsRetro,kp){
+  var loading=document.getElementById('c13Loading'), cards=document.getElementById('c13Cards');
+  var bar=document.getElementById('c13Bar');
+  if(bar) bar.style.width='100%';
+  setTimeout(function(){
+    if(loading) loading.style.display='none';
+    if(cards)   cards.style.display='block';
+    var luckColor=res.luck>=8?'#34d399':res.luck>=6?'#fbbf24':'#f87171';
+    var ohEmoji={'목':'🌳','화':'🔥','토':'⛰️','금':'⚔️','수':'💧'}[res.oh]||'✨';
+    var ohName={'목':'木','화':'火','토':'土','금':'金','수':'水'}[res.oh]||'';
+    var h=new Date().getHours();
+    var sj=h>=23||h<1?'자시':h<3?'축시':h<5?'인시':h<7?'묘시':h<9?'진시':h<11?'사시':h<13?'오시':h<15?'미시':h<17?'신시':h<19?'유시':h<21?'술시':'해시';
 
-// ━━ 방 만들기 (호스트) ━━
-var _cplRoomCode = null;
-function cplCreateRoom(){
-  if(_cplPeer){ _cplPeer.destroy(); _cplPeer=null; }
-  _cplIsHost = true;
+    // 카드1
+    document.getElementById('c13Luck1').innerHTML='<span style="color:'+luckColor+';font-size:13px;">'+res.luckText+'</span>';
+    document.getElementById('c13Card1').innerHTML=
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:rgba(251,191,36,.05);border-radius:10px;padding:8px 12px;">'+
+        '<span style="font-size:18px;">'+ohEmoji+'</span>'+
+        '<span style="font-size:11px;color:rgba(251,191,36,.7);">오행: <b style="color:#fbbf24">'+res.oh+'('+ohName+')</b> · '+sj+'</span>'+
+      '</div>'+
+      '<div style="white-space:pre-line;line-height:2.0;font-size:13px;letter-spacing:.01em;">'+res.card1+'</div>';
 
-  _cplSetStatus('📡 방 생성 중...','#fbbf24');
-  var box = document.getElementById('cpl-room-code-box');
-  var txt = document.getElementById('cpl-room-code-txt');
-  if(box) box.style.display='block';
-  if(txt) txt.textContent='...';
+    // 카드2
+    document.getElementById('c13Card2').innerHTML=
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">'+
+        '<span style="font-size:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:3px 8px;color:#38bdf8;">프로이트</span>'+
+        '<span style="font-size:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:3px 8px;color:#38bdf8;">칼 융</span>'+
+        '<span style="font-size:10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:3px 8px;color:#38bdf8;">뇌과학</span>'+
+      '</div>'+
+      '<div style="white-space:pre-line;line-height:1.95;font-size:13px;">'+res.card2+'</div>';
 
-  _cplGetLocalStream(function(stream){
-    try {
-      _cplPeer = new Peer({ debug:0 });
-    } catch(e) {
-      _cplSetStatus('⚠️ PeerJS 로딩 중... 잠시 후 다시 시도','#f87171');
-      return;
-    }
-    _cplPeer.on('open', function(id){
-      // ID 앞 6자리를 방 코드로 사용
-      var code = id.substring(0,8).toUpperCase();
-      _cplRoomCode = id; // 전체 ID 저장 (입장 시 필요)
-      if(txt) txt.textContent = code;
-      // 실제 코드 박스에 전체 ID도 data로 저장
-      if(box) box.setAttribute('data-full-id', id);
-      _cplSetStatus('상대방 입장 대기 중... 코드를 공유하세요','#34d399');
-    });
+    // 카드3
+    document.getElementById('c13Card3').innerHTML=
+      '<div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:rgba(196,181,253,.7);">'+
+        '🛰️ '+(jupOk?'목성 순행★':'목성 역행')+(marsRetro?' · 화성 역행⚠️':'')+
+        ' · ILI <b style="color:#c4b5fd">'+ili+'</b>점 · '+oh+' · Kp '+(kp>=0?kp.toFixed(1):'?')+
+      '</div>'+
+      '<div style="white-space:pre-line;line-height:1.95;font-size:13px;">'+res.card3+'</div>';
 
-    // B가 전화 걸어오면 받기
-    _cplPeer.on('call', function(call){
-      _cplCall = call;
-      call.answer(stream); // 내 스트림으로 응답
-      call.on('stream', function(remoteStream){
-        _cplShowRemote(remoteStream);
+    // ILI 점수 태그
+    var s18=(window.calcResult&&window.calcResult.scores&&window.calcResult.scores.s18)||{};
+    var iliBar=document.getElementById('c13IliBar'), scoreTags=document.getElementById('c13ScoreTags');
+    if(iliBar&&scoreTags&&Object.keys(s18).length>0){
+      iliBar.style.display='block';
+      var tagMap={s01:'사주',s02:'자미',s06:'행성',s13:'태을',s16:'타로',s17:'관상',s18:'손금'};
+      var tagHtml='';
+      Object.keys(tagMap).forEach(function(k){
+        if(s18[k]){var v=s18[k],c=v>=80?'#34d399':v>=65?'#d4a843':'#f87171';
+          tagHtml+='<span style="font-size:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:3px 8px;color:'+c+';">'+tagMap[k]+' '+v+'</span>';}
       });
-      call.on('error', function(e){ console.log('call error',e); });
-      _cplSetStatus('✅ 상대방 연결됨!','#d4a843');
-    });
-
-    _cplPeer.on('error', function(e){
-      _cplSetStatus('⚠️ 연결 오류: '+e.type,'#f87171');
-    });
-  });
-}
-
-// ━━ 방 입장 (게스트) ━━
-function cplJoinRoom(){
-  var input = document.getElementById('cpl-room-input');
-  if(!input) return;
-  var code = input.value.trim();
-  if(code.length < 6){ alert('코드를 정확히 붙여넣기 해주세요\n(📋 복사 버튼으로 복사된 전체 코드)'); return; }
-
-  _cplIsHost = false;
-  var joinedMsg = document.getElementById('cpl-joined-msg');
-  var joinedCode = document.getElementById('cpl-joined-code-show');
-  var codeBox = document.getElementById('cpl-room-code-box');
-
-  _cplGetLocalStream(function(stream){
-    if(_cplPeer){ _cplPeer.destroy(); _cplPeer=null; }
-    try {
-      _cplPeer = new Peer({ debug:0 });
-    } catch(e) {
-      alert('PeerJS 로딩 중입니다. 잠시 후 다시 시도해주세요.'); return;
+      scoreTags.innerHTML=tagHtml;
     }
-    _cplPeer.on('open', function(myId){
-      // 호스트에게 전화
-      var call = _cplPeer.call(code, stream);
-      _cplCall = call;
-      if(call){
-        call.on('stream', function(remoteStream){
-          _cplShowRemote(remoteStream);
-          if(codeBox) codeBox.style.display='none';
-          if(joinedMsg) joinedMsg.style.display='block';
-          if(joinedCode) joinedCode.textContent='코드: '+code.substring(0,8).toUpperCase()+' 연결 완료 🎉';
-        });
-        call.on('error', function(e){
-          alert('연결 실패: 코드를 다시 확인해주세요.\n오류: '+e);
-        });
-      } else {
-        alert('연결에 실패했습니다. 코드를 확인해주세요.');
-      }
-    });
-    _cplPeer.on('error', function(e){
-      alert('연결 오류: '+e.type+'\n코드가 맞는지 확인해주세요.');
-    });
-  });
-  if(typeof cplAutoFill==='function') setTimeout(cplAutoFill, 300);
-  input.value='';
+    var btn=document.getElementById('c13Btn'),btnTxt=document.getElementById('c13BtnTxt');
+    if(btn) btn.disabled=false; if(btnTxt) btnTxt.textContent='🌙 똑딱! 해몽 시작';
+  },300);
 }
 
-function cplReset(){
-  cplStopRPPG();
-  // PeerJS 연결 정리
-  if(_cplCall){ try{_cplCall.close();}catch(e){} _cplCall=null; }
-  if(_cplPeer){ try{_cplPeer.destroy();}catch(e){} _cplPeer=null; }
-  if(_cplLocalStream){ _cplLocalStream.getTracks().forEach(function(t){t.stop();}); _cplLocalStream=null; }
-  var vBr = document.getElementById('cpl-video-b-remote');
-  if(vBr){ vBr.srcObject=null; vBr.style.display='none'; }
-  document.getElementById('cpl-input-section').style.display='block';
-  document.getElementById('cpl-live-section').style.display='none';
-  document.getElementById('cpl-resonance-msg').style.display='none';
-  document.getElementById('cpl-total-score').textContent='--';
-  document.getElementById('cpl-room-code-box').style.display='none';
-  document.getElementById('cpl-joined-msg').style.display='none';
-  _cplScoreA=50; _cplScoreB=50;
-}
 
-// CSS 애니메이션
-(function(){
-  var st=document.createElement('style');
-  st.textContent='@keyframes cplPulse{0%,100%{box-shadow:0 0 0 rgba(212,168,67,.3)}50%{box-shadow:0 0 20px rgba(212,168,67,.4)}}';
-  document.head.appendChild(st);
-})();
-
-// ══ 커플 궁합 엔진 끝 ══════════════════════════════════════
-
-// ── TTS 엔진 사전 준비 완료 (별도 unlock 불필요)
-
-// ══ 생체 측정 가이드 팝업 시스템 ══════════════════════════
-// ══ 생체 측정 가이드 팝업 시스템 v2 (애니메이션 + 호흡 타이머) ══
-
-var _CGO_GUIDE_DATA = {
-  face: {
-    icon:'🧖', title:'관상 & rPPG 측정', time:33, color:'#93c5fd', border:'rgba(99,130,201,.4)',
-    anim:['🤲 양손으로 하단을 받치세요','💪 팔꿈치를 옆구리에 밀착!','👁️ 눈높이 = 카메라 수평','😐 무표정 · 정면 유지'],
-    steps:[
-      {ico:'🤲', t:'파지법', d:'양손으로 스마트폰 하단을 받치고, 양 팔꿈치를 옆구리에 밀착시키거나 책상에 고정하세요.'},
-      {ico:'📐', t:'각도', d:'눈높이와 카메라를 수평으로 맞추세요. (턱 각도에 따른 관상 왜곡 방지)'},
-      {ico:'💡', t:'조명 필수', d:'밝고 일정한 조명(형광등·LED) 정면에 앉으세요. 역광(창문이 뒤에 있을 때)·어두운 환경은 혈색 오차 최대 30%가 발생합니다. 조명이 얼굴 정면을 고르게 비추는지 확인하세요.'},
-      {ico:'🙅', t:'움직임 금지', d:'측정 중 말하기·미소·고개 돌림을 삼가세요. 고개 1cm 움직임 = 신호 오염 5초치. 숨은 평소대로 쉬되 최대한 동상처럼 고정하세요.'},
-      {ico:'💡', t:'이유', d:'33초간 발생하는 미세 떨림을 80% 이상 차단하여 혈류 데이터의 순도를 높입니다. (3초 딜레이 포함)'},
-      {ico:'⚠️', t:'주의', d:'측정 종료 알람이 울릴 때까지 정면을 유지하세요.'},
-    ],
-    startFn: function(){ if(typeof bioSkinScan==='function') bioSkinScan('face'); }
-  },
-  palm: {
-    icon:'✋', title:'손금 측정', time:33, color:'#fcd34d', border:'rgba(212,168,67,.4)',
-    anim:['✋ 한 손은 무릎에 펼쳐 고정','📱 반대 손으로 수직으로 들기','🤏 새끼손가락을 바닥에 대어 지지대','🔍 초점 고정 · 흔들림 0'],
-    steps:[
-      {ico:'🤲', t:'파지법', d:'한 손은 바닥(무릎)에 펼쳐 고정하고, 다른 한 손으로 스마트폰을 수직으로 드세요.'},
-      {ico:'💡', t:'팁', d:'스마트폰을 든 손의 새끼손가락을 바닥에 살짝 대어 지지대로 삼으세요.'},
-      {ico:'🔍', t:'이유', d:'미세한 손금 선(운로)을 33초간 선명하게 합성하려면 고정된 초점이 무결성을 결정합니다. (3초 딜레이 포함)'},
-      {ico:'⚠️', t:'주의', d:'초점이 고정된 상태에서 끝남 알람을 잘 들으세요.'},
-    ],
-    startFn: function(){ if(typeof bioSkinScan==='function') bioSkinScan('palm'); }
-  },
-  tongue: {
-    icon:'👅', title:'혀 스캔', time:15, color:'#fca5a5', border:'rgba(248,113,113,.4)',
-    anim:['📱 정면에서 입 앞으로 가져오기','👅 혀를 끝까지 내밀기','🫧 숨 잠시 멈추기','⚡ 찰나의 정지 — 5초!'],
-    steps:[
-      {ico:'🤲', t:'파지법', d:'한 손으로 가볍게 잡되, 거울을 보듯 정면에서 입 앞으로 가져오세요.'},
-      {ico:'💡', t:'팁', d:'15초간 딜레이 10초 포함 — 숨을 잠시 멈추고 찰나의 정지를 유지하세요.'},
-      {ico:'🔍', t:'이유', d:'설태의 형태가 흔들림 없이 포착되어야 정확한 소화기계 기운 분석이 가능합니다.'},
-      {ico:'⚠️', t:'주의', d:'잠시 멈춘 상태에서 끝남 알람을 잘 들으세요.'},
-    ],
-    startFn: function(){ if(typeof bioSkinScan==='function') bioSkinScan('tongue'); }
-  },
-  breath: {
-    icon:'🫁', title:'4-7-8 호흡 측정', time:19, color:'#38bdf8', border:'rgba(56,189,248,.4)',
-    anim:['🔌 케이스 하단 분리','📱 단자 구멍을 입/코 앞 4cm에','📐 45도 각도로 기울이기','🌬️ 호흡 준비 완료'],
-    steps:[
-      {ico:'🤲', t:'파지법', d:'케이스 하단(충전 단자 쪽)을 벗기고, 단자 구멍을 입/코 앞 4cm 거리에 45도로 두세요.'},
-      {ico:'🌬️', t:'호흡 박자', d:'[4초] 코로 흡입 → [7초] 숨 참기 → [8초] "슈우-" 소리를 내며 단자 쪽으로 천천히 내뱉기'},
-      {ico:'🔍', t:'이유', d:'기압 센서와 마이크가 호흡의 압력을 직접 수신하여 심박수와 동기화된 데이터를 추출합니다.'},
-      {ico:'⚠️', t:'주의', d:'호흡 주기를 유지하며 끝남 알람을 잘 들으세요.'},
-    ],
-    startFn: function(){
-      var btn=document.getElementById('db-breath-btn')||document.getElementById('hlt-bbtn');
-      if(btn) btn.click();
-      else if(typeof hltBreathStart==='function') hltBreathStart();
-    }
-  },
-  temp: {
-    icon:'🌡️', title:'손 열(체온) 측정', time:20, color:'#fbbf24', border:'rgba(251,191,36,.4)',
-    anim:['📱 케이스 완전히 벗기기','🤲 양손바닥으로 뒷면 감싸기','🌡️ 옆면까지 꽉 쥐기','🔥 온기 전달 · 20초 유지'],
-    steps:[
-      {ico:'🤲', t:'파지법', d:'케이스를 완전히 벗긴 후, 양손바닥으로 스마트폰 본체(뒷면과 옆면)를 따뜻하게 감싸 쥐세요.'},
-      {ico:'🌡️', t:'자세', d:'내부 정밀 서미스터 센서에 내 손의 온기가 직접 전달되도록 편안하게 쥐고 20초간 유지합니다.'},
-      {ico:'🔍', t:'이유', d:'손바닥의 열기를 기기 내부 센서에 직접 전달하여 0.01°C 단위의 체온 변화를 정확하게 연산합니다.'},
-      {ico:'⚠️', t:'주의', d:'온기가 충분히 전달되도록 끝남 알람을 잘 들으세요.'},
-    ],
-    startFn: function(){
-      var btn=document.getElementById('db-temp-btn')||document.getElementById('hlt-tempbtn');
-      if(btn) btn.click();
-      else if(typeof hltTempScan==='function') hltTempScan();
-    }
-  }
-};
-
-// ── 알람음 ──
-function _cgoAlarm(type){
-  try{
-    var ac=new(window.AudioContext||window.webkitAudioContext)();
-    var patterns = type==='start'
-      ? [[880,.12],[0,.06],[880,.18]]
-      : [[523,.18],[659,.18],[784,.18],[1047,.4]];
-    var t=ac.currentTime+0.05;
-    patterns.forEach(function(p){
-      if(p[0]===0){t+=p[1];return;}
-      var o=ac.createOscillator(),g=ac.createGain();
-      o.connect(g);g.connect(ac.destination);
-      o.frequency.value=p[0];o.type='sine';
-      g.gain.setValueAtTime(.4,t);
-      g.gain.exponentialRampToValueAtTime(.001,t+p[1]);
-      o.start(t);o.stop(t+p[1]);
-      t+=p[1]+.04;
-    });
-  }catch(e){}
-}
-
-// ── 파지법 애니메이션 (SVG 손 그림 버전) ──
-var _cgoAnimTimer = null;
-
-// SVG 손 그림 라이브러리 (각 측정별)
-var _CGO_SVG = {
-  face: [
-    // 1: 양손 하단 받치기
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><rect x="40" y="50" width="40" height="18" rx="5" fill="rgba(147,197,253,.15)" stroke="#93c5fd" stroke-width="1.5"/><!-- 화면 --><rect x="48" y="54" width="24" height="10" rx="2" fill="rgba(147,197,253,.08)" stroke="rgba(147,197,253,.3)" stroke-width="1"/><!-- 왼손 --><ellipse cx="28" cy="62" rx="14" ry="8" fill="rgba(147,197,253,.12)" stroke="#93c5fd" stroke-width="1.5"/><line x1="20" y1="62" x2="16" y2="55" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="24" y1="60" x2="22" y2="52" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="28" y1="59" x2="27" y2="51" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="32" y1="60" x2="32" y2="52" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><!-- 오른손 --><ellipse cx="92" cy="62" rx="14" ry="8" fill="rgba(147,197,253,.12)" stroke="#93c5fd" stroke-width="1.5"/><line x1="100" y1="62" x2="104" y2="55" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="96" y1="60" x2="98" y2="52" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="92" y1="59" x2="93" y2="51" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><line x1="88" y1="60" x2="88" y2="52" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><!-- 화살표 위로 --><path d="M55 48 L60 40 L65 48" fill="none" stroke="#93c5fd" stroke-width="1.5"/></svg>', desc:'양손으로 스마트폰 하단을 받치세요'},
-    // 2: 팔꿈치 고정
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><rect x="40" y="20" width="40" height="55" rx="5" fill="rgba(147,197,253,.15)" stroke="#93c5fd" stroke-width="1.5"/><!-- 팔꿈치 왼 --><path d="M35 75 Q20 60 25 40 Q30 30 40 35" fill="none" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/><!-- 팔꿈치 오른 --><path d="M85 75 Q100 60 95 40 Q90 30 80 35" fill="none" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/><!-- 몸통 표시 --><line x1="35" y1="75" x2="85" y2="75" stroke="rgba(147,197,253,.4)" stroke-width="1.5" stroke-dasharray="4,3"/><!-- 고정 표시 --><circle cx="30" cy="70" r="4" fill="rgba(147,197,253,.2)" stroke="#93c5fd" stroke-width="1.5"/><circle cx="90" cy="70" r="4" fill="rgba(147,197,253,.2)" stroke="#93c5fd" stroke-width="1.5"/><text x="60" y="15" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">팔꿈치 밀착!</text></svg>', desc:'팔꿈치를 옆구리에 밀착시키세요'},
-    // 3: 눈높이 수평
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 눈 --><ellipse cx="35" cy="40" rx="8" ry="6" fill="rgba(147,197,253,.1)" stroke="#93c5fd" stroke-width="1.5"/><circle cx="35" cy="40" r="3" fill="#93c5fd"/><!-- 수평선 --><line x1="45" y1="40" x2="75" y2="40" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4,3"/><!-- 화살표 양방향 --><polygon points="47,37 43,40 47,43" fill="#93c5fd"/><polygon points="73,37 77,40 73,43" fill="#93c5fd"/><!-- 스마트폰 --><rect x="75" y="25" width="28" height="30" rx="4" fill="rgba(147,197,253,.15)" stroke="#93c5fd" stroke-width="1.5"/><!-- 카메라 점 --><circle cx="89" cy="29" r="2.5" fill="rgba(147,197,253,.5)" stroke="#93c5fd" stroke-width="1"/><!-- 수평 OK 표시 --><text x="60" y="72" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">✓ 눈높이 = 카메라</text></svg>', desc:'눈높이와 카메라를 수평으로 맞추세요'},
-    // 4: 무표정 정면
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 얼굴 --><circle cx="60" cy="38" r="24" fill="rgba(147,197,253,.1)" stroke="#93c5fd" stroke-width="1.5"/><!-- 눈 --><ellipse cx="52" cy="34" rx="3.5" ry="3" fill="#93c5fd"/><ellipse cx="68" cy="34" rx="3.5" ry="3" fill="#93c5fd"/><!-- 무표정 입 --><line x1="52" y1="48" x2="68" y2="48" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><!-- 정면 화살표 --><path d="M60 8 L60 14" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/><circle cx="60" cy="7" r="2" fill="#93c5fd"/><!-- 30초 --><text x="60" y="74" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="bold">😐 무표정 · 정면 30초</text></svg>', desc:'무표정으로 정면을 30초간 유지하세요'},
-  ],
-  palm: [
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 무릎(바닥) --><ellipse cx="45" cy="70" rx="35" ry="8" fill="rgba(252,211,77,.1)" stroke="rgba(252,211,77,.4)" stroke-width="1"/><!-- 손 펼침 --><ellipse cx="45" cy="62" rx="22" ry="10" fill="rgba(252,211,77,.12)" stroke="#fcd34d" stroke-width="1.5"/><line x1="30" y1="58" x2="26" y2="46" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="36" y1="55" x2="33" y2="43" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="43" y1="53" x2="42" y2="41" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="50" y1="54" x2="51" y2="42" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="56" y1="57" x2="60" y2="47" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><!-- 고정 표시 --><text x="45" y="38" text-anchor="middle" fill="#fcd34d" font-size="8" font-weight="bold">고정</text><circle cx="45" cy="62" r="4" fill="none" stroke="#fcd34d" stroke-width="1.5" stroke-dasharray="3,2"/><!-- 스마트폰 수직 --><rect x="85" y="15" width="22" height="50" rx="4" fill="rgba(252,211,77,.15)" stroke="#fcd34d" stroke-width="1.5"/><circle cx="96" cy="20" r="2" fill="rgba(252,211,77,.5)" stroke="#fcd34d" stroke-width="1"/><text x="60" y="12" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="bold">한 손 고정 · 수직 파지</text></svg>', desc:'한 손은 무릎에 고정, 반대 손으로 수직으로 드세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 수직 --><rect x="48" y="10" width="24" height="50" rx="4" fill="rgba(252,211,77,.15)" stroke="#fcd34d" stroke-width="1.5"/><!-- 새끼손가락 지지대 --><path d="M72 55 Q82 58 84 68" stroke="#fcd34d" stroke-width="2.5" stroke-linecap="round" fill="none"/><circle cx="84" cy="69" r="5" fill="rgba(252,211,77,.2)" stroke="#fcd34d" stroke-width="1.5"/><!-- 화살표 --><path d="M76 60 L83 65" stroke="#fcd34d" stroke-width="1.5" marker-end="url(#arr)"/><!-- 손가락들 --><line x1="48" y1="30" x2="38" y2="22" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="48" y1="36" x2="37" y2="31" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="48" y1="42" x2="37" y2="40" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><line x1="48" y1="48" x2="37" y2="48" stroke="#fcd34d" stroke-width="2" stroke-linecap="round"/><!-- 라벨 --><text x="84" y="78" text-anchor="middle" fill="#fcd34d" font-size="8" font-weight="bold">지지대!</text><text x="60" y="8" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="bold">새끼손가락 → 지지대</text></svg>', desc:'새끼손가락을 바닥에 대어 지지대로 삼으세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 손금 손 --><ellipse cx="60" cy="50" rx="28" ry="22" fill="rgba(252,211,77,.1)" stroke="#fcd34d" stroke-width="1.5"/><!-- 손금 선들 --><path d="M42 42 Q52 38 62 40 Q70 42 76 48" fill="none" stroke="rgba(252,211,77,.6)" stroke-width="1.2"/><!-- 생명선 --><path d="M48 35 Q44 50 46 65" fill="none" stroke="rgba(252,211,77,.6)" stroke-width="1.2"/><!-- 두뇌선 --><path d="M48 35 Q58 40 70 36" fill="none" stroke="rgba(252,211,77,.6)" stroke-width="1.2"/><!-- 카메라 초점 --><rect x="44" y="34" width="32" height="32" rx="3" fill="none" stroke="#fcd34d" stroke-width="1.5" stroke-dasharray="3,3"/><!-- 모서리 포커스 --><path d="M44 38 L44 34 L48 34" stroke="#fcd34d" stroke-width="2.5" fill="none"/><path d="M72 34 L76 34 L76 38" stroke="#fcd34d" stroke-width="2.5" fill="none"/><path d="M44 62 L44 66 L48 66" stroke="#fcd34d" stroke-width="2.5" fill="none"/><path d="M72 66 L76 66 L76 62" stroke="#fcd34d" stroke-width="2.5" fill="none"/><text x="60" y="10" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="bold">🔍 초점 고정 · 무결성!</text></svg>', desc:'손금이 선명하게 보이도록 초점을 고정하세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 완성 체크 --><circle cx="60" cy="38" r="26" fill="rgba(252,211,77,.1)" stroke="#fcd34d" stroke-width="1.5"/><!-- 체크마크 --><path d="M44 38 L55 50 L76 28" fill="none" stroke="#fcd34d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><!-- 알람 -->  <text x="60" y="72" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="bold">끝남 알람 때까지 유지!</text></svg>', desc:'끝남 알람이 울릴 때까지 초점을 고정하세요'},
-  ],
-  tongue: [
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 --><rect x="46" y="15" width="28" height="50" rx="4" fill="rgba(252,165,165,.15)" stroke="#fca5a5" stroke-width="1.5"/><!-- 카메라 --><circle cx="60" cy="20" r="3" fill="rgba(252,165,165,.4)" stroke="#fca5a5" stroke-width="1"/><!-- 입/혀 이모지 화살표 --><text x="60" y="52" text-anchor="middle" fill="#fca5a5" font-size="18">👅</text><!-- 방향 화살표 --><path d="M44 40 L35 40" fill="none" stroke="#fca5a5" stroke-width="1.5"/><polygon points="35,37 30,40 35,43" fill="#fca5a5"/><!-- 거리 표시 --><text x="60" y="12" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="bold">정면 · 입 앞으로</text></svg>', desc:'한 손으로 잡고 정면에서 입 앞으로 가져오세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 얼굴 아웃라인 --><path d="M55 25 Q42 30 40 45 Q40 60 55 65 Q60 67 65 65 Q80 60 80 45 Q78 30 65 25 Z" fill="rgba(252,165,165,.08)" stroke="rgba(252,165,165,.3)" stroke-width="1"/><!-- 입 열림 --><path d="M48 52 Q60 62 72 52" fill="rgba(252,165,165,.1)" stroke="#fca5a5" stroke-width="1.5"/><!-- 혀 내밀기 --><ellipse cx="60" cy="60" rx="10" ry="7" fill="rgba(252,165,165,.25)" stroke="#fca5a5" stroke-width="1.5"/><!-- 화살표 아래 --><path d="M60 50 L60 56" stroke="#fca5a5" stroke-width="2" stroke-linecap="round"/><polygon points="57,55 60,60 63,55" fill="#fca5a5"/><!-- 텍스트 --><text x="60" y="10" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="bold">입을 크게 · 혀 끝까지!</text></svg>', desc:'입을 크게 벌리고 혀를 끝까지 내미세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 숨 멈춤 표시 --><circle cx="60" cy="35" r="22" fill="rgba(252,165,165,.1)" stroke="#fca5a5" stroke-width="1.5"/><!-- 일시정지 아이콘 --><rect x="52" y="25" width="6" height="20" rx="2" fill="#fca5a5"/>  <rect x="62" y="25" width="6" height="20" rx="2" fill="#fca5a5"/><!-- 5초 카운트 --><text x="60" y="70" text-anchor="middle" fill="#fca5a5" font-size="16" font-weight="900">5초!</text><text x="60" y="10" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="bold">숨 잠시 멈추기</text></svg>', desc:'숨을 잠시 멈추고 5초간 정지하세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 체크 --><circle cx="60" cy="35" r="22" fill="rgba(252,165,165,.1)" stroke="#fca5a5" stroke-width="1.5"/><path d="M46 35 L56 46 L76 24" fill="none" stroke="#fca5a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="60" y="72" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="bold">⚡ 찰나의 정지 완료!</text></svg>', desc:'끝남 알람이 울릴 때까지 자세를 유지하세요'},
-  ],
-  breath: [
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 --><rect x="45" y="12" width="30" height="56" rx="5" fill="rgba(56,189,248,.12)" stroke="#38bdf8" stroke-width="1.5"/><!-- 케이스 하단 분리 --><rect x="45" y="58" width="30" height="10" rx="3" fill="rgba(56,189,248,.06)" stroke="rgba(56,189,248,.4)" stroke-width="1" stroke-dasharray="3,2"/><!-- 화살표 분리 --><path d="M60 70 L60 76" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/><polygon points="57,76 60,80 63,76" fill="#38bdf8"/><!-- 충전 단자 --><rect x="54" y="66" width="12" height="4" rx="2" fill="rgba(56,189,248,.4)" stroke="#38bdf8" stroke-width="1"/><!-- 텍스트 --><text x="60" y="10" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="bold">케이스 하단 분리!</text></svg>', desc:'케이스 하단(충전 단자 쪽)을 벗기세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 45도 기울기 --><g transform="rotate(-45,60,40)"><rect x="46" y="15" width="28" height="50" rx="4" fill="rgba(56,189,248,.12)" stroke="#38bdf8" stroke-width="1.5"/><!-- 단자 -->  <rect x="53" y="62" width="14" height="4" rx="2" fill="rgba(56,189,248,.4)" stroke="#38bdf8" stroke-width="1"/></g><!-- 입/코 --><ellipse cx="28" cy="55" rx="8" ry="5" fill="rgba(56,189,248,.1)" stroke="rgba(56,189,248,.4)" stroke-width="1"/><!-- 거리 표시 4cm --><line x1="38" y1="55" x2="58" y2="45" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,2"/><text x="46" y="44" fill="#38bdf8" font-size="8" font-weight="bold">4cm</text><!-- 각도 표시 --><text x="60" y="10" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="bold">단자 → 입/코 앞 4cm · 45°</text></svg>', desc:'단자 구멍을 입/코 앞 4cm에 45도로 두세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 3단계 호흡 표시 --><rect x="8" y="20" width="30" height="40" rx="6" fill="rgba(56,189,248,.12)" stroke="#38bdf8" stroke-width="1.5"/><text x="23" y="36" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="bold">4초</text><text x="23" y="48" text-anchor="middle" fill="#38bdf8" font-size="8">코 흡입</text><text x="23" y="58" text-anchor="middle" fill="rgba(56,189,248,.5)" font-size="8">👃</text><rect x="44" y="20" width="32" height="40" rx="6" fill="rgba(212,168,67,.12)" stroke="#d4a843" stroke-width="1.5"/><text x="60" y="36" text-anchor="middle" fill="#d4a843" font-size="9" font-weight="bold">7초</text><text x="60" y="48" text-anchor="middle" fill="#d4a843" font-size="8">숨 참기</text><text x="60" y="58" text-anchor="middle" fill="rgba(212,168,67,.5)" font-size="8">🤐</text><rect x="82" y="20" width="30" height="40" rx="6" fill="rgba(52,211,153,.12)" stroke="#34d399" stroke-width="1.5"/><text x="97" y="36" text-anchor="middle" fill="#34d399" font-size="9" font-weight="bold">8초</text><text x="97" y="48" text-anchor="middle" fill="#34d399" font-size="8">입 배출</text><text x="97" y="58" text-anchor="middle" fill="rgba(52,211,153,.5)" font-size="8">💨</text><text x="60" y="10" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="bold">4 · 7 · 8 호흡 리듬</text></svg>', desc:'코로 4초 흡입 → 7초 참기 → 입으로 8초 배출'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 파동 그래프 --><path d="M10 50 Q20 20 30 50 Q40 80 50 50 Q60 20 70 50 Q80 80 90 50 Q100 20 110 50" fill="none" stroke="#38bdf8" stroke-width="2"/><text x="60" y="72" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="bold">호흡 준비 완료 · 시작!</text></svg>', desc:'호흡 주기를 유지하며 끝남 알람을 잘 들으세요'},
-  ],
-  temp: [
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 --><rect x="46" y="15" width="28" height="50" rx="4" fill="rgba(251,191,36,.12)" stroke="#fbbf24" stroke-width="1.5"/><!-- 케이스 제거 화살표 --><path d="M46 30 L36 25" stroke="#fbbf24" stroke-width="1.5"/><path d="M46 40 L34 38" stroke="#fbbf24" stroke-width="1.5"/><path d="M46 50 L36 52" stroke="#fbbf24" stroke-width="1.5"/><!-- X 케이스 표시 --><text x="30" y="35" fill="rgba(251,191,36,.5)" font-size="14">📱</text><!-- 화살표 위로 --><path d="M100 50 L100 35" stroke="#fbbf24" stroke-width="1.5"/><polygon points="97,36 100,30 103,36" fill="#fbbf24"/><!-- 텍스트 --><text x="60" y="10" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="bold">케이스 완전히 벗기기!</text></svg>', desc:'케이스를 완전히 벗겨주세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 스마트폰 중앙 --><rect x="46" y="20" width="28" height="45" rx="4" fill="rgba(251,191,36,.12)" stroke="#fbbf24" stroke-width="1.5"/><!-- 왼손 감싸기 --><path d="M46 25 Q32 30 30 42 Q30 55 46 60" fill="rgba(251,191,36,.1)" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/><!-- 오른손 감싸기 --><path d="M74 25 Q88 30 90 42 Q90 55 74 60" fill="rgba(251,191,36,.1)" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/><!-- 열기 표시 --><text x="60" y="48" text-anchor="middle" fill="#fbbf24" font-size="14">🔥</text><text x="60" y="10" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="bold">양손으로 뒷면 감싸기!</text></svg>', desc:'양손바닥으로 스마트폰 본체를 따뜻하게 감싸 쥐세요'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 서미스터 센서 위치 표시 --><rect x="46" y="20" width="28" height="45" rx="4" fill="rgba(251,191,36,.12)" stroke="#fbbf24" stroke-width="1.5"/><!-- 센서 위치 강조 --><circle cx="60" cy="42" r="8" fill="rgba(251,191,36,.15)" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,2"/><!-- 센서 아이콘 --><circle cx="60" cy="42" r="3" fill="#fbbf24"/><!-- 열 전달 파동 --><circle cx="60" cy="42" r="12" fill="none" stroke="rgba(251,191,36,.3)" stroke-width="1"/>  <circle cx="60" cy="42" r="17" fill="none" stroke="rgba(251,191,36,.15)" stroke-width="1"/><!-- 텍스트 --><text x="60" y="8" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="bold">서미스터 센서 가동 중...</text><text x="60" y="74" text-anchor="middle" fill="rgba(251,191,36,.6)" font-size="7">0.01°C 단위 연산</text></svg>', desc:'스마트폰 내부 서미스터 센서에 온기를 전달합니다'},
-    {svg:'<svg viewBox="0 0 120 80" width="120" height="80"><!-- 타이머 원 --><circle cx="60" cy="38" r="26" fill="rgba(251,191,36,.1)" stroke="#fbbf24" stroke-width="1.5"/><!-- 20초 --><text x="60" y="33" text-anchor="middle" fill="#fbbf24" font-size="18" font-weight="900">20</text><text x="60" y="48" text-anchor="middle" fill="rgba(251,191,36,.7)" font-size="10">초 유지</text><!-- 온기 표시 --><text x="60" y="72" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="bold">끝남 알람까지 꽉 쥐기!</text></svg>', desc:'끝남 알람이 울릴 때까지 20초간 꽉 쥐세요'},
-  ]
-};
-
-function _cgoRunAnim(steps, color, containerId){
-  var el = document.getElementById(containerId);
-  if(!el) return;
-  clearInterval(_cgoAnimTimer);
-  var i = 0;
-  var type = containerId === '_cgoAnimBox' ? window._cgoCurrentGuideType : null;
-  var svgData = type && _CGO_SVG[type] ? _CGO_SVG[type] : null;
-
-  function show(idx){
-    if(idx >= steps.length) idx = 0;
-    var svgHtml = svgData && svgData[idx]
-      ? '<div style="display:flex;justify-content:center;margin-bottom:6px;">' + svgData[idx].svg + '</div>'
-      + '<div style="font-size:11px;color:' + color + ';font-weight:700;text-align:center;line-height:1.5;">' + (svgData[idx].desc||steps[idx]) + '</div>'
-      : '<div style="font-size:28px;text-align:center;margin-bottom:6px;">' + steps[idx].split(' ')[0] + '</div>'
-      + '<div style="font-size:11px;color:' + color + ';font-weight:700;text-align:center;line-height:1.5;">' + steps[idx].substring(steps[idx].indexOf(' ')+1) + '</div>';
-
-    el.innerHTML = '<div style="padding:10px 8px 6px;animation:cgoFadeIn .35s ease;">'
-      + svgHtml
-      + '<div style="margin-top:8px;display:flex;justify-content:center;gap:5px;">'
-      + steps.map(function(_,j){ return '<div style="width:7px;height:7px;border-radius:50%;background:' + (j===idx ? color : 'rgba(255,255,255,.15)') + ';transition:background .3s;"></div>'; }).join('')
-      + '</div></div>';
-    i = idx + 1;
-  }
-  show(0);
-  _cgoAnimTimer = setInterval(function(){ show(i % steps.length); }, 2200);
-}
-
-// ── 호흡 타이머 팝업 ──
-var _breathTimerInterval = null;
-function _cgoBreathTimerShow(){
-  var overlay = document.getElementById('_cgoBreathOverlay');
-  if(overlay) overlay.remove();
-
-  var ov = document.createElement('div');
-  ov.id = '_cgoBreathOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-  ov.innerHTML =
-    '<div style="font-size:18px;font-weight:800;color:#38bdf8;margin-bottom:8px;">🫁 4 · 7 · 8 호흡 측정</div>'
-    + '<div id="_cgoBreathPhaseLabel" style="font-size:14px;color:rgba(240,220,160,.7);margin-bottom:20px;">준비하세요...</div>'
-    // 원형 게이지
-    + '<div style="position:relative;width:160px;height:160px;margin-bottom:20px;">'
-      + '<svg width="160" height="160" style="transform:rotate(-90deg);">'
-        + '<circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>'
-        + '<circle id="_cgoBCircle" cx="80" cy="80" r="70" fill="none" stroke="#38bdf8" stroke-width="10" stroke-dasharray="439.8" stroke-dashoffset="439.8" style="transition:stroke-dashoffset .05s linear,stroke .4s;"/>'
-      + '</svg>'
-      + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
-        + '<div id="_cgoBCount" style="font-size:52px;font-weight:900;color:#38bdf8;line-height:1;">-</div>'
-        + '<div id="_cgoBUnit" style="font-size:11px;color:rgba(56,189,248,.6);">초</div>'
-      + '</div>'
-    + '</div>'
-    // 3단계 표시
-    + '<div style="display:flex;gap:12px;margin-bottom:24px;">'
-      + '<div id="_cgoB1" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:#38bdf8;">코로 흡입 4초</div>'
-      + '<div id="_cgoB2" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3);">참기 7초</div>'
-      + '<div id="_cgoB3" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3);">내뱉기 8초</div>'
-    + '</div>'
-    + '<button onclick="_cgoBreathTimerStop()" style="padding:10px 28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:20px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;">✕ 중단</button>';
-  document.body.appendChild(ov);
-
-  // 타이머 로직: 4초 흡입 → 7초 참기 → 8초 배출
-  var phases = [
-    {sec:4, label:'코로 깊게 흡입!', color:'#38bdf8', btn:'_cgoB1'},
-    {sec:7, label:'숨을 꾹 참으세요!', color:'#d4a843', btn:'_cgoB2'},
-    {sec:8, label:'슈우~ 내뱉으세요!', color:'#34d399', btn:'_cgoB3'}
-  ];
-  var phaseIdx=0, elapsed=0, totalPhaseTime=phases[0].sec;
-  clearInterval(_breathTimerInterval);
-
-  function setPhase(idx){
-    var p = phases[idx];
-    document.getElementById('_cgoBreathPhaseLabel').textContent = p.label;
-    document.getElementById('_cgoBreathPhaseLabel').style.color = p.color;
-    document.getElementById('_cgoBCircle').style.stroke = p.color;
-    document.getElementById('_cgoBCount').style.color = p.color;
-    ['_cgoB1','_cgoB2','_cgoB3'].forEach(function(id,i){
-      var el=document.getElementById(id); if(!el) return;
-      if(i===idx){
-        el.style.background='rgba('+{_cgoB1:'56,189,248',_cgoB2:'212,168,67',_cgoB3:'52,211,153'}[id]+',.2)';
-        el.style.color={_cgoB1:'#38bdf8',_cgoB2:'#d4a843',_cgoB3:'#34d399'}[id];
-        el.style.borderColor='rgba('+{_cgoB1:'56,189,248',_cgoB2:'212,168,67',_cgoB3:'52,211,153'}[id]+',.5)';
-      } else {
-        el.style.background='rgba(255,255,255,.05)';
-        el.style.color='rgba(255,255,255,.3)';
-        el.style.borderColor='rgba(255,255,255,.1)';
-      }
-    });
-  }
-  setPhase(0);
-
-  _breathTimerInterval = setInterval(function(){
-    elapsed++;
-    var p = phases[phaseIdx];
-    var remain = p.sec - (elapsed % p.sec || p.sec);
-    var pct = ((elapsed % p.sec) || (elapsed>0?p.sec:0)) / p.sec;
-    var circ = document.getElementById('_cgoBCircle');
-    var cnt = document.getElementById('_cgoBCount');
-    if(circ) circ.style.strokeDashoffset = (439.8*(1-pct)).toFixed(1);
-    if(cnt) cnt.textContent = remain===0 ? p.sec : remain;
-
-    if(elapsed >= p.sec){
-      elapsed=0; phaseIdx++;
-      if(phaseIdx >= phases.length){
-        // 완료!
-        clearInterval(_breathTimerInterval);
-        _cgoAlarm('end');
-        var pl=document.getElementById('_cgoBreathPhaseLabel');
-        if(pl){pl.textContent='✅ 측정 완료!';pl.style.color='#34d399';}
-        if(circ){circ.style.stroke='#34d399';circ.style.strokeDashoffset='0';}
-        if(cnt){cnt.textContent='✓';cnt.style.color='#34d399';}
-        setTimeout(function(){ _cgoBreathTimerStop(); }, 1500);
-        return;
-      }
-      setPhase(phaseIdx);
-    }
-  }, 1000);
-}
-function _cgoBreathTimerStop(){
-  clearInterval(_breathTimerInterval);
-  var ov=document.getElementById('_cgoBreathOverlay');
-  if(ov) ov.remove();
-}
-
-// ── 가이드 팝업 열기 ──
-// ══════════════════════════════════════════════════
-// ★ CGO-Bio Sensor v2.0 — Groq Vision 관상/손금 분석
-// ══════════════════════════════════════════════════
 function _cgoVisionPopup(title, color, emoji){
   var ov = document.getElementById('cgo-vision-ov');
   if(!ov){
@@ -31082,36 +30117,38 @@ function _cgoTfCompute(r,w){
   var _hasHorary=_tfSelected['horary']||_tfSelected['liuren'];
   var _hasKabbalah=_tfSelected['gematria']||_tfSelected['runes'];
 
-  // ══ 카드 점수: 총운(total) 기준 ±15 이내 앵커링 ══
-  // total은 35~99지만 실제론 40~88 범위 — 현실적 분산
-  function _cardScore(base, delta, min, max){
-    // base = total, delta = 영역별 편차, 최종 38~82
-    return Math.min(max||82, Math.max(min||38, Math.round(base + delta)));
+  // ★ CGO-FULI 기준서 v1.0 — calcResult.scores.s18 실측값 기반
+  var _s18h = (r.scores && r.scores.s18) ? r.scores.s18 : {};
+  function _s18avg(){
+    var vals=[]; for(var i=0;i<arguments.length;i++){var v=_s18h[arguments[i]];if(v&&v>0)vals.push(v);}
+    return vals.length>0 ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
   }
+  function _clamp(v,mn,mx){ return Math.min(mx,Math.max(mn,Math.round(v))); }
 
-  // 날짜 시드 기반 각 영역별 랜덤 편차 (-13 ~ +10)
-  var _rMoney  = (rng(seed+11)%24)-13; // 재물
-  var _rLove   = (rng(seed+22)%24)-13; // 애정
-  var _rWork   = (rng(seed+33)%24)-13; // 직업
-  var _rHealth = (rng(seed+44)%24)-13; // 건강
-  var _rLegal  = (rng(seed+55)%22)-12; // 법적
-  var _rSocial = (rng(seed+66)%22)-12; // 대인
+  // ★ 영역별 점수: 관련 역학 s18 점수 평균 (없으면 total 기반 폴백)
+  // 재물·금전 → 사주(s01)+자미(s02)+주역(s15)+수비학(s08) 평균
+  var _moneyBase = _s18avg('s01','s02','s15','s08');
+  var _moneyScore = _clamp(_moneyBase||total, 40, 85);
 
-  // 역학 선택에 따른 소폭 보정 (최대 ±5)
-  var _moneyAdj  = (_hasBazi?2:0) + (_hasNumerology?1:0) - (_hasHorary?1:0);
-  var _loveAdj   = (_hasTarot?2:0) + (_hasZiwei?1:0) - (_hasFeng?1:0);
-  var _workAdj   = (_tfSelected['qimen']?2:0) + (_tfSelected['iching']?1:0) - (_hasBio?1:0);
-  var _healthAdj = (_hasBio?2:0) + (_hasJyotish?1:0) - (_tfSelected['qimen']?1:0);
-  var _legalAdj  = (_hasHorary?2:0) - (_hasTarot?1:0);
-  var _socialAdj = (_hasKabbalah?2:0) + (_tfSelected['enneagram']?1:0);
+  // 애정·관계 → 타로×달(s16)+합성차트(s14)+태양궁(s03) 평균
+  var _loveBase = _s18avg('s16','s14','s03');
+  var _loveScore = _clamp(_loveBase||total, 40, 85);
 
-  // 최종 카드 점수 (40~85 강제)
-  var _moneyScore  = _cardScore(total, _rMoney  + _moneyAdj,  40, 85);
-  var _loveScore   = _cardScore(total, _rLove   + _loveAdj,   40, 85);
-  var _workScore   = _cardScore(total, _rWork   + _workAdj,   40, 85);
-  var _healthScore = _cardScore(total, _rHealth + _healthAdj, 40, 85);
-  var _legalScore  = _cardScore(total, _rLegal  + _legalAdj,  40, 84);
-  var _socialScore = _cardScore(total, _rSocial + _socialAdj, 40, 84);
+  // 직업·명예 → 행성트랜짓(s06)+기문둔갑(s05)+태을신수(s13) 평균
+  var _workBase = _s18avg('s06','s05','s13');
+  var _workScore = _clamp(_workBase||total, 40, 85);
+
+  // 건강·활력 → 관상rPPG(s17)+손금BLI(s18)+풍수(s09)+구성기학(s19) 평균
+  var _healthBase = _s18avg('s17','s18','s09','s19');
+  var _healthScore = _clamp(_healthBase||total, 40, 85);
+
+  // 법적·계약 → 육임(s07)+주역(s15)+카발라(s10) 평균
+  var _legalBase = _s18avg('s07','s15','s10');
+  var _legalScore = _clamp(_legalBase||total, 40, 84);
+
+  // 대인·사회 → 성명학(s11)+카발라(s10)+합성차트(s14) 평균
+  var _socialBase = _s18avg('s11','s10','s14');
+  var _socialScore = _clamp(_socialBase||total, 40, 84);
 
   var details = [
     {icon:'💰',name:'재물·금전',score:_moneyScore,
@@ -32146,10 +31183,10 @@ var _cgoIntroContent = {
   pure:{badge:'📜 순수 역학 분석',badgeColor:'#d4a843',title:'지능형 멀티-엔진 역학 분석',subtitle:'Human-Intelligence',desc:'50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',body:'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 냅니다.',color:'rgba(212,168,67,.3)'},
   realtime:{badge:'🛸 실시간 데이터 연동 분석',badgeColor:'#38bdf8',title:'하이브리드 환경 데이터 연동 분석',subtitle:'Nature-Intelligence',desc:'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',body:'인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다.',color:'rgba(56,189,248,.3)'},
   rppg:{badge:'🧬 실시간 rPPG 데이터 연동 분석',badgeColor:'#34d399',title:"세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",subtitle:'Bio-Intelligence',desc:'바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',body:'CGO-FULI는 세계 최초로 첨단 rPPG 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화합니다.',color:'rgba(52,211,153,.3)'},
-  face:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#93c5fd',title:'관상 AI 분석 — 측정 전 필독',subtitle:'Face Bio-Scan',desc:'Groq Vision × 동양 관상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 밝은 곳에서 정면을 바라봐 주세요<br>② 카메라와 얼굴 거리 30~50cm 유지<br>③ 안경·모자 등 제거 후 촬영<br>④ 무표정으로 눈을 정면으로 응시<br>⑤ 33초간 얼굴을 고정해 주세요<br><br>⚠️ 얼굴이 감지되어야 타이머가 시작됩니다',color:'rgba(147,197,253,.3)'},
-  palm:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#fcd34d',title:'손금 AI 분석 — 측정 전 필독',subtitle:'Palm Bio-Scan',desc:'Groq Vision × 동양 수상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 손바닥을 카메라 가까이 펼쳐 주세요<br>② 손금 선이 잘 보이도록 조명 확보<br>③ 왼손 → 태어날 때 운명<br>④ 오른손 → 현재 진행 중인 운명<br>⑤ 33초간 손바닥을 고정해 주세요<br><br>⚠️ 손바닥이 감지되어야 타이머가 시작됩니다',color:'rgba(252,211,77,.3)'},
-  tongue:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#fca5a5',title:'혀 스캔 분석 — 측정 전 필독',subtitle:'Tongue Bio-Scan',desc:'Groq Vision × 한의학 설진 × 오행 건강 분석',body:'📋 측정 전 필독 지시사항<br><br>① 입을 크게 벌리고 혀를 끝까지 내미세요<br>② 밝은 곳에서 혀가 잘 보이도록 해 주세요<br>③ 혀를 가능한 한 편평하게 유지<br>④ 혀 표면 전체가 화면에 보이도록<br>⑤ 15초간 혀를 고정해 주세요<br><br>⚠️ 혀가 감지되어야 타이머가 시작됩니다',color:'rgba(252,165,165,.3)'},
-  breath:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#6ee7b7',title:'4 · 7 · 8 호흡 측정 — 측정 전 필독',subtitle:'Breath Bio-Scan',desc:'자율신경 안정 × 산소 공급 × HRV 개선 호흡법',body:'📋 측정 전 필독 지시사항<br><br>① 편안한 자세로 앉거나 누워 주세요<br>② 코로 <strong style="color:#38bdf8;">흡입 4초</strong> — 깊게 천천히 들이마세요<br>③ <strong style="color:#d4a843;">참기 7초</strong> — 숨을 꾹 참으세요<br>④ 입으로 <strong style="color:#34d399;">내뱉기 8초</strong> — 슈우~ 천천히 내뱉으세요<br>⑤ 위 과정을 3회 반복하면 완료됩니다<br><br>💡 이 호흡법은 자율신경을 안정시키고 HRV(심박변이도)를 높여 역학 분석 정확도를 향상시킵니다',color:'rgba(52,211,153,.3)'}
+  face:{badge:'🧬 생체 센서',badgeColor:'#93c5fd',title:'관상 AI 분석 — 측정 전 필독',subtitle:'Face Bio-Scan',desc:'Groq Vision × 동양 관상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 밝은 곳에서 정면을 바라봐 주세요<br>② 카메라와 얼굴 거리 30~50cm 유지<br>③ 안경·모자 등 제거 후 촬영<br>④ 무표정으로 눈을 정면으로 응시<br>⑤ 33초간 얼굴을 고정해 주세요<br><br>⚠️ 얼굴이 감지되어야 타이머가 시작됩니다',color:'rgba(147,197,253,.3)'},
+  palm:{badge:'🧬 생체 센서',badgeColor:'#fcd34d',title:'손금 AI 분석 — 측정 전 필독',subtitle:'Palm Bio-Scan',desc:'Groq Vision × 동양 수상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 손바닥을 카메라 가까이 펼쳐 주세요<br>② 손금 선이 잘 보이도록 조명 확보<br>③ 왼손 → 태어날 때 운명<br>④ 오른손 → 현재 진행 중인 운명<br>⑤ 33초간 손바닥을 고정해 주세요<br><br>⚠️ 손바닥이 감지되어야 타이머가 시작됩니다',color:'rgba(252,211,77,.3)'},
+  tongue:{badge:'🧬 생체 센서',badgeColor:'#fca5a5',title:'혀 스캔 분석 — 측정 전 필독',subtitle:'Tongue Bio-Scan',desc:'Groq Vision × 한의학 설진 × 오행 건강 분석',body:'📋 측정 전 필독 지시사항<br><br>① 입을 크게 벌리고 혀를 끝까지 내미세요<br>② 밝은 곳에서 혀가 잘 보이도록 해 주세요<br>③ 혀를 가능한 한 편평하게 유지<br>④ 혀 표면 전체가 화면에 보이도록<br>⑤ 15초간 혀를 고정해 주세요<br><br>⚠️ 혀가 감지되어야 타이머가 시작됩니다',color:'rgba(252,165,165,.3)'},
+  breath:{badge:'🧬 생체 센서',badgeColor:'#6ee7b7',title:'4 · 7 · 8 호흡 측정 — 측정 전 필독',subtitle:'Breath Bio-Scan',desc:'자율신경 안정 × 산소 공급 × HRV 개선 호흡법',body:'📋 측정 전 필독 지시사항<br><br>① 편안한 자세로 앉거나 누워 주세요<br>② 코로 <strong style="color:#38bdf8;">흡입 4초</strong> — 깊게 천천히 들이마세요<br>③ <strong style="color:#d4a843;">참기 7초</strong> — 숨을 꾹 참으세요<br>④ 입으로 <strong style="color:#34d399;">내뱉기 8초</strong> — 슈우~ 천천히 내뱉으세요<br>⑤ 위 과정을 3회 반복하면 완료됩니다<br><br>💡 이 호흡법은 자율신경을 안정시키고 HRV(심박변이도)를 높여 역학 분석 정확도를 향상시킵니다',color:'rgba(52,211,153,.3)'}
 };
 function cgoIntroOpen(type,callback){
   var d=_cgoIntroContent[type]; if(!d){if(callback)callback();return;}
@@ -49496,6 +48533,7 @@ function cgoGoPage(page){
   }
   // 페이지별 초기화
   if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
+    if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
   if(page==='couple') setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300);
   if(page==='algo') setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200);
@@ -52466,6 +51504,7 @@ function cgoGoPage(page){
   }
   // 페이지별 초기화
   if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
+    if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
   if(page==='couple') setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300);
   if(page==='algo') setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200);
@@ -52611,17 +51650,29 @@ var _unlockTimer=setInterval(function(){
 <!-- ══════════════════════════════════════════
   💬 CGO-FULI 메신저
 ══════════════════════════════════════════ -->
-<div class="page" id="page-chat" style="display:none;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;position:fixed;inset:0;z-index:19000;background:#060d1a;">
+<div class="page" id="page-chat" style="display:none;flex-direction:column;height:100%;max-height:100%;overflow:hidden;position:fixed;inset:0;z-index:19000;background:#060d1a;">
 
 
   <style>
     .cgm-screen{display:none;flex-direction:column;height:100%;overflow:hidden;}
     .cgm-screen.active{display:flex;}
+    /* ★ 스마트폰 키보드 대응 */
+    #page-chat {
+      height: 100% !important;
+      height: -webkit-fill-available !important;
+    }
+    #cgmRoom {
+      height: 100%;
+    }
+    #cgmMessages {
+      flex: 1;
+      min-height: 0;
+    }
     /* ★ 네온 간판 + 빛나는 글씨 효과 */
     @keyframes cgmNeonChar {
       0%   { opacity:1; text-shadow:0 0 6px currentColor, 0 0 12px currentColor; }
       30%  { opacity:1; text-shadow:0 0 2px currentColor; }
-      50%  { opacity:0.04; text-shadow:none; }
+      50%  { opacity:0; text-shadow:none; }
       70%  { opacity:1; text-shadow:0 0 8px currentColor, 0 0 20px currentColor, 0 0 30px currentColor; }
       100% { opacity:1; text-shadow:0 0 6px currentColor, 0 0 12px currentColor; }
     }
@@ -52629,17 +51680,35 @@ var _unlockTimer=setInterval(function(){
       display:inline;
       animation: cgmNeonChar 2.2s ease-in-out infinite;
     }
+    /* ★ 8글자 스크롤 윈도우 (캡처 방지) */
+    .cgm-scroll-win {
+      display:inline-block;
+      overflow:hidden;
+      width:8em;
+      white-space:nowrap;
+      vertical-align:bottom;
+    }
+    .cgm-scroll-win .cgm-scroll-inner {
+      display:inline-block;
+      white-space:nowrap;
+      animation: cgmScrollTicker linear infinite;
+    }
+    @keyframes cgmScrollTicker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
     /* 내 메시지 글자색 황금 빛 */
-    .cgm-bubble-me .cgm-char { color:#000; }
-    /* 상대 메시지 글자 청록 빛 */
+    .cgm-bubble-me .cgm-char { color:#d4a843; }
+    /* 상대 메시지 글자 */
     .cgm-bubble-you .cgm-char { color:rgba(240,230,200,.9); }
     /* 기울기 비활성 시 블러 */
     #cgmMessages.tilt-lock { filter:blur(12px); transition:filter .2s; pointer-events:none; }
     #cgmMessages.tilt-ok   { filter:none; transition:filter .2s; }
-    .cgm-bubble-me{align-self:flex-start;background:linear-gradient(135deg,#d4a843,#b8922f);color:#000;border-radius:4px 18px 18px 18px;padding:10px 14px;max-width:72%;font-size:13px;line-height:1.6;margin-bottom:4px;}
-    .cgm-bubble-you{align-self:flex-start;background:rgba(255,255,255,.1);color:rgba(240,230,200,.9);border-radius:4px 18px 18px 18px;padding:10px 14px;max-width:72%;font-size:13px;line-height:1.6;margin-bottom:4px;}
-    .cgm-bubble-sejong{align-self:center;background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(251,191,36,.08));border:1.5px solid rgba(212,168,67,.4);color:#f0e0a0;border-radius:14px;padding:10px 16px;max-width:88%;font-size:12px;line-height:1.8;margin:8px 0;text-align:left;position:relative;}
-    .cgm-bubble-sejong::before{content:'👑';position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:18px;}
+    /* ★ 말풍선 제거 — 텍스트만 */
+    .cgm-bubble-me{align-self:flex-start;background:none;color:#d4a843;border-radius:0;padding:2px 0;max-width:100%;font-size:13px;line-height:1.7;margin-bottom:2px;font-weight:600;}
+    .cgm-bubble-you{align-self:flex-start;background:none;color:rgba(240,230,200,.85);border-radius:0;padding:2px 0;max-width:100%;font-size:13px;line-height:1.7;margin-bottom:2px;}
+    .cgm-bubble-sejong{align-self:center;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(251,191,36,.04));border-left:2px solid rgba(212,168,67,.5);color:#f0e0a0;border-radius:0 8px 8px 0;padding:8px 14px;max-width:92%;font-size:12px;line-height:1.8;margin:8px 0;text-align:left;position:relative;}
+    .cgm-bubble-sejong::before{content:'👑 세종';position:relative;top:0;left:0;transform:none;font-size:10px;display:block;margin-bottom:4px;color:rgba(212,168,67,.6);}
     .cgm-bubble-ai{align-self:center;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c4b5fd;border-radius:14px;padding:8px 14px;max-width:85%;font-size:11px;line-height:1.6;margin:6px 0;text-align:center;}
     .cgm-time{font-size:9px;color:rgba(255,255,255,.3);margin-bottom:8px;}
     .cgm-read{font-size:9px;color:rgba(212,168,67,.6);margin-top:2px;text-align:right;}
@@ -52764,9 +51833,13 @@ var _unlockTimer=setInterval(function(){
       <div id="cgmWatermark" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:11px;color:rgba(212,168,67,.04);font-weight:900;pointer-events:none;z-index:1;white-space:nowrap;letter-spacing:.1em;user-select:none;"></div>
     </div>
     <!-- 입력창 -->
-    <div style="padding:10px 12px;background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
-      <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}"></textarea>
+    <div style="padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
+      <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}" onfocus="setTimeout(function(){var el=document.getElementById('cgmMessages');if(el)el.scrollTop=el.scrollHeight;},300);"></textarea>
       <button onclick="cgmSendMsg()" style="width:42px;height:42px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:50%;color:#000;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
+    </div>
+    <!-- ★ 특허 번호 -->
+    <div style="text-align:center;padding:5px 0 6px;background:rgba(0,0,0,.4);font-size:9px;color:rgba(212,168,67,.25);letter-spacing:.12em;font-family:'Orbitron',monospace;flex-shrink:0;">
+      특허 10-2026-0060113 · CGO-FULI SECURE MESSENGER
     </div>
   </div>
 
@@ -54133,15 +53206,16 @@ function cgmOpenRoom(code){
     _cgm.msgListener = _cgm.db.ref('chats/'+roomId+'/msgs');
     _cgm.msgListener.on('child_added', function(snap){
       var msg = snap.val();
+      if(!msg.views) msg.views = 0; // 조회수 초기화
       if(!_cgm.rooms[code].msgs) _cgm.rooms[code].msgs=[];
+      // ★ 내가 보낸 메시지는 이미 로컬에 저장됨 — Firebase 수신 무시 (중복+암호문 방지)
+      if(msg.from === _cgm.myCode) return;
       // 중복 방지
       var exists = _cgm.rooms[code].msgs.some(function(m){ return m.id===snap.key; });
       if(!exists){
-        // 복호화 (내가 보낸 것 제외)
-        if(msg.from !== _cgm.myCode){
-          var rId = [_cgm.myCode, code].sort().join('_');
-          msg.text = _cgmDecrypt(msg.text, rId);
-        }
+        // 복호화 (상대방 메시지만)
+        var rId = [_cgm.myCode, code].sort().join('_');
+        msg.text = _cgmDecrypt(msg.text, rId);
         msg.id = snap.key;
         _cgm.rooms[code].msgs.push(msg);
         _cgm.rooms[code].lastMsg = '새 메시지';
@@ -54165,7 +53239,80 @@ function cgmOpenRoom(code){
     });
   }
 
+  // ★ 열람 카운트 +1 (2회 후 삭제)
+  setTimeout(function(){ cgmCountViews(code); }, 200);
+  // ★ 30초 자동 삭제 타이머
+  if(_cgmCleanTimer) clearInterval(_cgmCleanTimer);
+  _cgmCleanTimer = setInterval(function(){
+    if(_cgm.currentRoom) cgmCleanupMessages(_cgm.currentRoom);
+  }, 5000); // 5초마다 체크
+
   setTimeout(function(){ var el=document.getElementById('cgmMessages'); if(el) el.scrollTop=el.scrollHeight; },100);
+}
+
+
+// ★★★ CGO 메신저 보안 삭제 시스템 ★★★
+// 규칙1: 메시지 전송 후 30초 경과 → 전체 삭제
+// 규칙2: 상대방이 2회 열람 → 해당 메시지 삭제
+var _cgmCleanTimer = null;
+
+function cgmCleanupMessages(code){
+  var room = _cgm.rooms[code];
+  if(!room || !room.msgs) return;
+  var now = Date.now();
+  var EXPIRE_MS = 30000; // 30초
+  var MAX_VIEWS = 2;     // 2회 조회
+  var changed = false;
+  var remaining = [];
+
+  room.msgs.forEach(function(msg){
+    // 규칙1: 30초 경과 → 삭제
+    if(msg.t && (now - msg.t) > EXPIRE_MS){
+      changed = true;
+      // Firebase에서도 삭제
+      if(_cgm.mode==='firebase' && _cgm.db && msg.id){
+        var rId = [_cgm.myCode, code].sort().join('_');
+        _cgm.db.ref('chats/'+rId+'/msgs/'+msg.id).remove();
+      }
+      return; // 배열에서 제거
+    }
+    // 규칙2: 상대 메시지가 2회 열람 → 삭제
+    if(msg.from !== _cgm.myCode && (msg.views||0) >= MAX_VIEWS){
+      changed = true;
+      if(_cgm.mode==='firebase' && _cgm.db && msg.id){
+        var rId2 = [_cgm.myCode, code].sort().join('_');
+        _cgm.db.ref('chats/'+rId2+'/msgs/'+msg.id).remove();
+      }
+      return; // 배열에서 제거
+    }
+    remaining.push(msg);
+  });
+
+  if(changed){
+    room.msgs = remaining;
+    localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+    cgmRenderMessages(code);
+    // 삭제 알림
+    cgmShowShieldToast('🔥 보안 삭제 완료');
+  }
+}
+
+// 채팅방 열 때 상대 메시지 열람 카운트 +1
+function cgmCountViews(code){
+  var room = _cgm.rooms[code];
+  if(!room || !room.msgs) return;
+  var changed = false;
+  room.msgs.forEach(function(msg){
+    // 내가 받은 메시지만 카운트 (상대방이 보낸 것)
+    if(msg.from !== _cgm.myCode){
+      msg.views = (msg.views||0) + 1;
+      changed = true;
+    }
+  });
+  if(changed){
+    localStorage.setItem('cgm_rooms', JSON.stringify(_cgm.rooms));
+    cgmCleanupMessages(code); // 즉시 2회 체크
+  }
 }
 
 function cgmRenderMessages(code){
@@ -54217,7 +53364,7 @@ function cgmSendMsg(){
   if(!text || !_cgm.currentRoom) return;
   inp.value='';
 
-  var msg = { from:_cgm.myCode, text:text, t:Date.now(), read:false };
+  var msg = { from:_cgm.myCode, text:text, t:Date.now(), read:false, views:0 };
   if(!_cgm.rooms[_cgm.currentRoom].msgs) _cgm.rooms[_cgm.currentRoom].msgs=[];
   if(_cgm.rooms[_cgm.currentRoom].msgs.length >= 10){
     _cgm.rooms[_cgm.currentRoom].msgs = _cgm.rooms[_cgm.currentRoom].msgs.slice(-9);
@@ -54635,16 +53782,36 @@ function cgmStopTiltWatch(){
 
 // ══ 네온 글씨 효과 ══
 function cgmNeonWrap(text){
-  // 각 글자를 span으로 감싸고 딜레이 설정
-  var result = '<span class="cgm-flow-text">';
+  // ★ 모든 글자 — 스크롤 + 네온 깜빡임 동시 적용
+  var WIN = 3; // 3자 이하=깜빡임만, 4자 이상=스크롤+깜빡임
   var chars = Array.from(text);
-  chars.forEach(function(ch, i){
-    var delay = (i * 0.15) % 2.5;
-    result += '<span class="cgm-char" style="animation-delay:'+delay.toFixed(2)+'s">'+
-      ch.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>';
-  });
-  result += '</span>';
-  return result;
+  var esc = function(c){ return c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  // 글자별 네온 span 생성 (딜레이 다르게 → 물결치듯 깜빡임)
+  function makeNeonChars(arr, offset){
+    return arr.map(function(ch,i){
+      var d = ((i + (offset||0)) * 0.15) % 2.2;
+      return '<span class="cgm-char" style="animation-delay:'+d.toFixed(2)+'s">'+esc(ch)+'</span>';
+    }).join('');
+  }
+
+  // 3글자 이하: 제자리 깜빡임만 / 4글자 이상: 스크롤+깜빡임
+  if(chars.length <= WIN){
+    return '<span class="cgm-flow-text">'+ makeNeonChars(chars) +'</span>';
+  }
+
+  // 9글자 이상: 8글자 윈도우 스크롤 + 각 글자 네온 깜빡임
+  var dur = Math.max(4, chars.length * 0.22);
+  // seamless loop: 원문 2배 복사
+  var inner = makeNeonChars(chars, 0) + makeNeonChars(chars, chars.length);
+
+  return '<span class="cgm-scroll-win">'+
+    '<span class="cgm-flow-text">'+
+      '<span class="cgm-scroll-inner" style="animation-duration:'+dur.toFixed(1)+'s">'+
+        inner+
+      '</span>'+
+    '</span>'+
+  '</span>';
 }
 
 // ══ 양방향 보안 신호 ══
