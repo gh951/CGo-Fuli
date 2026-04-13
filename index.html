@@ -3706,73 +3706,82 @@ function updateTransitSectionWithNASA(planets) {
       </style>
 
       
-<!-- ★ 퀵 네비 탭 (실시간 바 아래) -->
+<!-- ★ 퀵 네비 탭 -->
 <style>
-#cgoQuickNav{display:flex;gap:5px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0;}
+#cgoQuickNav{
+  display:flex;gap:6px;padding:8px 0 10px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
 #cgoQuickNav::-webkit-scrollbar{display:none;}
-.cgo-qnav{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.15);border-radius:10px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
-.cgo-qnav:active,.cgo-qnav.active{background:rgba(212,168,67,.18);border-color:rgba(212,168,67,.5);}
-.cgo-qnav .qico{font-size:16px;line-height:1;}
-.cgo-qnav .qtxt{font-size:8px;color:rgba(240,230,200,.5);white-space:nowrap;letter-spacing:.02em;}
-.cgo-qnav.active .qtxt{color:#d4a843;font-weight:700;}
+.cgo-qnav{
+  flex-shrink:0;display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:8px 12px;
+  background:rgba(212,168,67,.06);
+  border:1px solid rgba(212,168,67,.18);
+  border-radius:11px;cursor:pointer;
+  transition:all .2s;-webkit-tap-highlight-color:transparent;
+  min-width:52px;
+}
+.cgo-qnav:active{background:rgba(212,168,67,.2);transform:scale(.96);}
+.cgo-qnav.on{background:rgba(212,168,67,.16);border-color:rgba(212,168,67,.5);}
+.cgo-qnav .qi{font-size:18px;line-height:1;}
+.cgo-qnav .qt{font-size:8px;color:rgba(240,230,200,.45);white-space:nowrap;}
+.cgo-qnav.on .qt{color:#d4a843;font-weight:700;}
 </style>
 <div id="cgoQuickNav">
-  <div class="cgo-qnav active" id="qnav1" onclick="cgoQuickJump(1)">
-    <span class="qico">📋</span><span class="qtxt">정보입력</span>
+  <div class="cgo-qnav on" id="qn1" onclick="cgoQJ(1)">
+    <span class="qi">📋</span><span class="qt">정보입력</span>
   </div>
-  <div class="cgo-qnav" id="qnav2" onclick="cgoQuickJump(2)">
-    <span class="qico">🌌</span><span class="qtxt">천지인</span>
+  <div class="cgo-qnav" id="qn2" onclick="cgoQJ(2)">
+    <span class="qi">🌌</span><span class="qt">천지인</span>
   </div>
-  <div class="cgo-qnav" id="qnav3" onclick="cgoQuickJump(3)">
-    <span class="qico">🧬</span><span class="qtxt">생체센서</span>
+  <div class="cgo-qnav" id="qn3" onclick="cgoQJ(3)">
+    <span class="qi">🧬</span><span class="qt">생체센서</span>
   </div>
-  <div class="cgo-qnav" id="qnav4" onclick="cgoQuickJump(4)">
-    <span class="qico">📊</span><span class="qtxt">ILI점수</span>
+  <div class="cgo-qnav" id="qn4" onclick="cgoQJ(4)">
+    <span class="qi">📊</span><span class="qt">ILI점수</span>
   </div>
-  <div class="cgo-qnav" id="qnav5" onclick="cgoQuickJump(5)">
-    <span class="qico">✦</span><span class="qtxt">에너지의서</span>
+  <div class="cgo-qnav" id="qn5" onclick="cgoQJ(5)">
+    <span class="qi">✦</span><span class="qt">에너지서</span>
   </div>
-  <div class="cgo-qnav" id="qnav6" onclick="cgoQuickJump(6)">
-    <span class="qico">💬</span><span class="qtxt">메신저</span>
+  <div class="cgo-qnav" id="qn6" onclick="cgoQJ(6)">
+    <span class="qi">💬</span><span class="qt">메신저</span>
   </div>
-  <div class="cgo-qnav" id="qnav7" onclick="cgoQuickJump(7)">
-    <span class="qico">✦</span><span class="qtxt">전체기능</span>
+  <div class="cgo-qnav" id="qn7" onclick="cgoQJ(7)">
+    <span class="qi">✦</span><span class="qt">전체기능</span>
   </div>
 </div>
 <script>
-function cgoQuickJump(n){
-  var body = document.getElementById('cgoB'+n);
-  var arrow = document.getElementById('cgoA'+n);
-  if(!body) return;
-
-  // 섹션 펼치기 (닫혀있으면)
-  if(body.classList.contains('closed')){
-    cgoBarToggle('cgoB'+n,'cgoA'+n);
-  }
-
-  // 스크롤 이동
-  setTimeout(function(){
-    var target=document.getElementById('cgoB'+n);
-    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
-  },150);
-
-  // 네비 탭 활성화
+function cgoQJ(n){
+  // 1. 탭 활성화
   for(var i=1;i<=7;i++){
-    var q=document.getElementById('qnav'+i);
-    if(q) q.classList.toggle('active', i===n);
+    var q=document.getElementById('qn'+i);
+    if(q) q.classList.toggle('on', i===n);
   }
+  // 2. 바 id로 정확히 스크롤 (바는 항상 보임)
+  var bar=document.getElementById('cgoBar'+n);
+  if(bar){
+    bar.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  // 3. 펼치기 (스크롤 완료 후)
+  setTimeout(function(){
+    var b=document.getElementById('cgoB'+n);
+    if(b && b.classList.contains('closed')){
+      cgoBarToggle('cgoB'+n,'cgoA'+n);
+    }
+  },500);
 }
-
-// 스크롤 감지 → 현재 섹션 네비 강조
-window.addEventListener('scroll', function(){
+// 스크롤 감지 → 현재 섹션 탭 강조
+window.addEventListener('scroll',function(){
   for(var i=1;i<=7;i++){
     var b=document.getElementById('cgoB'+i);
-    if(!b) continue;
-    var rect=b.getBoundingClientRect();
-    if(rect.top<=150 && rect.bottom>0){
+    if(!b||b.classList.contains('closed')) continue;
+    var r=b.getBoundingClientRect();
+    if(r.top<=200 && r.bottom>0){
       for(var j=1;j<=7;j++){
-        var q=document.getElementById('qnav'+j);
-        if(q) q.classList.toggle('active',j===i);
+        var q=document.getElementById('qn'+j);
+        if(q) q.classList.toggle('on',j===i);
       }
       break;
     }
@@ -3780,7 +3789,7 @@ window.addEventListener('scroll', function(){
 },{passive:true});
 </script>
 
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB1','cgoA1')"><span class="cgo-bar-title">📋 정보 입력</span><span class="cgo-bar-arrow" id="cgoA1">▼</span></div><div id="cgoB1" class="cgo-collapsible">
+<div class="cgo-bar" id="cgoBar1" onclick="cgoBarToggle('cgoB1','cgoA1')"><span class="cgo-bar-title">📋 정보 입력</span><span class="cgo-bar-arrow" id="cgoA1">▼</span></div><div id="cgoB1" class="cgo-collapsible">
 <div class="input-panel">
         <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
         <div class="ip-form">
@@ -3892,7 +3901,7 @@ window.addEventListener('scroll', function(){
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
       
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB2','cgoA2')"><span class="cgo-bar-title">🌌 천지인 에너지 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA2" class="closed">▼</span></div><div id="cgoB2" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar2" onclick="cgoBarToggle('cgoB2','cgoA2')"><span class="cgo-bar-title">🌌 천지인 에너지 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA2" class="closed">▼</span></div><div id="cgoB2" class="cgo-collapsible closed">
 <div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
 
         <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
@@ -4037,7 +4046,7 @@ window.addEventListener('scroll', function(){
 
 
         
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB3','cgoA3')"><span class="cgo-bar-title">🧬 생체 센서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA3" class="closed">▼</span></div><div id="cgoB3" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar3" onclick="cgoBarToggle('cgoB3','cgoA3')"><span class="cgo-bar-title">🧬 생체 센서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA3" class="closed">▼</span></div><div id="cgoB3" class="cgo-collapsible closed">
 <!-- ✦ Bio Sensor 경계선 ✦ -->
         <div style="margin:22px 0;position:relative;display:flex;align-items:center;gap:12px;">
           <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6));"></div>
@@ -4129,7 +4138,7 @@ window.addEventListener('scroll', function(){
         </div>
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
         
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB4','cgoA4')"><span class="cgo-bar-title">📊 ILI 점수 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA4" class="closed">▼</span></div><div id="cgoB4" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar4" onclick="cgoBarToggle('cgoB4','cgoA4')"><span class="cgo-bar-title">📊 ILI 점수 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA4" class="closed">▼</span></div><div id="cgoB4" class="cgo-collapsible closed">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <!-- 왼쪽: ILI/CEI 게이지 -->
           <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
@@ -4186,7 +4195,7 @@ window.addEventListener('scroll', function(){
         <!-- ✦ 4-7-8 아래 ✦ -->
 
         
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB5','cgoA5')"><span class="cgo-bar-title">✦ CGO-FULI 에너지의 서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA5" class="closed">▼</span></div><div id="cgoB5" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar5" onclick="cgoBarToggle('cgoB5','cgoA5')"><span class="cgo-bar-title">✦ CGO-FULI 에너지의 서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA5" class="closed">▼</span></div><div id="cgoB5" class="cgo-collapsible closed">
 <!-- ══ CGO-FULI 3권의 서 ══ -->
         <div style="margin:32px 0 16px;">
           <!-- 상단 구분선 -->
@@ -4449,7 +4458,7 @@ window.addEventListener('scroll', function(){
         </div>
 
         
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB6','cgoA6')"><span class="cgo-bar-title">💬 CGO 메신저 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA6" class="closed">▼</span></div><div id="cgoB6" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar6" onclick="cgoBarToggle('cgoB6','cgoA6')"><span class="cgo-bar-title">💬 CGO 메신저 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA6" class="closed">▼</span></div><div id="cgoB6" class="cgo-collapsible closed">
 <div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
 
 
@@ -4463,7 +4472,7 @@ window.addEventListener('scroll', function(){
 
         <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
         
-<div class="cgo-bar" onclick="cgoBarToggle('cgoB7','cgoA7')"><span class="cgo-bar-title">✦ CGO-FULI 전체 기능 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA7" class="closed">▼</span></div><div id="cgoB7" class="cgo-collapsible closed">
+<div class="cgo-bar" id="cgoBar7" onclick="cgoBarToggle('cgoB7','cgoA7')"><span class="cgo-bar-title">✦ CGO-FULI 전체 기능 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA7" class="closed">▼</span></div><div id="cgoB7" class="cgo-collapsible closed">
 <div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
 
           <!-- 📋 전체 기능 모음 — 접이식 책 카드 -->
