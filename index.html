@@ -2332,82 +2332,6 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 </style>
 <!-- PeerJS WebRTC — 커플 실시간 영상 연결 -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<style>
-.cgo-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:11px;cursor:pointer;margin-bottom:8px;transition:background .2s;-webkit-tap-highlight-color:transparent;user-select:none;}
-.cgo-bar:active{background:rgba(212,168,67,.13);}
-.cgo-bar-title{font-size:12px;font-weight:700;color:rgba(240,230,200,.82);letter-spacing:.02em;}
-.cgo-bar-arrow{font-size:13px;color:#d4a843;transition:transform .3s;flex-shrink:0;}
-.cgo-bar-arrow.closed{transform:rotate(-90deg);}
-.cgo-collapsible{overflow:hidden;transition:max-height .4s ease,opacity .3s ease;}
-.cgo-collapsible.closed{max-height:0px!important;opacity:0!important;pointer-events:none!important;}
-#cgoCdToast{display:none;position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:99990;background:linear-gradient(135deg,rgba(6,13,26,.97),rgba(13,21,38,.95));border:1.5px solid rgba(212,168,67,.5);border-radius:18px;padding:14px 22px;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.55);min-width:200px;}
-#cgoCdToast .n{font-family:'Orbitron',monospace;font-size:34px;font-weight:900;color:#d4a843;line-height:1;margin-bottom:5px;}
-#cgoCdToast .t{font-size:10px;color:rgba(240,230,200,.55);margin-bottom:10px;line-height:1.5;}
-#cgoCdToast button{padding:8px 22px;background:linear-gradient(135deg,#d4a843,#f59e0b);border:none;border-radius:9px;color:#020817;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;}
-</style>
-<script>
-var _CB={IDLE:20*60*1000,CD:15,_t:{},_ci:null,_cs:15,_pid:null};
-['click','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,function(){_CB._cancel();_cgoBarResetAll();},{passive:true});});
-function cgoBarToggle(bId,aId){
-  var b=document.getElementById(bId),a=document.getElementById(aId);
-  if(!b)return;
-  var isClosed=b.classList.contains('closed');
-  if(isClosed){
-    // 열기
-    b.classList.remove('closed');
-    b.style.maxHeight='0px';
-    b.style.opacity='0';
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
-        b.style.maxHeight=b.scrollHeight+'px';
-        b.style.opacity='1';
-        setTimeout(function(){
-          if(!b.classList.contains('closed')){
-            b.style.maxHeight='none';
-          }
-        },420);
-      });
-    });
-  } else {
-    // 닫기
-    b.style.maxHeight=b.scrollHeight+'px';
-    b.style.opacity='1';
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
-        b.style.maxHeight='0px';
-        b.style.opacity='0';
-        setTimeout(function(){ b.classList.add('closed'); },380);
-      });
-    });
-  }
-  if(a)a.classList.toggle('closed',!isClosed);
-}
-function _cgoBarSet(bId,aId){
-  if(_CB._t[bId])clearTimeout(_CB._t[bId]);
-  _CB._t[bId]=setTimeout(function(){
-    var b=document.getElementById(bId);
-    if(b&&!b.classList.contains('closed')){_CB._pid={b:bId,a:aId};_CB._start();}
-  },_CB.IDLE-_CB.CD*1000);
-}
-_CB._start=function(){
-  _CB._cs=_CB.CD;var t=document.getElementById('cgoCdToast');
-  if(!t)return;t.style.display='block';document.getElementById('cgoCdN').textContent=_CB._cs;
-  if(_CB._ci)clearInterval(_CB._ci);
-  _CB._ci=setInterval(function(){
-    _CB._cs--;var n=document.getElementById('cgoCdN');if(n)n.textContent=_CB._cs;
-    if(_CB._cs<=0){clearInterval(_CB._ci);t.style.display='none';
-      if(_CB._pid){var p=_CB._pid;var b=document.getElementById(p.b);if(b&&!b.classList.contains('closed'))cgoBarToggle(p.b,p.a);_CB._pid=null;}
-    }
-  },1000);
-};
-_CB._cancel=function(){if(_CB._ci){clearInterval(_CB._ci);_CB._ci=null;}var t=document.getElementById('cgoCdToast');if(t)t.style.display='none';_CB._pid=null;};
-function cgoContinue(){_CB._cancel();_cgoBarResetAll();}
-function _cgoBarResetAll(){
-  [['cgoB1','cgoA1'],['cgoB2','cgoA2'],['cgoB3','cgoA3'],['cgoB4','cgoA4'],['cgoB5','cgoA5'],['cgoB6','cgoA6'],['cgoB7','cgoA7']].forEach(function(p){_cgoBarSet(p[0],p[1]);});
-}
-window.addEventListener('load',function(){setTimeout(_cgoBarResetAll,1500);});
-</script>
-<div id="cgoCdToast"><div class="n" id="cgoCdN">15</div><div class="t">화면이 곧 접힙니다<br>계속 사용하시려면 눌러주세요</div><button onclick="cgoContinue()">⏸ 계속 진행</button></div>
 </head>
 <body>
 <script>
@@ -3705,92 +3629,227 @@ function updateTransitSectionWithNASA(planets) {
       @keyframes rtWeather{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
       </style>
 
-      
-<!-- ★ 퀵 네비 탭 -->
-<style>
-#cgoQuickNav{
-  display:flex;gap:6px;padding:8px 0 10px;
-  overflow-x:auto;-webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
-}
-#cgoQuickNav::-webkit-scrollbar{display:none;}
-.cgo-qnav{
-  flex-shrink:0;display:flex;flex-direction:column;
-  align-items:center;gap:3px;padding:8px 12px;
-  background:rgba(212,168,67,.06);
-  border:1px solid rgba(212,168,67,.18);
-  border-radius:11px;cursor:pointer;
-  transition:all .2s;-webkit-tap-highlight-color:transparent;
-  min-width:52px;
-}
-.cgo-qnav:active{background:rgba(212,168,67,.2);transform:scale(.96);}
-.cgo-qnav.on{background:rgba(212,168,67,.16);border-color:rgba(212,168,67,.5);}
-.cgo-qnav .qi{font-size:18px;line-height:1;}
-.cgo-qnav .qt{font-size:8px;color:rgba(240,230,200,.45);white-space:nowrap;}
-.cgo-qnav.on .qt{color:#d4a843;font-weight:700;}
-</style>
-<div id="cgoQuickNav">
-  <div class="cgo-qnav on" id="qn1" onclick="cgoQJ(1)">
-    <span class="qi">📋</span><span class="qt">정보입력</span>
-  </div>
-  <div class="cgo-qnav" id="qn2" onclick="cgoQJ(2)">
-    <span class="qi">🌌</span><span class="qt">천지인</span>
-  </div>
-  <div class="cgo-qnav" id="qn3" onclick="cgoQJ(3)">
-    <span class="qi">🧬</span><span class="qt">생체센서</span>
-  </div>
-  <div class="cgo-qnav" id="qn4" onclick="cgoQJ(4)">
-    <span class="qi">📊</span><span class="qt">ILI점수</span>
-  </div>
-  <div class="cgo-qnav" id="qn5" onclick="cgoQJ(5)">
-    <span class="qi">✦</span><span class="qt">에너지서</span>
-  </div>
-  <div class="cgo-qnav" id="qn6" onclick="cgoQJ(6)">
-    <span class="qi">💬</span><span class="qt">메신저</span>
-  </div>
-  <div class="cgo-qnav" id="qn7" onclick="cgoQJ(7)">
-    <span class="qi">✦</span><span class="qt">전체기능</span>
-  </div>
-</div>
-<script>
-function cgoQJ(n){
-  // 1. 탭 활성화
-  for(var i=1;i<=7;i++){
-    var q=document.getElementById('qn'+i);
-    if(q) q.classList.toggle('on', i===n);
-  }
-  // 2. 바 id로 정확히 스크롤 (바는 항상 보임)
-  var bar=document.getElementById('cgoBar'+n);
-  if(bar){
-    bar.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-  // 3. 펼치기 (스크롤 완료 후)
-  setTimeout(function(){
-    var b=document.getElementById('cgoB'+n);
-    if(b && b.classList.contains('closed')){
-      cgoBarToggle('cgoB'+n,'cgoA'+n);
-    }
-  },500);
-}
-// 스크롤 감지 → 현재 섹션 탭 강조
-window.addEventListener('scroll',function(){
-  for(var i=1;i<=7;i++){
-    var b=document.getElementById('cgoB'+i);
-    if(!b||b.classList.contains('closed')) continue;
-    var r=b.getBoundingClientRect();
-    if(r.top<=200 && r.bottom>0){
-      for(var j=1;j<=7;j++){
-        var q=document.getElementById('qn'+j);
-        if(q) q.classList.toggle('on',j===i);
-      }
-      break;
-    }
-  }
-},{passive:true});
-</script>
+      <!-- ══ CGO 퀵 점프 네비 바 ══ -->
+      <style>
+      #cgoQuickNav{display:none!important;overflow-x:auto;gap:6px;padding:8px 2px 10px;margin-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+      #cgoQuickNav::-webkit-scrollbar{display:none;}
+      .cgo-qnav{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;flex-shrink:0;min-width:52px;}
+      .cgo-qnav:active{background:rgba(212,168,67,.2);transform:scale(.96);}
+      .cgo-qnav.on{background:rgba(212,168,67,.16);border-color:rgba(212,168,67,.5);}
+      .cgo-qnav .qi{font-size:18px;line-height:1;}
+      .cgo-qnav .qt{font-size:8px;color:rgba(240,230,200,.45);white-space:nowrap;}
+      .cgo-qnav.on .qt{color:#d4a843;font-weight:700;}
+      </style>
+      <div id="cgoQuickNav">
+        <div class="cgo-qnav on" id="qn1" onclick="cgoQJ(1)"><span class="qi">📋</span><span class="qt">정보입력</span></div>
+        <div class="cgo-qnav" id="qn2" onclick="cgoQJ(2)"><span class="qi">🌌</span><span class="qt">천지인</span></div>
+        <div class="cgo-qnav" id="qn3" onclick="cgoQJ(3)"><span class="qi">🧬</span><span class="qt">생체 스캔</span></div>
+        <div class="cgo-qnav" id="qn4" onclick="cgoQJ(4)"><span class="qi">📊</span><span class="qt">ILI점수</span></div>
+        <div class="cgo-qnav" id="qn5" onclick="cgoQJ(5)"><span class="qi">✦</span><span class="qt">에너지서</span></div>
+        <div class="cgo-qnav" id="qn6" onclick="cgoQJ(6)"><span class="qi">💬</span><span class="qt">메신저</span></div>
+        <div class="cgo-qnav" id="qn7" onclick="cgoQJ(7)"><span class="qi">✦</span><span class="qt">전체기능</span></div>
+      </div>
+      <script>
+      (function(){
+        /* ══ CGO 7개 독립 접이식 섹션 시스템 ══ */
 
-<div class="cgo-bar" id="cgoBar1" onclick="cgoBarToggle('cgoB1','cgoA1')"><span class="cgo-bar-title">📋 정보 입력</span><span class="cgo-bar-arrow" id="cgoA1">▼</span></div><div id="cgoB1" class="cgo-collapsible">
-<div class="input-panel">
+        // CSS 주입
+        var _s=document.createElement('style');
+        _s.textContent=
+          '.cgo-bar-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;'+
+          'background:rgba(10,18,38,.92);border:1px solid rgba(212,168,67,.28);border-radius:10px;'+
+          'border-left:3px solid rgba(212,168,67,.7);'+
+          'cursor:pointer;margin:3px 0;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .18s;}'+
+          '.cgo-bar-hd:hover{background:rgba(212,168,67,.07);}'+
+          '.cgo-bar-hd:active{background:rgba(212,168,67,.14);}'+
+          '.cgo-bar-hd-t{font-size:13px;font-weight:700;color:rgba(240,230,200,.9);letter-spacing:.02em;display:flex;align-items:center;gap:8px;}'+
+          '.cgo-bar-hd-a{font-size:11px;color:#d4a843;transition:transform .3s;display:inline-block;}'+
+          '.cgo-bar-hd-a.open{transform:rotate(90deg);}'+
+          '.cgo-sec-bd{overflow:hidden;}';
+        document.head.appendChild(_s);
+
+        // 바 헤더 생성
+        function makeBar(title, wrapId, isOpen){
+          var d=document.createElement('div');
+          d.className='cgo-bar-hd';
+          d.innerHTML='<span class="cgo-bar-hd-t">'+title+'</span>'+
+            '<span id="cgo-arr-'+wrapId+'" class="cgo-bar-hd-a'+(isOpen?' open':'')+'">&#9654;</span>';
+          d.onclick=function(){ cgoSecToggle(wrapId); };
+          return d;
+        }
+
+        // 개별 토글
+        window.cgoSecToggle=function(wrapId){
+          var sec=document.getElementById(wrapId);
+          if(!sec) return;
+          var arr=document.getElementById('cgo-arr-'+wrapId);
+          var isOpen=sec.style.display!=='none';
+          sec.style.display=isOpen?'none':'';
+          if(arr) arr.classList.toggle('open',!isOpen);
+        };
+
+        // 앵커 뒤에 바+래퍼 삽입 후 다음 앵커 전까지 내용 이동
+        function addSection(anchorId, nextAnchorId, wrapId, title, isOpen){
+          var anchor=document.getElementById(anchorId);
+          if(!anchor) return;
+          var endAnchor=nextAnchorId?document.getElementById(nextAnchorId):null;
+          var bar=makeBar(title, wrapId, isOpen);
+          var wrap=document.createElement('div');
+          wrap.id=wrapId; wrap.className='cgo-sec-bd';
+          wrap.style.display=isOpen?'':'none';
+          anchor.parentNode.insertBefore(bar,  anchor.nextSibling);
+          anchor.parentNode.insertBefore(wrap, bar.nextSibling);
+          while(wrap.nextSibling && wrap.nextSibling!==endAnchor){
+            wrap.appendChild(wrap.nextSibling);
+          }
+        }
+
+        function initSections(){
+          var ip   =document.getElementById('sec-ip');
+          var cheon=document.getElementById('sec-cheon');
+          var bio  =document.getElementById('sec-bio');
+          var ili  =document.getElementById('sec-ili');
+          var enrg =document.getElementById('sec-energy');
+          var chat =document.getElementById('sec-chat');
+          var all  =document.getElementById('sec-all');
+          if(!ip||!cheon||!bio||!ili||!enrg||!chat||!all) return;
+
+          /* ── 핵심: sec-energy·sec-chat의 부모(unnamed-div)의
+                    모든 자식을 sec-ip 레벨로 끌어올림 ── */
+          var energyParent=enrg.parentNode;
+          while(energyParent.firstChild){
+            ip.insertBefore(energyParent.firstChild, all);
+          }
+          // energyParent(빈 div)는 sec-ip 안에 남아 있지만 무해함
+
+          /* ── 정보입력: 항상 열린 상태 ── */
+          var ipBar=makeBar('📋 정보 입력','cgoip',true);
+          ip.insertBefore(ipBar, ip.firstChild);
+          var ipWrap=document.createElement('div');
+          ipWrap.id='cgoip'; ipWrap.className='cgo-sec-bd';
+          ipWrap.style.display='';
+          ip.insertBefore(ipWrap, ipBar.nextSibling);
+          while(ipWrap.nextSibling && ipWrap.nextSibling!==cheon){
+            ipWrap.appendChild(ipWrap.nextSibling);
+          }
+
+          /* ── 7개 독립 섹션 ── */
+          addSection('sec-cheon', 'sec-bio',    'cgosec2','🌌 천지인 에너지',        false);
+          addSection('sec-bio',   'sec-ili',    'cgosec3','🧬 생체 스캔',            false);
+          addSection('sec-ili',   'sec-energy', 'cgosec4','📊 ILI 점수',             false);
+          addSection('sec-energy','sec-chat',   'cgosec5','✦ CGO-FULI 에너지의 서',  false);
+          addSection('sec-chat',  'sec-all',    'cgosec6','💬 CGO 메신저',           false);
+          addSection('sec-all',   null,         'cgosec7','✦ 전체 기능',             false);
+        }
+
+        /* ── 퀵 탭 클릭: 해당 섹션 펼치기 + 스크롤 ── */
+        window.cgoQJ=function(n){
+          // 탭 하이라이트
+          for(var i=1;i<=7;i++){
+            var el=document.getElementById('qn'+i);
+            if(el) el.classList.toggle('on',i===n);
+          }
+          // 해당 섹션만 펼치기 (나머지는 닫기)
+          var ids=['cgoip','cgosec2','cgosec3','cgosec4','cgosec5','cgosec6','cgosec7'];
+          for(var i=0;i<ids.length;i++){
+            var sec=document.getElementById(ids[i]);
+            var arr=document.getElementById('cgo-arr-'+ids[i]);
+            var isOpen=(i+1)===n;
+            if(sec) sec.style.display=isOpen?'':'none';
+            if(arr) arr.classList.toggle('open',isOpen);
+          }
+          // 스크롤
+          var anchors=['sec-ip','sec-cheon','sec-bio','sec-ili','sec-energy','sec-chat','sec-all'];
+          var anchor=document.getElementById(anchors[n-1]);
+          if(anchor){
+            setTimeout(function(a){ a.scrollIntoView({behavior:'smooth',block:'start'}); },80,anchor);
+          }
+        };
+
+        if(document.readyState==='loading'){
+          document.addEventListener('DOMContentLoaded',initSections);
+        } else {
+          setTimeout(initSections,0);
+        }
+      })();
+      </script>
+      <!-- ══ /CGO 퀵 점프 네비 바 ══ -->
+
+      <!-- ✨ CGO-FULI 사용 가이드 카드 -->
+      <!-- 슬림 클릭 카드 -->
+      <div onclick="document.getElementById('cgoGuidePopup').style.display='flex'" style="position:relative;border:1.5px solid rgba(212,168,67,.6);border-radius:14px;background:linear-gradient(135deg,rgba(10,18,38,.97),rgba(18,28,52,.95));padding:14px 16px;margin-bottom:12px;cursor:pointer;overflow:hidden;transition:background .2s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(15,25,50,.98),rgba(25,38,68,.97))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(10,18,38,.97),rgba(18,28,52,.95))'">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#d4a843,#f0c060,#d4a843,transparent);"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">✨</span>
+            <span style="font-family:'Orbitron',monospace;font-size:13px;font-weight:900;color:#d4a843;letter-spacing:.1em;">CGO-FULI</span>
+            <span style="font-size:13px;font-weight:700;color:rgba(240,220,160,.95);">사용 가이드</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="padding:2px 8px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.35);border-radius:8px;font-size:9px;color:#d4a843;font-weight:700;">PCT 국제특허 출원중</span>
+            <span style="font-size:14px;color:#d4a843;">&#9654;</span>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:rgba(200,185,140,.55);">탭하면 세계 최초 7대 혁신 &amp; 사용법을 볼 수 있습니다</div>
+      </div>
+
+      <!-- 팝업 -->
+      <div id="cgoGuidePopup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="width:100%;max-width:600px;max-height:88vh;overflow-y:auto;background:linear-gradient(160deg,#060d1a,#0d1828);border:1.5px solid rgba(212,168,67,.5);border-radius:22px 22px 0 0;padding:0 0 32px;">
+          <!-- 팝업 헤더 -->
+          <div style="position:sticky;top:0;z-index:2;background:linear-gradient(135deg,#060d1a,#0d1828);border-bottom:1px solid rgba(212,168,67,.2);padding:16px 18px 12px;">
+            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#d4a843,#f0c060,#d4a843,transparent);border-radius:22px 22px 0 0;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:20px;">✨</span>
+                <span style="font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:#d4a843;letter-spacing:.1em;">CGO-FULI</span>
+                <span style="font-size:14px;font-weight:700;color:rgba(240,220,160,.95);">사용 가이드</span>
+              </div>
+              <button onclick="document.getElementById('cgoGuidePopup').style.display='none'" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,168,67,.3);background:rgba(212,168,67,.08);color:#d4a843;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <div style="margin-top:4px;"><span style="padding:2px 8px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:8px;font-size:9px;color:#d4a843;font-weight:700;">PCT 국제특허 출원중 · 10-2026-0060113</span></div>
+          </div>
+          <!-- 팝업 본문 -->
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;">
+            <!-- 세계 최초 7대 혁신 -->
+            <div style="background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.2);border-radius:12px;padding:14px;">
+              <div style="font-size:10px;font-weight:800;color:#d4a843;letter-spacing:.15em;margin-bottom:10px;">🌍 세계 최초 7대 혁신 기술</div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">🛸</span><span><b style="color:#f0e0a8;">NASA 실시간 천체 궤도 × 역학 퓨전</b> — VSOP87 이론 적용, 마이크로초 단위 보정</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">🧬</span><span><b style="color:#f0e0a8;">rPPG 비접촉 생체 스캔</b> — 카메라만으로 HRV·FCI·FMA·BLI → BAI 산출</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">🔐</span><span><b style="color:#f0e0a8;">rPPG 역이용 캡처 방지 보안 메신저</b> — 화면 촬영·스크린샷 원천 차단</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">💄</span><span><b style="color:#f0e0a8;">비접촉 화장품 흡수율 분석 (MAI)</b> — 스마트폰만으로 혈류 반응 속도 측정</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">💪</span><span><b style="color:#f0e0a8;">비접촉 피부 탄력 지수 (SVI)</b> — 고가 장비 없이 콜라겐 밀도 수치화</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">🏠</span><span><b style="color:#f0e0a8;">360° 7대 공간 철학 에너지 스캔</b> — 풍수·바스투·칸소 등 통합 분석</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:rgba(220,205,170,.9);line-height:1.5;"><span style="flex-shrink:0;font-size:14px;">💑</span><span><b style="color:#f0e0a8;">실시간 rPPG 영상 인연·궁합 분석</b> — 두 스마트폰 연결, 생체 파동 궁합</span></div>
+              </div>
+            </div>
+            <!-- 사용법 -->
+            <div>
+              <div style="font-size:10px;font-weight:800;color:rgba(52,211,153,.9);letter-spacing:.12em;margin-bottom:10px;">📖 이렇게 사용하세요</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(212,168,67,.6);"><span style="font-size:12px;font-weight:800;color:#d4a843;min-width:18px;">①</span><span style="font-size:12px;color:rgba(220,205,170,.9);">📋 <b style="color:#f0e0b0;">정보입력</b> → 이름·생년월일 입력 후 ⚡ 자동계산 클릭</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(99,130,201,.6);"><span style="font-size:12px;font-weight:800;color:#6382c9;min-width:18px;">②</span><span style="font-size:12px;color:rgba(220,205,170,.9);">🌌 <b style="color:#f0e0b0;">천지인</b> → NASA × 50대 역학 실시간 우주 에너지 확인</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(52,211,153,.6);"><span style="font-size:12px;font-weight:800;color:#34d399;min-width:18px;">③</span><span style="font-size:12px;color:rgba(220,205,170,.9);">🧬 <b style="color:#f0e0b0;">생체 스캔</b> → 관상·손금·혀·호흡 측정으로 ILI 정확도 향상</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(56,189,248,.6);"><span style="font-size:12px;font-weight:800;color:#38bdf8;min-width:18px;">④</span><span style="font-size:12px;color:rgba(220,205,170,.9);">📊 <b style="color:#f0e0b0;">ILI 점수</b> → 나의 통합 라이프 인덱스 점수 확인</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(212,168,67,.4);"><span style="font-size:12px;font-weight:800;color:#d4a843;min-width:18px;">⑤</span><span style="font-size:12px;color:rgba(220,205,170,.9);">✦ <b style="color:#f0e0b0;">에너지서</b> → 50대 역학 동서양 심층 분석 리포트</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(168,85,247,.6);"><span style="font-size:12px;font-weight:800;color:#a855f7;min-width:18px;">⑥</span><span style="font-size:12px;color:rgba(220,205,170,.9);">💬 <b style="color:#f0e0b0;">메신저</b> → 오행 궁합 채팅 · rPPG 보안 메신저</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:3px solid rgba(251,191,36,.6);"><span style="font-size:12px;font-weight:800;color:#fbbf24;min-width:18px;">⑦</span><span style="font-size:12px;color:rgba(220,205,170,.9);">✦ <b style="color:#f0e0b0;">전체기능</b> → 음악·건강·쇼핑·풍수 여행 등 16가지 탐색</span></div>
+              </div>
+            </div>
+            <!-- 하단 태그 -->
+            <div style="display:flex;flex-wrap:wrap;gap:5px;padding-top:4px;">
+              <span style="padding:3px 9px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.3);border-radius:8px;font-size:9px;color:#d4a843;font-weight:700;">🛸 NASA JPL 실시간</span>
+              <span style="padding:3px 9px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:8px;font-size:9px;color:#34d399;font-weight:700;">🧬 rPPG 생체스캔</span>
+              <span style="padding:3px 9px;background:rgba(99,130,201,.08);border:1px solid rgba(99,130,201,.25);border-radius:8px;font-size:9px;color:#6382c9;font-weight:700;">📜 50대 역학</span>
+              <span style="padding:3px 9px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:8px;font-size:9px;color:#f87171;font-weight:700;">🔐 MUFE 보안</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ✨ /CGO-FULI 사용 가이드 카드 -->
+
+      <div id="sec-ip" class="input-panel">
         <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
         <div class="ip-form">
           <div class="ip-group">
@@ -3900,17 +3959,15 @@ window.addEventListener('scroll',function(){
         <!-- 경계선 -->
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
-      
-<div class="cgo-bar" id="cgoBar2" onclick="cgoBarToggle('cgoB2','cgoA2')"><span class="cgo-bar-title">🌌 천지인 에너지 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA2" class="closed">▼</span></div><div id="cgoB2" class="cgo-collapsible closed">
-<div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
+      <div id="sec-cheon"></div><div id="cosmicOrderSection" class="dash-card-locked" style="margin-top:14px;position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#030818 0%,#060d1a 50%,#0a0e2a 100%);border:1px solid rgba(212,168,67,0.25);box-shadow:0 0 30px rgba(212,168,67,0.06)">
 
         <canvas id="cosmicCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
 
-        <!-- ① 헤더 : 천지인 에너지 + 시계 한 줄 -->
+        <!-- ① 헤더 : COSMIC ORDER + 시계 한 줄 -->
         <div style="position:relative;z-index:2;padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(212,168,67,0.12)">
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:7px;height:7px;background:#34d399;border-radius:50%;box-shadow:0 0 7px #34d399;animation:pulse 2s infinite;flex-shrink:0"></div>
-            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">천지인 에너지</span>
+            <span style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em" data-i18n="cosmic_order">COSMIC ORDER</span>
           </div>
           <span id="cosmicTime" style="font-size:11px;color:#e2e8f0;font-weight:600;font-variant-numeric:tabular-nums"></span>
         </div>
@@ -4042,23 +4099,22 @@ window.addEventListener('scroll',function(){
 
         </div>
       </div>
-      <!-- ═══ /천지인 에너지 ═══ -->
+      <!-- ═══ /COSMIC ORDER ═══ -->
 
 
-        
-<div class="cgo-bar" id="cgoBar3" onclick="cgoBarToggle('cgoB3','cgoA3')"><span class="cgo-bar-title">🧬 생체 센서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA3" class="closed">▼</span></div><div id="cgoB3" class="cgo-collapsible closed">
-<!-- ✦ Bio Sensor 경계선 ✦ -->
+        <div id="sec-bio"></div>
+        <!-- ✦ Bio Sensor 경계선 ✦ -->
         <div style="margin:22px 0;position:relative;display:flex;align-items:center;gap:12px;">
           <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6));"></div>
-          <div style="padding:5px 14px;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(56,189,248,.1));border:1px solid rgba(52,211,153,.5);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;white-space:nowrap;">🧬 생체 센서</div>
+          <div style="padding:5px 14px;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(56,189,248,.1));border:1px solid rgba(52,211,153,.5);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;white-space:nowrap;">🧬 CGO-Bio Sensor v2.0</div>
           <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(52,211,153,.6),transparent);"></div>
         </div>
 
-        <!-- ✦ 생체 센서 — 관상/손금/혀/호흡 -->
+        <!-- ✦ CGO-Bio Sensor v2.0 — 관상/손금/혀/호흡 -->
         <div style="margin:28px 0 10px;">
           <!-- 섹션 레이블 -->
           <div style="font-size:10px;letter-spacing:.12em;color:var(--text-3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:600;">
-            <span data-i18n="bioScan">🧬 생체 센서</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
+            <span data-i18n="bioScan">🧬 CGO-Bio Sensor v2.0</span> <span style="flex:1;height:1px;background:var(--border);display:inline-block"></span>
             <span data-i18n="btn_18engine" style="font-size:9px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;padding:2px 7px;border-radius:8px;">20개 엔진 즉시 반영</span>
           </div>
 
@@ -4072,7 +4128,7 @@ window.addEventListener('scroll',function(){
                   <span style="font-size:22px;">🔬</span>
                 </div>
                 <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">생체 센서</div>
+                  <div style="font-size:15px;font-weight:800;color:#34d399;letter-spacing:.02em;">CGO-Bio Sensor v2.0</div>
                   <div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:2px;">실측 분석 — rPPG · 호흡 · 생체신호 융합</div>
                 </div>
                 <div style="flex-shrink:0;padding:4px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:20px;">
@@ -4136,10 +4192,9 @@ window.addEventListener('scroll',function(){
           </div>
           <!-- bioSkinResult 배너 제거 -->
         </div>
+        <div id="sec-ili"></div>
         <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
-        
-<div class="cgo-bar" id="cgoBar4" onclick="cgoBarToggle('cgoB4','cgoA4')"><span class="cgo-bar-title">📊 ILI 점수 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA4" class="closed">▼</span></div><div id="cgoB4" class="cgo-collapsible closed">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
           <!-- 왼쪽: ILI/CEI 게이지 -->
           <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
@@ -4194,9 +4249,7 @@ window.addEventListener('scroll',function(){
 
         <!-- ✦ 4-7-8 아래 ✦ -->
 
-        
-<div class="cgo-bar" id="cgoBar5" onclick="cgoBarToggle('cgoB5','cgoA5')"><span class="cgo-bar-title">✦ CGO-FULI 에너지의 서 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA5" class="closed">▼</span></div><div id="cgoB5" class="cgo-collapsible closed">
-<!-- ══ CGO-FULI 3권의 서 ══ -->
+        <!-- ══ CGO-FULI 3권의 서 ══ -->
         <div style="margin:32px 0 16px;">
           <!-- 상단 구분선 -->
           <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),rgba(167,139,250,.3),transparent);margin-bottom:18px;"></div>
@@ -4209,6 +4262,7 @@ window.addEventListener('scroll',function(){
             </div>
           </div>
 
+          <div id="sec-energy"></div>
           <!-- 📜 Book 1: 순수 에너지 — 책 디자인 -->
           <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var t=document.getElementById('pure-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}_cgoBookOpen(1);})()"
             style="position:relative;margin-bottom:12px;cursor:pointer;transition:all .25s;"
@@ -4318,6 +4372,7 @@ window.addEventListener('scroll',function(){
           <!-- 하단 구분선 -->
           <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.3),rgba(212,168,67,.4),transparent);margin:8px 0 16px;"></div>
 
+          <div id="sec-chat"></div>
           <!-- 💬 CGO 메신저 카드 -->
           <div onclick="cgoOpenMessenger()" style="position:relative;margin-bottom:20px;cursor:pointer;transition:all .25s;" onmouseover="this.querySelector('.cgm-card-inner').style.boxShadow='0 8px 32px rgba(52,211,153,.35)'" onmouseout="this.querySelector('.cgm-card-inner').style.boxShadow='0 4px 20px rgba(0,0,0,.5)'">
             <div class="cgm-card-inner" style="position:relative;background:linear-gradient(135deg,#051a14,#0a2820,#051a14);border:1px solid rgba(52,211,153,.5);border-left:6px solid rgba(52,211,153,.85);border-radius:3px 14px 14px 3px;padding:18px 18px 14px 16px;transition:all .3s;box-shadow:0 4px 20px rgba(0,0,0,.5);overflow:hidden;">
@@ -4457,23 +4512,20 @@ window.addEventListener('scroll',function(){
         <!-- CGO-MASTER 유기체 상태 -->
         </div>
 
-        
-<div class="cgo-bar" id="cgoBar6" onclick="cgoBarToggle('cgoB6','cgoA6')"><span class="cgo-bar-title">💬 CGO 메신저 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA6" class="closed">▼</span></div><div id="cgoB6" class="cgo-collapsible closed">
-<div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
+        <div id="syncBanner" style="margin-top:12px;padding:14px 16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:12px"></div>
 
 
 
-        <!-- ── 천지인 에너지 / 전체메뉴 구분 카드 ── -->
+        <!-- ── COSMIC ORDER / 전체메뉴 구분 카드 ── -->
         <div style="margin:22px 0 18px;padding:13px 20px;background:linear-gradient(90deg,rgba(212,168,67,.06),rgba(52,211,153,.05),rgba(56,189,248,.05),rgba(212,168,67,.06));border:1px solid rgba(212,168,67,.3);border-radius:40px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 0 18px rgba(212,168,67,.08);">
           <div style="height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(212,168,67,.5));"></div>
           <span style="font-size:11px;font-weight:800;color:rgba(212,168,67,.85);letter-spacing:.18em;white-space:nowrap;">📋 전체 메뉴</span>
           <div style="height:1px;flex:1;background:linear-gradient(90deg,rgba(212,168,67,.5),transparent);"></div>
         </div>
 
+        <div id="sec-all"></div>
         <!-- ✦ 전체 메뉴 세로 정렬 ✦ -->
-        
-<div class="cgo-bar" id="cgoBar7" onclick="cgoBarToggle('cgoB7','cgoA7')"><span class="cgo-bar-title">✦ CGO-FULI 전체 기능 <span style="font-size:10px;color:rgba(212,168,67,.4);">▶ 탭하여 열기</span></span><span class="cgo-bar-arrow" id="cgoA7" class="closed">▼</span></div><div id="cgoB7" class="cgo-collapsible closed">
-<div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
+        <div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
 
           <!-- 📋 전체 기능 모음 — 접이식 책 카드 -->
           <div onclick="(function(){var b=document.getElementById('menuListBody');var a=document.getElementById('menuArrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
@@ -4685,7 +4737,7 @@ window.addEventListener('scroll',function(){
   <!-- Bio Sensor 미완료 안내 -->
   <div id="music-lock-notice" style="display:none;margin:20px 0;padding:20px;background:rgba(52,211,153,.05);border:1px dashed rgba(52,211,153,.3);border-radius:16px;text-align:center;">
     <div style="font-size:32px;margin-bottom:10px;">🔒</div>
-    <div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:6px;">생체 센서 스캔 완료 후 활성화</div>
+    <div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:6px;">CGO-Bio Sensor v2.0 스캔 완료 후 활성화</div>
     <div style="font-size:11px;color:rgba(240,230,200,.5);line-height:1.7;">대시보드의 관상·손금 스캔을 완료하면<br>나만의 주파수 음악이 처방됩니다 🎵</div>
     <button onclick="cgoGoPage('dashboard')" style="margin-top:14px;padding:10px 24px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.1));border:1.5px solid rgba(52,211,153,.5);border-radius:14px;color:#34d399;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">→ Bio Sensor 스캔하러 가기</button>
   </div>
@@ -8571,7 +8623,9 @@ var fcSystems = {
       <!-- 채팅 메시지 -->
       <div id="stk-ai-messages"></div>
 
-      <!-- 입력창 -->
+  
+
+    <!-- 입력창 -->
       <div id="stk-ai-inputrow">
         <textarea id="stk-ai-input" rows="1"
           placeholder="종목·시장·에너지에 대해 질문하세요..."
@@ -14140,19 +14194,19 @@ var _I18N = {
     ph_name:'예: 이주원',
     lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀', lbl_tap_scan:'탭하여 스캔', mbtiLabel:'MBTI 성격 유형', mbti_19th:'20번째 역학 보정', labelName:'이름 (성명)', labelTime:'출생 시간', labelGender:'성별', ipTitle:'📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)',
     btn_18engine:'20개 엔진 즉시 반영',
-    lbl_bioskin:'생체 센서',
+    lbl_bioskin:'CGO-Bio Sensor v2.0',
     lbl_face:'관상', lbl_palm:'손금', lbl_tongue:'혀',
     lbl_tap_scan:'탭하여 스캔',
     lbl_birth_label:'생년월일', lbl_solar:'양력', lbl_lunar:'음력',
     lbl_birth_place:'출생지', lbl_birth_hint:'동 단위 → 정밀 좌표', lbl_cur_place:'현재 거주지', lbl_cur_hint:'동 단위 → 정밀 방위',
     banner1:'🛸 NASA 실시간 우주 데이터와 생체 신호, 그리고 숫자화된', banner2:'50대 역학 중 엔진', banner3:'을 융합하여', banner4:'당신만의 인생 지수', banner5:'를 계산합니다.',
     btnSolar:'양력', btnLunar:'음력', optMale:'남성 (男)', optFemale:'여성 (女)', auto_loc:'📡 현재 위치 자동',
-    nasaLive:'NASA JPL', bioScan:'🧬 생체 센서', btn_18engine:'20개 엔진 즉시 반영',
+    nasaLive:'NASA JPL', bioScan:'🧬 CGO-Bio Sensor v2.0', btn_18engine:'20개 엔진 즉시 반영',
     fortune_ttl:'오늘 내 에너지는 어떤가요?',
     mbti_know:'내 MBTI 알아요', mbti_dontknow:'내 MBTI 몰라요',
     mbti_direct:'직접 선택 → 즉시 적용', mbti_test:'검사로 찾기',
     cosmic_subtitle:'실시간 행성 항로', cosmic_sky:'🌌 지금 하늘의 상태',
-    lbl_live:'LIVE', cosmic_order:'천지인 에너지',
+    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
     nasa_full:'( 미 항공 우주국 )', nasa_subtitle:'실시간 행성 항로 / 시간',
     word_time:'시간', lbl_live:'● LIVE',
     cosmic_btn:'🚨 지금 내 행운 신호 받기!', cosmic_btn_sub:'NASA + 50대 역학 중 × 실시간 분석',
@@ -14269,7 +14323,7 @@ var _I18N = {
     mbti_know:'I know my MBTI', mbti_dontknow:"I don't know my MBTI",
     mbti_direct:'Select directly → Apply now', mbti_test:'Find by test',
     cosmic_subtitle:'Real-time Planetary Path', cosmic_sky:'🌌 Sky Status Now',
-    lbl_live:'LIVE', cosmic_order:'천지인 에너지',
+    lbl_live:'LIVE', cosmic_order:'COSMIC ORDER',
     nasa_full:'( NASA )', nasa_subtitle:'Real-time Planetary Path / Time',
     word_time:'Time', lbl_live:'● LIVE',
     cosmic_btn:'🚨 Get My Lucky Signal Now!', cosmic_btn_sub:'NASA + 20 Engines × Live Analysis',
@@ -27290,7 +27344,7 @@ var _LANG_PACK = {
       sports:'스포츠', stock:'주식', lotto:'행운번호'
     },
     ili: '통합 라이프 인덱스', grade: '등급', energy: '에너지',
-    fortune: '오늘의 운수', bioScan: '생체 센서',
+    fortune: '오늘의 운수', bioScan: 'CGO-Bio Sensor v2.0',
     face: '관상', palm: '손금', tongue: '혀',
     algo18: '50대 역학 중 × NASA 실시간 분석',
     nasaLive: 'NASA JPL 실시간',
@@ -31266,10 +31320,10 @@ var _cgoIntroContent = {
   pure:{badge:'📜 순수 역학 분석',badgeColor:'#d4a843',title:'지능형 멀티-엔진 역학 분석',subtitle:'Human-Intelligence',desc:'50대 글로벌 역학 엔진의 유기적 결합과 데이터 표준화 솔루션',body:'CGO-FULI는 개별 역학의 전문성과 복합 역학의 통합성을 동시에 구현했습니다. 단일 역학 선택 시에는 해당 분야에 최적화된 맞춤 분석을 수행하며, 사용자가 50개의 역학 엔진 중 최대 5개를 직접 추가 선택할 수 있는 확장성을 갖췄습니다. 서로 다른 뿌리를 가진 역학 데이터를 CGO-FULI가 독자 개발한 표준화 점수 체계로 정량화하여, 복합적인 운명 지수를 객관적 데이터 기반으로 분석해 냅니다.',color:'rgba(212,168,67,.3)'},
   realtime:{badge:'🛸 실시간 데이터 연동 분석',badgeColor:'#38bdf8',title:'하이브리드 환경 데이터 연동 분석',subtitle:'Nature-Intelligence',desc:'NASA 실시간 천체 궤도와 지구 환경 변수의 다차원 동기화 기술',body:'인류가 가진 역학적 통찰의 80% 이상은 천체의 움직임을 인간의 삶에 투영한 결과입니다. CGO-FULI는 이러한 전통적 통찰을 현대 과학의 영역으로 격상시켰습니다. NASA로부터 30초 주기의 행성 궤도 데이터를, 5분 주기로 실시간 기상 및 방위 데이터를 수신하여 모든 환경 변수를 정밀하게 수치화합니다.',color:'rgba(56,189,248,.3)'},
   rppg:{badge:'🧬 실시간 rPPG 데이터 연동 분석',badgeColor:'#34d399',title:"세계 최초 '천지인(天地人)' 통합 rPPG 연동 분석",subtitle:'Bio-Intelligence',desc:'바이오 센싱과 우주 물리 데이터가 융합된 세계 유일의 라이프 인덱스(ILI)',body:'CGO-FULI는 세계 최초로 첨단 rPPG 기술을 NASA의 실시간 데이터 및 50대 글로벌 역학 엔진과 결합하여 천지인(天地人) 통합 분석을 완성했습니다. 하늘의 질서(NASA 행성 궤도), 땅의 환경(기상·방위), 사람의 기운(rPPG 생체 신호)을 하나의 알고리즘으로 동기화합니다.',color:'rgba(52,211,153,.3)'},
-  face:{badge:'🧬 생체 센서',badgeColor:'#93c5fd',title:'관상 AI 분석 — 측정 전 필독',subtitle:'Face Bio-Scan',desc:'Groq Vision × 동양 관상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 밝은 곳에서 정면을 바라봐 주세요<br>② 카메라와 얼굴 거리 30~50cm 유지<br>③ 안경·모자 등 제거 후 촬영<br>④ 무표정으로 눈을 정면으로 응시<br>⑤ 33초간 얼굴을 고정해 주세요<br><br>⚠️ 얼굴이 감지되어야 타이머가 시작됩니다',color:'rgba(147,197,253,.3)'},
-  palm:{badge:'🧬 생체 센서',badgeColor:'#fcd34d',title:'손금 AI 분석 — 측정 전 필독',subtitle:'Palm Bio-Scan',desc:'Groq Vision × 동양 수상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 손바닥을 카메라 가까이 펼쳐 주세요<br>② 손금 선이 잘 보이도록 조명 확보<br>③ 왼손 → 태어날 때 운명<br>④ 오른손 → 현재 진행 중인 운명<br>⑤ 33초간 손바닥을 고정해 주세요<br><br>⚠️ 손바닥이 감지되어야 타이머가 시작됩니다',color:'rgba(252,211,77,.3)'},
-  tongue:{badge:'🧬 생체 센서',badgeColor:'#fca5a5',title:'혀 스캔 분석 — 측정 전 필독',subtitle:'Tongue Bio-Scan',desc:'Groq Vision × 한의학 설진 × 오행 건강 분석',body:'📋 측정 전 필독 지시사항<br><br>① 입을 크게 벌리고 혀를 끝까지 내미세요<br>② 밝은 곳에서 혀가 잘 보이도록 해 주세요<br>③ 혀를 가능한 한 편평하게 유지<br>④ 혀 표면 전체가 화면에 보이도록<br>⑤ 15초간 혀를 고정해 주세요<br><br>⚠️ 혀가 감지되어야 타이머가 시작됩니다',color:'rgba(252,165,165,.3)'},
-  breath:{badge:'🧬 생체 센서',badgeColor:'#6ee7b7',title:'4 · 7 · 8 호흡 측정 — 측정 전 필독',subtitle:'Breath Bio-Scan',desc:'자율신경 안정 × 산소 공급 × HRV 개선 호흡법',body:'📋 측정 전 필독 지시사항<br><br>① 편안한 자세로 앉거나 누워 주세요<br>② 코로 <strong style="color:#38bdf8;">흡입 4초</strong> — 깊게 천천히 들이마세요<br>③ <strong style="color:#d4a843;">참기 7초</strong> — 숨을 꾹 참으세요<br>④ 입으로 <strong style="color:#34d399;">내뱉기 8초</strong> — 슈우~ 천천히 내뱉으세요<br>⑤ 위 과정을 3회 반복하면 완료됩니다<br><br>💡 이 호흡법은 자율신경을 안정시키고 HRV(심박변이도)를 높여 역학 분석 정확도를 향상시킵니다',color:'rgba(52,211,153,.3)'}
+  face:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#93c5fd',title:'관상 AI 분석 — 측정 전 필독',subtitle:'Face Bio-Scan',desc:'Groq Vision × 동양 관상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 밝은 곳에서 정면을 바라봐 주세요<br>② 카메라와 얼굴 거리 30~50cm 유지<br>③ 안경·모자 등 제거 후 촬영<br>④ 무표정으로 눈을 정면으로 응시<br>⑤ 33초간 얼굴을 고정해 주세요<br><br>⚠️ 얼굴이 감지되어야 타이머가 시작됩니다',color:'rgba(147,197,253,.3)'},
+  palm:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#fcd34d',title:'손금 AI 분석 — 측정 전 필독',subtitle:'Palm Bio-Scan',desc:'Groq Vision × 동양 수상학 × 50대 역학 융합 분석',body:'📋 측정 전 필독 지시사항<br><br>① 손바닥을 카메라 가까이 펼쳐 주세요<br>② 손금 선이 잘 보이도록 조명 확보<br>③ 왼손 → 태어날 때 운명<br>④ 오른손 → 현재 진행 중인 운명<br>⑤ 33초간 손바닥을 고정해 주세요<br><br>⚠️ 손바닥이 감지되어야 타이머가 시작됩니다',color:'rgba(252,211,77,.3)'},
+  tongue:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#fca5a5',title:'혀 스캔 분석 — 측정 전 필독',subtitle:'Tongue Bio-Scan',desc:'Groq Vision × 한의학 설진 × 오행 건강 분석',body:'📋 측정 전 필독 지시사항<br><br>① 입을 크게 벌리고 혀를 끝까지 내미세요<br>② 밝은 곳에서 혀가 잘 보이도록 해 주세요<br>③ 혀를 가능한 한 편평하게 유지<br>④ 혀 표면 전체가 화면에 보이도록<br>⑤ 15초간 혀를 고정해 주세요<br><br>⚠️ 혀가 감지되어야 타이머가 시작됩니다',color:'rgba(252,165,165,.3)'},
+  breath:{badge:'🧬 CGO-Bio Sensor v2.0',badgeColor:'#6ee7b7',title:'4 · 7 · 8 호흡 측정 — 측정 전 필독',subtitle:'Breath Bio-Scan',desc:'자율신경 안정 × 산소 공급 × HRV 개선 호흡법',body:'📋 측정 전 필독 지시사항<br><br>① 편안한 자세로 앉거나 누워 주세요<br>② 코로 <strong style="color:#38bdf8;">흡입 4초</strong> — 깊게 천천히 들이마세요<br>③ <strong style="color:#d4a843;">참기 7초</strong> — 숨을 꾹 참으세요<br>④ 입으로 <strong style="color:#34d399;">내뱉기 8초</strong> — 슈우~ 천천히 내뱉으세요<br>⑤ 위 과정을 3회 반복하면 완료됩니다<br><br>💡 이 호흡법은 자율신경을 안정시키고 HRV(심박변이도)를 높여 역학 분석 정확도를 향상시킵니다',color:'rgba(52,211,153,.3)'}
 };
 function cgoIntroOpen(type,callback){
   var d=_cgoIntroContent[type]; if(!d){if(callback)callback();return;}
@@ -39511,7 +39565,7 @@ function shopSync(){
 </div>
 <script>
 /* ============================================================
-   🌌 천지인 에너지 — 실시간 우주 명령 시스템 JS
+   🌌 COSMIC ORDER — 실시간 우주 명령 시스템 JS
    ============================================================ */
 
 var _cosmicPoints = parseInt(localStorage.getItem('cosmicPoints')||'0');
@@ -51909,6 +51963,45 @@ var _unlockTimer=setInterval(function(){
       <span id="cgmCompatText" style="color:rgba(212,168,67,.6);">🔥 오행 궁합 계산 중...</span>
       <span id="cgmNasaBadge" style="margin-left:auto;font-size:9px;color:rgba(56,189,248,.5);"></span>
     </div>
+    <!-- 보안 설정 패널 -->
+    <div id="cgmSecurityPanel" style="display:none;padding:12px 14px;background:rgba(6,13,26,.95);border-top:1px solid rgba(212,168,67,.15);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span style="font-size:10px;color:rgba(212,168,67,.8);font-weight:700;letter-spacing:.06em;">⚙️ 보안 강도 설정</span><button onclick="cgmToggleSecPanel()" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(212,168,67,.3);background:rgba(212,168,67,.08);color:rgba(212,168,67,.8);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit;">✕</button></div>
+      <!-- 프리셋 버튼 -->
+      <div style="display:flex;gap:5px;margin-bottom:12px;">
+        <button onclick="cgmSetPreset('off')"  id="cgmPreOff"  class="cgm-preset" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;">🟢 일반</button>
+        <button onclick="cgmSetPreset('mid')"  id="cgmPreMid"  class="cgm-preset" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);color:#fbbf24;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;">🟡 보안</button>
+        <button onclick="cgmSetPreset('high')" id="cgmPreHigh" class="cgm-preset" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.06);color:#f87171;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;">🔴 기밀</button>
+        <button onclick="cgmSetPreset('max')"  id="cgmPreMax"  class="cgm-preset" style="flex:1;padding:8px 4px;border-radius:10px;border:1px solid rgba(212,168,67,.3);background:rgba(212,168,67,.08);color:#d4a843;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;">🛡️ 최강</button>
+      </div>
+      <!-- 글자 수 슬라이더 -->
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:10px;color:rgba(240,230,200,.65);">📏 스크롤 글자 수</span>
+          <span id="cgmWinVal" style="font-size:12px;font-weight:800;color:#34d399;">6자</span>
+        </div>
+        <input type="range" id="cgmWinSlider" min="4" max="15" value="6" step="1" oninput="cgmSliderChange()" style="width:100%;height:5px;accent-color:#34d399;cursor:pointer;border-radius:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.22);margin-top:3px;"><span>4자 (최강)</span><span>15자 (여유)</span></div>
+      </div>
+      <!-- 자동 삭제 시간 슬라이더 -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:10px;color:rgba(240,230,200,.65);">⏱️ 자동 삭제 시간</span>
+          <span id="cgmExpVal" style="font-size:12px;font-weight:800;color:#f87171;">7초</span>
+        </div>
+        <input type="range" id="cgmExpSlider" min="3" max="30" value="7" step="1" oninput="cgmSliderChange()" style="width:100%;height:5px;accent-color:#f87171;cursor:pointer;border-radius:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.22);margin-top:3px;"><span>3초 (최강)</span><span>30초 (여유)</span></div>
+      </div>
+      <!-- 글자 이동 속도 슬라이더 -->
+      <div style="margin-bottom:10px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-size:10px;color:rgba(240,230,200,.65);">⚡ 글자 이동 속도</span>
+          <span id="cgmSpeedVal" style="font-size:12px;font-weight:800;color:#fbbf24;">0.3초</span>
+        </div>
+        <input type="range" id="cgmSpeedSlider" min="1" max="5" value="3" step="1" oninput="cgmSpeedChange()" style="width:100%;height:5px;accent-color:#fbbf24;cursor:pointer;border-radius:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.22);margin-top:3px;"><span>0.1초 (최강)</span><span>0.5초 (여유)</span></div>
+      </div>
+      <div style="margin-top:8px;font-size:9px;color:rgba(255,255,255,.2);text-align:center;letter-spacing:.05em;">특허 10-2026-0060113 · CGO-FULI SECURE MESSENGER</div>
+    </div>
     <!-- 메시지 영역 -->
     <!-- rPPG 방어막 레이어 -->
     <div id="cgmRppgLayer"></div>
@@ -51920,52 +52013,6 @@ var _unlockTimer=setInterval(function(){
     <div style="padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
       <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}" onfocus="setTimeout(function(){var el=document.getElementById('cgmMessages');if(el)el.scrollTop=el.scrollHeight;},300);"></textarea>
       <button onclick="cgmSendMsg()" style="width:42px;height:42px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:50%;color:#000;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
-    </div>
-
-    <style>
-    .cgm-preset{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 4px;color:rgba(240,230,200,.6);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
-    .cgm-preset.active{background:rgba(212,168,67,.2);border-color:rgba(212,168,67,.5);color:#d4a843;}
-    </style>
-
-    <!-- ★ 보안 설정 슬라이더 -->
-    <div id="cgmSecurityPanel" style="display:none;padding:12px 14px;background:rgba(0,0,0,.5);border-top:1px solid rgba(255,255,255,.06);">
-      <div style="font-size:10px;color:rgba(212,168,67,.7);font-weight:700;margin-bottom:10px;letter-spacing:.05em;">⚙️ 보안 강도 설정</div>
-
-      <!-- 프리셋 버튼 -->
-      <div style="display:flex;gap:6px;margin-bottom:12px;">
-        <button onclick="cgmSetPreset('off')"   id="cgmPreOff"  class="cgm-preset" style="flex:1;">🟢 일반</button>
-        <button onclick="cgmSetPreset('mid')"   id="cgmPreMid"  class="cgm-preset" style="flex:1;">🟡 보안</button>
-        <button onclick="cgmSetPreset('high')"  id="cgmPreHigh" class="cgm-preset" style="flex:1;">🔴 기밀</button>
-        <button onclick="cgmSetPreset('max')"   id="cgmPreMax"  class="cgm-preset" style="flex:1;">🛡️ 최강</button>
-      </div>
-
-      <!-- 글자 수 슬라이더 -->
-      <div style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-          <span style="font-size:10px;color:rgba(240,230,200,.6);">📏 스크롤 글자 수</span>
-          <span id="cgmWinVal" style="font-size:11px;font-weight:800;color:#34d399;">6자</span>
-        </div>
-        <input type="range" id="cgmWinSlider" min="4" max="15" value="6" step="1"
-          oninput="cgmSliderChange()"
-          style="width:100%;height:4px;accent-color:#34d399;cursor:pointer;">
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.25);margin-top:2px;">
-          <span>4자 (최강)</span><span>15자 (여유)</span>
-        </div>
-      </div>
-
-      <!-- 삭제 시간 슬라이더 -->
-      <div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-          <span style="font-size:10px;color:rgba(240,230,200,.6);">⏱️ 자동 삭제 시간</span>
-          <span id="cgmExpVal" style="font-size:11px;font-weight:800;color:#f87171;">7초</span>
-        </div>
-        <input type="range" id="cgmExpSlider" min="3" max="30" value="7" step="1"
-          oninput="cgmSliderChange()"
-          style="width:100%;height:4px;accent-color:#f87171;cursor:pointer;">
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.25);margin-top:2px;">
-          <span>3초 (최강)</span><span>30초 (여유)</span>
-        </div>
-      </div>
     </div>
     <!-- ★ 특허 번호 -->
     <div style="text-align:center;padding:5px 0 6px;background:rgba(0,0,0,.4);font-size:9px;color:rgba(212,168,67,.25);letter-spacing:.12em;font-family:'Orbitron',monospace;flex-shrink:0;">
@@ -53390,8 +53437,8 @@ function cgmCleanupMessages(code){
   var room = _cgm.rooms[code];
   if(!room || !room.msgs) return;
   var now = Date.now();
-  var EXPIRE_MS = (window._cgmExpireSec||7)*1000; // 사용자 설정 (기본 7초)
-  var MAX_VIEWS = 2; // 2회 조회 고정
+  var EXPIRE_MS = 30000; // 30초
+  var MAX_VIEWS = 2;     // 2회 조회
   var changed = false;
   var remaining = [];
 
@@ -53477,6 +53524,17 @@ function cgmRenderMessages(code){
 
   el.innerHTML = html;
   el.scrollTop = el.scrollHeight;
+  // ★ 자동 삭제 타이머 (_cgmExpireSec 적용)
+  if(_cgmShieldOn && window._cgmExpireSec){
+    var expMs = window._cgmExpireSec * 1000;
+    setTimeout(function(){
+      var room = _cgm.rooms[code];
+      if(room && room.msgs && room.msgs.length > 0){
+        room.msgs = [];
+        if(_cgm.currentRoom===code) cgmRenderMessages(code);
+      }
+    }, expMs);
+  }
   // 새 메시지 수신 시 알림음 (내가 보낸 것 제외)
   var lastMsg = msgs[msgs.length-1];
   if(lastMsg && lastMsg.from !== _cgm.myCode && lastMsg.type !== 'sejong'){
@@ -53621,68 +53679,6 @@ function cgmListenFirebase(){
 //       카메라 셔터 → 어두운 프레임 캡처 → 흐릿
 var _cgmShieldOn = false;
 
-
-// ★ 보안 설정 슬라이더 시스템
-window._cgmScrollWin = 6;  // 기본 6자
-window._cgmExpireSec = 7;  // 기본 7초
-
-function cgmToggleSecPanel(){
-  var p=document.getElementById('cgmSecurityPanel');
-  if(!p)return;
-  p.style.display=p.style.display==='none'?'block':'none';
-}
-
-function cgmSliderChange(){
-  var ws=document.getElementById('cgmWinSlider');
-  var es=document.getElementById('cgmExpSlider');
-  var wv=document.getElementById('cgmWinVal');
-  var ev=document.getElementById('cgmExpVal');
-  if(ws){ window._cgmScrollWin=parseInt(ws.value); if(wv) wv.textContent=ws.value+'자'; }
-  if(es){ window._cgmExpireSec=parseInt(es.value); if(ev) ev.textContent=es.value+'초'; }
-  // 프리셋 버튼 해제
-  ['Off','Mid','High','Max'].forEach(function(p){
-    var b=document.getElementById('cgmPre'+p);
-    if(b) b.classList.remove('active');
-  });
-}
-
-function cgmSetPreset(type){
-  var presets={
-    'off': {win:15,sec:30},   // 🟢 일반 — Shield OFF 효과
-    'mid': {win:8, sec:15},   // 🟡 보안
-    'high':{win:6, sec:7},    // 🔴 기밀
-    'max': {win:4, sec:3}     // 🛡️ 최강
-  };
-  var p=presets[type]; if(!p)return;
-  window._cgmScrollWin=p.win;
-  window._cgmExpireSec=p.sec;
-
-  // 슬라이더 값 업데이트
-  var ws=document.getElementById('cgmWinSlider');
-  var es=document.getElementById('cgmExpSlider');
-  var wv=document.getElementById('cgmWinVal');
-  var ev=document.getElementById('cgmExpVal');
-  if(ws){ws.value=p.win; if(wv) wv.textContent=p.win+'자';}
-  if(es){es.value=p.sec; if(ev) ev.textContent=p.sec+'초';}
-
-  // 프리셋 버튼 활성화
-  ['off','mid','high','max'].forEach(function(k){
-    var b=document.getElementById('cgmPre'+k.charAt(0).toUpperCase()+k.slice(1));
-    if(b) b.classList.toggle('active', k===type);
-  });
-
-  // Shield 자동 ON (일반 제외)
-  if(type!=='off' && !_cgmShieldOn) cgmToggleShield();
-  if(type==='off' && _cgmShieldOn)  cgmToggleShield();
-
-  cgmShowShieldToast({
-    'off':'🟢 일반 모드 — 편하게 대화하세요',
-    'mid':'🟡 보안 모드 — 8자/15초',
-    'high':'🔴 기밀 모드 — 6자/7초',
-    'max':'🛡️ 최강 모드 — 4자/3초 폭파!'
-  }[type]);
-}
-
 function cgmToggleShield(){
   _cgmShieldOn = !_cgmShieldOn;
   var layer = document.getElementById('cgmRppgLayer');
@@ -53713,6 +53709,8 @@ function cgmToggleShield(){
     }
     cgmShowShieldToast('🛡️ 캡처방지 해제됨');
   }
+  // ★ Shield 토글 시 메시지 즉시 재렌더링
+  if(_cgm.currentRoom) cgmRenderMessages(_cgm.currentRoom);
 }
 
 function cgmShowShieldToast(msg){
@@ -53974,32 +53972,33 @@ function cgmStopTiltWatch(){
 
 // ══ 네온 글씨 효과 ══
 function cgmNeonWrap(text){
-  // ★ 모든 글자 — 스크롤 + 네온 깜빡임 동시 적용
-  var WIN = window._cgmScrollWin||6; // 사용자 설정값 (기본 6자)
+  // ★ 슬라이더 값 실시간 참조
+  var WIN  = window._cgmScrollWin  || 6;    // 글자 수 슬라이더
+  var SPD  = window._cgmScrollSpeed|| 300;  // 이동 속도(ms) 슬라이더
   var chars = Array.from(text);
   var esc = function(c){ return c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
-  // 글자별 네온 span 생성 (딜레이 다르게 → 물결치듯 깜빡임)
   function makeNeonChars(arr, offset){
     return arr.map(function(ch,i){
-      var d = ((i + (offset||0)) * 0.15) % 2.2;
+      var d = ((i + (offset||0)) * 0.12) % 2.0;
       return '<span class="cgm-char" style="animation-delay:'+d.toFixed(2)+'s">'+esc(ch)+'</span>';
     }).join('');
   }
 
-  // 3글자 이하: 제자리 깜빡임만 / 4글자 이상: 스크롤+깜빡임
+  // WIN 글자 이하: 제자리 깜빡임만
   if(chars.length <= WIN){
     return '<span class="cgm-flow-text">'+ makeNeonChars(chars) +'</span>';
   }
 
-  // 9글자 이상: 8글자 윈도우 스크롤 + 각 글자 네온 깜빡임
-  var dur = Math.max(4, chars.length * 0.22);
-  // seamless loop: 원문 2배 복사
+  // WIN 초과: 스크롤 + 네온 깜빡임
+  // SPD = 글자 1개당 이동 시간(ms) → 전체 duration = 글자수 × SPD / 1000 초
+  var dur = Math.max(0.5, chars.length * SPD / 1000);
   var inner = makeNeonChars(chars, 0) + makeNeonChars(chars, chars.length);
 
-  return '<span class="cgm-scroll-win">'+
+  var winEm = (window._cgmScrollWin || 6) + 'em';
+  return '<span class="cgm-scroll-win" style="width:'+winEm+'">'+
     '<span class="cgm-flow-text">'+
-      '<span class="cgm-scroll-inner" style="animation-duration:'+dur.toFixed(1)+'s">'+
+      '<span class="cgm-scroll-inner" style="animation-duration:'+dur.toFixed(2)+'s">'+
         inner+
       '</span>'+
     '</span>'+
@@ -54290,5 +54289,86 @@ function cgmUpdateBadge(){
 
 // ── page 이동 시 채팅 초기화 ──
 var _cgmPageOrigFn = window.cgoGoPage;
+
+
+// ★ 보안 슬라이더
+window._cgmScrollWin = 6;  // 기본 6자
+window._cgmExpireSec = 7;  // 기본 7초
+
+function cgmToggleSecPanel(){
+  var p=document.getElementById('cgmSecurityPanel');
+  if(!p)return;
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function cgmSpeedChange(){
+  var s=document.getElementById('cgmSpeedSlider');
+  var v=document.getElementById('cgmSpeedVal');
+  var labels=['0.1초','0.2초','0.3초','0.4초','0.5초'];
+  var ms=[100,200,300,400,500];
+  if(s&&v){
+    var idx=parseInt(s.value)-1;
+    window._cgmScrollSpeed=ms[idx];
+    v.textContent=labels[idx];
+  }
+}
+function cgmSliderChange(){
+  var ws=document.getElementById('cgmWinSlider');
+  var es=document.getElementById('cgmExpSlider');
+  var wv=document.getElementById('cgmWinVal');
+  var ev=document.getElementById('cgmExpVal');
+  if(ws){ window._cgmScrollWin=parseInt(ws.value); if(wv) wv.textContent=ws.value+'자'; }
+  if(es){ window._cgmExpireSec=parseInt(es.value); if(ev) ev.textContent=es.value+'초'; }
+  // 프리셋 버튼 해제
+  ['Off','Mid','High','Max'].forEach(function(p){
+    var b=document.getElementById('cgmPre'+p);
+    if(b) b.classList.remove('active');
+  });
+}
+
+function cgmSetPreset(type){
+  var presets={
+    'off': {win:15,sec:30},   // 🟢 일반 — Shield OFF 효과
+    'mid': {win:8, sec:15},   // 🟡 보안
+    'high':{win:6, sec:7},    // 🔴 기밀
+    'max': {win:4, sec:3}     // 🛡️ 최강
+  };
+  var p=presets[type]; if(!p)return;
+  window._cgmScrollWin=p.win;
+  window._cgmExpireSec=p.sec;
+
+  // 슬라이더 값 업데이트
+  var ws=document.getElementById('cgmWinSlider');
+  var es=document.getElementById('cgmExpSlider');
+  var wv=document.getElementById('cgmWinVal');
+  var ev=document.getElementById('cgmExpVal');
+  if(ws){ws.value=p.win; if(wv) wv.textContent=p.win+'자';}
+  if(es){es.value=p.sec; if(ev) ev.textContent=p.sec+'초';}
+
+  // 프리셋 버튼 활성화
+  ['off','mid','high','max'].forEach(function(k){
+    var b=document.getElementById('cgmPre'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(b) b.classList.toggle('active', k===type);
+  });
+
+  // Shield 자동 ON (일반 제외)
+  if(type!=='off' && !_cgmShieldOn) cgmToggleShield();
+  if(type==='off' && _cgmShieldOn)  cgmToggleShield();
+
+  cgmShowShieldToast({
+    'off':'🟢 일반 모드 — 편하게 대화하세요',
+    'mid':'🟡 보안 모드 — 8자/15초',
+    'high':'🔴 기밀 모드 — 6자/7초',
+    'max':'🛡️ 최강 모드 — 4자/3초 폭파!'
+  }[type]);
+}
+
+function cgmAutoShield(){
+  if(!_cgmShieldOn) cgmToggleShield();
+}
+
+
+// ══ CGO 사용자 목록 ══
+var _cgmAllUsers = [];
 
 </script>
