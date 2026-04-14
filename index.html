@@ -35218,13 +35218,13 @@ function bsFsDoStart(){
     var _wLbl=document.getElementById('bsFsGuideLbl');
     var _camWrap=document.getElementById('bsFsCamWrap');
     if(BsFs.step==='face'||BsFs.step==='tongue'){
-      var _fmOK=BsFs._lastFaceLms&&BsFs._lastFaceLms.length>100;
+      var _fmOK=BsFs._lastFaceLms&&BsFs._lastFaceLms.length>380;
       if(!_fmOK){ BsFs._warnCount++; } else { BsFs._warnCount=0; }
       if(BsFs._warnCount>=1){
-        if(_wLbl) _wLbl.textContent='⚠️ '+(BsFs.step==='tongue'?'혀':'얼굴')+'를 카메라에 맞춰주세요!';
+        if(_wLbl) _wLbl.textContent='⚠️ '+(BsFs.step==='tongue'?'혀 전체':'얼굴 전체')+'를 화면에 맞춰주세요!';
         if(_camWrap) _camWrap.style.outline='3px solid #ef4444';
       } else {
-        if(_wLbl) _wLbl.textContent='✅ '+(BsFs.step==='tongue'?'혀':'얼굴')+' 감지 중...';
+        if(_wLbl) _wLbl.textContent='✅ '+(BsFs.step==='tongue'?'혀 전체':'얼굴 전체')+' 감지됨 — 측정 중';
         if(_camWrap) _camWrap.style.outline='none';
       }
     } else if(BsFs.step==='palm'){
@@ -35236,14 +35236,15 @@ function bsFsDoStart(){
         if(_camWrap) _camWrap.style.outline='none';
       }
     }
-    // ★ 핀셋 수정: 감지된 경우만 타이머 진행
+    // ★ 핀셋 수정: 감지된 경우만 타이머 진행 (즉시 정지)
     var _canCount = true;
     if(BsFs.step==='face'||BsFs.step==='tongue'){
-      // 얼굴/혀 없으면 카운트 정지
-      if(BsFs._warnCount>=1) _canCount=false;
+      // 얼굴/혀 완전히 없으면 즉시 정지
+      var _fmNow=BsFs._lastFaceLms&&BsFs._lastFaceLms.length>380;
+      if(!_fmNow) _canCount=false;
     } else if(BsFs.step==='palm'){
-      // 손 없으면 카운트 정지
-      if(_rPPG.lostCount>3) _canCount=false;
+      // 손 없으면 즉시 정지
+      if(_rPPG.lostCount>0) _canCount=false;
     }
     if(_canCount) BsFs.sec++;
     if(tmr) tmr.textContent=_canCount?(TOTAL-BsFs.sec):'⏸';
@@ -52561,11 +52562,11 @@ function maiStartScan(){
       var tmr=document.getElementById('mai-timer');
       var live=document.getElementById('mai-score-live');
       // ★ 핀셋: 얼굴 감지된 경우만 카운트
-      var _maiCanCount=(_mai.lostCount<=3);
+      var _maiCanCount=(_mai.lostCount===0);
       if(_maiCanCount) _mai.sec++;
       var remain=30-_mai.sec;
       if(prg) prg.style.width=(_mai.sec/30*100)+'%';
-      if(tmr) tmr.textContent=_maiCanCount?(remain>0?remain+'초 남음':'분석 완료!'):'⏸ 얼굴 감지 대기';
+      if(tmr) tmr.textContent=_maiCanCount?(remain>0?remain+'초 남음':'분석 완료!'):'⏸ 얼굴 전체를 화면에 맞춰주세요';
 
       // 픽셀 분석
       var v2=document.getElementById('mai-video');
@@ -52612,8 +52613,8 @@ function maiStartScan(){
             document.getElementById('mai-face-status').style.color='rgba(244,114,182,.9)';
           } else {
             _mai.lostCount++;
-            if(_mai.lostCount>3){
-              document.getElementById('mai-face-status').textContent='⚠️ 얼굴을 가까이 대주세요';
+            if(_mai.lostCount>0){
+              document.getElementById('mai-face-status').textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요';
               document.getElementById('mai-face-status').style.color='rgba(251,191,36,.8)';
             }
           }
@@ -52726,11 +52727,11 @@ function sviStartScan(){
       var tmr=document.getElementById('svi-timer');
       var live=document.getElementById('svi-score-live');
       // ★ 핀셋: 얼굴 감지된 경우만 카운트
-      var _sviCanCount=(_svi.lostCount<=3);
+      var _sviCanCount=(_svi.lostCount===0);
       if(_sviCanCount) _svi.sec++;
       var remain=30-_svi.sec;
       if(prg) prg.style.width=(_svi.sec/30*100)+'%';
-      if(tmr) tmr.textContent=_sviCanCount?(remain>0?remain+'초 남음':'분석 완료!'):'⏸ 얼굴 감지 대기';
+      if(tmr) tmr.textContent=_sviCanCount?(remain>0?remain+'초 남음':'분석 완료!'):'⏸ 얼굴 전체를 화면에 맞춰주세요';
 
       var v2=document.getElementById('svi-video');
       if(v2&&v2.videoWidth&&_svi.offCtx){
@@ -52775,8 +52776,8 @@ function sviStartScan(){
             document.getElementById('svi-face-status').style.color='rgba(56,189,248,.9)';
           } else {
             _svi.lostCount++;
-            if(_svi.lostCount>3){
-              document.getElementById('svi-face-status').textContent='⚠️ 얼굴을 가까이 대주세요';
+            if(_svi.lostCount>0){
+              document.getElementById('svi-face-status').textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요';
               document.getElementById('svi-face-status').style.color='rgba(251,191,36,.8)';
             }
           }
@@ -54418,4 +54419,3 @@ function cgmAutoShield(){
 var _cgmAllUsers = [];
 
 </script>
-
