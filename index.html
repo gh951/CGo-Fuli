@@ -51843,10 +51843,31 @@ var _unlockTimer=setInterval(function(){
     }
     #cgmRoom {
       height: 100%;
+      /* ★ 전체 기기 대응: 키보드 올라와도 레이아웃 유지 */
+      max-height: 100%;
+      overflow: hidden;
     }
     #cgmMessages {
       flex: 1;
       min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    /* ★ iOS Safari */
+    @supports (-webkit-touch-callout: none) {
+      #cgmRoom { height: -webkit-fill-available; }
+    }
+    /* ★ 안드로이드 Chrome + 모든 모바일 */
+    @media (max-width: 768px) {
+      #cgmRoom {
+        height: 100dvh;
+        max-height: 100dvh;
+      }
+      #cgmMessages {
+        flex: 1;
+        min-height: 0;
+      }
     }
     /* ★ 네온 간판 + 빛나는 글씨 효과 */
     @keyframes cgmNeonChar {
@@ -51947,7 +51968,7 @@ var _unlockTimer=setInterval(function(){
         <div style="font-size:15px;font-weight:900;color:#d4a843;">CGO 메신저</div>
         <div id="cgmMyInfo" style="font-size:10px;color:rgba(212,168,67,.5);"></div>
       </div>
-      <button onclick="cgmOpenUserPanel()" style="background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:20px;padding:6px 14px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">👥 사용자 목록</button>
+      <button onclick="cgmOpenUserPanel()" style="background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(212,168,67,.12));border:1.5px solid rgba(212,168,67,.6);border-radius:20px;padding:7px 16px;color:#d4a843;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 0 10px rgba(212,168,67,.2);">💬 CGO 사용자 목록</button>
       <button onclick="cgoCloseMessenger()" style="background:rgba(52,211,153,.1);border:1.5px solid rgba(52,211,153,.4);border-radius:20px;padding:6px 12px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">✕</button>
     </div>
     <!-- 내 코드 공유 -->
@@ -52053,8 +52074,8 @@ var _unlockTimer=setInterval(function(){
       <div id="cgmWatermark" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:11px;color:rgba(212,168,67,.04);font-weight:900;pointer-events:none;z-index:1;white-space:nowrap;letter-spacing:.1em;user-select:none;"></div>
     </div>
     <!-- 입력창 -->
-    <div style="padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;">
-      <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}" onfocus="setTimeout(function(){var el=document.getElementById('cgmMessages');if(el)el.scrollTop=el.scrollHeight;},300);"></textarea>
+    <div style="padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;position:sticky;bottom:0;z-index:10;">
+      <textarea id="cgmInput" placeholder="메시지 입력..." rows="1" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:10px 16px;color:#f0ece0;font-size:14px;resize:none;font-family:inherit;outline:none;max-height:80px;line-height:1.4;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();cgmSendMsg();}" onfocus="setTimeout(function(){var el=document.getElementById('cgmMessages');if(el)el.scrollTop=el.scrollHeight;var inp=document.getElementById('cgmInput');if(inp)inp.scrollIntoView({block:'nearest'});},300);"></textarea>
       <button onclick="cgmSendMsg()" style="width:42px;height:42px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:50%;color:#000;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↑</button>
     </div>
     <!-- ★ 특허 번호 -->
@@ -53079,7 +53100,6 @@ function cgoOpenMessenger(){
   var el = document.getElementById('page-chat');
   if(el) el.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  // 브라우저 알림 권한 요청
   if('Notification' in window && Notification.permission === 'default'){
     Notification.requestPermission();
   }
@@ -53116,6 +53136,16 @@ var _cgmOhCompat = {
 var _cgmOhColor = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#e5e7eb',수:'#38bdf8'};
 var _cgmOhEmoji = {목:'🌿',화:'🔥',토:'🏔',금:'💎',수:'💧'};
 
+// ★ 전체 기기 키보드 대응
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', function(){
+    var room = document.getElementById('cgmRoom');
+    if(room && document.getElementById('cgmRoom').style.display !== 'none'){
+      var offset = window.innerHeight - window.visualViewport.height;
+      room.style.paddingBottom = offset > 0 ? offset + 'px' : '0px';
+    }
+  });
+}
 function cgmShowScreen(id){
   document.querySelectorAll('.cgm-screen').forEach(function(s){ s.classList.remove('active'); });
   var el = document.getElementById(id);
