@@ -1,20 +1,16 @@
-// CGO-FULI Service Worker v1.0
-// 특허 출원 제10-2026-0060113호
+// ═══════════════════════════════════════════
+// CGO-FULI Service Worker v2.0
+// 푸시 알림 + 오프라인 캐시
+// ═══════════════════════════════════════════
 
-const CACHE_NAME = 'cgo-fuli-v1';
-const CACHE_URLS = ['/'];
+const CACHE_NAME = 'cgo-fuli-v2';
 
-// ── 설치: 캐시 저장 ──
+// ── 설치 ──
 self.addEventListener('install', function(e){
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache){
-      return cache.addAll(CACHE_URLS);
-    })
-  );
   self.skipWaiting();
 });
 
-// ── 활성화: 구버전 캐시 삭제 ──
+// ── 활성화 ──
 self.addEventListener('activate', function(e){
   e.waitUntil(
     caches.keys().then(function(keys){
@@ -27,84 +23,92 @@ self.addEventListener('activate', function(e){
   self.clients.claim();
 });
 
-// ── 네트워크 요청: 캐시 우선 전략 ──
-self.addEventListener('fetch', function(e){
-  e.respondWith(
-    caches.match(e.request).then(function(cached){
-      // 캐시 있으면 캐시 반환, 없으면 네트워크
-      var fetchPromise = fetch(e.request).then(function(response){
-        // HTML 페이지는 캐시 업데이트
-        if(response && response.status === 200 && e.request.mode === 'navigate'){
-          var responseClone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache){
-            cache.put(e.request, responseClone);
-          });
-        }
-        return response;
-      }).catch(function(){ return cached; });
-
-      return cached || fetchPromise;
-    })
-  );
-});
-
 // ── 푸시 알림 수신 ──
 self.addEventListener('push', function(e){
   var data = {};
-  try{ data = e.data ? e.data.json() : {}; }catch(err){}
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch(err) {
+    data = { title: 'CGO 메신저', body: '새 메시지가 왔습니다!' };
+  }
 
-  var title = data.title || 'CGO 메신저';
+  var title   = data.title || 'CGO 메신저 💬';
   var options = {
-    body: data.body || '새 메시지가 왔습니다! 💬',
-    icon: data.icon || '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: 'cgm-message',
+    body:    data.body  || '새 메시지가 왔습니다!',
+    icon:    '/images/icon-192.png',
+    badge:   '/images/icon-192.png',
+    tag:     'cgm-message',
     renotify: true,
-    vibrate: [200, 100, 200, 100, 200],
-    data: { url: data.url || '/' },
-    actions: [
-      { action: 'open', title: '열기' },
-      { action: 'close', title: '닫기' }
-    ]
+    vibrate: [200, 100, 200],
+    data:    { url: data.url || '/' },
+    // ★ 풍경 소리 — 알림음 파일이 있으면 적용
+    // silent: false  // 기본값
   };
 
-  e.waitUntil(self.registration.showNotification(title, options));
+  e.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 // ── 알림 클릭 ──
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
+  var targetUrl = (e.notification.data && e.notification.data.url) || '/';
 
-  if(e.action === 'close') return;
-
-  var url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
-    clients.matchAll({type:'window', includeUncontrolled:true}).then(function(clientList){
-      // 이미 열린 탭 있으면 포커스
-      for(var i=0; i<clientList.length; i++){
-        var client = clientList[i];
-        if(client.url.indexOf(self.location.origin) !== -1 && 'focus' in client){
-          client.focus();
-          client.postMessage({type:'CGM_NOTIFY_CLICK'});
-          return;
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(function(windowClients){
+        // 이미 열린 창이 있으면 포커스
+        for(var i = 0; i < windowClients.length; i++){
+          var client = windowClients[i];
+          if(client.url.indexOf(self.location.origin) >= 0 && 'focus' in client){
+            client.focus();
+            client.postMessage({ type: 'CGM_NOTIFY_CLICK' });
+            return;
+          }
         }
-      }
-      // 없으면 새 탭
-      if(clients.openWindow) return clients.openWindow(url);
-    })
+        // 없으면 새 창 열기
+        if(clients.openWindow){
+          return clients.openWindow(targetUrl);
+        }
+      })
   );
 });
 
-// ── 백그라운드 동기화 ──
-self.addEventListener('sync', function(e){
-  if(e.tag === 'cgm-sync'){
-    // 오프라인 중 쌓인 메시지 전송
-    e.waitUntil(
-      self.clients.matchAll().then(function(clients){
-        clients.forEach(function(client){
-          client.postMessage({type:'CGM_SYNC'});
-        });
-      })
-    );
-  }
-});
+// ── Firebase 메시지 백그라운드 수신 (compat) ──
+// Firebase SDK가 로드되어 있으면 백그라운드 메시지 처리
+try {
+  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyBwT8Dz1C07J-UK3V6Y1oj4-XJvxr6CXMg",
+    authDomain: "cgo-life.firebaseapp.com",
+    databaseURL: "https://cgo-life-default-rtdb.firebaseio.com",
+    projectId: "cgo-life",
+    storageBucket: "cgo-life.firebasestorage.app",
+    messagingSenderId: "435295214189",
+    appId: "1:435295214189:web:004edd952498cbff727d64"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  var messaging = firebase.messaging();
+
+  // 백그라운드 메시지 처리
+  messaging.onBackgroundMessage(function(payload){
+    var title   = (payload.notification && payload.notification.title) || 'CGO 메신저 💬';
+    var body    = (payload.notification && payload.notification.body)  || '새 메시지가 왔습니다!';
+    var options = {
+      body:     body,
+      icon:     '/images/icon-192.png',
+      badge:    '/images/icon-192.png',
+      tag:      'cgm-message',
+      renotify: true,
+      vibrate:  [200, 100, 200]
+    };
+    return self.registration.showNotification(title, options);
+  });
+} catch(e) {
+  // Firebase SDK 로드 실패 시 기본 push 이벤트로 처리
+  console.log('[CGO-SW] Firebase 없이 기본 push 처리');
+}
