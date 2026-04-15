@@ -52159,6 +52159,7 @@ window.addEventListener('beforeinstallprompt', function(e){
 });
 
 function cgoPwaInstall(){
+  // ★ beforeinstallprompt 있으면 바로 설치
   if(_cgoPwaPrompt){
     _cgoPwaPrompt.prompt();
     _cgoPwaPrompt.userChoice.then(function(result){
@@ -52171,7 +52172,26 @@ function cgoPwaInstall(){
         setTimeout(function(){ t.remove(); }, 3000);
       }
     });
+    return;
   }
+  // ★ iOS는 안내 팝업
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIOS){
+    var p = document.createElement('div');
+    p.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:flex-end;justify-content:center;';
+    p.innerHTML = '<div style="width:100%;max-width:480px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px 20px 0 0;padding:28px 22px;border:1px solid rgba(52,211,153,.3);text-align:center;">'
+      + '<div style="font-size:16px;font-weight:900;color:#34d399;margin-bottom:16px;">📲 CGO-FULI 앱 설치</div>'
+      + '<div style="font-size:14px;color:rgba(240,230,200,.8);line-height:1.8;margin-bottom:16px;">① 하단 <b style="color:#38bdf8;">공유 버튼 □↑</b> 탭<br>② <b style="color:#d4a843;">홈 화면에 추가</b> 선택<br>③ <b style="color:#34d399;">추가</b> 클릭!</div>'
+      + '<button onclick="this.parentNode.parentNode.remove()" style="width:100%;padding:14px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;">확인</button>'
+      + '</div>';
+    document.body.appendChild(p);
+    return;
+  }
+  // ★ 안드로이드 → APK 다운로드
+  var a = document.createElement('a');
+  a.href = 'https://raw.githubusercontent.com/gh951/CGo-Fuli/main/CGO-FULI-unsigned.apk';
+  a.download = 'CGO-FULI.apk';
+  a.click();
 }
 
 // ── CGO-FULI PWA Service Worker + FCM 푸시 알림 ──
