@@ -38099,18 +38099,29 @@ function pmYtOpen(vid,title,ch){
   if(ti)ti.textContent=title;
   if(ci)ci.textContent=ch+' · YouTube';
 }
-function pmYtFetch(oh,sj,ili,cid){
+function pmYtFetch(oh,sj,ili,cid,_retry){
   var box=document.getElementById(cid);
   if(!box)return;
   var q=pmYtBuildQ(oh,sj,ili);
-  var url='https://www.googleapis.com/youtube/v3/search?part=snippet&q='+encodeURIComponent(q)+'&type=video&maxResults=6&videoEmbeddable=true&videoCategoryId=10&key='+_CGO_YT_KEY;
+  // videoCategoryId 제거 — 더 넓은 결과
+  var url='https://www.googleapis.com/youtube/v3/search?part=snippet&q='+encodeURIComponent(q)+'&type=video&maxResults=6&videoEmbeddable=true&relevanceLanguage=ko&key='+_CGO_YT_KEY;
+  // 타임아웃 처리 (8초)
+  var _tmr=setTimeout(function(){
+    var b=document.getElementById(cid);
+    if(b&&b.innerHTML.indexOf('검색 중')>-1){
+      b.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">YouTube 응답 지연. 아래 목록의 &#9654; 재생 버튼을 이용하세요.</div>';
+    }
+  },8000);
   fetch(url).then(function(r){return r.json();}).then(function(data){
+    clearTimeout(_tmr);
     if(data.error){
-      if((data.error.code||0)===403){_cgoYtRotateKey();pmYtFetch(oh,sj,ili,cid);return;}
-      box.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">유튜브 한도 초과. 아래 목록을 이용하세요.</div>';
+      var ec=data.error.code||0;
+      var b2=document.getElementById(cid);
+      if(ec===403&&!_retry){_cgoYtRotateKey();pmYtFetch(oh,sj,ili,cid,true);return;}
+      if(b2)b2.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">YouTube API 오류 ('+ec+'). 아래 &#9654; 재생 버튼을 이용하세요.</div>';
       return;
     }
-    var items=data.items||[];
+        var items=data.items||[];
     if(!items.length){box.innerHTML='<div style="font-size:11px;color:rgba(240,230,200,.4);text-align:center;padding:10px;">검색 결과 없음</div>';return;}
     var wrap=document.createElement('div');
     wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
@@ -38138,8 +38149,10 @@ function pmYtFetch(oh,sj,ili,cid){
     });
     box.innerHTML='';
     box.appendChild(wrap);
-  }).catch(function(){
-    box.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">네트워크 오류</div>';
+  }).catch(function(e){
+    clearTimeout(_tmr);
+    var b3=document.getElementById(cid);
+    if(b3)b3.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">네트워크 오류. 아래 &#9654; 재생 버튼을 이용하세요.</div>';
   });
 }
 
