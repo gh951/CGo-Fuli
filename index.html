@@ -35546,12 +35546,13 @@ window.addEventListener('popstate', function(e) {
   _cgHistoryPush(prev);
 });
 
-// history API 안전 래퍼 (iframe/보안 환경 대응)
+// ★ 핀셋: URL에 #hash 안 붙이기 → PWA 설치 정상 작동
+// beforeinstallprompt는 URL이 깔끔해야 발생함
 function _cgHistoryPush(pageId) {
-  try { history.pushState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
+  // URL 변경 안 함 (PWA 설치를 위해)
 }
 function _cgHistoryReplace(pageId) {
-  try { history.replaceState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
+  // URL 변경 안 함 (PWA 설치를 위해)
 }
 
 // 최초 진입 시 히스토리 항목 추가
@@ -52159,13 +52160,6 @@ window.addEventListener('beforeinstallprompt', function(e){
 });
 
 function cgoPwaInstall(){
-  var ua = navigator.userAgent.toLowerCase();
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  var isAndroid = ua.indexOf('android') > -1;
-  var isKakao = ua.indexOf('kakaotalk') > -1;
-  var isInApp = ua.indexOf('kakaotalk') > -1 || ua.indexOf('fbav') > -1 || ua.indexOf('instagram') > -1 || ua.indexOf('naver') > -1;
-
-  // ★ 안드로이드 beforeinstallprompt 있으면 바로 설치
   if(_cgoPwaPrompt){
     _cgoPwaPrompt.prompt();
     _cgoPwaPrompt.userChoice.then(function(result){
@@ -52178,36 +52172,6 @@ function cgoPwaInstall(){
         setTimeout(function(){ t.remove(); }, 3000);
       }
     });
-    return;
-  }
-
-  // ★ 안드로이드 인앱브라우저 → Intent로 크롬 자동 실행
-  if(isAndroid && isInApp){
-    location.href = 'intent://c-go-fuli.com#Intent;scheme=https;package=com.android.chrome;end';
-    return;
-  }
-
-  // ★ 안드로이드 일반 브라우저
-  if(isAndroid){
-    location.href = 'intent://c-go-fuli.com#Intent;scheme=https;package=com.android.chrome;end';
-    return;
-  }
-
-  // ★ iOS Safari
-  if(isIOS){
-    var p = document.createElement('div');
-    p.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:flex-end;justify-content:center;';
-    p.innerHTML = '<div style="width:100%;max-width:480px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px 20px 0 0;padding:28px 22px;border:1px solid rgba(52,211,153,.3);">'
-      + '<div style="font-size:16px;font-weight:900;color:#34d399;text-align:center;margin-bottom:16px;">📲 CGO-FULI 앱 설치</div>'
-      + '<div style="font-size:14px;color:rgba(240,230,200,.8);line-height:1.8;margin-bottom:16px;">'
-      + '① 하단 <b style="color:#38bdf8;">공유 버튼 □↑</b> 탭<br>'
-      + '② <b style="color:#d4a843;">홈 화면에 추가</b> 선택<br>'
-      + '③ <b style="color:#34d399;">추가</b> 클릭!'
-      + '</div>'
-      + '<button onclick="this.parentNode.parentNode.remove()" style="width:100%;padding:14px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;">확인</button>'
-      + '</div>';
-    document.body.appendChild(p);
-    return;
   }
 }
 
