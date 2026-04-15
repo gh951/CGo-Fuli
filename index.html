@@ -25,34 +25,7 @@
 // ══ 위치 권한 싱글톤 — 최초 1회만 요청, 결과 전역 공유 ══
 window._cgoGeoPromise = null;
 
-// ★ 카카오톡 인앱브라우저 감지 → 크롬으로 열기 유도
-(function(){
-  var ua = navigator.userAgent.toLowerCase();
-  var isKakao = ua.indexOf('kakaotalk') > -1;
-  var isFacebook = ua.indexOf('fbav') > -1 || ua.indexOf('fban') > -1;
-  var isInApp = isKakao || isFacebook || ua.indexOf('instagram') > -1 || ua.indexOf('naver') > -1;
-
-  if(isInApp){
-    // 페이지 로드 후 안내 팝업
-    window.addEventListener('load', function(){
-      setTimeout(function(){
-        var p = document.createElement('div');
-        p.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:20px;';
-        p.innerHTML = '<div style="width:100%;max-width:360px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px;padding:28px 22px;border:1.5px solid rgba(52,211,153,.5);text-align:center;">'
-          + '<div style="font-size:32px;margin-bottom:12px;">🌐</div>'
-          + '<div style="font-size:16px;font-weight:900;color:#34d399;margin-bottom:10px;">크롬으로 열어주세요!</div>'
-          + '<div style="font-size:13px;color:rgba(240,230,200,.7);line-height:1.8;margin-bottom:20px;">'
-          + 'CGO-FULI 앱 설치를 위해<br>크롬 브라우저가 필요합니다.<br><br>'
-          + '<b style="color:#d4a843;">우측 하단 ··· → 다른 브라우저로 열기</b><br>'
-          + '→ Chrome 선택'
-          + '</div>'
-          + '<button onclick="this.parentNode.parentNode.remove()" style="width:100%;padding:13px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:14px;font-weight:900;cursor:pointer;">확인</button>'
-          + '</div>';
-        document.body.appendChild(p);
-      }, 500);
-    });
-  }
-})();
+// ★ 인앱브라우저 처리는 cgoPwaInstall에서 자동 처리
 window._cgoGeoResult  = null;
 
 function cgoGetLocation(callback) {
@@ -52186,7 +52159,13 @@ window.addEventListener('beforeinstallprompt', function(e){
 });
 
 function cgoPwaInstall(){
-  // ★ 안드로이드: beforeinstallprompt 있으면 바로 설치
+  var ua = navigator.userAgent.toLowerCase();
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isAndroid = ua.indexOf('android') > -1;
+  var isKakao = ua.indexOf('kakaotalk') > -1;
+  var isInApp = ua.indexOf('kakaotalk') > -1 || ua.indexOf('fbav') > -1 || ua.indexOf('instagram') > -1 || ua.indexOf('naver') > -1;
+
+  // ★ 안드로이드 beforeinstallprompt 있으면 바로 설치
   if(_cgoPwaPrompt){
     _cgoPwaPrompt.prompt();
     _cgoPwaPrompt.userChoice.then(function(result){
@@ -52194,7 +52173,7 @@ function cgoPwaInstall(){
       if(result.outcome === 'accepted'){
         var t = document.createElement('div');
         t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#34d399,#38bdf8);color:#000;padding:16px 28px;border-radius:20px;font-size:15px;font-weight:900;z-index:99999;text-align:center;';
-        t.innerHTML = '🎉 CGO-FULI 설치 완료!<br><span style="font-size:12px;font-weight:700;">바탕화면 아이콘을 확인하세요!</span>';
+        t.innerHTML = '🎉 CGO-FULI 설치 완료!';
         document.body.appendChild(t);
         setTimeout(function(){ t.remove(); }, 3000);
       }
@@ -52202,8 +52181,19 @@ function cgoPwaInstall(){
     return;
   }
 
-  // ★ iOS Safari: 수동 안내 팝업
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // ★ 안드로이드 인앱브라우저 → Intent로 크롬 자동 실행
+  if(isAndroid && isInApp){
+    location.href = 'intent://c-go-fuli.com#Intent;scheme=https;package=com.android.chrome;end';
+    return;
+  }
+
+  // ★ 안드로이드 일반 브라우저
+  if(isAndroid){
+    location.href = 'intent://c-go-fuli.com#Intent;scheme=https;package=com.android.chrome;end';
+    return;
+  }
+
+  // ★ iOS Safari
   if(isIOS){
     var p = document.createElement('div');
     p.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:flex-end;justify-content:center;';
@@ -52212,22 +52202,13 @@ function cgoPwaInstall(){
       + '<div style="font-size:14px;color:rgba(240,230,200,.8);line-height:1.8;margin-bottom:16px;">'
       + '① 하단 <b style="color:#38bdf8;">공유 버튼 □↑</b> 탭<br>'
       + '② <b style="color:#d4a843;">홈 화면에 추가</b> 선택<br>'
-      + '③ <b style="color:#34d399;">추가</b> 클릭 → 설치 완료!'
+      + '③ <b style="color:#34d399;">추가</b> 클릭!'
       + '</div>'
       + '<button onclick="this.parentNode.parentNode.remove()" style="width:100%;padding:14px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:15px;font-weight:900;cursor:pointer;">확인</button>'
       + '</div>';
     document.body.appendChild(p);
     return;
   }
-
-  // ★ 안드로이드 이미 설치된 경우 또는 기타
-  var t = document.createElement('div');
-  t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1px solid rgba(212,168,67,.4);color:#f0ece0;padding:20px 28px;border-radius:20px;font-size:14px;font-weight:700;z-index:99999;text-align:center;max-width:300px;';
-  t.innerHTML = '📲 앱 설치 방법<br><br>'
-    + '<span style="font-size:13px;color:rgba(240,230,200,.7);font-weight:400;line-height:1.8;">'
-    + '크롬 우상단 ⋮ 메뉴<br>→ <b style="color:#34d399;">홈 화면에 추가</b> 선택</span><br><br>'
-    + '<button onclick="this.parentNode.remove()" style="padding:8px 20px;background:#d4a843;border:none;border-radius:10px;color:#000;font-weight:900;cursor:pointer;">확인</button>';
-  document.body.appendChild(t);
 }
 
 // ── CGO-FULI PWA Service Worker + FCM 푸시 알림 ──
