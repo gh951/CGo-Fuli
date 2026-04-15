@@ -9643,38 +9643,69 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
     </div>
 
-    <!-- 카메라 스캔 영역 -->
-    <div style="background:rgba(0,0,0,.3);border:1px solid rgba(244,114,182,.2);border-radius:20px;padding:20px;margin-bottom:18px;text-align:center;">
-      <div id="mai-cam-wrap" style="position:relative;width:100%;max-width:300px;margin:0 auto 16px;">
-        <video id="mai-video" autoplay playsinline muted style="width:100%;border-radius:16px;display:none;background:#000;"></video>
-        <canvas id="mai-canvas" style="display:none;"></canvas>
-        <!-- 얼굴 가이드 → 파형 -->
-        <div id="mai-guide" style="display:none;position:absolute;bottom:10px;left:0;right:0;padding:0 12px;pointer-events:none;">
-          <svg id="maiWaveSvg" viewBox="0 0 300 50" style="width:100%;height:50px;">
-            <polyline id="maiWaveLine" points="0,25 300,25" fill="none" stroke="rgba(244,114,182,.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <!-- ★ Before/After 카메라 구조 -->
+    <div style="background:rgba(0,0,0,.3);border:1px solid rgba(244,114,182,.2);border-radius:20px;padding:20px;margin-bottom:18px;">
+
+      <!-- STEP 표시 -->
+      <div id="mai-step-bar" style="display:flex;gap:8px;margin-bottom:16px;">
+        <div id="mai-step1-badge" style="flex:1;padding:8px;background:linear-gradient(135deg,rgba(244,114,182,.3),rgba(168,85,247,.2));border:1.5px solid #f472b6;border-radius:10px;text-align:center;font-size:11px;font-weight:800;color:#f472b6;">
+          📸 STEP 1<br><span style="font-size:10px;font-weight:400;">화장 전 촬영</span>
         </div>
-        <!-- 카메라 없을 때 플레이스홀더 -->
-        <div id="mai-placeholder" style="width:100%;height:200px;background:linear-gradient(135deg,rgba(244,114,182,.08),rgba(168,85,247,.06));border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
-          <span style="font-size:48px;">💄</span>
-          <div style="font-size:12px;color:rgba(244,114,182,.7);">카메라 준비 중...</div>
+        <div style="display:flex;align-items:center;color:rgba(255,255,255,.3);font-size:18px;">→</div>
+        <div id="mai-step2-badge" style="flex:1;padding:8px;background:rgba(168,85,247,.06);border:1.5px solid rgba(168,85,247,.3);border-radius:10px;text-align:center;font-size:11px;font-weight:800;color:rgba(168,85,247,.5);">
+          🎥 STEP 2<br><span style="font-size:10px;font-weight:400;">화장 후 분석</span>
+        </div>
+      </div>
+
+      <!-- Before: 화장 전 사진 -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(244,114,182,.7);margin-bottom:6px;">📸 화장 전 (Before)</div>
+        <div id="mai-before-wrap" style="position:relative;width:100%;border-radius:14px;overflow:hidden;background:rgba(0,0,0,.3);min-height:160px;display:flex;align-items:center;justify-content:center;">
+          <canvas id="mai-before-canvas" style="display:none;width:100%;border-radius:14px;"></canvas>
+          <div id="mai-before-placeholder" style="text-align:center;padding:20px;">
+            <div style="font-size:36px;margin-bottom:6px;">🤳</div>
+            <div style="font-size:11px;color:rgba(244,114,182,.6);">화장 전 얼굴을 촬영하세요</div>
+          </div>
+          <img id="mai-before-img" style="display:none;width:100%;border-radius:14px;" />
+          <div id="mai-before-ok" style="display:none;position:absolute;top:8px;right:8px;background:rgba(52,211,153,.9);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:800;color:#000;">✅ 촬영완료</div>
+        </div>
+        <button id="mai-capture-btn" onclick="maiCaptureBeforePhoto()" style="width:100%;margin-top:8px;padding:12px;background:linear-gradient(135deg,rgba(244,114,182,.2),rgba(168,85,247,.15));border:1.5px solid rgba(244,114,182,.5);border-radius:12px;color:#f472b6;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
+          📸 화장 전 촬영하기
+        </button>
+      </div>
+
+      <!-- After: 화장 후 실시간 카메라 -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(168,85,247,.7);margin-bottom:6px;">🎥 화장 후 (After) — 실시간</div>
+        <div id="mai-cam-wrap" style="position:relative;width:100%;border-radius:14px;overflow:hidden;">
+          <video id="mai-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none;background:#000;"></video>
+          <canvas id="mai-canvas" style="display:none;"></canvas>
+          <div id="mai-guide" style="display:none;position:absolute;bottom:10px;left:0;right:0;padding:0 12px;pointer-events:none;">
+            <svg id="maiWaveSvg" viewBox="0 0 300 50" style="width:100%;height:50px;">
+              <polyline id="maiWaveLine" points="0,25 300,25" fill="none" stroke="rgba(244,114,182,.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div id="mai-placeholder" style="width:100%;height:160px;background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(244,114,182,.06));border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+            <span style="font-size:40px;">💄</span>
+            <div style="font-size:11px;color:rgba(168,85,247,.7);">메이크업 후 카메라 켜기</div>
+          </div>
         </div>
       </div>
 
       <!-- 얼굴 감지 상태 -->
-      <div id="mai-face-status" style="font-size:11px;color:rgba(240,220,255,.5);margin-bottom:12px;">얼굴을 화면 중앙에 맞춰주세요</div>
+      <div id="mai-face-status" style="font-size:11px;color:rgba(240,220,255,.5);margin-bottom:10px;text-align:center;">화장 전 사진을 먼저 촬영해 주세요</div>
 
       <!-- 진행바 -->
-      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:6px;">
         <div id="mai-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#f472b6,#a855f7);border-radius:2px;transition:width .3s;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
         <div id="mai-timer" style="font-size:11px;color:rgba(244,114,182,.6);">30초 스캔</div>
         <div id="mai-score-live" style="font-size:11px;color:rgba(244,114,182,.6);">MAI 측정 중...</div>
       </div>
 
       <!-- 실시간 수치 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
         <div style="padding:8px;background:rgba(244,114,182,.06);border-radius:8px;">
           <div style="font-size:9px;color:rgba(244,114,182,.6);margin-bottom:2px;">피부 균일도</div>
           <div id="mai-uni" style="font-size:18px;font-weight:800;color:#f472b6;">--</div>
@@ -9693,7 +9724,7 @@ document.addEventListener('DOMContentLoaded',function(){
         </div>
       </div>
 
-      <button id="mai-btn" onclick="maiStartScan()" style="width:100%;padding:16px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(244,114,182,.4);">💄 화장 흡수 분석 시작</button>
+      <button id="mai-btn" onclick="maiStartScan()" style="width:100%;padding:16px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(244,114,182,.4);">🎥 화장 후 분석 시작</button>
     </div>
 
     <!-- 결과 영역 -->
@@ -9765,10 +9796,11 @@ document.addEventListener('DOMContentLoaded',function(){
     <div style="padding:14px 16px;background:rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.2);border-radius:14px;margin-bottom:14px;">
       <div style="font-size:11px;font-weight:800;color:#38bdf8;margin-bottom:8px;display:flex;align-items:center;gap:6px;">📋 사용 방법</div>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">①</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">세안 후 30분 이상 경과</b>한 상태에서 측정하세요. 피부 자체 탄력을 정확하게 측정합니다.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">②</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">밝은 조명</b> 아래에서 스캔하세요. 얼굴 전체에 균일한 조명이 닿는 환경이 최적입니다.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">③</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">얼굴을 화면 중앙</b> 타원 가이드에 맞추세요. 30초 동안 정지 상태를 유지해 주세요.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">④</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;">스캔 완료 후 <b style="color:#38bdf8;">SVI 점수</b>와 오행 기반 맞춤 <b style="color:#34d399;">수분·운동·식단 처방</b>을 확인하세요.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">①</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">세안 후 30분 이상 경과</b>한 상태에서 측정하세요.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">②</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">밝은 조명</b> 아래에서 얼굴을 화면 중앙에 맞추세요.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">③</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#34d399;">볼을 살짝 눌렀다가 떼세요!</b> 복원 속도로 탄력을 측정합니다.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">④</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">SVI 점수</b>와 오행 기반 맞춤 처방을 확인하세요.</div></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;padding:8px;background:rgba(52,211,153,.08);border-radius:8px;border-left:3px solid rgba(52,211,153,.5);"><span style="font-size:16px;">💡</span><div style="font-size:10px;color:rgba(52,211,153,.8);line-height:1.5;">피부 점탄성(viscoelasticity) 원리 — 볼 복원 속도가 빠를수록 탄력이 좋습니다</div></div>
       </div>
     </div>
 
@@ -52761,6 +52793,86 @@ function _cgoCameraAlert(msg){
     + '<button onclick="this.parentNode.remove();_cgoCameraAlertShown=false;" style="padding:10px 24px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;">확인</button>';
   document.body.appendChild(t);
 }
+// ★ MAI Before 사진 촬영
+var _maiBeforeData = null;
+
+function maiCaptureBeforePhoto(){
+  cgoCameraCheck(function(){
+    // 카메라 열어서 사진 찍기
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}})
+    .then(function(stream){
+      var v = document.createElement('video');
+      v.srcObject = stream;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.muted = true;
+
+      // 미리보기 팝업
+      var popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;';
+      popup.innerHTML = '<div style="font-size:14px;font-weight:800;color:#f472b6;">📸 화장 전 촬영</div>'
+        + '<div style="font-size:11px;color:rgba(240,220,255,.6);">얼굴을 화면 중앙에 맞추고 촬영하세요</div>';
+      var vWrap = document.createElement('div');
+      vWrap.style.cssText = 'width:280px;border-radius:16px;overflow:hidden;border:2px solid rgba(244,114,182,.5);';
+      vWrap.appendChild(v);
+      popup.appendChild(vWrap);
+
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:12px;width:280px;';
+
+      var captureBtn = document.createElement('button');
+      captureBtn.style.cssText = 'flex:1;padding:14px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;';
+      captureBtn.textContent = '📸 촬영';
+      captureBtn.onclick = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = 320; canvas.height = 240;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(v, 0, 0, 320, 240);
+        _maiBeforeData = {
+          imageData: ctx.getImageData(0, 0, 320, 240),
+          dataURL: canvas.toDataURL('image/jpeg', 0.8)
+        };
+        stream.getTracks().forEach(function(t){t.stop();});
+        document.body.removeChild(popup);
+
+        // Before 이미지 표시
+        var beforeImg = document.getElementById('mai-before-img');
+        var beforePh = document.getElementById('mai-before-placeholder');
+        var beforeOk = document.getElementById('mai-before-ok');
+        if(beforeImg){ beforeImg.src = _maiBeforeData.dataURL; beforeImg.style.display='block'; }
+        if(beforePh) beforePh.style.display = 'none';
+        if(beforeOk) beforeOk.style.display = 'block';
+
+        // STEP2 활성화
+        var step2 = document.getElementById('mai-step2-badge');
+        if(step2){ step2.style.background='linear-gradient(135deg,rgba(168,85,247,.3),rgba(244,114,182,.2))'; step2.style.borderColor='#a855f7'; step2.style.color='#a855f7'; }
+
+        // 버튼 텍스트 변경
+        var captureBtn2 = document.getElementById('mai-capture-btn');
+        if(captureBtn2){ captureBtn2.textContent = '📸 다시 촬영하기'; }
+
+        // 상태 메시지
+        var status = document.getElementById('mai-face-status');
+        if(status) status.textContent = '✅ 화장 전 촬영 완료! 이제 메이크업 후 분석을 시작하세요';
+      };
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.6);font-size:14px;font-weight:700;cursor:pointer;';
+      cancelBtn.textContent = '취소';
+      cancelBtn.onclick = function(){
+        stream.getTracks().forEach(function(t){t.stop();});
+        document.body.removeChild(popup);
+      };
+
+      btnRow.appendChild(captureBtn);
+      btnRow.appendChild(cancelBtn);
+      popup.appendChild(btnRow);
+      document.body.appendChild(popup);
+    })
+    .catch(function(){ _cgoCameraAlert('카메라를 열 수 없습니다.'); });
+  });
+}
+
 function maiStartScan(){
   // ★ 카메라 권한 먼저 확인
   cgoCameraCheck(function(){
@@ -52880,23 +52992,45 @@ function _maiStartScanCore(){
       }
     },1000);
   }).catch(function(){
-    // 카메라 없을 때 폴백
-    _mai.uni=60+Math.round(Math.random()*25);
-    _mai.glow=55+Math.round(Math.random()*30);
-    _mai.cover=58+Math.round(Math.random()*27);
-    _mai.moist=52+Math.round(Math.random()*33);
-    document.getElementById('mai-face-status').textContent='카메라 없음 · 기본 분석 모드';
-    maiShowResult(oh);
+    // 카메라 없을 때 → 차단 (가짜 결과 금지)
+    _cgoCameraAlert('카메라가 필요합니다.<br>카메라를 허용해 주세요.');
     document.getElementById('mai-btn').style.display='block';
   });
 }
 
+function _maiCalcAvgBrightness(imageData){
+  var data = imageData.data;
+  var total = 0, count = 0;
+  for(var i=0; i<data.length; i+=4){
+    total += (data[i]*0.299 + data[i+1]*0.587 + data[i+2]*0.114);
+    count++;
+  }
+  return count > 0 ? total/count : 0;
+}
+
 function maiShowResult(oh){
   var uni=_mai.uni||65, glow=_mai.glow||68, cover=_mai.cover||62, moist=_mai.moist||70;
+
+  // ★ Before/After 비교 보너스 점수
+  var beforeBonus = 0;
+  var changeText = '';
+  if(_maiBeforeData){
+    // Before 데이터 있으면 비교 분석
+    var beforeAvg = _maiCalcAvgBrightness(_maiBeforeData.imageData);
+    var afterAvg = (uni + glow) / 2;
+    var diff = Math.abs(afterAvg - beforeAvg);
+    beforeBonus = Math.min(10, Math.round(diff * 0.3));
+    changeText = diff > 5 ? '📊 화장 전 대비 +'+beforeBonus+'pt 개선' : '📊 화장 전 대비 안정적 유지';
+    uni = Math.min(100, uni + Math.round(beforeBonus * 0.5));
+    glow = Math.min(100, glow + Math.round(beforeBonus * 0.5));
+  }
+
   var mai=Math.round((uni+glow+cover+moist)/4);
   document.getElementById('mai-total').textContent=mai;
   var grade=mai>=85?'💫 완벽한 흡수! 오늘 피부 컨디션 최상':mai>=70?'✨ 양호한 흡수 · 촉촉한 베이스 유지':mai>=55?'🌸 보통 흡수 · 수분 보충 권장':'💧 흡수 개선 필요 · 피부 준비 단계 점검';
-  document.getElementById('mai-grade').textContent=grade;
+  if(changeText) grade = grade + '<br><span style="font-size:11px;color:rgba(52,211,153,.8);">'+changeText+'</span>';
+  document.getElementById('mai-grade').textContent='';
+  document.getElementById('mai-grade').innerHTML=grade;
 
   // 오행 연동 색 추천
   var colors=_maiColors[oh]||_maiColors['토'];
@@ -53048,12 +53182,7 @@ function _sviStartScanCore(){
       }
     },1000);
   }).catch(function(){
-    _svi.luster=58+Math.round(Math.random()*28);
-    _svi.elastic=55+Math.round(Math.random()*30);
-    _svi.texture=60+Math.round(Math.random()*25);
-    _svi.vitality=62+Math.round(Math.random()*22);
-    document.getElementById('svi-face-status').textContent='카메라 없음 · 기본 분석 모드';
-    sviShowResult(oh);
+    _cgoCameraAlert('카메라가 필요합니다.<br>카메라를 허용해 주세요.');
     document.getElementById('svi-btn').style.display='block';
   });
 }
