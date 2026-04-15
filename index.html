@@ -52874,6 +52874,17 @@ function maiCaptureBeforePhoto(){
 }
 
 function maiStartScan(){
+  // ★ Before 사진 먼저 찍었는지 확인
+  if(!_maiBeforeData){
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1.5px solid rgba(244,114,182,.5);border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;';
+    t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">📸</div>'
+      + '<div style="font-size:14px;font-weight:900;color:#f472b6;margin-bottom:8px;">화장 전 사진이 없어요!</div>'
+      + '<div style="font-size:12px;color:rgba(240,220,255,.8);line-height:1.7;margin-bottom:16px;">먼저 <b style="color:#f472b6;">화장 전 촬영하기</b> 버튼으로<br>맨얼굴을 찍어주세요 😊</div>'
+      + '<button onclick="this.parentNode.remove()" style="padding:10px 24px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;">확인</button>';
+    document.body.appendChild(t);
+    return;
+  }
   // ★ 카메라 권한 먼저 확인
   cgoCameraCheck(function(){
     _maiStartScanCore();
@@ -53011,18 +53022,30 @@ function _maiCalcAvgBrightness(imageData){
 function maiShowResult(oh){
   var uni=_mai.uni||65, glow=_mai.glow||68, cover=_mai.cover||62, moist=_mai.moist||70;
 
-  // ★ Before/After 비교 보너스 점수
-  var beforeBonus = 0;
+  // ★ Before/After 실제 비교
   var changeText = '';
   if(_maiBeforeData){
-    // Before 데이터 있으면 비교 분석
     var beforeAvg = _maiCalcAvgBrightness(_maiBeforeData.imageData);
     var afterAvg = (uni + glow) / 2;
-    var diff = Math.abs(afterAvg - beforeAvg);
-    beforeBonus = Math.min(10, Math.round(diff * 0.3));
-    changeText = diff > 5 ? '📊 화장 전 대비 +'+beforeBonus+'pt 개선' : '📊 화장 전 대비 안정적 유지';
-    uni = Math.min(100, uni + Math.round(beforeBonus * 0.5));
-    glow = Math.min(100, glow + Math.round(beforeBonus * 0.5));
+    var diffPct = Math.abs(afterAvg - beforeAvg) / 255 * 100;
+
+    if(diffPct < 3){
+      // 차이가 거의 없음 → 경고
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1.5px solid rgba(251,191,36,.5);border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;';
+      t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">⚠️</div>'
+        + '<div style="font-size:14px;font-weight:900;color:#fbbf24;margin-bottom:8px;">화장 전후 차이가 없어요!</div>'
+        + '<div style="font-size:12px;color:rgba(240,220,255,.8);line-height:1.7;margin-bottom:16px;">메이크업 후 다시 측정해 주세요.<br>Before와 After의 차이가 있어야<br>정확한 분석이 가능합니다 😊</div>'
+        + '<button onclick="this.parentNode.remove()" style="padding:10px 24px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:900;cursor:pointer;">다시 측정하기</button>';
+      document.body.appendChild(t);
+      return;
+    }
+
+    // 차이가 있음 → 점수 보정
+    var bonus = Math.min(15, Math.round(diffPct * 0.8));
+    changeText = '📊 화장 전 대비 +'+bonus+'pt 피부 변화 감지';
+    uni = Math.min(100, uni + Math.round(bonus * 0.4));
+    glow = Math.min(100, glow + Math.round(bonus * 0.6));
   }
 
   var mai=Math.round((uni+glow+cover+moist)/4);
