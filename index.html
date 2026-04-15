@@ -2559,8 +2559,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
   <!-- 로고 -->
   <div style="text-align:center;margin-bottom:32px;position:relative;z-index:1;">
-    <div style="font-family:'Orbitron',monospace;font-size:clamp(36px,10vw,64px);font-weight:900;background:linear-gradient(135deg,#a07830,#d4a843,#f0c866,#d4a843,#a07830);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(212,168,67,.4));letter-spacing:.05em;">CGO-FULI</div>
-    <div style="font-size:clamp(11px,3vw,14px);color:rgba(212,168,67,.6);font-weight:600;letter-spacing:.15em;margin-top:4px;">운명 기상청 · LIFE NAVIGATOR</div>
+    <div style="font-family:'Orbitron',monospace;font-size:clamp(24px,7vw,40px);font-weight:900;background:linear-gradient(135deg,#a07830,#d4a843,#f0c866,#d4a843,#a07830);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(212,168,67,.4));letter-spacing:.05em;">CGO-FULI</div>
+    <div style="margin-top:6px;">
+      <button id="pwaInstallBtnTop" onclick="cgoPwaInstall()" style="padding:7px 20px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.12));border:1.5px solid rgba(52,211,153,.5);border-radius:16px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.03em;animation:goldPulse 2s ease-in-out infinite;">
+        📲 앱 설치하기 (무료)
+      </button>
+    </div>
   </div>
 
   <!-- 언어 선택 카드 -->
@@ -3722,12 +3726,12 @@ function updateTransitSectionWithNASA(planets) {
           }
           // energyParent(빈 div)는 sec-ip 안에 남아 있지만 무해함
 
-          /* ── 정보입력: 항상 열린 상태 ── */
-          var ipBar=makeBar('📋 정보 입력','cgoip',true);
+          /* ── 정보입력: 접힌 상태 ── */
+          var ipBar=makeBar('📋 정보 입력','cgoip',false);
           ip.insertBefore(ipBar, ip.firstChild);
           var ipWrap=document.createElement('div');
           ipWrap.id='cgoip'; ipWrap.className='cgo-sec-bd';
-          ipWrap.style.display='';
+          ipWrap.style.display='none';
           ip.insertBefore(ipWrap, ipBar.nextSibling);
           while(ipWrap.nextSibling && ipWrap.nextSibling!==cheon){
             ipWrap.appendChild(ipWrap.nextSibling);
@@ -3740,6 +3744,33 @@ function updateTransitSectionWithNASA(planets) {
           addSection('sec-energy','sec-chat',   'cgosec5','✦ CGO-FULI 에너지의 서',  false);
           addSection('sec-chat',  'sec-all',    'cgosec6','💬 CGO 메신저',           false);
           addSection('sec-all',   null,         'cgosec7','✦ 전체 기능',             false);
+
+          // ★ 핀셋: 바 순서 재정렬 (정보입력→생체스캔→ILI→천지인→에너지서→메신저→전체)
+          setTimeout(function(){
+            var parent = document.getElementById('cgoip') && document.getElementById('cgoip').parentNode;
+            if(!parent) return;
+            var ipBar   = document.getElementById('cgoip').previousSibling;
+            var sec3Bar = document.getElementById('cgosec3') && document.getElementById('cgosec3').previousSibling;
+            var sec3Bd  = document.getElementById('cgosec3');
+            var sec4Bar = document.getElementById('cgosec4') && document.getElementById('cgosec4').previousSibling;
+            var sec4Bd  = document.getElementById('cgosec4');
+            var sec2Bar = document.getElementById('cgosec2') && document.getElementById('cgosec2').previousSibling;
+            var sec2Bd  = document.getElementById('cgosec2');
+            // 정보입력 다음에: 생체스캔 → ILI → 천지인 순으로 이동
+            var ipBd = document.getElementById('cgoip');
+            if(ipBd && sec3Bar && sec3Bd){
+              parent.insertBefore(sec3Bar, ipBd.nextSibling);
+              parent.insertBefore(sec3Bd,  sec3Bar.nextSibling);
+            }
+            if(sec3Bd && sec4Bar && sec4Bd){
+              parent.insertBefore(sec4Bar, sec3Bd.nextSibling);
+              parent.insertBefore(sec4Bd,  sec4Bar.nextSibling);
+            }
+            if(sec4Bd && sec2Bar && sec2Bd){
+              parent.insertBefore(sec2Bar, sec4Bd.nextSibling);
+              parent.insertBefore(sec2Bd,  sec2Bar.nextSibling);
+            }
+          }, 100);
         }
 
         /* ── 퀵 탭 클릭: 해당 섹션 펼치기 + 스크롤 ── */
@@ -52225,14 +52256,18 @@ function cgoPushToUser(targetCode, message){
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
-    // 알림 권한 요청 후 초기화
+    // ★ 알림 권한 최초 1회만 요청 (localStorage로 체크)
     if('Notification' in window){
       if(Notification.permission === 'granted'){
         cgoInitPush();
       } else if(Notification.permission !== 'denied'){
-        Notification.requestPermission().then(function(perm){
-          if(perm === 'granted') cgoInitPush();
-        });
+        var _asked = localStorage.getItem('cgo_notif_asked');
+        if(!_asked){
+          localStorage.setItem('cgo_notif_asked','1');
+          Notification.requestPermission().then(function(perm){
+            if(perm === 'granted') cgoInitPush();
+          });
+        }
       }
     } else {
       cgoInitPush();
@@ -53173,9 +53208,7 @@ function cgoOpenMessenger(){
   var el = document.getElementById('page-chat');
   if(el) el.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  if('Notification' in window && Notification.permission === 'default'){
-    Notification.requestPermission();
-  }
+  // ★ 알림 권한은 앱 첫 로드 시 1회만 요청 (중복 제거)
   // ★ 3 AI 합의: 프로필 먼저 세팅 → Firebase 체크 → cgmEnterList
   var saved = localStorage.getItem('cgm_profile');
   if(saved){
