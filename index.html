@@ -38072,90 +38072,75 @@ function bsMusicRecommend(ili){
   });
 }
 
-// ══ CGO YouTube 실시간 AI 추천 시스템 ══
-var _pmYtQueryPool = {
-  목:['528hz forest nature healing morning','wood element growth meditation music','green energy focus nature ambient','forest birds sunrise healing 432hz','spring renewal fresh uplifting music','nature therapy relax stress relief','wood chakra healing binaural beats'],
-  화:['fire energy motivation boost music','heart chakra 417hz activation','passion energy upbeat inspiring','summer fire dance energy music','confidence motivation high vibration','fire transformation healing frequency','workout energy pump music'],
-  토:['396hz earth grounding stability music','center balance calm meditation','abundance prosperity earth frequency','autumn harvest warmth music','stability healing grounding frequency','soil nature calm therapy music','earth element abundance meditation'],
-  금:['741hz crystal clarity metal music','crystal singing bowls healing','classical focus clarity productivity','autumn gold precision music','lung meridian healing frequency','gold clarity achievement music','metal element intuition music'],
-  수:['852hz ocean water wisdom healing','ocean waves deep meditation sleep','water flow intuition ambient music','winter wisdom contemplation music','kidney healing water frequency','rain sounds clarity meditation','deep blue water healing binaural']
+// === CGO YouTube 실시간 AI 추천 ===
+var _cgoYtPool={
+  '목':['528hz forest nature healing','wood element growth music','nature morning energy focus','green healing binaural 432hz','spring renewal uplifting music','forest birds sunrise meditation'],
+  '화':['fire energy motivation music','heart chakra 417hz activation','passion upbeat energy music','summer fire dance motivation','confidence high vibration boost','fire transformation frequency'],
+  '토':['396hz earth grounding music','stability center meditation','abundance earth frequency healing','autumn harvest warmth music','grounding nature calm therapy','earth element balance music'],
+  '금':['741hz crystal clarity music','crystal singing bowls healing','classical focus clarity music','autumn gold precision music','lung meridian healing frequency','gold clarity achievement music'],
+  '수':['852hz ocean wisdom healing','ocean waves meditation sleep','water flow intuition music','winter wisdom contemplation','kidney healing water frequency','rain clarity meditation music']
 };
-var _pmSjSuffix=['sleep deep','night calm gentle','early morning gentle','sunrise awakening','morning focus','mid morning work','noon peak energy','afternoon calm','evening relax','sunset peaceful','night unwind','late night calm'];
-var _pmSeasonSuffix={봄:'spring fresh',여름:'summer vibrant',가을:'autumn calm',겨울:'winter deep'};
-
-function pmYtBuildQuery(oh, sjIdx, season, ili){
-  var pool = _pmYtQueryPool[oh]||_pmYtQueryPool['목'];
-  var now = new Date();
-  var day = Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
-  var idx = (day + sjIdx*3 + Math.floor(ili/20)) % pool.length;
-  var base = pool[idx];
-  var iliTag = ili>=80?'high energy':ili>=60?'harmony balance':'healing recovery';
-  return base+' '+iliTag;
+function pmYtBuildQ(oh,sj,ili){
+  var pool=_cgoYtPool[oh]||_cgoYtPool['목'];
+  var now=new Date();
+  var day=Math.floor((now-new Date(now.getFullYear(),0,0))/864e5);
+  var idx=(day+sj*3+Math.floor(ili/20))%pool.length;
+  return pool[idx]+' '+(ili>=80?'high energy':ili>=60?'harmony':'healing recovery');
 }
-
-function pmYtPlayVideo(vid, title, channel){
-  var overlay=document.getElementById('cgoYtOverlay');
-  var frame=document.getElementById('cgoYtFrame');
-  var titleEl=document.getElementById('cgoYtTitle');
-  var chEl=document.getElementById('cgoYtCh');
-  var listEl=document.getElementById('cgoYtResultList');
-  if(!overlay)return;
-  overlay.classList.add('show');
-  overlay.onclick=function(e){if(e.target===overlay)cgoYtClose();};
-  if(frame) frame.src='https://www.youtube.com/embed/'+vid+'?autoplay=1&rel=0';
-  if(titleEl) titleEl.textContent=title;
-  if(chEl) chEl.textContent=channel+' · YouTube';
-  if(listEl) listEl.innerHTML='';
+function pmYtOpen(vid,title,ch){
+  var ov=document.getElementById('cgoYtOverlay');
+  var fr=document.getElementById('cgoYtFrame');
+  var ti=document.getElementById('cgoYtTitle');
+  var ci=document.getElementById('cgoYtCh');
+  if(!ov)return;
+  ov.classList.add('show');
+  ov.onclick=function(e){if(e.target===ov)cgoYtClose();};
+  if(fr)fr.src='https://www.youtube.com/embed/'+vid+'?autoplay=1&rel=0';
+  if(ti)ti.textContent=title;
+  if(ci)ci.textContent=ch+' · YouTube';
 }
-
-function pmFetchYtRecommend(oh, sjIdx, season, ili, containerId){
-  var container=document.getElementById(containerId);
-  if(!container)return;
-  var query=pmYtBuildQuery(oh, sjIdx, season, ili);
-  var url='https://www.googleapis.com/youtube/v3/search'
-    +'?part=snippet'
-    +'&q='+encodeURIComponent(query)
-    +'&type=video'
-    +'&maxResults=6'
-    +'&videoEmbeddable=true'
-    +'&videoCategoryId=10'
-    +'&key='+_CGO_YT_KEY;
-  fetch(url)
-    .then(function(r){return r.json();})
-    .then(function(data){
-      if(data.error){
-        var ec=data.error.code||0;
-        if(ec===403){_cgoYtRotateKey();pmFetchYtRecommend(oh,sjIdx,season,ili,containerId);return;}
-        container.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);padding:10px;text-align:center;">YouTube 검색 한도 초과. 아래 목록을 이용해 주세요.</div>';
-        return;
-      }
-      var items=data.items||[];
-      if(!items.length){container.innerHTML='<div style="font-size:11px;color:rgba(240,230,200,.4);padding:10px;text-align:center;">검색 결과가 없습니다.</div>';return;}
-      var html='<div style="display:flex;flex-direction:column;gap:6px;">';
-      items.forEach(function(item){
-        var vid=item.id&&item.id.videoId;
-        var snip=item.snippet||{};
-        var thumb=snip.thumbnails&&(snip.thumbnails.medium||snip.thumbnails.default);
-        var title=snip.title||'';
-        var channel=snip.channelTitle||'';
-        if(!vid)return;
-        var safeTitle=title.replace(/'/g,"\'").replace(/"/g,'&quot;');
-        var safeCh=channel.replace(/'/g,"\'").replace(/"/g,'&quot;');
-        html+='<div onclick="pmYtPlayVideo(''+vid+'',''+safeTitle+'',''+safeCh+'')" style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='rgba(255,60,60,.4)';this.style.background='rgba(255,0,0,.06)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)'">'
-          +(thumb?'<img src="'+thumb.url+'" style="width:88px;height:50px;object-fit:cover;border-radius:7px;flex-shrink:0;">':'<div style="width:88px;height:50px;background:#1a1a2e;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;color:rgba(255,80,80,.6);">▶</div>')
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:11px;font-weight:600;color:rgba(240,230,200,.9);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">'+title+'</div>'
-          +'<div style="font-size:10px;color:rgba(200,185,140,.45);margin-top:3px;">'+channel+'</div>'
-          +'</div>'
-          +'<div style="font-size:22px;color:rgba(255,60,60,.7);flex-shrink:0;">▶</div>'
-          +'</div>';
-      });
-      html+='</div>';
-      container.innerHTML=html;
-    })
-    .catch(function(){
-      container.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);padding:10px;text-align:center;">네트워크 오류가 발생했습니다.</div>';
+function pmYtFetch(oh,sj,ili,cid){
+  var box=document.getElementById(cid);
+  if(!box)return;
+  var q=pmYtBuildQ(oh,sj,ili);
+  var url='https://www.googleapis.com/youtube/v3/search?part=snippet&q='+encodeURIComponent(q)+'&type=video&maxResults=6&videoEmbeddable=true&videoCategoryId=10&key='+_CGO_YT_KEY;
+  fetch(url).then(function(r){return r.json();}).then(function(data){
+    if(data.error){
+      if((data.error.code||0)===403){_cgoYtRotateKey();pmYtFetch(oh,sj,ili,cid);return;}
+      box.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">유튜브 한도 초과. 아래 목록을 이용하세요.</div>';
+      return;
+    }
+    var items=data.items||[];
+    if(!items.length){box.innerHTML='<div style="font-size:11px;color:rgba(240,230,200,.4);text-align:center;padding:10px;">검색 결과 없음</div>';return;}
+    var wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
+    items.forEach(function(item){
+      var vid=item.id&&item.id.videoId;
+      var snip=item.snippet||{};
+      var thumb=snip.thumbnails&&(snip.thumbnails.medium||snip.thumbnails.default);
+      var title=snip.title||'';
+      var ch=snip.channelTitle||'';
+      if(!vid)return;
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;cursor:pointer;transition:all .2s;';
+      row.onmouseover=function(){this.style.borderColor='rgba(255,60,60,.4)';this.style.background='rgba(255,0,0,.06)';};
+      row.onmouseout=function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';};
+      (function(v,t,c){row.onclick=function(){pmYtOpen(v,t,c);};})(vid,title,ch);
+      var img=thumb?'<img src="'+thumb.url+'" style="width:80px;height:46px;object-fit:cover;border-radius:6px;flex-shrink:0;">'
+        :'<div style="width:80px;height:46px;background:#1a1a2e;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,80,80,.5);flex-shrink:0;">&#9654;</div>';
+      row.innerHTML=img
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:11px;font-weight:600;color:rgba(240,230,200,.9);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">'+title+'</div>'
+        +'<div style="font-size:10px;color:rgba(200,185,140,.45);margin-top:2px;">'+ch+'</div>'
+        +'</div>'
+        +'<div style="font-size:20px;color:rgba(255,60,60,.7);flex-shrink:0;">&#9654;</div>';
+      wrap.appendChild(row);
     });
+    box.innerHTML='';
+    box.appendChild(wrap);
+  }).catch(function(){
+    box.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.6);text-align:center;padding:10px;">네트워크 오류</div>';
+  });
 }
 
 function _showMusicList(el,bs,avg){
@@ -38201,7 +38186,7 @@ function _showMusicList(el,bs,avg){
         '<div class="bsml-reason">'+t.reason+'</div>'+
       '</div>'+
       '<div class="bsml-actions">'+
-        '<button class="bsml-yt" data-song="'+encodeURIComponent(t.song||'')+'" data-artist="'+encodeURIComponent(t.artist||'')+'" onclick="cgoYtBtn(this);event.stopPropagation()">▶ 재생</button>'+
+        '<button class="bsml-yt" data-song="'+encodeURIComponent(t.song||'')+'" data-artist="'+encodeURIComponent(t.artist||'')+'" onclick="cgoYtBtn(this);event.stopPropagation()">&#9654; 재생</button>'+
         '<div class="bsml-tag" style="background:'+tb+';color:'+tc+';border:1px solid '+tbr+'">'+(t.tag||'')+'</div>'+
       '</div>'+
     '</div>';
@@ -38222,24 +38207,16 @@ function _showMusicList(el,bs,avg){
     '</div>'+
   '</div>';
 
-  // ── YouTube 실시간 AI 추천 섹션 ──
-  var _sjNames=['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'];
-  var _ytQ = pmYtBuildQuery(oh, _sjIdx, bs.season, bs.eng||70);
+  // YouTube LIVE
+  var _sjNames2=['자시','축시','인시','멘시','진시','사시','오시','미시','신시','유시','술시','해시'];
+  var _ytQ2=pmYtBuildQ(oh,_sjIdx,bs.eng||70);
   h+='<div style="background:rgba(255,0,0,.06);border:1px solid rgba(255,0,0,.28);border-radius:14px;padding:14px;margin-bottom:16px;">';
-  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
-  h+='<span style="font-size:16px;">▶</span>';
-  h+='<div style="font-size:13px;font-weight:800;color:#ff4444;">YouTube 실시간 AI 추천</div>';
-  h+='<div style="margin-left:auto;font-size:9px;padding:2px 8px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:6px;color:rgba(255,100,100,.9);font-weight:700;animation:pulse 2s infinite;">● LIVE</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:15px;">&#9654;</span><div style="font-size:13px;font-weight:800;color:#ff4444;">YouTube 실시간 AI 추천</div><div style="margin-left:auto;font-size:9px;padding:2px 8px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:6px;color:rgba(255,100,100,.9);font-weight:700;">&#9679; LIVE</div></div>';
+  h+='<div style="font-size:10px;color:rgba(240,230,200,.6);line-height:1.7;margin-bottom:10px;"><b style="color:rgba(212,168,67,.8)">'+oh+'</b> &times; <b style="color:rgba(56,189,248,.8)">'+_sjNames2[_sjIdx]+'</b> &times; <b style="color:rgba(52,211,153,.8)">'+bs.season+'</b> 에너지 맞춤 YouTube 영상 실시간 검색. 클릭하면 앱 안에서 바로 재생!</div>';
+  h+='<div id="pm-yt-live" style="min-height:60px;"><div style="text-align:center;padding:16px;font-size:11px;color:rgba(240,230,200,.4);">&#9203; YouTube 맞춤 음악 검색 중...</div></div>';
+  h+='<div style="font-size:9px;color:rgba(255,80,80,.3);margin-top:6px;">&#128269; '+_ytQ2+'</div>';
   h+='</div>';
-  h+='<div style="font-size:10px;color:rgba(240,230,200,.6);line-height:1.7;margin-bottom:10px;">';
-  h+='<b style="color:rgba(212,168,67,.8)">'+oh+'(오행)</b> × <b style="color:rgba(56,189,248,.8)">'+_sjNames[_sjIdx]+'</b> × <b style="color:rgba(52,211,153,.8)">'+bs.season+'</b> 에너지 맞춤 — YouTube에서 실시간 검색한 영상이에요. 클릭하면 앱 안에서 바로 재생됩니다!';
-  h+='</div>';
-  h+='<div id="pm-yt-live" style="min-height:70px;">';
-  h+='<div style="text-align:center;padding:18px;font-size:11px;color:rgba(240,230,200,.4);">⏳ YouTube에서 맞춤 음악 검색 중...</div>';
-  h+='</div>';
-  h+='<div style="font-size:9px;color:rgba(255,80,80,.3);margin-top:8px;">🔍 AI 검색어: '+_ytQ+'</div>';
-  h+='</div>';
-  setTimeout(function(){ pmFetchYtRecommend(oh, _sjIdx, bs.season, bs.eng||70, 'pm-yt-live'); }, 400);
+  setTimeout(function(){pmYtFetch(oh,_sjIdx,bs.eng||70,'pm-yt-live');},400);
 
   // 🇰🇷 한국
   h+='<div class="bsml-sec"><div class="bsml-sec-t">🇰🇷 한국 추천 음악 — '+oh+'('+ok[oh]+') 에너지 최적화</div>';
