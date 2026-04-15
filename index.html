@@ -54030,14 +54030,14 @@ function cgmLoadUsers(){
   var emptyEl = document.getElementById('cgmUserEmpty');
 
   if(_cgm.mode==='firebase' && _cgm.db){
-    // Firebase에서 전체 사용자 불러오기
-    _cgm.db.ref('users').once('value').then(function(snap){
+    // ★ 실시간으로 사용자 목록 업데이트 (once → on)
+    _cgm.db.ref('users').on('value', function(snap){
       var users = snap.val() || {};
       _cgmAllUsers = Object.values(users).filter(function(u){
-        return u.code && u.code !== _cgm.myCode; // 나 제외
+        return u.code && u.code !== _cgm.myCode;
       });
       cgmRenderUserList(_cgmAllUsers);
-    }).catch(function(){
+    }, function(){
       if(emptyEl) emptyEl.style.display='block';
     });
   } else {
