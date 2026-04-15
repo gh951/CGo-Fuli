@@ -35546,13 +35546,12 @@ window.addEventListener('popstate', function(e) {
   _cgHistoryPush(prev);
 });
 
-// ★ 핀셋: URL에 #hash 안 붙이기 → PWA 설치 정상 작동
-// beforeinstallprompt는 URL이 깔끔해야 발생함
+// history API 안전 래퍼 (iframe/보안 환경 대응)
 function _cgHistoryPush(pageId) {
-  // URL 변경 안 함 (PWA 설치를 위해)
+  try { history.pushState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
 }
 function _cgHistoryReplace(pageId) {
-  // URL 변경 안 함 (PWA 설치를 위해)
+  try { history.replaceState({ cgo: pageId }, '', '#' + pageId); } catch(e) {}
 }
 
 // 최초 진입 시 히스토리 항목 추가
