@@ -24,6 +24,35 @@
 <script>
 // ══ 위치 권한 싱글톤 — 최초 1회만 요청, 결과 전역 공유 ══
 window._cgoGeoPromise = null;
+
+// ★ 카카오톡 인앱브라우저 감지 → 크롬으로 열기 유도
+(function(){
+  var ua = navigator.userAgent.toLowerCase();
+  var isKakao = ua.indexOf('kakaotalk') > -1;
+  var isFacebook = ua.indexOf('fbav') > -1 || ua.indexOf('fban') > -1;
+  var isInApp = isKakao || isFacebook || ua.indexOf('instagram') > -1 || ua.indexOf('naver') > -1;
+
+  if(isInApp){
+    // 페이지 로드 후 안내 팝업
+    window.addEventListener('load', function(){
+      setTimeout(function(){
+        var p = document.createElement('div');
+        p.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:20px;';
+        p.innerHTML = '<div style="width:100%;max-width:360px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px;padding:28px 22px;border:1.5px solid rgba(52,211,153,.5);text-align:center;">'
+          + '<div style="font-size:32px;margin-bottom:12px;">🌐</div>'
+          + '<div style="font-size:16px;font-weight:900;color:#34d399;margin-bottom:10px;">크롬으로 열어주세요!</div>'
+          + '<div style="font-size:13px;color:rgba(240,230,200,.7);line-height:1.8;margin-bottom:20px;">'
+          + 'CGO-FULI 앱 설치를 위해<br>크롬 브라우저가 필요합니다.<br><br>'
+          + '<b style="color:#d4a843;">우측 하단 ··· → 다른 브라우저로 열기</b><br>'
+          + '→ Chrome 선택'
+          + '</div>'
+          + '<button onclick="this.parentNode.parentNode.remove()" style="width:100%;padding:13px;background:linear-gradient(135deg,#34d399,#38bdf8);border:none;border-radius:12px;color:#000;font-size:14px;font-weight:900;cursor:pointer;">확인</button>'
+          + '</div>';
+        document.body.appendChild(p);
+      }, 500);
+    });
+  }
+})();
 window._cgoGeoResult  = null;
 
 function cgoGetLocation(callback) {
