@@ -52710,40 +52710,55 @@ var _maiColors = {
 };
 
 
-// ★ 공통 카메라 권한 체크 함수 (한 번 허용하면 모든 스캔 사용 가능)
+// ★ 카메라 권한 전역 상태 관리 (한 번만 요청)
+var _cgoCameraGranted = false;
+var _cgoCameraAlertShown = false;
+
+// ★ 앱 시작 시 카메라 권한 1회 요청
+window.addEventListener('load', function(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  navigator.mediaDevices.getUserMedia({video:true})
+    .then(function(s){
+      s.getTracks().forEach(function(t){t.stop();});
+      _cgoCameraGranted = true;
+    })
+    .catch(function(){ _cgoCameraGranted = false; });
+});
+
+// ★ 공통 카메라 권한 체크 (이미 허용됐으면 바로 실행)
 function cgoCameraCheck(onGranted){
+  if(_cgoCameraGranted){
+    onGranted();
+    return;
+  }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     _cgoCameraAlert('이 브라우저는 카메라를 지원하지 않습니다.');
     return;
   }
-  navigator.permissions && navigator.permissions.query({name:'camera'})
-    .then(function(perm){
-      if(perm.state === 'granted'){
-        onGranted();
-      } else if(perm.state === 'denied'){
-        _cgoCameraAlert('카메라 접근이 차단됐습니다.<br>브라우저 설정에서 카메라를 허용해 주세요.');
-      } else {
-        // 처음 요청 또는 prompt 상태 → 직접 요청
-        navigator.mediaDevices.getUserMedia({video:true})
-          .then(function(s){ s.getTracks().forEach(function(t){t.stop();}); onGranted(); })
-          .catch(function(){ _cgoCameraAlert('카메라 접근이 거부됐습니다.<br>브라우저 설정에서 카메라를 허용해 주세요.'); });
-      }
+  navigator.mediaDevices.getUserMedia({video:true})
+    .then(function(s){
+      s.getTracks().forEach(function(t){t.stop();});
+      _cgoCameraGranted = true;
+      onGranted();
     })
     .catch(function(){
-      // permissions API 미지원 → 직접 요청
-      navigator.mediaDevices.getUserMedia({video:true})
-        .then(function(s){ s.getTracks().forEach(function(t){t.stop();}); onGranted(); })
-        .catch(function(){ _cgoCameraAlert('카메라 접근이 거부됐습니다.<br>브라우저 설정에서 카메라를 허용해 주세요.'); });
+      _cgoCameraGranted = false;
+      if(!_cgoCameraAlertShown){
+        _cgoCameraAlertShown = true;
+        _cgoCameraAlert('카메라 접근이 거부됐습니다.<br><br>브라우저 주소창 옆 🔒 클릭<br>→ 카메라 → <b style="color:#34d399;">허용</b>으로 변경해 주세요.');
+      }
     });
 }
 
 function _cgoCameraAlert(msg){
+  if(document.getElementById('_cgoCamAlertBox')) return;
   var t = document.createElement('div');
+  t.id = '_cgoCamAlertBox';
   t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1.5px solid rgba(244,114,182,.5);border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;';
   t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">📷</div>'
     + '<div style="font-size:14px;font-weight:900;color:#f472b6;margin-bottom:8px;">카메라 허용 필요</div>'
     + '<div style="font-size:12px;color:rgba(240,220,255,.8);line-height:1.7;margin-bottom:16px;">'+msg+'</div>'
-    + '<button onclick="this.parentNode.remove()" style="padding:10px 24px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;">확인</button>';
+    + '<button onclick="this.parentNode.remove();_cgoCameraAlertShown=false;" style="padding:10px 24px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;">확인</button>';
   document.body.appendChild(t);
 }
 function maiStartScan(){
