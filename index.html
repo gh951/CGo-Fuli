@@ -50639,6 +50639,42 @@ function _cgoEntranceDone(){
   // ✅ 새로고침 시 대문 건너뛰기 — 탭이 열려있는 동안만 유지 (sessionStorage)
   try { sessionStorage.setItem('cgo_unlocked', '1'); } catch(e){}
 
+  // ★ 앱 진입 즉시 국가/지역 정보 Firebase 저장
+  setTimeout(function(){
+    try {
+      var _userCode = localStorage.getItem('cgo_usercode') || '';
+      if(!_userCode){
+        _userCode = Math.random().toString(36).substr(2,6).toUpperCase();
+        localStorage.setItem('cgo_usercode', _userCode);
+      }
+      var _savedName = '';
+      var _savedOh = '';
+      try {
+        var nameEl = document.getElementById('ipName');
+        if(nameEl && nameEl.value) _savedName = nameEl.value;
+      } catch(e){}
+
+      fetch('https://ipapi.co/json/')
+        .then(function(r){ return r.json(); })
+        .then(function(geo){
+          var fbConfig = {
+            apiKey:"AIzaSyBwT8Dz1C07J-UK3V6Y1oj4-XJvxr6CXMg",
+            databaseURL:"https://cgo-life-default-rtdb.firebaseio.com"
+          };
+          if(window.firebase && firebase.apps && firebase.apps.length){
+            firebase.database().ref('visitors/'+_userCode).set({
+              name: _savedName || '방문자',
+              country: geo.country_name || '알 수 없음',
+              city: geo.city || '',
+              region: geo.region || '',
+              lastSeen: Date.now()
+            });
+          }
+        })
+        .catch(function(){});
+    } catch(e){}
+  }, 2000);
+
   // ── 위치 권한 1회만 요청 → 전역 저장 ──
   if(!window._cgoLocationDone){
     window._cgoLocationDone = true;
@@ -54339,12 +54375,29 @@ function cgmStartFromList(code){
 // Firebase에 내 정보 등록 (로그인 시)
 function cgmRegisterToFirebase(){
   if(_cgm.mode==='firebase' && _cgm.db && _cgm.myCode){
-    _cgm.db.ref('users/'+_cgm.myCode).set({
-      code: _cgm.myCode,
-      nick: _cgm.myNick,
-      oh: _cgm.myOh,
-      lastSeen: Date.now()
-    });
+    // ★ 국가/지역 정보 IP로 가져오기
+    fetch('https://ipapi.co/json/')
+      .then(function(r){ return r.json(); })
+      .then(function(geo){
+        _cgm.db.ref('users/'+_cgm.myCode).set({
+          code: _cgm.myCode,
+          nick: _cgm.myNick,
+          oh: _cgm.myOh,
+          lastSeen: Date.now(),
+          country: (geo.country_name||'알 수 없음'),
+          city: (geo.city||''),
+          region: (geo.region||'')
+        });
+      })
+      .catch(function(){
+        _cgm.db.ref('users/'+_cgm.myCode).set({
+          code: _cgm.myCode,
+          nick: _cgm.myNick,
+          oh: _cgm.myOh,
+          lastSeen: Date.now(),
+          country: '알 수 없음'
+        });
+      });
   }
 }
 
