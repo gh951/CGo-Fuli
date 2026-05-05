@@ -86537,9 +86537,11 @@ var _rmaiArLipsOuter = [
 var _rmaiArCheekLeft = [116, 117, 118, 119, 100, 142, 36, 50, 207, 213];
 var _rmaiArCheekRight = [345, 346, 347, 348, 329, 371, 266, 280, 427, 433];
 
-// ★ 눈꺼풀 위 영역 (왼/오 — 윗눈꺼풀 ~ 눈썹 사이)
-var _rmaiArEyeLeft = [156, 70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 124, 113, 225, 224, 223, 222, 221, 189];
-var _rmaiArEyeRight = [383, 300, 293, 334, 296, 336, 285, 295, 282, 283, 276, 353, 342, 445, 444, 443, 442, 441, 413];
+// ★ 눈꺼풀 영역 — 윗눈꺼풀만 (눈 위쪽 라인 + 눈썹 아래쪽 라인 사이)
+//   왼쪽: 눈 위 라인 (33→133) + 눈썹 아래 라인 (107→70)을 결합한 다각형
+var _rmaiArEyeLeft = [33, 246, 161, 160, 159, 158, 157, 173, 133, 107, 66, 105, 63, 70];
+//   오른쪽: 눈 위 라인 (362→263) + 눈썹 아래 라인 (336→300)을 결합한 다각형
+var _rmaiArEyeRight = [362, 398, 384, 385, 386, 387, 388, 466, 263, 336, 296, 334, 293, 300];
 
 // ★ 얼굴 외곽 (베이스 톤용 — 입술/눈 영역 제외하고 전체 적용)
 var _rmaiArFaceOval = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
@@ -87079,9 +87081,9 @@ function _rmaiArDrawLip(ctx, canvas, landmarks, color){
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// ★ 볼 — 원형 부드러운 그라디언트 (multiply + 블러 효과)
+// ★ 볼 — 부드러운 원형 그라디언트 (자연스러운 페이딩)
 function _rmaiArDrawCheek(ctx, canvas, landmarks, indices, color){
-  // 인덱스 영역의 중심점 + 반경 계산
+  // 인덱스 영역의 중심점 계산
   var cx = 0, cy = 0, count = 0;
   indices.forEach(function(idx){
     var lm = landmarks[idx];
@@ -87093,20 +87095,20 @@ function _rmaiArDrawCheek(ctx, canvas, landmarks, indices, color){
   if(count === 0) return;
   cx /= count; cy /= count;
 
-  // 반경 추정 (얼굴 크기에 비례 — 코끝 1번 ~ 턱 152번 거리의 1/6)
+  // 반경 = 얼굴 높이의 1/7 (이전 1/4보다 훨씬 작음 — 자연스러움)
   var nose = landmarks[1];
   var chin = landmarks[152];
   var faceH = nose && chin ? Math.abs((chin.y - nose.y) * canvas.height) : 60;
-  var radius = Math.max(20, faceH / 4);
+  var radius = Math.max(15, faceH / 6);
 
-  // 부드러운 원형 그라디언트
+  // 부드러운 원형 그라디언트 — 가운데도 진하지 않게, 가장자리 자연스럽게 페이드
   var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
   grad.addColorStop(0, color);
-  grad.addColorStop(0.5, color);
+  grad.addColorStop(0.4, color);
   grad.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.28;  // 0.45 → 0.28 (훨씬 옅게)
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -87115,7 +87117,7 @@ function _rmaiArDrawCheek(ctx, canvas, landmarks, indices, color){
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// ★ 아이 (눈꺼풀) — 다각형 + 그라디언트 페더링
+// ★ 아이 (눈꺼풀) — 다각형 + 살짝 옅은 multiply
 function _rmaiArDrawEye(ctx, canvas, landmarks, indices, color){
   ctx.beginPath();
   indices.forEach(function(idx, i){
@@ -87128,7 +87130,7 @@ function _rmaiArDrawEye(ctx, canvas, landmarks, indices, color){
   });
   ctx.closePath();
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.35;  // 0.5 → 0.35 (자연스러움)
   ctx.fillStyle = color;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -87470,7 +87472,10 @@ window.rmaiChatSend = function(){
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      messages: [{role:'system', content:systemPrompt}].concat(historyMsgs).concat([{role:'user', content:input}])
+      model: 'llama-3.1-8b-instant',
+      messages: [{role:'system', content:systemPrompt}].concat(historyMsgs).concat([{role:'user', content:input}]),
+      max_tokens: 600,
+      temperature: 0.7
     })
   })
   .then(function(resp){ return resp.json(); })
