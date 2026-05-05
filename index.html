@@ -86512,7 +86512,7 @@ var _maiBeforeData = null;
 //   28명 클로드가 박제한 @mediapipe/face_mesh CDN 활용 (line 63299)
 // ═══════════════════════════════════════════════════
 
-// ★ AR 전역 상태 (4 카테고리 통합)
+// ★ AR 전역 상태 (4 카테고리 + 팔레트 전환 + 강도 조절)
 var _rmaiAr = {
   running: false,
   stream: null,
@@ -86520,12 +86520,25 @@ var _rmaiAr = {
   canvas: null,
   ctx: null,
   faceMesh: null,
-  currentColor: null,        // 호환용 (= appliedColors[currentCategory])
-  currentCategory: 'lip',    // 'lip' | 'cheek' | 'eye' | 'base'
+  currentColor: null,
+  currentCategory: 'lip',
+  currentPalette: 'oheng',  // 'oheng' (사주) | 'rainbow' (무지개 7색)
   appliedColors: { lip:null, cheek:null, eye:null, base:null },
+  intensity: { lip:0.55, cheek:0.20, eye:0.35, base:0.35 }, // 카테고리별 alpha (0~1)
   frameCount: 0,
   lastResults: null
 };
+
+// ★ 무지개 7색 라이브러리 (빨주노초파남보 — 모든 카테고리 공통)
+var _rmaiArRainbowSet = [
+  {n:'빨강', c:'#dc2626'},
+  {n:'주황', c:'#f97316'},
+  {n:'노랑', c:'#eab308'},
+  {n:'초록', c:'#16a34a'},
+  {n:'파랑', c:'#2563eb'},
+  {n:'남색', c:'#1e3a8a'},
+  {n:'보라', c:'#9333ea'}
+];
 
 // ★ MediaPipe FaceMesh 입술 외곽 (20개 — 시계방향)
 var _rmaiArLipsOuter = [
@@ -86537,11 +86550,11 @@ var _rmaiArLipsOuter = [
 var _rmaiArCheekLeft = [116, 117, 118, 119, 100, 142, 36, 50, 207, 213];
 var _rmaiArCheekRight = [345, 346, 347, 348, 329, 371, 266, 280, 427, 433];
 
-// ★ 눈꺼풀 영역 — 윗눈꺼풀만 (눈 위쪽 라인 + 눈썹 아래쪽 라인 사이)
-//   왼쪽: 눈 위 라인 (33→133) + 눈썹 아래 라인 (107→70)을 결합한 다각형
-var _rmaiArEyeLeft = [33, 246, 161, 160, 159, 158, 157, 173, 133, 107, 66, 105, 63, 70];
-//   오른쪽: 눈 위 라인 (362→263) + 눈썹 아래 라인 (336→300)을 결합한 다각형
-var _rmaiArEyeRight = [362, 398, 384, 385, 386, 387, 388, 466, 263, 336, 296, 334, 293, 300];
+// ★ 눈꺼풀 영역 — 윗눈꺼풀만 (눈 위쪽 라인 + 눈썹 *아래쪽* 라인 사이)
+//   왼쪽: 눈 위 (33→133) + 눈썹 아래 (55, 65, 52, 53, 46) — 역순
+var _rmaiArEyeLeft = [33, 246, 161, 160, 159, 158, 157, 173, 133, 55, 65, 52, 53, 46];
+//   오른쪽: 눈 위 (362→263) + 눈썹 아래 (285, 295, 282, 283, 276) — 역순
+var _rmaiArEyeRight = [362, 398, 384, 385, 386, 387, 388, 466, 263, 285, 295, 282, 283, 276];
 
 // ★ 얼굴 외곽 (베이스 톤용 — 입술/눈 영역 제외하고 전체 적용)
 var _rmaiArFaceOval = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
@@ -87061,7 +87074,7 @@ function _rmaiArOnResults(results){
 // 4 카테고리 색 적용 helper 함수들
 // ═══════════════════════════════════════════════════
 
-// ★ 립 — multiply 블렌드 (이전 버전과 동일)
+// ★ 립 — multiply 블렌드 (강도 동적)
 function _rmaiArDrawLip(ctx, canvas, landmarks, color){
   ctx.beginPath();
   _rmaiArLipsOuter.forEach(function(idx, i){
@@ -87074,7 +87087,7 @@ function _rmaiArDrawLip(ctx, canvas, landmarks, color){
   });
   ctx.closePath();
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = _rmaiAr.intensity.lip;
   ctx.fillStyle = color;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -87108,7 +87121,7 @@ function _rmaiArDrawCheek(ctx, canvas, landmarks, indices, color){
   grad.addColorStop(1, 'rgba(0,0,0,0)');
 
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.28;  // 0.45 → 0.28 (훨씬 옅게)
+  ctx.globalAlpha = _rmaiAr.intensity.cheek;
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -87130,7 +87143,7 @@ function _rmaiArDrawEye(ctx, canvas, landmarks, indices, color){
   });
   ctx.closePath();
   ctx.globalCompositeOperation = 'multiply';
-  ctx.globalAlpha = 0.35;  // 0.5 → 0.35 (자연스러움)
+  ctx.globalAlpha = _rmaiAr.intensity.eye;
   ctx.fillStyle = color;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -87150,7 +87163,7 @@ function _rmaiArDrawBase(ctx, canvas, landmarks, color){
   });
   ctx.closePath();
   ctx.globalCompositeOperation = 'soft-light';
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = _rmaiAr.intensity.base;
   ctx.fillStyle = color;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -87158,7 +87171,7 @@ function _rmaiArDrawBase(ctx, canvas, landmarks, color){
 }
 
 // ═══════════════════════════════════════════════════
-// ★ 색 picker UI — 4 카테고리 탭 (YouCam 스타일)
+// ★ 색 picker UI — 4 카테고리 + 팔레트 전환 + 강도 슬라이더 (하이브리드)
 // ═══════════════════════════════════════════════════
 function _rmaiArInitColorPicker(){
   var picker = document.getElementById('rmai-ar-color-picker');
@@ -87174,7 +87187,7 @@ function _rmaiArInitColorPicker(){
     return;
   }
 
-  // ★ 4 카테고리 탭 + 활성 카테고리 색 스와치
+  // ★ 4 카테고리 탭
   var cats = [
     {key:'lip',   icon:'💋', name:'립',     pal:pal.lip,   subtitle:'립스틱'},
     {key:'cheek', icon:'🌸', name:'볼',     pal:pal.cheek, subtitle:'블러셔'},
@@ -87182,8 +87195,7 @@ function _rmaiArInitColorPicker(){
     {key:'base',  icon:'🫧', name:'베이스', pal:pal.base,  subtitle:'베이스 톤'}
   ];
 
-  // 카테고리 탭
-  var tabsHtml = '<div style="display:flex;gap:4px;margin-bottom:12px;background:#f3f4f6;padding:4px;border-radius:12px;">';
+  var tabsHtml = '<div style="display:flex;gap:4px;margin-bottom:10px;background:#f3f4f6;padding:4px;border-radius:12px;">';
   cats.forEach(function(c){
     var active = (c.key === _rmaiAr.currentCategory);
     var bg = active ? '#fff' : 'transparent';
@@ -87195,13 +87207,22 @@ function _rmaiArInitColorPicker(){
   });
   tabsHtml += '</div>';
 
-  // 현재 카테고리 색 스와치
+  // ★ 팔레트 전환 탭 (사주 / 무지개)
+  var paletteToggle = '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+  var palOhActive = (_rmaiAr.currentPalette === 'oheng');
+  var palRbActive = (_rmaiAr.currentPalette === 'rainbow');
+  paletteToggle += '<button onclick="rmaiArSetPalette(\'oheng\')" style="flex:1;padding:6px 8px;background:'+(palOhActive?'linear-gradient(135deg,#fbbf24,#f59e0b)':'#f3f4f6')+';border:none;border-radius:8px;color:'+(palOhActive?'#1a1408':'#888')+';font-size:10px;font-weight:'+(palOhActive?'900':'700')+';cursor:pointer;font-family:inherit;">🎨 사주 추천 ('+(ohNames[oh]||oh)+')</button>';
+  paletteToggle += '<button onclick="rmaiArSetPalette(\'rainbow\')" style="flex:1;padding:6px 8px;background:'+(palRbActive?'linear-gradient(90deg,#dc2626,#f97316,#eab308,#16a34a,#2563eb,#9333ea)':'#f3f4f6')+';border:none;border-radius:8px;color:'+(palRbActive?'#fff':'#888')+';font-size:10px;font-weight:'+(palRbActive?'900':'700')+';cursor:pointer;font-family:inherit;text-shadow:'+(palRbActive?'0 1px 2px rgba(0,0,0,.4)':'none')+';">🌈 무지개 7색</button>';
+  paletteToggle += '</div>';
+
+  // 현재 카테고리 + 현재 팔레트에 따른 색 배열
   var currentCat = cats.find(function(c){ return c.key === _rmaiAr.currentCategory; }) || cats[0];
-  var currentColors = currentCat.pal || [];
+  var currentColors = (_rmaiAr.currentPalette === 'rainbow') ? _rmaiArRainbowSet : (currentCat.pal || []);
   var appliedHex = _rmaiAr.appliedColors[currentCat.key];
+  var paletteLabel = (_rmaiAr.currentPalette === 'rainbow') ? '🌈 무지개 7색' : (currentCat.icon + ' ' + currentCat.subtitle + ' — 사주 ' + (ohNames[oh]||oh));
 
   var swatchHtml = '<div style="font-size:11px;font-weight:800;color:#1a1408;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<span>'+currentCat.icon+' '+currentCat.subtitle+' — 사주 '+(ohNames[oh]||oh)+' 추천</span>'
+    + '<span>'+paletteLabel+'</span>'
     + '<span style="font-size:9px;font-weight:700;color:#888;">탭해서 적용</span>'
     + '</div>'
     + '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
@@ -87217,25 +87238,56 @@ function _rmaiArInitColorPicker(){
       + '</button>';
   });
 
-  swatchHtml += '</div>'
-    + '<button onclick="rmaiArApplyColor(null,null)" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ '+currentCat.name+' 색 적용 해제</button>';
+  swatchHtml += '</div>';
 
-  picker.innerHTML = tabsHtml + swatchHtml;
+  // ★ 강도 슬라이더 (현재 카테고리)
+  var maxIntensity = (currentCat.key === 'base') ? 0.7 : 0.85;  // 베이스는 더 옅게 제한
+  var curIntensity = _rmaiAr.intensity[currentCat.key];
+  var pct = Math.round(curIntensity / maxIntensity * 100);
+  var sliderHtml = '<div style="margin-top:14px;padding:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    + '<span style="font-size:11px;font-weight:800;color:#581c87;">⚙️ '+currentCat.name+' 진하기</span>'
+    + '<span id="rmai-ar-intensity-pct" style="font-size:11px;font-weight:900;color:#7c3aed;">'+pct+'%</span>'
+    + '</div>'
+    + '<input type="range" id="rmai-ar-intensity-slider" min="0" max="100" value="'+pct+'" oninput="rmaiArSetIntensity(this.value)" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#e9d5ff,#a855f7);border-radius:3px;outline:none;cursor:pointer;" />'
+    + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>옅게</span><span>진하게</span></div>'
+    + '</div>';
+
+  var clearBtn = '<button onclick="rmaiArApplyColor(null,null)" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ '+currentCat.name+' 색 적용 해제</button>';
+
+  picker.innerHTML = tabsHtml + paletteToggle + swatchHtml + sliderHtml + clearBtn;
 }
 
 // ★ 카테고리 전환
 window.rmaiArSetCategory = function(catKey){
   if(['lip','cheek','eye','base'].indexOf(catKey) < 0) return;
   _rmaiAr.currentCategory = catKey;
-  _rmaiArInitColorPicker(); // picker 재렌더 (탭 + 색)
+  _rmaiArInitColorPicker();
+};
+
+// ★ 팔레트 전환 (사주 ↔ 무지개)
+window.rmaiArSetPalette = function(palKey){
+  if(['oheng','rainbow'].indexOf(palKey) < 0) return;
+  _rmaiAr.currentPalette = palKey;
+  _rmaiArInitColorPicker();
+};
+
+// ★ 강도 조절 (슬라이더 0~100 → alpha 동적 매핑)
+window.rmaiArSetIntensity = function(val){
+  var cat = _rmaiAr.currentCategory;
+  var maxIntensity = (cat === 'base') ? 0.7 : 0.85;
+  var alpha = (parseFloat(val) || 0) / 100 * maxIntensity;
+  _rmaiAr.intensity[cat] = alpha;
+  // 표시 갱신 (전체 picker 재렌더 안 함 — 슬라이더 끊김 방지)
+  var pctEl = document.getElementById('rmai-ar-intensity-pct');
+  if(pctEl) pctEl.textContent = val + '%';
 };
 
 // ★ 색 적용 — 현재 카테고리에 저장
 window.rmaiArApplyColor = function(hexColor, btnEl){
   var cat = _rmaiAr.currentCategory;
   _rmaiAr.appliedColors[cat] = hexColor;
-  _rmaiAr.currentColor = hexColor; // 호환용
-  // picker 재렌더 (선택 표시 갱신)
+  _rmaiAr.currentColor = hexColor;
   _rmaiArInitColorPicker();
 };
 
@@ -87264,7 +87316,9 @@ window.rmaiArStop = function(){
   if(arStartBtn) arStartBtn.style.display='block';
   _rmaiAr.currentColor = null;
   _rmaiAr.appliedColors = { lip:null, cheek:null, eye:null, base:null };
+  _rmaiAr.intensity = { lip:0.55, cheek:0.20, eye:0.35, base:0.35 };
   _rmaiAr.currentCategory = 'lip';
+  _rmaiAr.currentPalette = 'oheng';
 };
 
 // ═══════════════════════════════════════════════════
