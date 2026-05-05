@@ -15932,6 +15932,11 @@ var fcSystems = {
               <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(212,168,67,.6);"></div>
               <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#d4a843;box-shadow:0 0 8px rgba(212,168,67,.9);"></div>
             </div>
+            <!-- ★ 풍수카메라 이식: 카메라 영상 위 목표 방향 큰 화살표 오버레이 (fc360ArrowOverlay 구조 그대로) -->
+            <div id="tvyCamArrowOverlay" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:15;">
+              <div id="tvyCamBigArrow" style="font-size:80px;filter:drop-shadow(0 2px 12px rgba(0,0,0,.85));transition:all .3s;color:#fff;line-height:1;">🧭</div>
+              <div id="tvyCamArrowLabel" style="font-size:13px;font-weight:800;color:#fff;background:rgba(0,0,0,.78);padding:6px 14px;border-radius:20px;margin-top:10px;letter-spacing:.02em;text-align:center;max-width:92%;line-height:1.4;">나침반 연결 대기 중...</div>
+            </div>
           </div>
           
           <!-- 시작/촬영/재시작 버튼 -->
@@ -18237,11 +18242,20 @@ window.tvyCamUpdateGuide = function(deg){
   for(var i=0;i<TVY_DIR_ORDER.length;i++){
     if(!window.TVY_CAM.shots[TVY_DIR_ORDER[i]]){target = TVY_DIR_ORDER[i]; break;}
   }
-  if(target == null) return; // 10방위 모두 완료
+  if(target == null){ // 10방위 모두 완료 → 오버레이 숨김 후 종료
+    var overlayElDone = document.getElementById('tvyCamArrowOverlay');
+    if(overlayElDone) overlayElDone.style.display = 'none';
+    return;
+  }
 
   var arrowEl = document.getElementById('tvyCamArrow2');
   var guideEl = document.getElementById('tvyCamGuide');
+  var overlayEl = document.getElementById('tvyCamArrowOverlay');  // ★ 카메라 위 큰 화살표 오버레이
+  var bigArrowEl = document.getElementById('tvyCamBigArrow');
+  var labelEl = document.getElementById('tvyCamArrowLabel');
   var camOn = !!window.TVY_CAM.stream;
+  // 카메라 ON 일 때만 오버레이 표시
+  if(overlayEl) overlayEl.style.display = camOn ? 'flex' : 'none';
   var aligned = false;
 
   // 천장(UP) / 바닥(DN) — 기울기(e.beta) 기반
@@ -18270,6 +18284,17 @@ window.tvyCamUpdateGuide = function(deg){
         guideEl.style.color = '#92400e';
       }
     }
+    // ★ 카메라 위 큰 화살표 오버레이 갱신
+    if(bigArrowEl){
+      bigArrowEl.textContent = isUP ? '⬆' : '⬇';
+      bigArrowEl.style.color = aligned ? '#10b981' : '#ef4444';
+      bigArrowEl.style.animation = aligned ? 'fc360Green .5s ease-in-out infinite' : 'fc360Blink .7s ease-in-out infinite';
+    }
+    if(labelEl){
+      labelEl.innerHTML = aligned
+        ? ('✅ ' + (isUP?'천장':'바닥') + ' 감지! 자동 촬영')
+        : ('🧭 폰을 ' + (isUP?'위로':'아래로') + ' 기울이세요' + ((tiltDeg!=null)?(' (현재 '+tiltDeg+'°)'):''));
+    }
   }
   // 8방위 — 도수 차이 기반
   else {
@@ -18297,6 +18322,19 @@ window.tvyCamUpdateGuide = function(deg){
         guideEl.style.background = '#fef3c7';
         guideEl.style.color = '#92400e';
       }
+    }
+    // ★ 카메라 위 큰 화살표 오버레이 갱신
+    var rotateChar = diff > 0 ? '↺' : '↻';
+    var rotateDirLabel = diff > 0 ? '왼쪽(반시계)' : '오른쪽(시계)';
+    if(bigArrowEl){
+      bigArrowEl.textContent = aligned ? (TVY_DIR_ARROW[target] || '↑') : rotateChar;
+      bigArrowEl.style.color = aligned ? '#10b981' : '#ef4444';
+      bigArrowEl.style.animation = aligned ? 'fc360Green .5s ease-in-out infinite' : 'fc360Blink .7s ease-in-out infinite';
+    }
+    if(labelEl){
+      labelEl.innerHTML = aligned
+        ? ('✅ ' + (TVY_DIR_LABEL[target]||target) + ' 정렬! 자동 촬영')
+        : ('🧭 ' + rotateDirLabel + ' ' + Math.round(absDiff) + '° → ' + (TVY_DIR_LABEL[target]||target));
     }
   }
 
