@@ -15944,6 +15944,8 @@ var fcSystems = {
             <button onclick="tvyCamStart()" id="tvyCamStartBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#1a1a2e,#3730a3);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;">📷 카메라 시작</button>
             <button onclick="tvyCamShoot()" id="tvyCamShootBtn" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;opacity:0.4;">📸 지금 촬영</button>
           </div>
+          <!-- ★ 프라이버시 보호: 카메라 종료 버튼 (카메라 ON 일 때만 보임) -->
+          <button onclick="tvyCamStop()" id="tvyCamStopBtn" style="display:none;width:100%;padding:11px;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;margin-bottom:8px;box-shadow:0 2px 8px rgba(220,38,38,.25);">⏹ 카메라 종료 (프라이버시 보호)</button>
           <button onclick="tvyCamReset()" id="tvyCamResetBtn" style="display:none;width:100%;padding:10px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;color:#666;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;">🔄 처음부터 다시</button>
           
           <!-- 7대 시스템 종합 분석 결과 -->
@@ -18263,7 +18265,11 @@ window.tvyCamUpdateGuide = function(deg){
     var isUP = target === 'UP';
     var beta = window.TVY_CAM.curBeta;
     var tiltDeg = (beta != null) ? Math.round(beta) : null;
-    aligned = (tiltDeg != null) && (isUP ? tiltDeg > 60 : tiltDeg < -60);
+    // ★ 정확한 카메라 방향 감지 (사용자 시행착오 발견 — fc360 원본은 DN 임계값이 물리적으로 틀림)
+    // 천장(UP) — 카메라가 위 향함 → 화면이 아래로 → |beta| > 135 (180 또는 -180 근처, 폰 뒤집힘)
+    // 바닥(DN) — 카메라가 아래 향함 → 화면이 위로 → |beta| < 45 (0 근처, 폰 평평)
+    var absTilt = (tiltDeg != null) ? Math.abs(tiltDeg) : null;
+    aligned = (absTilt != null) && (isUP ? absTilt > 135 : absTilt < 45);
 
     if(arrowEl){
       arrowEl.textContent = isUP ? '⬆' : '⬇';
@@ -18277,8 +18283,10 @@ window.tvyCamUpdateGuide = function(deg){
         guideEl.style.background = '#dcfce7';
         guideEl.style.color = '#15803d';
       } else {
-        var msg = isUP ? '폰을 위로 기울여 천장을 향하세요' : '폰을 아래로 기울여 바닥을 향하세요';
-        var sub = (tiltDeg != null) ? ' (현재 ' + tiltDeg + '°, ' + (isUP?'60° 이상':'-60° 이하')+' 필요)' : '';
+        var msg = isUP
+          ? '📱 스마트폰을 뒤집어 화면이 아래를 향하게 하세요 (카메라가 천장)'
+          : '📱 스마트폰을 평평히 화면이 위를 향하게 하세요 (카메라가 바닥)';
+        var sub = (tiltDeg != null) ? ' (현재 기울기 ' + tiltDeg + '°)' : '';
         guideEl.innerHTML = '🧭 ' + msg + sub;
         guideEl.style.background = '#fef3c7';
         guideEl.style.color = '#92400e';
@@ -18293,7 +18301,7 @@ window.tvyCamUpdateGuide = function(deg){
     if(labelEl){
       labelEl.innerHTML = aligned
         ? ('✅ ' + (isUP?'천장':'바닥') + ' 감지! 자동 촬영')
-        : ('🧭 폰을 ' + (isUP?'위로':'아래로') + ' 기울이세요' + ((tiltDeg!=null)?(' (현재 '+tiltDeg+'°)'):''));
+        : (isUP ? '📱 화면을 아래로 (카메라 ↑)' : '📱 화면을 위로 (카메라 ↓)');
     }
   }
   // 8방위 — 도수 차이 기반
@@ -18354,7 +18362,9 @@ window.tvyCamUpdateGuide = function(deg){
       if(target === 'UP' || target === 'DN'){
         var isUPNow = target === 'UP';
         var b = window.TVY_CAM.curBeta;
-        stillAligned = (b != null) && (isUPNow ? b > 60 : b < -60);
+        // ★ 정확한 임계값 (위 aligned 검사와 동일)
+        var absBNow = (b != null) ? Math.abs(b) : null;
+        stillAligned = (absBNow != null) && (isUPNow ? absBNow > 135 : absBNow < 45);
       } else {
         var tDeg = TVY_DIR_TARGET_DEG[target];
         var d = window.TVY_CAM.curDeg - tDeg;
@@ -18388,6 +18398,9 @@ window.tvyCamStart = function(){
       if(startBtn) startBtn.style.display = 'none';
       if(shootBtn){shootBtn.disabled = false; shootBtn.style.opacity = '1';}
       if(resetBtn) resetBtn.style.display = 'block';
+      // ★ 프라이버시: 카메라 종료 버튼 표시
+      var stopBtn = document.getElementById('tvyCamStopBtn');
+      if(stopBtn) stopBtn.style.display = 'block';
       // 자동 나침반 시작 시도
       if(!window.TVY_CAM.orientHandler) window.tvyCamRequestOrient();
     })
@@ -18451,8 +18464,48 @@ window.tvyCamShoot = function(){
   }
 };
 
+// ═══════════════════════════════════════════════════
+// ★ 카메라 안전 종료 — 프라이버시 보호 (사용자 시행착오 발견)
+// 호출 시점:
+//   ① 10방위 완료 (tvyCamRunFullAnalysis 끝)
+//   ② 처음부터 다시 (tvyCamReset)
+//   ③ 사용자가 직접 ⏹ 카메라 종료 버튼 클릭
+// 동작: 스트림·트랙 정지(LED off) → srcObject 끊기 → autoTimer 취소 → 오버레이/비디오박스 숨김 → 버튼 상태 초기화
+// 나침반 핸들러는 유지 (재시작 시 재권한 요청 회피)
+// ═══════════════════════════════════════════════════
+window.tvyCamStop = function(){
+  // ① MediaStream 트랙 모두 정지 (카메라 LED 꺼짐)
+  if(window.TVY_CAM.stream){
+    try { window.TVY_CAM.stream.getTracks().forEach(function(t){t.stop();}); } catch(e){}
+    window.TVY_CAM.stream = null;
+  }
+  // ② 비디오 element 의 srcObject 도 끊기
+  var video = document.getElementById('tvyCamVideo');
+  if(video) video.srcObject = null;
+  // ③ 자동 촬영 타이머 취소
+  if(window.TVY_CAM.autoTimer){
+    clearTimeout(window.TVY_CAM.autoTimer);
+    window.TVY_CAM.autoTimer = null;
+  }
+  // ④ 카메라 위 큰 화살표 오버레이 숨김
+  var overlay = document.getElementById('tvyCamArrowOverlay');
+  if(overlay) overlay.style.display = 'none';
+  // ⑤ 비디오 박스 자체 숨김 (영상 흔적 0)
+  var box = document.getElementById('tvyCamVideoBox');
+  if(box) box.style.display = 'none';
+  // ⑥ 버튼 상태 초기화
+  var startBtn = document.getElementById('tvyCamStartBtn');
+  var shootBtn = document.getElementById('tvyCamShootBtn');
+  var stopBtn  = document.getElementById('tvyCamStopBtn');
+  if(startBtn) startBtn.style.display = '';                                       // 시작 버튼 다시 보이게
+  if(shootBtn){ shootBtn.disabled = true; shootBtn.style.opacity = '0.4'; }       // 촬영 비활성
+  if(stopBtn) stopBtn.style.display = 'none';                                     // 종료 버튼 숨김
+};
+
 // 처음부터 다시
 window.tvyCamReset = function(){
+  // ★ 프라이버시: 카메라부터 안전 종료 (스트림·LED 즉시 꺼짐)
+  if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
   window.TVY_CAM.shots = {};
   window.TVY_CAM.shotCount = 0;
   document.querySelectorAll('.tvy-cam-dot').forEach(function(d){
@@ -18559,13 +18612,8 @@ window.tvyCamRunFullAnalysis = function(){
   box.innerHTML = html;
   box.style.display = 'block';
   
-  // 카메라 정지 (배터리 절약)
-  if(window.TVY_CAM.stream){
-    window.TVY_CAM.stream.getTracks().forEach(function(t){t.stop();});
-    window.TVY_CAM.stream = null;
-    var video = document.getElementById('tvyCamVideo');
-    if(video) video.srcObject = null;
-  }
+  // 카메라 정지 (배터리 절약 + 프라이버시 보호) — 중앙 함수 사용
+  if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
   
   // 부드러운 스크롤
   setTimeout(function(){box.scrollIntoView({behavior:'smooth', block:'start'});}, 100);
