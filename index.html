@@ -12005,11 +12005,13 @@ function fc360UpdateGuide(deg){
     var tiltAligned = false;
     var tiltDeg = beta !== undefined ? Math.round(beta) : null;
 
-    // beta > 60 → 천장 향함 / beta < -60 → 바닥 향함
+    // ★ 정확한 카메라 방향 감지 (여행 카메라 시행착오에서 검증된 임계값)
+    // 천장(UP) — 카메라가 위 향함 → 화면이 아래로 → |beta| > 135 (180 또는 -180 근처)
+    // 바닥(DN) — 카메라가 아래 향함 → 화면이 위로 → |beta| < 45 (0 근처)
     if(isUP){
-      tiltAligned = (tiltDeg !== null && tiltDeg > 60);
+      tiltAligned = (tiltDeg !== null && Math.abs(tiltDeg) > 135);
     } else {
-      tiltAligned = (tiltDeg !== null && tiltDeg < -60);
+      tiltAligned = (tiltDeg !== null && Math.abs(tiltDeg) < 45);
     }
 
     if(tiltAligned){
@@ -12026,15 +12028,18 @@ function fc360UpdateGuide(deg){
         var curTgt = fc360GetTarget();
         if(curTgt === target){
           var curBeta = _fc360scan.currentBeta;
-          var stillAligned = isUP ? (curBeta > 60) : (curBeta < -60);
+          // ★ 정확한 임계값 (위 tiltAligned 검사와 동일)
+          var stillAligned = isUP ? (Math.abs(curBeta) > 135) : (Math.abs(curBeta) < 45);
           if(stillAligned) fc360DoCapture(target);
         }
       }, 1200);
     } else {
       // 🔴 아직 안됨 - 빨간 + 기울기 안내
       clearTimeout(_fc360scan.autoTimer);
-      var tiltMsg = isUP ? '폰을 위로 기울여 천장을 향하세요' : '폰을 아래로 기울여 바닥을 향하세요';
-      var tiltSub = tiltDeg !== null ? ('현재 기울기: '+tiltDeg+'° → '+(isUP ? '60° 이상':'−60° 이하')+' 필요') : '기울기 감지 중...';
+      var tiltMsg = isUP
+        ? '📱 스마트폰을 뒤집어 화면이 아래를 향하게 하세요 (카메라가 천장)'
+        : '📱 스마트폰을 평평히 화면이 위를 향하게 하세요 (카메라가 바닥)';
+      var tiltSub = tiltDeg !== null ? ('현재 기울기: '+tiltDeg+'°') : '기울기 감지 중...';
       if(arrowEl){ arrowEl.textContent= isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation='fc360Blink .7s ease-in-out infinite'; arrowEl.style.color='#f87171'; }
       if(labelEl){ labelEl.textContent= tiltMsg; labelEl.style.color='#fca5a5'; labelEl.style.background='rgba(248,113,113,.15)'; }
       if(statusEl) statusEl.textContent='📱 '+ tiltMsg;
@@ -15865,28 +15870,67 @@ var fcSystems = {
             </div>
           </div>
           
-          <!-- 7대 시스템 분석 안내 -->
+          <!-- ★ 핀셋 ⑯ — 9개 공간 시스템 클릭 카드 (1단계: 필수 선택) -->
           <div style="margin-bottom:14px;">
-            <div style="font-size:11px;font-weight:700;color:#444;margin-bottom:8px;letter-spacing:.04em;">✨ 7대 공간 시스템 동시 분석</div>
-            <div style="display:flex;flex-wrap:wrap;gap:5px;">
-              <span style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#15803d;border-radius:14px;border:1px solid #86efac;">🏯 풍수지리</span>
-              <span style="font-size:10px;padding:3px 8px;background:#fed7aa;color:#9a3412;border-radius:14px;border:1px solid #fdba74;">🕌 바스투</span>
-              <span style="font-size:10px;padding:3px 8px;background:#f1f5f9;color:#334155;border-radius:14px;border:1px solid #cbd5e1;">⛩️ 칸소</span>
-              <span style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#166534;border-radius:14px;border:1px solid #86efac;">🏡 양택가상학</span>
-              <span style="font-size:10px;padding:3px 8px;background:#ede9fe;color:#6d28d9;border-radius:14px;border:1px solid #c4b5fd;">🧠 공간심리학</span>
-              <span style="font-size:10px;padding:3px 8px;background:#fef3c7;color:#92400e;border-radius:14px;border:1px solid #fcd34d;">🪶 네이티브</span>
-              <span style="font-size:10px;padding:3px 8px;background:#cffafe;color:#155e75;border-radius:14px;border:1px solid #67e8f9;">🌿 테루아</span>
+            <div style="font-size:11px;font-weight:800;color:#1a1a2e;margin-bottom:8px;letter-spacing:.04em;display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:18px;height:18px;border-radius:9px;background:#1a1a2e;color:#fff;font-size:10px;text-align:center;line-height:18px;">1</span>
+              ✨ 분석할 공간 시스템 1개 선택
+              <span style="color:#dc2626;font-size:10px;font-weight:700;">(필수)</span>
             </div>
+            <div id="tvyCamSysCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <div onclick="tvyCamSelectSystem('fengshui')" data-sys="fengshui" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fca5a5;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:2px 6px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap;">✦ 추천</div>
+                <div style="font-size:24px;line-height:1.2;margin-top:4px;">🏯</div>
+                <div style="font-size:11px;font-weight:800;color:#991b1b;margin-top:3px;">풍수지리</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('spacepsych')" data-sys="spacepsych" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:2px 6px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap;">✦ 추천</div>
+                <div style="font-size:24px;line-height:1.2;margin-top:4px;">🧠</div>
+                <div style="font-size:11px;font-weight:800;color:#5b21b6;margin-top:3px;">공간 심리학</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('native')" data-sys="native" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fcd34d;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:2px 6px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap;">✦ 추천</div>
+                <div style="font-size:24px;line-height:1.2;margin-top:4px;">🪶</div>
+                <div style="font-size:11px;font-weight:800;color:#92400e;margin-top:3px;">네이티브</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('vastu')" data-sys="vastu" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fdba74;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="font-size:24px;line-height:1.2;">🕌</div>
+                <div style="font-size:11px;font-weight:800;color:#9a3412;margin-top:3px;">바스투</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('kanso')" data-sys="kanso" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="font-size:24px;line-height:1.2;">⛩️</div>
+                <div style="font-size:11px;font-weight:800;color:#334155;margin-top:3px;">칸소</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('yangzhai')" data-sys="yangzhai" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="font-size:24px;line-height:1.2;">🏡</div>
+                <div style="font-size:11px;font-weight:800;color:#166534;margin-top:3px;">양택가상학</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('terroir')" data-sys="terroir" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#ecfeff,#cffafe);border:1.5px solid #67e8f9;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="font-size:24px;line-height:1.2;">🌿</div>
+                <div style="font-size:11px;font-weight:800;color:#155e75;margin-top:3px;">테루아</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('realtime')" data-sys="realtime" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#1e293b,#312e81);border:1.5px solid #3b82f6;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:2px 6px;background:#fbbf24;color:#1a1a2e;border-radius:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap;">⚡ LIVE</div>
+                <div style="font-size:24px;line-height:1.2;margin-top:4px;">🛰️</div>
+                <div style="font-size:11px;font-weight:800;color:#dbeafe;margin-top:3px;">실시간<br>데이터</div>
+              </div>
+              <div onclick="tvyCamSelectSystem('rppg')" data-sys="rppg" class="tvy-cam-sys-card" style="position:relative;text-align:center;padding:10px 4px;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #f87171;border-radius:10px;cursor:pointer;transition:all .2s;">
+                <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:2px 6px;background:#ef4444;color:#fff;border-radius:8px;font-weight:800;letter-spacing:.05em;white-space:nowrap;">⚠ 미연동</div>
+                <div style="font-size:24px;line-height:1.2;margin-top:4px;">💓</div>
+                <div style="font-size:11px;font-weight:800;color:#991b1b;margin-top:3px;">rPPG 생체</div>
+              </div>
+            </div>
+            <div id="tvyCamSelectedInfo" style="display:none;margin-top:10px;padding:10px;background:linear-gradient(135deg,#f0fdfa,#ecfdf5);border:1px solid #86efac;border-radius:10px;font-size:11px;color:#15803d;"></div>
           </div>
           
           <!-- ★ 자체 카메라 + GPS + 나침반 + 촬영 + 분석 (외부 page-gmd 의존 X) -->
           
           <!-- GPS + 나침반 상태 -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-            <button onclick="tvyCamGetGPS()" id="tvyCamGpsBtn" style="padding:10px;background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:10px;color:#0891b2;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <button onclick="tvyCamGetGPS()" id="tvyCamGpsBtn" disabled style="padding:10px;background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:10px;color:#0891b2;font-size:11px;font-weight:800;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;opacity:0.4;filter:grayscale(.6);">
               <span style="font-size:14px;">📍</span><span id="tvyCamGpsTxt">GPS 받기</span>
             </button>
-            <button onclick="tvyCamRequestOrient()" id="tvyCamOrientBtn" style="padding:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:10px;color:#92400e;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <button onclick="tvyCamRequestOrient()" id="tvyCamOrientBtn" disabled style="padding:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:10px;color:#92400e;font-size:11px;font-weight:800;cursor:not-allowed;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;opacity:0.4;filter:grayscale(.6);">
               <span style="font-size:14px;">🧭</span><span id="tvyCamOrientTxt">나침반 시작</span>
             </button>
           </div>
@@ -15941,7 +15985,7 @@ var fcSystems = {
           
           <!-- 시작/촬영/재시작 버튼 -->
           <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <button onclick="tvyCamStart()" id="tvyCamStartBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,#1a1a2e,#3730a3);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;">📷 카메라 시작</button>
+            <button onclick="tvyCamStart()" id="tvyCamStartBtn" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#1a1a2e,#3730a3);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:not-allowed;font-family:inherit;letter-spacing:.03em;opacity:0.4;filter:grayscale(.6);">📷 카메라 시작</button>
             <button onclick="tvyCamShoot()" id="tvyCamShootBtn" disabled style="flex:1;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;opacity:0.4;">📸 지금 촬영</button>
           </div>
           <!-- ★ 프라이버시 보호: 카메라 종료 버튼 (카메라 ON 일 때만 보임) -->
@@ -18149,7 +18193,89 @@ window.TVY_CAM = {
   autoTimer: null,      // ★ 풍수카메라 이식: 정렬 후 1.2초 자동촬영 setTimeout 참조
   gpsLat: null, gpsLng: null,
   shotCount: 0,
-  shots: {} // {N:{deg:0, ts:...}, E:..., ...}
+  shots: {}, // {N:{deg:0, ts:...}, E:..., ...}
+  selectedSystem: null  // ★ 핀셋 ⑭ — 1단계 시스템 선택 상태 (9개 중 1)
+};
+
+// ═══════════════════════════════════════════════════
+// ★ 핀셋 ⑮ — 9개 공간 분석 시스템 정보 (점수체계 v2.0 표준 준수)
+//   • 베이스(T1) 절대 떨어지지 않음 / T2·T3 가산만 누적
+//   • 최대 95 캡 (100은 거짓)
+//   • 종합 분석(all) 옵션 없음 — 단일 시스템 1개만 분석
+// ═══════════════════════════════════════════════════
+window.TVY_CAM_SYS_INFO = {
+  fengshui: {
+    n:'풍수지리', e:'🏯', stars:'★★★★★', sub:'배산임수·기·용맥',
+    origin:'🇨🇳 중국·한국 4,000년',
+    base:60, t2:20, t3:15,  // 60~95
+    badge:'추천', badgeColor:'#10b981', badgeBg:'rgba(16,185,129,.15)',
+    cardBg:'linear-gradient(135deg,#fef2f2,#fee2e2)', cardBorder:'#fca5a5',
+    prompt:'당신은 풍수지리 전문가입니다. 사용자의 GPS 좌표·10방위 촬영 데이터를 기반으로 이 여행지 공간을 풍수 관점에서 분석해주세요. 반드시 [풍수 점수: XX/100] 으로 시작 (60~95 사이).\n\n🏯 이게 뭔가요?\n(풍수지리가 무엇이고 어떻게 적용되는지 초등학생도 이해할 수준 2~3문장)\n\n📊 이 위치 풍수 분석\n1. 기(氣)의 흐름과 배산임수\n2. 24방위 평가 (가장 좋은 방향)\n3. 살기(煞氣) 점검\n\n🏠 이 위치 숙소·머무르기 적합도\n(이 여행자가 이 위치에서 머무르기 좋은지 한 문단 솔직하게)\n\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  spacepsych: {
+    n:'공간 심리학', e:'🧠', stars:'★★★★★', sub:'환경·뇌과학·심리학',
+    origin:'🌍 서양 현대 과학',
+    base:65, t2:18, t3:12,  // 65~95
+    badge:'추천', badgeColor:'#10b981', badgeBg:'rgba(16,185,129,.15)',
+    cardBg:'linear-gradient(135deg,#faf5ff,#ede9fe)', cardBorder:'#c4b5fd',
+    prompt:'당신은 환경 심리학·공간 인지·뇌과학 전문가입니다. 사용자의 GPS·10방위 사진 시드를 기반으로 이 공간이 사용자 심리·뇌·생산성에 미치는 영향을 분석해주세요. 반드시 [공간 심리 점수: XX/100] 으로 시작 (65~95).\n\n🧠 이게 뭔가요?\n(공간 심리학 2~3문장 설명)\n\n📊 이 공간의 심리적 분석\n1. 색채·조명·여백 추정 영향\n2. 세로토닌·코르티솔 영향 가능성\n3. 집중력·휴식·창의성 추정 환경\n\n🏠 이 위치 머무르기 적합도\n\n✅ 이 공간에서 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  native: {
+    n:'네이티브', e:'🪶', stars:'★★★★★', sub:'4방위·메디슨휠',
+    origin:'🌎 북미·아프리카 원주민',
+    base:60, t2:18, t3:12,  // 60~90
+    badge:'추천', badgeColor:'#10b981', badgeBg:'rgba(16,185,129,.15)',
+    cardBg:'linear-gradient(135deg,#fffbeb,#fef3c7)', cardBorder:'#fcd34d',
+    prompt:'당신은 북미·전세계 원주민 4방위 공간 철학 전문가입니다(메디슨휠·동(탄생)·남(성장)·서(성찰)·북(지혜)). GPS·10방위 데이터로 이 위치를 원주민 4방위 관점에서 분석해주세요. 반드시 [네이티브 점수: XX/100] 으로 시작 (60~90).\n\n🪶 이게 뭔가요?\n📊 4방위 분석\n🏠 머무르기 적합도\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  vastu: {
+    n:'바스투', e:'🕌', stars:'★★★★☆', sub:'5대원소·8방위',
+    origin:'🇮🇳 인도 5,000년',
+    base:60, t2:18, t3:12,  // 60~90
+    badge:null,
+    cardBg:'linear-gradient(135deg,#fff7ed,#ffedd5)', cardBorder:'#fdba74',
+    prompt:'당신은 인도 바스투 샤스트라 전문가입니다(5대 원소·8방위). GPS·10방위 데이터로 이 위치 바스투 분석. 반드시 [바스투 점수: XX/100] 으로 시작 (60~90).\n\n🕌 이게 뭔가요?\n📊 5대 원소·8방위 분석\n🏠 머무르기 적합도\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  kanso: {
+    n:'칸소', e:'⛩️', stars:'★★★★☆', sub:'여백·간소·Ki',
+    origin:'🇯🇵 일본 선(禪) 불교',
+    base:60, t2:15, t3:12,  // 60~87
+    badge:null,
+    cardBg:'linear-gradient(135deg,#f8fafc,#f1f5f9)', cardBorder:'#cbd5e1',
+    prompt:'당신은 일본 칸소(簡素) 공간 철학 전문가입니다(선·여백·Ma·미니멀). 이 위치 칸소 관점 분석. 반드시 [칸소 점수: XX/100] 으로 시작 (60~87).\n\n⛩️ 이게 뭔가요?\n📊 여백·Ki 흐름 분석\n🏠 머무르기 적합도\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  yangzhai: {
+    n:'양택가상학', e:'🏡', stars:'★★★★☆', sub:'대문·안방·부엌',
+    origin:'🏯 한·중 주거 풍수',
+    base:60, t2:18, t3:12,  // 60~90
+    badge:null,
+    cardBg:'linear-gradient(135deg,#f0fdf4,#dcfce7)', cardBorder:'#86efac',
+    prompt:'당신은 양택가상학 전문가입니다(대문·안방·부엌 삼요소·동사택/서사택). 이 위치 양택 분석. 반드시 [양택 점수: XX/100] 으로 시작 (60~90).\n\n🏡 이게 뭔가요?\n📊 삼요소·동기감응 분석\n🏠 머무르기 적합도\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  terroir: {
+    n:'테루아', e:'🌿', stars:'★★★★☆', sub:'땅·토양·풍토',
+    origin:'🇫🇷 프랑스·유럽',
+    base:60, t2:15, t3:10,  // 60~85
+    badge:null,
+    cardBg:'linear-gradient(135deg,#ecfeff,#cffafe)', cardBorder:'#67e8f9',
+    prompt:'당신은 테루아(Terroir) 전문가입니다(토양·기후·지형·일조). 이 위치 테루아 분석. 반드시 [테루아 점수: XX/100] 으로 시작 (60~85).\n\n🌿 이게 뭔가요?\n📊 토양·풍토·일조 분석\n🏠 머무르기 적합도\n✅ 권하는 활동 / ⚠️ 피하면 좋은 것'
+  },
+  realtime: {
+    n:'실시간 데이터', e:'🛰️', stars:'★★★★☆', sub:'NASA·기상·지자기',
+    origin:'🛰️ NASA JPL·실시간',
+    base:65, t2:25, t3:5,  // 65~95 — T2 최대 (외부 검증 가능 데이터)
+    badge:'LIVE', badgeColor:'#fbbf24', badgeBg:'rgba(251,191,36,.18)',
+    cardBg:'linear-gradient(135deg,#1e293b,#312e81)', cardBorder:'#3b82f6', textColor:'#fff',
+    prompt:'당신은 NASA 천체·기상·지자기 통합 분석 전문가입니다. 현재 NASA JPL 9행성·달위상·Kp 지자기·기압 데이터를 기반으로 이 위치의 실시간 우주 에너지를 분석해주세요. 반드시 [실시간 점수: XX/100] 으로 시작 (65~95).\n\n🛰️ 이게 뭔가요?\n(실시간 NASA 데이터 통합 분석이 무엇인지 2~3문장)\n\n📊 이 위치 실시간 분석\n1. 현재 천체 위치 → 이 좌표 천체 에너지\n2. Kp 지자기 → 신경계·수면 영향\n3. 기압·날씨 → 컨디션 영향\n\n🏠 지금 이 시간 이 위치 머무르기 적합도\n\n✅ 지금 좋은 활동 / ⚠️ 피하면 좋은 것'
+  },
+  rppg: {
+    n:'rPPG 생체', e:'💓', stars:'★★★★★', sub:'BPM·HRV·FCI 융합',
+    origin:'🧬 PCT 특허 알고리즘',
+    base:55, t2:8, t3:32,  // 55~95 — T3 최대 (rPPG 측정값 의존, 측정 시에만 만점)
+    badge:'미연동', badgeColor:'#ef4444', badgeBg:'rgba(239,68,68,.15)',
+    cardBg:'linear-gradient(135deg,#fef2f2,#fee2e2)', cardBorder:'#f87171',
+    prompt:'당신은 rPPG 생체 데이터 융합 공간 분석 전문가입니다(CHROM 알고리즘·BPM·HRV·FCI). 사용자 rPPG 측정값과 이 위치 공간 에너지를 융합하여 분석해주세요. 만약 rPPG 데이터가 없으면 베이스 점수만 산출. 반드시 [rPPG 점수: XX/100] 으로 시작 (55~95, 측정값 없으면 55~63 사이).\n\n💓 이게 뭔가요?\n(rPPG 생체스캔이 무엇이고 어떻게 공간 분석에 쓰이는지)\n\n📊 이 위치 × 내 생체 융합 분석\n1. BPM/HRV → 자율신경 컨디션\n2. 이 위치 에너지가 내 신체에 주는 영향\n3. 머무를 때 신체 반응 예측\n\n🏠 이 숙소·이 위치 머무르기 적합도 (생체 관점)\n\n✅ 이 위치에서 좋은 활동 / ⚠️ 신체 주의할 점'
+  }
 };
 
 // 도(0~360) → 8방위 변환
@@ -18172,6 +18298,11 @@ var TVY_DIR_TARGET_DEG = {N:0, NE:45, E:90, SE:135, S:180, SW:225, W:270, NW:315
 
 // GPS 받기
 window.tvyCamGetGPS = function(){
+  // ★ 핀셋 ⑱ — prereq: 시스템 미선택 차단
+  if(!window.TVY_CAM.selectedSystem){
+    alert('먼저 1단계에서 분석할 공간 시스템을 선택해주세요 (9개 카드 중 1개)');
+    return;
+  }
   var btn = document.getElementById('tvyCamGpsTxt');
   if(!navigator.geolocation){
     if(btn) btn.textContent = '⚠️ 미지원';
@@ -18182,6 +18313,8 @@ window.tvyCamGetGPS = function(){
     window.TVY_CAM.gpsLat = pos.coords.latitude;
     window.TVY_CAM.gpsLng = pos.coords.longitude;
     if(btn) btn.textContent = '✅ ' + pos.coords.latitude.toFixed(2) + '°, ' + pos.coords.longitude.toFixed(2) + '°';
+    // ★ 다음 단계(나침반) 활성화
+    if(typeof window.tvyCamUpdateBtnStates === 'function') window.tvyCamUpdateBtnStates();
   }, function(){
     if(btn) btn.textContent = '⚠️ 권한 필요';
   }, {enableHighAccuracy:true, timeout:10000});
@@ -18189,12 +18322,22 @@ window.tvyCamGetGPS = function(){
 
 // 나침반 권한 + 시작 (iOS 13+ 대응)
 window.tvyCamRequestOrient = function(){
+  // ★ 핀셋 ⑱ — prereq: 시스템·GPS 모두 필요
+  if(!window.TVY_CAM.selectedSystem){
+    alert('먼저 1단계 시스템을 선택해주세요');
+    return;
+  }
+  if(window.TVY_CAM.gpsLat == null){
+    alert('먼저 2단계 GPS를 받아주세요');
+    return;
+  }
   var btnTxt = document.getElementById('tvyCamOrientTxt');
   if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
     DeviceOrientationEvent.requestPermission().then(function(p){
       if(p === 'granted'){
         window.tvyCamStartOrient();
         if(btnTxt) btnTxt.textContent = '✅ 나침반 ON';
+        if(typeof window.tvyCamUpdateBtnStates === 'function') window.tvyCamUpdateBtnStates();
       } else {
         if(btnTxt) btnTxt.textContent = '⚠️ 권한 거부';
       }
@@ -18204,6 +18347,7 @@ window.tvyCamRequestOrient = function(){
   } else {
     window.tvyCamStartOrient();
     if(btnTxt) btnTxt.textContent = '✅ 나침반 ON';
+    if(typeof window.tvyCamUpdateBtnStates === 'function') window.tvyCamUpdateBtnStates();
   }
 };
 
@@ -18381,6 +18525,19 @@ window.tvyCamUpdateGuide = function(deg){
 
 // 카메라 시작
 window.tvyCamStart = function(){
+  // ★ 핀셋 ⑱ — prereq: 시스템·GPS·나침반 모두 필요
+  if(!window.TVY_CAM.selectedSystem){
+    alert('먼저 1단계 시스템을 선택해주세요');
+    return;
+  }
+  if(window.TVY_CAM.gpsLat == null){
+    alert('먼저 2단계 GPS를 받아주세요');
+    return;
+  }
+  if(!window.TVY_CAM.orientHandler){
+    alert('먼저 3단계 나침반을 시작해주세요');
+    return;
+  }
   var box = document.getElementById('tvyCamVideoBox');
   var prog = document.getElementById('tvyCamProgress');
   var startBtn = document.getElementById('tvyCamStartBtn');
@@ -18502,10 +18659,96 @@ window.tvyCamStop = function(){
   if(stopBtn) stopBtn.style.display = 'none';                                     // 종료 버튼 숨김
 };
 
+// ═══════════════════════════════════════════════════
+// ★ 핀셋 ⑰ — 시스템 선택 + 버튼 상태 게이팅 (엄격 A: 순서 강제)
+//   1단계 시스템 선택 → 2단계 GPS 활성 → 3단계 나침반 활성 → 4단계 카메라 활성
+// ═══════════════════════════════════════════════════
+window.tvyCamSelectSystem = function(key){
+  var info = window.TVY_CAM_SYS_INFO[key];
+  if(!info) return;
+  // 카메라 켜진 상태에서 시스템 변경 시 — 카메라 종료 (재시작 유도)
+  if(window.TVY_CAM.stream && window.TVY_CAM.selectedSystem !== key){
+    if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
+  }
+  window.TVY_CAM.selectedSystem = key;
+  // 카드 시각 표시
+  var cards = document.querySelectorAll('.tvy-cam-sys-card');
+  cards.forEach(function(c){
+    var ck = c.getAttribute('data-sys');
+    if(ck === key){
+      c.style.boxShadow = '0 0 0 3px rgba(16,185,129,.5), 0 4px 12px rgba(16,185,129,.25)';
+      c.style.transform = 'translateY(-2px)';
+    } else {
+      c.style.boxShadow = '';
+      c.style.transform = '';
+      c.style.opacity = '0.55';
+    }
+  });
+  // 선택 정보 박스
+  var infoBox = document.getElementById('tvyCamSelectedInfo');
+  if(infoBox){
+    var rangeMin = info.base;
+    var rangeMax = Math.min(95, info.base + info.t2 + info.t3);
+    infoBox.style.display = 'block';
+    infoBox.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+      +'<span style="font-size:18px;">'+info.e+'</span>'
+      +'<div><div style="font-weight:900;color:#15803d;">✓ '+info.n+' 선택됨</div>'
+      +'<div style="font-size:10px;color:#666;font-weight:600;">'+info.origin+' · '+info.sub+'</div></div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:#666;line-height:1.5;">📊 점수 범위: <b style="color:#15803d;">'+rangeMin+'~'+rangeMax+'</b> (베이스 '+info.base+' + T2 가산 0~'+info.t2+' + T3 가산 0~'+info.t3+')</div>'
+      +'<div style="margin-top:6px;font-size:10px;color:#92400e;background:#fef3c7;padding:6px 8px;border-radius:6px;">▶ <b>다음 단계:</b> 📍 GPS 받기 (이 위치 좌표)</div>';
+  }
+  // 다음 단계 버튼 상태 갱신
+  if(typeof window.tvyCamUpdateBtnStates === 'function') window.tvyCamUpdateBtnStates();
+};
+
+// ★ 버튼 상태 게이팅 헬퍼 — 시스템선택→GPS→나침반→카메라 순서대로 활성화
+window.tvyCamUpdateBtnStates = function(){
+  var sys = window.TVY_CAM.selectedSystem;
+  var gps = window.TVY_CAM.gpsLat != null;
+  var orient = !!window.TVY_CAM.orientHandler;
+  function setBtn(id, enabled){
+    var b = document.getElementById(id);
+    if(!b) return;
+    b.disabled = !enabled;
+    b.style.opacity = enabled ? '1' : '0.4';
+    b.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    b.style.filter = enabled ? '' : 'grayscale(.6)';
+  }
+  setBtn('tvyCamGpsBtn', !!sys);
+  setBtn('tvyCamOrientBtn', !!sys && gps);
+  setBtn('tvyCamStartBtn', !!sys && gps && orient);
+};
+
 // 처음부터 다시
 window.tvyCamReset = function(){
   // ★ 프라이버시: 카메라부터 안전 종료 (스트림·LED 즉시 꺼짐)
   if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
+  // ★ 핀셋 ⑳ — 시스템 선택·GPS·나침반 상태 초기화 + 카드 시각 복원
+  window.TVY_CAM.selectedSystem = null;
+  window.TVY_CAM.gpsLat = null;
+  window.TVY_CAM.gpsLng = null;
+  // 나침반 핸들러도 분리 (재선택 시 재바인딩하도록)
+  if(window.TVY_CAM.orientHandler){
+    try { window.removeEventListener('deviceorientation', window.TVY_CAM.orientHandler, true); } catch(e){}
+    window.TVY_CAM.orientHandler = null;
+  }
+  // 카드 시각 복원
+  document.querySelectorAll('.tvy-cam-sys-card').forEach(function(c){
+    c.style.boxShadow = '';
+    c.style.transform = '';
+    c.style.opacity = '';
+  });
+  var infoBox = document.getElementById('tvyCamSelectedInfo');
+  if(infoBox){ infoBox.style.display = 'none'; infoBox.innerHTML = ''; }
+  // GPS·나침반 버튼 텍스트 복원
+  var gpsTxt = document.getElementById('tvyCamGpsTxt');
+  var orientTxt = document.getElementById('tvyCamOrientTxt');
+  if(gpsTxt) gpsTxt.textContent = 'GPS 받기';
+  if(orientTxt) orientTxt.textContent = '나침반 시작';
+  // 버튼 비활성 상태로 복원
+  if(typeof window.tvyCamUpdateBtnStates === 'function') window.tvyCamUpdateBtnStates();
+  // 기존 shots 초기화
   window.TVY_CAM.shots = {};
   window.TVY_CAM.shotCount = 0;
   document.querySelectorAll('.tvy-cam-dot').forEach(function(d){
@@ -18528,95 +18771,150 @@ window.tvyCamReset = function(){
 };
 
 // 7대 시스템 종합 분석 (10방위 촬영 완료 후)
+// ═══════════════════════════════════════════════════
+// ★ 핀셋 ⑲ — 단일 시스템 분석 (선택한 시스템 1개로 AI + 점수 + 숙소 적합도)
+//   • 점수체계 v2.0 표준: base + (시드 % (t2+t3)) → 베이스 절대 안 떨어짐, 최대 95 캡
+//   • 숙소 적합도: 룰 기반 (점수→등급) + AI 자연어 분석 둘 다 (옵션 C)
+// ═══════════════════════════════════════════════════
 window.tvyCamRunFullAnalysis = function(){
   var box = document.getElementById('tvyCamResult');
   if(!box) return;
-  
-  // 시드: 10방위 deg 합 + 사용자 정보
-  var SYS = window.TVY_SYSTEMS;
+
+  var sysKey = window.TVY_CAM.selectedSystem;
+  var info = window.TVY_CAM_SYS_INFO[sysKey];
+  if(!info){
+    box.innerHTML = '<div style="padding:14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:12px;">⚠️ 시스템이 선택되지 않았습니다. 처음부터 다시 시작해주세요.</div>';
+    box.style.display = 'block';
+    return;
+  }
+
+  // 시드 (결정론 — 같은 입력 = 같은 점수, PDF v2.0 시드 함수 정신 준수)
   var profile = window.calcResult || {};
   var userOh = profile.oh || '목';
   var totalDeg = 0;
   Object.keys(window.TVY_CAM.shots).forEach(function(k){
     if(window.TVY_CAM.shots[k].deg) totalDeg += window.TVY_CAM.shots[k].deg;
   });
-  var seed = Math.abs(totalDeg + userOh.charCodeAt(0));
-  
-  // 7개 시스템별 점수 (헌법 v2.0 시드 기반, Math.random X)
-  var sysKeys = Object.keys(SYS);
-  var scores = {};
-  var totalSum = 0;
-  sysKeys.forEach(function(k, i){
-    // ★ 헌법 v2.0 적용 — 시스템별 점수 (기준 77 + 시드 ±15)
-    var _GC = window.CGOFULI_GLOBAL_CONST || {};
-    var _ref = _GC.reference || 77;
-    var s = ((seed + i*7 + k.charCodeAt(0)) % 23) + (_ref - 7);  // 70~92 → 헌법 70~92
-    scores[k] = s;
-    totalSum += s;
-  });
-  var avg = Math.round(totalSum / sysKeys.length);
-  
-  // 베스트 방위 추정 (deg 평균이 가장 균형 잡힌 곳)
-  var bestDir = TVY_DIR_ORDER[seed % 10];
-  
-  // 등급
-  var grade, gradeColor;
-  if(avg >= 85){grade='🌟 최고 명당'; gradeColor='#10b981';}
-  else if(avg >= 78){grade='✨ 우수 공간'; gradeColor='#0891b2';}
-  else if(avg >= 72){grade='📊 양호 공간'; gradeColor='#d97706';}
-  else {grade='⚠️ 보완 필요'; gradeColor='#dc2626';}
-  
-  var html = ''
-    + '<div style="margin-top:14px;padding:14px;background:linear-gradient(135deg,#f0fdfa,#ecfdf5);border:1px solid #86efac;border-radius:12px;">'
-      + '<div style="text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px dashed #86efac;">'
-        + '<div style="font-size:10px;color:#15803d;letter-spacing:.08em;margin-bottom:4px;">10방위 360° 종합 분석</div>'
-        + '<div style="font-family:Orbitron,sans-serif;font-size:46px;font-weight:900;color:'+gradeColor+';line-height:1;">'+avg+'</div>'
-        + '<div style="font-size:13px;color:'+gradeColor+';font-weight:800;margin-top:4px;">'+grade+'</div>'
-      + '</div>'
-      
-      + '<div style="margin-bottom:12px;">'
-        + '<div style="font-size:11px;font-weight:800;color:#444;margin-bottom:8px;">🌍 7대 공간 시스템 점수 <span style="font-size:9px;color:#999;font-weight:600;">(클릭 → 상세)</span></div>'
-        + sysKeys.map(function(k){
-          var s = SYS[k];
-          var sc = scores[k];
-          return '<div onclick="tvyCamShowSysDetail(\''+k+'\','+sc+')" style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:6px;cursor:pointer;padding:6px 8px;border-radius:8px;transition:all .2s;" onmouseover="this.style.background=\''+s.c+'12\'" onmouseout="this.style.background=\'transparent\'">'
-            + '<span style="width:18px;text-align:center;">'+s.e+'</span>'
-            + '<span style="width:80px;color:#666;font-weight:700;">'+s.n+'</span>'
-            + '<div style="flex:1;height:6px;background:#fff;border-radius:3px;overflow:hidden;border:1px solid #d1fae5;">'
-              + '<div style="width:'+sc+'%;height:100%;background:'+s.c+';"></div>'
-            + '</div>'
-            + '<span style="font-family:Orbitron,sans-serif;font-weight:800;color:'+s.c+';width:24px;text-align:right;">'+sc+'</span>'
-            + '<span style="color:#bbb;font-size:14px;">›</span>'
-          + '</div>';
-        }).join('')
-      + '</div>'
-      
-      + '<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;">'
-        + '<div style="font-size:11px;font-weight:800;color:#444;margin-bottom:6px;">🧭 당신에게 맞는 베스트 방위</div>'
-        + '<div style="font-size:24px;text-align:center;margin:8px 0;">'+TVY_DIR_ARROW[bestDir]+'</div>'
-        + '<div style="text-align:center;font-size:14px;font-weight:900;color:#1a1a2e;">'+TVY_DIR_LABEL[bestDir]+'</div>'
-        + '<div style="font-size:11px;color:#666;margin-top:8px;line-height:1.6;text-align:center;">'
-          + '이 방위에 위치한 것으로 보이는 <b style="color:#10b981;">숙소·식당·관광지</b>를 우선 추천드릴 만합니다 '
-          + '사주 오행 <b>'+userOh+'</b>과 가장 조화로운 방향으로 보입니다'
+  var gpsLat = window.TVY_CAM.gpsLat || 0;
+  var gpsLng = window.TVY_CAM.gpsLng || 0;
+  var seed = Math.abs(
+    Math.round(totalDeg) +
+    Math.round(gpsLat * 1000) +
+    Math.round(gpsLng * 1000) +
+    userOh.charCodeAt(0) +
+    sysKey.charCodeAt(0) * 7
+  );
+
+  // 점수 산출 — 베이스(T1) + T2 가산 + T3 가산 (PDF v2.0 정직 원칙)
+  var addRange = info.t2 + info.t3;
+  var addition = seed % (addRange + 1);  // 0 ~ addRange
+  var score = info.base + addition;
+  if(score > 95) score = 95;  // 최대 95 캡 (100은 거짓 — PDF v2.0)
+  if(score < info.base) score = info.base;  // 안전장치 — 베이스 안 떨어짐
+
+  // 숙소 적합도 등급 (룰 기반 — 옵션 C 일부)
+  var fit, fitColor, fitDesc, fitStars;
+  if(score >= 88){ fit='🌟 최고 명당'; fitColor='#10b981'; fitStars='★★★★★'; fitDesc='이 위치에서 머무르기 매우 좋습니다 — 권장'; }
+  else if(score >= 80){ fit='✨ 머무르기 좋음'; fitColor='#0891b2'; fitStars='★★★★☆'; fitDesc='이 위치 숙소·머무름 좋은 편입니다'; }
+  else if(score >= 72){ fit='📊 양호'; fitColor='#d97706'; fitStars='★★★☆☆'; fitDesc='보통 수준 — 머무를 만 합니다'; }
+  else if(score >= 65){ fit='⚠️ 보통 이하'; fitColor='#dc2626'; fitStars='★★☆☆☆'; fitDesc='이 위치에서 머무르기는 다른 곳도 검토해보시는 것이 좋습니다'; }
+  else { fit='⚠️ 보완 필요'; fitColor='#dc2626'; fitStars='★☆☆☆☆'; fitDesc='이 시스템 관점으로는 다른 위치 검토 권장'; }
+
+  // 1단계 렌더링 (즉시) — 점수 + 시스템 + 숙소 적합도
+  var darkText = info.textColor === '#fff';
+  var bgFill = info.cardBg || 'linear-gradient(135deg,#f0fdfa,#ecfdf5)';
+  var headerHTML = ''
+    + '<div style="margin-top:14px;padding:16px;background:'+bgFill+';border:1.5px solid '+(info.cardBorder||'#86efac')+';border-radius:14px;'+(darkText?'color:#fff;':'')+'">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed '+(darkText?'rgba(255,255,255,.25)':'#86efac')+';">'
+        + '<div style="font-size:32px;">'+info.e+'</div>'
+        + '<div style="flex:1;">'
+          + '<div style="font-size:14px;font-weight:900;'+(darkText?'color:#fff;':'color:#1a1a2e;')+'">'+info.n+'</div>'
+          + '<div style="font-size:10px;'+(darkText?'color:rgba(255,255,255,.7);':'color:#666;')+'margin-top:2px;">'+info.origin+' · '+info.sub+'</div>'
+        + '</div>'
+        + '<div style="text-align:right;">'
+          + '<div style="font-size:13px;color:#fbbf24;letter-spacing:.05em;">'+info.stars+'</div>'
+          + '<div style="font-size:9px;'+(darkText?'color:rgba(255,255,255,.6);':'color:#888;')+'margin-top:2px;">'+(info.badge||'')+'</div>'
         + '</div>'
       + '</div>'
-      
-      + '<div style="background:#fff;border-radius:10px;padding:12px;">'
-        + '<div style="font-size:11px;font-weight:800;color:#444;margin-bottom:6px;">📍 GPS 좌표</div>'
-        + '<div style="font-size:11px;color:#666;font-family:monospace;">'
-          + (window.TVY_CAM.gpsLat ? '위도 ' + window.TVY_CAM.gpsLat.toFixed(4) + '° / 경도 ' + window.TVY_CAM.gpsLng.toFixed(4) + '°' : 'GPS 정보 없음')
+      + '<div style="text-align:center;margin-bottom:14px;">'
+        + '<div style="font-size:10px;'+(darkText?'color:rgba(255,255,255,.7);':'color:#15803d;')+'letter-spacing:.08em;margin-bottom:4px;">공간 에너지 점수</div>'
+        + '<div style="font-family:Orbitron,sans-serif;font-size:54px;font-weight:900;color:'+fitColor+';line-height:1;">'+score+'</div>'
+        + '<div style="font-size:11px;'+(darkText?'color:rgba(255,255,255,.85);':'color:#666;')+'margin-top:6px;">베이스 '+info.base+' + 가산 '+addition+' / 최대 '+(info.base+info.t2+info.t3)+'</div>'
+      + '</div>'
+      // ★ 숙소 적합도 배지 (룰 기반)
+      + '<div style="background:'+(darkText?'rgba(255,255,255,.08)':'#fff')+';border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid '+fitColor+';">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+          + '<div style="font-size:11px;font-weight:800;'+(darkText?'color:rgba(255,255,255,.9);':'color:#444;')+'">🏨 숙소·머무르기 적합도</div>'
+          + '<div style="font-size:11px;color:'+fitColor+';font-weight:900;">'+fitStars+'</div>'
         + '</div>'
+        + '<div style="font-size:14px;font-weight:900;color:'+fitColor+';margin-bottom:4px;">'+fit+'</div>'
+        + '<div style="font-size:11px;'+(darkText?'color:rgba(255,255,255,.75);':'color:#666;')+'line-height:1.5;">'+fitDesc+'</div>'
+      + '</div>'
+      // 분석 결과 영역 (AI 응답이 들어갈 자리)
+      + '<div id="tvyCamAIReport" style="background:'+(darkText?'rgba(255,255,255,.08)':'#fff')+';border-radius:10px;padding:12px;margin-bottom:10px;'+(darkText?'color:rgba(255,255,255,.9);':'')+'">'
+        + '<div style="font-size:11px;font-weight:800;'+(darkText?'color:rgba(255,255,255,.9);':'color:#444;')+'margin-bottom:8px;">📊 '+info.n+' 분석 보고서</div>'
+        + '<div style="text-align:center;padding:14px 0;font-size:11px;'+(darkText?'color:rgba(255,255,255,.7);':'color:#666;')+'"><div style="font-size:24px;margin-bottom:6px;">⏳</div>AI 분석 중... (10~20초)</div>'
+      + '</div>'
+      // GPS
+      + '<div style="background:'+(darkText?'rgba(255,255,255,.08)':'#fff')+';border-radius:10px;padding:10px;font-size:10px;'+(darkText?'color:rgba(255,255,255,.7);':'color:#666;')+'font-family:monospace;">'
+        + '📍 위도 '+gpsLat.toFixed(4)+'° / 경도 '+gpsLng.toFixed(4)+'°'
       + '</div>'
     + '</div>';
-  
-  box.innerHTML = html;
+  box.innerHTML = headerHTML;
   box.style.display = 'block';
-  
-  // 카메라 정지 (배터리 절약 + 프라이버시 보호) — 중앙 함수 사용
-  if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
-  
-  // 부드러운 스크롤
   setTimeout(function(){box.scrollIntoView({behavior:'smooth', block:'start'});}, 100);
+
+  // 카메라 정지 (프라이버시)
+  if(typeof window.tvyCamStop === 'function') window.tvyCamStop();
+
+  // 2단계 렌더링 — AI 호출 (텍스트 전용, 빠른 모델)
+  var contextStr = ''
+    + '## 분석 컨텍스트\n'
+    + '- GPS 위도: ' + gpsLat.toFixed(4) + '° / 경도: ' + gpsLng.toFixed(4) + '°\n'
+    + '- 사용자 사주 오행: ' + userOh + '\n'
+    + '- 10방위 평균 방위각: ' + Math.round(totalDeg / 10) + '°\n'
+    + '- 결정론적 점수(시스템): ' + score + '/95\n'
+    + '\n위 컨텍스트를 바탕으로, 한국어로 자세하지만 친근하게 분석해주세요. 마크다운 #### 헤더 사용. 길이는 600~900자.';
+
+  var fullPrompt = info.prompt + '\n\n' + contextStr;
+
+  fetch('/api/groq', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'llama-3.1-8b-instant',
+      messages:[{role:'user', content: fullPrompt}],
+      max_tokens: 900,
+      temperature: 0.7
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var aiText = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    if(!aiText){
+      aiText = '⚠️ AI 응답 비어있음. 잠시 후 다시 시도해주세요.';
+    }
+    var rep = document.getElementById('tvyCamAIReport');
+    if(rep){
+      // 마크다운 간단 변환
+      var html = aiText
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/^#### (.*$)/gm,'<div style="font-size:12px;font-weight:900;margin:10px 0 4px;'+(darkText?'color:#fbbf24;':'color:#15803d;')+'">$1</div>')
+        .replace(/^### (.*$)/gm,'<div style="font-size:13px;font-weight:900;margin:12px 0 6px;'+(darkText?'color:#fbbf24;':'color:#0891b2;')+'">$1</div>')
+        .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+        .replace(/\n/g,'<br>');
+      rep.innerHTML = '<div style="font-size:11px;font-weight:800;'+(darkText?'color:rgba(255,255,255,.9);':'color:#444;')+'margin-bottom:8px;">📊 '+info.n+' 분석 보고서</div>'
+        + '<div style="font-size:11px;line-height:1.7;'+(darkText?'color:rgba(255,255,255,.85);':'color:#444;')+';">'+html+'</div>'
+        + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed '+(darkText?'rgba(255,255,255,.2)':'#e5e7eb')+';font-size:9px;'+(darkText?'color:rgba(255,255,255,.5);':'color:#999;')+'line-height:1.5;">⚠️ '+info.n+'은 가능성의 측정이지 운명의 결정이 아닙니다 (관상불여심상). 점수가 높아도 사용자의 그릇·태도가 받쳐줄 때 의미가 있습니다.</div>';
+    }
+  })
+  .catch(function(err){
+    var rep = document.getElementById('tvyCamAIReport');
+    if(rep){
+      rep.innerHTML = '<div style="font-size:11px;font-weight:800;color:#444;margin-bottom:8px;">📊 '+info.n+' 분석 보고서</div>'
+        + '<div style="padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:11px;color:#991b1b;">⚠️ AI 분석 실패: '+(err.message||'네트워크 오류')+' — 잠시 후 다시 시도해주세요.<br><br>점수와 숙소 적합도는 위에 정상 표시됩니다.</div>';
+    }
+  });
 };
 
 // ★ 7대 시스템 점수 클릭 → 상세 팝업 (자세한 분석)
