@@ -86822,19 +86822,41 @@ function _rmaiArStartCore(){
     });
 }
 
-function _rmaiArInitFaceMesh(){
+function _rmaiArInitFaceMesh(retryCount){
+  retryCount = retryCount || 0;
   var status = document.getElementById('rmai-ar-status');
 
-  // FaceMesh 라이브러리 체크
+  // FaceMesh 라이브러리 체크 (재시도 + 동적 CDN 로드)
   if(typeof FaceMesh === 'undefined'){
+    // 첫 시도에 CDN script를 *동적으로 추가* (페이지 로드 시 안 된 경우 대비)
+    if(retryCount === 0 && !document.querySelector('script[data-rmai-facemesh]')){
+      if(status){ status.textContent = '⏳ AR 라이브러리 로드 중...'; status.style.background = 'rgba(251,191,36,.85)'; }
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
+      s.setAttribute('data-rmai-facemesh', '1');
+      s.crossOrigin = 'anonymous';
+      document.head.appendChild(s);
+    }
+
+    if(retryCount < 60){ // 6초 (100ms × 60) 까지 재시도
+      if(status && retryCount % 5 === 0){
+        var dots = '.'.repeat((retryCount/5) % 4 + 1);
+        status.textContent = '⏳ AR 준비 중'+dots;
+      }
+      setTimeout(function(){ _rmaiArInitFaceMesh(retryCount + 1); }, 100);
+      return;
+    }
+
+    // 6초 후에도 미로드 → 명시적 에러
     if(status){
-      status.textContent = '⚠️ FaceMesh 미로드';
+      status.textContent = '⚠️ 라이브러리 로드 실패 — 인터넷 확인';
       status.style.background = 'rgba(239,68,68,.85)';
     }
-    console.error('[rmaiAr] FaceMesh class not found. CDN load failed?');
+    console.error('[rmaiAr] FaceMesh CDN load timeout (6s)');
     return;
   }
 
+  // FaceMesh 로드 OK → 초기화
   try {
     _rmaiAr.faceMesh = new FaceMesh({
       locateFile: function(file){
@@ -86851,7 +86873,10 @@ function _rmaiArInitFaceMesh(){
 
     _rmaiAr.faceMesh.onResults(_rmaiArOnResults);
 
-    if(status) status.textContent = '✓ FaceMesh 초기화 완료';
+    if(status){
+      status.textContent = '✓ FaceMesh 초기화 완료';
+      status.style.background = 'rgba(34,197,94,.85)';
+    }
 
     _rmaiAr.running = true;
     _rmaiAr.frameCount = 0;
