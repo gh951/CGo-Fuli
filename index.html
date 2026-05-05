@@ -16142,9 +16142,9 @@ var fcSystems = {
         </div>
 
         <!-- 팝업 -->
-        <div id="tvyFcPopup" onclick="if(event.target.id==='tvyFcPopup')closeFcPopup()">
+        <div id="tvyFcPopup" onclick="if(event.target.id==='tvyFcPopup')tvyFcClosePopup()">
           <div id="tvyFcPopupBox">
-            <button id="tvyFcPopClose" onclick="closeFcPopup()">✕</button>
+            <button id="tvyFcPopClose" onclick="tvyFcClosePopup()">✕</button>
             <div id="tvyFcPopTitle" style="font-size:16px;font-weight:800;color:#d4a843;margin-bottom:4px;padding-right:36px"></div>
             <div id="tvyFcPopOrigin" style="font-size:11px;color:rgba(240,230,200,.35);margin-bottom:14px"></div>
             <div id="tvyFcPopScore" style="font-family:Orbitron,sans-serif;font-size:42px;font-weight:700;text-align:center;padding:14px;background:rgba(0,0,0,.3);border-radius:12px;margin-bottom:14px"></div>
@@ -18388,7 +18388,7 @@ window.tvyShowHelpPopup = function(){
 // ★ 풍수 카메라 360° (메인 page-gmd JS 100% 복제 — 28번째 박제 v2)
 // ═══════════════════════════════════════════════════
 
-// ★ 카드 토글 (접힘/펼침 + 카메라 자동 시작)
+// ★ 카드 토글 (접힘/펼침 + 360° 스캔 모드 자동 시작)
 window.tvyFcCardToggle = function(){
   var body = document.getElementById('tvyFcCardBody');
   var arrow = document.getElementById('tvyFcCardArrow');
@@ -18396,15 +18396,25 @@ window.tvyFcCardToggle = function(){
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if(arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-  // 펼침 시 — 시스템 선택 화면이 메인 카메라 흐름의 시작점
+  // 펼침 시 — 360° 스캔 모드로 전환 (시스템 선택 → 10방위 자동 진행)
   if(!isOpen){
     setTimeout(function(){
       try{
-        // 카메라 모드로 전환
-        if(typeof tvyFcSwitchMode === 'function') tvyFcSwitchMode('camera');
+        // 360° 스캔 패널 보이기 (메인 카메라의 진짜 360° 흐름)
+        if(typeof tvyFcSwitchMode === 'function') tvyFcSwitchMode('scan360');
       }catch(e){console.error('[TvyCam toggle]', e);}
     }, 300);
+  } else {
+    // 접힘 — 카메라 정지
+    try{ if(typeof tvyFcStopCamera === 'function') tvyFcStopCamera(); }catch(e){}
   }
+};
+
+// ★ 우리 페이지 fcPopup 닫기
+window.tvyFcClosePopup = function(){
+  var popup = document.getElementById('tvyFcPopup');
+  if(popup) popup.style.display = 'none';
+  document.body.style.overflow = '';
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19405,6 +19415,33 @@ function tvyFcRequestOrientation(){
   }
 }
 // ★ 시스템 팝업 AI 사용자 맞춤 분석 호출
+
+// ★ 28번째 핀셋 — function 선언을 window.* 글로벌 등록 (onclick에서 호출 가능)
+window.tvy360UpdateProgress = tvy360UpdateProgress;
+window.tvyFcSwitchMode = tvyFcSwitchMode;
+window.tvy360Start = tvy360Start;
+window.tvy360GetDir = tvy360GetDir;
+window.tvy360DirDeg = tvy360DirDeg;
+window.tvy360UpdateTarget = tvy360UpdateTarget;
+window.tvy360Capture = tvy360Capture;
+window.tvy360Analyze = tvy360Analyze;
+window.tvy360RenderResult = tvy360RenderResult;
+window.tvy360Reset = tvy360Reset;
+window.tvyFcStartCamera = tvyFcStartCamera;
+window.tvyFcStopCamera = tvyFcStopCamera;
+window.tvyFcGetGPS = tvyFcGetGPS;
+window.tvyFcHandleOrientation = tvyFcHandleOrientation;
+window.tvy360SelectSystem = tvy360SelectSystem;
+window.tvy360GetTarget = tvy360GetTarget;
+window.tvy360UpdateGuide = tvy360UpdateGuide;
+window.tvy360DoCapture = tvy360DoCapture;
+window.tvy360ManualCapture = tvy360ManualCapture;
+window.tvy360RunAnalysis = tvy360RunAnalysis;
+window.tvy360ShowResult = tvy360ShowResult;
+window.tvy360ResetScan = tvy360ResetScan;
+window.tvyFcStartOrientation = tvyFcStartOrientation;
+window.tvyFcRequestOrientation = tvyFcRequestOrientation;
+
 window.tvyLoadPopupAi = function(box){
   if(!box || box.dataset.loaded === '1') return;
   box.dataset.loaded = '1';
