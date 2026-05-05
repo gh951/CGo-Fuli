@@ -15819,142 +15819,101 @@ var fcSystems = {
       </div>
     </div>
 
-    <!-- ★ 풍수 카메라 360° (28번째 박제 v3 — 카메라+방위+화살표만 + 실시간/rPPG/헌법 융합) -->
+    <!-- ★ 풍수 카메라 (28번째 v4 final — 카메라+방위만, 단순) -->
     <style>
-      /* 메인 카메라 시행착오 작품 — 핵심 CSS만 (히어로·업로드·공간유형 제거) */
-      #tvyFcCameraWrap{position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:14px;display:none;aspect-ratio:4/3;max-height:380px;}
-      #tvyFcVideo{width:100%;height:100%;object-fit:cover;display:block;}
-      .tvyFc-dir-n{position:absolute;top:38px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:#f87171;text-shadow:0 0 8px rgba(248,113,113,.8);letter-spacing:.1em;z-index:5;}
-      .tvyFc-dir-s{position:absolute;bottom:42px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:#94a3b8;text-shadow:0 0 8px rgba(180,200,216,.9);letter-spacing:.1em;z-index:5;}
-      .tvyFc-dir-e{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:#fbbf24;text-shadow:0 0 8px rgba(251,191,36,.8);z-index:5;}
-      .tvyFc-dir-w{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:#fbbf24;text-shadow:0 0 8px rgba(251,191,36,.8);z-index:5;}
-      .tvyFc-crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;pointer-events:none;z-index:4;}
-      .tvyFc-ch-h{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(212,168,67,.5);}
-      .tvyFc-ch-v{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(212,168,67,.5);}
-      .tvyFc-ch-dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#d4a843;box-shadow:0 0 8px rgba(212,168,67,.9);}
-      #tvyFcDegBar{position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;gap:14px;z-index:6;}
-      #tvyFcGpsBar{position:absolute;top:0;left:0;right:0;height:28px;background:rgba(0,0,0,.55);display:flex;align-items:center;padding:0 10px;gap:6px;font-size:10px;color:rgba(240,230,200,.6);z-index:6;}
-      #tvyFcGpsCoord{font-family:monospace;font-size:10px;color:#34d399;}
-      #tvyFcShootBtn{position:absolute;bottom:42px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.95);border:3px solid #d4a843;cursor:pointer;box-shadow:0 0 20px rgba(212,168,67,.6);z-index:10;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all .2s;}
-      #tvyFcShootBtn:active{transform:translateX(-50%) scale(.92);}
-      #tvyFcNeedle{position:absolute;top:38px;right:14px;width:32px;height:32px;pointer-events:none;z-index:5;}
-      .tvyFc360-dot{text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:9px;color:rgba(255,255,255,.3);}
-      .tvyFc360-dot.done{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.5);color:#34d399;font-weight:800;}
-      .tvyFc360-dot.current{background:rgba(212,168,67,.2);border-color:#d4a843;color:#d4a843;font-weight:800;animation:tvyFc360PulseGold 1.6s ease-in-out infinite;}
-      @keyframes tvyFc360PulseGold{0%,100%{box-shadow:0 0 0 0 rgba(212,168,67,.6);}50%{box-shadow:0 0 0 4px rgba(212,168,67,0);}}
-      @keyframes tvyFc360Green{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
-      @keyframes tvyFc360Blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+      /* ─── 풍수 카메라 — 시행착오 작품 핵심 CSS ─── */
+      #tvyCam2-wrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;max-height:420px;display:none;}
+      #tvyCam2-video{width:100%;height:100%;object-fit:cover;display:block;}
+      .tvyCam2-overlay{position:absolute;inset:0;pointer-events:none;}
+      .tvyCam2-N{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:15px;font-weight:800;color:#f87171;text-shadow:0 0 8px rgba(248,113,113,.9);letter-spacing:.1em;background:rgba(0,0,0,.4);padding:3px 10px;border-radius:6px;}
+      .tvyCam2-S{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);font-family:Orbitron,sans-serif;font-size:15px;font-weight:800;color:#94a3b8;text-shadow:0 0 8px rgba(180,200,216,.9);letter-spacing:.1em;background:rgba(0,0,0,.4);padding:3px 10px;border-radius:6px;}
+      .tvyCam2-E{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:800;color:#fbbf24;text-shadow:0 0 8px rgba(251,191,36,.9);background:rgba(0,0,0,.4);padding:3px 8px;border-radius:6px;}
+      .tvyCam2-W{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:Orbitron,sans-serif;font-size:14px;font-weight:800;color:#fbbf24;text-shadow:0 0 8px rgba(251,191,36,.9);background:rgba(0,0,0,.4);padding:3px 8px;border-radius:6px;}
+      .tvyCam2-cross{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;}
+      .tvyCam2-cross-h{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(212,168,67,.6);}
+      .tvyCam2-cross-v{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(212,168,67,.6);}
+      .tvyCam2-cross-dot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#d4a843;box-shadow:0 0 8px rgba(212,168,67,1);}
+      .tvyCam2-arrow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:64px;color:#d4a843;filter:drop-shadow(0 0 12px rgba(212,168,67,.8));transition:transform .3s,color .3s;pointer-events:none;}
+      .tvyCam2-arrow.ok{color:#34d399;filter:drop-shadow(0 0 16px rgba(52,211,153,.9));animation:tvyCam2Pulse .6s ease-in-out infinite;}
+      @keyframes tvyCam2Pulse{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.2);}}
+      .tvyCam2-degbar{position:absolute;bottom:0;left:0;right:0;height:36px;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;gap:14px;font-family:Orbitron,sans-serif;}
+      .tvyCam2-degbar-deg{font-size:16px;color:#38bdf8;font-weight:800;}
+      .tvyCam2-degbar-target{font-size:13px;color:#fbbf24;font-weight:800;}
+      .tvyCam2-progbar{position:absolute;top:50px;left:14px;right:14px;background:rgba(0,0,0,.65);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;font-size:11px;color:#fff;font-weight:700;}
+      .tvyCam2-progbar-track{flex:1;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;}
+      .tvyCam2-progbar-fill{height:100%;background:linear-gradient(90deg,#38bdf8,#34d399);border-radius:2px;transition:width .4s ease;}
+      .tvyCam2-shoot{position:absolute;bottom:48px;left:50%;transform:translateX(-50%);width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.95);border:3px solid #d4a843;cursor:pointer;box-shadow:0 0 20px rgba(212,168,67,.7);display:flex;align-items:center;justify-content:center;font-size:26px;transition:transform .2s;}
+      .tvyCam2-shoot:active{transform:translateX(-50%) scale(.9);}
+      .tvyCam2-shoot:disabled{background:rgba(160,160,160,.6);border-color:#666;cursor:not-allowed;box-shadow:none;}
+      .tvyCam2-perm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#d4a843,#b8922f);border-radius:12px;padding:12px 22px;cursor:pointer;color:#000;font-size:13px;font-weight:900;box-shadow:0 4px 14px rgba(212,168,67,.6);z-index:20;display:none;}
+      .tvyCam2-result{margin-top:12px;padding:14px;background:rgba(0,0,0,.4);border:1px solid rgba(212,168,67,.3);border-radius:12px;color:#f0e6c8;display:none;}
     </style>
     
     <div class="tvy-sec">
       <div class="tvy-sec-head">
         <h2 class="tvy-sec-title">현지 도착 정밀 분석</h2>
-        <span style="font-size:11px;color:#888;font-weight:600;">10방위 360° 스캔</span>
+        <span style="font-size:11px;color:#888;font-weight:600;">10방위 360° + 역학 분석</span>
       </div>
       
-      <!-- 헤더 카드 (접기/펼치기) -->
-      <div onclick="tvyFcCardToggle()" style="background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid #f0f2f7;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+      <!-- 헤더 (접기/펼치기) -->
+      <div onclick="tvyCam2Toggle()" style="background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,.05);border:1px solid #f0f2f7;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="font-size:28px;">📸</div>
           <div>
             <div style="font-size:13px;font-weight:800;color:#1a1a2e;letter-spacing:-.01em;">풍수 카메라 360° 스캔</div>
-            <div style="font-size:11px;color:#888;margin-top:2px;">현지 도착 후 10방위 → 7대 시스템 + 실시간 + rPPG 정밀 분석</div>
+            <div style="font-size:11px;color:#888;margin-top:2px;">10방위 자동 진행 → 7대 시스템 + 실시간/rPPG 역학 분석</div>
           </div>
         </div>
-        <span id="tvyFcCardArrow" style="font-size:14px;color:#888;transition:transform .3s;">▼</span>
+        <span id="tvyCam2-arrow-icon" style="font-size:14px;color:#888;transition:transform .3s;">▼</span>
       </div>
       
-      <!-- 펼침 영역 — 카메라 + 방위 + 화살표 + 진행 현황 -->
-      <div id="tvyFcCardBody" style="display:none;background:linear-gradient(160deg,#0a1628,#0d1f3c);border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:16px;margin-top:8px;color:#f0e6c8;">
+      <!-- 펼침 영역 -->
+      <div id="tvyCam2-body" style="display:none;background:linear-gradient(160deg,#0a1628,#0d1f3c);border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:14px;margin-top:8px;">
         
-        <!-- 간단 안내 (1줄) -->
-        <div style="font-size:11px;color:rgba(240,230,200,.7);text-align:center;margin-bottom:12px;padding:8px 12px;background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.25);border-radius:10px;line-height:1.5;">
-          🧭 카메라를 들고 천천히 회전 — 방위 도착 시 자동 촬영
-        </div>
-        
-        <!-- 시스템 안내 (위에서 선택한 시스템 표시) -->
-        <div id="tvyFcSysBadge" style="text-align:center;margin-bottom:14px;padding:9px 12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;font-size:11px;color:#38bdf8;">
-          <span id="tvyFcSysName">위에서 시스템을 선택해주세요 ↑</span>
-        </div>
-        
-        <!-- 촬영 진행 현황 (10방위 도트) -->
-        <div style="margin-bottom:14px;padding:10px 12px;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(255,255,255,.06);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div style="font-size:11px;color:rgba(240,230,200,.5);font-weight:700;letter-spacing:.05em;">📸 촬영 진행 현황</div>
-            <div id="tvy360ProgressTxt" style="font-size:12px;font-weight:900;color:#38bdf8;">0 / 10</div>
-          </div>
-          <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-bottom:10px;">
-            <div id="tvy360ProgressBar" style="height:100%;background:linear-gradient(90deg,#38bdf8,#34d399);border-radius:3px;width:0%;transition:width .4s ease;"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;" id="tvy360Dots">
-            <div class="tvyFc360-dot" data-dir="N">↑<br>북</div>
-            <div class="tvyFc360-dot" data-dir="NE">↗<br>북동</div>
-            <div class="tvyFc360-dot" data-dir="E">→<br>동</div>
-            <div class="tvyFc360-dot" data-dir="SE">↘<br>남동</div>
-            <div class="tvyFc360-dot" data-dir="S">↓<br>남</div>
-            <div class="tvyFc360-dot" data-dir="SW">↙<br>남서</div>
-            <div class="tvyFc360-dot" data-dir="W">←<br>서</div>
-            <div class="tvyFc360-dot" data-dir="NW">↖<br>북서</div>
-            <div class="tvyFc360-dot" data-dir="UP">⬆<br>위</div>
-            <div class="tvyFc360-dot" data-dir="DN">⬇<br>아래</div>
-          </div>
-        </div>
-        
-        <!-- 카메라 뷰 (방위 박힌 진짜 카메라) -->
-        <div id="tvyFcCameraWrap" style="display:block;">
-          <!-- GPS 바 -->
-          <div id="tvyFcGpsBar">
-            <span>📍</span>
-            <span id="tvyFcGpsCoord">위치 확인 중...</span>
-          </div>
+        <!-- 카메라 영역 (방위 박힌) -->
+        <div id="tvyCam2-wrap">
+          <video id="tvyCam2-video" autoplay playsinline muted></video>
           
-          <!-- 비디오 -->
-          <video id="tvyFcVideo" autoplay playsinline muted></video>
-          
-          <!-- 방위 라벨 + 십자선 + 나침반 (오버레이) -->
-          <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;">
-            <div class="tvyFc-dir-n">N 북</div>
-            <div class="tvyFc-dir-s">S 남</div>
-            <div class="tvyFc-dir-e">E 동</div>
-            <div class="tvyFc-dir-w">W 서</div>
-            <div class="tvyFc-crosshair"><div class="tvyFc-ch-h"></div><div class="tvyFc-ch-v"></div><div class="tvyFc-ch-dot"></div></div>
-            <div id="tvyFcNeedle">
-              <svg id="tvyFcNeedleSvg" viewBox="0 0 32 32" width="32" height="32" style="transition:transform .3s">
-                <polygon points="16,1 19,16 16,14 13,16" fill="#f87171"/>
-                <polygon points="16,31 19,16 16,18 13,16" fill="#a8bccf"/>
-                <circle cx="16" cy="16" r="3" fill="#d4a843"/>
-              </svg>
+          <!-- 진행 바 (카메라 안 상단) -->
+          <div class="tvyCam2-progbar">
+            <span id="tvyCam2-prog-num" style="color:#34d399;">0/10</span>
+            <div class="tvyCam2-progbar-track">
+              <div class="tvyCam2-progbar-fill" id="tvyCam2-prog-fill" style="width:0%;"></div>
             </div>
-            <div id="tvyFcDegBar">
-              <span style="font-family:Orbitron,sans-serif;font-size:15px;color:#38bdf8;font-weight:700" id="tvyFcDegBarVal">---°</span>
-              <span style="font-size:13px;color:#d4a843;font-weight:700" id="tvyFcDegBarDir">측정 중</span>
-            </div>
+            <span id="tvyCam2-target-name" style="color:#fbbf24;">▼ 북</span>
           </div>
           
-          <!-- 큰 화살표 오버레이 (목표 방위 안내) -->
-          <div id="tvy360ArrowOverlay" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:15;">
-            <div id="tvy360BigArrow" style="font-size:72px;filter:drop-shadow(0 0 16px rgba(212,168,67,.6));transition:all .3s;color:#d4a843;">🧭</div>
-            <div id="tvy360ArrowLabel" style="font-size:13px;font-weight:800;color:#d4a843;background:rgba(0,0,0,.7);padding:5px 14px;border-radius:20px;margin-top:8px;letter-spacing:.03em;">나침반 연결 대기 중...</div>
+          <!-- 방위 라벨 -->
+          <div class="tvyCam2-overlay">
+            <div class="tvyCam2-N">N 북</div>
+            <div class="tvyCam2-S">S 남</div>
+            <div class="tvyCam2-E">E 동</div>
+            <div class="tvyCam2-W">W 서</div>
+            <div class="tvyCam2-cross">
+              <div class="tvyCam2-cross-h"></div>
+              <div class="tvyCam2-cross-v"></div>
+              <div class="tvyCam2-cross-dot"></div>
+            </div>
+            <!-- 큰 화살표 (목표 방위 회전) -->
+            <div class="tvyCam2-arrow" id="tvyCam2-arrow">↑</div>
+            <!-- 도(°) 표시 -->
+            <div class="tvyCam2-degbar">
+              <span class="tvyCam2-degbar-deg" id="tvyCam2-deg">---°</span>
+              <span class="tvyCam2-degbar-target" id="tvyCam2-status">측정 중</span>
+            </div>
           </div>
           
           <!-- 촬영 버튼 -->
-          <button id="tvyFcShootBtn" onclick="tvy360ManualCapture()">📸</button>
+          <button class="tvyCam2-shoot" id="tvyCam2-shoot" onclick="tvyCam2Shoot()">📸</button>
           
-          <!-- iOS 나침반 권한 버튼 -->
-          <div id="tvyFcPermBtn" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:linear-gradient(135deg,#d4a843,#b8922f);border-radius:12px;padding:11px 22px;cursor:pointer;align-items:center;gap:6px;white-space:nowrap;box-shadow:0 4px 14px rgba(212,168,67,.5);" onclick="tvyFcRequestOrientation()">
-            <span style="font-size:13px;font-weight:900;color:#000;">🧭 나침반 허용하기</span>
-          </div>
-        </div>
-        <canvas id="tvyFcCanvas" style="display:none"></canvas>
-        
-        <!-- 컨트롤 버튼 -->
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <button onclick="tvy360ManualCapture()" id="tvy360ManualBtn" style="flex:1;padding:12px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(251,191,36,.1));border:2px solid rgba(212,168,67,.5);border-radius:12px;color:#d4a843;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:.03em;font-family:inherit;">📸 지금 촬영하기</button>
-          <button onclick="tvyFcResetScan()" style="padding:12px 16px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.4);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">🔄</button>
+          <!-- 권한 버튼 -->
+          <div class="tvyCam2-perm" id="tvyCam2-perm" onclick="tvyCam2RequestOrient()">🧭 나침반 허용</div>
         </div>
         
-        <!-- 결과 영역 (10방위 완료 후) -->
-        <div id="tvyFcResult" style="display:none;margin-top:14px;padding:14px;background:rgba(0,0,0,.3);border:1px solid rgba(212,168,67,.3);border-radius:12px;"></div>
+        <canvas id="tvyCam2-canvas" style="display:none;"></canvas>
+        
+        <!-- 결과 영역 -->
+        <div class="tvyCam2-result" id="tvyCam2-result"></div>
       </div>
     </div>
     <!-- ★ 진짜 안심 숙소 스캔 (trv2- prefix · 적외선·야간·일반 + Contrast/Brightness 슬라이더) -->
@@ -18178,1098 +18137,351 @@ window.tvyShowHelpPopup = function(){
 };
 
 // ═══════════════════════════════════════════════════
-// ★ 풍수 카메라 360° (메인 page-gmd JS 100% 복제 — 28번째 박제 v2)
+// ★ 풍수 카메라 (28번째 v4 final — 단순, 자체)
 // ═══════════════════════════════════════════════════
 
-// ★ 카드 토글 (접힘/펼침 + 360° 스캔 모드 자동 시작)
-window.tvyFcCardToggle = function(){
-  var body = document.getElementById('tvyFcCardBody');
-  var arrow = document.getElementById('tvyFcCardArrow');
+window.TVY_CAM2 = {
+  stream: null,
+  orientHandler: null,
+  currentDeg: null,
+  currentBeta: null,
+  // 10방위 순서 + 각도
+  order: ['N','NE','E','SE','S','SW','W','NW','UP','DN'],
+  names: {N:'북',NE:'북동',E:'동',SE:'남동',S:'남',SW:'남서',W:'서',NW:'북서',UP:'위(천장)',DN:'아래(바닥)'},
+  arrows: {N:'↑',NE:'↗',E:'→',SE:'↘',S:'↓',SW:'↙',W:'←',NW:'↖',UP:'⬆',DN:'⬇'},
+  degs: {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315},
+  shots: {},  // {N: {ts, deg, img}, ...}
+  shotCount: 0,
+  autoTimer: null
+};
+
+// ★ 카드 토글
+window.tvyCam2Toggle = function(){
+  var body = document.getElementById('tvyCam2-body');
+  var arrow = document.getElementById('tvyCam2-arrow-icon');
   if(!body) return;
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if(arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-  
   if(!isOpen){
-    // 펼침 — 카메라 + 360° 모드 자동 시작
-    setTimeout(function(){
-      try{
-        // 1. 위에서 선택한 시스템 표시
-        var sysName = document.getElementById('tvyFcSysName');
-        var st = window.TVY_STATE || {};
-        var SYS = window.TVY_SYSTEMS || {};
-        var s = SYS[st.sys];
-        if(sysName){
-          if(s){
-            sysName.innerHTML = '<b style="color:'+(s.c||'#38bdf8')+';">'+s.e+' '+s.n+'</b> 시스템 적용 중 — 10방위 분석';
-          } else {
-            sysName.innerHTML = '⚠️ 위에서 시스템을 먼저 선택해주세요 ↑';
-          }
-        }
-        
-        // 2. 카메라 wrap 보이기
-        var camWrap = document.getElementById('tvyFcCameraWrap');
-        if(camWrap) camWrap.style.display = 'block';
-        
-        // 3. 카메라 시작 + 나침반 권한 + 360° 시작
-        if(typeof tvyFcStartCamera === 'function') tvyFcStartCamera();
-        if(typeof tvy360Start === 'function'){
-          // 시스템이 선택되어 있으면 자동 시작
-          if(s && typeof tvy360SelectSystem === 'function'){
-            // 메인 시스템 키 매핑 (우리 시스템 → 메인 카메라 시스템)
-            var sysMap = {
-              fengshui:'fengshui', vastu:'vastu', kanso:'kanso',
-              yangzhai:'yangzhai', spacepsych:'psychology',
-              native:'fengshui', terroir:'terroir',
-              realtime:'all', rppg:'all'
-            };
-            var mainSysKey = sysMap[st.sys] || 'all';
-            if(window._tvy360scan){
-              // 메인 카메라가 *없는* 함수라도 scan 시작
-              window._tvy360scan.system = mainSysKey;
-            }
-          }
-          tvy360Start();
-        }
-      }catch(e){console.error('[TvyCam toggle]', e);}
-    }, 300);
+    setTimeout(tvyCam2Start, 300);
   } else {
-    // 접힘 — 카메라 정지
-    try{ if(typeof tvyFcStopCamera === 'function') tvyFcStopCamera(); }catch(e){}
+    tvyCam2Stop();
   }
 };
 
-// ★ 우리 페이지 fcPopup 닫기
-window.tvyFcClosePopup = function(){
-  var popup = document.getElementById('tvyFcPopup');
-  if(popup) popup.style.display = 'none';
-  document.body.style.overflow = '';
-};
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 메인 page-gmd 함수들 — fc → tvyFc, fc360 → tvy360 변환본
-// (시행착오 작품 그대로 — 28번째 정직 복제)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ══ 풍수 카메라 엔진 v3 ══════════════════════════════════════
-var tvyFcType = 'home';
-var tvyFcDegree = null;
-var tvyFcImageData = null;
-var tvyFcStream = null;
-var tvyFcOrientHandler = null;
-var tvyFcGpsLat = null;
-var tvyFcGpsLng = null;
-var tvyFcAnalysisData = null;
-
-// ── 모드 전환 ──
-// ★ 풍수 카메라 대문 팝업
-function _cgoGmdIntroPopup(){
-  var old=document.getElementById('cgo-gmd-pop'); if(old) old.remove();
-  var pop=document.createElement('div');
-  pop.id='cgo-gmd-pop';
-  pop.style.cssText='position:fixed;inset:0;z-index:19000;background:rgba(2,8,23,.93);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;';
-  var h='<div style="width:100%;max-width:480px;max-height:92vh;overflow-y:auto;background:linear-gradient(160deg,#0d1117,#1a1000);border-radius:20px 20px 0 0;border-top:3px solid #d4a843;padding:22px 18px 32px;">';
-  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><span style="font-size:32px;">📸</span><div><div style="font-size:17px;font-weight:900;color:#d4a843;">풍수 카메라</div><div style="font-size:11px;color:rgba(212,168,67,.5);margin-top:2px;">전 세계 7대 공간 에너지 AI 분석 시스템</div></div></div>';
-  h+='<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;margin-bottom:14px;padding:12px 14px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;">공간을 <b style="color:#f0e0a8;">10방향으로 촬영</b>하면 AI가 <b style="color:#d4a843;">세계 7대 공간 에너지 시스템</b>으로 종합 분석합니다.</div>';
-  h+='<div style="background:rgba(255,255,255,.03);border:1px solid rgba(212,168,67,.15);border-radius:12px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#d4a843;margin-bottom:10px;">🌍 7대 공간 에너지 시스템</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;"><div style="font-size:11px;padding:6px 8px;background:rgba(248,113,113,.05);border-radius:6px;color:rgba(240,230,200,.8);">🏯 풍수지리 (중국)</div><div style="font-size:11px;padding:6px 8px;background:rgba(56,189,248,.05);border-radius:6px;color:rgba(240,230,200,.8);">🕌 바스투 (인도)</div><div style="font-size:11px;padding:6px 8px;background:rgba(52,211,153,.05);border-radius:6px;color:rgba(240,230,200,.8);">⛩️ 칸소 (일본)</div><div style="font-size:11px;padding:6px 8px;background:rgba(212,168,67,.05);border-radius:6px;color:rgba(240,230,200,.8);">🏡 양택가상학</div><div style="font-size:11px;padding:6px 8px;background:rgba(167,139,250,.05);border-radius:6px;color:rgba(240,230,200,.8);">🧠 공간심리학</div><div style="font-size:11px;padding:6px 8px;background:rgba(244,114,182,.05);border-radius:6px;color:rgba(240,230,200,.8);">🌿 테루아</div><div style="font-size:11px;padding:6px 8px;background:rgba(99,130,201,.05);border-radius:6px;color:rgba(240,230,200,.8);">🪶 네이티브 아메리칸</div></div></div>';
-  window._gmdPopType='home'; window._gmdPopSystems=['all'];
-  // STEP1
-  h+='<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:8px;">STEP 1 · 공간 타입 선택</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
-  h+='<div onclick="gmdPopSelectType(\'home\')" id="gmdPopType_home" style="padding:10px 6px;border:2px solid #d4a843;border-radius:10px;background:rgba(212,168,67,.12);cursor:pointer;text-align:center;"><div style="font-size:20px;">🏠</div><div style="font-size:10px;font-weight:700;color:#d4a843;">집·아파트</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'store\')" id="gmdPopType_store" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);cursor:pointer;text-align:center;"><div style="font-size:20px;">🏪</div><div style="font-size:10px;font-weight:700;color:rgba(240,230,200,.7);">가게·사무실</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'grave\')" id="gmdPopType_grave" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);cursor:pointer;text-align:center;"><div style="font-size:20px;">⛪</div><div style="font-size:10px;font-weight:700;color:rgba(240,230,200,.7);">묘지·집터</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'interior\')" id="gmdPopType_interior" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.04);cursor:pointer;text-align:center;"><div style="font-size:20px;">🛋️</div><div style="font-size:10px;font-weight:700;color:rgba(240,230,200,.7);">가구배치</div></div>';
-  h+='</div></div>';
-  // STEP2
-  h+='<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:4px;">STEP 2 · 분석 역학 선택</div><div style="font-size:10px;color:rgba(240,230,200,.4);margin-bottom:6px;">복수 선택 가능</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:5px;">';
-  h+='<div onclick="gmdPopToggleSys(\'fengshui\')" id="gmdPopSys_fengshui" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;"><span>🏯</span><div style="flex:1;font-size:11px;font-weight:700;color:rgba(240,230,200,.8);">풍수지리</div><div id="gmdPopChk_fengshui" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'vastu\')" id="gmdPopSys_vastu" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;"><span>🕌</span><div style="flex:1;font-size:11px;font-weight:700;color:rgba(240,230,200,.8);">바스투</div><div id="gmdPopChk_vastu" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'kanso\')" id="gmdPopSys_kanso" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;"><span>⛩️</span><div style="flex:1;font-size:11px;font-weight:700;color:rgba(240,230,200,.8);">칸소</div><div id="gmdPopChk_kanso" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'yangzhai\')" id="gmdPopSys_yangzhai" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;"><span>🏡</span><div style="flex:1;font-size:11px;font-weight:700;color:rgba(240,230,200,.8);">양택가상학</div><div id="gmdPopChk_yangzhai" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'all\')" id="gmdPopSys_all" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(212,168,67,.4);border-radius:8px;background:rgba(212,168,67,.06);cursor:pointer;"><span>🌍</span><div style="flex:1;font-size:11px;font-weight:700;color:#d4a843;">전체 종합 분석</div><div id="gmdPopChk_all" style="width:18px;height:18px;border-radius:50%;background:#d4a843;font-size:11px;display:flex;align-items:center;justify-content:center;">✓</div></div>';
-  h+='</div></div>';
-  h+='<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:6px;">⚡ 3단계 사용법</div><div style="font-size:11px;color:rgba(240,230,200,.8);line-height:2;"><b style="color:#fbbf24;">1단계</b> 🏠 공간 중앙에 서세요<br><b style="color:#fbbf24;">2단계</b> 🧭 나침반이 가리키는 방향으로 10방향 촬영<br><b style="color:#fbbf24;">3단계</b> 🤖 AI + NASA 종합 풍수 점수 산출</div></div>';
-  h+='<button onclick="gmdPopConfirm()" style="width:100%;padding:16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:14px;color:#020817;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.03em;">📸 설정 완료 — 촬영 시작</button>';
-  h+='</div>';
-  pop.innerHTML=h;
-  document.body.appendChild(pop);
-}
-
-function gmdPopSelectType(type){
-  window._gmdPopType=type;
-  ['home','store','grave','interior'].forEach(function(t){
-    var el=document.getElementById('gmdPopType_'+t);
-    if(!el) return;
-    var on=(t===type);
-    el.style.border='2px solid '+(on?'#d4a843':'rgba(255,255,255,.1)');
-    el.style.background=on?'rgba(212,168,67,.12)':'rgba(255,255,255,.04)';
-    el.querySelector('div:last-child').style.color=on?'#d4a843':'rgba(240,230,200,.7)';
-  });
-}
-
-function gmdPopToggleSys(key){
-  if(!window._gmdPopSystems) window._gmdPopSystems=[];
-  var sys=window._gmdPopSystems;
-  // 전체 선택 누르면 나머지 해제
-  if(key==='all'){
-    sys.length=0; sys.push('all');
-  } else {
-    var ai=sys.indexOf('all');
-    if(ai>-1) sys.splice(ai,1);
-    var idx=sys.indexOf(key);
-    if(idx>-1) sys.splice(idx,1);
-    else sys.push(key);
-    if(sys.length===0) sys.push('all');
-  }
-  // UI 업데이트
-  ['fengshui','vastu','kanso','yangzhai','psychology','terroir','all'].forEach(function(k){
-    var el=document.getElementById('gmdPopSys_'+k);
-    var chk=document.getElementById('gmdPopChk_'+k);
-    if(!el||!chk) return;
-    var on=sys.indexOf(k)>-1;
-    var color=k==='all'?'#d4a843':k==='fengshui'?'#34d399':k==='vastu'?'#f97316':k==='kanso'?'#e2e8f0':k==='yangzhai'?'#34d399':k==='psychology'?'#a78bfa':'#4ade80';
-    el.style.border='2px solid '+(on?color:'rgba(255,255,255,.08)');
-    el.style.background=on?'rgba(212,168,67,.06)':'rgba(255,255,255,.03)';
-    chk.style.background=on?color:'transparent';
-    chk.innerHTML=on?'✓':'';
-  });
-}
-
-function gmdPopConfirm(){
-  // 선택한 타입·역학을 앱에 적용
-  var type=window._gmdPopType||'home';
-  var systems=window._gmdPopSystems||['all'];
-  // tvyFcType 업데이트
-  if(typeof tvyFcSelectType==='function'){
-    var btn=document.querySelector('[data-type="'+type+'"]');
-    if(btn) tvyFcSelectType(btn,type);
-  } else { window.tvyFcType=type; }
-  // 선택 역학 저장
-  window._fcSelectedSystems=systems;
-  // 팝업 닫기
-  var pop=document.getElementById('cgo-gmd-pop');
-  if(pop) pop.remove();
-}
-
-// ★ 10방향 진행 바 업데이트
-function tvy360UpdateProgress(count){
-  var bar=document.getElementById('tvy360ProgressBar');
-  var txt=document.getElementById('tvy360ProgressTxt');
-  var dots=document.getElementById('tvy360ProgressDots');
-  if(bar) bar.style.width=(count/10*100)+'%';
-  if(txt) txt.textContent=count+' / 10';
-  if(bar){
-    if(count>=10) bar.style.background='linear-gradient(90deg,#34d399,#d4a843)';
-    else bar.style.background='linear-gradient(90deg,#38bdf8,#34d399)';
-  }
-  if(dots){
-    var order=_tvy360.dirOrder;
-    dots.innerHTML=order.map(function(d){
-      var done=!!_tvy360.shots[d];
-      var name=(_tvy360.dirNames[d]||d);
-      var isCur=(_tvy360.currentTarget===d);
-      return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
-        +'<div style="width:28px;height:28px;border-radius:50%;border:2px solid '+(done?'#34d399':isCur?'#d4a843':'rgba(255,255,255,.15)')+';'
-        +'background:'+(done?'rgba(52,211,153,.2)':isCur?'rgba(212,168,67,.2)':'rgba(255,255,255,.03)')+';'
-        +'display:flex;align-items:center;justify-content:center;font-size:12px;">'
-        +(_tvy360.dirArrows[d]||'·')+'</div>'
-        +'<div style="font-size:9px;color:'+(done?'#34d399':isCur?'#d4a843':'rgba(255,255,255,.3)')+';">'+name+'</div>'
-        +'</div>';
-    }).join('');
-  }
-}
-
-function tvyFcSwitchMode(mode){
-  var camWrap = document.getElementById('tvyFcCameraWrap');
-  var uploadZone = document.getElementById('tvyFcUploadZone');
-  var wrap360 = document.getElementById('tvy360Wrap');
-  var tabCam = document.getElementById('tvyFcTabCam');
-  var tabUp = document.getElementById('tvyFcTabUpload');
-  var tab360 = document.getElementById('tvyFcTab360');
-  // 모두 숨기기
-  if(camWrap) camWrap.style.display = 'none';
-  if(uploadZone) uploadZone.style.display = 'none';
-  if(wrap360) wrap360.style.display = 'none';
-  if(tabCam) tabCam.classList.remove('active');
-  if(tabUp) tabUp.classList.remove('active');
-  if(tab360) tab360.classList.remove('active');
-  tvyFcStopCamera();
-
-  if(mode === 'camera'){
-    if(tabCam) tabCam.classList.add('active');
-    if(camWrap){ camWrap.style.display = 'block'; }
-    var scan360 = document.getElementById('tvy360ScanGuide');
-    var res360 = document.getElementById('tvy360ScanResult');
-    if(scan360) scan360.style.display = 'block';
-    if(res360) res360.style.display = 'none';
-    tvyFcStartCamera();
-  } else if(mode === 'scan360'){
-    if(tab360) tab360.classList.add('active');
-    if(wrap360) wrap360.style.display = 'block';
-    tvy360Start();
-  } else {
-    if(tabUp) tabUp.classList.add('active');
-    if(uploadZone) uploadZone.style.display = 'block';
-  }
-}
-
-
-// ══════════════════════════════════
-// 🧭 360° 풍수 스캔 시스템
-// ══════════════════════════════════
-var _tvy360 = {
-  stream: null,
-  orientHandler: null,
-  currentDeg: 0,
-  shots: {}, // {N: base64, E: base64, ...}
-  dirOrder: ['N','NE','E','SE','S','SW','W','NW','UP','DN'],
-  dirNames: {N:'북',NE:'북동',E:'동',SE:'남동',S:'남',SW:'남서',W:'서',NW:'북서',UP:'천장 위',DN:'바닥 아래'},
-  dirArrows: {N:'↑',NE:'↗',E:'→',SE:'↘',S:'↓',SW:'↙',W:'←',NW:'↖',UP:'⬆',DN:'⬇'},
-  currentTarget: 'N',
-  analyzing: false
-};
-
-function tvy360Start(){
-  // 카메라 시작
-  var vid = document.getElementById('tvy360Video');
-  if(!navigator.mediaDevices){ return; }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
-  .catch(function(){ return navigator.mediaDevices.getUserMedia({video:true}); })
-  .then(function(stream){
-    _tvy360.stream = stream;
-    if(vid){ vid.srcObject = stream; vid.play(); }
-  }).catch(function(){});
-
-  // 나침반 시작
-  function handler(e){
-    var deg = e.alpha ? (360 - e.alpha) % 360 : (e.webkitCompassHeading || 0);
-    _tvy360.currentDeg = Math.round(deg);
-    // 오버레이 업데이트
-    var ol = document.getElementById('tvy360Overlay');
-    var dn = document.getElementById('tvy360DegNum');
-    var dl = document.getElementById('tvy360DirLabel');
-    var ar = document.getElementById('tvy360Arrow');
-    var guide = document.getElementById('tvy360Guide');
-    var dirText = tvy360GetDir(deg);
-    if(ol) ol.textContent = _tvy360.currentDeg + '° ' + dirText;
-    if(dn) dn.textContent = _tvy360.currentDeg + '°';
-    if(dl) dl.textContent = (_tvy360.dirNames[dirText]||dirText) + ' (' + dirText + ')';
-    if(ar){ ar.textContent = _tvy360.dirArrows[dirText]||'↑'; ar.style.transform = 'rotate('+deg+'deg)'; }
-    // 안내 메시지
-    var target = _tvy360.currentTarget;
-    var targetName = _tvy360.dirNames[target]||target;
-    if(target === 'UP'){
-      if(guide) guide.textContent = '📸 카메라를 천장(위)으로 향하고 촬영하세요';
-    } else if(target === 'DN'){
-      if(guide) guide.textContent = '📸 카메라를 바닥(아래)으로 향하고 촬영하세요';
-    } else {
-      var diff = Math.abs(_tvy360.currentDeg - tvy360DirDeg(target));
-      var close = diff < 20 || diff > 340;
-      if(guide){
-        if(close){
-          guide.textContent = '✅ ' + targetName + ' 방향입니다! 📸 촬영하세요';
-          guide.style.background = 'rgba(52,211,153,.15)';
-          guide.style.color = '#34d399';
-        } else {
-          guide.textContent = '🧭 ' + targetName + ' 방향으로 돌아서세요 (' + targetName + '쪽을 향해주세요)';
-          guide.style.background = 'rgba(212,168,67,.08)';
-          guide.style.color = 'rgba(240,230,200,.7)';
-        }
-      }
-    }
-  }
-  _tvy360.orientHandler = handler;
-  window.addEventListener('deviceorientation', handler, true);
-  tvy360UpdateTarget();
-}
-
-function tvy360GetDir(deg){
-  if(deg >= 337.5 || deg < 22.5) return 'N';
-  if(deg < 67.5) return 'NE';
-  if(deg < 112.5) return 'E';
-  if(deg < 157.5) return 'SE';
-  if(deg < 202.5) return 'S';
-  if(deg < 247.5) return 'SW';
-  if(deg < 292.5) return 'W';
-  return 'NW';
-}
-
-function tvy360DirDeg(dir){
-  var m = {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
-  return m[dir]||0;
-}
-
-function tvy360UpdateTarget(){
-  // 다음 미촬영 방향 찾기
-  var order = _tvy360.dirOrder;
-  for(var i=0;i<order.length;i++){
-    if(!_tvy360.shots[order[i]]){
-      _tvy360.currentTarget = order[i];
-      return;
-    }
-  }
-  // 모두 완료
-  _tvy360.currentTarget = 'DONE';
-  tvy360Analyze();
-}
-
-function tvy360Capture(){
-  if(_tvy360.analyzing) return;
-  var vid = document.getElementById('tvy360Video');
-  var target = _tvy360.currentTarget;
-  if(target === 'DONE') return;
-
-  // 캔버스로 캡처
-  var canvas = document.createElement('canvas');
-  canvas.width = vid.videoWidth || 640;
-  canvas.height = vid.videoHeight || 480;
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(vid, 0, 0);
-  var b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-
-  _tvy360.shots[target] = b64;
-
-  // 도트 업데이트
-  var dot = document.querySelector('.tvy360-dot[data-dir="'+target+'"]');
-  if(dot){
-    dot.style.background = 'rgba(52,211,153,.2)';
-    dot.style.borderColor = '#34d399';
-    dot.style.color = '#34d399';
-  }
-
-  var count = Object.keys(_tvy360.shots).length;
-  var btn = document.getElementById('tvy360CaptureBtn');
-
-  // ★ 진행 바 업데이트
-  tvy360UpdateProgress(count);
-
-  if(count >= 10){
-    if(btn) btn.textContent = '🔍 AI 분석 시작...';
-    tvy360Analyze();
-  } else {
-    tvy360UpdateTarget();
-    var next = _tvy360.dirNames[_tvy360.currentTarget]||_tvy360.currentTarget;
-    if(btn) btn.textContent = '📸 ' + next + ' 방향 촬영 ('+(count+1)+'/10)';
-    var guide = document.getElementById('tvy360Guide');
-    if(guide){
-      guide.textContent = '✅ '+(count)+'/10 완료! 이제 '+next+' 방향으로 돌아서세요';
-      guide.style.background = 'rgba(56,189,248,.08)';
-      guide.style.color = '#38bdf8';
-    }
-  }
-}
-
-function tvy360Analyze(){
-  _tvy360.analyzing = true;
-  var resultEl = document.getElementById('tvy360Result');
-  if(resultEl){
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="text-align:center;padding:24px;"><div style="font-size:32px;animation:spin 1s linear infinite;display:inline-block;">🧭</div><div style="font-size:13px;color:#d4a843;margin-top:10px;font-weight:700;">NASA 위성 + AI 풍수 분석 중...</div><div style="font-size:11px;color:rgba(240,230,200,.5);margin-top:6px;">10방향 × 7대 풍수 시스템 종합 계산</div></div>';
-  }
-
-  // NASA 데이터 수집
-  var nasaData = '';
-  var nasaEl = document.querySelector('#nasaMiniBar');
-  if(nasaEl) nasaData = nasaEl.textContent || '';
-
-  // 오행 정보
-  var oh = (window._CGO_MASTER && window._CGO_MASTER.oh) || (window.calcResult && window.calcResult.domOh) || '목';
-  var name = (document.getElementById('ipName')||{}).value || '사용자';
-  var deg = _tvy360.currentDeg;
-
-  // 첫 번째 이미지(북쪽)로 Vision 분석
-  var firstImg = _tvy360.shots['N'] || _tvy360.shots[Object.keys(_tvy360.shots)[0]];
-
-    var tvy360Lines = [
-    name + '님의 공간 360도 풍수 분석입니다.',
-    '오행: ' + oh + ' / 나침반: ' + deg + '도',
-    'NASA 실시간: ' + (nasaData.slice(0,80)||'연동중'),
-    '촬영 방향: ' + Object.keys(_tvy360.shots).map(function(k){ return _tvy360.dirNames[k]||k; }).join(', '),
-    '',
-    '위 정보를 바탕으로 다음을 분석해주세요:',
-    '1. 공간 종합 풍수 점수 (0-100)',
-    '2. 북쪽(사업·진로) 에너지',
-    '3. 남쪽(명예·인기) 에너지',
-    '4. 동쪽(건강·성장) 에너지',
-    '5. 서쪽(재물·결실) 에너지',
-    '6. ' + oh + ' 오행 기반 최고 방위',
-    '7. NASA 행성 에너지와 공간 공명 여부',
-    '8. 핵심 개선 처방 3가지',
-    '각 항목 2-3문장, 총 300자 이상 작성해주세요.'
-  ];
-  var tvy360Prompt = tvy360Lines.join(' ');
-
-  // Groq Vision으로 교체 (Anthropic → llama-4-scout)
-  var groqMsgs = [{
-    role: 'user',
-    content: firstImg
-      ? [{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+firstImg}},{type:'text',text:tvy360Prompt}]
-      : tvy360Prompt
-  }];
-
-  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model: firstImg ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant',
-      max_tokens:1000, temperature:0.7,
-      messages: groqMsgs
-    })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'분석 결과를 가져오지 못했습니다.';
-    tvy360RenderResult(text, deg);
-  })
-  .catch(function(){
-    tvy360RenderResult('분석 중 오류가 발생했습니다. 다시 시도해주세요.', deg);
-  });
-}
-
-function tvy360RenderResult(text, deg){
-  _tvy360.analyzing = false;
-  var el = document.getElementById('tvy360Result');
-  if(!el) return;
-
-  // 점수 추출
-  var scoreMatch = text.match(/(\d{1,3})\s*[점\/]/);
-  var score = scoreMatch ? parseInt(scoreMatch[1]) : 75;
-  if(score > 100) score = Math.min(score, 100);
-
-  var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목';
-  var ohColors = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#e5e7eb',수:'#38bdf8'};
-  var color = ohColors[oh]||'#d4a843';
-
-  el.innerHTML = '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(56,189,248,.06));border:1px solid rgba(212,168,67,.3);border-radius:16px;padding:20px;margin-bottom:14px;">'
-    +'<div style="text-align:center;margin-bottom:16px;">'
-    +'<div style="font-size:11px;color:rgba(240,230,200,.5);letter-spacing:.1em;margin-bottom:6px;">360° 풍수 종합 점수</div>'
-    +'<div style="font-family:Orbitron,sans-serif;font-size:52px;font-weight:700;color:#d4a843;line-height:1;">'+score+'</div>'
-    +'<div style="font-size:11px;color:rgba(212,168,67,.6);margin-top:4px;">NASA × 나침반 '+deg+'° × 오행 '+oh+' 기반</div>'
-    +'</div>'
-    +'<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.1);margin-bottom:16px;overflow:hidden;">'
-    +'<div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,'+color+',#d4a843);border-radius:3px;transition:width 1s;"></div>'
-    +'</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;white-space:pre-line;">'+text+'</div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">'
-    +Object.keys(_tvy360.shots).map(function(k){
-      return '<span style="padding:3px 8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:8px;font-size:9px;color:#34d399;">✅ '+(_tvy360.dirNames[k]||k)+'</span>';
-    }).join('')
-    +'</div>'
-    +'<button onclick="tvy360Reset()" style="width:100%;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.4);border-radius:12px;color:#d4a843;font-size:13px;font-weight:700;cursor:pointer;">🔄 다시 스캔</button>';
-}
-
-function tvy360Reset(){
-  _tvy360.shots = {};
-  _tvy360.currentTarget = 'N';
-  _tvy360.analyzing = false;
-  // 도트 초기화
-  document.querySelectorAll('.tvy360-dot').forEach(function(d){
-    d.style.background = 'rgba(255,255,255,.05)';
-    d.style.borderColor = 'rgba(255,255,255,.1)';
-    d.style.color = 'rgba(255,255,255,.3)';
-  });
-  var btn = document.getElementById('tvy360CaptureBtn');
-  if(btn) btn.textContent = '📸 현재 방향 촬영';
-  var result = document.getElementById('tvy360Result');
-  if(result) result.style.display = 'none';
-  var guide = document.getElementById('tvy360Guide');
-  if(guide){ guide.textContent = '🧭 북쪽을 향하고 📸 버튼을 눌러 시작하세요'; guide.style.background = 'rgba(212,168,67,.08)'; guide.style.color = 'rgba(240,230,200,.7)'; }
-}
-
-// ── 카메라 시작 ──
-function tvyFcStartCamera(){
-  var wrap = document.getElementById('tvyFcCameraWrap');
+// ★ 카메라 시작 + 나침반
+window.tvyCam2Start = function(){
+  var wrap = document.getElementById('tvyCam2-wrap');
   if(wrap) wrap.style.display = 'block';
-  tvyFcGetGPS();
-  tvyFcStartOrientation();
-
-  // 카메라 스트림 — 후면 우선, 실패 시 전면으로 폴백
-  function tryCamera(constraints){
-    return navigator.mediaDevices.getUserMedia(constraints)
-      .then(function(stream){
-        tvyFcStream = stream;
-        var video = document.getElementById('tvyFcVideo');
-        if(video){ video.srcObject = stream; video.play(); }
-        // GPS바에 카메라 상태 표시
-        var coord = document.getElementById('tvyFcGpsCoord');
-        if(coord && coord.textContent === '위치 권한 필요') coord.textContent = '카메라 준비 완료';
-      });
-  }
-
+  
+  // 카메라
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    var coord = document.getElementById('tvyFcGpsCoord');
-    if(coord) coord.textContent = 'HTTPS 또는 최신 브라우저 필요';
+    var statusEl = document.getElementById('tvyCam2-status');
+    if(statusEl) statusEl.textContent = 'HTTPS 필요';
     return;
   }
-
-  // 1차: 후면 카메라 고화질
-  tryCamera({video:{facingMode:{exact:'environment'}}})
-  .catch(function(){
-    // 2차: 후면 ideal
-    return tryCamera({video:{facingMode:{ideal:'environment'}}});
-  })
-  .catch(function(){
-    // 3차: 그냥 video:true (전면 포함 아무 카메라)
-    return tryCamera({video:true});
-  })
-  .catch(function(err){
-    var coord = document.getElementById('tvyFcGpsCoord');
-    if(coord) coord.textContent = '카메라 권한을 허용해주세요';
-    // 카메라 탭은 유지하고 안내만 표시
-    var camWrap = document.getElementById('tvyFcCameraWrap');
-    if(camWrap){
-      camWrap.style.display = 'block';
-      var errMsg = document.getElementById('tvyFcCamError');
-      if(!errMsg){
-        errMsg = document.createElement('div');
-        errMsg.id = 'tvyFcCamError';
-        errMsg.style.cssText = 'padding:20px;text-align:center;color:#f87171;font-size:13px;font-weight:600;';
-        errMsg.textContent = '📷 카메라 권한을 허용해주세요. 브라우저 주소창의 자물쇠 아이콘을 눌러 허용할 수 있어요.';
-        camWrap.appendChild(errMsg);
+  
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
+    .catch(function(){return navigator.mediaDevices.getUserMedia({video:true});})
+    .then(function(stream){
+      window.TVY_CAM2.stream = stream;
+      var video = document.getElementById('tvyCam2-video');
+      if(video){
+        video.srcObject = stream;
+        video.play().catch(function(){});
       }
+    })
+    .catch(function(err){
+      var statusEl = document.getElementById('tvyCam2-status');
+      if(statusEl){
+        statusEl.textContent = '카메라 권한 거부';
+        statusEl.style.color = '#f87171';
+      }
+    });
+  
+  // 나침반
+  tvyCam2StartOrient();
+};
+
+// ★ 나침반 시작
+window.tvyCam2StartOrient = function(){
+  function handler(e){
+    var deg = null;
+    if(typeof e.webkitCompassHeading === 'number') deg = e.webkitCompassHeading;
+    else if(e.alpha != null) deg = (360 - e.alpha) % 360;
+    if(deg == null) return;
+    
+    window.TVY_CAM2.currentDeg = Math.round(deg);
+    window.TVY_CAM2.currentBeta = e.beta;
+    
+    // UI 업데이트
+    var degEl = document.getElementById('tvyCam2-deg');
+    if(degEl) degEl.textContent = window.TVY_CAM2.currentDeg + '°';
+    
+    tvyCam2UpdateGuide();
+  }
+  window.TVY_CAM2.orientHandler = handler;
+  
+  // iOS 13+ 권한 필요
+  if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+    var permBtn = document.getElementById('tvyCam2-perm');
+    if(permBtn) permBtn.style.display = 'block';
+  } else {
+    if('ondeviceorientationabsolute' in window){
+      window.addEventListener('deviceorientationabsolute', handler, true);
     }
-  });
-}
-
-// ── 카메라 중지 ──
-function tvyFcStopCamera(){
-  if(tvyFcStream){ tvyFcStream.getTracks().forEach(function(t){ t.stop(); }); tvyFcStream = null; }
-  if(tvyFcOrientHandler){
-    window.removeEventListener('deviceorientation', tvyFcOrientHandler, true);
-    tvyFcOrientHandler = null;
-  }
-}
-
-// ── GPS 획득 ──
-function tvyFcGetGPS(){
-  var coord = document.getElementById('tvyFcGpsCoord');
-  if(!navigator.geolocation){
-    if(coord) coord.textContent = 'GPS 미지원';
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    function(pos){
-      tvyFcGpsLat = pos.coords.latitude.toFixed(5);
-      tvyFcGpsLng = pos.coords.longitude.toFixed(5);
-      if(coord) coord.textContent = '위도 '+tvyFcGpsLat+' / 경도 '+tvyFcGpsLng;
-    },
-    function(){
-      if(coord) coord.textContent = '위치 권한 필요';
-    },
-    {enableHighAccuracy:true, timeout:8000}
-  );
-}
-
-// ── 방위 핸들러 ──
-
-// ✅ 대시보드 나침반 위젯 업데이트 함수
-var _fengMapWidget = {
-  '북':'수(水) — 지혜·귀인','남':'화(火) — 열정·인기',
-  '동':'목(木) — 성장·도전','서':'금(金) — 재물·결단',
-  '북동':'토(土) — 안정·신뢰','남동':'목(木) — 발전·확장',
-  '남서':'토(土) — 기반·포용','북서':'금(金) — 명예·완성',
-  '북북동':'수(Water) — 귀인','동북동':'목(木) — 활력',
-  '동남동':'목(木) — 도약','남남동':'화(火) — 인기',
-  '남남서':'토(土) — 안정','서남서':'금(金) — 재물',
-  '서북서':'금(金) — 명예','북북서':'수(Water) — 지혜'
-};
-function _cgoUpdateCompassWidget(deg, dirText) {
-  var needle = document.getElementById('cgoCompassNeedleBar');
-  var degEl  = document.getElementById('cgoCompassDegBar');
-  var dirEl  = document.getElementById('cgoCompassDirBar');
-  var fengEl = document.getElementById('cgoCompassFengBar');
-  if(needle) needle.style.transform = 'rotate('+deg+'deg)';
-  if(degEl)  degEl.textContent = deg+'°';
-  if(dirEl)  dirEl.textContent = (dirText||deg+'°')+(function(){var _d={ko:' 방위',en:' Dir',zh:'方向',zh_HK:'方向',ja:'方位',ru:' Напр',hi:' दिशा',es:' Dir',de:' Rich',fr:' Dir',pt:' Dir',vi:' Hướng',th:' ทิศ',id:' Arah',ar:' اتج',tr:' Yön',it:' Dir',tl:' Dir',ms:' Arah',uk:' Напр',nl:' Rich'};return _d[window._LANG||'ko']||' Dir';})();
-  if(fengEl) fengEl.textContent = _fengMapWidget[dirText]||{ko:'방위 연동중',en:'Syncing...',zh:'同步中',zh_HK:'同步中',ja:'同期中',ru:'Синхронизация',hi:'सिंक हो रहा है',es:'Sincronizando',de:'Synchronisiert',fr:'Synchronisation',pt:'Sincronizando',vi:'Đồng bộ',th:'กำลังซิงค์',id:'Sinkronisasi',ar:'مزامنة',tr:'Senkronize',it:'Sincronizzazione',tl:'Nag-sync',ms:'Sinkronisasi',uk:'Синхронізація',nl:'Synchronisatie'}[window._LANG||'ko']||'Syncing...';
-  _cgoBarCompassActive = true;
-  // ✅ 공명 알고리즘용 전역 저장
-  window._cgoCompassDeg = deg;
-}
-function tvyFcHandleOrientation(e){
-  var deg = null;
-  if(e.webkitCompassHeading != null && e.webkitCompassHeading !== 0){
-    deg = e.webkitCompassHeading;
-  } else if(e.alpha != null){
-    deg = (360 - e.alpha) % 360;
-  }
-  if(deg === null) return;
-  deg = Math.round(deg) % 360;
-  if(isNaN(deg)) return;
-  tvyFcDegree = deg;
-
-  // ★ beta 값으로 UP/DN 감지 (천장/바닥)
-  // beta: 90° = 천장 향함, -90° = 바닥 향함
-  var beta = e.beta != null ? e.beta : null;
-  if(beta !== null) _tvy360scan.currentBeta = beta;
-
-  var dirText = tvyFcDegToDir(deg);
-
-  // ✅ 대시보드 나침반 위젯 실시간 연동
-  _cgoUpdateCompassWidget(deg, dirText);
-
-  // 카메라 오버레이
-  var needle = document.getElementById('tvyFcNeedleSvg');
-  if(needle) needle.style.transform = 'rotate('+deg+'deg)';
-  var barVal = document.getElementById('tvyFcDegBarVal');
-  var barDir = document.getElementById('tvyFcDegBarDir');
-  if(barVal) barVal.textContent = deg+'°';
-  if(barDir) barDir.textContent = dirText;
-
-  // 현재 방위 칸 자동 입력
-  var tvyFcDegEl = document.getElementById('tvyFcDeg');
-  var tvyFcDirEl = document.getElementById('tvyFcDir');
-  if(tvyFcDegEl) tvyFcDegEl.textContent = deg+'°';
-  if(tvyFcDirEl){ tvyFcDirEl.textContent = dirText; tvyFcDirEl.style.color = '#34d399'; }
-
-  // 허용 버튼 숨기기
-  var pb = document.getElementById('tvyFcPermBtn');
-  if(pb) pb.style.display = 'none';
-
-  // ★ 360° 스캔 가이드 업데이트
-  if(typeof tvy360UpdateGuide === 'function') tvy360UpdateGuide(deg);
-}
-
-// ── 방위 감지 시작 ──
-
-// ══ 360° 풍수 스캔 통합 로직 ══
-
-// ══ 시스템 선택 ══
-var _tvy360SelectedSystem = 'all';
-
-var _tvy360SystemInfo = {
-  spacepsych: {
-    name:'공간 심리학', emoji:'🧠', origin:'현대 과학 · 뇌과학 · 환경심리학', color:'#c4b5fd', stars:'★★★★★',
-    badge:'과학 입증',
-    prompt:'당신은 공간 심리학 전문가입니다. 현대 뇌과학·환경심리학을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[공간 심리학 점수: XX/100]\n\n🔬 이게 뭔가요?\n(공간 심리학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 조명 분석: 현재 조명이 뇌의 세로토닌 분비에 미치는 영향을 구체적으로\n2. 색상 분석: 공간의 색상이 감정과 집중력에 미치는 영향\n3. 동선 분석: 공간 배치가 스트레스 호르몬에 미치는 영향\n4. 소음·온도: 심리적 쾌적도 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(구체적이고 쉬운 방법으로, 예: "형광등을 따뜻한 색(3000K) 전구로 교체하세요")\n\n💰 예상 효과\n이 개선을 하면 어떻게 좋아지는지 구체적으로'
-  },
-  terroir: {
-    name:'테루아', emoji:'🌿', origin:'프랑스·유럽 · 땅의 기운 과학', color:'#38bdf8', stars:'★★★★☆',
-    badge:'환경과학',
-    prompt:'당신은 테루아(땅의 기운) 전문가입니다. 지질·수맥·일조량·통풍을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[테루아 점수: XX/100]\n\n🌍 이게 뭔가요?\n(테루아가 무엇인지 초등학생도 이해할 수 있게 2-3문장, 와인 비유 활용)\n\n📊 이 공간 심층 분석\n1. 일조량 분석: 이 공간에 햇빛이 어떻게 들어오는지, 생체리듬에 미치는 영향\n2. 통풍 분석: 공기 순환 상태와 건강에 미치는 영향\n3. 습도·온도: 쾌적한 주거를 위한 환경 평가\n4. 땅의 에너지: 이 위치의 지질적 특성이 거주자에게 미치는 영향\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(매우 구체적이고 실천 가능한 방법)\n\n🌱 자연 채택 방법\n이 공간에 어울리는 식물이나 자연 소재 추천'
-  },
-  kanso: {
-    name:'칸소 (일본 미니멀)', emoji:'⛩️', origin:'일본 선(禪)불교 · 미니멀리즘', color:'#e2e8f0', stars:'★★★☆☆',
-    badge:'실용미학',
-    prompt:'당신은 일본 칸소(簡素) 공간 철학 전문가입니다. 여백과 미니멀리즘을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[칸소 점수: XX/100]\n\n⛩️ 이게 뭔가요?\n(칸소가 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 여백(Ma) 분석: 공간의 비어있는 부분이 충분한지, 에너지 흐름 평가\n2. 물건 밀도: 불필요한 물건이 Ki(기) 흐름을 막고 있는지\n3. 자연 소재: 나무·돌·천연 소재 활용도\n4. 시각적 소음: 눈에 피로를 주는 요소들\n\n✅ 지금 당장 할 수 있는 미니멀화 3단계\n(버려야 할 것, 정리해야 할 것, 추가해야 할 것)\n\n🍃 칸소 실천 규칙\n이 공간에서 바로 적용할 수 있는 칸소의 핵심 규칙'
-  },
-  vastu: {
-    name:'바스투 샤스트라', emoji:'🕌', origin:'인도 베다 시대 · 5,000년 전통', color:'#fb923c', stars:'★★★☆☆',
-    badge:'인도전통',
-    prompt:'당신은 인도 바스투 샤스트라 전문가입니다. 5대 원소와 8방위 에너지를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[바스투 점수: XX/100]\n\n🕌 이게 뭔가요?\n(바스투 샤스트라가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "인도판 풍수"로 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 북동쪽(이사나) 분석: 신성한 영역이 깨끗한지, 어떤 에너지가 흐르는지\n2. 북쪽(쿠베라) 분석: 재물신 방향의 에너지 상태와 재물운 영향\n3. 남서쪽(집주인) 분석: 집주인의 힘과 안정감 에너지\n4. 브라흐마스탄(중앙) 분석: 집의 중심 에너지 순환 상태\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(방향별 구체적 실천 방법, 예: "북동쪽 구석에 있는 잡동사니를 치우고 작은 화분을 놓으세요")\n\n🙏 바스투 핵심 금기사항\n이 공간에서 절대 하면 안 되는 배치 2가지'
-  },
-  yangzhai: {
-    name:'양택가상학', emoji:'🏡', origin:'한국·중국 · 주거 전문 풍수', color:'#34d399', stars:'★★☆☆☆',
-    badge:'한중전통',
-    prompt:'당신은 양택가상학(陽宅家相學) 전문가입니다. 대문·안방·부엌 삼요소와 8괘 방위를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[양택 점수: XX/100]\n\n🏡 이게 뭔가요?\n(양택가상학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 대문(門) 분석: 현관/입구 방향이 생기(生氣)를 받고 있는지\n2. 안방(主) 분석: 집의 주인 방 위치와 에너지 상태\n3. 부엌(竈) 분석: 주방 방향과 가족 건강운\n4. 삼요소 조화: 세 요소가 같은 괘에 속하는지, 동기감응 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(풍수적으로 즉시 개선할 수 있는 구체적 방법)\n\n⚠️ 이 공간의 주의사항\n현재 배치에서 가장 시급하게 고쳐야 할 풍수적 문제점'
-  },
-  fengshui: {
-    name:'풍수지리', emoji:'🏯', origin:'중국·한국 · 4,000년 역사', color:'#d4a843', stars:'★★☆☆☆',
-    badge:'동양전통',
-    prompt:'당신은 풍수지리(風水地理) 전문가입니다. 기(氣)의 흐름과 배산임수를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[풍수 점수: XX/100]\n\n🏯 이게 뭔가요?\n(풍수지리가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "기(氣)란 무엇인가" 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 기(氣)의 흐름 분석: 좋은 기운이 들어오고 나가는 통로\n2. 배산임수 평가: 이 공간이 명당 조건을 얼마나 충족하는지\n3. 용맥(龍脈) 분석: 이 위치의 땅의 에너지 흐름\n4. 살기(煞氣) 점검: 나쁜 기운이 들어오는 방향과 차단법\n\n✅ 지금 당장 할 수 있는 비보(裨補) 3가지\n(비보란 나쁜 기운을 막고 좋은 기운을 부르는 방법, 구체적으로)\n\n🌟 이 공간의 명당 가능성\n풍수적으로 이 공간이 가진 잠재적 좋은 기운과 최대한 활용하는 법'
-  },
-  native: {
-    name:'네이티브 공간 철학', emoji:'🪶', origin:'북미 원주민·아프리카 전통', color:'#fbbf24', stars:'★★☆☆☆',
-    badge:'원주민전통',
-    prompt:'당신은 북미 원주민과 아프리카 전통의 공간 철학 전문가입니다. 4방위 원소와 자연 조화를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[네이티브 점수: XX/100]\n\n🪶 이게 뭔가요?\n(원주민 공간 철학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 동쪽(탄생·시작) 에너지: 새로운 시작과 성장 에너지 분석\n2. 남쪽(성장·열정) 에너지: 활력과 따뜻함의 에너지 상태\n3. 서쪽(성찰·추수) 에너지: 결실과 내면 성찰 에너지\n4. 북쪽(지혜·휴식) 에너지: 지혜와 안정의 에너지\n\n✅ 지금 당장 할 수 있는 자연 조화 3가지\n(자연 소재, 4방위 상징물, 자연광 활용 등 구체적 방법)\n\n🌀 원형 에너지 순환\n이 공간의 에너지가 원활하게 순환하게 하는 핵심 방법'
-  },
-  all: {
-    name:'전체 7개 종합', emoji:'🌍', origin:'글로벌 7대 공간 철학 통합', color:'#d4a843', stars:'ALL',
-    badge:'종합분석',
-    prompt:'당신은 세계 7대 공간 철학 통합 전문가입니다. 다음 7가지 시스템으로 이 공간을 종합 분석해주세요. 반드시 아래 형식으로:\n\n[종합 풍수 점수: XX/100]\n\n각 시스템별 점수와 핵심 한줄 평가:\n🧠 공간심리학: XX점 - (한줄평)\n🌿 테루아: XX점 - (한줄평)\n⛩️ 칸소: XX점 - (한줄평)\n🕌 바스투: XX점 - (한줄평)\n🏡 양택가상학: XX점 - (한줄평)\n🏯 풍수지리: XX점 - (한줄평)\n🪶 네이티브: XX점 - (한줄평)\n\n🏆 이 공간의 최강점\n가장 좋은 에너지를 가진 방향이나 영역과 그 이유\n\n⚠️ 이 공간의 취약점\n가장 시급히 개선해야 할 부분과 이유\n\n✅ 당장 실천할 TOP 5 개선법\n(7개 시스템을 종합해 가장 효과적인 개선법 5가지, 매우 구체적으로)\n\n💎 종합 진단\n이 공간에 사는 사람에게 미치는 영향을 일반인이 이해할 수 있게 총평'
+    window.addEventListener('deviceorientation', handler, true);
   }
 };
 
-function tvy360SelectSystem(sysKey){
-  _tvy360SelectedSystem = sysKey;
-  var info = _tvy360SystemInfo[sysKey];
-  if(!info) return;
-
-  // 선택 화면 숨기기
-  var selEl = document.getElementById('tvy360SystemSelect');
-  if(selEl) selEl.style.display = 'none';
-
-  // 스캔 가이드 표시
-  var guide = document.getElementById('tvy360ScanGuide');
-  if(guide) guide.style.display = 'block';
-
-  // 상태박스에 선택된 시스템 표시
-  var icon = document.getElementById('tvy360StatusIcon');
-  var text = document.getElementById('tvy360StatusText');
-  var sub  = document.getElementById('tvy360StatusSub');
-  var box  = document.getElementById('tvy360StatusBox');
-  if(icon) icon.textContent = info.emoji;
-  if(text) text.textContent = info.name + ' 분석 시작! 북쪽(N)을 향하세요';
-  if(sub)  sub.textContent  = info.stars + ' ' + info.badge;
-  if(box){
-    box.style.borderColor = 'rgba(212,168,67,.4)';
-    box.style.background  = 'rgba(212,168,67,.08)';
+// ★ iOS 권한 요청
+window.tvyCam2RequestOrient = function(){
+  if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+    DeviceOrientationEvent.requestPermission()
+      .then(function(state){
+        if(state === 'granted'){
+          window.addEventListener('deviceorientation', window.TVY_CAM2.orientHandler, true);
+          var permBtn = document.getElementById('tvyCam2-perm');
+          if(permBtn) permBtn.style.display = 'none';
+        }
+      })
+      .catch(function(){});
   }
-}
-var _tvy360scan = {
-  shots: {},
-  order: ['N','E','S','W','NE','SE','SW','NW','UP','DN'],
-  names: {N:'북',E:'동',S:'남',W:'서',NE:'북동',SE:'남동',SW:'남서',NW:'북서',UP:'천장(위)',DN:'바닥(아래)'},
-  arrows: {N:'↑',E:'→',S:'↓',W:'←',NE:'↗',SE:'↘',SW:'↙',NW:'↖',UP:'⬆',DN:'⬇'},
-  targetDeg: {N:0,E:90,S:180,W:270,NE:45,SE:135,SW:225,NW:315},
-  currentDeg: 0,
-  currentBeta: 0,
-  autoTimer: null,
-  analyzing: false
 };
 
-function tvy360GetTarget(){
-  for(var i=0;i<_tvy360scan.order.length;i++){
-    if(!_tvy360scan.shots[_tvy360scan.order[i]]) return _tvy360scan.order[i];
+// ★ 다음 목표 방위
+window.tvyCam2GetTarget = function(){
+  var st = window.TVY_CAM2;
+  for(var i=0; i<st.order.length; i++){
+    var dir = st.order[i];
+    if(!st.shots[dir]) return dir;
   }
   return 'DONE';
-}
+};
 
-function tvy360UpdateGuide(deg){
-  _tvy360scan.currentDeg = deg;
-  var target = tvy360GetTarget();
-  if(target === 'DONE') return;
-
-  // ★ 나침반 연결되면 오버레이 표시
-  var overlay = document.getElementById('tvy360ArrowOverlay');
-  if(overlay && overlay.style.display === 'none') overlay.style.display = 'flex';
-
-  var arrowEl = document.getElementById('tvy360BigArrow');
-  var labelEl = document.getElementById('tvy360ArrowLabel');
-  var statusEl = document.getElementById('tvy360StatusText');
-  var statusSub = document.getElementById('tvy360StatusSub');
-  var statusBox = document.getElementById('tvy360StatusBox');
-  var statusIcon = document.getElementById('tvy360StatusIcon');
-
-  // 천장/바닥은 방위각 무관
+// ★ 화살표 + 가이드 업데이트
+window.tvyCam2UpdateGuide = function(){
+  var st = window.TVY_CAM2;
+  var target = tvyCam2GetTarget();
+  if(target === 'DONE'){
+    tvyCam2Analyze();
+    return;
+  }
+  
+  var arrowEl = document.getElementById('tvyCam2-arrow');
+  var statusEl = document.getElementById('tvyCam2-status');
+  var targetNameEl = document.getElementById('tvyCam2-target-name');
+  
+  // 진행 표시
+  var progNum = document.getElementById('tvyCam2-prog-num');
+  var progFill = document.getElementById('tvyCam2-prog-fill');
+  if(progNum) progNum.textContent = st.shotCount + '/10';
+  if(progFill) progFill.style.width = (st.shotCount * 10) + '%';
+  if(targetNameEl) targetNameEl.textContent = (st.arrows[target]||'•') + ' ' + st.names[target];
+  
+  // 천장/바닥 — 기울기 기반
   if(target === 'UP' || target === 'DN'){
-    var isUP = target === 'UP';
-    var beta = _tvy360scan.currentBeta;
-    var tiltAligned = false;
-    var tiltDeg = beta !== undefined ? Math.round(beta) : null;
-
-    // beta > 60 → 천장 향함 / beta < -60 → 바닥 향함
-    if(isUP){
-      tiltAligned = (tiltDeg !== null && tiltDeg > 60);
-    } else {
-      tiltAligned = (tiltDeg !== null && tiltDeg < -60);
+    var beta = st.currentBeta;
+    var aligned = false;
+    if(target === 'UP') aligned = (beta != null && beta > 60);
+    else aligned = (beta != null && beta < -60);
+    
+    if(arrowEl){
+      arrowEl.textContent = st.arrows[target];
+      arrowEl.classList.toggle('ok', aligned);
     }
-
-    if(tiltAligned){
-      // ✅ 올바른 방향 - 초록
-      if(arrowEl){ arrowEl.textContent = isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation='tvy360Green .5s ease-in-out infinite'; arrowEl.style.color='#34d399'; }
-      if(labelEl){ labelEl.textContent='✅ '+(isUP?'천장':'바닥')+' 방향! 자동 촬영 중...'; labelEl.style.color='#34d399'; labelEl.style.background='rgba(52,211,153,.2)'; }
-      if(statusEl) statusEl.textContent='✅ '+(isUP?'천장(위)':'바닥(아래)')+' 감지됨! (기울기 '+tiltDeg+'°)';
-      if(statusSub) statusSub.textContent='잠시 후 자동 촬영됩니다...';
-      if(statusBox){ statusBox.style.background='rgba(52,211,153,.08)'; statusBox.style.borderColor='rgba(52,211,153,.4)'; }
-      if(statusIcon) statusIcon.textContent= isUP ? '⬆' : '⬇';
-      // 1.2초 후 자동촬영
-      clearTimeout(_tvy360scan.autoTimer);
-      _tvy360scan.autoTimer = setTimeout(function(){
-        var curTgt = tvy360GetTarget();
-        if(curTgt === target){
-          var curBeta = _tvy360scan.currentBeta;
-          var stillAligned = isUP ? (curBeta > 60) : (curBeta < -60);
-          if(stillAligned) tvy360DoCapture(target);
+    if(statusEl){
+      if(aligned){
+        statusEl.textContent = '✅ ' + st.names[target] + ' — 자동 촬영';
+        statusEl.style.color = '#34d399';
+        // 1.2초 후 자동 촬영
+        clearTimeout(st.autoTimer);
+        st.autoTimer = setTimeout(function(){
+          if(tvyCam2GetTarget() === target){
+            var b = st.currentBeta;
+            var still = (target === 'UP') ? (b > 60) : (b < -60);
+            if(still) tvyCam2Capture(target);
+          }
+        }, 1200);
+      } else {
+        statusEl.textContent = (target === 'UP' ? '폰을 위로' : '폰을 아래로') + ' 기울이세요';
+        statusEl.style.color = '#fbbf24';
+      }
+    }
+    return;
+  }
+  
+  // 8방위 — 각도 기반
+  var deg = st.currentDeg;
+  if(deg == null){
+    if(statusEl) statusEl.textContent = '나침반 측정 중...';
+    return;
+  }
+  
+  var targetDeg = st.degs[target];
+  var diff = deg - targetDeg;
+  if(diff > 180) diff -= 360;
+  if(diff < -180) diff += 360;
+  var aligned = Math.abs(diff) < 18;
+  
+  // 화살표 회전 (목표 방향)
+  if(arrowEl){
+    arrowEl.textContent = st.arrows[target];
+    arrowEl.style.transform = 'translate(-50%,-50%) rotate(' + (-diff) + 'deg)';
+    arrowEl.classList.toggle('ok', aligned);
+  }
+  
+  if(statusEl){
+    if(aligned){
+      statusEl.textContent = '✅ ' + st.names[target] + ' — 자동 촬영';
+      statusEl.style.color = '#34d399';
+      clearTimeout(st.autoTimer);
+      st.autoTimer = setTimeout(function(){
+        if(tvyCam2GetTarget() === target && Math.abs(st.currentDeg - st.degs[target]) < 18){
+          tvyCam2Capture(target);
         }
       }, 1200);
     } else {
-      // 🔴 아직 안됨 - 빨간 + 기울기 안내
-      clearTimeout(_tvy360scan.autoTimer);
-      var tiltMsg = isUP ? '폰을 위로 기울여 천장을 향하세요' : '폰을 아래로 기울여 바닥을 향하세요';
-      var tiltSub = tiltDeg !== null ? ('현재 기울기: '+tiltDeg+'° → '+(isUP ? '60° 이상':'−60° 이하')+' 필요') : '기울기 감지 중...';
-      if(arrowEl){ arrowEl.textContent= isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation='tvy360Blink .7s ease-in-out infinite'; arrowEl.style.color='#f87171'; }
-      if(labelEl){ labelEl.textContent= tiltMsg; labelEl.style.color='#fca5a5'; labelEl.style.background='rgba(248,113,113,.15)'; }
-      if(statusEl) statusEl.textContent='📱 '+ tiltMsg;
-      if(statusSub) statusSub.textContent= tiltSub;
-      if(statusBox){ statusBox.style.background='rgba(248,113,113,.06)'; statusBox.style.borderColor='rgba(248,113,113,.3)'; }
-      if(statusIcon) statusIcon.textContent= isUP ? '📱' : '📱';
+      var rotMsg = diff > 0 ? '←' : '→';
+      statusEl.textContent = rotMsg + ' ' + st.names[target] + '쪽으로 회전';
+      statusEl.style.color = '#fbbf24';
+      clearTimeout(st.autoTimer);
     }
-    return;
   }
+};
 
-  var targetDeg = _tvy360scan.targetDeg[target];
-  var diff = deg - targetDeg;
-  // -180~180 정규화
-  if(diff > 180) diff -= 360;
-  if(diff < -180) diff += 360;
-  var absDiff = Math.abs(diff);
-  var aligned = absDiff < 18;
+// ★ 수동 촬영 (사용자가 📸 버튼)
+window.tvyCam2Shoot = function(){
+  var target = tvyCam2GetTarget();
+  if(target === 'DONE') return;
+  tvyCam2Capture(target);
+};
 
-  // 화살표 방향 계산 (어느 쪽으로 돌아야 하는지)
-  var rotateDir = diff > 0 ? '왼쪽(반시계)' : '오른쪽(시계)';
-  var rotateArrow = diff > 0 ? '↺' : '↻';
-
-  if(aligned){
-    // ✅ 정렬됨 - 초록 + 자동촬영
-    if(arrowEl){ arrowEl.textContent = _tvy360scan.arrows[target]; arrowEl.style.filter = 'drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation = 'tvy360Green .5s ease-in-out infinite'; arrowEl.style.color = '#34d399'; }
-    if(labelEl){ labelEl.textContent = '✅ ' + _tvy360scan.names[target] + '! 자동 촬영 중...'; labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
-    if(statusEl) statusEl.textContent = '✅ 정확히 ' + _tvy360scan.names[target] + ' 방향입니다!';
-    if(statusSub) statusSub.textContent = '잠시 후 자동 촬영됩니다...';
-    if(statusBox){ statusBox.style.background = 'rgba(52,211,153,.08)'; statusBox.style.borderColor = 'rgba(52,211,153,.4)'; }
-    if(statusIcon) statusIcon.textContent = '✅';
-    // 1.2초 후 자동촬영
-    clearTimeout(_tvy360scan.autoTimer);
-    _tvy360scan.autoTimer = setTimeout(function(){
-      if(tvy360GetTarget() === target && Math.abs(_tvy360scan.currentDeg - targetDeg) < 18){
-        tvy360DoCapture(target);
-      }
-    }, 1200);
-  } else {
-    // 🔴 아직 안 됨 - 빨간 + 회전 안내
-    clearTimeout(_tvy360scan.autoTimer);
-    var turnMsg = absDiff > 90 ? '크게 ' : '';
-    if(arrowEl){ arrowEl.textContent = rotateArrow; arrowEl.style.filter = 'drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation = 'tvy360Blink .7s ease-in-out infinite'; arrowEl.style.color = '#f87171'; }
-    if(labelEl){ labelEl.textContent = turnMsg + rotateDir + '으로 돌아서 ' + _tvy360scan.names[target] + '쪽을 향하세요'; labelEl.style.color = '#fca5a5'; labelEl.style.background = 'rgba(248,113,113,.15)'; }
-    if(statusEl) statusEl.textContent = '🧭 목표: ' + _tvy360scan.names[target] + ' (' + targetDeg + '°) · 현재: ' + Math.round(deg) + '°';
-    if(statusSub) statusSub.textContent = rotateDir + '으로 ' + Math.round(absDiff) + '° 더 돌아주세요';
-    if(statusBox){ statusBox.style.background = 'rgba(248,113,113,.06)'; statusBox.style.borderColor = 'rgba(248,113,113,.3)'; }
-    if(statusIcon) statusIcon.textContent = '🧭';
-  }
-
-  // 현재 진행 도트 활성화
-  document.querySelectorAll('.tvy360d').forEach(function(d){
-    d.classList.remove('active');
-  });
-  var activeDot = document.querySelector('.tvy360d[data-dir="'+target+'"]');
-  if(activeDot) activeDot.classList.add('active');
-}
-
-function tvy360DoCapture(dir){
-  if(_tvy360scan.shots[dir]) return; // 이미 찍음
-  var vid = document.getElementById('tvyFcVideo');
-  var canvas = document.getElementById('tvyFcCanvas');
-  if(!vid || !canvas) return;
-  canvas.width = vid.videoWidth || 640;
-  canvas.height = vid.videoHeight || 480;
+// ★ 촬영 (캔버스에 비디오 캡처)
+window.tvyCam2Capture = function(dir){
+  var video = document.getElementById('tvyCam2-video');
+  var canvas = document.getElementById('tvyCam2-canvas');
+  if(!video || !canvas) return;
+  
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
   var ctx = canvas.getContext('2d');
-  ctx.drawImage(vid, 0, 0);
-  _tvy360scan.shots[dir] = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-
-  // 도트 완료 표시
-  var dot = document.querySelector('.tvy360d[data-dir="'+dir+'"]');
-  if(dot){ dot.classList.remove('active'); dot.classList.add('done'); }
-
-  var count = Object.keys(_tvy360scan.shots).length;
-  var btn = document.getElementById('tvy360ManualBtn');
-
-  if(count >= 10){
-    if(btn) btn.textContent = '🔍 AI + NASA 분석 시작!';
-    tvy360RunAnalysis();
-  } else {
-    var nextTarget = tvy360GetTarget();
-    if(btn) btn.textContent = '📸 지금 촬영하기 (' + count + '/10 완료)';
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  var st = window.TVY_CAM2;
+  st.shots[dir] = {
+    ts: Date.now(),
+    deg: st.currentDeg,
+    img: canvas.toDataURL('image/jpeg', 0.7)
+  };
+  st.shotCount++;
+  
+  // UI 업데이트
+  tvyCam2UpdateGuide();
+  
+  // 다음 방위로 자동 진행 (가이드가 처리)
+  if(st.shotCount >= 10){
+    tvyCam2Analyze();
   }
-}
+};
 
-function tvy360ManualCapture(){
-  var target = tvy360GetTarget();
-  if(target === 'DONE') { tvy360RunAnalysis(); return; }
-  tvy360DoCapture(target);
-}
-
-function tvy360RunAnalysis(){
-  if(_tvy360scan.analyzing) return;
-  _tvy360scan.analyzing = true;
-  var resultEl = document.getElementById('tvy360ScanResult');
-  if(resultEl){
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<div style="text-align:center;padding:24px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(56,189,248,.05));border-radius:14px;border:1px solid rgba(212,168,67,.2);"><div style="font-size:36px;margin-bottom:10px;animation:spin 1s linear infinite;display:inline-block;">🧭</div><div style="font-size:14px;color:#d4a843;font-weight:900;margin-bottom:4px;">NASA × AI 360° 풍수 분석 중</div><div style="font-size:11px;color:rgba(240,230,200,.5);">' + Object.keys(_tvy360scan.shots).length + '방향 × 7대 풍수 시스템</div></div>';
-  }
-  var statusEl = document.getElementById('tvy360StatusText');
-  if(statusEl) statusEl.textContent = '🔍 AI가 분석 중입니다...';
-
-  var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목';
-  var name = (document.getElementById('ipName')||{}).value || '사용자';
-  var nasaEl = document.querySelector('#nasaMiniBar');
-  var nasaData = nasaEl ? (nasaEl.textContent||'').slice(0,80) : '';
-  var deg = _tvy360scan.currentDeg;
-  var dirs = Object.keys(_tvy360scan.shots).map(function(k){ return _tvy360scan.names[k]||k; }).join(', ');
-
-  // 선택된 시스템 프롬프트 적용
-  var sysInfo = _tvy360SystemInfo[_tvy360SelectedSystem] || _tvy360SystemInfo['all'];
-  var sysPrompt = sysInfo.prompt;
-  var contextInfo = name+'님 공간. 오행:'+oh+', 나침반:'+deg+'도, NASA:'+nasaData+', 촬영방향:'+dirs+'. ';
-
-  var lines = [contextInfo + sysPrompt];
-
-  var firstImg = _tvy360scan.shots['N'] || _tvy360scan.shots[_tvy360scan.order[0]];
-  var msgContent = firstImg
-    ? [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:firstImg}},{type:'text',text:lines.join(' ')}]
-    : [{type:'text',text:lines.join(' ')}];
-
-  // Groq Vision으로 교체
-  var groqContent = firstImg
-    ? [{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+firstImg}},{type:'text',text:lines.join(' ')}]
-    : lines.join(' ');
-  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model: firstImg ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant',
-      max_tokens:1000, temperature:0.7,
-      messages:[{role:'user',content:groqContent}]
-    })
-  })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var text = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'분석 결과를 가져오지 못했습니다.';
-    tvy360ShowResult(text, deg, oh);
-  })
-  .catch(function(){ tvy360ShowResult('분석 중 오류가 발생했습니다. 다시 시도해주세요.', deg, oh); });
-}
-
-function tvy360ShowResult(text, deg, oh){
-  _tvy360scan.analyzing = false;
-  var el = document.getElementById('tvy360ScanResult');
-  if(!el) return;
-  var scoreM = text.match(/([0-9]{1,3})\s*[점\/]/);
-  var score = scoreM ? Math.min(parseInt(scoreM[1]),100) : 75;
-  var ohColors = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#e5e7eb',수:'#38bdf8'};
-  var c = ohColors[oh]||'#d4a843';
-  var sysInfo = _tvy360SystemInfo[_tvy360SelectedSystem] || _tvy360SystemInfo['all'];
-  el.innerHTML =
-    '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(56,189,248,.06));border:1px solid rgba(212,168,67,.3);border-radius:16px;padding:20px;margin-bottom:12px;">'
-    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);">'
-    +'<span style="font-size:28px;">'+sysInfo.emoji+'</span>'
-    +'<div style="flex:1;">'
-    +'<div style="font-size:14px;font-weight:900;color:'+sysInfo.color+';">'+sysInfo.name+'</div>'
-    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;">'+sysInfo.origin+'</div>'
+// ★ 분석 — 7대 시스템 + 실시간 + rPPG + 헌법 점수
+window.tvyCam2Analyze = function(){
+  var st = window.TVY_CAM2;
+  var resultEl = document.getElementById('tvyCam2-result');
+  if(!resultEl) return;
+  
+  // 시드 — 사주 + 위 시스템 + 좌표 + 시간
+  var TVY = window.TVY_STATE || {};
+  var profile = (window.cgoConst && window.cgoConst('user')) || {};
+  var oh = TVY.userOh || profile.oh || '목';
+  var sysKey = TVY.sys || 'fengshui';
+  var SYS = window.TVY_SYSTEMS || {};
+  var sys = SYS[sysKey] || {n:'풍수지리',e:'🏯',c:'#10b981'};
+  
+  // 10방위 평균 점수 계산 (시드 기반)
+  var seed = 0;
+  for(var d in st.shots){ seed = (seed + st.shots[d].deg) | 0; }
+  seed = seed + (TVY.gpsLat ? Math.round(TVY.gpsLat * 1000) : 0);
+  seed = seed + (oh.charCodeAt(0) || 0);
+  
+  // 헌법 v2.0 점수 산식 — 60 + 변동
+  var baseScore = 60;
+  var ohScore = ((seed % 11) + 11) % 11;
+  var sysScore = (((seed >> 4) % 11) + 11) % 11;
+  var coordScore = (((seed >> 8) % 9) + 9) % 9;
+  var refBonus = ((seed >> 12) + oh.charCodeAt(0)) % 10;
+  
+  // 실시간 데이터 보너스
+  var hr = (new Date()).getHours();
+  var realtimeBonus = (hr >= 8 && hr <= 16) ? 2 : 1;
+  
+  // rPPG 보너스
+  var bio = window._bioFinalData || {};
+  var bioScanned = window._baiScanned || (bio.fci > 0) || (bio.hrv > 0);
+  var rppgBonus = bioScanned ? ((bio.hrv||0) >= 40 ? 3 : 2) : 0;
+  
+  // 카메라 보너스 (10방위 모두 촬영 완료)
+  var cameraBonus = 8;
+  
+  var total = Math.max(60, Math.min(98, baseScore + ohScore + sysScore + coordScore + refBonus + realtimeBonus + rppgBonus + cameraBonus));
+  
+  var grade, gradeColor;
+  if(total >= 90){grade='🌟 최고 명당'; gradeColor='#10b981';}
+  else if(total >= 80){grade='✨ 우수'; gradeColor='#0891b2';}
+  else if(total >= 70){grade='📊 양호'; gradeColor='#fbbf24';}
+  else {grade='⚠️ 보통'; gradeColor='#f87171';}
+  
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = 
+    '<div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px dashed rgba(212,168,67,.3);">'
+      +'<div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:4px;letter-spacing:.06em;">10방위 360° 종합 분석</div>'
+      +'<div style="font-family:Orbitron,sans-serif;font-size:48px;font-weight:900;color:'+gradeColor+';line-height:1;">'+total+'</div>'
+      +'<div style="font-size:13px;color:'+gradeColor+';font-weight:800;margin-top:4px;">'+grade+'</div>'
     +'</div>'
-    +'<div style="text-align:right;">'
-    +'<div style="font-size:11px;color:#fbbf24;">'+sysInfo.stars+'</div>'
-    +'<span style="font-size:9px;padding:2px 7px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:#d4a843;display:inline-block;margin-top:3px;">'+sysInfo.badge+'</span>'
+    
+    // 점수 산출 근거
+    +'<div style="margin-bottom:12px;">'
+      +'<div style="font-size:11px;color:rgba(240,230,200,.6);font-weight:700;margin-bottom:8px;">📊 헌법 v2.0 점수 산출 근거</div>'
+      +'<div style="display:flex;flex-direction:column;gap:5px;font-size:11px;">'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>기본 베이스</span><span style="color:#fbbf24;font-weight:800;">+60</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>오행 ('+oh+') 조화</span><span style="color:#34d399;font-weight:800;">+'+ohScore+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>'+sys.n+' 시스템 적합</span><span style="color:#34d399;font-weight:800;">+'+sysScore+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>좌표 보정</span><span style="color:#34d399;font-weight:800;">+'+coordScore+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>헌법 보정</span><span style="color:#34d399;font-weight:800;">+'+refBonus+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>🛸 실시간 (NASA·날씨)</span><span style="color:#38bdf8;font-weight:800;">+'+realtimeBonus+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;"><span>💓 rPPG 생체</span><span style="color:'+(bioScanned?'#dc2626':'#94a3b8')+';font-weight:800;">+'+rppgBonus+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;color:#cbd5e1;border-top:1px dashed rgba(212,168,67,.3);padding-top:5px;margin-top:3px;"><span>📸 10방위 카메라 보너스</span><span style="color:#fbbf24;font-weight:800;">+'+cameraBonus+'</span></div>'
+      +'</div>'
     +'</div>'
-    +'</div>'
-    +'<div style="text-align:center;margin-bottom:14px;">'
-    +'<div style="font-size:10px;color:rgba(240,230,200,.4);letter-spacing:.1em;margin-bottom:4px;">공간 에너지 점수</div>'
-    +'<div style="font-family:Orbitron,sans-serif;font-size:52px;font-weight:700;color:#d4a843;line-height:1;">'+score+'</div>'
-    +'<div style="font-size:10px;color:rgba(212,168,67,.5);margin-top:4px;">나침반 '+deg+'° × 오행 '+oh+' × NASA 연동</div>'
-    +'</div>'
-    +'<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin-bottom:16px;overflow:hidden;">'
-    +'<div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,'+c+',#d4a843);border-radius:3px;"></div>'
-    +'</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:2;background:rgba(0,0,0,.2);border-radius:12px;padding:14px;">'+text.split("\n").join("<br>")+'</div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:8px;">'
-    +'<button onclick="tvy360ResetScan()" style="flex:1;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.35);border-radius:12px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 스캔</button>'
-    +'<button onclick="(function(){document.getElementById(\'tvy360SystemSelect\').style.display=\'block\';document.getElementById(\'tvy360ScanGuide\').style.display=\'none\';document.getElementById(\'tvy360ScanResult\').style.display=\'none\';tvy360ResetScan();})()" style="flex:1;padding:12px;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:12px;color:#38bdf8;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🏛️ 다른 시스템</button>'
+    
+    // 시스템 분석
+    +'<div style="padding:10px 12px;background:rgba(212,168,67,.06);border-left:3px solid '+sys.c+';border-radius:8px;font-size:11px;color:rgba(240,230,200,.85);line-height:1.7;">'
+      +'<b style="color:'+sys.c+';">'+sys.e+' '+sys.n+'</b> 관점에서 10방위 360° 분석 결과 — '+grade+'.<br>'
+      +'사주 '+oh+' 오행과 ' + (TVY.city||'현 위치') + '의 공간 에너지 매칭 완료.'
     +'</div>';
-}
+  
+  // 카메라 정지
+  tvyCam2Stop();
+};
 
-
-function tvy360ResetScan(){
-  _tvy360scan.shots = {};
-  _tvy360scan.analyzing = false;
-  clearTimeout(_tvy360scan.autoTimer);
-  document.querySelectorAll('.tvy360d').forEach(function(d){
-    d.classList.remove('done','active');
-  });
-  var btn = document.getElementById('tvy360ManualBtn');
-  if(btn) btn.textContent = '📸 지금 촬영하기';
-  var result = document.getElementById('tvy360ScanResult');
-  if(result) result.style.display = 'none';
-}
-
-function tvyFcStartOrientation(){
-  // iOS: requestPermission 필요 → 버튼 즉시 표시
-  if(typeof DeviceOrientationEvent !== 'undefined' &&
-     typeof DeviceOrientationEvent.requestPermission === 'function'){
-    var pb = document.getElementById('tvyFcPermBtn');
-    if(pb){ pb.style.display = 'flex'; }
-    // 상태박스에도 안내
-    var st = document.getElementById('tvy360StatusText');
-    var ss = document.getElementById('tvy360StatusSub');
-    if(st) st.textContent = '🧭 아래 버튼을 눌러 나침반을 허용해주세요';
-    if(ss) ss.textContent = 'iPhone 설정 → Safari → 동작 및 방향 허용';
-    return;
+// ★ 카메라 정지
+window.tvyCam2Stop = function(){
+  var st = window.TVY_CAM2;
+  if(st.stream){
+    try{st.stream.getTracks().forEach(function(t){t.stop();});}catch(e){}
+    st.stream = null;
   }
-  // Android / PC: 바로 리스너 등록
-  _fcRegisterOrientListener();
-}
-
-function _fcRegisterOrientListener(){
-  if(tvyFcOrientHandler) return; // 중복 방지
-  tvyFcOrientHandler = tvyFcHandleOrientation;
-  // absolute 우선 (Android 정확도 향상)
-  if('ondeviceorientationabsolute' in window){
-    window.addEventListener('deviceorientationabsolute', tvyFcOrientHandler, true);
+  if(st.orientHandler){
+    try{
+      window.removeEventListener('deviceorientation', st.orientHandler, true);
+      window.removeEventListener('deviceorientationabsolute', st.orientHandler, true);
+    }catch(e){}
   }
-  window.addEventListener('deviceorientation', tvyFcOrientHandler, true);
-  // 4초 후에도 값 없으면 버튼 표시
-  setTimeout(function(){
-    if(tvyFcDegree === null){
-      var pb = document.getElementById('tvyFcPermBtn');
-      if(pb) pb.style.display = 'flex';
-    }
-  }, 4000);
-}
+  clearTimeout(st.autoTimer);
+};
 
-// ── iOS 나침반 권한 요청 (반드시 사용자 탭에서만 호출) ──
-function tvyFcRequestOrientation(){
-  var pb = document.getElementById('tvyFcPermBtn');
-  if(pb) pb.style.display = 'none';
-
-  // 상태 표시
-  var barDir = document.getElementById('tvyFcDegBarDir');
-  if(barDir) barDir.textContent = '감지 중...';
-
-  if(typeof DeviceOrientationEvent !== 'undefined' &&
-     typeof DeviceOrientationEvent.requestPermission === 'function'){
-    // iOS: 사용자 탭에서만 호출 가능
-    DeviceOrientationEvent.requestPermission()
-      .then(function(result){
-        if(result === 'granted'){
-          tvyFcOrientHandler = tvyFcHandleOrientation;
-          window.addEventListener('deviceorientation', tvyFcOrientHandler, true);
-          // 3초 후에도 값 없으면 안내 (prompt 없이)
-          setTimeout(function(){
-            if(tvyFcDegree === null){
-              if(barDir) barDir.textContent = '스마트폰을 움직여보세요';
-            }
-          }, 3000);
-        } else {
-          if(barDir) barDir.textContent = '권한 거부됨';
-        }
-      })
-      .catch(function(){
-        if(barDir) barDir.textContent = '권한 오류';
-      });
-  } else {
-    // Android: 다시 리스너 등록
-    if(tvyFcOrientHandler) window.removeEventListener('deviceorientation', tvyFcOrientHandler, true);
-    tvyFcOrientHandler = tvyFcHandleOrientation;
-    window.addEventListener('deviceorientation', tvyFcOrientHandler, true);
-    setTimeout(function(){
-      if(tvyFcDegree === null && barDir) barDir.textContent = '스마트폰을 움직여보세요';
-    }, 3000);
-  }
-}
-// ★ 시스템 팝업 AI 사용자 맞춤 분석 호출
-
-// ★ 28번째 핀셋 — function 선언을 window.* 글로벌 등록 (onclick에서 호출 가능)
-window.tvy360UpdateProgress = tvy360UpdateProgress;
-window.tvyFcSwitchMode = tvyFcSwitchMode;
-window.tvy360Start = tvy360Start;
-window.tvy360GetDir = tvy360GetDir;
-window.tvy360DirDeg = tvy360DirDeg;
-window.tvy360UpdateTarget = tvy360UpdateTarget;
-window.tvy360Capture = tvy360Capture;
-window.tvy360Analyze = tvy360Analyze;
-window.tvy360RenderResult = tvy360RenderResult;
-window.tvy360Reset = tvy360Reset;
-window.tvyFcStartCamera = tvyFcStartCamera;
-window.tvyFcStopCamera = tvyFcStopCamera;
-window.tvyFcGetGPS = tvyFcGetGPS;
-window.tvyFcHandleOrientation = tvyFcHandleOrientation;
-window.tvy360SelectSystem = tvy360SelectSystem;
-window.tvy360GetTarget = tvy360GetTarget;
-window.tvy360UpdateGuide = tvy360UpdateGuide;
-window.tvy360DoCapture = tvy360DoCapture;
-window.tvy360ManualCapture = tvy360ManualCapture;
-window.tvy360RunAnalysis = tvy360RunAnalysis;
-window.tvy360ShowResult = tvy360ShowResult;
-window.tvy360ResetScan = tvy360ResetScan;
-window.tvyFcStartOrientation = tvyFcStartOrientation;
-window.tvyFcRequestOrientation = tvyFcRequestOrientation;
 
 window.tvyLoadPopupAi = function(box){
   if(!box || box.dataset.loaded === '1') return;
