@@ -86488,29 +86488,275 @@ window.rppgArStart = function(){
 };
 
 // ═══════════════════════════════════════════════════
-// rmaiCaptureBeforePhoto / rmaiStartScan
-// ㊲ 단계에선 *기존 MAI 함수에 위임* (rPPG AR과 별도)
-// ㊵에서 진짜 통합 함수로 교체 가능
+// ★ rmai-* 진짜 작동 함수 박제
+//   기존 mai* 함수 코드 복제 + ID rmai-*로 매핑
+//   _maiColors / _maiCalcAvgBrightness 는 공유 (전역 utility)
 // ═══════════════════════════════════════════════════
+
+// 별도 상태 변수 (기존 _mai와 충돌 없음)
+var _rmaiBeforeData = null;
+var _rmai = { running:false, timer:null, sec:0, stream:null, offCanvas:null, offCtx:null, lostCount:0, uni:0, glow:0, cover:0, moist:0, _samples:0 };
+
 window.rmaiCaptureBeforePhoto = function(){
-  // 기존 MAI 페이지의 촬영 함수 재사용 (DOM ID는 다르지만 카메라/canvas 로직 동일)
-  if(typeof window.maiCaptureBeforePhoto==='function'){
-    // 임시 안내 — 기존 MAI 페이지로 이동 권장
-    var t = document.createElement('div');
-    t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,.98);border:1.5px solid #fbbf24;border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);';
-    t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">📸</div>'
-      + '<div style="font-size:14px;font-weight:900;color:#b45309;margin-bottom:8px;">화장 흡수 분석 통합</div>'
-      + '<div style="font-size:12px;color:#666;line-height:1.7;margin-bottom:16px;">화장 전 촬영 + MAI 분석은 기존 페이지에서 작동합니다.<br>이 페이지는 <b style="color:#b45309;">AR 메이크업 적용</b>을 담당합니다.</div>'
-      + '<button onclick="this.parentNode.remove();cgoGoPage(\'mai\');" style="padding:10px 24px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:10px;color:#1a1408;font-size:13px;font-weight:900;cursor:pointer;margin-right:6px;">기존 MAI로 →</button>'
-      + '<button onclick="this.parentNode.remove()" style="padding:10px 18px;background:#f3f4f6;border:none;border-radius:10px;color:#666;font-size:13px;font-weight:700;cursor:pointer;">닫기</button>';
-    document.body.appendChild(t);
-  }
+  cgoCameraCheck(function(){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}})
+    .then(function(stream){
+      var v = document.createElement('video');
+      v.srcObject = stream;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.muted = true;
+
+      var popup = document.createElement('div');
+      popup.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;';
+      popup.innerHTML = '<div style="font-size:14px;font-weight:800;color:#f472b6;">📸 화장 전 촬영</div>'
+        + '<div style="font-size:11px;color:rgba(240,220,255,.6);">얼굴을 화면 중앙에 맞추고 촬영하세요</div>';
+      var vWrap = document.createElement('div');
+      vWrap.style.cssText = 'width:280px;border-radius:16px;overflow:hidden;border:2px solid rgba(244,114,182,.5);';
+      vWrap.appendChild(v);
+      popup.appendChild(vWrap);
+
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:12px;width:280px;';
+
+      var captureBtn = document.createElement('button');
+      captureBtn.style.cssText = 'flex:1;padding:14px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;';
+      captureBtn.textContent = '📸 촬영';
+      captureBtn.onclick = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = 320; canvas.height = 240;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(v, 0, 0, 320, 240);
+        _rmaiBeforeData = {
+          imageData: ctx.getImageData(0, 0, 320, 240),
+          dataURL: canvas.toDataURL('image/jpeg', 0.8)
+        };
+        stream.getTracks().forEach(function(t){t.stop();});
+        document.body.removeChild(popup);
+
+        var beforeImg = document.getElementById('rmai-before-img');
+        var beforePh = document.getElementById('rmai-before-placeholder');
+        var beforeOk = document.getElementById('rmai-before-ok');
+        if(beforeImg){ beforeImg.src = _rmaiBeforeData.dataURL; beforeImg.style.display='block'; }
+        if(beforePh) beforePh.style.display = 'none';
+        if(beforeOk) beforeOk.style.display = 'block';
+
+        var step2 = document.getElementById('rmai-step2-badge');
+        if(step2){ step2.style.background='linear-gradient(135deg,rgba(168,85,247,.3),rgba(244,114,182,.2))'; step2.style.borderColor='#a855f7'; step2.style.color='#a855f7'; }
+
+        var captureBtn2 = document.getElementById('rmai-capture-btn');
+        if(captureBtn2){ captureBtn2.textContent = '📸 다시 촬영하기'; }
+
+        var status = document.getElementById('rmai-face-status');
+        if(status) status.textContent = '✅ 화장 전 촬영 완료! 이제 메이크업 후 분석을 시작하세요';
+      };
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.6);font-size:14px;font-weight:700;cursor:pointer;';
+      cancelBtn.textContent = '취소';
+      cancelBtn.onclick = function(){
+        stream.getTracks().forEach(function(t){t.stop();});
+        document.body.removeChild(popup);
+      };
+
+      btnRow.appendChild(captureBtn);
+      btnRow.appendChild(cancelBtn);
+      popup.appendChild(btnRow);
+      document.body.appendChild(popup);
+    })
+    .catch(function(){ _cgoCameraAlert('카메라를 열 수 없습니다.'); });
+  });
 };
 
 window.rmaiStartScan = function(){
-  // ㊲ 진짜 AR 모드를 직접 시작
-  window.rmaiArStart();
+  if(!_rmaiBeforeData){
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1.5px solid rgba(244,114,182,.5);border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;';
+    t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">📸</div>'
+      + '<div style="font-size:14px;font-weight:900;color:#f472b6;margin-bottom:8px;">화장 전 사진이 없어요!</div>'
+      + '<div style="font-size:12px;color:rgba(240,220,255,.8);line-height:1.7;margin-bottom:16px;">먼저 <b style="color:#f472b6;">화장 전 촬영하기</b> 버튼으로<br>맨얼굴을 찍어주세요 😊</div>'
+      + '<button onclick="this.parentNode.remove()" style="padding:10px 24px;background:linear-gradient(135deg,#f472b6,#a855f7);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;">확인</button>';
+    document.body.appendChild(t);
+    return;
+  }
+  cgoCameraCheck(function(){
+    _rmaiStartScanCore();
+  });
 };
+
+function _rmaiStartScanCore(){
+  var r = window.calcResult||{};
+  var oh = r.domOh||'토';
+  var resEl = document.getElementById('rmai-result');
+  var btnEl = document.getElementById('rmai-btn');
+  if(resEl) resEl.style.display='none';
+  if(btnEl) btnEl.style.display='none';
+  _rmai.sec=0; _rmai.uni=0; _rmai.glow=0; _rmai.cover=0; _rmai.moist=0; _rmai._samples=0; _rmai.lostCount=0;
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}})
+  .then(function(stream){
+    _rmai.stream=stream;
+    var v=document.getElementById('rmai-video');
+    var ph=document.getElementById('rmai-placeholder');
+    var guide=document.getElementById('rmai-guide');
+    if(v){ v.srcObject=stream; v.style.display='block'; }
+    if(ph) ph.style.display='none';
+    if(guide) guide.style.display='block';
+    _rmai.offCanvas=document.createElement('canvas');
+    _rmai.offCtx=_rmai.offCanvas.getContext('2d');
+    _rmai.running=true;
+    _rmai.timer=setInterval(function(){
+      var prg=document.getElementById('rmai-progress');
+      var tmr=document.getElementById('rmai-timer');
+      var live=document.getElementById('rmai-score-live');
+      var canCount=(_rmai.lostCount===0);
+      if(canCount) _rmai.sec++;
+      var remain=30-_rmai.sec;
+      if(prg) prg.style.width=(_rmai.sec/30*100)+'%';
+      if(tmr) tmr.textContent=canCount?(remain>0?remain+'초 남음':'분석 완료!'):'⏸ 얼굴 전체를 화면에 맞춰주세요';
+
+      var v2=document.getElementById('rmai-video');
+      if(v2&&v2.videoWidth&&_rmai.offCtx){
+        _rmai.offCanvas.width=64;_rmai.offCanvas.height=48;
+        _rmai.offCtx.drawImage(v2,0,0,64,48);
+        var px=_rmai.offCtx.getImageData(0,0,64,48).data;
+        var rS=0,gS=0,bS=0,cnt=0;
+        var vals=[];
+        for(var i=0;i<px.length;i+=4){rS+=px[i];gS+=px[i+1];bS+=px[i+2];cnt++;vals.push(px[i+1]);}
+        if(cnt){
+          var r2=rS/cnt,g2=gS/cnt,b2=bS/cnt;
+          var mx=Math.max(r2,g2,b2),mn=Math.min(r2,g2,b2);
+          var s=mx>0?(mx-mn)/mx:0;
+          var l=(mx+mn)/2/255;
+          var isSkin=(r2>60&&g2>40&&b2>20&&r2>g2&&r2>b2&&s>0.1&&s<0.75);
+          if(isSkin){
+            _rmai.lostCount=0;
+            _rmai._samples++;
+            var mean=g2; var vr=0;
+            vals.forEach(function(v){vr+=Math.pow(v-mean,2);});
+            vr=Math.sqrt(vr/vals.length);
+            var uni=Math.round(Math.max(30,Math.min(98,100-vr*0.8)));
+            var glow=Math.round(Math.max(30,Math.min(98,l*120)));
+            var rg=Math.abs(r2-g2);
+            var cover=Math.round(Math.max(30,Math.min(98,100-rg*0.6)));
+            var moist=Math.round(Math.max(30,Math.min(98,s*150)));
+            _rmai.uni=Math.round((_rmai.uni*(_rmai._samples-1)+uni)/_rmai._samples);
+            _rmai.glow=Math.round((_rmai.glow*(_rmai._samples-1)+glow)/_rmai._samples);
+            _rmai.cover=Math.round((_rmai.cover*(_rmai._samples-1)+cover)/_rmai._samples);
+            _rmai.moist=Math.round((_rmai.moist*(_rmai._samples-1)+moist)/_rmai._samples);
+            var uniEl=document.getElementById('rmai-uni'); if(uniEl) uniEl.textContent=_rmai.uni;
+            var glowEl=document.getElementById('rmai-glow'); if(glowEl) glowEl.textContent=_rmai.glow;
+            var coverEl=document.getElementById('rmai-cover'); if(coverEl) coverEl.textContent=_rmai.cover;
+            var moistEl=document.getElementById('rmai-moist'); if(moistEl) moistEl.textContent=_rmai.moist;
+            var maiNow=Math.round((_rmai.uni+_rmai.glow+_rmai.cover+_rmai.moist)/4);
+            if(live) live.textContent='MAI '+maiNow+'점';
+            var fs=document.getElementById('rmai-face-status');
+            if(fs){ fs.textContent='✅ 얼굴 감지 중 · 분석 진행'; fs.style.color='rgba(244,114,182,.9)'; }
+          } else {
+            _rmai.lostCount++;
+            if(_rmai.lostCount>0){
+              var fs=document.getElementById('rmai-face-status');
+              if(fs){ fs.textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요'; fs.style.color='rgba(251,191,36,.8)'; }
+            }
+          }
+        }
+      }
+      if(_rmai.lostCount>=5 && _rmai._samples===0){
+        var fs=document.getElementById('rmai-face-status');
+        if(fs){ fs.textContent='⛔ 얼굴이 감지되지 않습니다. 카메라에 얼굴을 가까이 대주세요'; fs.style.color='rgba(248,113,113,.9)'; }
+        _rmai.sec=2; _rmai.lostCount=0;
+        return;
+      }
+      if(_rmai.sec>=30){
+        clearInterval(_rmai.timer); _rmai.running=false;
+        if(_rmai._samples<5){
+          var fs2=document.getElementById('rmai-face-status');
+          if(fs2){ fs2.textContent='⚠️ 얼굴 감지 부족 — 다시 시도해 주세요'; fs2.style.color='rgba(251,191,36,.9)'; }
+          if(_rmai.stream){_rmai.stream.getTracks().forEach(function(t){t.stop();});}
+          var v3=document.getElementById('rmai-video'); if(v3) v3.style.display='none';
+          var ph3=document.getElementById('rmai-placeholder'); if(ph3) ph3.style.display='flex';
+          var g3=document.getElementById('rmai-guide'); if(g3) g3.style.display='none';
+          var b3=document.getElementById('rmai-btn'); if(b3) b3.style.display='block';
+          var prg2=document.getElementById('rmai-progress'); if(prg2) prg2.style.width='0%';
+          return;
+        }
+        if(_rmai.stream){_rmai.stream.getTracks().forEach(function(t){t.stop();});}
+        var v4=document.getElementById('rmai-video'); if(v4) v4.style.display='none';
+        var ph4=document.getElementById('rmai-placeholder'); if(ph4) ph4.style.display='flex';
+        var g4=document.getElementById('rmai-guide'); if(g4) g4.style.display='none';
+        rmaiShowResult(oh);
+        var b4=document.getElementById('rmai-btn'); if(b4) b4.style.display='block';
+      }
+    },1000);
+  }).catch(function(){
+    _cgoCameraAlert('카메라가 필요합니다.<br>카메라를 허용해 주세요.');
+    var b5=document.getElementById('rmai-btn'); if(b5) b5.style.display='block';
+  });
+}
+
+function rmaiShowResult(oh){
+  var uni=_rmai.uni||65, glow=_rmai.glow||68, cover=_rmai.cover||62, moist=_rmai.moist||70;
+
+  var changeText = '';
+  if(_rmaiBeforeData && typeof _maiCalcAvgBrightness === 'function'){
+    var beforeAvg = _maiCalcAvgBrightness(_rmaiBeforeData.imageData);
+    var afterAvg = (uni + glow) / 2;
+    var diffPct = Math.abs(afterAvg - beforeAvg) / 255 * 100;
+
+    if(diffPct < 3){
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,22,40,.97);border:1.5px solid rgba(251,191,36,.5);border-radius:20px;padding:24px 28px;z-index:99999;text-align:center;max-width:300px;width:90%;';
+      t.innerHTML = '<div style="font-size:28px;margin-bottom:10px;">⚠️</div>'
+        + '<div style="font-size:14px;font-weight:900;color:#fbbf24;margin-bottom:8px;">화장 전후 차이가 없어요!</div>'
+        + '<div style="font-size:12px;color:rgba(240,220,255,.8);line-height:1.7;margin-bottom:16px;">메이크업 후 다시 측정해 주세요.<br>Before와 After의 차이가 있어야<br>정확한 분석이 가능합니다 😊</div>'
+        + '<button onclick="this.parentNode.remove()" style="padding:10px 24px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:900;cursor:pointer;">다시 측정하기</button>';
+      document.body.appendChild(t);
+      return;
+    }
+
+    var bonus = Math.min(15, Math.round(diffPct * 0.8));
+    changeText = '📊 화장 전 대비 +'+bonus+'pt 피부 변화 감지';
+    uni = Math.min(100, uni + Math.round(bonus * 0.4));
+    glow = Math.min(100, glow + Math.round(bonus * 0.6));
+  }
+
+  var mai=Math.round((uni+glow+cover+moist)/4);
+  var totalEl=document.getElementById('rmai-total'); if(totalEl) totalEl.textContent=mai;
+  var grade=mai>=85?'💫 완벽한 흡수! 오늘 피부 컨디션 최상':mai>=70?'✨ 양호한 흡수 · 촉촉한 베이스 유지':mai>=55?'🌸 보통 흡수 · 수분 보충 권장':'💧 흡수 개선 필요 · 피부 준비 단계 점검';
+  if(changeText) grade = grade + '<br><span style="font-size:11px;color:rgba(52,211,153,.8);">'+changeText+'</span>';
+  var gradeEl=document.getElementById('rmai-grade');
+  if(gradeEl){ gradeEl.textContent=''; gradeEl.innerHTML=grade; }
+
+  var colors=(typeof _maiColors !== 'undefined' && _maiColors[oh]) ? _maiColors[oh] : (typeof _maiColors !== 'undefined' ? _maiColors['토'] : null);
+  var ohNames={목:'목(木) — 봄의 생명력',화:'화(火) — 여름의 열정',토:'토(土) — 대지의 안정',금:'금(金) — 가을의 순수',수:'수(水) — 겨울의 깊이'};
+
+  function renderCols(containerId, colorArr){
+    var el=document.getElementById(containerId);
+    if(!el || !colorArr) return;
+    el.innerHTML=colorArr.map(function(col){
+      return '<div onclick="rmaiArApplyColor(\''+col.c+'\',null);if(!_rmaiAr.running) rmaiArStart();" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;">'
+        +'<div style="width:36px;height:36px;border-radius:50%;background:'+col.c+';border:2px solid rgba(0,0,0,.08);box-shadow:0 2px 8px rgba(0,0,0,.15);transition:transform .2s;" onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'scale(1)\'"></div>'
+        +'<div style="font-size:8px;color:#888;text-align:center;width:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;">'+col.n+'</div>'
+        +'</div>';
+    }).join('');
+  }
+  if(colors){
+    renderCols('rmai-lip-colors', colors.lip);
+    renderCols('rmai-cheek-colors', colors.cheek);
+    renderCols('rmai-eye-colors', colors.eye);
+    renderCols('rmai-base-colors', colors.base);
+  }
+
+  var ohTextEl=document.getElementById('rmai-oh-text');
+  if(ohTextEl){
+    ohTextEl.innerHTML='<b style="color:#be185d;">'+ohNames[oh]+'</b> 기운이 오늘의 메이크업 에너지입니다.<br>'
+      +'MAI <b>'+mai+'점</b> 기준, 위 추천 컬러를 활용하면 에너지 공명 지수가 <b style="color:#be185d;">+'+(Math.round((mai-50)*0.15))+'pt</b> 상승합니다.<br>'
+      +'피부 균일도 '+uni+'점 · 화사함 '+glow+'점 · 커버율 '+cover+'점 · 촉촉함 '+moist+'점';
+  }
+
+  var resEl2=document.getElementById('rmai-result');
+  if(resEl2) resEl2.style.display='block';
+}
 
 // ═══════════════════════════════════════════════════
 // ★ rmaiArStart — AR 메이크업 시작 (FaceMesh 468)
