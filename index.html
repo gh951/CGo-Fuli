@@ -20370,6 +20370,13 @@ window.tvyShowIntroPopup = function(){
 
       function tryGreet(){
         if(p.classList.contains('active')){
+          // ★ 정보 입력 검증 — 미입력 시 차단 + 대시보드로 이동
+          var r = window.calcResult || {};
+          if(!r.y || !r.name){
+            alert('먼저 정보를 입력하고 ⚡ 자동 계산을 눌러주세요!\n\nC-29 AR 메이크업은 사주 오행 + 생년월일 기반으로 작동합니다.');
+            if(typeof cgoGoPage === 'function') cgoGoPage('dashboard');
+            return true;
+          }
           // ★ 즉시 호출 — setTimeout 제거 (본 페이지 깜빡임 방지, yeogi 패턴)
           rmaiShowIntroPopup();
           // C-29 챗 인사는 약간 후 (팝업이 떠 있을 때 배경)
@@ -86821,7 +86828,15 @@ function rmaiShowResult(oh){
   //   우리 식: 4지표 + 사주 가중치 → 추정 생체나이 + 시계열 노화 속도
   // ═══════════════════════════════════════════════════
   if(typeof _rmaiCalcFuliAge === 'function'){
-    var realAge = (window.calcResult && calcResult.age) ? parseInt(calcResult.age) : 35;
+    // ★ 정보 입력에서 *출생 연도* 가져와 정확한 만 나이 계산
+    var realAge = 35; // fallback
+    if(window.calcResult && window.calcResult.y){
+      var birthYear = parseInt(window.calcResult.y);
+      if(birthYear && birthYear > 1900 && birthYear < 2100){
+        var nowYear = new Date().getFullYear();
+        realAge = nowYear - birthYear;
+      }
+    }
     var fuliAgeData = _rmaiCalcFuliAge(realAge, uni, glow, cover, moist, oh, mai);
     _rmaiSaveFuliAgeRecord(fuliAgeData);
     _rmaiRenderFuliAgeCard(fuliAgeData);
