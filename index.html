@@ -86540,6 +86540,47 @@ var _rmaiArRainbowSet = [
   {n:'보라', c:'#9333ea'}
 ];
 
+// ★ 사주 추천 모드 — 카테고리별 빨주노초파남보 톤 (28색)
+//   각 카테고리에 맞는 메이크업 톤 (립=선명 / 볼=살구·핑크 / 아이=어두움 / 베이스=파스텔)
+var _rmaiArOhengSet = {
+  lip: [  // 💋 진한 립스틱 톤 — 선명함
+    {n:'빨강', c:'#dc2626'},
+    {n:'주황', c:'#ea580c'},
+    {n:'노랑', c:'#ca8a04'},
+    {n:'초록', c:'#15803d'},
+    {n:'파랑', c:'#1d4ed8'},
+    {n:'남색', c:'#1e3a8a'},
+    {n:'보라', c:'#7c3aed'}
+  ],
+  cheek: [  // 🌸 살구·핑크 톤 — 부드러운 블러셔
+    {n:'코랄', c:'#fb7185'},
+    {n:'살구', c:'#fdba74'},
+    {n:'베이지', c:'#fde68a'},
+    {n:'민트', c:'#86efac'},
+    {n:'스카이', c:'#93c5fd'},
+    {n:'라일락', c:'#c4b5fd'},
+    {n:'핑크', c:'#f9a8d4'}
+  ],
+  eye: [  // 👁️ 어두운 톤 — 스모키 아이쉐도우
+    {n:'와인', c:'#881337'},
+    {n:'브라운', c:'#92400e'},
+    {n:'골드', c:'#78350f'},
+    {n:'다크그린', c:'#14532d'},
+    {n:'미드나잇', c:'#172554'},
+    {n:'차콜', c:'#1e293b'},
+    {n:'퍼플', c:'#4c1d95'}
+  ],
+  base: [  // 🫧 파스텔 톤 — 자연 피부 보정
+    {n:'핑크', c:'#fecaca'},
+    {n:'살몬', c:'#fed7aa'},
+    {n:'크림', c:'#fef3c7'},
+    {n:'민트', c:'#d1fae5'},
+    {n:'스카이', c:'#dbeafe'},
+    {n:'라벤더', c:'#ddd6fe'},
+    {n:'모브', c:'#f3e8ff'}
+  ]
+};
+
 // ★ MediaPipe FaceMesh 입술 외곽 (20개 — 시계방향)
 var _rmaiArLipsOuter = [
   61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291,
@@ -87187,12 +87228,12 @@ function _rmaiArInitColorPicker(){
     return;
   }
 
-  // ★ 4 카테고리 탭
+  // ★ 4 카테고리 탭 (사주 모드는 카테고리별 빨주노초파남보 28색)
   var cats = [
-    {key:'lip',   icon:'💋', name:'립',     pal:pal.lip,   subtitle:'립스틱'},
-    {key:'cheek', icon:'🌸', name:'볼',     pal:pal.cheek, subtitle:'블러셔'},
-    {key:'eye',   icon:'👁️', name:'아이',   pal:pal.eye,   subtitle:'아이쉐도우'},
-    {key:'base',  icon:'🫧', name:'베이스', pal:pal.base,  subtitle:'베이스 톤'}
+    {key:'lip',   icon:'💋', name:'립',     pal: _rmaiArOhengSet.lip,   subtitle:'립스틱'},
+    {key:'cheek', icon:'🌸', name:'볼',     pal: _rmaiArOhengSet.cheek, subtitle:'블러셔'},
+    {key:'eye',   icon:'👁️', name:'아이',   pal: _rmaiArOhengSet.eye,   subtitle:'아이쉐도우'},
+    {key:'base',  icon:'🫧', name:'베이스', pal: _rmaiArOhengSet.base,  subtitle:'베이스 톤'}
   ];
 
   var tabsHtml = '<div style="display:flex;gap:4px;margin-bottom:10px;background:#f3f4f6;padding:4px;border-radius:12px;">';
@@ -87219,7 +87260,7 @@ function _rmaiArInitColorPicker(){
   var currentCat = cats.find(function(c){ return c.key === _rmaiAr.currentCategory; }) || cats[0];
   var currentColors = (_rmaiAr.currentPalette === 'rainbow') ? _rmaiArRainbowSet : (currentCat.pal || []);
   var appliedHex = _rmaiAr.appliedColors[currentCat.key];
-  var paletteLabel = (_rmaiAr.currentPalette === 'rainbow') ? '🌈 무지개 7색' : (currentCat.icon + ' ' + currentCat.subtitle + ' — 사주 ' + (ohNames[oh]||oh));
+  var paletteLabel = (_rmaiAr.currentPalette === 'rainbow') ? '🌈 무지개 7색' : (currentCat.icon + ' ' + currentCat.subtitle + ' — 사주 ' + (ohNames[oh]||oh) + ' · 7색');
 
   var swatchHtml = '<div style="font-size:11px;font-weight:800;color:#1a1408;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
     + '<span>'+paletteLabel+'</span>'
