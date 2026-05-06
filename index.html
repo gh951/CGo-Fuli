@@ -20431,7 +20431,14 @@ window.tvyShowIntroPopup = function(){
   </div>
 
   <!-- ════ ★ C-29 컨설턴트 — Floating FAB + 말풍선 미리보기 + 풀 모달 ════ -->
-  <button id="rmai-chat-fab" onclick="rmaiChatToggle()" style="position:fixed;bottom:80px;right:16px;z-index:9001;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);border:2.5px solid #fff;box-shadow:0 4px 18px rgba(168,85,247,.45);color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;animation:rmaiChatPulse 2.4s ease-in-out infinite;">🤖</button>
+  <div id="rmai-chat-fab-wrap" style="position:fixed;bottom:80px;right:16px;z-index:9001;">
+    <button id="rmai-chat-fab" onclick="rmaiChatToggle()" aria-label="C-29 컨설턴트 열기" style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#7c3aed);border:2.5px solid #fff;box-shadow:0 4px 18px rgba(168,85,247,.45);color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;animation:rmaiChatPulse 2.4s ease-in-out infinite;">🤖</button>
+    <button id="rmai-chat-fab-close" onclick="event.stopPropagation();rmaiChatHideFab()" aria-label="C-29 숨기기" title="C-29 숨기기" style="position:absolute;top:-4px;right:-4px;width:22px;height:22px;border-radius:50%;background:#fff;border:1.5px solid #c4b5fd;box-shadow:0 2px 6px rgba(0,0,0,.2);color:#7c3aed;font-size:13px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;line-height:1;padding:0;">✕</button>
+  </div>
+
+  <!-- ★ FAB 숨김 상태에서 다시 호출하는 작은 미니 버튼 (페이지 좌하단) -->
+  <button id="rmai-chat-restore-btn" onclick="rmaiChatShowFab()" aria-label="C-29 다시 표시" title="C-29 컨설턴트 다시 열기" style="display:none;position:fixed;bottom:80px;left:16px;z-index:9001;width:36px;height:36px;border-radius:50%;background:rgba(168,85,247,.85);border:1.5px solid #fff;box-shadow:0 2px 8px rgba(168,85,247,.4);color:#fff;font-size:14px;cursor:pointer;align-items:center;justify-content:center;font-family:inherit;backdrop-filter:blur(8px);">🤖</button>
+
 
   <div id="rmai-chat-bubble" onclick="rmaiChatToggle()" style="position:fixed;bottom:148px;right:16px;z-index:9001;max-width:280px;padding:12px 14px;background:#fff;border:1.5px solid #ddd6fe;border-radius:14px 14px 4px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:12px;color:#1a1408;line-height:1.6;display:none;cursor:pointer;">
     <div style="font-size:9px;font-weight:800;color:#7c3aed;margin-bottom:4px;letter-spacing:.04em;">🤖 C-29 컨설턴트</div>
@@ -87446,6 +87453,24 @@ window.rmaiChatToggle = function(){
       if(inp) inp.focus();
     }, 80);
   }
+};
+
+// ★ FAB 숨김 — 작은 ✕ 클릭 시 (오른쪽 큰 버튼 → 왼쪽 작은 미니 버튼으로 전환)
+window.rmaiChatHideFab = function(){
+  var fabWrap = document.getElementById('rmai-chat-fab-wrap');
+  var bubble = document.getElementById('rmai-chat-bubble');
+  var restoreBtn = document.getElementById('rmai-chat-restore-btn');
+  if(fabWrap) fabWrap.style.display = 'none';
+  if(bubble) bubble.style.display = 'none';
+  if(restoreBtn) restoreBtn.style.display = 'flex';
+};
+
+// ★ FAB 다시 표시 — 미니 버튼 클릭 시
+window.rmaiChatShowFab = function(){
+  var fabWrap = document.getElementById('rmai-chat-fab-wrap');
+  var restoreBtn = document.getElementById('rmai-chat-restore-btn');
+  if(fabWrap) fabWrap.style.display = 'block';
+  if(restoreBtn) restoreBtn.style.display = 'none';
 };
 
 window.rmaiChatAddMessage = function(role, content, opts){
