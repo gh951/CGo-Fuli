@@ -86527,11 +86527,17 @@ var _rmaiAr = {
   canvas: null,
   ctx: null,
   faceMesh: null,
+  selfieSeg: null,
+  segmentationMask: null,
   currentColor: null,
   currentCategory: 'lip',
   currentPalette: 'oheng',  // 'oheng' (사주) | 'rainbow' (무지개 7색)
   appliedColors: { lip:null, cheek:null, eye:null, base:null },
   intensity: { lip:0.55, cheek:0.20, eye:0.35, base:0.35 }, // 카테고리별 alpha (0~1)
+  hairColor: null,        // ㊹ 헤어 컬러 (hex)
+  hairIntensity: 0.45,    // 헤어 색 강도
+  faceSlim: 0,            // ㊺ 얼굴 슬림 강도 (0~50)
+  eyeBigger: 0,           // ㊺ 눈 키우기 강도 (0~50)
   frameCount: 0,
   lastResults: null
 };
@@ -86545,6 +86551,17 @@ var _rmaiArRainbowSet = [
   {n:'파랑', c:'#2563eb'},
   {n:'남색', c:'#1e3a8a'},
   {n:'보라', c:'#9333ea'}
+];
+
+// ★ 헤어 컬러 7색 (자연스러운 헤어 톤 + 트렌디 컬러)
+var _rmaiArHairSet = [
+  {n:'블랙', c:'#1a1a1a'},
+  {n:'다크브라운', c:'#3a2418'},
+  {n:'브라운', c:'#5d3a1f'},
+  {n:'골드', c:'#8b5a2b'},
+  {n:'레드', c:'#a52a2a'},
+  {n:'와인', c:'#722f37'},
+  {n:'애쉬', c:'#6b6b6b'}
 ];
 
 // ★ 사주 추천 모드 — 카테고리별 빨주노초파남보 톤 (28색)
@@ -87017,6 +87034,9 @@ function _rmaiArInitFaceMesh(retryCount){
     _rmaiAr.frameCount = 0;
     _rmaiArProcessFrame();
 
+    // ★ ㊹ SelfieSegmentation 백그라운드 로드 (헤어 컬러용 — 옵션)
+    _rmaiArInitSelfieSeg();
+
     // ★ C-29 hook — AR 시작 알림
     if(typeof rmaiChatSay === 'function') rmaiChatSay('ar-started');
   } catch(e){
@@ -87057,35 +87077,40 @@ function _rmaiArOnResults(results){
 
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
   if(results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0){
     var landmarks = results.multiFaceLandmarks[0];
-    var ac = _rmaiAr.appliedColors;
 
-    // ★ 1. 베이스 (가장 먼저 — 다른 색이 위에 덮음)
-    if(ac.base){
-      _rmaiArDrawBase(ctx, canvas, landmarks, ac.base);
+    // ★ ㊺ 얼굴 변형 (워핑) — slim/eye 강도 0이면 일반 그리기
+    if(_rmaiAr.faceSlim > 0 || _rmaiAr.eyeBigger > 0){
+      _rmaiArDrawWarpedImage(ctx, canvas, results.image, landmarks);
+    } else {
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
     }
 
-    // ★ 2. 볼 (양쪽 — 원형 그라디언트)
+    var ac = _rmaiAr.appliedColors;
+
+    // ★ ㊹ 헤어 컬러 (배경 그린 직후, 얼굴 메이크업 *전*)
+    if(_rmaiAr.hairColor && _rmaiAr.segmentationMask){
+      _rmaiArDrawHairColor(ctx, canvas, results.image, _rmaiAr.hairColor, landmarks);
+    }
+
+    // 1. 베이스 (가장 먼저 — 다른 색이 위에 덮음)
+    if(ac.base) _rmaiArDrawBase(ctx, canvas, landmarks, ac.base);
+    // 2. 볼
     if(ac.cheek){
       _rmaiArDrawCheek(ctx, canvas, landmarks, _rmaiArCheekLeft, ac.cheek);
       _rmaiArDrawCheek(ctx, canvas, landmarks, _rmaiArCheekRight, ac.cheek);
     }
-
-    // ★ 3. 아이 (양쪽 눈꺼풀)
+    // 3. 아이
     if(ac.eye){
       _rmaiArDrawEye(ctx, canvas, landmarks, _rmaiArEyeLeft, ac.eye);
       _rmaiArDrawEye(ctx, canvas, landmarks, _rmaiArEyeRight, ac.eye);
     }
+    // 4. 립 (가장 위)
+    if(ac.lip) _rmaiArDrawLip(ctx, canvas, landmarks, ac.lip);
 
-    // ★ 4. 립 (가장 위 — 가장 진하게)
-    if(ac.lip){
-      _rmaiArDrawLip(ctx, canvas, landmarks, ac.lip);
-    }
-
-    // ★ 468 랜드마크 점 (옅게 — 진단용)
+    // ★ 468 랜드마크 점 (옅게)
     ctx.fillStyle = 'rgba(255, 80, 80, 0.35)';
     landmarks.forEach(function(lm){
       ctx.beginPath();
@@ -87093,7 +87118,6 @@ function _rmaiArOnResults(results){
       ctx.fill();
     });
 
-    // 상태 갱신 (30프레임마다)
     _rmaiAr.frameCount++;
     if(_rmaiAr.frameCount % 30 === 0){
       var status = document.getElementById('rmai-ar-status');
@@ -87103,11 +87127,15 @@ function _rmaiArOnResults(results){
         if(ac.cheek) applied.push('볼');
         if(ac.eye) applied.push('아이');
         if(ac.base) applied.push('베이스');
+        if(_rmaiAr.hairColor) applied.push('헤어');
+        if(_rmaiAr.faceSlim > 0) applied.push('슬림');
+        if(_rmaiAr.eyeBigger > 0) applied.push('눈');
         status.textContent = '✓ 추적 중 · ' + (applied.length ? applied.join('·')+' 적용' : '색 선택 대기');
         status.style.background = 'rgba(34,197,94,.85)';
       }
     }
   } else {
+    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
     var status = document.getElementById('rmai-ar-status');
     if(status){
       status.textContent = '⏳ 얼굴 감지 중...';
@@ -87117,6 +87145,188 @@ function _rmaiArOnResults(results){
 
   ctx.restore();
 }
+
+// ═══════════════════════════════════════════════════
+// ㊹ 헤어 컬러 — SelfieSegmentation 동적 로드
+// ═══════════════════════════════════════════════════
+function _rmaiArInitSelfieSeg(){
+  if(_rmaiAr.selfieSeg) return;
+
+  function tryInit(retry){
+    retry = retry || 0;
+    if(typeof SelfieSegmentation === 'undefined'){
+      if(retry === 0 && !document.querySelector('script[data-rmai-selfieseg]')){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js';
+        s.setAttribute('data-rmai-selfieseg', '1');
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+      }
+      if(retry < 80){
+        setTimeout(function(){ tryInit(retry + 1); }, 100);
+      }
+      return;
+    }
+    try {
+      _rmaiAr.selfieSeg = new SelfieSegmentation({
+        locateFile: function(file){
+          return 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/'+file;
+        }
+      });
+      _rmaiAr.selfieSeg.setOptions({modelSelection: 1});
+      _rmaiAr.selfieSeg.onResults(function(results){
+        _rmaiAr.segmentationMask = results.segmentationMask;
+      });
+      // 매 N프레임 마다 segmentation 갱신 (성능)
+      setInterval(function(){
+        if(_rmaiAr.running && _rmaiAr.video && _rmaiAr.selfieSeg && _rmaiAr.hairColor){
+          try { _rmaiAr.selfieSeg.send({image: _rmaiAr.video}); } catch(e){}
+        }
+      }, 200); // 5fps (헤어는 빠르지 않게)
+    } catch(e){ console.error('[rmaiAr] SelfieSeg init fail:', e); }
+  }
+  tryInit();
+}
+
+function _rmaiArDrawHairColor(ctx, canvas, image, color, landmarks){
+  var mask = _rmaiAr.segmentationMask;
+  if(!mask) return;
+
+  // 얼굴 외곽 윗부분 (이마 위 = 헤어 시작점) — 머리카락만 분리
+  // FaceMesh forehead 인덱스 10 (이마 중앙) 의 y 좌표를 헤어 컷오프
+  var forehead = landmarks[10];
+  if(!forehead) return;
+  var foreheadY = forehead.y * canvas.height;
+
+  // segmentationMask: 0(배경) ~ 1(인물)
+  // 인물 영역 중 *이마 위쪽*만 헤어로 간주
+  var off = document.createElement('canvas');
+  off.width = canvas.width;
+  off.height = canvas.height;
+  var octx = off.getContext('2d');
+
+  // 1. 마스크 그리기 (인물=흰, 배경=검정)
+  octx.drawImage(mask, 0, 0, off.width, off.height);
+
+  // 2. 이마 아래쪽 모두 잘라냄 (얼굴은 메이크업이 별도 처리)
+  octx.globalCompositeOperation = 'destination-in';
+  octx.fillStyle = '#000';
+  octx.fillRect(0, 0, off.width, foreheadY); // 이마 위만 keep
+
+  // 3. 색 채우기 (multiply 블렌드)
+  octx.globalCompositeOperation = 'source-in';
+  octx.fillStyle = color;
+  octx.fillRect(0, 0, off.width, off.height);
+
+  // 4. 본 캔버스에 multiply 합성
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = _rmaiAr.hairIntensity;
+  ctx.drawImage(off, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ═══════════════════════════════════════════════════
+// ㊺ 얼굴 슬림 / 눈 키우기 — Canvas warping
+// ═══════════════════════════════════════════════════
+function _rmaiArDrawWarpedImage(ctx, canvas, image, landmarks){
+  // Forward warping: 얼굴 외곽/눈 영역을 이동 → 픽셀 재배치
+  // 간단 구현: 얼굴 영역만 별도 캔버스에 그린 후 변형
+  var slim = _rmaiAr.faceSlim / 100;     // 0 ~ 0.5
+  var eyeBig = _rmaiAr.eyeBigger / 100;  // 0 ~ 0.5
+
+  // 얼굴 중심 + 폭 계산
+  var leftCheek = landmarks[234];   // 왼쪽 볼 외곽
+  var rightCheek = landmarks[454];  // 오른쪽 볼 외곽
+  var noseTip = landmarks[1];
+  var leftEye = landmarks[33];
+  var rightEye = landmarks[263];
+
+  if(!leftCheek || !rightCheek || !noseTip){
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  if(slim > 0){
+    // 얼굴 슬림: 양쪽 볼 외곽을 *안쪽*으로 약간 이동
+    // 간단 구현 — 양쪽 볼 영역에 좁은 그라디언트로 *어둡게* 만들어 슬림 illusion
+    var cx = noseTip.x * canvas.width;
+    var faceW = (rightCheek.x - leftCheek.x) * canvas.width;
+    var pixelShift = faceW * slim * 0.18;
+
+    ctx.save();
+    // 왼쪽 볼 외곽 안쪽으로 그림자
+    var lcx = leftCheek.x * canvas.width;
+    var lcy = leftCheek.y * canvas.height;
+    var lgrad = ctx.createRadialGradient(lcx, lcy, 0, lcx, lcy, pixelShift * 3);
+    lgrad.addColorStop(0, 'rgba(0,0,0,'+(slim*0.35)+')');
+    lgrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lgrad;
+    ctx.beginPath();
+    ctx.arc(lcx, lcy, pixelShift * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 오른쪽 볼 외곽 안쪽으로 그림자
+    var rcx = rightCheek.x * canvas.width;
+    var rcy = rightCheek.y * canvas.height;
+    var rgrad = ctx.createRadialGradient(rcx, rcy, 0, rcx, rcy, pixelShift * 3);
+    rgrad.addColorStop(0, 'rgba(0,0,0,'+(slim*0.35)+')');
+    rgrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rgrad;
+    ctx.beginPath();
+    ctx.arc(rcx, rcy, pixelShift * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if(eyeBig > 0 && leftEye && rightEye){
+    // 눈 키우기: 양쪽 눈 영역의 *밝기*를 약간 증가 + 콘트라스트 강화 illusion
+    var lex = leftEye.x * canvas.width;
+    var ley = leftEye.y * canvas.height;
+    var rex = rightEye.x * canvas.width;
+    var rey = rightEye.y * canvas.height;
+    var eyeR = canvas.width * 0.06 * (1 + eyeBig);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = eyeBig * 0.4;
+
+    var leg = ctx.createRadialGradient(lex, ley, 0, lex, ley, eyeR);
+    leg.addColorStop(0, 'rgba(255,255,255,0.6)');
+    leg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = leg;
+    ctx.beginPath();
+    ctx.arc(lex, ley, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+
+    var reg = ctx.createRadialGradient(rex, rey, 0, rex, rey, eyeR);
+    reg.addColorStop(0, 'rgba(255,255,255,0.6)');
+    reg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = reg;
+    ctx.beginPath();
+    ctx.arc(rex, rey, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ★ 헤어 컬러 적용 함수 (외부 호출용)
+window.rmaiArSetHairColor = function(hex){
+  _rmaiAr.hairColor = hex;
+};
+window.rmaiArSetHairIntensity = function(val){
+  _rmaiAr.hairIntensity = (parseFloat(val) || 0) / 100 * 0.7;
+};
+
+// ★ 얼굴 변형 적용 함수 (외부 호출용)
+window.rmaiArSetFaceSlim = function(val){
+  _rmaiAr.faceSlim = parseFloat(val) || 0;
+};
+window.rmaiArSetEyeBigger = function(val){
+  _rmaiAr.eyeBigger = parseFloat(val) || 0;
+};
 
 // ═══════════════════════════════════════════════════
 // 4 카테고리 색 적용 helper 함수들
@@ -87257,17 +87467,20 @@ function _rmaiArInitColorPicker(){
     {key:'lip',   icon:'💋', name:'립',     pal: _rmaiArOhengSet.lip,   subtitle:'립스틱'},
     {key:'cheek', icon:'🌸', name:'볼',     pal: _rmaiArOhengSet.cheek, subtitle:'블러셔'},
     {key:'eye',   icon:'👁️', name:'아이',   pal: _rmaiArOhengSet.eye,   subtitle:'아이쉐도우'},
-    {key:'base',  icon:'🫧', name:'베이스', pal: _rmaiArOhengSet.base,  subtitle:'베이스 톤'}
+    {key:'base',  icon:'🫧', name:'베이스', pal: _rmaiArOhengSet.base,  subtitle:'베이스 톤'},
+    {key:'hair',  icon:'💇', name:'헤어',   pal: _rmaiArHairSet,        subtitle:'헤어 컬러'},
+    {key:'face',  icon:'✨', name:'성형',   pal: null,                   subtitle:'얼굴 변형'}
   ];
 
-  var tabsHtml = '<div style="display:flex;gap:4px;margin-bottom:10px;background:#f3f4f6;padding:4px;border-radius:12px;">';
+  // 카테고리 탭 — 3x2 그리드 (6개가 모두 보이게)
+  var tabsHtml = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px;background:#f3f4f6;padding:4px;border-radius:12px;">';
   cats.forEach(function(c){
     var active = (c.key === _rmaiAr.currentCategory);
     var bg = active ? '#fff' : 'transparent';
     var color = active ? '#1a1408' : '#888';
     var shadow = active ? 'box-shadow:0 1px 4px rgba(0,0,0,.08);' : '';
     var weight = active ? '900' : '700';
-    tabsHtml += '<button onclick="rmaiArSetCategory(\''+c.key+'\')" style="flex:1;padding:8px 4px;background:'+bg+';border:none;border-radius:8px;color:'+color+';font-size:11px;font-weight:'+weight+';cursor:pointer;font-family:inherit;'+shadow+'transition:all .2s;">'
+    tabsHtml += '<button onclick="rmaiArSetCategory(\''+c.key+'\')" style="padding:9px 4px;background:'+bg+';border:none;border-radius:8px;color:'+color+';font-size:11px;font-weight:'+weight+';cursor:pointer;font-family:inherit;'+shadow+'transition:all .2s;">'
       +c.icon+' '+c.name+'</button>';
   });
   tabsHtml += '</div>';
@@ -87282,50 +87495,107 @@ function _rmaiArInitColorPicker(){
 
   // 현재 카테고리 + 현재 팔레트에 따른 색 배열
   var currentCat = cats.find(function(c){ return c.key === _rmaiAr.currentCategory; }) || cats[0];
-  var currentColors = (_rmaiAr.currentPalette === 'rainbow') ? _rmaiArRainbowSet : (currentCat.pal || []);
-  var appliedHex = _rmaiAr.appliedColors[currentCat.key];
-  var paletteLabel = (_rmaiAr.currentPalette === 'rainbow') ? '🌈 무지개 7색' : (currentCat.icon + ' ' + currentCat.subtitle + ' — 사주 ' + (ohNames[oh]||oh) + ' · 7색');
+
+  // ★ 헤어 카테고리는 _rmaiArHairSet 사용 (사주/무지개와 무관)
+  var currentColors;
+  if(currentCat.key === 'hair'){
+    currentColors = _rmaiArHairSet;
+  } else if(currentCat.key === 'face'){
+    currentColors = []; // 색 없음 — 슬라이더만
+  } else {
+    currentColors = (_rmaiAr.currentPalette === 'rainbow') ? _rmaiArRainbowSet : (currentCat.pal || []);
+  }
+
+  var appliedHex = (currentCat.key === 'hair') ? _rmaiAr.hairColor : _rmaiAr.appliedColors[currentCat.key];
+  var paletteLabel;
+  if(currentCat.key === 'hair') paletteLabel = '💇 헤어 컬러 — 자연 톤 7색';
+  else if(currentCat.key === 'face') paletteLabel = '✨ 얼굴 변형 — 슬림 / 눈 키우기';
+  else paletteLabel = (_rmaiAr.currentPalette === 'rainbow') ? '🌈 무지개 7색' : (currentCat.icon + ' ' + currentCat.subtitle + ' — 사주 ' + (ohNames[oh]||oh) + ' · 7색');
 
   var swatchHtml = '<div style="font-size:11px;font-weight:800;color:#1a1408;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<span>'+paletteLabel+'</span>'
-    + '<span style="font-size:9px;font-weight:700;color:#888;">탭해서 적용</span>'
-    + '</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-
-  currentColors.forEach(function(c){
-    var isApplied = (appliedHex === c.c);
-    var ringColor = isApplied ? '#fbbf24' : 'rgba(0,0,0,.08)';
-    var ringWidth = isApplied ? '3px' : '2.5px';
-    var scale = isApplied ? 'scale(1.15)' : 'scale(1)';
-    swatchHtml += '<button onclick="rmaiArApplyColor(\''+c.c+'\',this)" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">'
-      +   '<div style="width:38px;height:38px;border-radius:50%;background:'+c.c+';border:'+ringWidth+' solid '+ringColor+';box-shadow:0 2px 6px rgba(0,0,0,.15);transition:transform .2s,border-color .2s;transform:'+scale+';" data-rmai-swatch="1"></div>'
-      +   '<div style="font-size:8px;color:#666;text-align:center;width:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+c.n+'</div>'
-      + '</button>';
-  });
-
+    + '<span>'+paletteLabel+'</span>';
+  if(currentCat.key !== 'face') swatchHtml += '<span style="font-size:9px;font-weight:700;color:#888;">탭해서 적용</span>';
   swatchHtml += '</div>';
 
-  // ★ 강도 슬라이더 (현재 카테고리)
-  var maxIntensity = (currentCat.key === 'base') ? 0.7 : 0.85;  // 베이스는 더 옅게 제한
-  var curIntensity = _rmaiAr.intensity[currentCat.key];
-  var pct = Math.round(curIntensity / maxIntensity * 100);
-  var sliderHtml = '<div style="margin-top:14px;padding:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-    + '<span style="font-size:11px;font-weight:800;color:#581c87;">⚙️ '+currentCat.name+' 진하기</span>'
-    + '<span id="rmai-ar-intensity-pct" style="font-size:11px;font-weight:900;color:#7c3aed;">'+pct+'%</span>'
-    + '</div>'
-    + '<input type="range" id="rmai-ar-intensity-slider" min="0" max="100" value="'+pct+'" oninput="rmaiArSetIntensity(this.value)" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#e9d5ff,#a855f7);border-radius:3px;outline:none;cursor:pointer;" />'
-    + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>옅게</span><span>진하게</span></div>'
-    + '</div>';
+  if(currentCat.key === 'face'){
+    // ★ 성형 카테고리: 색 스와치 대신 *2개의 슬라이더*
+    var slimPct = Math.round(_rmaiAr.faceSlim);
+    var eyePct = Math.round(_rmaiAr.eyeBigger);
+    swatchHtml += '<div style="padding:14px;background:#fef9f3;border:1px solid #fde68a;border-radius:10px;margin-bottom:8px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      + '<span style="font-size:11px;font-weight:800;color:#92400e;">🪞 얼굴 슬림</span>'
+      + '<span id="rmai-ar-slim-pct" style="font-size:11px;font-weight:900;color:#b45309;">'+slimPct+'%</span>'
+      + '</div>'
+      + '<input type="range" min="0" max="50" value="'+slimPct+'" oninput="rmaiArSetFaceSlim(this.value);document.getElementById(\'rmai-ar-slim-pct\').textContent=this.value+\'%\';" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#fde68a,#f59e0b);border-radius:3px;outline:none;cursor:pointer;" />'
+      + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>원본</span><span>날씬</span></div>'
+      + '</div>';
+    swatchHtml += '<div style="padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      + '<span style="font-size:11px;font-weight:800;color:#1e40af;">👁️ 눈 키우기</span>'
+      + '<span id="rmai-ar-eye-pct" style="font-size:11px;font-weight:900;color:#2563eb;">'+eyePct+'%</span>'
+      + '</div>'
+      + '<input type="range" min="0" max="50" value="'+eyePct+'" oninput="rmaiArSetEyeBigger(this.value);document.getElementById(\'rmai-ar-eye-pct\').textContent=this.value+\'%\';" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#bfdbfe,#2563eb);border-radius:3px;outline:none;cursor:pointer;" />'
+      + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>원본</span><span>또렷</span></div>'
+      + '</div>';
+  } else {
+    swatchHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    currentColors.forEach(function(c){
+      var isApplied = (appliedHex === c.c);
+      var ringColor = isApplied ? '#fbbf24' : 'rgba(0,0,0,.08)';
+      var ringWidth = isApplied ? '3px' : '2.5px';
+      var scale = isApplied ? 'scale(1.15)' : 'scale(1)';
+      swatchHtml += '<button onclick="rmaiArApplyColor(\''+c.c+'\',this)" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">'
+        +   '<div style="width:38px;height:38px;border-radius:50%;background:'+c.c+';border:'+ringWidth+' solid '+ringColor+';box-shadow:0 2px 6px rgba(0,0,0,.15);transition:transform .2s,border-color .2s;transform:'+scale+';" data-rmai-swatch="1"></div>'
+        +   '<div style="font-size:8px;color:#666;text-align:center;width:42px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+c.n+'</div>'
+        + '</button>';
+    });
+    swatchHtml += '</div>';
+  }
 
-  var clearBtn = '<button onclick="rmaiArApplyColor(null,null)" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ '+currentCat.name+' 색 적용 해제</button>';
+  // ★ 강도 슬라이더 (헤어 카테고리는 헤어 강도 / 성형은 슬라이더 없음 / 나머지는 메이크업 강도)
+  var sliderHtml = '';
+  if(currentCat.key === 'hair'){
+    var hairPct = Math.round(_rmaiAr.hairIntensity / 0.7 * 100);
+    sliderHtml = '<div style="margin-top:14px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      + '<span style="font-size:11px;font-weight:800;color:#991b1b;">⚙️ 헤어 진하기</span>'
+      + '<span id="rmai-ar-hair-pct" style="font-size:11px;font-weight:900;color:#dc2626;">'+hairPct+'%</span>'
+      + '</div>'
+      + '<input type="range" min="0" max="100" value="'+hairPct+'" oninput="rmaiArSetHairIntensity(this.value);document.getElementById(\'rmai-ar-hair-pct\').textContent=this.value+\'%\';" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#fecaca,#dc2626);border-radius:3px;outline:none;cursor:pointer;" />'
+      + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>옅게</span><span>진하게</span></div>'
+      + '</div>';
+  } else if(currentCat.key !== 'face'){
+    var maxIntensity = (currentCat.key === 'base') ? 0.7 : 0.85;
+    var curIntensity = _rmaiAr.intensity[currentCat.key];
+    var pct = Math.round(curIntensity / maxIntensity * 100);
+    sliderHtml = '<div style="margin-top:14px;padding:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      + '<span style="font-size:11px;font-weight:800;color:#581c87;">⚙️ '+currentCat.name+' 진하기</span>'
+      + '<span id="rmai-ar-intensity-pct" style="font-size:11px;font-weight:900;color:#7c3aed;">'+pct+'%</span>'
+      + '</div>'
+      + '<input type="range" id="rmai-ar-intensity-slider" min="0" max="100" value="'+pct+'" oninput="rmaiArSetIntensity(this.value)" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#e9d5ff,#a855f7);border-radius:3px;outline:none;cursor:pointer;" />'
+      + '<div style="display:flex;justify-content:space-between;font-size:9px;color:#888;margin-top:4px;"><span>옅게</span><span>진하게</span></div>'
+      + '</div>';
+  }
 
-  picker.innerHTML = tabsHtml + paletteToggle + swatchHtml + sliderHtml + clearBtn;
+  // ★ 해제 버튼 (헤어/성형은 별도 처리)
+  var clearBtn;
+  if(currentCat.key === 'hair'){
+    clearBtn = '<button onclick="rmaiArSetHairColor(null);_rmaiArInitColorPicker();" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ 헤어 색 적용 해제</button>';
+  } else if(currentCat.key === 'face'){
+    clearBtn = '<button onclick="rmaiArSetFaceSlim(0);rmaiArSetEyeBigger(0);_rmaiArInitColorPicker();" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ 얼굴 변형 해제</button>';
+  } else {
+    clearBtn = '<button onclick="rmaiArApplyColor(null,null)" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ '+currentCat.name+' 색 적용 해제</button>';
+  }
+
+  // ★ 헤어/성형 카테고리는 사주/무지개 팔레트 전환 비활성화
+  var showPaletteToggle = (currentCat.key !== 'hair' && currentCat.key !== 'face');
+  picker.innerHTML = tabsHtml + (showPaletteToggle ? paletteToggle : '') + swatchHtml + sliderHtml + clearBtn;
 }
 
-// ★ 카테고리 전환
+// ★ 카테고리 전환 (확장: hair/face 추가)
 window.rmaiArSetCategory = function(catKey){
-  if(['lip','cheek','eye','base'].indexOf(catKey) < 0) return;
+  if(['lip','cheek','eye','base','hair','face'].indexOf(catKey) < 0) return;
   _rmaiAr.currentCategory = catKey;
   _rmaiArInitColorPicker();
 };
@@ -87348,11 +87618,17 @@ window.rmaiArSetIntensity = function(val){
   if(pctEl) pctEl.textContent = val + '%';
 };
 
-// ★ 색 적용 — 현재 카테고리에 저장
+// ★ 색 적용 — 현재 카테고리에 저장 (헤어는 hairColor에 저장)
 window.rmaiArApplyColor = function(hexColor, btnEl){
   var cat = _rmaiAr.currentCategory;
-  _rmaiAr.appliedColors[cat] = hexColor;
-  _rmaiAr.currentColor = hexColor;
+  if(cat === 'hair'){
+    _rmaiAr.hairColor = hexColor;
+  } else if(cat === 'face'){
+    // 얼굴 변형 카테고리는 색 없음
+  } else {
+    _rmaiAr.appliedColors[cat] = hexColor;
+    _rmaiAr.currentColor = hexColor;
+  }
   _rmaiArInitColorPicker();
 };
 
@@ -87384,6 +87660,11 @@ window.rmaiArStop = function(){
   _rmaiAr.intensity = { lip:0.55, cheek:0.20, eye:0.35, base:0.35 };
   _rmaiAr.currentCategory = 'lip';
   _rmaiAr.currentPalette = 'oheng';
+  _rmaiAr.hairColor = null;
+  _rmaiAr.hairIntensity = 0.45;
+  _rmaiAr.faceSlim = 0;
+  _rmaiAr.eyeBigger = 0;
+  _rmaiAr.segmentationMask = null;
 };
 
 // ═══════════════════════════════════════════════════
