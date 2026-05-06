@@ -87263,57 +87263,66 @@ var _rmaiArWebGL = {
   initFailed: false
 };
 
-// ★ FaceMesh 공식 tessellation triangles (간소화된 ~470개 — 얼굴 영역 핵심)
-//   각 3개 인덱스 = 1 triangle. 좌우 대칭. MediaPipe FACEMESH_TESSELATION 기반.
+// ★ FaceMesh tessellation triangles — 얼굴 영역 빼곡히 (~280개)
+//   MediaPipe FACEMESH_TESSELATION 기반. 좌우 대칭. 얼굴 내부+외곽+눈+입+코.
 var _rmaiArFaceTrianglesIndices = new Uint16Array([
-  // 얼굴 외곽 + 볼 영역
-  10,338,297, 10,67,103, 10,109,338, 10,151,9, 9,107,55, 9,336,285,
-  151,108,9, 151,337,299, 108,67,151, 337,297,151,
-  // 이마 위쪽
-  103,67,109, 332,338,297, 109,67,108, 338,332,337,
-  // 좌측 볼 (왼쪽 - 화면)
-  234,93,132, 234,127,93, 127,234,162, 234,132,93, 132,58,172,
-  172,58,138, 138,135,172, 135,138,215, 215,138,172, 215,177,176,
-  176,177,148, 148,176,152, 215,176,150,
-  // 우측 볼 (대칭)
-  454,323,361, 454,356,323, 356,454,389, 454,361,323, 361,288,397,
-  397,288,367, 367,364,397, 364,367,435, 435,364,397, 435,401,400,
-  400,401,377, 377,400,152, 435,400,379,
-  // 좌측 눈 + 눈썹
-  33,7,163, 33,246,7, 246,161,7, 161,160,144, 160,159,158, 159,158,157,
-  158,157,173, 157,173,133, 33,163,144, 163,144,145, 145,153,154,
-  154,155,133, 173,133,155, 246,33,247, 247,33,130, 130,247,113,
-  113,247,225, 225,247,189, 189,247,221, 221,247,222, 222,247,52,
-  52,53,46, 46,53,225, 70,63,105, 105,66,107,
-  // 좌측 눈썹
-  46,53,52, 52,53,65, 65,53,55, 55,107,65, 107,108,55,
-  // 우측 눈 + 눈썹 (대칭)
-  263,249,390, 263,466,249, 466,388,249, 388,387,373, 387,386,385,
-  386,385,384, 385,384,398, 384,398,362, 263,390,373, 390,373,374,
-  374,380,381, 381,382,362, 398,362,382, 466,263,467, 467,263,359,
-  359,467,342, 342,467,445, 445,467,409, 409,467,441, 441,467,442,
-  442,467,282, 282,283,276, 276,283,445, 300,293,334, 334,296,336,
-  // 우측 눈썹
-  276,283,282, 282,283,295, 295,283,285, 285,336,295, 336,337,285,
-  // 코
+  // 이마 + 미간
+  10,338,297, 10,67,109, 10,151,9, 10,108,151, 10,109,151, 10,338,151,
+  9,107,55, 9,108,107, 9,336,285, 9,337,336, 151,108,9, 151,337,9,
+  108,67,151, 337,297,151, 67,103,109, 297,332,338,
+  // 광대 + 볼 (좌)
+  234,93,132, 234,127,93, 127,234,162, 162,127,21, 21,127,71, 21,71,68,
+  68,71,139, 139,71,156, 156,71,68, 132,93,58, 132,58,172, 58,172,138,
+  138,135,172, 135,138,215, 215,138,177, 215,177,176, 215,176,150,
+  176,177,148, 148,176,152, 152,176,400,
+  // 광대 + 볼 (우 — 대칭)
+  454,323,361, 454,356,323, 356,454,389, 389,356,251, 251,356,301, 251,301,298,
+  298,301,368, 368,301,389, 368,301,298, 361,323,288, 361,288,397, 288,397,367,
+  367,364,397, 364,367,435, 435,364,401, 435,401,400, 435,400,379,
+  400,401,377, 377,400,152, 152,400,148,
+  // 눈 (좌)
+  33,7,163, 33,246,7, 246,161,7, 161,160,144, 161,144,7, 160,159,158,
+  159,158,145, 158,157,173, 157,173,133, 173,133,155, 33,163,144, 163,145,144,
+  145,153,144, 153,154,145, 154,155,153, 155,133,154,
+  // 눈썹 + 눈 위 (좌)
+  246,33,247, 247,33,130, 130,247,113, 113,247,225, 225,247,189, 189,247,221,
+  221,247,222, 222,247,52, 52,53,46, 46,53,225, 70,63,105, 105,66,107,
+  46,53,52, 52,53,65, 65,53,55, 55,107,65, 107,108,55, 55,65,52,
+  // 눈 (우 — 대칭)
+  263,249,390, 263,466,249, 466,388,249, 388,387,373, 388,373,249, 387,386,385,
+  386,385,374, 385,384,398, 384,398,362, 398,362,382, 263,390,373, 390,381,374,
+  381,380,373, 380,374,381, 380,381,382, 381,382,383,
+  // 눈썹 + 눈 위 (우 — 대칭)
+  466,263,467, 467,263,359, 359,467,342, 342,467,445, 445,467,409, 409,467,441,
+  441,467,442, 442,467,282, 282,283,276, 276,283,445, 300,293,334, 334,296,336,
+  276,283,282, 282,283,295, 295,283,285, 285,336,295, 336,337,285, 285,295,282,
+  // 코 + 미간
   168,8,193, 168,417,8, 8,193,245, 8,417,465, 245,193,122, 465,417,351,
-  122,193,196, 351,417,419, 196,193,3, 419,417,248, 3,196,248,
-  248,419,3, 3,248,236, 236,248,134, 134,248,131, 131,134,49,
-  131,236,49, 49,236,209, 209,49,131, 122,196,193,
-  // 입 주변 (윗입술)
+  122,193,196, 351,417,419, 196,193,3, 419,417,248, 3,196,248, 248,419,3,
+  3,248,236, 236,248,134, 134,248,131, 131,134,49, 131,236,49, 49,236,209,
+  209,49,131, 122,196,193, 4,5,275, 4,45,5, 5,275,440, 5,45,220,
+  220,45,236, 220,236,49, 275,440,442, 440,275,438, 438,275,457,
+  // 입 외곽 (윗입술)
   61,146,91, 61,185,40, 61,40,39, 61,39,37, 61,37,0, 0,37,267,
-  0,267,269, 269,267,270, 270,269,409, 409,270,291, 291,409,375,
-  375,291,321, 321,375,405, 405,321,314, 314,405,17, 17,314,18,
-  18,17,200, 200,18,201, 201,200,199, 199,201,208, 208,199,428,
-  // 입 주변 (아랫입술)
-  91,146,61, 91,181,84, 84,91,181, 84,17,18, 17,84,314,
-  // 턱
-  152,176,148, 152,377,400, 152,148,176, 152,400,377,
-  // 추가 코 영역
-  4,5,275, 4,45,5, 5,275,440, 5,45,220, 220,45,236,
-  // 추가 광대
-  127,162,21, 21,162,71, 21,71,68, 68,71,139, 139,71,156,
-  356,389,251, 251,389,301, 251,301,298, 298,301,368, 368,301,389
+  0,267,269, 269,267,270, 270,269,409, 409,270,291, 291,409,375, 375,291,321,
+  321,375,405, 405,321,314, 314,405,17, 17,314,18, 18,17,200, 200,18,201,
+  201,200,199, 199,201,208, 208,199,428,
+  // 입 외곽 (아랫입술)
+  91,146,61, 91,181,84, 84,91,181, 84,17,18, 17,84,314, 84,180,181,
+  180,178,181, 178,180,191, 191,180,80, 80,191,82, 82,80,81, 81,82,13,
+  13,81,82, 13,82,191, 191,82,42, 42,191,80, 80,42,41, 41,42,38,
+  // 턱 + 아래
+  152,176,148, 152,377,400, 152,148,176, 152,400,377, 152,200,201, 152,200,428,
+  // 광대 위쪽 (외곽 보강)
+  127,162,21, 21,162,71, 21,71,68, 356,389,251, 251,389,301, 251,301,298,
+  // 추가 보간 영역 (얼굴 중앙)
+  168,6,5, 5,6,4, 6,168,8, 4,5,1, 1,5,4, 1,2,4,
+  2,3,236, 4,2,1, 2,1,98, 98,1,97, 97,1,2, 97,2,164,
+  164,2,98, 326,2,97, 326,97,164, 326,164,393,
+  // 광대 (좌측 추가)
+  93,132,58, 93,58,172, 172,58,177, 138,172,215, 138,215,177,
+  // 광대 (우측 추가)
+  323,361,288, 323,288,397, 397,288,401, 367,397,435, 367,435,401
 ]);
 
 // 얼굴 외곽 인덱스 (얼굴 슬림 시 안쪽으로 이동할 점들)
@@ -87337,7 +87346,7 @@ function _rmaiArInitWebGL(parentCanvas){
     var c = document.createElement('canvas');
     c.width = parentCanvas.width;
     c.height = parentCanvas.height;
-    var gl = c.getContext('webgl', {alpha: false, premultipliedAlpha: false, preserveDrawingBuffer: true});
+    var gl = c.getContext('webgl', {alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true});
     if(!gl){
       console.warn('[rmaiAr WebGL] not supported, fallback to 2D');
       _rmaiArWebGL.initFailed = true;
@@ -87420,7 +87429,7 @@ function _rmaiArInitWebGL(parentCanvas){
   }
 }
 
-// ★ Forward warping vertex 계산 — landmarks를 변형 좌표로 변환
+// ★ Forward warping vertex 계산 — 모든 vertex 부드러운 보간 (radial decay)
 function _rmaiArComputeWarpedVertices(landmarks, slim, eyeBig){
   var positions = new Float32Array(468 * 2);
   var texCoords = new Float32Array(468 * 2);
@@ -87430,17 +87439,15 @@ function _rmaiArComputeWarpedVertices(landmarks, slim, eyeBig){
   if(!nose) return null;
   var cx = nose.x, cy = nose.y;
 
+  // 얼굴 폭 (왼쪽 외곽 234 ~ 오른쪽 외곽 454)
+  var leftCheek = landmarks[234];
+  var rightCheek = landmarks[454];
+  if(!leftCheek || !rightCheek) return null;
+  var faceHalfW = (rightCheek.x - leftCheek.x) / 2;
+
   // 눈 중심
   var leftEye = landmarks[33];
   var rightEye = landmarks[263];
-
-  // 얼굴 외곽 인덱스 set 생성 (빠른 lookup)
-  var faceContourSet = {};
-  _rmaiArFaceContourIdx.forEach(function(i){ faceContourSet[i] = true; });
-
-  // 눈 영역 인덱스 set
-  var eyeAreaSet = {};
-  _rmaiArEyeAreaIdx.forEach(function(i){ eyeAreaSet[i] = true; });
 
   for(var i = 0; i < 468; i++){
     var lm = landmarks[i];
@@ -87449,29 +87456,52 @@ function _rmaiArComputeWarpedVertices(landmarks, slim, eyeBig){
     var newX = origX;
     var newY = origY;
 
-    // 얼굴 슬림: 외곽 점들을 *얼굴 중심 방향으로* 이동
-    if(slim > 0 && faceContourSet[i]){
+    // ★ 얼굴 슬림 — 모든 vertex에 *얼굴 중심 거리 기반 부드러운 변형*
+    // 외곽일수록 많이 안쪽으로, 중심 vertex는 거의 그대로
+    if(slim > 0){
       var dx = origX - cx;
-      newX = origX - dx * slim * 0.18;  // 18% 안쪽으로 (강도 비례)
+      var dy = origY - cy;
+      var distNorm = Math.sqrt(dx*dx + dy*dy) / faceHalfW; // 0=중심 ~ 1=외곽
+      // 얼굴 영역 내부만 (distNorm < 1.2) 변형, 외곽은 점차 줄어듦
+      if(distNorm < 1.4){
+        var pullStrength = Math.min(1, distNorm) * slim * 0.10;  // 0.18 → 0.10 (더 부드럽게)
+        newX = origX - dx * pullStrength;
+      }
     }
 
-    // 눈 키우기: 눈 영역 점을 가장 가까운 *눈 중심에서 바깥으로* 확대
-    if(eyeBig > 0 && eyeAreaSet[i] && leftEye && rightEye){
-      var distL = Math.abs(origX - leftEye.x);
-      var distR = Math.abs(origX - rightEye.x);
-      var nearestEye = (distL < distR) ? leftEye : rightEye;
-      var dxe = origX - nearestEye.x;
-      var dye = origY - nearestEye.y;
-      newX = origX + dxe * eyeBig * 0.4;  // 40% 확대
-      newY = origY + dye * eyeBig * 0.4;
+    // ★ 눈 키우기 — 양쪽 눈 중심에서 거리 기반 부드러운 확대
+    if(eyeBig > 0 && leftEye && rightEye){
+      var dxL = origX - leftEye.x;
+      var dyL = origY - leftEye.y;
+      var distL = Math.sqrt(dxL*dxL + dyL*dyL);
+      var dxR = origX - rightEye.x;
+      var dyR = origY - rightEye.y;
+      var distR = Math.sqrt(dxR*dxR + dyR*dyR);
+
+      // 가장 가까운 눈 + 영향 반경 (얼굴 폭의 25%)
+      var eyeR = faceHalfW * 0.5;
+      var nearestEye, dxE, dyE, distE;
+      if(distL < distR){
+        nearestEye = leftEye; dxE = dxL; dyE = dyL; distE = distL;
+      } else {
+        nearestEye = rightEye; dxE = dxR; dyE = dyR; distE = distR;
+      }
+
+      // 영향 반경 안에서만 부드럽게 확대 (가까울수록 더 많이)
+      if(distE < eyeR){
+        var falloff = 1 - (distE / eyeR);  // 1=눈 중심 ~ 0=경계
+        var scale = eyeBig * 0.20 * falloff * falloff; // 0.4 → 0.20 + falloff² (부드러움)
+        newX = newX + dxE * scale;
+        newY = newY + dyE * scale;
+      }
     }
 
     // WebGL 좌표계 (-1~1, y 뒤집힘)
     positions[i*2]     = newX * 2 - 1;
     positions[i*2 + 1] = 1 - newY * 2;
-    // 원본 텍스처 좌표 (0~1, y 뒤집힘 안 함 — WebGL UV는 bottom-up)
+    // 원본 텍스처 좌표 (WebGL UV는 bottom-up)
     texCoords[i*2]     = origX;
-    texCoords[i*2 + 1] = 1 - origY;  // WebGL texture y 반전
+    texCoords[i*2 + 1] = 1 - origY;
   }
 
   return { positions: positions, texCoords: texCoords };
@@ -87538,13 +87568,16 @@ function _rmaiArDrawWarpedImage(ctx, canvas, image, landmarks){
     // Index buffer
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, _rmaiArWebGL.idxBuf);
 
-    // 1. 먼저 *원본 video*를 background로 그림 (변형 영역 외 부분)
+    // 1. 먼저 *원본 video*를 background로 그림 (변형 영역 외 부분 + fallback)
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    // 2. WebGL로 *변형된 얼굴*만 그림
+    // 2. WebGL로 *변형된 얼굴 triangles*만 그림 (배경은 투명 alpha:true)
     gl.drawElements(gl.TRIANGLES, _rmaiArWebGL.triangles.length, gl.UNSIGNED_SHORT, 0);
 
-    // 3. WebGL 결과를 2D 캔버스에 합성 (얼굴 부분만 덮어쓰기)
+    // 3. WebGL 결과를 2D 캔버스에 *부드럽게 합성* (alpha 영역만 덮어쓰기)
+    //    WebGL canvas의 투명 영역은 무시되고 triangle 영역만 덮어씀
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(_rmaiArWebGL.canvas, 0, 0, canvas.width, canvas.height);
   } catch(e){
     console.error('[rmaiAr WebGL] render error:', e);
