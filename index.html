@@ -87171,24 +87171,41 @@ function _rmaiArDrawCheek(ctx, canvas, landmarks, indices, color){
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// ★ 아이 (눈꺼풀) — 다각형 + 살짝 옅은 multiply
+// ★ 아이 (눈꺼풀) — 가우시안 블러 페더링 (가장자리 부드럽게 — 자연스러움)
 function _rmaiArDrawEye(ctx, canvas, landmarks, indices, color){
-  ctx.beginPath();
+  // 임시 캔버스 재사용 (성능)
+  if(!_rmaiAr.eyeOffscreen){
+    _rmaiAr.eyeOffscreen = document.createElement('canvas');
+  }
+  var off = _rmaiAr.eyeOffscreen;
+  if(off.width !== canvas.width || off.height !== canvas.height){
+    off.width = canvas.width;
+    off.height = canvas.height;
+  }
+  var oCtx = off.getContext('2d');
+  oCtx.clearRect(0, 0, off.width, off.height);
+
+  // 다각형 채우기 (임시 캔버스에)
+  oCtx.beginPath();
   indices.forEach(function(idx, i){
     var lm = landmarks[idx];
     if(!lm) return;
     var x = lm.x * canvas.width;
     var y = lm.y * canvas.height;
-    if(i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if(i === 0) oCtx.moveTo(x, y);
+    else oCtx.lineTo(x, y);
   });
-  ctx.closePath();
+  oCtx.closePath();
+  oCtx.fillStyle = color;
+  oCtx.fill();
+
+  // 메인 캔버스에 *가우시안 블러 5px* + multiply 합성 → 가장자리 부드러움
+  ctx.save();
+  ctx.filter = 'blur(5px)';
   ctx.globalCompositeOperation = 'multiply';
   ctx.globalAlpha = _rmaiAr.intensity.eye;
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(off, 0, 0);
+  ctx.restore();
 }
 
 // ★ 베이스 (전체 얼굴 톤) — soft-light 블렌드 (자연스러운 피부톤)
