@@ -86815,11 +86815,221 @@ function rmaiShowResult(oh){
   var resEl2=document.getElementById('rmai-result');
   if(resEl2) resEl2.style.display='block';
 
-  // ★ C-29 hook — 분석 결과 알림
+  // ═══════════════════════════════════════════════════
+  // ★ ㊻ FULI Age — 세계 최초 사주 + rPPG + FaceAge 융합
+  //   기반: Nature Communications 2026.04.28 (FaceAge / FAR 연구)
+  //   우리 식: 4지표 + 사주 가중치 → 추정 생체나이 + 시계열 노화 속도
+  // ═══════════════════════════════════════════════════
+  if(typeof _rmaiCalcFuliAge === 'function'){
+    var realAge = (window.calcResult && calcResult.age) ? parseInt(calcResult.age) : 35;
+    var fuliAgeData = _rmaiCalcFuliAge(realAge, uni, glow, cover, moist, oh, mai);
+    _rmaiSaveFuliAgeRecord(fuliAgeData);
+    _rmaiRenderFuliAgeCard(fuliAgeData);
+  }
+
+  // ★ C-29 hook — 분석 결과 알림 (FULI Age 포함)
   if(typeof rmaiChatSay === 'function'){
     rmaiChatSay('analysis-done', {mai:mai, oh:oh, uni:uni, glow:glow, cover:cover, moist:moist});
   }
 }
+
+// ═══════════════════════════════════════════════════
+// ★ ㊻ FULI Age — 알고리즘 + 시계열 추적 (~150라인)
+// ═══════════════════════════════════════════════════
+
+// 일반 한국인 평균 4지표 (연령대별 기준값) — 우리 큐레이션
+var _rmaiAgeBaseline = {
+  20: { uni:78, glow:75, cover:55, moist:75 },
+  30: { uni:72, glow:68, cover:55, moist:65 },
+  40: { uni:65, glow:60, cover:55, moist:55 },
+  50: { uni:58, glow:53, cover:55, moist:48 },
+  60: { uni:50, glow:45, cover:55, moist:40 },
+  70: { uni:42, glow:38, cover:55, moist:35 }
+};
+
+// 사주 오행 가중치 (목=빠른 노화 속도 vs 수=느린 노화)
+var _rmaiOhAgeWeight = {목:1.05, 화:1.10, 토:1.00, 금:0.95, 수:0.92};
+
+// 보간 함수 — 정확한 나이의 baseline 산출
+function _rmaiInterpolateBaseline(age){
+  var ages = [20,30,40,50,60,70];
+  if(age <= 20) return _rmaiAgeBaseline[20];
+  if(age >= 70) return _rmaiAgeBaseline[70];
+  for(var i=0; i<ages.length-1; i++){
+    if(age >= ages[i] && age < ages[i+1]){
+      var t = (age - ages[i]) / 10;
+      var b1 = _rmaiAgeBaseline[ages[i]];
+      var b2 = _rmaiAgeBaseline[ages[i+1]];
+      return {
+        uni:   Math.round(b1.uni   + (b2.uni   - b1.uni)   * t),
+        glow:  Math.round(b1.glow  + (b2.glow  - b1.glow)  * t),
+        cover: Math.round(b1.cover + (b2.cover - b1.cover) * t),
+        moist: Math.round(b1.moist + (b2.moist - b1.moist) * t)
+      };
+    }
+  }
+  return _rmaiAgeBaseline[40];
+}
+
+// ★ FULI Age 계산 — 4지표 + 사주 → 추정 생체나이
+window._rmaiCalcFuliAge = function(realAge, uni, glow, cover, moist, oh, mai){
+  // 1. 실제 나이 baseline
+  var base = _rmaiInterpolateBaseline(realAge);
+  // 2. 측정값 vs baseline 편차 (양수=젊어 보임, 음수=늙어 보임)
+  var diffUni   = uni   - base.uni;
+  var diffGlow  = glow  - base.glow;
+  var diffMoist = moist - base.moist;
+  // cover는 보정 — 화장에 따른 차이라 가중치 작게
+  // 가중치: 화사함 > 촉촉함 > 균일도 (노화 가장 잘 드러나는 순)
+  var diffScore = (diffGlow * 0.40 + diffMoist * 0.35 + diffUni * 0.25);
+  // 3. 점수 → 나이 편차 (10점 = 약 5살)
+  var ageDelta = -diffScore / 2;
+  // 4. 사주 가중치 적용
+  var ohW = _rmaiOhAgeWeight[oh] || 1.0;
+  ageDelta = ageDelta * ohW;
+  // 5. FULI Age = 실제 나이 + 편차
+  var fuliAge = Math.round((realAge + ageDelta) * 10) / 10;
+  // 6. FAD (안면 연령 편차) — 양수=빨리 노화, 음수=느린 노화
+  var fad = Math.round(ageDelta * 10) / 10;
+
+  return {
+    realAge: realAge,
+    fuliAge: fuliAge,
+    fad: fad,
+    oh: oh,
+    mai: mai,
+    indicators: { uni:uni, glow:glow, cover:cover, moist:moist },
+    baseline: base,
+    timestamp: Date.now(),
+    date: new Date().toISOString().slice(0,10)
+  };
+};
+
+// ★ 시계열 저장 (localStorage)
+window._rmaiSaveFuliAgeRecord = function(data){
+  try {
+    var key = 'cgo_fuli_age_history';
+    var raw = localStorage.getItem(key);
+    var arr = raw ? JSON.parse(raw) : [];
+    arr.push({
+      ts: data.timestamp,
+      date: data.date,
+      age: data.fuliAge,
+      fad: data.fad,
+      mai: data.mai,
+      oh: data.oh,
+      uni: data.indicators.uni,
+      glow: data.indicators.glow,
+      cover: data.indicators.cover,
+      moist: data.indicators.moist
+    });
+    // 최근 100개만 보관
+    if(arr.length > 100) arr = arr.slice(-100);
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch(e){ console.warn('[FULI Age] storage fail:', e); }
+};
+
+// ★ FAR 계산 — 시계열 측정 → 노화 속도 (실시간 vs 평균)
+window._rmaiCalcFAR = function(){
+  try {
+    var raw = localStorage.getItem('cgo_fuli_age_history');
+    if(!raw) return null;
+    var arr = JSON.parse(raw);
+    if(arr.length < 2) return { count: arr.length, far: null, message: '시계열 추적 시작 — 다음 측정 시 노화 속도 산출' };
+
+    // 첫 측정 vs 최신 측정
+    var first = arr[0];
+    var latest = arr[arr.length - 1];
+    var daysDiff = (latest.ts - first.ts) / (1000 * 60 * 60 * 24);
+    if(daysDiff < 1) daysDiff = 1; // 같은 날 측정 보호
+
+    var ageDiff = latest.age - first.age;
+    // FAR = 1년당 추가 노화 (실제 1년 = 1살. 우리 추정이 더 빠르면 +)
+    var farPerYear = (ageDiff / daysDiff) * 365;
+    var farPercent = Math.round((farPerYear / 1) * 100); // 1.4 → 140% (40% 빠름)
+
+    return {
+      count: arr.length,
+      first: first,
+      latest: latest,
+      daysDiff: Math.round(daysDiff * 10) / 10,
+      ageDiff: Math.round(ageDiff * 10) / 10,
+      farPerYear: Math.round(farPerYear * 100) / 100,
+      farPercent: farPercent,
+      message: ageDiff > 0
+        ? '노화 속도 ' + farPercent + '% (일반 100% 기준)'
+        : '노화 속도 안정적 — 좋은 추세'
+    };
+  } catch(e){ return null; }
+};
+
+// ★ FULI Age 결과 카드 렌더링
+window._rmaiRenderFuliAgeCard = function(data){
+  var container = document.getElementById('rmai-fuli-age-card');
+  if(!container){
+    // 카드 없으면 새로 박제 (rmai-result 안에)
+    var resultArea = document.getElementById('rmai-result');
+    if(!resultArea) return;
+    container = document.createElement('div');
+    container.id = 'rmai-fuli-age-card';
+    container.style.cssText = 'background:linear-gradient(135deg,#0a1428,#1e1b4b);border:1px solid rgba(168,85,247,.4);border-radius:16px;padding:16px 18px;margin-top:14px;color:#fff;';
+    resultArea.appendChild(container);
+  }
+
+  var fad = data.fad;
+  var fadColor = fad > 3 ? '#f87171' : fad > 0 ? '#fbbf24' : fad > -3 ? '#86efac' : '#60a5fa';
+  var fadIcon = fad > 3 ? '⚠️' : fad > 0 ? '⏳' : fad > -3 ? '✨' : '💎';
+  var fadLabel = fad > 3 ? '노화 가속' : fad > 0 ? '평균 약간 빠름' : fad > -3 ? '평균 수준' : '젊음 유지';
+
+  var far = _rmaiCalcFAR();
+  var farHtml = '';
+  if(far){
+    if(far.count < 2){
+      farHtml = '<div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:8px;font-size:10px;color:rgba(255,255,255,.5);">📈 '+far.message+'</div>';
+    } else {
+      var farColor = far.farPercent > 130 ? '#f87171' : far.farPercent > 105 ? '#fbbf24' : far.farPercent > 90 ? '#86efac' : '#60a5fa';
+      farHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;">'
+        + '<div style="font-size:9px;font-weight:800;color:#a78bfa;letter-spacing:.06em;margin-bottom:6px;">📈 FAR · 안면 노화 속도 (시계열 '+far.count+'회)</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        +   '<span style="font-size:11px;color:rgba(255,255,255,.7);">'+far.daysDiff+'일간 추적 결과</span>'
+        +   '<span style="font-size:14px;font-weight:900;color:'+farColor+';">'+far.farPercent+'%</span>'
+        + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,.55);">'+far.message+'</div>'
+        + '</div>';
+    }
+  }
+
+  container.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    +   '<div>'
+    +     '<div style="font-size:9px;font-weight:800;color:#a78bfa;letter-spacing:.18em;">WORLD FIRST · FULI AGE</div>'
+    +     '<div style="font-size:13px;font-weight:900;color:#fff;margin-top:2px;">생체 나이 + 사주 융합 분석</div>'
+    +   '</div>'
+    +   '<span style="font-size:10px;color:rgba(168,85,247,.7);background:rgba(168,85,247,.1);padding:3px 8px;border-radius:6px;">Nature 2026 응용</span>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
+    +   '<div style="padding:12px;background:rgba(255,255,255,.05);border-radius:10px;">'
+    +     '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:2px;">실제 나이</div>'
+    +     '<div style="font-size:24px;font-weight:900;color:#fff;">'+data.realAge+'<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);"> 세</span></div>'
+    +   '</div>'
+    +   '<div style="padding:12px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:10px;">'
+    +     '<div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:2px;">FULI Age (추정)</div>'
+    +     '<div style="font-size:24px;font-weight:900;color:#fff;">'+data.fuliAge+'<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);"> 세</span></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="padding:10px 12px;background:rgba(255,255,255,.03);border-left:3px solid '+fadColor+';border-radius:8px;">'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;">'
+    +     '<span style="font-size:10px;font-weight:800;color:rgba(255,255,255,.6);">FAD · 안면 연령 편차</span>'
+    +     '<span style="font-size:14px;font-weight:900;color:'+fadColor+';">'+fadIcon+' '+(fad>0?'+':'')+fad+'</span>'
+    +   '</div>'
+    +   '<div style="font-size:9px;color:rgba(255,255,255,.5);margin-top:2px;">'+fadLabel+'</div>'
+    + '</div>'
+    + farHtml
+    + '<div style="margin-top:10px;padding:8px 10px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;">'
+    +   '<div style="font-size:8px;font-weight:800;color:#f87171;margin-bottom:2px;">📌 정직 안내</div>'
+    +   '<div style="font-size:9px;color:rgba(255,255,255,.5);line-height:1.6;">참고 자료입니다. 의료 진단 X. 매일 측정 시 시계열 노화 속도(FAR)를 추적할 수 있습니다.</div>'
+    + '</div>';
+};
 
 // ═══════════════════════════════════════════════════
 // ★ rmaiArStart — AR 메이크업 시작 (FaceMesh 468)
@@ -87851,18 +88061,35 @@ window.rmaiChatSend = function(){
     colorCatalog += '\n  ['+catName+']: '+ ((pal[cat] || []).map(function(c){return c.n;}).join(', '));
   });
 
-  var systemPrompt = '당신은 C-29 컨설턴트입니다. 사주 오행 + 색채심리 + 메이크업 트렌드 전문 박학다식 컨설턴트.\n'
+  var systemPrompt = '당신은 C-29 컨설턴트입니다. 사주 오행 + 색채심리 + 메이크업 트렌드 + FULI Age 노화 분석 전문 박학다식 컨설턴트.\n'
     + '톤: 전문가 컨설턴트 (정중한 존댓말, "~을 추천드립니다").\n'
     + '답변 규칙:\n'
     + '1. 짧게 (3-4문장 이내, 줄바꿈 사용).\n'
     + '2. 색 추천 시 *반드시* 아래 카탈로그 안의 이름만 사용.\n'
     + '3. 색 적용을 권할 땐 [APPLY:카테고리:색이름] 태그 사용. 예: [APPLY:lip:코랄레드]\n'
     + '   카테고리는 lip/cheek/eye/base 중 하나.\n'
-    + '4. 사용자 질문이 메이크업 외 (사주, 트렌드, 코디 등)이면 박학다식하게 답변하되 결국 *색 추천*으로 자연스럽게 연결.\n\n'
+    + '4. FULI Age 데이터가 있으면 *생체 나이 / 노화 속도*도 자연스럽게 코멘트.\n'
+    + '5. 사용자 질문이 메이크업 외 (사주, 노화, 트렌드 등)이면 박학다식하게 답변하되 결국 *색 추천*으로 자연스럽게 연결.\n\n'
     + '사용자 정보:\n'
     + '  - 사주: ' + (ohNames[oh]||oh) + '\n'
     + (mai ? '  - MAI 점수: ' + mai + '점\n' : '  - MAI 분석 아직 안 함\n')
     + (mai ? '  - 4지표: 균일도 '+_rmai.uni+'·화사함 '+_rmai.glow+'·커버 '+_rmai.cover+'·촉촉 '+_rmai.moist+'\n' : '')
+    + ((function(){
+        try {
+          var raw = localStorage.getItem('cgo_fuli_age_history');
+          if(!raw) return '';
+          var arr = JSON.parse(raw);
+          if(!arr.length) return '';
+          var latest = arr[arr.length-1];
+          var s = '  - FULI Age: '+latest.age+'세 (FAD '+(latest.fad>0?'+':'')+latest.fad+')\n';
+          if(arr.length >= 2 && typeof _rmaiCalcFAR === 'function'){
+            var far = _rmaiCalcFAR();
+            if(far && far.farPercent) s += '  - FAR (노화 속도): '+far.farPercent+'%\n';
+          }
+          s += '  - 측정 횟수: '+arr.length+'회\n';
+          return s;
+        } catch(e){ return ''; }
+      })())
     + '  - 현재 적용: 립=' + (ac.lip||'없음') + ', 볼=' + (ac.cheek||'없음') + ', 아이=' + (ac.eye||'없음') + ', 베이스=' + (ac.base||'없음') + '\n'
     + '\n오늘 추천 색 카탈로그:' + colorCatalog;
 
