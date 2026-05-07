@@ -25,398 +25,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CGO-FULI">
 <title>GO Future — ILI 라이프 인덱스</title>
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!-- ✦ CGO-FULI 점수 헌법 v3.1 — SSOT 박제 (C-30 · 2026-05-07) ✦ -->
-<!-- 헌법 출처: CGO_FULI_SCORING_CONSTITUTION_v3.1.md             -->
-<!-- 박제 원칙: 제5조 SSOT — 단일 진실 원천                       -->
-<!-- ══════════════════════════════════════════════════════════════ -->
-<script>
-window.CGO_FULI_SCORE = (function(){
-
-  // ── 헌법 제3조 § USEED — User Unique Seed ──
-  // 변화적 응답 보장: T4 미측정 시에도 다른 사용자 = 다른 점수
-  function generateUSEED(calcResult){
-    if(!calcResult || !calcResult.y) return 0;
-    var seed = (calcResult.y * 10000 + (calcResult.m||1) * 100 + (calcResult.d||1)) * 31;
-    if(calcResult.name && calcResult.name.length > 0){
-      seed += calcResult.name.charCodeAt(0) * 17;
-    }
-    seed += (calcResult.lifeNum||5) * 7;
-    if(calcResult.domOh && calcResult.domOh.length > 0){
-      seed += calcResult.domOh.charCodeAt(0);
-    }
-    return seed;
-  }
-
-  // ── 헌법 제6조 § 4계층 기본 가중치 (Article 2) ──
-  var WEIGHTS_DEFAULT = { T1: 25, T2: 25, T3: 20, T4: 30 };
-
-  // ── 헌법 제8조 § 18대 역학 가중치 매트릭스 ──
-  var YEOKHAK_MATRIX = {
-    'saju':       { T1:50, T2:20, T3:10, T4:20 },  // 사주명리
-    'jami':       { T1:35, T2:25, T3:25, T4:15 },  // 자미두수
-    'astrology':  { T1:30, T2:20, T3:35, T4:15 },  // 서양 점성술
-    'numerology': { T1:60, T2:30, T3:5,  T4:5  },  // 수비학
-    'kimun':      { T1:30, T2:25, T3:35, T4:10 },  // 기문둔갑
-    'kusei':      { T1:35, T2:30, T3:25, T4:10 },  // 구성기학
-    'taeul':      { T1:40, T2:30, T3:20, T4:10 },  // 태을신수
-    'yukim':      { T1:35, T2:30, T3:25, T4:10 },  // 육임신살
-    'juyeok':     { T1:25, T2:35, T3:25, T4:15 },  // 주역
-    'tarot':      { T1:15, T2:50, T3:20, T4:15 },  // 타로
-    'naming':     { T1:70, T2:25, T3:0,  T4:5  },  // 성명학
-    'feng':       { T1:30, T2:20, T3:30, T4:20 },  // 풍수지리
-    'face':       { T1:10, T2:5,  T3:5,  T4:80 },  // 관상
-    'palm':       { T1:10, T2:5,  T3:5,  T4:80 },  // 손금
-    'kabbalah':   { T1:30, T2:50, T3:10, T4:10 },  // 카발라
-    'chakra':     { T1:20, T2:30, T3:10, T4:40 },  // 차크라
-    'runic':      { T1:30, T2:50, T3:10, T4:10 },  // 루닉
-    'sun_sign':   { T1:20, T2:15, T3:50, T4:15 }   // 태양궁
-  };
-
-  // ── 헌법 제10조 § 18대 역학 baseScore (정확도) ──
-  var YEOKHAK_BASE_SCORE = {
-    'saju':95, 'numerology':92, 'jami':90, 'astrology':88,
-    'kimun':80, 'kusei':78, 'taeul':75, 'juyeok':72,
-    'sun_sign':71, 'yukim':70, 'naming':70, 'tarot':65,
-    'feng':60, 'face':55, 'kabbalah':55, 'chakra':52,
-    'palm':50, 'runic':50
-  };
-
-  // ── 헌법 제7조 § 신뢰 등급 산출 ──
-  function computeConfidenceGrade(layers){
-    var T1 = !!(layers && layers.T1);
-    var T2 = !!(layers && layers.T2);
-    var T3 = !!(layers && layers.T3);
-    var T4 = !!(layers && layers.T4);
-    if(T1 && T2 && T3 && T4) return { grade:'A', confidence:95, color:'#34d399' };
-    if(T1 && T2 && T3)        return { grade:'B', confidence:75, color:'#fbbf24' };
-    if(T1 && T2)              return { grade:'C', confidence:55, color:'#f97316' };
-    if(T1)                    return { grade:'D', confidence:35, color:'#ef4444' };
-    return { grade:'F', confidence:0, color:'#999999' };
-  }
-
-  // ── 헌법 제6조 § 점수 산출 메인 함수 ──
-  // domain: 18대 역학 키 (없으면 기본 가중치)
-  // layerScores: {T1,T2,T3,T4} 각 0~100
-  // context: {calcResult, useed} — USEED 변동 보장용
-  function compute(domain, layerScores, context){
-    var W = (domain && YEOKHAK_MATRIX[domain]) ? YEOKHAK_MATRIX[domain] : WEIGHTS_DEFAULT;
-    var L = layerScores || {};
-    var T1 = L.T1 || 0, T2 = L.T2 || 0, T3 = L.T3 || 0, T4 = L.T4 || 0;
-    var score = (T1 * W.T1 + T2 * W.T2 + T3 * W.T3 + T4 * W.T4) / 100;
-    // USEED 변동: T4 미측정 시에도 사용자별 변동 보장 (헌법 제3조)
-    // Murmur3 finalizer로 비트 혼합 — 인접 USEED도 다른 변동값 보장
-    var useed = (context && context.useed) ||
-                ((context && context.calcResult) ? generateUSEED(context.calcResult) : 0);
-    if(!T4 && useed > 0){
-      var h = useed | 0;
-      h = ((h ^ (h >>> 16)) * 0x85ebca6b) | 0;
-      h = ((h ^ (h >>> 13)) * 0xc2b2ae35) | 0;
-      h = (h ^ (h >>> 16));
-      score += (Math.abs(h) % 7) - 3;  // -3 ~ +3 변동 (잘 분포됨)
-    }
-    return Math.max(0, Math.min(100, Math.round(score)));
-  }
-
-  // ── 헌법 제6조 § 19역학 → 4계층 분석 (비파괴) ──
-  // 기존 _IW 배열 그대로 받아 T1/T2/T3/T4 breakdown 반환
-  // 기존 ILI 계산은 손대지 않음 — *부가 정보*로만 4계층 노출
-  // S01~S19 인덱스 → 4계층 분류 (코드 line 49055~ 주석 기반)
-  var IW_LAYER_MAP = [
-    'T1', // 0: S01 사주명리 (정적)
-    'T3', // 1: S02 자미두수 (별자리)
-    'T3', // 2: S03 베딕+태양궁 (NASA)
-    'T3', // 3: S04 전체차트 (행성)
-    'T3', // 4: S05 기문둔갑 (시간)
-    'T3', // 5: S06 행성트랜짓 (NASA)
-    'T3', // 6: S07 육임신살 (시각)
-    'T1', // 7: S08 수비학 (생일)
-    'T3', // 8: S09 풍수지리 (환경)
-    'T1', // 9: S10 카발라 (이름)
-    'T1', // 10: S11 성명학 (이름)
-    'T3', // 11: S12 하우스 (행성위치)
-    'T1', // 12: S13 태을신수 (사주+천문)
-    'T3', // 13: S14 합성차트 (현재행성)
-    'T2', // 14: S15 주역 (점괘)
-    'T2', // 15: S16 타로 (선택)
-    'T4', // 16: S17 관상 (rPPG)
-    'T4', // 17: S18 손금 (BLI)
-    'T3'  // 18: S19 구성학 (본명성+태양고도)
-  ];
-
-  function analyze4Layer(IW){
-    if(!IW || !IW.length) return null;
-    var sums    = { T1:0, T2:0, T3:0, T4:0 };
-    var weights = { T1:0, T2:0, T3:0, T4:0 };
-    for(var i=0; i<IW.length && i<IW_LAYER_MAP.length; i++){
-      var layer = IW_LAYER_MAP[i];
-      if(!layer || !IW[i]) continue;
-      sums[layer]    += (IW[i].w || 0) * (IW[i].s || 0);
-      weights[layer] += (IW[i].w || 0);
-    }
-    return {
-      T1: weights.T1 > 0 ? Math.round(sums.T1 / weights.T1) : 0,
-      T2: weights.T2 > 0 ? Math.round(sums.T2 / weights.T2) : 0,
-      T3: weights.T3 > 0 ? Math.round(sums.T3 / weights.T3) : 0,
-      T4: weights.T4 > 0 ? Math.round(sums.T4 / weights.T4) : 0,
-      _meta: {
-        T1_count: 5,   // S01,S08,S10,S11,S13
-        T2_count: 2,   // S15,S16
-        T3_count: 10,  // S02-S07,S09,S12,S14,S19
-        T4_count: 2,   // S17,S18
-        constitution: 'v3.1'
-      }
-    };
-  }
-
-  // ── 공개 API ──
-  return {
-    VERSION:               'v3.1',
-    BUILD_DATE:            '2026-05-07',
-    BUILD_BY:              'C-30',
-    generateUSEED:         generateUSEED,
-    compute:               compute,
-    analyze4Layer:         analyze4Layer,
-    computeConfidenceGrade:computeConfidenceGrade,
-    WEIGHTS_DEFAULT:       WEIGHTS_DEFAULT,
-    YEOKHAK_MATRIX:        YEOKHAK_MATRIX,
-    YEOKHAK_BASE_SCORE:    YEOKHAK_BASE_SCORE,
-    IW_LAYER_MAP:          IW_LAYER_MAP
-  };
-})();
-
-// ── 헌법 제20조 § 변경 금지 — Object.freeze 영구 박제 ──
-Object.freeze(window.CGO_FULI_SCORE);
-Object.freeze(window.CGO_FULI_SCORE.WEIGHTS_DEFAULT);
-Object.freeze(window.CGO_FULI_SCORE.YEOKHAK_MATRIX);
-Object.freeze(window.CGO_FULI_SCORE.YEOKHAK_BASE_SCORE);
-Object.freeze(window.CGO_FULI_SCORE.IW_LAYER_MAP);
-
-try { console.log('[CGO-FULI] 헌법 v3.1 SSOT 박제 완료 (C-30 · 2026-05-07)'); } catch(e){}
-</script>
-
-<!-- ✦ Step 4: USEED 기반 ILI Fallback 헬퍼 (C-30 · 2026-05-07) ✦ -->
-<script>
-// 헌법 제3조 변화적 응답 보장 — 정직한 ILI 기본값 산출
-// 입력: calcResult (없거나 불완전하면 70 반환 — 진짜 데이터 없을 때만)
-// 출력: 64~76 (USEED 기반 사용자별 변동) 또는 70 (데이터 부족 시)
-window._cgoIliFromUSEED = function(calcResult){
-  var r = calcResult || window.calcResult;
-  if(!r || !r.y) return 70;  // 진짜 무데이터 시에만 70 (정직)
-  if(!window.CGO_FULI_SCORE || !window.CGO_FULI_SCORE.generateUSEED) return 70;
-  var useed = window.CGO_FULI_SCORE.generateUSEED(r);
-  if(!useed) return 70;
-  // Murmur3 finalizer — 사용자별 정직한 변동
-  var h = useed | 0;
-  h = ((h ^ (h >>> 16)) * 0x85ebca6b) | 0;
-  h = ((h ^ (h >>> 13)) * 0xc2b2ae35) | 0;
-  h = (h ^ (h >>> 16));
-  return 64 + (Math.abs(h) % 13);  // 64~76 범위 (-6~+6 from 70)
-};
-
-// ✦ 헌법 제15조 § 점수 카드 6필드 공통 렌더러 (C-30 · Universal · 2026-05-07) ✦
-// 어떤 팝업·페이지에서든 1줄 호출로 헌법 준수 점수 카드 박제
-// 사용법: element.innerHTML = window.cgoScoreCard({score:88, domain:'saju', label:'사주명리 점수'})
-window.cgoScoreCard = function(opts){
-  opts = opts || {};
-  var score   = (opts.score!==undefined && opts.score!==null) ? Math.round(opts.score) : 0;
-  var domain  = opts.domain  || '';      // 'saju', 'tarot' 등 (없으면 종합)
-  var label   = opts.label   || '점수';  // 카드 제목 (예: '오늘 총운')
-  var compact = !!opts.compact;          // true면 4필드만 (출처/범위/시각/보강만, 큰 점수 없음)
-
-  // ── 신뢰 등급 산출 (T1~T4 측정 여부) ──
-  var r       = window.calcResult || {};
-  var bio     = window._bioFinalData || {};
-  var nasa    = window._nasaPlanets;
-  var weather = window._weatherData;
-  var T1 = !!(r.y && r.name);
-  var T2 = !!((r.selectedYeokhak && r.selectedYeokhak.length>0) ||
-              (window._qt && window._qt.selectedCard) ||
-              (window._mbtiResult && window._mbtiResult.type) || domain);
-  var T3 = !!(nasa || weather);
-  var T4 = !!(bio.bpm > 0 || bio.hrv > 0 || bio.fci > 0 || bio.bli > 0);
-  var grade = window.CGO_FULI_SCORE
-            ? window.CGO_FULI_SCORE.computeConfidenceGrade({T1:T1,T2:T2,T3:T3,T4:T4})
-            : {grade:'?', color:'#999'};
-
-  // ── 출처 ──
-  var sources = [];
-  if(T1){
-    sources.push('생년월일');
-    if(r.name) sources.push('이름');
-    if(r.domOh) sources.push('오행('+r.domOh+')');
-  }
-  if(T2 && domain) sources.push('역학('+domain+')');
-  else if(T2) sources.push('역학선택');
-  if(T3) sources.push('NASA');
-  if(T4){
-    var bp = [];
-    if(bio.bpm>0) bp.push('BPM');
-    if(bio.hrv>0) bp.push('HRV');
-    if(bio.fci>0) bp.push('FCI');
-    if(bio.bli>0) bp.push('BLI');
-    sources.push('rPPG('+bp.join('/')+')');
-  }
-  var srcText = sources.length ? sources.join(' · ') : '데이터 입력 필요';
-
-  // ── 범위 ──
-  var rangeText = '--';
-  if(score > 0){
-    var spread = T4 ? 3 : (T3 ? 6 : (T2 ? 9 : 12));
-    var minV = Math.max(0, score - spread);
-    var maxV = Math.min(100, score + spread);
-    var prec = T4 ? '정밀' : T3 ? '보통' : T2 ? '선택반영' : '추정';
-    rangeText = minV+'~'+maxV+' (±'+spread+', '+prec+')';
-  }
-
-  // ── 측정 시각 ──
-  var timeText = '--';
-  if(score > 0){
-    var now = new Date();
-    var pad = function(n){return (n<10?'0':'')+n;};
-    timeText = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
-  }
-
-  // ── 보강 안내 ──
-  var hintText = '';
-  if(grade.grade === 'F')      hintText = '생년월일·이름·성별을 먼저 입력해 주세요';
-  else if(grade.grade === 'D') hintText = 'NASA 연결 + 30초 rPPG 측정 시 A등급 (95% 정밀)';
-  else if(grade.grade === 'C') hintText = '실시간 NASA 연결 + 생체 측정으로 A등급 가능';
-  else if(grade.grade === 'B') hintText = '30초 rPPG 측정 시 A등급 (95% 정밀)';
-  else                          hintText = '✓ A등급 — 모든 데이터 측정 완료';
-
-  // ── HTML 조립 (인라인 스타일로 모든 팝업에서 동일하게 보이도록) ──
-  var bigScore = compact ? '' :
-    '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px;">'
-    +'<span style="font-size:36px;font-weight:900;color:'+grade.color+';font-family:Orbitron,monospace;line-height:1;">'+(score>0?score:'--')+'</span>'
-    +'<span style="font-size:11px;color:rgba(240,230,200,.4);">/100</span>'
-    +'<span style="margin-left:auto;padding:2px 9px;background:'+grade.color+'22;border:1px solid '+grade.color+'66;border-radius:10px;font-size:10px;color:'+grade.color+';font-weight:700;">'+grade.grade+'등급</span>'
-    +'</div>';
-
-  return '<div class="cgo-score-card" data-domain="'+domain+'" style="padding:10px 12px;background:rgba(212,168,67,.04);border:1px solid rgba(212,168,67,.18);border-radius:10px;font-family:inherit;">'
-       +(label?'<div style="font-size:10px;font-weight:700;color:rgba(212,168,67,.7);letter-spacing:.06em;margin-bottom:4px;">'+label+'</div>':'')
-       +bigScore
-       +'<div style="font-size:10px;line-height:1.7;color:rgba(240,230,200,.55);">'
-       +  '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:2px;">'
-       +    '<span style="opacity:.7;flex-shrink:0;">📊</span>'
-       +    '<span style="opacity:.5;flex-shrink:0;">출처:</span>'
-       +    '<span style="color:rgba(240,230,200,.75);">'+srcText+'</span>'
-       +  '</div>'
-       +  '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:2px;">'
-       +    '<span style="opacity:.7;flex-shrink:0;">📏</span>'
-       +    '<span style="opacity:.5;flex-shrink:0;">범위:</span>'
-       +    '<span style="color:rgba(240,230,200,.75);">'+rangeText+'</span>'
-       +  '</div>'
-       +  '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:2px;">'
-       +    '<span style="opacity:.7;flex-shrink:0;">🕐</span>'
-       +    '<span style="opacity:.5;flex-shrink:0;">측정:</span>'
-       +    '<span style="color:rgba(240,230,200,.75);">'+timeText+'</span>'
-       +  '</div>'
-       +  '<div style="display:flex;align-items:flex-start;gap:5px;padding:5px 8px;margin-top:4px;background:rgba(52,211,153,.06);border-left:2px solid rgba(52,211,153,.4);border-radius:4px;">'
-       +    '<span style="color:#34d399;flex-shrink:0;">💡</span>'
-       +    '<span style="color:rgba(52,211,153,.85);">'+hintText+'</span>'
-       +  '</div>'
-       +'</div>'
-       +'<div style="margin-top:6px;font-size:9px;color:rgba(240,230,200,.3);text-align:center;">참고용 자료 · 의료 진단 X · 헌법 v3.1</div>'
-       +'</div>';
-};
-
-// ✦ 헌법 제15조 § 자동 주입 시스템 (C-30 · 2026-05-07) ✦
-// 사용법 1 (HTML): <div data-cgo-score-card data-score="88" data-domain="saju" data-label="사주명리"></div>
-//                  → DOM 변화 시 자동으로 헌법 6필드 카드 박제
-// 사용법 2 (JS):    element.innerHTML = window.cgoScoreCard({score:88, domain:'saju', label:'...'});
-window._cgoAutoInjectScoreCards = function(root){
-  var scope = root || document;
-  var targets = scope.querySelectorAll('[data-cgo-score-card]:not([data-cgo-injected])');
-  for(var i=0; i<targets.length; i++){
-    var el = targets[i];
-    try {
-      var score   = parseInt(el.getAttribute('data-score')) || 0;
-      var domain  = el.getAttribute('data-domain')  || '';
-      var label   = el.getAttribute('data-label')   || '점수';
-      var compact = el.hasAttribute('data-compact');
-      el.innerHTML = window.cgoScoreCard({score:score, domain:domain, label:label, compact:compact});
-      el.setAttribute('data-cgo-injected', '1');
-    } catch(e) { /* 한 카드 실패해도 다음 카드는 박제 */ }
-  }
-};
-
-// ✦ 헌법 v3.1 제15조 § ID 화이트리스트 기반 자동 부착 (C-30 v2 · 2026-05-07) ✦
-// 안전한 명시적 ID 매핑 — 점수가 채워질 때마다 옆에 정직 메타 카드 자동 부착
-// 화이트리스트만 처리 → 의도하지 않은 자리에 부착될 위험 X
-window._CGO_SCORE_ID_MAP = {
-  // [ID]: {domain, label}
-  // ── 커플 매칭 ──
-  'cpl-total-score':    {domain:'astrology', label:'커플 매칭 점수 — 정직성 메타'},
-  'cpl-ind-total':      {domain:'astrology', label:'개인 매칭 — 정직성 메타'},
-  // ── 24절기 운세 ──
-  'tf-total-score':     {domain:'saju',      label:'24절기 운세 — 정직성 메타'},
-  // ── 풍수 카메라 시스템 팝업 ──
-  'fcPopScore':         {domain:'feng',      label:'공간 시스템 점수 — 정직성 메타'},
-  // ── 건강 부분 점수 (대표 점수만 — 작은 5열 카드는 레이아웃 충돌로 제외) ──
-  'hlt-bscore':         {domain:'face',      label:'건강 부분 점수 — 정직성 메타'},
-  // hlt-bio-face-score, hlt-bio-palm-score, hlt-bio-tongue-score, hlt-bio-breath-score
-  // → 5열 grid 작은 카드 (each card 1/5 너비)
-  // → 헌법 6필드 카드 부착 시 레이아웃 깨짐 → 제외
-  // → 대표 점수 hlt-bscore 및 hlt-total-score (명시 박제)에서 통합 정직 표시
-  // ── 음악 추천 ──
-  'rmai-total':         {domain:'astrology', label:'음악 매칭 점수 — 정직성 메타'},
-  'rmai-score-live':    {domain:'astrology', label:'음악 실시간 점수 — 정직성 메타'},
-  // ── 향기 추천 ──
-  'svi-total':          {domain:'astrology', label:'향기 매칭 점수 — 정직성 메타'},
-  'svi-score-live':     {domain:'astrology', label:'향기 실시간 점수 — 정직성 메타'},
-  // ── 주식 ──
-  'stk-compat-score':   {domain:'numerology',label:'주식 궁합 점수 — 정직성 메타'},
-  // ── 음식 ──
-  'food-log-total':     {domain:'face',      label:'음식 매칭 점수 — 정직성 메타'},
-  // ── 종합 m-score ──
-  'm-score':            {domain:'',          label:'점수 — 정직성 메타'},
-  // ── 쇼핑 ILI ──
-  'shop-ili-num':       {domain:'',          label:'쇼핑 추천 점수 — 정직성 메타'},
-  // ── 음악 추천 풀스캔 ILI ──
-  'bsFIli':             {domain:'astrology', label:'풀스캔 매칭 점수 — 정직성 메타'}
-  // 이미 명시 박제된 자리(dash-ili-num, hlt-total-score, fcGlobalScore, tvyCamScoreNum)는
-  // 자동 부착 X (중복 방지 — 명시 박제로 처리됨)
-};
-
-window._cgoAutoAttachByID = function(){
-  if(!window.CGO_FULI_SCORE || !window.cgoScoreCard) return;
-  for(var id in window._CGO_SCORE_ID_MAP){
-    if(!window._CGO_SCORE_ID_MAP.hasOwnProperty(id)) continue;
-    var el = document.getElementById(id);
-    if(!el) continue;
-    var parent = el.parentElement;
-    if(!parent) continue;
-    // 이미 부착됐으면 스킵
-    if(parent.querySelector('[data-cgo-id-meta="'+id+'"]')) continue;
-    // 점수 텍스트가 유효한지 확인
-    var txt = (el.textContent || '').trim();
-    var score = parseInt(txt);
-    if(!score || score < 1 || score > 100) continue;  // -- 또는 ⏳ 등 미완료 시 스킵
-
-    var cfg = window._CGO_SCORE_ID_MAP[id];
-    try {
-      var meta = document.createElement('div');
-      meta.setAttribute('data-cgo-id-meta', id);
-      meta.style.cssText = 'margin-top:10px;text-align:left;';
-      meta.innerHTML = window.cgoScoreCard({score:score, domain:cfg.domain, label:cfg.label, compact:true});
-      parent.appendChild(meta);
-    } catch(e) { /* 부착 실패해도 다음 ID 처리 계속 */ }
-  }
-};
-
-// MutationObserver — 새로 박제되는 팝업도 자동 감지
-document.addEventListener('DOMContentLoaded', function(){
-  // 첫 1회 즉시 박제
-  setTimeout(window._cgoAutoInjectScoreCards, 200);
-  setTimeout(window._cgoAutoAttachByID, 1500);  // DOM 안정화 대기
-  // 1초마다 새 카드 자동 박제
-  setInterval(window._cgoAutoInjectScoreCards, 1000);
-  // 2초마다 ID 화이트리스트 자동 부착 (느슨 — 부담 최소)
-  setInterval(window._cgoAutoAttachByID, 2000);
-});
-</script>
-
 <!-- ✅ 언어 기본값 보장 — 반드시 최상단에서 실행 -->
 
 <script>
@@ -5449,33 +5057,6 @@ function cgoGuideFeature(key){
             </div>
             <!-- 점수 구성 설명 (스캔 완료 시 표시) -->
             <div id="dash-score-breakdown" style="display:none;margin-top:8px;padding:7px 10px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:8px;font-size:10px;color:rgba(240,230,200,.6);line-height:1.7;white-space:pre-line;"></div>
-            <!-- ✦ 헌법 v3.1 제15조 — 점수 카드 6필드 (C-30 · 2026-05-07) ✦ -->
-            <div id="dash-card-meta" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(212,168,67,.15);font-size:10px;line-height:1.7;color:rgba(240,230,200,.55);">
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-                <span style="opacity:.6;">📊</span>
-                <span style="opacity:.5;">출처:</span>
-                <span id="dash-source" style="color:rgba(240,230,200,.75);flex:1;">--</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-                <span style="opacity:.6;">📏</span>
-                <span style="opacity:.5;">범위:</span>
-                <span id="dash-range" style="color:rgba(240,230,200,.75);flex:1;">--</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
-                <span style="opacity:.6;">🕐</span>
-                <span style="opacity:.5;">측정:</span>
-                <span id="dash-time" style="color:rgba(240,230,200,.75);flex:1;">--</span>
-              </div>
-              <div style="display:flex;align-items:flex-start;gap:5px;padding:6px 8px;margin-top:5px;background:rgba(52,211,153,.06);border-left:2px solid rgba(52,211,153,.4);border-radius:4px;">
-                <span style="color:#34d399;flex-shrink:0;">💡</span>
-                <span id="dash-hint" style="color:rgba(52,211,153,.85);line-height:1.6;flex:1;">정보를 입력하면 등급이 산출됩니다</span>
-              </div>
-              <!-- ✦ Step 6-B: 4계층 점수 분해 (헌법 제6조) ✦ -->
-              <div id="dash-4layer" style="display:none;margin-top:6px;padding:6px 8px;background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.15);border-radius:4px;font-size:9.5px;line-height:1.5;color:rgba(240,230,200,.55);">
-                <div style="font-weight:700;color:rgba(56,189,248,.7);margin-bottom:3px;">🔬 4계층 분해</div>
-                <div id="dash-4layer-bars" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-family:'Orbitron',monospace;"></div>
-              </div>
-            </div>
           </div>
           <!-- 오른쪽: BAI 카드들 -->
           <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
@@ -7307,10 +6888,6 @@ function cgoGuideFeature(key){
       inner += '<div style="font-size:12.5px;font-weight:800;color:'+compatColor+';margin-bottom:3px;line-height:1.4">'+compat+'</div>';
       inner += '<div style="font-size:10.5px;color:rgba(232,234,240,.7);line-height:1.6">사용자 <b style="color:'+(ohEntry.color||'#38bdf8')+'">'+oh+'</b>'+(trackOh?' × 곡 <b>'+trackOh+'</b>':'')+'</div>';
       inner += '</div></div>';
-      /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — 오행 궁합 (C-30 박제) ✦ */
-      if(typeof window.cgoScoreCard==='function'){
-        inner += '<div style="margin-bottom:14px;">'+window.cgoScoreCard({score:compatScore, domain:'numerology', label:'오행 궁합 — 정직성 메타', compact:true})+'</div>';
-      }
       
       // ② 추천 이유
       if(reason){
@@ -7604,10 +7181,6 @@ function cgoGuideFeature(key){
       inner += '<div style="font-family:Orbitron,sans-serif;font-size:48px;font-weight:900;color:'+scC+';line-height:1;margin-bottom:4px">'+matchScore+'</div>';
       inner += '<div style="font-size:11px;color:rgba(232,234,240,.7);line-height:1.7">사주 오행 <b style="color:'+ohColor+'">'+oh+'</b>(BPM <b>'+(bs.bpm||72)+'</b>) × 이 곡 매칭도</div>';
       inner += '</div>';
-      /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — 음악 매칭 (C-30 박제) ✦ */
-      if(typeof window.cgoScoreCard==='function'){
-        inner += '<div style="margin-bottom:14px;">'+window.cgoScoreCard({score:matchScore, domain:'astrology', label:'음악 매칭 — 정직성 메타', compact:true})+'</div>';
-      }
       
       // 권장 청취 박스 (시진 + 분)
       inner += '<div style="background:rgba(56,189,248,.06);border-left:3px solid #38bdf8;border-radius:0 10px 10px 0;padding:13px;margin-bottom:12px;">';
@@ -9662,8 +9235,6 @@ function cgoGuideFeature(key){
             ? '<div style="background:linear-gradient(135deg,'+scC+'22,'+scC+'08);border:1px solid '+scC+';border-radius:14px;padding:18px;text-align:center;margin-bottom:14px;">'
               +'<div style="font-size:9px;font-weight:800;color:'+scC+';letter-spacing:.15em;margin-bottom:6px;">CGO-FULI HEALTH SCORE</div>'
               +'<div style="font-family:Orbitron,sans-serif;font-size:48px;font-weight:900;color:'+scC+';line-height:1;">'+score+'</div>'
-              /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — 건강 부위별 점수 (C-30 박제) ✦ */
-              +(typeof window.cgoScoreCard==='function' ? '<div style="margin-top:12px;text-align:left;">'+window.cgoScoreCard({score:score, domain:'face', label:'부위별 건강 점수 — 정직성 메타', compact:true})+'</div>' : '')
             +'</div>'
             : '<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);border-radius:14px;padding:18px;text-align:center;margin-bottom:14px;">'
               +'<div style="font-size:13px;font-weight:800;color:#fbbf24;">📷 카메라 측정이 필요합니다</div>'
@@ -12647,8 +12218,6 @@ function fc360ShowResult(text, deg, oh){
     +'<div style="height:100%;width:'+score+'%;background:linear-gradient(90deg,'+c+',#d4a843);border-radius:3px;"></div>'
     +'</div>'
     +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:2;background:rgba(0,0,0,.2);border-radius:12px;padding:14px;">'+text.split("\n").join("<br>")+'</div>'
-    /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — C-30 박제 ✦ */
-    +(typeof window.cgoScoreCard==='function' ? '<div style="margin-top:10px;">'+window.cgoScoreCard({score:score, domain:'feng', label:'정직성 메타 (헌법 v3.1)', compact:true})+'</div>' : '')
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-top:8px;">'
     +'<button onclick="fc360ResetScan()" style="flex:1;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.35);border-radius:12px;color:#d4a843;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 스캔</button>'
@@ -12867,17 +12436,6 @@ function fcRunAnalysis(){
       : avg>=70
       ? '✨ 우수 등급 — 좋은 공간 에너지, 보완으로 명당 완성!'
       : '📊 보통 등급 — 아래 조언으로 에너지를 높이세요.';
-
-    // ✦ 헌법 v3.1 제15조 § 정직 6필드 카드 박제 (C-30) ✦
-    if(typeof window.cgoScoreCard==='function' && globalDesc && globalDesc.parentElement){
-      var existing = globalDesc.parentElement.querySelector('[data-cgo-fc-meta]');
-      if(existing) existing.remove();
-      var metaWrap = document.createElement('div');
-      metaWrap.setAttribute('data-cgo-fc-meta', '1');
-      metaWrap.style.cssText = 'margin-top:10px;';
-      metaWrap.innerHTML = window.cgoScoreCard({score:avg, domain:'feng', label:'정직성 메타 (헌법 v3.1)', compact:true});
-      globalDesc.parentElement.appendChild(metaWrap);
-    }
 
     // 카드 렌더링
     cardsDiv.innerHTML = '';
@@ -19450,16 +19008,6 @@ window.tvyCamRunFullAnalysis = function(){
         ? '✨ <b>C-29 분석 점수</b> · 베이스 '+info.base+' / 최대 '+(Math.min(95, info.base+info.t2+info.t3))
         : '⚠️ <b>결정론 폴백 점수</b> (AI 응답 실패) · 베이스 '+info.base;
     }
-    /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — C-30 박제 ✦ */
-    if(typeof window.cgoScoreCard==='function' && subEl && subEl.parentElement){
-      var existing = subEl.parentElement.querySelector('[data-cgo-tvy-meta]');
-      if(existing) existing.remove();
-      var metaWrap = document.createElement('div');
-      metaWrap.setAttribute('data-cgo-tvy-meta', '1');
-      metaWrap.style.cssText = 'margin-top:10px;';
-      metaWrap.innerHTML = window.cgoScoreCard({score:score, domain:'feng', label:'정직성 메타 (헌법 v3.1)', compact:true});
-      subEl.parentElement.appendChild(metaWrap);
-    }
     if(fitEl){
       fitEl.style.borderColor = fit.color;
       fitEl.innerHTML = ''
@@ -19591,8 +19139,6 @@ window.tvyCamShowSysDetail = function(k, score){
           + '<div style="font-family:Orbitron,sans-serif;font-size:42px;font-weight:900;line-height:1;margin-top:4px;">'+score+'</div>'
           + '<div style="font-size:13px;font-weight:800;margin-top:4px;">'+grade+'</div>'
           + '<div style="font-size:11px;opacity:.85;margin-top:8px;line-height:1.6;">'+gradeMsg+'</div>'
-          /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — 명당 시스템 (C-30 박제) ✦ */
-          +(typeof window.cgoScoreCard==='function' ? '<div style="margin-top:12px;text-align:left;">'+window.cgoScoreCard({score:score, domain:'feng', label:'명당 시스템 — 정직성 메타', compact:true})+'</div>' : '')
         + '</div>'
       + '</div>'
       
@@ -25287,19 +24833,6 @@ function _hvShowResult(seed,oh,sd){
   var grade=total>=85?'🌟 최상 — 에너지 충만':total>=75?'☀️ 양호 — 균형 상태':total>=65?'⚠️ 보통 — 관리 필요':'🔴 주의 — 즉각 관리';
   var tg=_g('hlt-total-grade');if(tg)tg.textContent=grade+' / 100';
   setTimeout(function(){var tb=_g('hlt-total-bar');if(tb)tb.style.width=total+'%';},400);
-  /* ✦ 헌법 v3.1 제15조 § 정직 6필드 — C-30 박제 ✦ */
-  if(typeof window.cgoScoreCard==='function'){
-    var _hltContainer = document.getElementById('hlt-total-score');
-    if(_hltContainer && _hltContainer.parentNode){
-      var existing = _hltContainer.parentNode.querySelector('[data-cgo-hlt-meta]');
-      if(existing) existing.remove();
-      var metaWrap = document.createElement('div');
-      metaWrap.setAttribute('data-cgo-hlt-meta', '1');
-      metaWrap.style.cssText = 'margin-top:12px;text-align:left;';
-      metaWrap.innerHTML = window.cgoScoreCard({score:total, domain:'face', label:'정직성 메타 (헌법 v3.1)', compact:true});
-      _hltContainer.parentNode.appendChild(metaWrap);
-    }
-  }
   window._algoDone = true;
 
   // ══ [A] 12대 장부 Full Report ══════════════════════════
@@ -41042,8 +40575,7 @@ function _cgoAutoSaveInputs(){
     var yv=parseInt(by),mv=parseInt(bm),dv=parseInt(bd);
     window.calcResult.lifeNum = ((yv%9)+(mv%9)+(dv%9))%9+1||9;
     if(!window.calcResult.domOh) window.calcResult.domOh='토';
-    // ✦ 헌법 제3조 — USEED 기반 변동 (다른 사용자=다른 점수) ✦
-    if(!window.calcResult.ili)   window.calcResult.ili = (typeof window._cgoIliFromUSEED==='function') ? window._cgoIliFromUSEED(window.calcResult) : 70;
+    if(!window.calcResult.ili)   window.calcResult.ili=70;
   }
 
   // 프로필 페이지 이름 카드도 업데이트
@@ -44899,7 +44431,7 @@ function generateFortune(r){
   if(!r.d){ r.d = parseInt((document.getElementById('ipBirthD')||{}).value||'1'); }
   if(!r.domOh){ r.domOh = '토'; }
   if(!r.lifeNum){ r.lifeNum = ((r.y||1990)+(r.m||1)+(r.d||1))%9 || 9; }
-  if(!r.ili){ r.ili = (typeof window._cgoIliFromUSEED==='function') ? window._cgoIliFromUSEED(r) : 70; }
+  if(!r.ili){ r.ili = 70; }
   if(!r.dGJ){ r.dGJ = {gan:'甲',ji:'子'}; }
   if(!r.ohBal){ r.ohBal = 50; }
   var today=window._fcBase||new Date();
@@ -49631,22 +49163,6 @@ var S19 = _sc(_S19base + _S19adj);
   } catch(e) { _tarotAdj = 0; }
   _tarotAdj = Math.min(3, Math.max(-2, _tarotAdj));
   var ili=Math.min(98,Math.max(44,Math.round(_wSum/_wTot+_bioC+_dynAdj+_mbtiAdj+_tarotAdj)));
-
-  // ✦ 헌법 v3.1 제6조 — 4계층 분석 결과를 calcResult에 노출 (비파괴) ✦
-  // 기존 ILI 계산은 그대로 두고, *부가 정보*로 T1/T2/T3/T4 breakdown 추가
-  // C-30 박제 (2026-05-07) — Step 6-A
-  try {
-    if(window.CGO_FULI_SCORE && window.CGO_FULI_SCORE.analyze4Layer && window.calcResult){
-      var _4layer = window.CGO_FULI_SCORE.analyze4Layer(_IW);
-      if(_4layer){
-        window.calcResult.t1Score   = _4layer.T1;
-        window.calcResult.t2Score   = _4layer.T2;
-        window.calcResult.t3Score   = _4layer.T3;
-        window.calcResult.t4Score   = _4layer.T4;
-        window.calcResult.layerMeta = _4layer._meta;
-      }
-    }
-  } catch(e) { /* 4계층 분석 실패해도 본 흐름은 진행 */ }
 
   // ✦ C-25: NBTI 보정 효과 시각화 — 검사한 사용자에게 효과 명시 ✦
   try {
@@ -57460,8 +56976,7 @@ function cgoOpenPureMetaphysics(){
     window.calcResult.gender = gv;
     window.calcResult.domOh = '토';
     window.calcResult.lifeNum = ((parseInt(by)+parseInt(bm)+parseInt(bd))%9)||9;
-    // ✦ 헌법 제3조 — USEED 기반 변동 (순수역학 진입 시) ✦
-    window.calcResult.ili = (typeof window._cgoIliFromUSEED==='function') ? window._cgoIliFromUSEED(window.calcResult) : 70;
+    window.calcResult.ili = 70;
     window.calcResult.dGJ = {gan:'甲',ji:'子'};
     window.calcResult.ohBal = 50;
   }
@@ -58312,9 +57827,7 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
     +'<div style="font-size:11px;color:var(--text-3);margin-top:3px">오늘 총운 에너지 점수</div>'
     +'<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">'
     +['일간 '+oh,oh+' 오행','생명수 '+lifeNum,precisionNote].map(function(t){return '<span class="fp-tag" style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);color:var(--gold)">'+t+'</span>';}).join('')
-    +'</div></div></div>'
-    /* ✦ 헌법 v3.1 제15조 § 정직 6필드 카드 — C-30 박제 ✦ */
-    +(typeof window.cgoScoreCard==='function' ? '<div style="margin-top:10px;">'+window.cgoScoreCard({score:total, domain:'saju', label:'정직성 메타 (헌법 v3.1)', compact:true})+'</div>' : '');
+    +'</div></div></div>';
 
   // ② 세부 에너지 바 — 기준서 v1.0 s18 실측값 기반
   var barItems=[
@@ -80991,7 +80504,7 @@ function vipAskAI(userText) {
           +'- 심박수 '+_gsV.bpm+'BPM / HRV '+_gsV.hrv+'ms / FCI '+_gsV.fci+' / BLI '+_gsV.bli+'\n'
           +'→ 위 수치를 분석에 적극 반영하고 일반인이 이해하기 쉽게 설명하세요\n\n';
       }
-      return '## 에너지 지수: ILI '+(_gsV?_gsV.ili:(typeof window._cgoIliFromUSEED==='function'?window._cgoIliFromUSEED():70))+'점 (생체 스캔 미완료)\n\n';
+      return '## 에너지 지수: ILI '+(_gsV?_gsV.ili:70)+'점 (생체 스캔 미완료)\n\n';
     })() +
     '## 50대 역학 중 엔진 실시간 수치\n'+engLines+'\n\n' +
     '## NASA JPL 실시간 행성 위치\n'+nasaLines.join('\n')+'\n\n' +
@@ -82363,128 +81876,145 @@ function _cgoRenderDetailPopup(p, m, _rgb){
 
 
 </script>
-<!-- ✦ Banner script 중복 제거 (C-30 정리 · 2026-05-07) — Block 2 (line 85453) 살아있음 ✦ -->
-
-<!-- ✦ 헌법 v3.1 제15조 — 점수 카드 6필드 업데이트 (C-30 · 2026-05-07) ✦ -->
 <script>
-window._cgoUpdateDashCard6Fields = function(){
-  if(!window.CGO_FULI_SCORE) return;
-  var r       = window.calcResult || {};
-  var bio     = window._bioFinalData || {};
-  var nasa    = window._nasaPlanets;
-  var weather = window._weatherData;
+// ── CGO-FULI 홍보 배너 슬라이드 ──
+var _cgoBannerIdx = 0;
+var _cgoBannerTotal = 4;
+var _cgoBannerTimer = null;
 
-  // T1/T2/T3/T4 측정 여부 판정
-  var T1 = !!(r.y && r.name);
-  var T2 = !!((r.selectedYeokhak && r.selectedYeokhak.length>0) ||
-              (window._qt && window._qt.selectedCard) ||
-              (window._mbtiResult && window._mbtiResult.type));
-  var T3 = !!(nasa || weather);
-  var T4 = !!(bio.bpm > 0 || bio.hrv > 0 || bio.fci > 0 || bio.bli > 0);
+function cgoBannerGo(n){
+  _cgoBannerIdx = ((n % _cgoBannerTotal) + _cgoBannerTotal) % _cgoBannerTotal;
+  var slides = document.getElementById('cgo-slides');
+  if(slides) slides.style.transform = 'translateX(-'+(_cgoBannerIdx*100)+'%)';
+  document.querySelectorAll('.cgo-slide-dot').forEach(function(d,i){
+    var isActive = i === _cgoBannerIdx;
+    d.style.width = isActive ? '20px' : '8px';
+    d.style.background = isActive ? '#d4a843' : 'rgba(255,255,255,.25)';
+  });
+  clearInterval(_cgoBannerTimer);
+  _cgoBannerTimer = setInterval(function(){ cgoBannerGo(_cgoBannerIdx+1); }, 4000);
+}
+function cgoBannerNext(){ cgoBannerGo(_cgoBannerIdx+1); }
+function cgoBannerPrev(){ cgoBannerGo(_cgoBannerIdx-1); }
 
-  var grade = window.CGO_FULI_SCORE.computeConfidenceGrade({T1:T1,T2:T2,T3:T3,T4:T4});
-
-  // ── 출처 ──
-  var sources = [];
-  if(T1){
-    sources.push('생년월일');
-    if(r.name) sources.push('이름');
-    if(r.domOh) sources.push('오행('+r.domOh+')');
-  }
-  if(T2) sources.push('역학선택');
-  if(T3) sources.push('NASA');
-  if(T4){
-    var bp = [];
-    if(bio.bpm>0) bp.push('BPM');
-    if(bio.hrv>0) bp.push('HRV');
-    if(bio.fci>0) bp.push('FCI');
-    if(bio.bli>0) bp.push('BLI');
-    sources.push('rPPG('+bp.join('/')+')');
-  }
-  var srcEl = document.getElementById('dash-source');
-  if(srcEl){
-    srcEl.textContent = sources.length ? sources.join(' · ') : '데이터 입력 필요';
-    srcEl.style.color = sources.length ? 'rgba(240,230,200,.75)' : 'rgba(248,113,113,.7)';
-  }
-
-  // ── 범위 ──
-  var iliEl = document.getElementById('dash-ili-num');
-  var ili = iliEl ? (parseInt(iliEl.textContent)||0) : 0;
-  var rangeEl = document.getElementById('dash-range');
-  if(rangeEl){
-    if(ili > 0){
-      var spread = T4 ? 3 : (T3 ? 6 : (T2 ? 9 : 12));
-      var min = Math.max(0, ili - spread);
-      var max = Math.min(100, ili + spread);
-      var prec = T4 ? '정밀' : T3 ? '보통' : T2 ? '선택반영' : '추정';
-      rangeEl.textContent = min+'~'+max+' (±'+spread+', '+prec+')';
-    } else {
-      rangeEl.textContent = '--';
-    }
-  }
-
-  // ── 측정 시각 ──
-  var tsEl = document.getElementById('dash-time');
-  if(tsEl){
-    if(ili > 0){
-      var now = new Date();
-      var pad = function(n){return (n<10?'0':'')+n;};
-      tsEl.textContent = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
-    } else {
-      tsEl.textContent = '--';
-    }
-  }
-
-  // ── 보강 안내 (D~A 단계별 정직한 가이드) ──
-  var hintEl = document.getElementById('dash-hint');
-  if(hintEl){
-    var hint = '';
-    if(grade.grade === 'F'){
-      hint = '생년월일·이름·성별을 먼저 입력해 주세요';
-    } else if(grade.grade === 'D'){
-      hint = 'NASA 연결 + 30초 rPPG 측정 시 A등급 (95% 정밀)';
-    } else if(grade.grade === 'C'){
-      hint = '실시간 NASA 연결 + 생체 측정으로 A등급 가능';
-    } else if(grade.grade === 'B'){
-      hint = '30초 rPPG 측정 시 A등급 (95% 정밀)';
-    } else {
-      hint = '✓ A등급 — 모든 데이터 측정 완료';
-    }
-    hintEl.textContent = hint;
-  }
-
-  // ── 4계층 분해 (Step 6-B · 헌법 제6조) ──
-  var l4 = document.getElementById('dash-4layer');
-  var l4bars = document.getElementById('dash-4layer-bars');
-  if(l4 && l4bars && r.t1Score !== undefined){
-    l4.style.display = 'block';
-    var labels = [
-      {k:'정적(T1)', v:r.t1Score, c:'#fbbf24', ok:T1},
-      {k:'선택(T2)', v:r.t2Score, c:'#a78bfa', ok:T2},
-      {k:'실시간(T3)', v:r.t3Score, c:'#38bdf8', ok:T3},
-      {k:'생체(T4)', v:r.t4Score, c:'#34d399', ok:T4}
-    ];
-    l4bars.innerHTML = labels.map(function(L){
-      var disp = L.ok && L.v ? L.v : '--';
-      var dim  = L.ok ? '' : 'opacity:.35;';
-      return '<div style="'+dim+'">'
-           + '<span style="color:'+L.c+';font-size:8.5px;font-family:sans-serif;font-weight:700;">'+L.k+'</span> '
-           + '<span style="color:#f0e6c8;font-weight:700;">'+disp+'</span>'
-           + '</div>';
-    }).join('');
-  } else if(l4){
-    l4.style.display = 'none';
-  }
-};
-
-// 1초마다 자동 업데이트 + 페이지 진입 시 즉시 1회
+// 자동 재생
 document.addEventListener('DOMContentLoaded', function(){
-  setInterval(window._cgoUpdateDashCard6Fields, 1000);
-  setTimeout(window._cgoUpdateDashCard6Fields, 100);  // 첫 호출
+  _cgoBannerTimer = setInterval(function(){ cgoBannerGo(_cgoBannerIdx+1); }, 4000);
+
+  // ILI 점수 카드 실시간 동기화
+  setInterval(function(){
+    var iliEl = document.getElementById('dash-ili-num');
+    var cardIli = document.getElementById('cgo-card-ili');
+    var bannerIli = document.getElementById('cgo-banner-ili');
+    if(iliEl && cardIli && iliEl.textContent !== '--'){
+      cardIli.textContent = iliEl.textContent;
+      if(bannerIli) bannerIli.textContent = iliEl.textContent;
+    }
+    var hrvEl = document.getElementById('dash-hrv-num');
+    var cardHrv = document.getElementById('cgo-card-hrv');
+    if(hrvEl && cardHrv && hrvEl.textContent !== '--'){
+      cardHrv.textContent = hrvEl.textContent;
+    }
+  }, 1000);
 });
 </script>
 
-<!-- ✦ cgoGoPage Block 1 중복 제거 (C-30 · 2026-05-07) — Block 2 (line 85456) 살아있음 ✦ -->
+<script>
+// ── cgoGoPage: 사이드바 없이 페이지 이동 ──
+function cgoGoPage(page){
+  // 대시보드 이탈 시 스크롤 위치 저장
+  if (_cgCurrent === 'dashboard' && page !== 'dashboard') {
+    var _saveCt = document.querySelector('.content');
+    window._cgoDashScrollY = _saveCt ? _saveCt.scrollTop : window.scrollY;
+  }
+  // 모든 페이지 숨기기
+  document.querySelectorAll('.page').forEach(function(p){
+    p.classList.remove('active');
+    if(p.id === 'page-chat') p.style.display = 'none';
+  });
+  // 대상 페이지 표시
+  var target = document.getElementById('page-'+page);
+  if(target){
+    target.classList.add('active');
+    if(page === 'chat') target.style.display = 'flex';
+  }
+  // 메신저는 오직 cgoOpenMessenger()로만 열림
+  var _chatEl = document.getElementById('page-chat');
+  if(_chatEl && page !== 'chat') _chatEl.style.display = 'none';
+  // nav-btn active 업데이트 (내부 로직 유지)
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.querySelector('.nav-btn[data-page="'+page+'"]');
+  if(btn) btn.classList.add('active');
+  // 상단 타이틀 업데이트
+  var pageTitles = {
+    dashboard:'🏠 대시보드', scan:'🔬 생체 스캔', family:'👨‍👩‍👧 가족 관리',
+    algo:'🩺 건강 예측', report:'📜 정밀 리포트', gmd:'📸 풍수 카메라',
+    naming:'✍️ 작명', star:'⭐ 별 충전소', food:'🍱 음식 궁합 C-11', consult:'🔮 AI 상담',
+    lotto:'🎰 행운 번호', couple:'💑 궁합 분석', sports:'⚽ 스포츠',
+    stock:'📈 주식', travel:'🏨 풍수 여행', 'travel-yeogi':'🏨 나에게 맞는 숙소', 'c14-v2':'🌙 꿈 해몽', 'algo-v2':'🩺 나의 건강 예측', shop:'🛍️ 쇼핑', profile:'👤 프로필',
+    mai:'💄 화장 흡수 분석', svi:'💪 피부 탄력 분석',
+    'rppg-ar':'🎨 C-29 AR 메이크업'
+  };
+  var titleEl = document.getElementById('pageTitleText');
+  var nasaBar = document.getElementById('nasaMiniBar');
+  if(page === 'dashboard'){
+    if(nasaBar) nasaBar.style.display = 'flex';
+    if(titleEl){ titleEl.style.display='none'; titleEl.textContent=''; }
+  } else {
+    if(nasaBar) nasaBar.style.display = 'none';
+    if(titleEl){
+      titleEl.style.display='block';
+      // ★ i18n 번역 우선 적용
+      var _i18nTitle = window._pageTitleI18N && window._pageTitleI18N[page];
+      titleEl.textContent = _i18nTitle || pageTitles[page] || page;
+    }
+  }
+  // ★ 페이지 전환 시 data-i18n 정적 번역만 재적용
+  if(window._LANG && window._LANG !== 'ko'){
+    setTimeout(function(){
+      var _p = CGO_I18N[window._LANG] || {};
+      // data-i18n 텍스트만 교체 (setLang 전체 호출 없이)
+      document.querySelectorAll('[data-i18n]').forEach(function(el){
+        var k=el.getAttribute('data-i18n');
+        if(_p[k]!==undefined) el.textContent=_p[k];
+      });
+      // 페이지 타이틀만 갱신
+      var titleEl=document.getElementById('pageTitleText');
+      if(titleEl && window._pageTitleI18N && window._pageTitleI18N[page]){
+        titleEl.textContent = window._pageTitleI18N[page];
+      }
+    }, 100);
+  }
+  // 페이지별 초기화
+  if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
+    if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
+  if(page==='shop' && typeof shopInit==='function') shopInit();
+  if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
+  if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
+  if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
+  if(page==='naming' && typeof _cgoNamingIntroPopup==='function') _cgoNamingIntroPopup();
+  if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
+  if(page==='report'){
+    _cgoReportIntroPopup();
+    setTimeout(function(){
+      var r=window.calcResult;
+      if(r&&r.y&&typeof generateReport==='function') generateReport(r);
+      // ★ 18 카드 접기식 후처리 (빌더 0건 수정 / DOM 후처리)
+      if(typeof _rfuMakeCollapsible==='function') setTimeout(_rfuMakeCollapsible, 150);
+    },300);
+  }
+  // 대시보드 복귀 시 저장 위치 복원, 나머지는 맨 위로
+  var _ct = document.querySelector('.content');
+  if (page === 'dashboard' && window._cgoDashScrollY != null) {
+    if (_ct) setTimeout(function(){ _ct.scrollTop = window._cgoDashScrollY; }, 50);
+  } else {
+    if (_ct) _ct.scrollTop = 0;
+    var mainEl = document.querySelector('.main') || document.querySelector('.pages');
+    if(mainEl) mainEl.scrollTop = 0;
+    window.scrollTo(0,0);
+  }
+}
+</script>
 
 <script>
 // ✅ 공명 알고리즘 UX 배지 업데이트
