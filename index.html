@@ -57910,8 +57910,16 @@ function _cgoYeokToggle(cardEl, fullId){
     if(hint) hint.textContent = '탭하면 자세히 보기';
   } else {
     fullEl.style.display = 'block';
+    // ★ 강제 reflow — 모바일 브라우저가 paint를 미루지 않도록
+    void fullEl.offsetHeight;
     if(arrow) arrow.style.transform = 'rotate(180deg)';
     if(hint) hint.textContent = '탭하면 접기';
+    // ★ 카드를 화면 안으로 부드럽게 스크롤 — viewport 밖 lazy render 방지
+    setTimeout(function(){
+      try { cardEl.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){
+        try { cardEl.scrollIntoView(); } catch(e2){}
+      }
+    }, 60);
   }
 }
 
