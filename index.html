@@ -88550,7 +88550,7 @@ window._cgoMediaGuard = (function(){
     if(_indicatorEl) return _indicatorEl;
     var el = document.createElement('div');
     el.id = '_cgoMediaIndicator';
-    el.style.cssText = 'position:fixed;top:14px;right:14px;z-index:99998;background:rgba(220,38,38,.95);border:1.5px solid rgba(255,200,200,.8);border-radius:20px;padding:6px 12px 6px 10px;font-size:11px;font-weight:800;color:#fff;display:none;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(220,38,38,.4);animation:_cgoMediaPulse 1.5s infinite;font-family:-apple-system,sans-serif;';
+    el.style.cssText = 'position:fixed;top:14px;right:14px;z-index:9999998;background:rgba(220,38,38,.95);border:1.5px solid rgba(255,200,200,.8);border-radius:20px;padding:6px 12px 6px 10px;font-size:11px;font-weight:800;color:#fff;display:none;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(220,38,38,.4);animation:_cgoMediaPulse 1.5s infinite;font-family:-apple-system,sans-serif;';
     el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#fff;border-radius:50%;animation:_cgoMediaBlink 1s infinite;"></span><span id="_cgoMediaIndicatorLabel">카메라 사용 중</span>';
     // 애니메이션 keyframes (한 번만 추가)
     if(!document.getElementById('_cgoMediaStyle')){
@@ -88641,11 +88641,11 @@ document.addEventListener('visibilitychange', function(){
 // ═══════════════════════════════════════════════════════════════
 
 function _cgoShowTrustBanner(){
-  if(localStorage.getItem('cgo_privacy_seen_v1') === '1') return;
+  if(localStorage.getItem('cgo_privacy_seen_v2') === '1') return;
   if(document.getElementById('_cgoTrustBanner')) return;
   var el = document.createElement('div');
   el.id = '_cgoTrustBanner';
-  el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,15,30,.96);z-index:99997;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:-apple-system,sans-serif;';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,15,30,.96);z-index:9999999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:-apple-system,sans-serif;';
   el.innerHTML = ''
     + '<div style="max-width:380px;width:100%;background:linear-gradient(160deg,rgba(20,30,55,.98),rgba(15,22,42,.98));border:1.5px solid rgba(96,165,250,.4);border-radius:22px;padding:24px 22px;box-shadow:0 12px 40px rgba(0,0,0,.6);">'
     +   '<div style="text-align:center;margin-bottom:14px;">'
@@ -88691,15 +88691,18 @@ function _cgoCloseTrustBanner(){
     el.style.opacity = '0';
     setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 300);
   }
-  try { localStorage.setItem('cgo_privacy_seen_v1', '1'); } catch(e){}
+  try { localStorage.setItem('cgo_privacy_seen_v2', '1'); } catch(e){}
 }
 
-// 첫 진입 시 한 번만 표시 (DOM 준비된 후)
+// 첫 진입 시 한 번만 표시 (DOM 준비된 후 + gate 모달 끝난 후)
+function _cgoQueueTrustBanner(){ setTimeout(_cgoShowTrustBanner, 1500); }
 if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_cgoShowTrustBanner, 800); });
+  document.addEventListener('DOMContentLoaded', _cgoQueueTrustBanner);
 } else {
-  setTimeout(_cgoShowTrustBanner, 800);
+  _cgoQueueTrustBanner();
 }
+// load 이벤트 백업 (다른 모달이 가렸을 경우 한 번 더 시도)
+window.addEventListener('load', function(){ setTimeout(_cgoShowTrustBanner, 2200); });
 
 // ★ 공통 카메라 권한 체크 (이미 허용됐으면 바로 실행)
 function cgoCameraCheck(onGranted){
