@@ -57888,6 +57888,25 @@ function _cgoVisionCollapse(btn){
   }
 }
 
+function _cgoYeokToggle(cardEl, fullId){
+  // ★ yeokList 카드 클릭 시 풀텍스트 펼침/접힘 토글
+  if(!cardEl || !fullId) return;
+  var fullEl = document.getElementById(fullId);
+  if(!fullEl) return;
+  var arrow = cardEl.querySelector('.cgo-yeok-arrow');
+  var hint = cardEl.querySelector('.cgo-yeok-hint');
+  var isOpen = fullEl.style.display !== 'none';
+  if(isOpen){
+    fullEl.style.display = 'none';
+    if(arrow) arrow.style.transform = 'rotate(0deg)';
+    if(hint) hint.textContent = '탭하면 자세히 보기';
+  } else {
+    fullEl.style.display = 'block';
+    if(arrow) arrow.style.transform = 'rotate(180deg)';
+    if(hint) hint.textContent = '탭하면 접기';
+  }
+}
+
 function _cgoGlow(id){
   // 모든 glow 제거 후 해당 부위만 반짝임
   var all = document.querySelectorAll('.cgo-svg-part');
@@ -58285,41 +58304,64 @@ function _cgoVisionRenderDeep(p, mode){
 
     var yeokList = isF ? [
       {nm:'관상학(觀相學)',   ico:'👁',  sc: p.score||70,
-       desc: _first(p.personality||'얼굴 전체 특징에서 관찰된 종합 에너지입니다.')},
+       desc: _first(p.personality||'얼굴 전체 특징에서 관찰된 종합 에너지입니다.'),
+       full: (p.personality||'얼굴 전체 특징에서 관찰된 종합 에너지를 분석합니다.')+(p.animal?'<br><br>🐾 <b>동물상</b>: '+p.animal:'')+(p.love?'<br><br>💕 <b>연애운</b>: '+p.love:'')+(p.career?'<br><br>💼 <b>직업·재물운</b>: '+p.career:'')},
       {nm:'오형론(五形論)',   ico:'☯️',  sc: p.score ? Math.round(p.score*0.95+2) : 70,
-       desc: (p.face_type||'오형')+' — '+(p.face_type_desc||'오행 체형 분류 에너지').slice(0,50)},
+       desc: (p.face_type||'오형')+' — '+(p.face_type_desc||'오행 체형 분류 에너지').slice(0,50),
+       full: '<b>'+(p.face_type||'오형')+'</b> — '+(p.face_type_desc||'오행 체형 분류 에너지')+(p.oh_match_desc?'<br><br>☯️ <b>오행 매치</b>: '+p.oh_match_desc:'')},
       {nm:'삼정법(三停法)',   ico:'📐',  sc: _avg(_sc(pt,'이마'),_sc(pt,'코'),_sc(pt,'턱')),
-       desc: '상정(이마) '+_sc(pt,'이마')+'·중정(코) '+_sc(pt,'코')+'·하정(턱) '+_sc(pt,'턱')+'점 균형'},
+       desc: '상정(이마) '+_sc(pt,'이마')+'·중정(코) '+_sc(pt,'코')+'·하정(턱) '+_sc(pt,'턱')+'점 균형',
+       full: '<b>🏔 상정(上停) — 이마 '+_sc(pt,'이마')+'점</b><br>'+(pt['이마']&&pt['이마'].pro?pt['이마'].pro:'30대 운세와 관록궁 영역')+(pt['이마']&&pt['이마'].easy?'<br>😊 '+pt['이마'].easy:'')+'<br><br><b>⛰ 중정(中停) — 코 '+_sc(pt,'코')+'점</b><br>'+(pt['코']&&pt['코'].pro?pt['코'].pro:'40대 재물운과 재백궁')+(pt['코']&&pt['코'].easy?'<br>😊 '+pt['코'].easy:'')+'<br><br><b>🗻 하정(下停) — 턱 '+_sc(pt,'턱')+'점</b><br>'+(pt['턱']&&pt['턱'].pro?pt['턱'].pro:'50대 말년운과 의지력')+(pt['턱']&&pt['턱'].easy?'<br>😊 '+pt['턱'].easy:'')},
       {nm:'십이궁법(十二宮)', ico:'🏯',  sc: _avg(_sc(g,'명궁'),_sc(g,'재백궁'),_sc(g,'관록궁'),_sc(g,'복덕궁'),_sc(g,'처첩궁')),
-       desc: '명궁 '+_sc(g,'명궁')+'·재백궁 '+_sc(g,'재백궁')+'·관록궁 '+_sc(g,'관록궁')+'점'},
+       desc: '명궁 '+_sc(g,'명궁')+'·재백궁 '+_sc(g,'재백궁')+'·관록궁 '+_sc(g,'관록궁')+'점',
+       full: ['명궁','재백궁','관록궁','복덕궁','처첩궁'].map(function(k){var it=g[k];if(!it)return'';return'<b>🏯 '+k+' — '+(it.score||0)+'점</b><br>'+(it.pro||it.desc||'')+(it.easy?'<br>😊 '+it.easy:'');}).filter(function(x){return x;}).join('<br><br>')},
       {nm:'기색론(氣色論)',   ico:'🎨',  sc: _fci>0 ? Math.min(95,Math.round(_fci*0.8+30)) : (p.score?Math.round(p.score*0.9):70),
-       desc: _fci>0 ? ('FCI 안면혈색 '+_fci+(_fma>0?' · FMA 표정활성 '+_fma:'')) : _first(p.giSaek_easy||p.giSaek||'기색 분석')},
+       desc: _fci>0 ? ('FCI 안면혈색 '+_fci+(_fma>0?' · FMA 표정활성 '+_fma:'')) : _first(p.giSaek_easy||p.giSaek||'기색 분석'),
+       full: (_fci>0?'<b>🧬 rPPG 실측 생체신호</b><br>안면혈색지수 FCI: '+_fci+'%'+(_fma>0?'<br>표정활성도 FMA: '+_fma+'%':'')+(_bpm>0?'<br>심박수 BPM: '+_bpm:'')+'<br><br>':'')+'<b>🎨 기색론(氣色論) 분석</b><br>'+(p.giSaek||'얼굴의 빛과 색으로 보는 현재 건강과 운기')+(p.giSaek_easy?'<br><br>😊 <b>쉽게 말하면</b><br>'+p.giSaek_easy:'')},
       {nm:'부위별상법(部位相法)',ico:'🔍',sc: _avg(_sc(pt,'이마'),_sc(pt,'눈'),_sc(pt,'코'),_sc(pt,'입'),_sc(pt,'턱'),_sc(pt,'눈썹'),_sc(pt,'인중')),
-       desc: '눈 '+_sc(pt,'눈')+'·코 '+_sc(pt,'코')+'·이마 '+_sc(pt,'이마')+'·입 '+_sc(pt,'입')+'점'},
+       desc: '눈 '+_sc(pt,'눈')+'·코 '+_sc(pt,'코')+'·이마 '+_sc(pt,'이마')+'·입 '+_sc(pt,'입')+'점',
+       full: ['이마','눈','코','입','턱','눈썹','인중'].map(function(k){var it=pt[k];if(!it)return'';var sc=(typeof it==='object'&&it.score)?it.score:0;var pro=(typeof it==='object')?(it.pro||it.desc||''):it;var ez=(typeof it==='object')?(it.easy||''):'';return'<b>🔍 '+k+(sc?' — '+sc+'점':'')+'</b><br>'+pro+(ez?'<br>😊 '+ez:'');}).filter(function(x){return x;}).join('<br><br>')},
       {nm:'음양론(陰陽論)',   ico:'☯',   sc: _avg(ey.yang_score||0, ey.yin_score||0),
-       desc: ey.yang_score ? '양면 '+ey.yang_score+'·음면 '+ey.yin_score+'점 — '+(ey.yang_desc||'').slice(0,35) : '음양 에너지 균형 분석'},
+       desc: ey.yang_score ? '양면 '+ey.yang_score+'·음면 '+ey.yin_score+'점 — '+(ey.yang_desc||'').slice(0,35) : '음양 에너지 균형 분석',
+       full: ey.yang_score?('<b>☀️ 양면(陽·왼쪽 얼굴) — '+ey.yang_score+'점</b><br>사회운·직업운·외면 에너지<br>'+(ey.yang_desc||'')+'<br><br><b>🌙 음면(陰·오른쪽 얼굴) — '+(ey.yin_score||0)+'점</b><br>내면·건강·감성 에너지<br>'+(ey.yin_desc||'')):'음양(陰陽)은 얼굴의 좌우 균형으로 사회와 내면 에너지를 봅니다. 마의상법 전통.'},
       {nm:'오관법(五官法)',   ico:'👁️',  sc: _avg(_sc(og,'눈'),_sc(og,'코'),_sc(og,'귀'),_sc(og,'입'),_sc(og,'눈썹')),
-       desc: '눈(간담) '+_sc(og,'눈')+'·코(폐) '+_sc(og,'코')+'·귀(신장) '+_sc(og,'귀')+'점'},
+       desc: '눈(간담) '+_sc(og,'눈')+'·코(폐) '+_sc(og,'코')+'·귀(신장) '+_sc(og,'귀')+'점',
+       full: '<b>오관(五官)은 다섯 감각의 자리이며 각각 장부 에너지와 연결됩니다.</b><br><br>'+['눈','코','귀','입','눈썹'].map(function(k){var it=og[k];if(!it)return'';var ohMap={'눈':'간담(肝膽·목)','코':'폐(肺·금)','귀':'신장(腎·수)','입':'비위(脾胃·토)','눈썹':'간기(肝氣)'};var sc=it.score||0;return'<b>👁️ '+k+' ['+ohMap[k]+'] — '+sc+'점</b><br>'+(it.desc||'');}).filter(function(x){return x;}).join('<br><br>')},
       {nm:'형상학/장부론',    ico:'🫀',  sc: _avg(_sc(jb,'간담'),_sc(jb,'심장'),_sc(jb,'비위'),_sc(jb,'폐'),_sc(jb,'신장')),
-       desc: '간담 '+_sc(jb,'간담')+'·심장 '+_sc(jb,'심장')+'·폐 '+_sc(jb,'폐')+'·신장 '+_sc(jb,'신장')+'점'},
+       desc: '간담 '+_sc(jb,'간담')+'·심장 '+_sc(jb,'심장')+'·폐 '+_sc(jb,'폐')+'·신장 '+_sc(jb,'신장')+'점',
+       full: '<b>장부론(臟腑論) — 얼굴은 오장육부의 거울입니다.</b><br><br>'+['간담','심장','비위','폐','신장'].map(function(k){var it=jb[k];if(!it)return'';var sc=it.score||0;return'<b>🫀 '+k+' — '+sc+'점</b><br>'+(it.desc||'');}).filter(function(x){return x;}).join('<br><br>')},
       {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70,
-       desc: _first(p.manSeLi_easy||p.manSeLi||'일간 오행과 관상 오행 조화도')},
+       desc: _first(p.manSeLi_easy||p.manSeLi||'일간 오행과 관상 오행 조화도'),
+       full: '<b>📜 만세력 × 관상 융합 분석</b><br>'+(p.manSeLi||'일간 오행과 관상 오행의 조화도 분석')+(p.manSeLi_easy?'<br><br>😊 <b>쉽게 말하면</b><br>'+p.manSeLi_easy:'')+(p.today?'<br><br>✨ <b>오늘의 행운 조언</b><br>'+p.today:'')},
       {nm:'마의상법(고전)',   ico:'📖',  sc: p.score ? Math.round(p.score*0.95) : 70,
-       desc: _first(p.easy||'마의상법 전통 관점 종합 분석')},
+       desc: _first(p.easy||'마의상법 전통 관점 종합 분석'),
+       full: '<b>📖 마의상법(麻衣相法) 고전 관점</b><br>'+(p.easy||'마의상법 전통 관점에서의 종합 분석. 상(相)은 마음이 만드는 것, 점수는 가능성이지 운명이 아닙니다.')+(p.simsang?'<br><br>💛 <b>심상(心相)</b><br>'+p.simsang:'')},
       {nm:'rPPG 생체신호',   ico:'💓',  sc: _fci>0 ? Math.min(95,Math.round(_fci*0.7+_fma*0.3+10)) : 0,
-       desc: _fci>0 ? ('혈색FCI '+_fci+'·표정FMA '+_fma+' — 생체신호 기반 분석') : '생체 스캔 시 활성화'}
+       desc: _fci>0 ? ('혈색FCI '+_fci+'·표정FMA '+_fma+' — 생체신호 기반 분석') : '생체 스캔 시 활성화',
+       full: _fci>0?('<b>🧬 rPPG 비접촉 생체 측정값</b><br>심박수 BPM: '+(_bpm||'-')+(_bpm?' bpm':'')+'<br>안면혈색지수 FCI: '+_fci+'%<br>표정활성도 FMA: '+(_fma||'-')+(_fma?'%':'')+'<br><br><b>📊 의미</b><br>FCI 70+ 이마혈색 활성, 50-70 평균, 50미만 보강 필요. FMA는 표정의 미세한 움직임 활성도. 두 값을 종합해 현재 자율신경 균형과 컨디션을 보여줍니다. CGO-FULI 세계 최초 관상×rPPG 융합 분석.'):'카메라 스캔으로 비접촉 생체신호 측정이 활성화됩니다.'}
     ].filter(function(y){ return y.sc>0; }) : [
-      {nm:'수상학(手相學)',   ico:'✋',  sc: p.score||70, desc: _first(p.personality||'손 전체 특징 종합 분석')},
-      {nm:'오형론(손형)',     ico:'☯️',  sc: p.score ? Math.round(p.score*0.95) : 70, desc: (p.hand_type||'오형')+' — '+(p.hand_type_desc||'').slice(0,40)},
-      {nm:'생명선(生命線)',   ico:'❤️',  sc: _sc(ln,'생명선'), desc: ln['생명선']&&ln['생명선'].desc?ln['생명선'].desc.slice(0,80):'', easy: ln['생명선']&&ln['생명선'].easy?ln['생명선'].easy:''},
-      {nm:'감정선(感情線)',   ico:'💕',  sc: _sc(ln,'감정선'), desc: ln['감정선']&&ln['감정선'].desc?ln['감정선'].desc.slice(0,80):'', easy: ln['감정선']&&ln['감정선'].easy?ln['감정선'].easy:''},
-      {nm:'두뇌선(頭腦線)',   ico:'🧠',  sc: _sc(ln,'두뇌선'), desc: ln['두뇌선']&&ln['두뇌선'].desc?ln['두뇌선'].desc.slice(0,80):'', easy: ln['두뇌선']&&ln['두뇌선'].easy?ln['두뇌선'].easy:''},
-      {nm:'운명선(運命線)',   ico:'⭐',  sc: _sc(ln,'운명선'), desc: ln['운명선']&&ln['운명선'].desc?ln['운명선'].desc.slice(0,80):'', easy: ln['운명선']&&ln['운명선'].easy?ln['운명선'].easy:''},
-      {nm:'태양선(太陽線)',   ico:'☀️',  sc: _sc(ln,'태양선'), desc: ln['태양선']&&ln['태양선'].desc?ln['태양선'].desc.slice(0,80):'', easy: ln['태양선']&&ln['태양선'].easy?ln['태양선'].easy:''},
-      {nm:'재물선(財物線)',   ico:'💰',  sc: _sc(ln,'재물선'), desc: ln['재물선']&&ln['재물선'].desc?ln['재물선'].desc.slice(0,80):'', easy: ln['재물선']&&ln['재물선'].easy?ln['재물선'].easy:''},
-      {nm:'결혼선(結婚線)',   ico:'💍',  sc: _sc(ln,'결혼선'), desc: ln['결혼선']&&ln['결혼선'].desc?ln['결혼선'].desc.slice(0,80):'', easy: ln['결혼선']&&ln['결혼선'].easy?ln['결혼선'].easy:''},
-      {nm:'손가락론(指論)',   ico:'🖐️',  sc: _avg(_sc(fi,'엄지'),_sc(fi,'검지'),_sc(fi,'약지')), desc: '엄지(의지)·검지(야망)·약지(예술) 에너지 분석', easy: p.fingers?('엄지 '+_txt(fi,'엄지').slice(0,25)):''},
-      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70, desc: (p.manSeLi||'').slice(0,80), easy: p.manSeLi_easy||''}
+      {nm:'수상학(手相學)',   ico:'✋',  sc: p.score||70, desc: _first(p.personality||'손 전체 특징 종합 분석'),
+       full: '<b>✋ 수상학(手相學) 종합 분석</b><br>'+(p.personality||'손 전체 특징을 종합한 분석')+(p.love?'<br><br>💕 <b>연애운</b><br>'+p.love:'')+(p.career?'<br><br>💼 <b>직업운</b><br>'+p.career:'')+(p.money?'<br><br>💰 <b>재물운</b><br>'+p.money:'')},
+      {nm:'오형론(손형)',     ico:'☯️',  sc: p.score ? Math.round(p.score*0.95) : 70, desc: (p.hand_type||'오형')+' — '+(p.hand_type_desc||'').slice(0,40),
+       full: '<b>☯️ 오형론 — '+(p.hand_type||'오형')+'</b><br>'+(p.hand_type_desc||'오행에 따른 손의 형태 분류')+(p.oh_match_desc?'<br><br>'+p.oh_match_desc:'')},
+      {nm:'생명선(生命線)',   ico:'❤️',  sc: _sc(ln,'생명선'), desc: ln['생명선']&&ln['생명선'].desc?ln['생명선'].desc.slice(0,80):'', easy: ln['생명선']&&ln['생명선'].easy?ln['생명선'].easy:'',
+       full: '<b>❤️ 생명선(生命線) — 활력·체력·면역력의 자리</b><br>'+(ln['생명선']&&ln['생명선'].pro?ln['생명선'].pro:(ln['생명선']&&ln['생명선'].desc?ln['생명선'].desc:'생명선은 손바닥에서 가장 굵고 긴 선으로 활력의 흐름이 새겨집니다.'))+(ln['생명선']&&ln['생명선'].easy?'<br><br>😊 '+ln['생명선'].easy:'')},
+      {nm:'감정선(感情線)',   ico:'💕',  sc: _sc(ln,'감정선'), desc: ln['감정선']&&ln['감정선'].desc?ln['감정선'].desc.slice(0,80):'', easy: ln['감정선']&&ln['감정선'].easy?ln['감정선'].easy:'',
+       full: '<b>💕 감정선(感情線) — 사랑과 인간관계의 자리</b><br>'+(ln['감정선']&&ln['감정선'].pro?ln['감정선'].pro:(ln['감정선']&&ln['감정선'].desc?ln['감정선'].desc:'감정선은 새끼손가락 아래에서 시작하며 감정의 깊이가 새겨집니다.'))+(ln['감정선']&&ln['감정선'].easy?'<br><br>😊 '+ln['감정선'].easy:'')},
+      {nm:'두뇌선(頭腦線)',   ico:'🧠',  sc: _sc(ln,'두뇌선'), desc: ln['두뇌선']&&ln['두뇌선'].desc?ln['두뇌선'].desc.slice(0,80):'', easy: ln['두뇌선']&&ln['두뇌선'].easy?ln['두뇌선'].easy:'',
+       full: '<b>🧠 두뇌선(頭腦線) — 사고방식과 직관의 자리</b><br>'+(ln['두뇌선']&&ln['두뇌선'].pro?ln['두뇌선'].pro:(ln['두뇌선']&&ln['두뇌선'].desc?ln['두뇌선'].desc:'두뇌선은 사고의 흐름과 직관의 패턴을 보여줍니다.'))+(ln['두뇌선']&&ln['두뇌선'].easy?'<br><br>😊 '+ln['두뇌선'].easy:'')},
+      {nm:'운명선(運命線)',   ico:'⭐',  sc: _sc(ln,'운명선'), desc: ln['운명선']&&ln['운명선'].desc?ln['운명선'].desc.slice(0,80):'', easy: ln['운명선']&&ln['운명선'].easy?ln['운명선'].easy:'',
+       full: '<b>⭐ 운명선(運命線) — 인생의 큰 방향</b><br>'+(ln['운명선']&&ln['운명선'].pro?ln['운명선'].pro:(ln['운명선']&&ln['운명선'].desc?ln['운명선'].desc:'운명선은 손바닥 가운데를 흐르며 인생의 큰 방향이 담깁니다.'))+(ln['운명선']&&ln['운명선'].easy?'<br><br>😊 '+ln['운명선'].easy:'')},
+      {nm:'태양선(太陽線)',   ico:'☀️',  sc: _sc(ln,'태양선'), desc: ln['태양선']&&ln['태양선'].desc?ln['태양선'].desc.slice(0,80):'', easy: ln['태양선']&&ln['태양선'].easy?ln['태양선'].easy:'',
+       full: '<b>☀️ 태양선(太陽線) — 명예와 인기의 자리</b><br>'+(ln['태양선']&&ln['태양선'].pro?ln['태양선'].pro:(ln['태양선']&&ln['태양선'].desc?ln['태양선'].desc:'태양선은 약지(태양구) 아래로 올라오는 짧은 선으로 명예와 인기를 보여줍니다.'))+(ln['태양선']&&ln['태양선'].easy?'<br><br>😊 '+ln['태양선'].easy:'')},
+      {nm:'재물선(財物線)',   ico:'💰',  sc: _sc(ln,'재물선'), desc: ln['재물선']&&ln['재물선'].desc?ln['재물선'].desc.slice(0,80):'', easy: ln['재물선']&&ln['재물선'].easy?ln['재물선'].easy:'',
+       full: '<b>💰 재물선(財物線) — 금전 흐름의 자리</b><br>'+(ln['재물선']&&ln['재물선'].pro?ln['재물선'].pro:(ln['재물선']&&ln['재물선'].desc?ln['재물선'].desc:'재물선은 새끼손가락 아래(수성구)의 짧은 세로선으로 금전 감각이 새겨집니다.'))+(ln['재물선']&&ln['재물선'].easy?'<br><br>😊 '+ln['재물선'].easy:'')},
+      {nm:'결혼선(結婚線)',   ico:'💍',  sc: _sc(ln,'결혼선'), desc: ln['결혼선']&&ln['결혼선'].desc?ln['결혼선'].desc.slice(0,80):'', easy: ln['결혼선']&&ln['결혼선'].easy?ln['결혼선'].easy:'',
+       full: '<b>💍 결혼선(結婚線) — 깊은 인연의 자리</b><br>'+(ln['결혼선']&&ln['결혼선'].pro?ln['결혼선'].pro:(ln['결혼선']&&ln['결혼선'].desc?ln['결혼선'].desc:'결혼선은 새끼손가락 아래쪽 옆면의 짧은 가로선으로 깊은 인연의 시기를 보여줍니다.'))+(ln['결혼선']&&ln['결혼선'].easy?'<br><br>😊 '+ln['결혼선'].easy:'')},
+      {nm:'손가락론(指論)',   ico:'🖐️',  sc: _avg(_sc(fi,'엄지'),_sc(fi,'검지'),_sc(fi,'약지')), desc: '엄지(의지)·검지(야망)·약지(예술) 에너지 분석', easy: p.fingers?('엄지 '+_txt(fi,'엄지').slice(0,25)):'',
+       full: '<b>🖐️ 손가락론(指論)</b><br>각 손가락은 인생의 다른 영역을 비춥니다.<br><br>'+['엄지','검지','약지'].map(function(k){var it=fi[k];if(!it)return'';var pro=(typeof it==='object')?(it.pro||it.desc||''):it;var ez=(typeof it==='object')?(it.easy||''):'';var icoMap={'엄지':'👍 엄지(의지·자기통제)','검지':'☝️ 검지(야망·리더십)','약지':'💍 약지(예술·행운)'};return'<b>'+icoMap[k]+'</b><br>'+pro+(ez?'<br>😊 '+ez:'');}).filter(function(x){return x;}).join('<br><br>')},
+      {nm:'만세력/사주명리',  ico:'📜',  sc: p.score ? Math.round(p.score*0.9+5) : 70, desc: (p.manSeLi||'').slice(0,80), easy: p.manSeLi_easy||'',
+       full: '<b>📜 만세력 × 손금 융합 분석</b><br>'+(p.manSeLi||'사주 일간과 손금의 흐름이 만나는 자리입니다.')+(p.manSeLi_easy?'<br><br>😊 <b>쉽게 말하면</b><br>'+p.manSeLi_easy:'')+(p.today?'<br><br>✨ <b>오늘의 행운 조언</b><br>'+p.today:'')}
     ].filter(function(y){ return y.sc>0; });
 
     if(!yeokList.length) return;
@@ -58333,11 +58375,14 @@ function _cgoVisionRenderDeep(p, mode){
        + '<div style="display:flex;flex-direction:column;gap:6px;">'
        + yeokList.map(function(y,i){
            var bc = y.sc>=80?'#34d399':y.sc>=65?'#fbbf24':'#f87171';
-           return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;">'
+           var hasFull = !!y.full;
+           var fullId = 'cgo-yeok-full-'+i+'-'+Math.floor(Math.random()*9999);
+           return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;'+(hasFull?'cursor:pointer;':'')+'"'+(hasFull?' onclick="_cgoYeokToggle(this,\''+fullId+'\')"':'')+'>'
              + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
              + '<span style="font-size:10px;width:16px;text-align:center;">'+y.ico+'</span>'
              + '<span style="font-size:11px;font-weight:700;color:'+color+';flex:1;">'+y.nm+'</span>'
              + '<span style="font-size:13px;font-weight:900;color:'+bc+';">'+y.sc+'</span>'
+             + (hasFull?'<span class="cgo-yeok-arrow" style="font-size:10px;color:rgba(240,230,200,.4);margin-left:4px;transition:transform .3s;">▼</span>':'')
              + '</div>'
              + '<div style="display:flex;align-items:center;gap:6px;">'
              + '<div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;">'
@@ -58346,6 +58391,8 @@ function _cgoVisionRenderDeep(p, mode){
              + '</div>'
              + (y.desc?'<div style="font-size:10px;color:rgba(240,230,200,.55);margin-top:5px;line-height:1.6;">🔬 '+y.desc+'</div>':'')
              + (y.easy?'<div style="font-size:10px;color:rgba(52,211,153,.75);margin-top:3px;line-height:1.6;background:rgba(52,211,153,.04);border-radius:5px;padding:3px 6px;">😊 '+y.easy+'</div>':'')
+             + (hasFull?'<div id="'+fullId+'" class="cgo-yeok-full" style="display:none;margin-top:8px;padding:10px 12px;background:rgba('+colorRgb+',.05);border:1px solid rgba('+colorRgb+',.18);border-radius:8px;font-size:11px;color:rgba(240,230,200,.85);line-height:1.85;">'+y.full+'</div>':'')
+             + (hasFull?'<div class="cgo-yeok-hint" style="font-size:9px;color:rgba(240,230,200,.3);margin-top:4px;text-align:center;">탭하면 자세히 보기</div>':'')
              + '</div>';
          }).join('')
        + '</div>'
