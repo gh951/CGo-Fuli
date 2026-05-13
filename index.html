@@ -55299,12 +55299,49 @@ function _cgoVisionPopup(title, color, emoji){
   return ov;
 }
 
+// ★ C-35 개인정보 보호 패치 — 전역 미디어 강제 종료 (글로벌 앱 GDPR 표준)
+function _cgoForceStopAllMedia(){
+  try {
+    // 1) 페이지 안 모든 video/audio 요소의 srcObject track 강제 해제
+    var els = document.querySelectorAll('video, audio');
+    for(var i=0;i<els.length;i++){
+      var el = els[i];
+      if(el.srcObject && el.srcObject.getTracks){
+        el.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} });
+        el.srcObject = null;
+      }
+    }
+    // 2) window 전역에 알려진 stream 변수도 모두 해제
+    var globals = ['_trv2ScanStream','_trv2Mic','_breathMicStream','TVY_CAM','_cgoMediaStream'];
+    for(var j=0;j<globals.length;j++){
+      var g = window[globals[j]];
+      if(g){
+        var s = g.stream || g;
+        if(s && s.getTracks){
+          try{ s.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); }catch(e){}
+        }
+      }
+    }
+  } catch(e){ /* 안전: 어떤 오류도 사용자 흐름 막지 않음 */ }
+}
+
+// ★ C-35 — 페이지 가려질 때 자동 종료 (탭 전환·앱 백그라운드)
+if(typeof document !== 'undefined' && !window._cgoVisHookInstalled){
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) _cgoForceStopAllMedia();
+  });
+  window._cgoVisHookInstalled = true;
+}
+
 function _cgoVisionClose(){
   var ov = document.getElementById('cgo-vision-ov');
   if(ov) ov.style.display = 'none';
   var v = document.getElementById('cgo-vision-video');
   if(v && v.srcObject){ v.srcObject.getTracks().forEach(function(t){t.stop();}); v.srcObject=null; }
   if(window._cgoVisionScanTimer){ clearInterval(window._cgoVisionScanTimer); window._cgoVisionScanTimer=null; }
+  // ★ C-35 — 닫을 때 전역 안전망 호출 (다른 video/audio도 확실히 정화)
+  try{ _cgoForceStopAllMedia(); }catch(e){}
+  if(window._cgoPrivacyShutdownTimer){ clearTimeout(window._cgoPrivacyShutdownTimer); window._cgoPrivacyShutdownTimer=null; }
 }
 
 window._cgoVisionMode = '';
@@ -55657,18 +55694,13 @@ function _cgoVisionShoot(){
         +'"manSeLi":"일간 '+dGan+'('+oh+'·'+ohK[oh]+') 오행과 손금 오행의 충돌·조화. 인생에서 가장 조심해야 할 것과 가장 잘 될 분야. 4문장",'
         +'"today":"오늘 '+name+'님 손금+만세력 기반 구체적 행동 지침. 오늘 해야 할 것과 하면 안 되는 것. 행운을 부르는 색상·방향·음식. 3문장"}';
 
-    // 25초 타임아웃 안전장치
-    var _ctrl = new AbortController();
-    var _timer = setTimeout(function(){ console.warn('[CGO관상] 35초 타임아웃'); _ctrl.abort(); }, 35000);
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      signal: _ctrl.signal,
       body:JSON.stringify({model:'llama-3.1-8b-instant',
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
         max_tokens:6500,temperature:0.85})});
   })
   .then(function(res){ return res.json(); })
   .then(function(data){
-    if(typeof _timer!=='undefined') clearTimeout(_timer);
     var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
     if(!txt){ console.error('[CGO관상] 2단계 응답 없음:', JSON.stringify(data).slice(0,200)); throw new Error('no_content'); }
     var clean=txt.replace(/```json|```/g,'').trim();
@@ -56612,6 +56644,30 @@ function _cgoVisionRenderDeep(p, mode){
 function _cgoVisionRender(p, mode){
   var resDiv = document.getElementById('cgo-vision-result');
   if(!resDiv) return;
+
+  // ★ C-35 개인정보 보호 — 진짜 결과(parts 또는 face_type_desc 있을 때)에만 셧다운 타이머 작동
+  // (progress/로딩 단계에서는 p가 비어있거나 부분적이므로 작동 안 함)
+  var _isRealResult = !!(p && typeof p==='object' && (p.parts || p.face_type_desc || p.hand_type_desc || p.simsang || p.lines || p.tongue_color));
+  if(_isRealResult){
+    try{
+      // 즉시: 분석은 끝났으니 결과 화면 동안에는 카메라 필요 없음 — 바로 끄기
+      var _vNow = document.getElementById('cgo-vision-video');
+      if(_vNow && _vNow.srcObject){ _vNow.srcObject.getTracks().forEach(function(t){try{t.stop();}catch(e){}}); _vNow.srcObject=null; }
+      // 10초 안전망: 만에 하나 다른 곳에 살아있는 미디어가 있을 경우 전역 정화 + 작은 알림
+      if(window._cgoPrivacyShutdownTimer){ clearTimeout(window._cgoPrivacyShutdownTimer); }
+      window._cgoPrivacyShutdownTimer = setTimeout(function(){
+        try{ _cgoForceStopAllMedia(); }catch(e){}
+        var existing = document.getElementById('cgo-privacy-toast');
+        if(existing) return;
+        var toast = document.createElement('div');
+        toast.id = 'cgo-privacy-toast';
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.95);color:#fcd34d;padding:10px 18px;border-radius:24px;font-size:12px;font-weight:600;letter-spacing:.05em;z-index:99999;border:1px solid rgba(252,211,77,.3);box-shadow:0 4px 20px rgba(0,0,0,.4);';
+        toast.textContent = '🛡️ 개인정보 보호 — 카메라/마이크 해제됨';
+        document.body.appendChild(toast);
+        setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 3000);
+      }, 10000);
+    }catch(e){}
+  }
 
   var isF = mode === 'face';
   var isT = mode === 'tongue';
