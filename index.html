@@ -55668,6 +55668,7 @@ function _cgoVisionShoot(){
     var step2Prompt = mode==='face'
       ? mans+'\n얼굴관찰: '+obs+'\n\n아래 JSON만 반환. 실제 관찰 특징 기반, 만세력 오행('+oh+') 연결:\n'
         +'{"face_type":"목형木/화형火/토형土/금형金/수형水 중 하나",'
+        +'"face_type_desc":"오형론(五形論) — '+oh+' 오행의 얼굴 유형 의미. 이 유형 사람의 타고난 기질·체형 특징·인생 운명 흐름을 일반인도 쉽게 이해할 수 있게 비유와 예시로 풀어서. 3~4문장",'
         +'"score":관상종합점수(60~95),'
         +'"personality":"성격과 기질. 장점·단점 솔직히. 3문장",'
         +'"animal":"가장 닮은 동물상(여우·곰·사슴·독수리·고양이·호랑이·토끼 중 하나)과 이유. 1문장",'
@@ -56291,7 +56292,7 @@ function _cgoVisionRenderDeep(p, mode){
       if(isF){
         // 관상: nm 이름에 따라 풀 데이터 매핑
         if(y.nm.indexOf('관상학')>=0) full = p.personality||y.desc;
-        else if(y.nm.indexOf('오형론')>=0) full = (p.face_type?p.face_type+' — ':'')+(p.face_type_desc||y.desc);
+        else if(y.nm.indexOf('오형론')>=0) full = '【'+(p.face_type||'오형')+'】\n\n'+(p.face_type_desc||y.desc);
         else if(y.nm.indexOf('삼정')>=0) full = ['상정(이마)','중정(코)','하정(턱)'].map(function(k){var sc=_sc(pt,k.split('(')[0]==='상정'?'이마':k.split('(')[0]==='중정'?'코':'턱');var dt=pt&&pt[k.split('(')[0]==='상정'?'이마':k.split('(')[0]==='중정'?'코':'턱']||{};return '【'+k+' '+sc+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
         else if(y.nm.indexOf('십이궁')>=0) full = ['명궁','재백궁','관록궁','복덕궁','처첩궁'].map(function(k){var dt=g&&g[k]||{};return '【'+k+' '+_sc(g,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
         else if(y.nm.indexOf('기색론')>=0) full = (p.giSaek||p.giSaek_easy||y.desc) + (_fci>0?'\n\n💓 rPPG 실측: FCI '+_fci+(_fma>0?' · FMA '+_fma:''):'');
@@ -56306,7 +56307,7 @@ function _cgoVisionRenderDeep(p, mode){
       } else {
         // 손금: nm 이름에 따라 풀 데이터 매핑
         if(y.nm.indexOf('수상학')>=0) full = p.personality||y.desc;
-        else if(y.nm.indexOf('오형론')>=0) full = (p.hand_type?p.hand_type+' — ':'')+(p.hand_type_desc||y.desc);
+        else if(y.nm.indexOf('오형론')>=0) full = '【'+(p.hand_type||'오형')+'】\n\n'+(p.hand_type_desc||y.desc);
         else if(y.nm.indexOf('손가락')>=0) full = ['엄지','검지','약지','중지','새끼'].map(function(k){var dt=fi&&fi[k]||{};return '【'+k+' '+_sc(fi,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
         else if(y.nm.indexOf('만세력')>=0) full = p.manSeLi||y.desc;
         else {
