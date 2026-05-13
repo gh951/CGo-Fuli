@@ -2597,7 +2597,6 @@ document.addEventListener('DOMContentLoaded', function(){
   <!-- 로고 -->
   <div style="text-align:center;margin-bottom:32px;position:relative;z-index:1;">
     <div style="font-family:'Orbitron',monospace;font-size:clamp(24px,7vw,40px);font-weight:900;background:linear-gradient(135deg,#a07830,#d4a843,#f0c866,#d4a843,#a07830);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(212,168,67,.4));letter-spacing:.05em;">CGO-FULI</div>
-    <div style="margin-top:4px;text-align:center;font-size:10px;color:rgba(212,168,67,.4);letter-spacing:.2em;font-family:'Noto Sans KR',sans-serif;font-weight:600;">✦ 하늘 ✦</div>
     <div style="margin-top:6px;">
       <button id="pwaInstallBtnTop" onclick="cgoPwaInstall()" style="padding:7px 20px;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(56,189,248,.12));border:1.5px solid rgba(52,211,153,.5);border-radius:16px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.03em;animation:goldPulse 2s ease-in-out infinite;">
         📲 앱 설치하기 (무료)
@@ -55333,6 +55332,34 @@ if(typeof document !== 'undefined' && !window._cgoVisHookInstalled){
   window._cgoVisHookInstalled = true;
 }
 
+// ★ C-35 — 역학 카드 클릭 시 풀버전 팝업 모달 (글로벌 앱 UX, 大將 요청)
+function _cgoYeokModalOpen(nm, ico, sc, fullDesc, easy, color){
+  var prev = document.getElementById('cgo-yeok-modal');
+  if(prev) prev.remove();
+  var bc = sc>=80?'#34d399':sc>=65?'#fbbf24':'#f87171';
+  var ov = document.createElement('div');
+  ov.id = 'cgo-yeok-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;animation:cgoFadeIn .2s ease;';
+  ov.onclick = function(e){ if(e.target===ov) _cgoYeokModalClose(); };
+  ov.innerHTML =
+    '<div style="background:linear-gradient(180deg,#1a1530,#0f0e1f);border:1px solid '+(color||'#fcd34d')+'66;border-radius:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:22px;box-shadow:0 8px 40px rgba(0,0,0,.6);">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">'+(ico||'🔬')+'</span>'
+    +'<div><div style="font-size:15px;font-weight:900;color:'+(color||'#fcd34d')+';">'+nm+'</div>'
+    +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;letter-spacing:.1em;">C-35 풀버전 분석</div></div></div>'
+    +'<div style="font-size:28px;font-weight:900;color:'+bc+';font-family:Orbitron,sans-serif;">'+sc+'</div>'
+    +'</div>'
+    +(fullDesc?'<div style="font-size:12.5px;color:rgba(240,230,200,.88);line-height:1.85;padding:14px;background:rgba(255,255,255,.025);border-radius:12px;border-left:3px solid '+(color||'#fcd34d')+';margin-bottom:'+(easy?'12px':'0')+';white-space:pre-wrap;">'+fullDesc+'</div>':'')
+    +(easy?'<div style="font-size:11.5px;color:rgba(240,230,200,.75);line-height:1.75;padding:12px;background:rgba(52,211,153,.06);border-radius:10px;border-left:3px solid #34d399;">😊 <b style="color:#34d399;">쉽게 풀이</b><br>'+easy+'</div>':'')
+    +'<div style="text-align:center;margin-top:16px;"><button onclick="_cgoYeokModalClose()" style="padding:8px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(240,230,200,.85);font-size:12px;font-weight:600;cursor:pointer;">닫기</button></div>'
+    +'</div>';
+  document.body.appendChild(ov);
+}
+function _cgoYeokModalClose(){
+  var m = document.getElementById('cgo-yeok-modal');
+  if(m) m.remove();
+}
+
 function _cgoVisionClose(){
   var ov = document.getElementById('cgo-vision-ov');
   if(ov) ov.style.display = 'none';
@@ -56089,6 +56116,8 @@ function _cgoVisionRenderDeep(p, mode){
   var colorRgb = isF?'147,197,253':'252,211,77';
   var title = isF?'🧖 CGO 관상 분석':'✋ CGO 손금 분석';
   var score = p.score||75;
+  // ★ C-35 정직 패치 (헌법 §HONESTY): 총점은 yeokList 평균과 통일되도록 _avgScoreOverride 변수 준비
+  // (yeokList 계산 후 update — 아래 yeokList 정의 후 score를 평균으로 재할당)
   var gc = score>=80?'#34d399':score>=65?'#d4a843':score>=50?'#fbbf24':'#f87171';
   // ── rPPG 생체 변수 안전 선언 (전역 window.BS에서 읽기) ──
   var _bs  = window.BS || {};
@@ -56219,7 +56248,7 @@ function _cgoVisionRenderDeep(p, mode){
     function _sc(o,k){ return(o[k]&&o[k].score)?o[k].score:(o[k]&&typeof o[k]==='number'?o[k]:0); }
     function _avg(){ var s=0,c=0; for(var i=0;i<arguments.length;i++){if(arguments[i]>0){s+=arguments[i];c++;}} return c?Math.round(s/c):0; }
     function _txt(o,k){ if(!o||!o[k])return''; var v=o[k]; return(typeof v==='object')?(v.easy||v.pro||v.desc||'').slice(0,60):(String(v)).slice(0,60); }
-    function _first(s){ return s?(s.replace(/<[^>]+>/g,'').split('.')[0]+'.'):''; }
+    function _first(s){ return s?(s.replace(/<[^>]+>/g,'').split('.').slice(0,3).join('.').trim()+'.'):''; }
 
     var yeokList = isF ? [
       {nm:'관상학(觀相學)',   ico:'👁',  sc: p.score||70,
@@ -56262,6 +56291,43 @@ function _cgoVisionRenderDeep(p, mode){
 
     if(!yeokList.length) return;
     var avgSc = Math.round(yeokList.reduce(function(a,b){return a+b.sc;},0)/yeokList.length);
+    // ★ C-35 정직 패치: 종합점수를 5개 평균과 일치시킴 (헌법 §HONESTY)
+    score = avgSc;
+    gc = score>=80?'#34d399':score>=65?'#d4a843':score>=50?'#fbbf24':'#f87171';
+
+    // ★ C-35 — 각 카드의 풀버전 데이터를 window 전역에 저장 (모달이 인덱스로 가져감)
+    window._cgoYeokFullMap = yeokList.map(function(y){
+      var full = '';
+      if(isF){
+        // 관상: nm 이름에 따라 풀 데이터 매핑
+        if(y.nm.indexOf('관상학')>=0) full = p.personality||y.desc;
+        else if(y.nm.indexOf('오형론')>=0) full = (p.face_type?p.face_type+' — ':'')+(p.face_type_desc||y.desc);
+        else if(y.nm.indexOf('삼정')>=0) full = ['상정(이마)','중정(코)','하정(턱)'].map(function(k){var sc=_sc(pt,k.split('(')[0]==='상정'?'이마':k.split('(')[0]==='중정'?'코':'턱');var dt=pt&&pt[k.split('(')[0]==='상정'?'이마':k.split('(')[0]==='중정'?'코':'턱']||{};return '【'+k+' '+sc+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('십이궁')>=0) full = ['명궁','재백궁','관록궁','복덕궁','처첩궁'].map(function(k){var dt=g&&g[k]||{};return '【'+k+' '+_sc(g,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('기색론')>=0) full = (p.giSaek||p.giSaek_easy||y.desc) + (_fci>0?'\n\n💓 rPPG 실측: FCI '+_fci+(_fma>0?' · FMA '+_fma:''):'');
+        else if(y.nm.indexOf('부위별')>=0) full = ['이마','눈','코','입','턱','눈썹','인중'].map(function(k){var dt=pt&&pt[k]||{};return '【'+k+' '+_sc(pt,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('음양')>=0) full = (ey.yang_desc||'')+'\n\n'+(ey.yin_desc||'');
+        else if(y.nm.indexOf('오관')>=0) full = ['눈','코','귀','입','눈썹'].map(function(k){var dt=og&&og[k]||{};return '【'+k+' '+_sc(og,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('장부')>=0||y.nm.indexOf('형상학')>=0) full = ['간담','심장','비위','폐','신장'].map(function(k){var dt=jb&&jb[k]||{};return '【'+k+' '+_sc(jb,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('만세력')>=0) full = p.manSeLi||y.desc;
+        else if(y.nm.indexOf('마의상법')>=0) full = (p.face_type_desc||'')+'\n\n'+(p.personality||'');
+        else if(y.nm.indexOf('rPPG')>=0) full = '실측 생체신호 기반 관상 보정.\nFCI(안면혈색): '+_fci+'\nFMA(표정활성): '+_fma+'\n→ 동양 관상학의 기색론(氣色論)을 현대 광학으로 검증.';
+        else full = y.desc;
+      } else {
+        // 손금: nm 이름에 따라 풀 데이터 매핑
+        if(y.nm.indexOf('수상학')>=0) full = p.personality||y.desc;
+        else if(y.nm.indexOf('오형론')>=0) full = (p.hand_type?p.hand_type+' — ':'')+(p.hand_type_desc||y.desc);
+        else if(y.nm.indexOf('손가락')>=0) full = ['엄지','검지','약지','중지','새끼'].map(function(k){var dt=fi&&fi[k]||{};return '【'+k+' '+_sc(fi,k)+'점】\n'+(dt.pro||dt.desc||'');}).join('\n\n');
+        else if(y.nm.indexOf('만세력')>=0) full = p.manSeLi||y.desc;
+        else {
+          // 손금 7선 (생명선·감정선·두뇌선·운명선·태양선·재물선·결혼선)
+          var lineName = y.nm.replace(/\(.+\)/,'').trim();
+          var ldt = ln&&ln[lineName]||{};
+          full = ldt.desc||ldt.pro||y.desc;
+        }
+      }
+      return {nm:y.nm, ico:y.ico, sc:y.sc, full:full, easy:y.easy||'', color:color};
+    });
 
     h += '<div style="margin-bottom:12px;">'
        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
@@ -56271,7 +56337,7 @@ function _cgoVisionRenderDeep(p, mode){
        + '<div style="display:flex;flex-direction:column;gap:6px;">'
        + yeokList.map(function(y,i){
            var bc = y.sc>=80?'#34d399':y.sc>=65?'#fbbf24':'#f87171';
-           return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;">'
+           return '<div onclick="(function(){var d=window._cgoYeokFullMap['+i+'];if(d)_cgoYeokModalOpen(d.nm,d.ico,d.sc,d.full,d.easy,d.color);})()" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 11px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background=\'rgba(255,255,255,.06)\';this.style.borderColor=\'rgba(255,255,255,.15)\';" onmouseout="this.style.background=\'rgba(255,255,255,.03)\';this.style.borderColor=\'rgba(255,255,255,.07)\';">'
              + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
              + '<span style="font-size:10px;width:16px;text-align:center;">'+y.ico+'</span>'
              + '<span style="font-size:11px;font-weight:700;color:'+color+';flex:1;">'+y.nm+'</span>'
@@ -56284,6 +56350,7 @@ function _cgoVisionRenderDeep(p, mode){
              + '</div>'
              + (y.desc?'<div style="font-size:10px;color:rgba(240,230,200,.55);margin-top:5px;line-height:1.6;">🔬 '+y.desc+'</div>':'')
              + (y.easy?'<div style="font-size:10px;color:rgba(52,211,153,.75);margin-top:3px;line-height:1.6;background:rgba(52,211,153,.04);border-radius:5px;padding:3px 6px;">😊 '+y.easy+'</div>':'')
+             + '<div style="font-size:9px;color:rgba(240,230,200,.35);margin-top:5px;text-align:right;letter-spacing:.05em;">탭하면 자세히 ▸</div>'
              + '</div>';
          }).join('')
        + '</div>'
