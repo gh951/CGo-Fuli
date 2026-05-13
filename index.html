@@ -55406,10 +55406,9 @@ function cgoTongueVisionAnalysis(){
 }
 
 function _cgoVisionStartCam(){
-  // ★ 카메라 권한 먼저 확인
-  cgoCameraCheck(function(){
-    _cgoVisionStartCamCore();
-  });
+  // ★ C-35 — 권한 체크 제거 (cgoCameraCheck가 별도 권한 팝업 띄워서 2번 떴음)
+  // 다른 페이지 7곳은 cgoCameraCheck 유지, 관상만 직접 호출
+  _cgoVisionStartCamCore();
 }
 function _cgoVisionStartCamCore(){
   var mode = window._cgoVisionMode;
@@ -55522,6 +55521,8 @@ function _cgoVisionShoot(){
   var b64 = c.toDataURL('image/jpeg',0.72).split(',')[1];
 
   var mode = window._cgoVisionMode;
+  // ★ C-35 — 관상 모드: 결과 화면에 진짜 사진 표시 (선택 B 1단계, 옵션 A)
+  if(mode==='face') window._cgoLastFaceB64 = b64;
 
   // ★ 손금 양손 스캔 — AI 분석 없이 이미지만 저장
   if(mode==='palm'){
@@ -56216,6 +56217,30 @@ function _cgoVisionRenderDeep(p, mode){
     h+='</div>';
   }
 
+
+  // ★ C-35 — 선택 B 1단계: 관상 결과 화면에 진짜 사진 + 부위 라벨 (옵션 A 정적 위치, 大將 차별화)
+  if(isF && window._cgoLastFaceB64 && p.parts){
+    var _pt = p.parts;
+    var _sc35 = function(k){var d=_pt&&_pt[k]||{}; return (d.score||score||75);};
+    var _bclr = function(s){return s>=80?'#34d399':s>=65?'#fbbf24':'#f87171';};
+    // 부위 라벨 좌표 (사진 비율 기준 %, 정면 셀카 기준 평균 위치)
+    var _spots = [
+      {nm:'이마', sc:_sc35('이마'), x:50, y:18},
+      {nm:'눈',   sc:_sc35('눈'),   x:50, y:38},
+      {nm:'코',   sc:_sc35('코'),   x:50, y:55},
+      {nm:'입',   sc:_sc35('입'),   x:50, y:72},
+      {nm:'턱',   sc:_sc35('턱'),   x:50, y:88}
+    ];
+    h+='<div style="position:relative;width:100%;max-width:280px;margin:0 auto 12px;aspect-ratio:1/1;border-radius:18px;overflow:hidden;border:2px solid rgba(212,168,67,.35);box-shadow:0 4px 24px rgba(0,0,0,.4);">'
+      +'<img src="data:image/jpeg;base64,'+window._cgoLastFaceB64+'" style="width:100%;height:100%;object-fit:cover;display:block;" alt="관상 분석 대상" />'
+      +_spots.map(function(s){
+        var bc = _bclr(s.sc);
+        return '<div style="position:absolute;left:'+s.x+'%;top:'+s.y+'%;transform:translate(-50%,-50%);padding:5px 11px;background:rgba(15,15,25,.82);border:1.5px solid '+bc+';border-radius:18px;font-size:11px;font-weight:900;color:'+bc+';letter-spacing:.05em;box-shadow:0 2px 10px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.08);backdrop-filter:blur(4px);white-space:nowrap;">'
+          +s.nm+' <span style="color:#fff;">'+s.sc+'</span></div>';
+      }).join('')
+      +'<div style="position:absolute;bottom:6px;right:8px;font-size:8px;color:rgba(212,168,67,.55);letter-spacing:.1em;font-weight:700;">C-35 부위별 분석</div>'
+      +'</div>';
+  }
 
   // 총점 + 오행 면형/수형
   h+='<div style="background:linear-gradient(135deg,rgba('+colorRgb+',.1),rgba('+colorRgb+',.05));border:1px solid rgba('+colorRgb+',.3);border-radius:14px;padding:14px;margin-bottom:10px;">'
