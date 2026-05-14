@@ -496,8 +496,112 @@
   // ═══════════════════════════════════════════════════
   // 시작
   // ═══════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════
+  // ★★★ 화이트리스트 — 검색엔진/공유 미리보기 봇 보호 ★★★
+  // 정상 봇이 잘못 잡히면 大將 SEO + 공유 미리보기 망함
+  // 大將 FULI = Groq AI 사용 중 (Llama 3.1 + Llama 4 Scout)
+  // ═══════════════════════════════════════════════════
+  const WHITELIST_PATTERNS = [
+    // ─── 검색엔진 봇 ───
+    'googlebot',                  // 구글
+    'google-inspectiontool',      // 구글 서치 콘솔
+    'mediapartners-google',       // 구글 애드센스
+    'adsbot-google',              // 구글 광고 봇
+    'bingbot',                    // 마이크로소프트 빙
+    'slurp',                      // 야후
+    'duckduckbot',                // 덕덕고
+    'baiduspider',                // 바이두
+    'yandexbot',                  // 얀덱스
+    'applebot',                   // 애플 (Siri)
+    'mj12bot',                    // Majestic
+    'ahrefsbot',                  // Ahrefs (SEO 분석)
+    'semrushbot',                 // SEMrush (SEO 분석)
+    
+    // ─── 한국 검색엔진 ───
+    'yeti',                       // 네이버
+    'naverbot',                   // 네이버
+    'daumoa',                     // 다음/카카오
+    'cocolinkbot',                // 코코링크
+    
+    // ─── 공유 미리보기 봇 ───
+    'facebookexternalhit',        // 페북 미리보기
+    'facebookcatalog',            // 페북 카탈로그
+    'twitterbot',                 // 트위터 미리보기
+    'linkedinbot',                // 링크드인
+    'whatsapp',                   // 왓츠앱
+    'telegrambot',                // 텔레그램
+    'discordbot',                 // 디스코드
+    'slackbot',                   // 슬랙
+    'kakaotalk-scrap',            // 카카오톡 스크랩
+    'kakaotalk',                  // 카카오톡 일반
+    'line-poker',                 // 라인 미리보기
+    'naver share',                // 네이버 공유
+    'pinterestbot',               // 핀터레스트
+    'redditbot',                  // 레딧
+    
+    // ─── AI 실시간 검색 봇 (학습 X, 검색 시 인용) ───
+    // 大將께서 노출 원하시면 OK, 콘텐츠 보호 원하시면 차단
+    // 현재: 실시간 검색만 허용, 학습 차단
+    'perplexitybot',              // Perplexity AI (실시간 검색)
+    'youbot',                     // You.com 검색
+    
+    // ─── 大將 자체 ───
+    'cgo-fuli',                   // 大將 자기 앱 (CGO-FULI/1.0)
+    
+    // ─── 모니터링/CDN ───
+    'archive.org_bot',            // 인터넷 아카이브
+    'wayback',                    // 웨이백 머신
+    'uptimerobot',                // 업타임로봇
+    'pingdom',                    // 핑돔
+    'newrelic',                   // 뉴렐릭
+    'datadog',                    // 데이터독
+    'statuspage',                 // 스테이터스 페이지
+    'vercel',                     // Vercel 자체 모니터
+    
+    // ─── AI 학습 봇 차단 (大將 콘텐츠 보호) ───
+    // 아래는 박지 X — 차단 (abyss로 격리)
+    // ✗ gptbot (OpenAI ChatGPT)
+    // ✗ chatgpt-user (ChatGPT 사용자)
+    // ✗ oai-searchbot (OpenAI 검색)
+    // ✗ anthropic-ai (Claude 학습)
+    // ✗ claudebot (Claude 학습)
+    // ✗ claude-web (Claude 웹)
+    // ✗ google-extended (Gemini 학습)
+    // ✗ bytespider (TikTok/ByteDance)
+    // ✗ amazonbot (Amazon Alexa)
+    // ✗ ccbot (Common Crawl — AI 학습 데이터)
+    // ✗ facebookbot (Meta AI 학습)
+  ];
+  
+  function isWhitelistedBot() {
+    try {
+      const ua = (navigator.userAgent || '').toLowerCase();
+      for (const pattern of WHITELIST_PATTERNS) {
+        if (ua.indexOf(pattern) !== -1) {
+          log('✅ 화이트 봇 감지 (보호): ' + pattern);
+          return pattern;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+  
   function start() {
     log('MUFE Card 시작');
+    
+    // ★★★ 화이트 봇 검사 (다른 모든 검사보다 먼저!!) ★★★
+    const whitelistedBot = isWhitelistedBot();
+    if (whitelistedBot) {
+      log('✅ 화이트 봇 (' + whitelistedBot + ') — 모든 봉인 우회 + 정상 페이지');
+      state.whitelisted = true;
+      window.__MUFE_WHITELISTED__ = whitelistedBot;
+      // 화이트 봇은 아무 박음 X
+      // - 점수 계산 X
+      // - 미끼 박음 X
+      // - redirect X
+      // → 검색엔진/공유 봇 정상 작동 보장
+      return;
+    }
     
     // 환경 검사 (즉시)
     checkEnvironment();
