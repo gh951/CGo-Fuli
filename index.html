@@ -57299,6 +57299,9 @@ function cgoTfCheckEngine(id,val){
   else _tfSelectedPure[id]=val;
   cgoTfUpdateCount();
   cgoTfUpdateWeight();
+  // ★ C-35 헌법 v3.0 §V.5.1 정직 적용: 결과 화면이 이미 떠있으면 자동 재분석
+  // 大將 의심 해결 — "체크박스 바꿔도 점수 똑같은" 위배 정리
+  _cgoTfAutoReanalyze();
 }
 function cgoTfSelectAll(val){
   var mObj = _cgoActiveMode==='realtime' ? _tfSelectedRealtime
@@ -57310,6 +57313,25 @@ function cgoTfSelectAll(val){
   });
   cgoTfRenderEngineList();
   cgoTfUpdateWeight();
+  // ★ C-35 — 전체선택/초기화 후에도 자동 재분석
+  _cgoTfAutoReanalyze();
+}
+
+// ★ C-35 헌법 v3.0 §V.5.1: 결과 화면 떠있을 때만 디바운스 자동 재분석 (Rate Limit 보호)
+var _cgoTfReanalyzeTimer = null;
+function _cgoTfAutoReanalyze(){
+  // 결과 화면이 안 떠있으면 패스 (사용자가 아직 첫 분석 안 했음)
+  var rs = document.getElementById('tf-result');
+  var rtRs = document.getElementById('tf-rt-result');
+  var resultVisible = (rs && rs.style.display==='block') || (rtRs && rtRs.style.display==='block');
+  if(!resultVisible) return;
+  // 디바운스 800ms — 사용자가 빠르게 체크박스 여러 개 클릭해도 마지막 한 번만 호출
+  if(_cgoTfReanalyzeTimer) clearTimeout(_cgoTfReanalyzeTimer);
+  _cgoTfReanalyzeTimer = setTimeout(function(){
+    var selectedEngines = _TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
+    if(selectedEngines.length===0) return; // 0개면 분석 안 함
+    if(typeof cgoRunTodayFortune==='function') cgoRunTodayFortune();
+  }, 800);
 }
 function cgoTfUpdateCount(){
   var cnt=Object.values(_tfSelected).filter(Boolean).length;
