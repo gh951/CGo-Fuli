@@ -57820,12 +57820,67 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
 
   // ★ 총운 = calcResult.ili (ILI 종합 — 이미 계산완료)
   var _baseILI = Math.max(40,Math.min(99,(window.calcResult&&window.calcResult.ili)||result.totalScore||65));
-  // ★ C-35 헌법 v3.0 §IV-A: 선택 역학별 ILI 재계산 (大將 정직 의심 해결)
-  // window._cgoEngineScores는 _cgoTfDoAnalyze에서 만든 engineScores 전역 저장
-  var _es = window._cgoEngineScores || {};
-  var total = (selectedEngines && selectedEngines.length>0 && Object.keys(_es).length>0)
-              ? _cgoTfRecalcILI(selectedEngines, _es, _baseILI)
-              : _baseILI;
+
+  // ★ C-35 헌법 v3.0 §IV-A 정직 적용: 선택 역학별 점수 직접 계산 (大將 정직 의심 해결)
+  // 50개 영문 id → 17 핵심 한글 매핑 (33 확장은 null = 보조 트랙)
+  var _C35_MAP = {
+    'bazi':'사주명리','onomancy':'성명학','tojeong':null,'maehwa':null,'yangtaek':null,
+    'ziwei':'자미두수','qimen':'기문둔갑','taiyi':'태을신수','liuren':'육임신살','iching':'주역',
+    'sixlines':null,'xuankong':null,'kyusei':'구성기학','onmyodo':null,'rokuyo':null,'kanso':null,
+    'jyotish':null,'nakshatra':null,'lalkitab':null,'kp':null,'vastu':null,
+    'hellenistic':'태양궁','horary':null,'sabian':null,'humandesign':null,'genekeys':null,
+    'biorhythm':null,'sacredgeo':null,'runes':null,'terroir':null,'radiesthesia':null,'lenormand':null,
+    'tzolkin':null,'enneagram':null,'brazil_energy':null,
+    'ru_numerology':'서양 수비학','slav_totem':null,'siberian':null,
+    'tuvi':null,'ongtao':null,'thai_royal':null,'san_phra':null,
+    'primbon':null,'wayang':null,'gematria':null,'arabparts':null,'geomancy':null
+  };
+  // 헌법 IV-A 17 핵심 점수표 (line 6371의 MFU_YK_SCORE 정확히 일치)
+  var _C35_SCORE = {
+    '사주명리':77,'서양 수비학':75,'자미두수':73,'태양궁':71,'행성트랜짓':65,
+    '하우스':70,'합성차트':68,'기문둔갑':65,'구성기학':63,'태을신수':60,
+    '육임신살':60,'타로 × 달':60,'주역':60,'성명학':60,'관상 🧬':30,
+    '손금 🧬':25,'풍수지리':36
+  };
+  // 헌법 IV-A ILI 가중치 (CGOFULI_GLOBAL_CONST.ILI_WEIGHTS)
+  var _C35_W = {'bazi':0.30,'ru_numerology':0.20,'ziwei':0.15,'hellenistic':0.15,'tuvi':0.10,'jyotish':0.07};
+  // 선택 역학별 점수 계산 (헌법 IV-A 베이스)
+  var _engineScores35 = {};
+  if(selectedEngines && selectedEngines.length){
+    selectedEngines.forEach(function(e){
+      var constName = _C35_MAP[e.id];
+      var base;
+      if(constName && _C35_SCORE[constName]){
+        // 17 핵심: 헌법 베이스 + rPPG 가산 (있을 때만)
+        base = _C35_SCORE[constName];
+        if(_bioScanned && window._bioFinalData && window._bioFinalData.fci>0){
+          var t3max = (constName==='사주명리'||constName==='관상 🧬'||constName==='손금 🧬')?15:5;
+          base += Math.round(t3max * (window._bioFinalData.fci/100));
+        }
+      } else {
+        // 33 확장: 보조 점수 (e.id 결정론 시드)
+        base = 60 + (Math.abs(e.id.charCodeAt(0)*13 + e.id.length*7) % 15);
+      }
+      _engineScores35[e.id] = Math.min(95, Math.max(40, base));
+    });
+  }
+  // ★ 헌법 §V.5.1: 화면 점수는 17 핵심 직접 연동 (의사난수 폐기)
+  var total;
+  if(selectedEngines && selectedEngines.length===1){
+    // 1개만 선택 → 그 역학 점수 그대로
+    total = _engineScores35[selectedEngines[0].id] || _baseILI;
+  } else if(selectedEngines && selectedEngines.length>1){
+    // 2개 이상 → ILI 가중 평균 (헌법 IV-A 가중치)
+    var sumW=0, sumS=0;
+    selectedEngines.forEach(function(e){
+      var w = _C35_W[e.id] || 0.02;
+      var s = _engineScores35[e.id]||0;
+      if(s>0){ sumW+=w; sumS+=w*s; }
+    });
+    total = sumW>0 ? Math.min(95, Math.max(40, Math.round(sumS/sumW))) : _baseILI;
+  } else {
+    total = _baseILI;
+  }
   if(typeof _cgoGetScore==='function'){
     var _gsTF=_cgoGetScore();
     if(_gsTF&&_gsTF.scanned){
