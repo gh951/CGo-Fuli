@@ -55672,7 +55672,7 @@ function _cgoVisionShoot(){
         +'"face_type_desc":"오형론(五形論) — '+oh+' 오행의 얼굴 유형 의미. 이 유형 사람의 타고난 기질·체형 특징·인생 운명 흐름을 일반인도 쉽게 이해할 수 있게 비유와 예시로 풀어서. 3~4문장",'
         +'"score":관상종합점수(60~95),'
         +'"personality":"성격과 기질. 장점·단점 솔직히. 3문장",'
-        +'"animal":"가장 닮은 동물상(여우·곰·사슴·독수리·고양이·호랑이·토끼 중 하나)과 이유. 1문장",'
+        +'"animal":"가장 닮은 동물상을 다음 12종 중 정확히 하나만 선택: 여우(영리·매력)·곰(듬직·인내)·사슴(우아·섬세)·독수리(리더십·예리)·고양이(신비·자유)·호랑이(카리스마·용맹)·토끼(부드러움·친화)·사자(통솔·위엄)·늑대(직감·충성)·말(활동·자유)·소(우직·근면)·돼지(복덕·풍요). 실제 얼굴 윤곽·이목구비 특징을 근거로 가장 닮은 1종만 선택하고 그 이유를 관찰 특징과 함께 1~2문장. 추측 금지, 관찰 우선",'
         +'"love":"연애운·스타일. 2문장",'
         +'"career":"직업운·재물운. 오행('+oh+') 연결. 3문장",'
         +'"simsang":"심상(心相). 마음가짐을 바꾸면 달라질 부분. 따뜻하게. 3문장",'
@@ -58187,6 +58187,74 @@ function _cgoTfCompute(r,w){
   var _ohRelation = _ohDiff===1?'상생':_ohDiff===3?'상극':_ohDiff===0?'비화':_ohDiff===2?'상설':'상충';
   var _ohBonus = {상생:10, 비화:3, 상설:-2, 상충:-5, 상극:-8}[_ohRelation]||0;
 
+  // ★ C-35 헌법 v3.0 §IV-A: 50개 영문 id → 17 핵심 한글 매핑 (33 확장은 null = 보조 트랙)
+  var _TF_TO_CONST = {
+    // 🇰🇷 한국 핵심 (4개)
+    'bazi':'사주명리', 'onomancy':'성명학',
+    // 🇰🇷 한국 확장 (3개) — null = 17 핵심 아님
+    'tojeong':null, 'maehwa':null, 'yangtaek':null,
+    // 🇨🇳 중국 핵심 (5개)
+    'ziwei':'자미두수', 'qimen':'기문둔갑', 'taiyi':'태을신수', 'liuren':'육임신살', 'iching':'주역',
+    // 🇨🇳 중국 확장 (2개)
+    'sixlines':null, 'xuankong':null,
+    // 🇯🇵 일본 핵심 (1개)
+    'kyusei':'구성기학',
+    // 🇯🇵 일본 확장 (3개)
+    'onmyodo':null, 'rokuyo':null, 'kanso':null,
+    // 🇮🇳 인도 — 모두 확장 (5개)
+    'jyotish':null, 'nakshatra':null, 'lalkitab':null, 'kp':null, 'vastu':null,
+    // 🇺🇸🇬🇧 영미권 핵심 (1개) — 헬레니즘이 태양궁 점성술 대표
+    'hellenistic':'태양궁',
+    // 🇺🇸🇬🇧 영미권 확장 (4개)
+    'horary':null, 'sabian':null, 'humandesign':null, 'genekeys':null,
+    // 🇩🇪 독일 확장 (3개)
+    'biorhythm':null, 'sacredgeo':null, 'runes':null,
+    // 🇫🇷 프랑스 확장 (3개)
+    'terroir':null, 'radiesthesia':null, 'lenormand':null,
+    // 🇪🇸🇧🇷 중남미 확장 (3개)
+    'tzolkin':null, 'enneagram':null, 'brazil_energy':null,
+    // 🇷🇺 러시아 확장 (3개) — 러시아 수비학은 헌법 수비학에 흡수
+    'ru_numerology':'서양 수비학', 'slav_totem':null, 'siberian':null,
+    // 🇻🇳 베트남 확장 (2개)
+    'tuvi':null, 'ongtao':null,
+    // 🇹🇭 태국 확장 (2개)
+    'thai_royal':null, 'san_phra':null,
+    // 🇮🇩 인도네시아 확장 (2개)
+    'primbon':null, 'wayang':null,
+    // 🇮🇱 중동 확장 (3개)
+    'gematria':null, 'arabparts':null, 'geomancy':null
+  };
+
+  // ★ C-35 헌법 v3.0 §IV-A 점수 계산 함수 (T1 베이스 + T2 가산 + T3 가산)
+  function _calcConstScore(engineId, engineDomain, engineWeight, seedVal){
+    var constName = _TF_TO_CONST[engineId];
+    // 33 확장 역학 (null): 헌법 IV-B — 보조 점수 (현실적 범위 60~75)
+    if(!constName){
+      var sc33 = 60 + (Math.abs(seedVal + engineId.charCodeAt(0)*13) % 16); // 60~75 결정론
+      return Math.min(78, Math.max(58, sc33 + _ohBonus));
+    }
+    // 17 핵심 역학: 헌법 IV-A 점수표에서 베이스 가져옴
+    var meta = (typeof MFU_YK_SCORE !== 'undefined' && MFU_YK_SCORE[constName])
+               ? MFU_YK_SCORE[constName]
+               : {base:65, t2:10, t3:3, range:[65,80]};
+    var base = meta.base;
+    // T2 가산: 도메인별 외부 데이터 활용도 (헌법 II.T2)
+    var t2 = 0;
+    if(engineDomain==='astro' && _tfOnNasa) t2 = Math.round(meta.t2 * 0.7); // NASA 활성화
+    else if(engineDomain==='weather' && _tfOnWeather) t2 = Math.round(meta.t2 * 0.6);
+    else if(engineDomain==='env' && _tfOnEnv) t2 = Math.round(meta.t2 * 0.5);
+    else if(engineDomain==='nasa' && _tfOnNasa) t2 = meta.t2;
+    // T3 가산: rPPG 측정값 (헌법 II.T3 — 측정값이 좋을 때만 최대)
+    var t3 = 0;
+    if(engineDomain==='bio' && _fci>0){
+      t3 = Math.round(meta.t3 * (_fci/100)); // FCI에 비례
+    }
+    // 오행 상생/상극 반영 (헌법 보존)
+    var sc = base + t2 + t3 + _ohBonus;
+    // 헌법 IV-A 95 캡 + 베이스 절대 보존 (T2·T3는 0일 수 있음)
+    return Math.min(95, Math.max(base, sc));
+  }
+
   // ══ 역학별 점수 계산 (상생·상극 반영) ══
   var selectedEngines = _TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
   var engineScores = {}; // 각 역학 점수 저장
@@ -58226,14 +58294,8 @@ function _cgoTfCompute(r,w){
 
   var totalW=0, totalS=0;
   selectedEngines.forEach(function(e,i){
-    var sc = 48 + rng(seed+i*7+_ohIdx*3)%28; // 48~75 기본 범위 (현실적)
-    // NASA/날씨/환경 연동 보정 (상한 88)
-    if(e.domain==='nasa'&&_tfOnNasa) sc=Math.min(88,sc+10);
-    if(e.domain==='weather'&&_tfOnWeather) sc=Math.min(88,sc+6);
-    if(e.domain==='env'&&_tfOnEnv) sc=Math.min(88,sc+6);
-    if(e.domain==='bio') sc=Math.min(88,sc+Math.round(w.bio*0.3));
-    // 오행 상생/상극 반영 (상한 88)
-    sc = Math.min(88, Math.max(35, sc + _ohBonus));
+    // ★ C-35 헌법 v3.0 §IV-A/IV-B 적용: 의사난수 폐기, 헌법 점수표 직접 연동
+    var sc = _calcConstScore(e.id, e.domain, e.w, seed+i*7+_ohIdx*3);
     engineScores[e.id] = sc;
     totalW+=e.w; totalS+=sc*e.w;
   });
