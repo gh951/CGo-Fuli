@@ -57736,6 +57736,40 @@ function _cgoTfRenderFallback(r, selectedEngines, engCount){
   _cgoTfRenderAiResult(result, r, selectedEngines, engCount);
 }
 
+// ★ C-35 헌법 v3.0 §IV-A 정직 적용: 선택된 역학 기반 ILI 재계산
+// 화면 점수가 "어떤 역학을 선택하든 같은 ILI"였던 위배 해결 (大將 의심 100% 정직 반영)
+function _cgoTfRecalcILI(selectedEngines, engineScores, baseILI){
+  // 핵심 4대 ILI 가중치 (CGOFULI_GLOBAL_CONST.ILI_WEIGHTS - 헌법 IV-A)
+  var W = {
+    'bazi': 0.30,         // 사주명리 30%
+    'ru_numerology': 0.20,// 수비학 20% (러시아 수비학 = 헌법 수비학)
+    'ziwei': 0.15,        // 자미두수 15%
+    'hellenistic': 0.15,  // 헬레니즘 = 태양궁 점성술 15%
+    'tuvi': 0.10,         // 베트남 자미두수 = 자미두수 보조
+    'jyotish': 0.07       // 베딕 점성술 = 점성술 보조
+  };
+  // 헌법 가중치가 없는 역학은 0.02 기본 (보조)
+  var defaultW = 0.02;
+
+  if(!selectedEngines||!selectedEngines.length) return baseILI;
+  // 1개만 선택: 그 역학 점수 직접 (헌법 §V.5.1)
+  if(selectedEngines.length===1){
+    var e0 = selectedEngines[0];
+    return engineScores[e0.id] || baseILI;
+  }
+  // 2개 이상: ILI 가중 평균
+  var sumW=0, sumS=0;
+  selectedEngines.forEach(function(e){
+    var w = W[e.id] || defaultW;
+    var s = engineScores[e.id];
+    if(s>0){ sumW += w; sumS += w*s; }
+  });
+  if(sumW<=0) return baseILI;
+  var recalcILI = Math.round(sumS/sumW);
+  // 헌법 §V.5.4: 95 캡, 최소 40
+  return Math.min(95, Math.max(40, recalcILI));
+}
+
 function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   var ld=document.getElementById('tf-loading');
   var isRT=(window._cgoInRealtimeMode&&!window._cgoInPureMode);
@@ -57763,7 +57797,13 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   var _isPureMode  = !!window._cgoInPureMode && !window._cgoInRealtimeMode;
 
   // ★ 총운 = calcResult.ili (ILI 종합 — 이미 계산완료)
-  var total = Math.max(40,Math.min(99,(window.calcResult&&window.calcResult.ili)||result.totalScore||65));
+  var _baseILI = Math.max(40,Math.min(99,(window.calcResult&&window.calcResult.ili)||result.totalScore||65));
+  // ★ C-35 헌법 v3.0 §IV-A: 선택 역학별 ILI 재계산 (大將 정직 의심 해결)
+  // window._cgoEngineScores는 _cgoTfDoAnalyze에서 만든 engineScores 전역 저장
+  var _es = window._cgoEngineScores || {};
+  var total = (selectedEngines && selectedEngines.length>0 && Object.keys(_es).length>0)
+              ? _cgoTfRecalcILI(selectedEngines, _es, _baseILI)
+              : _baseILI;
   if(typeof _cgoGetScore==='function'){
     var _gsTF=_cgoGetScore();
     if(_gsTF&&_gsTF.scanned){
@@ -58299,6 +58339,8 @@ function _cgoTfCompute(r,w){
     engineScores[e.id] = sc;
     totalW+=e.w; totalS+=sc*e.w;
   });
+  // ★ C-35 — engineScores를 window 전역에 저장 (렌더링 시 ILI 재계산용)
+  window._cgoEngineScores = engineScores;
   var baseScore = totalW>0 ? Math.round(totalS/totalW) : 62;
   // 역학 1~2개만 선택 시 기본 보정 (너무 낮지 않도록)
   if(selectedEngines.length === 1) baseScore = Math.max(baseScore, 55);
