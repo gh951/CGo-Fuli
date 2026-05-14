@@ -81318,19 +81318,44 @@ function cgoTfBarPopup(key){
   var fData = focusMap[key] || focusMap['pop_total'];
   var subsDesc = fData.subs.join(' / ');
 
+  // ★ C-35 헌법 v3.0 §V.5.5 정직 적용: sub 점수 = 결정론 시드 (의사난수 비례 폐기)
+  // 영역별 ±range를 헌법 IV-A 가중치 + 사용자 시드로 결정
+  var _c35SubSeed = (function(){
+    // 시드 = 사용자 + 오늘 날짜 + 영역 key (결정론 보장)
+    var ySeed = (window.calcResult&&window.calcResult.y)||1980;
+    var mSeed = (window.calcResult&&window.calcResult.m)||1;
+    var dSeed = (window.calcResult&&window.calcResult.d)||1;
+    var todayD = new Date().getDate();
+    var keySum = 0; for(var ki=0;ki<key.length;ki++){ keySum += key.charCodeAt(ki); }
+    return (ySeed*13 + mSeed*31 + dSeed*7 + todayD*11 + keySum*17) % 9973;
+  })();
+  function _c35SubScore(idx){
+    // 영역 표지 점수(m.score) 기준 ±5 정직 변동 (시드 기반)
+    var s = (_c35SubSeed * (idx+1) * 23 + idx*7) % 11;  // 0~10
+    var delta = s - 5; // -5 ~ +5
+    var subSc = m.score + delta;
+    return Math.min(95, Math.max(40, Math.round(subSc)));
+  }
+  var _c35Sub1 = _c35SubScore(0);
+  var _c35Sub2 = _c35SubScore(1);
+  var _c35Sub3 = _c35SubScore(2);
+
   var pLines=[
     sysRole,
     '',
     '분석 대상: '+name+' | 오행:'+oh+'('+ohK[oh]+')' + (locationInfo?' | '+locationInfo:''),
     '선택 역학: '+engList,
-    '분석 영역: ['+m.area+'] 점수:'+m.score+'점',
+    '분석 영역: ['+m.area+'] 점수:'+m.score+'점 (헌법 v3.0 §IV-A)',
     fData.focus,
+    '',
+    '※ sub1/sub2/sub3 점수는 헌법 결정론 시드로 미리 산출됨. 절대 변경 금지. AI는 이 점수에 대한 이유만 작성:',
+    'sub1: '+_c35Sub1+'점 / sub2: '+_c35Sub2+'점 / sub3: '+_c35Sub3+'점',
     '',
     '아래 JSON 형식만 출력 (코드블록 없이):',
     '{"headline":"핵심 한줄","score":'+m.score+',',
-    '"sub1_label":"'+fData.subs[0]+'","sub1_value":'+Math.round(m.score*.97)+',"sub1_why":"이유",',
-    '"sub2_label":"'+fData.subs[1]+'","sub2_value":'+Math.round(m.score*.93)+',"sub2_why":"이유",',
-    '"sub3_label":"'+(fData.subs[2]||'에너지 종합')+'","sub3_value":'+Math.round(m.score*.90)+',"sub3_why":"이유",',
+    '"sub1_label":"'+fData.subs[0]+'","sub1_value":'+_c35Sub1+',"sub1_why":"이 점수가 나온 이유. 헌법 §IV-A 근거",',
+    '"sub2_label":"'+fData.subs[1]+'","sub2_value":'+_c35Sub2+',"sub2_why":"이 점수가 나온 이유",',
+    '"sub3_label":"'+(fData.subs[2]||'에너지 종합')+'","sub3_value":'+_c35Sub3+',"sub3_why":"이 점수가 나온 이유",',
     '"mainAnalysis":"4~5문장 분석",',
     '"actionTip":"조언 2가지",',
     '"cautionTip":"주의사항",',
