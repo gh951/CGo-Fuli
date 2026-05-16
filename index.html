@@ -92821,6 +92821,7 @@ var _cgmAllUsers = [];
 /* C-37 rPPG 강화 엔진 · 大將 L.J.R × C-37                       */
 /* 자이로 IMU 보정 · 노치 필터 · 파형 특징점 · 위험도 분류         */
 /* 본진 함수 래핑 패턴 (C-19 검증 방식) · 원본 0줄 수정              */
+/* v1.0.1 — 6부위 종합 분석(_c24) 엔진 강화 추가                   */
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 (function(){
 'use strict';
@@ -92828,7 +92829,7 @@ var _cgmAllUsers = [];
 // ─── 네임스페이스 ───
 window._cgo37 = window._cgo37 || {};
 var C37 = window._cgo37;
-C37.version = '1.0.0';
+C37.version = '1.0.1';
 C37.ready = false;
 
 // ─── 설정 ───
@@ -92846,8 +92847,11 @@ C37.stats = {
   imuFramesReceived: 0,
   samplesRejectedByIMU: 0,
   notchApplied: 0,
+  c24NotchApplied: 0,
   featuresExtracted: 0,
-  risksClassified: 0
+  c24FeaturesExtracted: 0,
+  risksClassified: 0,
+  panelsRendered: 0
 };
 
 /* ════════════════════════════════════════════ */
@@ -92855,12 +92859,8 @@ C37.stats = {
 /* ════════════════════════════════════════════ */
 
 C37.imu = {
-  ax: 0, ay: 0, az: 9.8,
-  gx: 0, gy: 0, gz: 0,
-  magnitude: 0,
-  ts: 0,
-  ready: false,
-  supported: false,
+  ax: 0, ay: 0, az: 9.8, gx: 0, gy: 0, gz: 0,
+  magnitude: 0, ts: 0, ready: false, supported: false,
   permissionState: 'unknown'
 };
 
@@ -92875,9 +92875,7 @@ C37._imuHandler = function(e){
     C37.imu.gy = e.rotationRate.beta || 0;
     C37.imu.gz = e.rotationRate.gamma || 0;
   }
-  var dx = C37.imu.ax;
-  var dy = C37.imu.ay;
-  var dz = C37.imu.az - 9.8;
+  var dx = C37.imu.ax, dy = C37.imu.ay, dz = C37.imu.az - 9.8;
   C37.imu.magnitude = Math.sqrt(dx*dx + dy*dy + dz*dz);
   C37.imu.ts = Date.now();
   C37.imu.ready = true;
@@ -92916,27 +92914,27 @@ C37.startIMU = function(){
 /* ════════════════════════════════════════════ */
 /* 모듈 2: 저주파 드리프트 노치 필터              */
 /* ════════════════════════════════════════════ */
-// fc≈0.25Hz @ fs=30Hz, Q=10 — 호흡대 베이스라인 드리프트 억제
-// 본진 기존 밴드패스(0.7~3Hz)와 상보적으로 작동
+// _rPPG용과 _c24용을 분리 (상태 분리 위해)
 
 C37.notch = {
-  zs: [0, 0],
+  rppg_zs: [0, 0],
+  c24_zs: [0, 0],
   b: [0.99739, -1.99265, 0.99739],
   a: [1, -1.99265, 0.99478]
 };
 
-C37.applyNotch = function(x){
+C37.applyNotch = function(x, channel){
   if(typeof x !== 'number' || !isFinite(x)) return x;
-  var b = C37.notch.b, a = C37.notch.a, z = C37.notch.zs;
+  var b = C37.notch.b, a = C37.notch.a;
+  var z = (channel === 'c24') ? C37.notch.c24_zs : C37.notch.rppg_zs;
   var w = x - a[1]*z[0] - a[2]*z[1];
   var y = b[0]*w + b[1]*z[0] + b[2]*z[1];
   z[1] = z[0];
   z[0] = w;
-  C37.stats.notchApplied++;
+  if(channel === 'c24') C37.stats.c24NotchApplied++;
+  else C37.stats.notchApplied++;
   return y;
 };
-
-C37.resetNotch = function(){ C37.notch.zs = [0, 0]; };
 
 /* ════════════════════════════════════════════ */
 /* 모듈 3: PPG 파형 특징점 추출                   */
@@ -92957,7 +92955,6 @@ C37.extractFeatures = function(pulseSegment){
   var systolicAmp = maxVal - minVal;
   if(systolicAmp <= 0) return null;
 
-  // Dicrotic notch 검출
   var notchIdx = -1, notchVal = maxVal;
   for(var j = maxIdx + 2; j < n - 2; j++){
     if(pulseSegment[j] < pulseSegment[j-1] && pulseSegment[j] < pulseSegment[j+1] &&
@@ -92968,7 +92965,6 @@ C37.extractFeatures = function(pulseSegment){
     }
   }
 
-  // Augmentation Index
   var p2Idx = -1, p2Val = -Infinity;
   if(notchIdx > 0){
     for(var k = notchIdx + 1; k < n - 1; k++){
@@ -93005,7 +93001,6 @@ C37.extractFeatures = function(pulseSegment){
     dicroticNotchPos = (notchIdx - maxIdx) / (n - maxIdx);
   }
 
-  C37.stats.featuresExtracted++;
   return {
     systolicAmp: systolicAmp,
     augmentationIndex: Math.round(augmentationIndex * 10) / 10,
@@ -93090,7 +93085,7 @@ C37.classifyRisk = function(features, bpm, hrv){
 /* 모듈 5: 본진 함수 래핑 (C-19 패턴)             */
 /* ════════════════════════════════════════════ */
 
-// 5-1. _rPPGSample 래핑 — IMU 모션 게이트
+// ─── 5-1. _rPPGSample 래핑 — IMU 모션 게이트 ───
 if(typeof window._rPPGSample === 'function'){
   C37._origSample = window._rPPGSample;
   window._rPPGSample = function(){
@@ -93107,7 +93102,7 @@ if(typeof window._rPPGSample === 'function'){
   console.warn('[C-37] _rPPGSample 함수를 찾을 수 없음 — IMU 보정 비활성');
 }
 
-// 5-2. _rPPGChromUpdate 래핑 — 노치 필터 추가 적용
+// ─── 5-2. _rPPGChromUpdate 래핑 — 노치 필터 추가 적용 ───
 if(typeof window._rPPGChromUpdate === 'function'){
   C37._origChromUpdate = window._rPPGChromUpdate;
   window._rPPGChromUpdate = function(){
@@ -93116,17 +93111,16 @@ if(typeof window._rPPGChromUpdate === 'function'){
     if(!C37.config.enabled) return r;
     if(window._rPPG && _rPPG.chromSignal && _rPPG.chromSignal.length > prevLen){
       var lastIdx = _rPPG.chromSignal.length - 1;
-      var orig = _rPPG.chromSignal[lastIdx];
-      _rPPG.chromSignal[lastIdx] = C37.applyNotch(orig);
+      _rPPG.chromSignal[lastIdx] = C37.applyNotch(_rPPG.chromSignal[lastIdx], 'rppg');
     }
     return r;
   };
   console.log('[C-37] _rPPGChromUpdate 래핑 완료 · 노치 필터 활성');
 } else {
-  console.warn('[C-37] _rPPGChromUpdate 함수를 찾을 수 없음 — 노치 필터 비활성');
+  console.warn('[C-37] _rPPGChromUpdate 함수를 찾을 수 없음');
 }
 
-// 5-3. _rPPGCalcVitals 래핑 — ★ 가장 중요 (features + risk 자동 추가)
+// ─── 5-3. _rPPGCalcVitals 래핑 — features + risk 자동 추가 ───
 if(typeof window._rPPGCalcVitals === 'function'){
   C37._origCalcVitals = window._rPPGCalcVitals;
   window._rPPGCalcVitals = function(){
@@ -93146,18 +93140,221 @@ if(typeof window._rPPGCalcVitals === 'function'){
             vitals.features = features;
             vitals.risk = C37.classifyRisk(features, vitals.bpm, vitals.hrv);
             vitals._c37 = true;
+            C37.stats.featuresExtracted++;
           }
         }
       }
     } catch(e){
-      console.warn('[C-37] vitals 강화 중 오류:', e);
+      console.warn('[C-37] _rPPGCalcVitals 강화 중 오류:', e);
     }
     return vitals;
   };
   console.log('[C-37] _rPPGCalcVitals 래핑 완료 · 파형 특징점 + 위험도 분류 활성 ★');
 } else {
-  console.warn('[C-37] _rPPGCalcVitals 함수를 찾을 수 없음 — 위험도 분류 비활성');
+  console.warn('[C-37] _rPPGCalcVitals 함수를 찾을 수 없음');
 }
+
+// ─── 5-4. _c24ChromStep 래핑 — 6부위 종합 분석 노치 필터 ★NEW v1.0.1 ───
+if(typeof window._c24ChromStep === 'function'){
+  C37._origC24ChromStep = window._c24ChromStep;
+  window._c24ChromStep = function(r, g, b){
+    var prevLen = (window._c24 && _c24.chromSig) ? _c24.chromSig.length : 0;
+    var result = C37._origC24ChromStep.apply(this, arguments);
+    if(!C37.config.enabled) return result;
+    if(window._c24 && _c24.chromSig && _c24.chromSig.length > prevLen){
+      var lastIdx = _c24.chromSig.length - 1;
+      _c24.chromSig[lastIdx] = C37.applyNotch(_c24.chromSig[lastIdx], 'c24');
+    }
+    // C-24도 IMU 모션 게이트 적용 (격렬한 움직임 시 prev 리셋해 다음 프레임 자동 폐기)
+    if(C37.imu.ready && C37.imu.magnitude > C37.config.motionThreshold){
+      if(window._c24){
+        _c24.prevR = 0; _c24.prevG = 0;
+        C37.stats.samplesRejectedByIMU++;
+      }
+    }
+    return result;
+  };
+  console.log('[C-37] _c24ChromStep 래핑 완료 · C-24 노치 필터 + IMU 게이트 활성 ★');
+} else {
+  console.warn('[C-37] _c24ChromStep 함수를 찾을 수 없음');
+}
+
+// ─── 5-5. _c24CalcVitals 래핑 — 6부위 종합 분석 강화 ★NEW v1.0.1 ───
+if(typeof window._c24CalcVitals === 'function'){
+  C37._origC24CalcVitals = window._c24CalcVitals;
+  window._c24CalcVitals = function(){
+    var vitals = C37._origC24CalcVitals.apply(this, arguments);
+    if(!C37.config.enabled) return vitals;
+    if(!vitals || !window._c24) return vitals;
+    try {
+      var sig = _c24.chromSig;
+      if(sig && sig.length >= 30){
+        // _c24CalcVitals는 peaks를 외부에 노출 안 하므로 다시 검출
+        var peaks = [];
+        var minD = Math.round((_c24.sampleRate || 30) * 0.2);
+        for(var i=2; i<sig.length-2; i++){
+          if(sig[i]>sig[i-1] && sig[i]>sig[i-2] && sig[i]>sig[i+1] && sig[i]>sig[i+2]){
+            if(!peaks.length || i-peaks[peaks.length-1] >= minD) peaks.push(i);
+          }
+        }
+        if(peaks.length >= 2){
+          // 가장 최근 완전한 사이클
+          var p1 = peaks[peaks.length - 2];
+          var p2 = peaks[peaks.length - 1];
+          if(p2 > p1 && p1 >= 0 && p2 < sig.length){
+            var cycle = sig.slice(p1, p2);
+            var features = C37.extractFeatures(cycle);
+            if(features){
+              vitals.features = features;
+              vitals.risk = C37.classifyRisk(features, vitals.bpm, vitals.hrv);
+              vitals._c37 = true;
+              C37.stats.c24FeaturesExtracted++;
+              // ★ 전역에 마지막 강화 결과 저장 (UI 패널이 읽어감)
+              C37.lastC24Vitals = vitals;
+            }
+          }
+        }
+      }
+    } catch(e){
+      console.warn('[C-37] _c24CalcVitals 강화 중 오류:', e);
+    }
+    return vitals;
+  };
+  console.log('[C-37] _c24CalcVitals 래핑 완료 · 6부위 종합 분석 강화 ★ v1.0.1');
+} else {
+  console.warn('[C-37] _c24CalcVitals 함수를 찾을 수 없음');
+}
+
+// ─── 5-6. _c24ShowResult 래핑 — UI 패널 자동 삽입 ★NEW v1.0.1 ───
+if(typeof window._c24ShowResult === 'function'){
+  C37._origC24ShowResult = window._c24ShowResult;
+  window._c24ShowResult = function(){
+    var r = C37._origC24ShowResult.apply(this, arguments);
+    if(!C37.config.enabled) return r;
+    // 결과 화면이 그려진 후 C-37 패널 삽입
+    setTimeout(function(){ C37.renderC24Panel(); }, 300);
+    return r;
+  };
+  console.log('[C-37] _c24ShowResult 래핑 완료 · UI 패널 동적 삽입 활성 ★');
+} else {
+  console.warn('[C-37] _c24ShowResult 함수를 찾을 수 없음');
+}
+
+/* ════════════════════════════════════════════ */
+/* C-37 UI 패널 렌더러 (본진 톤 매칭)             */
+/* ════════════════════════════════════════════ */
+
+C37.renderC24Panel = function(){
+  try {
+    // 기존 패널 제거 (재측정 시)
+    var old = document.getElementById('c37-panel');
+    if(old && old.parentNode) old.parentNode.removeChild(old);
+
+    var diseaseList = document.getElementById('c24-disease-list');
+    if(!diseaseList) return;
+
+    // 강화 데이터 가져오기
+    var vitals = C37.lastC24Vitals;
+    if(!vitals || !vitals.features){
+      // 데이터 없으면 안내 패널만
+      var info = document.createElement('div');
+      info.id = 'c37-panel';
+      info.style.cssText = 'margin-top:14px;padding:14px;background:rgba(212,168,67,.05);border:1px solid rgba(212,168,67,.2);border-radius:12px;';
+      info.innerHTML = '<div style="font-size:11px;color:rgba(212,168,67,.7);text-align:center;">💎 C-37 정밀 파형 분석 — 더 긴 측정에서 활성화됩니다</div>';
+      diseaseList.parentNode.insertBefore(info, diseaseList.nextSibling);
+      return;
+    }
+
+    var f = vitals.features;
+    var risk = vitals.risk;
+
+    // 패널 HTML 생성 (본진 다크 톤 + 골드 매칭)
+    var html = '';
+    html += '<div id="c37-panel" style="margin-top:18px;padding:16px 18px;background:linear-gradient(135deg,rgba(13,21,38,.95),rgba(17,31,53,.92));border:1px solid rgba(212,168,67,.35);border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.4);">';
+
+    // 헤더
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,168,67,.2);">';
+    html +=   '<div style="display:flex;align-items:center;gap:8px;">';
+    html +=     '<span style="font-size:18px;">💎</span>';
+    html +=     '<span style="font-size:13px;font-weight:800;color:#d4a843;letter-spacing:.02em;">C-37 정밀 파형 분석</span>';
+    html +=   '</div>';
+    html +=   '<span style="font-size:9px;font-weight:700;padding:2px 8px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.4);border-radius:10px;color:#d4a843;letter-spacing:.04em;">v' + C37.version + '</span>';
+    html += '</div>';
+
+    // 위험도 점수 (큰 표시)
+    if(risk){
+      html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:12px;background:rgba(0,0,0,.25);border-radius:10px;border-left:3px solid ' + risk.grade.color + ';">';
+      html +=   '<div style="font-size:28px;font-weight:900;color:' + risk.grade.color + ';font-family:Orbitron,monospace;line-height:1;">' + risk.riskScore + '</div>';
+      html +=   '<div style="flex:1;">';
+      html +=     '<div style="font-size:11px;color:rgba(240,230,200,.5);margin-bottom:2px;">위험도 점수 (0~100)</div>';
+      html +=     '<div style="font-size:14px;font-weight:800;color:' + risk.grade.color + ';">' + risk.grade.icon + ' ' + risk.grade.level + ' 등급</div>';
+      html +=   '</div>';
+      html += '</div>';
+    }
+
+    // 파형 특징점 4개 (2x2 그리드)
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+    var aiColor = f.augmentationIndex > 30 ? '#ef4444' : f.augmentationIndex > 20 ? '#fbbf24' : '#34d399';
+    html +=   '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;">';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">AUGMENTATION IDX</div>';
+    html +=     '<div style="font-size:15px;font-weight:800;color:' + aiColor + ';font-family:Orbitron,monospace;">' + f.augmentationIndex.toFixed(1) + '%</div>';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">동맥 경직 마커</div>';
+    html +=   '</div>';
+    html +=   '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;">';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">PULSE WIDTH 50%</div>';
+    html +=     '<div style="font-size:15px;font-weight:800;color:#38bdf8;font-family:Orbitron,monospace;">' + f.pulseWidth50 + '</div>';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">혈관 탄력 지표</div>';
+    html +=   '</div>';
+    html +=   '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;">';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">RISE TIME</div>';
+    html +=     '<div style="font-size:15px;font-weight:800;color:#a78bfa;font-family:Orbitron,monospace;">' + f.riseTime + '</div>';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">수축기 상승</div>';
+    html +=   '</div>';
+    html +=   '<div style="padding:10px;background:rgba(0,0,0,.2);border-radius:8px;">';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">DICROTIC NOTCH</div>';
+    html +=     '<div style="font-size:15px;font-weight:800;color:#34d399;font-family:Orbitron,monospace;">' + f.dicroticNotchPos.toFixed(2) + '</div>';
+    html +=     '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">동맥 반사파 위치</div>';
+    html +=   '</div>';
+    html += '</div>';
+
+    // 경고 메시지
+    if(risk && risk.warnings && risk.warnings.length){
+      html += '<div style="margin-bottom:12px;">';
+      html +=   '<div style="font-size:10px;font-weight:700;color:rgba(212,168,67,.7);margin-bottom:6px;letter-spacing:.04em;">📋 정밀 분석 신호</div>';
+      risk.warnings.forEach(function(w){
+        var wColor = w.level === 'high' ? '#ef4444' : w.level === 'medium' ? '#fbbf24' : '#94a3b8';
+        html += '<div style="padding:6px 10px;margin-bottom:4px;background:rgba(255,255,255,.03);border-left:2px solid ' + wColor + ';border-radius:4px;">';
+        html +=   '<div style="font-size:11px;color:rgba(240,230,200,.85);"><b style="color:' + wColor + ';">●</b> ' + w.msg + '</div>';
+        html +=   '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">측정값: ' + w.value + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // 면책
+    html += '<div style="padding:8px 10px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.18);border-radius:6px;">';
+    html +=   '<div style="font-size:9px;color:rgba(248,113,113,.7);line-height:1.5;">⚠️ ' + (risk ? risk.disclaimer : '본 결과는 참고용 신호이며 의료 진단이 아닙니다.') + '</div>';
+    html += '</div>';
+
+    // 푸터
+    html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(212,168,67,.1);text-align:center;font-size:8px;color:rgba(212,168,67,.4);letter-spacing:.05em;">';
+    html +=   'C-37 · rPPG ADVANCED ENGINE · CHROM + IMU + WAVEFORM ANALYSIS';
+    html += '</div>';
+
+    html += '</div>';
+
+    // disease-list 다음에 삽입
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    var panel = temp.firstChild;
+    diseaseList.parentNode.insertBefore(panel, diseaseList.nextSibling);
+
+    C37.stats.panelsRendered++;
+    console.log('[C-37] 정밀 분석 패널 렌더링 완료 · 위험도 ' + (risk ? risk.riskScore : '?') + '점');
+  } catch(e){
+    console.warn('[C-37] 패널 렌더링 오류:', e);
+  }
+};
 
 /* ════════════════════════════════════════════ */
 /* 유틸리티                                       */
@@ -93179,12 +93376,21 @@ C37.diag = function(){
     imuMagnitude: C37.imu.magnitude.toFixed(3),
     stats: JSON.stringify(C37.stats),
     wrapped: {
-      sample: typeof C37._origSample === 'function',
-      chromUpdate: typeof C37._origChromUpdate === 'function',
-      calcVitals: typeof C37._origCalcVitals === 'function'
-    }
+      rppgSample: typeof C37._origSample === 'function',
+      rppgChromUpdate: typeof C37._origChromUpdate === 'function',
+      rppgCalcVitals: typeof C37._origCalcVitals === 'function',
+      c24ChromStep: typeof C37._origC24ChromStep === 'function',
+      c24CalcVitals: typeof C37._origC24CalcVitals === 'function',
+      c24ShowResult: typeof C37._origC24ShowResult === 'function'
+    },
+    lastC24: C37.lastC24Vitals ? {
+      bpm: C37.lastC24Vitals.bpm,
+      hrv: C37.lastC24Vitals.hrv,
+      AI: C37.lastC24Vitals.features ? C37.lastC24Vitals.features.augmentationIndex : null,
+      risk: C37.lastC24Vitals.risk ? C37.lastC24Vitals.risk.riskScore : null
+    } : null
   };
-  console.log('[C-37 진단]', info);
+  console.log('[C-37 진단 v' + C37.version + ']', info);
   return info;
 };
 
@@ -93192,6 +93398,9 @@ C37.rollback = function(){
   if(C37._origSample) window._rPPGSample = C37._origSample;
   if(C37._origChromUpdate) window._rPPGChromUpdate = C37._origChromUpdate;
   if(C37._origCalcVitals) window._rPPGCalcVitals = C37._origCalcVitals;
+  if(C37._origC24ChromStep) window._c24ChromStep = C37._origC24ChromStep;
+  if(C37._origC24CalcVitals) window._c24CalcVitals = C37._origC24CalcVitals;
+  if(C37._origC24ShowResult) window._c24ShowResult = C37._origC24ShowResult;
   if(C37._origGoPage) window.cgoGoPage = C37._origGoPage;
   C37.config.enabled = false;
   if(C37._imuHandler && C37.imu.supported){
@@ -93200,8 +93409,14 @@ C37.rollback = function(){
   console.warn('[C-37] 비상 롤백 완료 — 본진 원본 함수 복구');
 };
 
+// 수동으로 IMU 시작 (콘솔에서 호출 가능)
+C37.requestIMU = function(){ C37.startIMU(); };
+
+// 수동으로 패널 다시 렌더 (콘솔에서 호출 가능)
+C37.refreshPanel = function(){ C37.renderC24Panel(); };
+
 /* ════════════════════════════════════════════ */
-/* 자동 시작 — cgoGoPage 래핑으로 rPPG 페이지 진입 시 IMU 시작 */
+/* 자동 시작                                      */
 /* ════════════════════════════════════════════ */
 
 C37._autoStart = function(){
@@ -93209,7 +93424,8 @@ C37._autoStart = function(){
     C37._origGoPage = window.cgoGoPage;
     window.cgoGoPage = function(page){
       var r = C37._origGoPage.apply(this, arguments);
-      var rppgPages = ['scan', 'rppg-ar', 'algo-v2', 'couple', 'food', 'svi', 'family'];
+      // rPPG 사용 페이지 광범위 커버 (v1.0.1)
+      var rppgPages = ['scan', 'rppg-ar', 'algo-v2', 'algo', 'couple', 'food', 'svi', 'family', 'report', 'report-v2'];
       if(rppgPages.indexOf(page) > -1 && !C37.imu.supported){
         setTimeout(C37.startIMU, 100);
       }
@@ -93217,6 +93433,18 @@ C37._autoStart = function(){
     };
     console.log('[C-37] cgoGoPage 래핑 완료 · 자동 IMU 시작 (rPPG 페이지 진입 시)');
   }
+  // 추가 안전장치: 6부위 측정 시작 시점에도 IMU 시도
+  // (사용자가 카드 클릭하지 않고 다른 경로로 진입할 가능성 대비)
+  document.addEventListener('click', function(e){
+    if(!C37.imu.supported && C37.imu.permissionState !== 'denied'){
+      var t = e.target;
+      // C-24 측정 시작 관련 버튼 클릭 감지
+      if(t && (t.id === 'c24-start' || (t.onclick && t.onclick.toString().indexOf('_c24') > -1) ||
+               (t.parentElement && t.parentElement.id && t.parentElement.id.indexOf('c24') > -1))){
+        C37.startIMU();
+      }
+    }
+  }, {passive: true, capture: true});
   C37.ready = true;
 };
 
@@ -93230,7 +93458,8 @@ if(document.readyState !== 'loading'){
 
 console.log('[C-37] rPPG 강화 엔진 v' + C37.version + ' 박입 완료');
 console.log('[C-37] 모듈: 자이로 IMU · 드리프트 노치 · 파형 특징점(AI/PW50/RT/Decay) · 위험도 분류');
-console.log('[C-37] 콘솔 명령: _cgo37.diag() · _cgo37.toggle() · _cgo37.rollback()');
+console.log('[C-37] v1.0.1 — 6부위 종합 분석(_c24) 엔진 강화 추가 ★');
+console.log('[C-37] 콘솔 명령: _cgo37.diag() · _cgo37.toggle() · _cgo37.rollback() · _cgo37.refreshPanel()');
 
 })();
 </script>
