@@ -5449,7 +5449,7 @@ function cgoGuideFeature(key){
 
             <div onclick="cgoGoPage('algo-v2')" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(52,211,153,.06),rgba(56,189,248,.04));border:1px solid rgba(52,211,153,.3);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='linear-gradient(135deg,rgba(52,211,153,.12),rgba(56,189,248,.08))';this.style.borderColor='rgba(52,211,153,.55)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(52,211,153,.06),rgba(56,189,248,.04))';this.style.borderColor='rgba(52,211,153,.3)'">
               <span style="font-size:22px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(52,211,153,.15);border-radius:12px;flex-shrink:0;">🩺</span>
-              <div style="flex:1"><div style="font-size:14px;font-weight:800;color:rgba(245,230,175,1);letter-spacing:.02em;">🩺 나의 건강 예측</div><div style="font-size:11px;color:rgba(200,185,140,.55);margin-top:3px;line-height:1.4;">CHROM rPPG × 6부위 스캔 × 50대 역학 통합</div></div>
+              <div style="flex:1"><div style="font-size:14px;font-weight:800;color:rgba(245,230,175,1);letter-spacing:.02em;">🩺 나의 건강 예측 C-37</div><div style="font-size:11px;color:rgba(200,185,140,.55);margin-top:3px;line-height:1.4;">6부위 자기보정 × 한방 5패턴 × SpO2·BP·HRV 즉시 15진단</div></div>
               <span style="color:rgba(52,211,153,.7);font-size:18px;font-weight:300;">›</span>
             </div>
 
@@ -94257,5 +94257,161 @@ console.log('[C-37 v2.1] 철학: ZERO STORAGE · ZERO SERVER · INSTANT 5종 진
 
 })();
 </script>
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* C-37 v2.2 · 大將 L.J.R × C-37                                  */
+/* 측정 시작/종료 알림 소리 (Web Audio API)                          */
+/* 저장 0, 서버 0, 즉석 사운드 생성                                  */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+(function(){
+'use strict';
+
+if(!window._cgo37){
+  console.warn('[C-37 v2.2] v2.0/v2.1 박입 안 됨. v2.2 중단.');
+  return;
+}
+
+var C37 = window._cgo37;
+C37.version = '2.2.0';
+
+// AudioContext - 사용자 인터랙션 후 생성
+C37._audioCtx = null;
+C37._audioEnabled = true;
+
+C37._getAudioCtx = function(){
+  if(!C37._audioCtx){
+    try {
+      C37._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e){
+      console.warn('[C-37 v2.2] AudioContext 생성 실패:', e);
+      return null;
+    }
+  }
+  // 일시정지 상태면 재개 (iOS 등)
+  if(C37._audioCtx.state === 'suspended'){
+    C37._audioCtx.resume();
+  }
+  return C37._audioCtx;
+};
+
+// 단음 비프 헬퍼
+C37._playTone = function(freq, duration, volume, delay, type){
+  var ctx = C37._getAudioCtx();
+  if(!ctx || !C37._audioEnabled) return;
+
+  try {
+    var startTime = ctx.currentTime + (delay || 0);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    // ADSR 엔벨로프 (부드러운 페이드)
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume || 0.15, startTime + 0.02);
+    gain.gain.setValueAtTime(volume || 0.15, startTime + duration - 0.05);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  } catch(e){
+    console.warn('[C-37 v2.2] 톤 재생 오류:', e);
+  }
+};
+
+/* ════════════════════════════════════════════════ */
+/* 측정 시작 사운드 — 부드러운 상승 (도→솔)         */
+/* ════════════════════════════════════════════════ */
+C37.playStartSound = function(){
+  try {
+    // 도(C5) 523Hz → 솔(G5) 784Hz 상승
+    C37._playTone(523, 0.15, 0.12, 0, 'sine');       // 도
+    C37._playTone(784, 0.20, 0.15, 0.13, 'sine');    // 솔
+    console.log('[C-37 v2.2] 🔔 측정 시작 알림');
+  } catch(e){}
+};
+
+/* ════════════════════════════════════════════════ */
+/* 측정 종료 사운드 — 완료 화음 (도-미-솔)          */
+/* ════════════════════════════════════════════════ */
+C37.playEndSound = function(){
+  try {
+    // 도(C5) → 미(E5) → 솔(G5) → 도(C6) 상승 화음
+    C37._playTone(523, 0.12, 0.13, 0, 'sine');       // 도
+    C37._playTone(659, 0.12, 0.13, 0.10, 'sine');    // 미
+    C37._playTone(784, 0.15, 0.14, 0.20, 'sine');    // 솔
+    C37._playTone(1046, 0.30, 0.16, 0.32, 'sine');   // 도(높은)
+    console.log('[C-37 v2.2] 🎵 측정 완료 알림');
+  } catch(e){}
+};
+
+/* ════════════════════════════════════════════════ */
+/* 단계 진행 사운드 — 6부위 각 단계 완료 시 (선택)  */
+/* ════════════════════════════════════════════════ */
+C37.playStepSound = function(){
+  try {
+    C37._playTone(880, 0.08, 0.10, 0, 'sine');  // 가벼운 "딩"
+  } catch(e){}
+};
+
+/* ════════════════════════════════════════════════ */
+/* 본진 함수 래핑 — 자동 사운드 트리거             */
+/* ════════════════════════════════════════════════ */
+
+// 측정 시작 후크 (_c24CompStartReal 래핑)
+if(typeof window._c24CompStartReal === 'function'){
+  C37._origCompStartReal = window._c24CompStartReal;
+  window._c24CompStartReal = function(){
+    var r = C37._origCompStartReal.apply(this, arguments);
+    setTimeout(function(){ C37.playStartSound(); }, 50);
+    return r;
+  };
+  console.log('[C-37 v2.2] _c24CompStartReal 래핑 완료');
+}
+
+// 측정 종료 후크 (v2.0 _c24ShowResult 래핑 위에 추가)
+if(typeof window._c24ShowResult === 'function'){
+  var prevShow = window._c24ShowResult;
+  window._c24ShowResult = function(){
+    var r = prevShow.apply(this, arguments);
+    setTimeout(function(){ C37.playEndSound(); }, 100);
+    return r;
+  };
+  console.log('[C-37 v2.2] _c24ShowResult (종료 사운드) 래핑 완료');
+}
+
+// 단계 진행 후크 (각 부위 측정 완료 시 — 선택적)
+if(typeof window._c24CompStartStep === 'function'){
+  C37._origCompStartStep = window._c24CompStartStep;
+  window._c24CompStartStep = function(){
+    var r = C37._origCompStartStep.apply(this, arguments);
+    // step 시작 시 "딩" — 시작 사운드 직후라 첫 단계만 스킵
+    if(_c24CompState && _c24CompState.step > 0){
+      setTimeout(function(){ C37.playStepSound(); }, 50);
+    }
+    return r;
+  };
+  console.log('[C-37 v2.2] _c24CompStartStep (단계 사운드) 래핑 완료');
+}
+
+/* ════════════════════════════════════════════════ */
+/* 콘솔 명령 / 설정                                 */
+/* ════════════════════════════════════════════════ */
+C37.soundOn = function(){ C37._audioEnabled = true; console.log('[C-37 v2.2] 알림 ON'); };
+C37.soundOff = function(){ C37._audioEnabled = false; console.log('[C-37 v2.2] 알림 OFF'); };
+C37.testStartSound = function(){ C37.playStartSound(); };
+C37.testEndSound = function(){ C37.playEndSound(); };
+
+console.log('[C-37 v2.2] 측정 시작/종료 알림 소리 박입 완료');
+console.log('[C-37 v2.2] 콘솔: _cgo37.testStartSound() · .testEndSound() · .soundOn() · .soundOff()');
+console.log('[C-37 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔-도 화음 (620ms)');
+
+})();
+</script>
+
 
 
