@@ -4,6 +4,7 @@
 
 
 
+
 <!DOCTYPE html>
 <!-- CGO-FULI v2.3.0 deploy 2026-05-03 13:30 - 생체스캔 카드 3개 제거 (54건째 재시도) -->
 <html lang="ko">
@@ -5462,6 +5463,12 @@ function cgoGuideFeature(key){
             <div onclick="cgoGoPage('family')" class="menu-lock-item" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(52,211,153,.08)';this.style.borderColor='rgba(52,211,153,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
               <span style="font-size:22px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border-radius:12px;flex-shrink:0;">👨‍👩‍👧</span>
               <div style="flex:1"><div style="font-size:14px;font-weight:800;color:rgba(245,230,175,1);letter-spacing:.02em;">가족 ILI 관리</div><div style="font-size:11px;color:rgba(200,185,140,.55);margin-top:3px;line-height:1.4;">가족 구성원 통합 라이프 인덱스</div></div>
+              <span style="color:rgba(212,168,67,.7);font-size:18px;font-weight:300;">›</span>
+            </div>
+
+            <div onclick="cgoGoPage('iq')" class="menu-lock-item" style="display:flex;align-items:center;gap:14px;padding:15px 16px 15px 14px;background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);border-radius:16px;cursor:pointer;transition:all .3s;box-shadow:0 2px 12px rgba(0,0,0,.3);" onmouseover="this.style.background='rgba(212,168,67,.08)';this.style.borderColor='rgba(212,168,67,.3)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.borderColor='rgba(255,255,255,.07)'">
+              <span style="font-size:22px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border-radius:12px;flex-shrink:0;">🧠</span>
+              <div style="flex:1"><div style="font-size:14px;font-weight:800;color:rgba(245,230,175,1);letter-spacing:.02em;">나의 IQ C-36</div><div style="font-size:11px;color:rgba(200,185,140,.55);margin-top:3px;line-height:1.4;">175문항 · 5영역 인지 능력 측정</div></div>
               <span style="color:rgba(212,168,67,.7);font-size:18px;font-weight:300;">›</span>
             </div>
 
@@ -10942,6 +10949,35 @@ if(document.readyState === 'loading'){
 </script>
 <!-- ════ END Report Collapsible ════ -->
 
+
+    <!-- ══ 나의 IQ C-36 페이지 (25번째) ══ -->
+    <div class="page" id="page-iq">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+      <iframe id="c36IqFrame" src="https://fuli-c36-iq.vercel.app/" style="width:100%;height:100vh;border:0;display:block;background:#f8fafc;" allow="clipboard-read; clipboard-write"></iframe>
+      <div style="position:fixed;bottom:16px;right:8px;width:120px;height:54px;background:#f8fafc;z-index:8999;pointer-events:none;"></div>
+      <script>
+        (function(){
+          // C-36 IQ 페이지 진입 시 iframe 로딩 (지연 로딩 패턴)
+          var prevPage = null;
+          var origCgoGoPage = window.cgoGoPage;
+          if(typeof origCgoGoPage === 'function'){
+            window.cgoGoPage = function(page){
+              var result = origCgoGoPage.apply(this, arguments);
+              var frame = document.getElementById('c36IqFrame');
+              if(frame){
+                if(page === 'iq'){
+                  // IQ 페이지 진입 시 iframe src 설정 (최순 진입 또는 이전에 추출한 경우)
+                  if(!frame.src || frame.src === 'about:blank' || frame.src === window.location.href){
+                    frame.src = 'https://fuli-c36-iq.vercel.app/';
+                  }
+                }
+              }
+              return result;
+            };
+          }
+        })();
+      </script>
+    </div>
 
     <!-- ══ 풍수 카메라 ══ -->
     <div class="page" id="page-gmd">
@@ -85546,6 +85582,7 @@ function cgoGoPage(page){
     naming:'✍️ 작명', star:'⭐ 별 충전소', food:'🍱 음식 궁합 C-11', consult:'🔮 AI 상담',
     lotto:'🎰 행운 번호', couple:'💑 궁합 분석', sports:'⚽ 스포츠',
     stock:'📈 주식', travel:'🏨 풍수 여행', shop:'🛍️ 쇼핑', profile:'👤 프로필',
+    iq:'🧠 나의 IQ C-36',
     mai:'💄 화장 흡수 분석', svi:'💪 피부 탄력 분석',
     'rppg-ar':'🎨 C-29 AR 메이크업'
   };
