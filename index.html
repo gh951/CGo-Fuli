@@ -8979,7 +8979,7 @@ function cgoGuideFeature(key){
 
   <div id="scalp-intro-pop">
     <div class="sip-wrap">
-      <div class="sip-top"><button class="sip-close" onclick="document.getElementById('scalp-intro-pop').style.display='none';">×</button></div>
+      <div class="sip-top"><button class="sip-close" onclick="document.getElementById('scalp-intro-pop').style.display='none';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">×</button></div>
       <div class="sip-body">
         <div class="sip-hero">
           <div class="sip-badge">C-39 · BUJEOK LIFESTYLE</div>
@@ -9021,7 +9021,7 @@ function cgoGuideFeature(key){
         <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">💓 rPPG 자율신경 융합 (C-37 연동)</div><div class="sip-step-desc">먼저 <b>C-37 건강 예측</b>을 측정하시면 얼굴 rPPG·자율신경 데이터가 두피 분석에 융합됩니다. <b>세계 어떤 앱도 안 하는 FULI 차별점</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">5</div><div class="sip-step-body"><div class="sip-step-title">🤖 두피 케어 AI 상담</div><div class="sip-step-desc">두피·탈모 임상 지식 + 한의학 종합 1:1 맞춤 가이드 + 오행 라이프웨어(C-04·C-16·C-02) 자동 매칭.</div></div></div>
 
-        <button class="sip-cta" onclick="document.getElementById('scalp-intro-pop').style.display='none';">✓ 이해했어요, 시작하기</button>
+        <button class="sip-cta" onclick="document.getElementById('scalp-intro-pop').style.display='none';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">✓ 이해했어요, 시작하기</button>
         <div class="sip-disc">⚠️ 본 도구는 의료 진단·예측·치료 기기가 아닙니다. 두피 라이프스타일 셀프 트래킹 참고용입니다. 의학적 판단은 피부과·트리코로지 전문의 상담을 권장드립니다.</div>
       </div>
     </div>
@@ -9049,7 +9049,39 @@ function cgoGuideFeature(key){
       <!-- 페이지 제목 -->
       <!-- 도움말 버튼 (상단) -->
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <button onclick="var p=document.getElementById('scalp-intro-pop');if(p)p.style.display='block';" style="padding:8px 14px;background:#fff;border:1px solid #d4a843;border-radius:20px;color:#d4a843;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(212,168,67,.1);">📖 사용 설명서</button>
+        <button id="scalp-khanbang-btn-page" onclick="window.scalpShowKHanbang()" style="display:none;padding:8px 14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:20px;color:#fff;font-size:11px;font-weight:800;cursor:pointer;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(16,185,129,.3);">🌿 K-한방 변증 (옵션)</button>
+        </div>
+        <script>
+        // C-39 v1.3 — K-한방 버튼 페이지 상단 노출 (관련 국가만)
+        (function(){
+          try {
+            var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+            var khanbangLangs = ['ko','zh','ja','vi','th','id','ms','ar','tr','hi','ru','uk'];
+            var isKHL = khanbangLangs.some(function(lc){ return userLang.indexOf(lc) === 0; });
+            if(isKHL){
+              var btn = document.getElementById('scalp-khanbang-btn-page');
+              if(btn){
+                btn.style.display = 'flex';
+                // 다국어 라벨
+                var label = '🌿 K-한방 변증 (옵션)';
+                if(userLang.indexOf('zh') === 0) label = '🌿 韓方診斷 (選擇)';
+                else if(userLang.indexOf('ja') === 0) label = '🌿 韓方診断 (オプション)';
+                else if(userLang.indexOf('ar') === 0) label = '🌿 الطب الكوري';
+                else if(userLang.indexOf('ru') === 0) label = '🌿 Корейская мед.';
+                else if(userLang.indexOf('vi') === 0) label = '🌿 Y học Hàn Quốc';
+                else if(userLang.indexOf('th') === 0) label = '🌿 การแพทย์เกาหลี';
+                else if(userLang.indexOf('hi') === 0) label = '🌿 कोरियाई चिकित्सा';
+                else if(userLang.indexOf('tr') === 0) label = '🌿 Kore Tıbbı';
+                else if(userLang.indexOf('id') === 0 || userLang.indexOf('ms') === 0) label = '🌿 Pengobatan Korea';
+                else if(userLang.indexOf('uk') === 0) label = '🌿 Корейська мед.';
+                btn.textContent = label;
+              }
+            }
+          } catch(e){}
+        })();
+        </script>
       </div>
 
       <div style="text-align:center;margin-bottom:24px;padding:24px 16px 20px;background:linear-gradient(180deg,#fff,#fef9f3);border-radius:18px;border:1px solid #f0e6d4;">
@@ -9293,23 +9325,29 @@ function cgoGuideFeature(key){
   <script>
   (function(){
     var _scalpShown = false;
+    // C-39 v1.3 — 페이지 진입 즉시 팝업 (setTimeout 제거)
+    function _scalpShowIntroNow(){
+      if(_scalpShown) return;
+      _scalpShown = true;
+      var p = document.getElementById('scalp-intro-pop');
+      if(p){
+        p.style.display = 'block';
+        // 페이지 본문 깜빡임 방지 — 팝업 z-index 강제 최상단
+        p.style.zIndex = '99999';
+      }
+    }
     window.addEventListener('hashchange', function(){
       if(location.hash === '#scalp' && !_scalpShown){
-        _scalpShown = true;
-        setTimeout(function(){
-          var p = document.getElementById('scalp-intro-pop');
-          if(p) p.style.display = 'block';
-        }, 200);
+        _scalpShowIntroNow();
       }
     });
     if(location.hash === '#scalp'){
-      setTimeout(function(){
-        if(!_scalpShown){
-          _scalpShown = true;
-          var p = document.getElementById('scalp-intro-pop');
-          if(p) p.style.display = 'block';
-        }
-      }, 500);
+      // 즉시 표시 (setTimeout 0ms — DOM 준비 직후)
+      if(document.readyState === 'complete' || document.readyState === 'interactive'){
+        _scalpShowIntroNow();
+      } else {
+        document.addEventListener('DOMContentLoaded', _scalpShowIntroNow);
+      }
     }
   })();
 
@@ -84538,6 +84576,17 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
+  // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (깜빡임 0)
+  if(arguments[0] === 'scalp'){
+    try {
+      var _seen = localStorage.getItem('scalp_intro_seen');
+      var p = document.getElementById('scalp-intro-pop');
+      if(p && !_seen){
+        p.style.display = 'block';
+        p.style.zIndex = '99999';
+      }
+    } catch(e){}
+  }
   // 대시보드 이탈 시 스크롤 위치 저장
   if (_cgCurrent === 'dashboard' && page !== 'dashboard') {
     var _saveCt = document.querySelector('.content');
