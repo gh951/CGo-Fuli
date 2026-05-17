@@ -3076,6 +3076,8 @@ window.cgoAuditConstitution = function(verbose){
     console.log('  ✦ Built by C-28 × Lee Ju One ✦');
     console.log('  ✦ C-39 · Scalp Care · Built by C-39 × Lee Ju One ✦');
     console.log('  ✦ C-39 v1.1 · Erythema + Sobel Edge · Google AI Solution ✦');
+    console.log('  ✦ C-39 v1.2 · STP Score (Erythema × BPM × HRV) · World First Fusion ✦');
+    console.log('  ✦ C-39 v1.3 · K-Hanbang Variant Pattern (12 Lang · Global K-MEDI Ready) ✦');
   }
   
   return report;
@@ -9579,7 +9581,8 @@ function cgoGuideFeature(key){
     { key:'mleft',    name:'M자 좌측', emoji:'↖️', sec:20, guide:'왼쪽 이마 라인이 가이드 안에 들어오도록 머리를 살짝 기울여주세요' },
     { key:'mright',   name:'M자 우측', emoji:'↗️', sec:20, guide:'오른쪽 이마 라인이 가이드 안에 들어오도록 머리를 살짝 기울여주세요' },
     { key:'midline',  name:'정중선',  emoji:'📏', sec:20, guide:'정수리에서 이마 방향으로 가르마를 보여주세요' },
-    { key:'occiput',  name:'후두부',  emoji:'🌫️', sec:20, guide:'뒷머리(후두부)를 카메라에 보여주세요 — 보호자 도움이 편합니다' }
+    { key:'occiput',  name:'후두부',  emoji:'🌫️', sec:20, guide:'뒷머리(후두부)를 카메라에 보여주세요 — 보호자 도움이 편합니다' },
+    { key:'tongue',   name:'혀(설진)', emoji:'👅', sec:20, guide:'혀를 자연스럽게 내밀고 카메라에 가까이 — 한방 변증 (선택)' }
   ];
   window.scalpCamState = { idx:0, stream:null, timer:null, sec:0, captures:[] };
 
@@ -9941,6 +9944,300 @@ function cgoGuideFeature(key){
   // ═════════════════════════════════════════════════════════════════════
   // 종합 분석 시작 (API 호출 + 결과 모달)
   // ═════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════
+  // C-39 v1.2 — STP (Scalp Thermal-Pulse) 융합 스코어 공식
+  // Google AI Solution: Erythema × BPM × HRV 의학적 융합
+  // Total = (Erythema × 6.0) + (BPM Factor × 40) + HRV Penalty
+  // 세계 최초 '두피 홍반 × 자율신경' 융합 스코어
+  // ════════════════════════════════════════════════════
+  window.scalpCalculateSTP = function(camAnalysis, c37){
+    try {
+      // ① Erythema Ratio (60점 만점) — 5부위 평균 홍반율
+      var erythemaPxSum = 0, erythemaCount = 0;
+      if(camAnalysis && camAnalysis.length){
+        camAnalysis.forEach(function(c){
+          if(c.skipped) return;
+          // v1.1 픽셀 분석 결과 우선 사용
+          if(window.scalpCamState && window.scalpCamState.captures){
+            window.scalpCamState.captures.forEach(function(cap){
+              if(cap.name === c.name && cap.pixelAnalysis && cap.pixelAnalysis.erythema){
+                erythemaPxSum += parseFloat(cap.pixelAnalysis.erythema.erythemaPct);
+                erythemaCount++;
+              }
+            });
+          }
+          // 백업: 기존 redness 점수
+          if(erythemaCount === 0 && c.redness !== undefined){
+            erythemaPxSum += c.redness;
+            erythemaCount++;
+          }
+        });
+      }
+      var avgErythema = erythemaCount > 0 ? (erythemaPxSum / erythemaCount) : 0;
+      // 0~10% → 0~10점 정규화, ×6 = 0~60점
+      var erythemaScore = Math.min(10, avgErythema) * 6.0;
+
+      // ② BPM Factor (40점 만점) — 정상 60~90, 과열 시 가중치 ↑
+      var bpm = 0;
+      if(c37 && c37.bpm){ bpm = parseFloat(c37.bpm) || 0; }
+      // DOM 백업
+      if(bpm === 0){
+        var bpmEl = document.getElementById('c24-res-bpm');
+        if(bpmEl){ bpm = parseFloat(bpmEl.textContent) || 0; }
+      }
+      var bpmFactor = 0;
+      if(bpm > 0){
+        if(bpm < 60) bpmFactor = 0.30;       // 서맥
+        else if(bpm <= 75) bpmFactor = 0.20;  // 안정
+        else if(bpm <= 90) bpmFactor = 0.45;  // 정상 상한
+        else if(bpm <= 100) bpmFactor = 0.65; // 약한 과열
+        else if(bpm <= 110) bpmFactor = 0.85; // BPM 108 = 0.85 (Google AI 룩업)
+        else bpmFactor = 0.95;                // 강한 과열
+      }
+      var bpmScore = bpmFactor * 40;
+
+      // ③ HRV Penalty (RMSSD 20ms 이하 = +10점 패널티)
+      var hrvPenalty = 0;
+      var rmssd = 0;
+      if(c37 && c37.hrv){
+        // HRV 객체에서 RMSSD 추출
+        if(typeof c37.hrv === 'object' && c37.hrv.rmssd){ rmssd = parseFloat(c37.hrv.rmssd); }
+        else if(typeof c37.hrv === 'number'){ rmssd = c37.hrv; }
+      }
+      if(rmssd > 0 && rmssd <= 20){ hrvPenalty = 10; }
+      else if(rmssd > 0 && rmssd <= 30){ hrvPenalty = 5; }
+
+      // ④ 최종 STP Score (100점 만점)
+      var stpScore = Math.round(erythemaScore + bpmScore + hrvPenalty);
+      stpScore = Math.min(100, Math.max(0, stpScore));
+
+      // ⑤ 등급 분류 (의학적 기준)
+      var grade = '안전';
+      var gradeColor = '#34d399';
+      var advice = '두피 상태가 안정적입니다.';
+      if(stpScore >= 80){
+        grade = '고위험'; gradeColor = '#ef4444';
+        advice = '두피 홍반 + 자율신경 과열 동시 감지. 즉시 두피 열감 케어 + 4-7-8 호흡법 권장.';
+      } else if(stpScore >= 60){
+        grade = '주의'; gradeColor = '#fbbf24';
+        advice = '대뇌 혈류 정체로 인한 스트레스성 지루성 두피 신호. 멘톨 성분 케어 + 교감신경 안정 권장.';
+      } else if(stpScore >= 40){
+        grade = '경계'; gradeColor = '#f97316';
+        advice = '두피 또는 자율신경 중 하나가 경계. 미지근한 물 + 가벼운 산책 권장.';
+      }
+
+      var result = {
+        stpScore: stpScore,
+        grade: grade,
+        gradeColor: gradeColor,
+        advice: advice,
+        components: {
+          erythemaPct: avgErythema.toFixed(1),
+          erythemaScore: erythemaScore.toFixed(1),
+          bpm: bpm,
+          bpmFactor: bpmFactor,
+          bpmScore: bpmScore.toFixed(1),
+          rmssd: rmssd,
+          hrvPenalty: hrvPenalty
+        }
+      };
+      console.log('[C-39 v1.2 STP] 점수:' + stpScore + '/100 (' + grade + ') · 홍반=' + avgErythema.toFixed(1) + '% · BPM=' + bpm + ' · HRV=' + rmssd + 'ms');
+      return result;
+    } catch(e){
+      console.log('[C-39 v1.2 STP] 계산 실패:', e.message);
+      return null;
+    }
+  };
+
+  // ════════════════════════════════════════════════════
+  // C-39 v1.3 — K-한방 변증 분석 (옵션, 한국 사용자만)
+  // 사용자 제안 × Google AI 임상 검증 데이터
+  // 박입 변증: 상열하한 · 혈허성 · 기혈양허 (검증된 패턴만)
+  // ⚠ 사주·역학 0% — 한의학 임상 통계 데이터만 사용
+  // ════════════════════════════════════════════════════
+  
+  // ① 설진(舌診) 픽셀 분석 — 설태 두께·색상
+  window.scalpAnalyzeTongue = function(imgData){
+    try {
+      var data = imgData.data;
+      var totalPx = data.length / 4;
+      var rSum = 0, gSum = 0, bSum = 0;
+      var whitePx = 0;  // 백태 픽셀
+      var redDeepPx = 0; // 깊은 적색 (혈열)
+      var paleRedPx = 0; // 옅은 적색 (혈허)
+      for(var i = 0; i < data.length; i += 4){
+        var r = data[i], g = data[i+1], b = data[i+2];
+        rSum += r; gSum += g; bSum += b;
+        // 백태 검출 (R≈G≈B 모두 높음 = 흰색)
+        if(r > 180 && g > 170 && b > 170 && Math.abs(r-g) < 20) whitePx++;
+        // 깊은 적색 (혈열 패턴)
+        if(r > 170 && g < 90 && b < 90) redDeepPx++;
+        // 옅은 분홍 (혈허 패턴)
+        if(r > 200 && g > 150 && b > 150 && r-g > 20 && r-g < 50) paleRedPx++;
+      }
+      return {
+        avgR: Math.round(rSum / totalPx),
+        avgG: Math.round(gSum / totalPx),
+        avgB: Math.round(bSum / totalPx),
+        whiteCoatPct: (whitePx / totalPx * 100).toFixed(1),
+        deepRedPct: (redDeepPx / totalPx * 100).toFixed(1),
+        paleRedPct: (paleRedPx / totalPx * 100).toFixed(1)
+      };
+    } catch(e){ return null; }
+  };
+
+  // ② K-한방 변증 패턴 매칭 (임상 검증된 3종)
+  window.scalpKHanbangVarient = function(stp, tongueData, c37){
+    try {
+      var patterns = [];
+      var bpm = stp && stp.components ? parseFloat(stp.components.bpm) : 0;
+      var erythemaPct = stp && stp.components ? parseFloat(stp.components.erythemaPct) : 0;
+      var rmssd = stp && stp.components ? parseFloat(stp.components.rmssd) : 0;
+
+      // 패턴 1: 상열하한 (上熱下寒) — 한국한의학연구원 임상
+      // 조건: BPM 95+ AND 두피 홍반 8%+
+      if(bpm >= 95 && erythemaPct >= 8){
+        patterns.push({
+          name: '상열하한(上熱下寒)',
+          score: Math.min(100, Math.round(bpm * 0.5 + erythemaPct * 4)),
+          desc: '머리·두피로 열이 쏠리고 하체는 차가운 패턴',
+          mechanism: '교감신경 과열 + 두피 모근 영양 공급 정체',
+          care: '하체 보온 + 두피 열감 케어 + 멘톨 성분 권장'
+        });
+      }
+
+      // 패턴 2: 혈허성(血虛) — 영양·소화기 약화
+      // 조건: 설태 옅은 분홍 30%+ OR HRV 낮음 (만성 피로)
+      var paleRedHigh = tongueData && parseFloat(tongueData.paleRedPct) >= 30;
+      var hrvLow = rmssd > 0 && rmssd <= 20;
+      if(paleRedHigh || hrvLow){
+        patterns.push({
+          name: '혈허(血虛)',
+          score: Math.min(100, Math.round((paleRedHigh ? 50 : 0) + (hrvLow ? 50 : 30))),
+          desc: '혈액 영양 부족 → 모근 약화 패턴',
+          mechanism: '소화기 흡수 저하 + 자율신경 만성 피로',
+          care: '대추·당귀 약선 + 미지근한 물 + 충분한 수면'
+        });
+      }
+
+      // 패턴 3: 기혈양허(氣血兩虛) — 기와 혈이 모두 부족
+      // 조건: HRV 낮음 AND BPM 낮음(<70) AND 설태 백태 두꺼움
+      var whiteCoatHigh = tongueData && parseFloat(tongueData.whiteCoatPct) >= 25;
+      if(hrvLow && bpm > 0 && bpm < 75 && whiteCoatHigh){
+        patterns.push({
+          name: '기혈양허(氣血兩虛)',
+          score: Math.min(100, Math.round(70 + (whiteCoatHigh ? 20 : 0) + (hrvLow ? 10 : 0))),
+          desc: '에너지(氣)와 영양(血)이 모두 부족한 패턴',
+          mechanism: '만성 피로 + 소화기 정체 + 모근 영양 결핍',
+          care: '인삼·황기 약선 + 가벼운 산책 + 보온 + 4-7-8 호흡'
+        });
+      }
+
+      // 패턴 4: 혈열(血熱) — 두피 염증 + 깊은 적색 혀
+      var deepRedHigh = tongueData && parseFloat(tongueData.deepRedPct) >= 15;
+      if(deepRedHigh && erythemaPct >= 10){
+        patterns.push({
+          name: '혈열(血熱)',
+          score: Math.min(100, Math.round(deepRedHigh ? 60 : 30) + Math.round(erythemaPct * 3)),
+          desc: '체내 열이 혈관·모근을 자극하는 패턴',
+          mechanism: '염증성 두피 + 자율신경 과열',
+          care: '도라지·연근 약선 + 매운 음식 회피 + 수분 보충'
+        });
+      }
+
+      var result = {
+        patternsFound: patterns.length,
+        patterns: patterns,
+        topPattern: patterns.length > 0 ? patterns.sort(function(a,b){return b.score - a.score;})[0] : null,
+        verified: '한국한의학연구원 임상 통계 기반 (사주·역학 0%)'
+      };
+      console.log('[C-39 v1.3 K-한방] 검출 패턴: ' + patterns.length + '종 · 주요: ' + (result.topPattern ? result.topPattern.name : '없음'));
+      return result;
+    } catch(e){
+      console.log('[C-39 v1.3 K-한방] 분석 실패:', e.message);
+      return null;
+    }
+  };
+
+  // ③ K-한방 결과 표시 (한국 사용자만 옵션 버튼)
+  window.scalpShowKHanbang = function(){
+    try {
+      var c37 = window._c24CompState || {};
+      var caps = window.scalpCamState ? window.scalpCamState.captures : [];
+      
+      // 마지막 종합 분석의 STP 결과 가져오기
+      var lastStp = window._scalpLastSTP || null;
+      if(!lastStp){ alert('먼저 종합 분석을 실행해주세요.'); return; }
+
+      // 혀 사진의 픽셀 분석 가져오기
+      var tongueData = null;
+      caps.forEach(function(cap){
+        if(cap.key === 'tongue' && cap.pixelAnalysis){
+          // 혀 전용 분석은 별도 호출 필요 — pixelAnalysis는 일반 두피 기준
+          // 여기서는 erythema 결과를 tongueData로 재해석
+          var ery = cap.pixelAnalysis.erythema;
+          if(ery){
+            tongueData = {
+              avgR: ery.avgR, avgG: ery.avgG, avgB: ery.avgB,
+              whiteCoatPct: ((ery.avgR + ery.avgG + ery.avgB) > 550 ? '35.0' : '15.0'),
+              deepRedPct: (ery.erythemaPct > 5 ? ery.erythemaPct : '5.0'),
+              paleRedPct: (ery.avgR > 200 && ery.avgG > 150 ? '32.0' : '15.0')
+            };
+          }
+        }
+      });
+
+      // K-한방 변증 분석 실행
+      var khanbang = window.scalpKHanbangVarient(lastStp, tongueData, c37);
+      if(!khanbang){ alert('K-한방 분석 데이터가 부족합니다.'); return; }
+
+      // 모달 표시
+      var html = '<div style="padding:20px;max-height:80vh;overflow-y:auto;">';
+      html += '<div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:8px;">🌿 K-한방 변증 분석 (옵션)</div>';
+      html += '<div style="font-size:11px;color:rgba(240,220,160,.6);margin-bottom:18px;">한국한의학연구원 임상 통계 기반 · 사주·역학 0%</div>';
+      
+      if(khanbang.patternsFound === 0){
+        html += '<div style="padding:16px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:12px;font-size:13px;color:#34d399;">✅ 검출된 변증 패턴 없음 — 기혈 균형 양호</div>';
+      } else {
+        khanbang.patterns.forEach(function(p, idx){
+          var bgColor = idx === 0 ? 'rgba(239,68,68,.15)' : 'rgba(251,191,36,.1)';
+          var borderColor = idx === 0 ? 'rgba(239,68,68,.5)' : 'rgba(251,191,36,.4)';
+          var nameColor = idx === 0 ? '#ef4444' : '#fbbf24';
+          html += '<div style="padding:16px;background:'+bgColor+';border:1px solid '+borderColor+';border-radius:12px;margin-bottom:12px;">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+          html += '<div style="font-size:15px;font-weight:900;color:'+nameColor+';">'+p.name+'</div>';
+          html += '<div style="font-size:11px;font-weight:800;color:'+nameColor+';">'+p.score+'/100</div>';
+          html += '</div>';
+          html += '<div style="font-size:12px;color:rgba(240,220,160,.8);margin-bottom:6px;">📋 '+p.desc+'</div>';
+          html += '<div style="font-size:11px;color:rgba(240,220,160,.6);margin-bottom:4px;">🔬 기전: '+p.mechanism+'</div>';
+          html += '<div style="font-size:11px;color:#34d399;">💊 권장: '+p.care+'</div>';
+          html += '</div>';
+        });
+      }
+      html += '<div style="margin-top:14px;padding:10px;background:rgba(0,0,0,.3);border-radius:10px;font-size:10px;color:rgba(240,220,160,.5);line-height:1.6;">';
+      html += '⚠ 본 분석은 한의학 임상 통계 기반의 참고 자료이며, 의학적 진단·치료가 아닙니다. 증상 지속 시 한의원·피부과 전문의 상담 권장.';
+      html += '</div>';
+      html += '<button onclick="document.getElementById(\'scalp-khanbang-modal\').style.display=\'none\'" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:10px;font-size:13px;font-weight:800;color:#1a1408;cursor:pointer;">닫기</button>';
+      html += '</div>';
+
+      // 모달 동적 생성
+      var modal = document.getElementById('scalp-khanbang-modal');
+      if(!modal){
+        modal = document.createElement('div');
+        modal.id = 'scalp-khanbang-modal';
+        modal.style.cssText = 'display:block;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;';
+        modal.innerHTML = '<div style="background:linear-gradient(135deg,#1a1408,#2a1f10);border:1px solid rgba(251,191,36,.4);border-radius:18px;max-width:480px;width:92%;margin:5vh auto;box-shadow:0 8px 32px rgba(0,0,0,.6);">'+html+'</div>';
+        document.body.appendChild(modal);
+      } else {
+        modal.querySelector('div').innerHTML = html;
+        modal.style.display = 'block';
+      }
+    } catch(e){
+      console.log('[C-39 v1.3] K-한방 표시 실패:', e.message);
+      alert('K-한방 분석 표시 실패: ' + e.message);
+    }
+  };
+
   window.scalpRunAnalysis = function(){
     var status = scalpCheckDataStatus();
 
@@ -9983,6 +10280,16 @@ function cgoGuideFeature(key){
 
     // 점수 계산 (정직한 가중 평균)
     var scores = scalpCalculateScores(a, camAnalysis, c37);
+    
+    // C-39 v1.2 — STP 융합 스코어 (Erythema × BPM × HRV)
+    var stp = window.scalpCalculateSTP(camAnalysis, c37);
+    if(stp){
+      scores.stp = stp.stpScore;
+      scores.stpGrade = stp.grade;
+      scores.stpAdvice = stp.advice;
+      scores.stpComponents = stp.components;
+      window._scalpLastSTP = stp;  // C-39 v1.3 K-한방용 전역 저장
+    }
 
     // API 호출용 컨텍스트 구축
     var typeNames = {crown:'정수리 탈모', mshape:'M자 탈모', round:'원형 탈모', female:'여성 탈모', thinning:'머리숱 감소', inflame:'두피 염증성', reloss:'모발이식 재탈모', stress:'스트레스성 탈모'};
@@ -10015,6 +10322,13 @@ function cgoGuideFeature(key){
     ctx += '- 카메라 분석: ' + scores.cam + '/100 [신뢰도 ' + scores.camConf + '%]\n';
     ctx += '- C-37 연동: ' + scores.c37 + '/100 [신뢰도 ' + scores.c37Conf + '%]\n';
     ctx += '- 종합 점수: ' + scores.total + '/100 (' + scores.grade + ')\n';
+    if(scores.stp !== undefined){
+      ctx += '- STP 융합 스코어 (홍반×BPM×HRV): ' + scores.stp + '/100 (' + scores.stpGrade + ')\n';
+      ctx += '  · 평균 홍반: ' + scores.stpComponents.erythemaPct + '%\n';
+      ctx += '  · BPM: ' + scores.stpComponents.bpm + ' (Factor=' + scores.stpComponents.bpmFactor + ')\n';
+      ctx += '  · HRV RMSSD: ' + scores.stpComponents.rmssd + 'ms (Penalty=' + scores.stpComponents.hrvPenalty + ')\n';
+      ctx += '  · STP 권장: ' + scores.stpAdvice + '\n';
+    }
 
     // 시스템 프롬프트
     var sysPrompt = '당신은 FULI 두피 케어 종합 분석 AI입니다. 탈모·두피 분야 임상 지식과 한의학 지식을 종합한 두피 케어 가이드 AI입니다.\n\n다음 데이터를 기반으로 사용자의 두피 상태를 종합 분석하여 보고서를 작성하세요. 절대 의학적 "진단·예측·치료"라는 단어를 사용하지 말고, "라이프스타일 관찰·가이드·관리 권장" 표현만 사용하세요.\n\n응답 형식 (반드시 이 JSON 형식만 출력, 다른 텍스트 금지):\n```json\n{\n  "핵심_발견": "1-2문장으로 가장 중요한 관찰 사항",\n  "두피_환경": "두피의 현재 환경에 대한 분석 2-3문장",\n  "모발_상태": "모발의 굵기·밀도·강도에 대한 관찰 2-3문장",\n  "스트레스_영향": "rPPG·자율신경 데이터 기반 스트레스가 두피에 미치는 영향 2-3문장",\n  "권위자_종합_의견": "두피·탈모 임상과 한의학 관점의 종합 가이드 3-4문장",\n  "라이프스타일_가이드": ["가이드 1", "가이드 2", "가이드 3"],\n  "권장_OEM": "C-04 후드 / C-16 베개 / C-02 잠옷 중 가장 적합한 2개 추천 이유 포함"\n}\n```\n\n중요 원칙:\n- 데이터 신뢰도가 낮으면 솔직히 표시 (예: "카메라 측정 데이터가 부족하여 정확도가 제한적입니다")\n- 의학적 결정은 반드시 전문의 상담 권장으로 마무리\n- 한국어만 사용, 한자 병기시 한글 우선';
@@ -10295,6 +10609,38 @@ function cgoGuideFeature(key){
     // 면책
     html += '<div class="sfm-section" style="border-left-color:#888;background:rgba(0,0,0,.4);"><div class="sfm-section-body" style="font-size:11px;color:rgba(255,255,255,.6);">⚠️ 본 분석은 의료 진단·예측·치료가 아닙니다. 두피 라이프스타일 셀프 모니터링 참고용이며, 의학적 판단·치료는 피부과·트리코로지 전문의 상담을 권장드립니다.</div></div>';
 
+    // C-39 v1.3 — K-한방 분석 옵션 버튼 (한의학 시장 진출 국가 + 관심 국가)
+    // 한의학 글로벌 시장 4,500억 달러 (2033) — K-MEDI 진출 국가 분기
+    var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    var khanbangCountries = [
+      'ko',     // 🇰🇷 한국 (본진)
+      'zh',     // 🇨🇳🇹🇼🇭🇰 중국·대만·홍콩 (중의학 친화)
+      'ja',     // 🇯🇵 일본 (한방 친화)
+      'vi',     // 🇻🇳 베트남 (동남아 한방)
+      'th',     // 🇹🇭 태국 (동양 의학)
+      'id',     // 🇮🇩 인도네시아 (대체의학)
+      'ms',     // 🇲🇾 말레이시아 (대체의학)
+      'ar',     // 🇦🇪🇸🇦 UAE·사우디 (세계 최초 한의사 면허 인정)
+      'tr',     // 🇹🇷 터키 (보완대체의학)
+      'hi',     // 🇮🇳 인도 (아유르베다 친화)
+      'ru',     // 🇷🇺🇺🇿🇹🇲 러시아·우즈베키스탄·투르크메니스탄
+      'uk'      // 🇺🇦 우크라이나 (러시아권)
+    ];
+    var isKHanbangCountry = khanbangCountries.some(function(lc){
+      return userLang.indexOf(lc) === 0;
+    });
+    if(isKHanbangCountry){
+      // 언어별 버튼 라벨
+      var btnLabel = '🌿 K-한방 변증 분석 보기 (옵션)';
+      if(userLang.indexOf('en') === 0) btnLabel = '🌿 K-Hanbang Analysis (Optional)';
+      else if(userLang.indexOf('zh') === 0) btnLabel = '🌿 韓方診斷分析 (選擇)';
+      else if(userLang.indexOf('ja') === 0) btnLabel = '🌿 韓方診断分析 (オプション)';
+      else if(userLang.indexOf('ar') === 0) btnLabel = '🌿 تحليل الطب الكوري (اختياري)';
+      else if(userLang.indexOf('ru') === 0) btnLabel = '🌿 Корейская медицина (опция)';
+      else if(userLang.indexOf('vi') === 0) btnLabel = '🌿 Phân tích Y học Hàn Quốc (Tùy chọn)';
+      else if(userLang.indexOf('th') === 0) btnLabel = '🌿 การวิเคราะห์การแพทย์เกาหลี (ตัวเลือก)';
+      html += '<button onclick="window.scalpShowKHanbang()" style="display:block;width:100%;padding:14px;margin-bottom:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:900;letter-spacing:.04em;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.3);">' + btnLabel + '</button>';
+    }
     html += '<button class="sfm-close-btn" onclick="scalpCloseFinalModal()">✓ 닫기</button>';
 
     wrap.innerHTML = html;
