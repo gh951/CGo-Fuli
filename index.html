@@ -3075,6 +3075,7 @@ window.cgoAuditConstitution = function(verbose){
     }
     console.log('  ✦ Built by C-28 × Lee Ju One ✦');
     console.log('  ✦ C-39 · Scalp Care · Built by C-39 × Lee Ju One ✦');
+    console.log('  ✦ C-39 v1.1 · Erythema + Sobel Edge · Google AI Solution ✦');
   }
   
   return report;
@@ -9680,6 +9681,71 @@ function cgoGuideFeature(key){
   }
 
   // 캡처 (Canvas로 video → image)
+  // ════════════════════════════════════════════════════
+  // C-39 v1.1 — 클라이언트 픽셀 분석 엔진 (Google AI 솔루션)
+  // ① 두피 홍반 검출 (R-G-B 적색 치우침)
+  // ② Sobel Edge 모발 윤곽 (3x3 회선 행렬)
+  // 추가 용량: ~3KB | 외부 의존성: 0 | 본진 SoC 완전 보존
+  // ════════════════════════════════════════════════════
+  
+  // ① 두피 홍반 픽셀 분석 (염증·열감 검출)
+  window.scalpAnalyzeErythema = function(imgData){
+    try {
+      var data = imgData.data;
+      var erythemaPx = 0;
+      var totalPx = data.length / 4;
+      var rSum = 0, gSum = 0, bSum = 0;
+      for(var i = 0; i < data.length; i += 4){
+        var r = data[i], g = data[i+1], b = data[i+2];
+        rSum += r; gSum += g; bSum += b;
+        // 적색 치우침 스코어 (Google AI 수식)
+        var score = r - (g * 0.6 + b * 0.4);
+        if(score > 35 && r > 120) erythemaPx++;
+      }
+      return {
+        erythemaPct: (erythemaPx / totalPx * 100).toFixed(1),
+        avgR: Math.round(rSum / totalPx),
+        avgG: Math.round(gSum / totalPx),
+        avgB: Math.round(bSum / totalPx),
+        confidence: totalPx > 50000 ? 'high' : 'mid'
+      };
+    } catch(e){ return null; }
+  };
+  
+  // ② Sobel Edge — 모발 윤곽·밀도 카운트
+  window.scalpDetectHairEdge = function(imgData, w, h){
+    try {
+      var d = imgData.data;
+      var kx = [-1,0,1,-2,0,2,-1,0,1];
+      var ky = [-1,-2,-1,0,0,0,1,2,1];
+      var edgePx = 0;
+      var sampleStep = 2; // 성능 위해 2픽셀 간격 샘플링
+      for(var y = 1; y < h - 1; y += sampleStep){
+        for(var x = 1; x < w - 1; x += sampleStep){
+          var gx = 0, gy = 0;
+          for(var cy = -1; cy <= 1; cy++){
+            for(var cx = -1; cx <= 1; cx++){
+              var idx = ((y + cy) * w + (x + cx)) * 4;
+              var val = (d[idx] + d[idx+1] + d[idx+2]) / 3;
+              var kIdx = (cy + 1) * 3 + (cx + 1);
+              gx += val * kx[kIdx];
+              gy += val * ky[kIdx];
+            }
+          }
+          var mag = Math.sqrt(gx * gx + gy * gy);
+          if(mag > 50) edgePx++;
+        }
+      }
+      var sampleArea = Math.floor((w-2)/sampleStep) * Math.floor((h-2)/sampleStep);
+      return {
+        edgeDensity: (edgePx / sampleArea * 100).toFixed(1),
+        edgeCount: edgePx,
+        sampledArea: sampleArea
+      };
+    } catch(e){ return null; }
+  };
+  
+  // ③ 캡처 + 픽셀 분석 통합
   window.scalpCamCapture = function(){
     if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
     var v = document.getElementById('scalp-cam-video');
@@ -9690,8 +9756,26 @@ function cgoGuideFeature(key){
     var ctx = c.getContext('2d');
     ctx.drawImage(v, 0, 0, w, h);
     var dataUrl = c.toDataURL('image/jpeg', 0.85);
+    
+    // C-39 v1.1 — 클라이언트 즉시 분석 (Vision API 보완)
+    var pixelAnalysis = null;
+    try {
+      var imgData = ctx.getImageData(0, 0, w, h);
+      var erythema = window.scalpAnalyzeErythema(imgData);
+      var edge = window.scalpDetectHairEdge(imgData, w, h);
+      pixelAnalysis = { erythema: erythema, edge: edge, w: w, h: h };
+      console.log('[C-39 v1.1] 부위 ' + (window.scalpCamState.idx+1) + ' 픽셀 분석:',
+        '홍반=' + (erythema ? erythema.erythemaPct + '%' : 'N/A'),
+        '모발밀도=' + (edge ? edge.edgeDensity + '%' : 'N/A'));
+    } catch(e){
+      console.log('[C-39 v1.1] 픽셀 분석 실패 (정상 작동):', e.message);
+    }
+    
     var p = window.scalpCamParts[window.scalpCamState.idx];
-    window.scalpCamState.captures.push({ key:p.key, name:p.name, emoji:p.emoji, img:dataUrl });
+    window.scalpCamState.captures.push({ 
+      key:p.key, name:p.name, emoji:p.emoji, img:dataUrl,
+      pixelAnalysis: pixelAnalysis  // C-39 v1.1
+    });
     // 다음 부위
     setTimeout(function(){ scalpCamStartPart(window.scalpCamState.idx + 1); }, 300);
   };
