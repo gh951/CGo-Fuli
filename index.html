@@ -9204,15 +9204,17 @@ function cgoGuideFeature(key){
       <!-- 카메라 측정 (항상 보임 — 자가진단 무관) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- C-39 v1.5 — 6부위 위치 가이드 (세로 리스트 + AI 사진) -->
+      <!-- C-39 v1.5 — 6부위 위치 가이드 (Accordion · 세로 리스트 + AI 사진) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="scalp-step-block" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:2px solid #0ea5e9;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span style="display:inline-block;width:8px;height:8px;background:#0ea5e9;border-radius:50%;animation:scalp-pulse 1.8s infinite;"></span>
-          <span style="font-size:11px;font-weight:800;color:#0369a1;letter-spacing:.04em;">📍 측정 위치 가이드</span>
+      <div class="scalp-step-block scalp-acc-block" id="scalp-acc-guide" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:2px solid #0ea5e9;">
+        <div class="scalp-step-head scalp-acc-head" onclick="scalpToggleAcc('guide')" style="cursor:pointer;">
+          <span class="scalp-step-tag" style="background:#0ea5e9;color:#fff;">📍 가이드</span>
+          <span class="scalp-step-h" style="color:#0c4a6e;">🗺️ 6부위 위치 안내</span>
+          <span class="scalp-acc-meta" id="scalp-acc-meta-guide" style="color:#0369a1;">— 사진으로 확인</span>
+          <span class="scalp-acc-icon" id="scalp-acc-icon-guide" style="color:#0369a1;">▶</span>
         </div>
-        <div style="font-size:18px;font-weight:900;color:#0c4a6e;margin-bottom:6px;letter-spacing:-.02em;">🗺️ 6부위 위치 안내</div>
-        <div style="font-size:13px;color:#075985;margin-bottom:14px;line-height:1.5;">사진의 <b style="color:#dc2626;">빨간 동그라미</b> 위치를 카메라로 촬영해주세요. 각 부위마다 안내 시간 동안 위치를 잡으신 후 <b>[지금 촬영]</b> 버튼을 직접 눌러주세요.</div>
+        <div class="scalp-acc-body" id="scalp-acc-body-guide" style="display:none;">
+        <div style="font-size:13px;color:#075985;margin:0 0 14px;line-height:1.5;padding-top:8px;">사진의 <b style="color:#dc2626;">빨간 동그라미</b> 위치를 카메라로 촬영해주세요. 각 부위마다 안내 시간 동안 위치를 잡으신 후 <b>[지금 촬영]</b> 버튼을 직접 눌러주세요.</div>
         
         <!-- 부위 1: 정수리 -->
         <div style="display:flex;gap:12px;padding:12px;background:#fff;border:1px solid #bae6fd;border-radius:12px;margin-bottom:10px;align-items:center;">
@@ -9275,6 +9277,7 @@ function cgoGuideFeature(key){
         </div>
 
         <div style="margin-top:12px;padding:10px 12px;background:rgba(255,255,255,.6);border-radius:8px;font-size:11px;color:#075985;text-align:center;line-height:1.5;">⏱️ 각 부위는 시간이 지나면 카메라가 정지됩니다 · <b>[지금 촬영] 버튼을 직접 누르세요</b></div>
+        </div><!-- /scalp-acc-body-guide -->
       </div>
 
       <div class="scalp-step-block" style="background:linear-gradient(135deg,#fef9f3,#fffbeb);border:2px solid #d4a843;">
@@ -9733,6 +9736,33 @@ function cgoGuideFeature(key){
   };
 
   // 카메라 권한 요청 + 스트림 시작
+  // C-39 v1.6 — 카메라 열림 후 사용자가 [지금 촬영] 누를 때까지 대기
+  function scalpCamWaitFirst(){
+    var parts = window.scalpCamParts;
+    if(!parts || !parts.length) return;
+    var firstP = parts[0];
+    var inst = document.getElementById('scc-instruction');
+    var label = document.getElementById('scc-guide-label');
+    var timer = document.getElementById('scc-timer');
+    var prog = document.getElementById('scc-progress');
+    var btn = document.getElementById('scc-capture-btn');
+    if(inst) inst.innerHTML = '📷 카메라가 켜졌습니다<br><br>📍 첫 부위: <b>' + firstP.emoji + ' ' + firstP.name + '</b><br><span style="font-size:11px;opacity:.8;">' + firstP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
+    if(label) label.innerHTML = firstP.emoji + ' ' + firstP.name + ' (대기 중)';
+    if(timer) timer.textContent = firstP.sec;
+    if(prog) prog.textContent = 'PART 1 / ' + parts.length + ' · 준비';
+    if(btn){
+      btn.textContent = '📸 ' + firstP.name + ' 촬영 시작';
+      btn.style.animation = 'scalp-pulse 1.2s infinite';
+      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+      btn.onclick = function(){
+        btn.style.animation = '';
+        btn.style.background = '';
+        btn.onclick = function(){ scalpCamCapture(); };  // 다음부터는 캡처
+        scalpCamStartPart(0);  // 첫 부위 측정 시작
+      };
+    }
+  }
+
   function scalpCamRequestStream(){
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
       scalpCamShowError('이 브라우저는 카메라를 지원하지 않습니다.<br/><br/>최신 Chrome·Safari·Edge를 권장합니다.');
@@ -9745,7 +9775,8 @@ function cgoGuideFeature(key){
       window.scalpCamState.stream = stream;
       var v = document.getElementById('scalp-cam-video');
       if(v){ v.srcObject = stream; v.play().catch(function(){}); }
-      scalpCamStartPart(0);
+      // C-39 v1.6 — 카메라만 켜고 대기 (사용자가 [지금 촬영] 클릭 시 첫 부위 시작)
+      scalpCamWaitFirst();
     }).catch(function(err){
       // 후면 카메라 실패 시 전면 시도
       navigator.mediaDevices.getUserMedia({video:true, audio:false})
@@ -9753,7 +9784,8 @@ function cgoGuideFeature(key){
           window.scalpCamState.stream = stream;
           var v = document.getElementById('scalp-cam-video');
           if(v){ v.srcObject = stream; v.play().catch(function(){}); }
-          scalpCamStartPart(0);
+          // C-39 v1.6 — 카메라만 켜고 대기
+          scalpCamWaitFirst();
         })
         .catch(function(){
           scalpCamShowError('카메라 권한이 거부되었습니다.<br/><br/>브라우저 설정에서 카메라 권한을 허용 후 다시 시도해주세요.');
