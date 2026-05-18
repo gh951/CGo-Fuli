@@ -9738,8 +9738,18 @@ function cgoGuideFeature(key){
       var t = document.getElementById('scc-timer');
       if(t) t.textContent = window.scalpCamState.sec;
       if(window.scalpCamState.sec <= 0){
+        // C-39 v1.4 — 타이머 만료 시 자동 캡처 X, 사용자 직접 촬영 대기
         clearInterval(window.scalpCamState.timer);
-        scalpCamCapture();
+        window.scalpCamState.sec = 0;
+        if(t) t.textContent = '0';
+        scalpPlayDing();  // 카메라 정지 알림음
+        var inst = document.getElementById('scc-instruction');
+        if(inst) inst.innerHTML = '⏰ 시간 완료 — <b style="color:#10b981;">위치 확인 후 [지금 촬영] 버튼을 눌러주세요</b>';
+        var capBtn = document.getElementById('scc-capture-btn');
+        if(capBtn){
+          capBtn.style.animation = 'scalp-pulse 1s infinite';
+          capBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+        }
       }
     }, 1000);
   }
@@ -9840,8 +9850,38 @@ function cgoGuideFeature(key){
       key:p.key, name:p.name, emoji:p.emoji, img:dataUrl,
       pixelAnalysis: pixelAnalysis  // C-39 v1.1
     });
-    // 다음 부위
-    setTimeout(function(){ scalpCamStartPart(window.scalpCamState.idx + 1); }, 300);
+    // C-39 v1.4 — 캡처 직후 자동 진행 X, 사용자 위치 이동 후 다음 부위 시작
+    scalpPlayDing();  // 캡처 완료 알림
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    var _nextIdx = window.scalpCamState.idx + 1;
+    var _parts = window.scalpCamParts;
+    if(_nextIdx >= _parts.length){
+      // 마지막 부위 완료 → 결과 표시
+      setTimeout(function(){ scalpCamStartPart(_nextIdx); }, 600);
+    } else {
+      // 다음 부위 안내 — 사용자가 위치 이동 후 직접 버튼 클릭
+      var _nextP = _parts[_nextIdx];
+      var _inst = document.getElementById('scc-instruction');
+      var _lbl = document.getElementById('scc-guide-label');
+      var _t = document.getElementById('scc-timer');
+      var _pg = document.getElementById('scc-progress');
+      var _btn = document.getElementById('scc-capture-btn');
+      if(_inst) _inst.innerHTML = '✓ 부위 ' + (window.scalpCamState.idx+1) + ' 촬영 완료!<br><br>📍 다음 부위: <b>' + _nextP.emoji + ' ' + _nextP.name + '</b><br><span style="font-size:11px;opacity:.8;">' + _nextP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
+      if(_lbl) _lbl.innerHTML = _nextP.emoji + ' ' + _nextP.name + ' (대기 중)';
+      if(_t) _t.textContent = _nextP.sec;
+      if(_pg) _pg.textContent = 'PART ' + (_nextIdx+1) + ' / ' + _parts.length + ' · 준비';
+      if(_btn){
+        _btn.textContent = '📸 ' + _nextP.name + ' 촬영 시작';
+        _btn.style.animation = 'scalp-pulse 1.2s infinite';
+        _btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+        _btn.onclick = function(){
+          _btn.style.animation = '';
+          _btn.style.background = '';
+          _btn.onclick = function(){ scalpCamCapture(); };
+          scalpCamStartPart(_nextIdx);
+        };
+      }
+    }
   };
 
   // 건너뛰기
