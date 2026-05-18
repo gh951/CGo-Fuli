@@ -9739,30 +9739,96 @@ function cgoGuideFeature(key){
 
   // 카메라 권한 요청 + 스트림 시작
   // C-39 v1.6 — 카메라 열림 후 사용자가 [지금 촬영] 누를 때까지 대기
-  function scalpCamWaitFirst(){
+  // C-39 v1.7 — 카메라 전환 (사용자가 선택)
+  window.scalpCamSwitchCamera = function(facingMode, callback){
+    // 기존 스트림 정지
+    if(window.scalpCamState.stream){
+      window.scalpCamState.stream.getTracks().forEach(function(t){ t.stop(); });
+    }
+    // 새 카메라 시작
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode, width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    }).then(function(stream){
+      window.scalpCamState.stream = stream;
+      var v = document.getElementById('scalp-cam-video');
+      if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+      window.scalpCamState.facingMode = facingMode;
+      if(callback) callback(true);
+    }).catch(function(err){
+      // 폴백 — facingMode 무시하고 그냥 시도
+      navigator.mediaDevices.getUserMedia({video:true, audio:false})
+        .then(function(stream){
+          window.scalpCamState.stream = stream;
+          var v = document.getElementById('scalp-cam-video');
+          if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+          if(callback) callback(true);
+        })
+        .catch(function(){ if(callback) callback(false); });
+    });
+  };
+  
+  // C-39 v1.7 — 부위별 카메라 선택 UI 표시
+  window.scalpShowCameraChoice = function(idx){
     var parts = window.scalpCamParts;
-    if(!parts || !parts.length) return;
-    var firstP = parts[0];
+    if(idx >= parts.length){ scalpCamStartPart(idx); return; }
+    var p = parts[idx];
     var inst = document.getElementById('scc-instruction');
     var label = document.getElementById('scc-guide-label');
     var timer = document.getElementById('scc-timer');
     var prog = document.getElementById('scc-progress');
     var btn = document.getElementById('scc-capture-btn');
-    if(inst) inst.innerHTML = '📷 카메라가 켜졌습니다<br><br>📍 첫 부위: <b>' + firstP.emoji + ' ' + firstP.name + '</b><br><span style="font-size:11px;opacity:.8;">' + firstP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
-    if(label) label.innerHTML = firstP.emoji + ' ' + firstP.name + ' (대기 중)';
-    if(timer) timer.textContent = firstP.sec;
-    if(prog) prog.textContent = 'PART 1 / ' + parts.length + ' · 준비';
+    
+    // 부위 추천 카메라
+    var recommend = (p.key === 'tongue') ? 'user' : 'environment';
+    var recommendText = (recommend === 'user') ? '📱 전면(셀카) 추천' : '📷 후면 추천';
+    
+    if(label) label.innerHTML = p.emoji + ' ' + p.name + ' · 카메라 선택';
+    if(timer) timer.textContent = p.sec;
+    if(prog) prog.textContent = 'PART ' + (idx+1) + ' / ' + parts.length + ' · 카메라 선택';
+    if(inst) inst.innerHTML = '📍 <b>' + p.emoji + ' ' + p.name + '</b><br><span style="font-size:11px;opacity:.8;">' + p.guide + '</span><br><br>' +
+      '<div style="margin-top:12px;padding:10px;background:rgba(16,185,129,.15);border-radius:10px;font-size:12px;color:#10b981;">' + recommendText + '</div>' +
+      '<br><b style="color:#10b981;">사용하실 카메라를 선택해주세요 ↓</b>';
+    
+    // 버튼을 2개로 변경
     if(btn){
-      btn.textContent = '📸 ' + firstP.name + ' 촬영 시작';
-      btn.style.animation = 'scalp-pulse 1.2s infinite';
-      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
-      btn.onclick = function(){
-        btn.style.animation = '';
-        btn.style.background = '';
-        btn.onclick = function(){ scalpCamCapture(); };  // 다음부터는 캡처
-        scalpCamStartPart(0);  // 첫 부위 측정 시작
-      };
+      btn.style.display = 'none';  // 기존 버튼 숨김
+      // 카메라 선택 컨테이너
+      var existingChoice = document.getElementById('scc-camera-choice');
+      if(existingChoice) existingChoice.remove();
+      
+      var choice = document.createElement('div');
+      choice.id = 'scc-camera-choice';
+      choice.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;';
+      choice.innerHTML = 
+        '<button onclick="window.scalpStartWithCamera(' + idx + ', \'environment\')" style="padding:18px 10px;background:' + (recommend === 'environment' ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#475569,#334155)') + ';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.2);">📷 후면 카메라<br><span style="font-size:10px;opacity:.85;font-weight:600;">(외부 촬영)</span></button>' +
+        '<button onclick="window.scalpStartWithCamera(' + idx + ', \'user\')" style="padding:18px 10px;background:' + (recommend === 'user' ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#475569,#334155)') + ';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.2);">📱 전면 카메라<br><span style="font-size:10px;opacity:.85;font-weight:600;">(셀카)</span></button>';
+      btn.parentNode.insertBefore(choice, btn.nextSibling);
     }
+  };
+  
+  // C-39 v1.7 — 카메라 선택 후 측정 시작
+  window.scalpStartWithCamera = function(idx, facingMode){
+    var choice = document.getElementById('scc-camera-choice');
+    if(choice) choice.remove();
+    var btn = document.getElementById('scc-capture-btn');
+    if(btn){
+      btn.style.display = '';
+      btn.onclick = function(){ scalpCamCapture(); };
+    }
+    // 카메라 전환 후 부위 측정 시작
+    window.scalpCamSwitchCamera(facingMode, function(ok){
+      if(ok){
+        scalpCamStartPart(idx);
+      } else {
+        scalpCamShowError('카메라 권한이 필요합니다.');
+      }
+    });
+  };
+
+  function scalpCamWaitFirst(){
+    // C-39 v1.7 — 첫 부위부터 카메라 선택 UI 표시
+    window.scalpShowCameraChoice(0);
   }
 
   function scalpCamRequestStream(){
@@ -9978,17 +10044,8 @@ function cgoGuideFeature(key){
       if(_lbl) _lbl.innerHTML = _nextP.emoji + ' ' + _nextP.name + ' (대기 중)';
       if(_t) _t.textContent = _nextP.sec;
       if(_pg) _pg.textContent = 'PART ' + (_nextIdx+1) + ' / ' + _parts.length + ' · 준비';
-      if(_btn){
-        _btn.textContent = '📸 ' + _nextP.name + ' 촬영 시작';
-        _btn.style.animation = 'scalp-pulse 1.2s infinite';
-        _btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
-        _btn.onclick = function(){
-          _btn.style.animation = '';
-          _btn.style.background = '';
-          _btn.onclick = function(){ scalpCamCapture(); };
-          scalpCamStartPart(_nextIdx);
-        };
-      }
+      // C-39 v1.7 — 다음 부위 진입 시 카메라 선택 UI 표시
+      window.scalpShowCameraChoice(_nextIdx);
     }
   };
 
