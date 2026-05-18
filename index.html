@@ -3078,6 +3078,7 @@ window.cgoAuditConstitution = function(verbose){
     console.log('  ✦ C-39 v1.1 · Erythema + Sobel Edge · Google AI Solution ✦');
     console.log('  ✦ C-39 v1.2 · STP Score (Erythema × BPM × HRV) · World First Fusion ✦');
     console.log('  ✦ C-39 v1.3 · K-Hanbang Variant Pattern (12 Lang · Global K-MEDI Ready) ✦');
+    console.log('  ✦ C-39 v1.4 · Few-shot DB Connected (fuli-c-39) · Google AI Strategy ✦');
   }
   
   return report;
@@ -10492,7 +10493,65 @@ function cgoGuideFeature(key){
     }
   };
 
+  // ════════════════════════════════════════════════════════
+  // C-39 v1.4 — fuli-c-39 외부 DB Few-shot 연동
+  // Google AI 전략: 1,000장 골드셋 + Few-shot Learning
+  // 외부 DB: https://gh951.github.io/fuli-c-39/
+  // ════════════════════════════════════════════════════════
+  window._scalpFewShotCache = null;
+  window._scalpFewShotURL = 'https://gh951.github.io/fuli-c-39/metadata.json';
+  
+  // Few-shot 메타데이터 로드 (캐시 + fallback)
+  window.scalpFetchFewShot = function(){
+    return new Promise(function(resolve){
+      // 캐시 있으면 즉시 반환
+      if(window._scalpFewShotCache){
+        resolve(window._scalpFewShotCache);
+        return;
+      }
+      // fetch (5초 타임아웃)
+      var controller = new AbortController();
+      var timeout = setTimeout(function(){ controller.abort(); }, 5000);
+      fetch(window._scalpFewShotURL, { signal: controller.signal })
+        .then(function(r){ clearTimeout(timeout); return r.json(); })
+        .then(function(data){
+          window._scalpFewShotCache = data;
+          console.log('[C-39 v1.4] Few-shot DB 로드 성공: ' + data.examples.length + '개 예시 (' + data.stats.phase + ')');
+          resolve(data);
+        })
+        .catch(function(e){
+          console.log('[C-39 v1.4] Few-shot DB 로드 실패 — 일반 모드 (안전 fallback):', e.message);
+          resolve(null);  // null이면 일반 모드
+        });
+    });
+  };
+  
+  // Few-shot 프롬프트 빌더 (Google AI 형식)
+  window.scalpBuildFewShotPrompt = function(fewShotData){
+    if(!fewShotData || !fewShotData.examples || !fewShotData.examples.length) return '';
+    var prompt = '\n\n[Few-shot 학습 예시 — 두피 진단 기준]\n';
+    prompt += '아래 예시를 참고하여 사용자 두피를 분석하세요:\n\n';
+    fewShotData.examples.forEach(function(ex, idx){
+      prompt += '─── 예시 ' + (idx+1) + ' ───\n';
+      if(ex.basp){
+        prompt += 'BASP 등급: ' + ex.basp + ' (' + ex.category + ')\n';
+        prompt += '홍반: ' + ex.erythema_pct + '% · 모낭밀도: ' + ex.follicle_density + ' · 솜털비율: ' + ex.vellus_ratio + '\n';
+      } else {
+        prompt += '설진(K-한방): ' + ex.category + '\n';
+        prompt += '백태: ' + ex.white_coat_pct + '% · 깊은적색: ' + ex.deep_red_pct + '% · 옅은분홍: ' + ex.pale_red_pct + '%\n';
+      }
+      prompt += '진단: ' + ex.diagnosis + '\n';
+      prompt += '권장 케어: ' + ex.care + '\n\n';
+    });
+    prompt += '[/Few-shot 학습 예시]\n';
+    prompt += '※ 이 예시들은 한국한의학연구원 임상 통계 + 의학적 BASP 표준 기반 (Phase ' + fewShotData.stats.phase + ')\n';
+    return prompt;
+  };
+
   window.scalpRunAnalysis = function(){
+    // C-39 v1.4 — Few-shot DB 백그라운드 로드 (블로킹 X)
+    if(!window._scalpFewShotCache){ window.scalpFetchFewShot(); }
+    
     var status = scalpCheckDataStatus();
 
     // 데이터 0개면 경고
@@ -10582,6 +10641,11 @@ function cgoGuideFeature(key){
       ctx += '  · BPM: ' + scores.stpComponents.bpm + ' (Factor=' + scores.stpComponents.bpmFactor + ')\n';
       ctx += '  · HRV RMSSD: ' + scores.stpComponents.rmssd + 'ms (Penalty=' + scores.stpComponents.hrvPenalty + ')\n';
       ctx += '  · STP 권장: ' + scores.stpAdvice + '\n';
+    }
+    
+    // C-39 v1.4 — Few-shot 외부 DB 박입 (fuli-c-39)
+    if(window._scalpFewShotCache){
+      ctx += window.scalpBuildFewShotPrompt(window._scalpFewShotCache);
     }
 
     // 시스템 프롬프트
@@ -84803,6 +84867,10 @@ function cgoGoPage(page){
         if(sp) sp.style.visibility = 'hidden';
         p.style.display = 'block';
         p.style.zIndex = '99999';
+      }
+      // C-39 v1.4 — Few-shot DB 백그라운드 사전 로드
+      if(window.scalpFetchFewShot && !window._scalpFewShotCache){
+        window.scalpFetchFewShot();
       }
     } catch(e){}
   }
