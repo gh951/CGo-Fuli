@@ -8899,11 +8899,7 @@ function cgoGuideFeature(key){
 
   <!-- ★ C-39 안내 팝업 (페이지 진입 시 자동 표시) -->
   <style>
-  #scalp-intro-pop{display:none;position:fixed;inset:0;z-index:99999;background:rgba(255,255,255,1);overflow-y:auto;-webkit-overflow-scrolling:touch;}
-/* C-39 v1.3 — 본페이지 깜빡임 완전 차단 (CSS 우선순위 최대) */
-body.scalp-intro-loading #page-scalp{visibility:hidden!important;}
-body.scalp-intro-loading #scalp-intro-pop{display:block!important;visibility:visible!important;z-index:2147483647!important;}
-body.scalp-intro-loading{overflow:hidden!important;}
+  #scalp-intro-pop{display:none;position:fixed;inset:0;z-index:29000;background:rgba(255,255,255,.98);overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .sip-wrap{max-width:560px;margin:0 auto;padding:0 0 80px;}
   .sip-top{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:12px 16px;background:rgba(255,255,255,.98);border-bottom:1px solid #f0f2f7;}
   .sip-close{width:36px;height:36px;border-radius:50%;border:1px solid #e8eaf0;background:#fff;color:#666;font-size:18px;cursor:pointer;}
@@ -8981,36 +8977,9 @@ body.scalp-intro-loading{overflow:hidden!important;}
   .scc-result-label{font-size:10px;color:#fbbf24;text-align:center;margin-top:6px;font-weight:800;letter-spacing:.08em;font-family:'Courier New',monospace;}
   </style>
 
-  <script>
-/* C-39 v1.3 — page-scalp 진입 즉시 본페이지 가리기 (인라인 즉시 실행) */
-(function(){
-  try{
-    if(localStorage.getItem('scalp_intro_seen')) return;
-    var sp = document.getElementById('page-scalp');
-    var pp = document.getElementById('scalp-intro-pop');
-    if(!sp) return;
-    /* MutationObserver: page-scalp가 active 되는 순간 즉시 가림 */
-    var hideNow = function(){
-      if(sp.classList.contains('active') && !localStorage.getItem('scalp_intro_seen')){
-        sp.style.visibility = 'hidden';
-        if(pp){
-          pp.style.cssText = 'display:block!important;position:fixed!important;inset:0!important;z-index:2147483647!important;background:#fff!important;overflow-y:auto!important;visibility:visible!important;';
-        }
-        document.body.style.overflow = 'hidden';
-      }
-    };
-    /* 1) 지금 이미 active면 즉시 처리 */
-    hideNow();
-    /* 2) class 변화 감시 (active 추가되는 순간 즉시) */
-    if(window.MutationObserver){
-      new MutationObserver(hideNow).observe(sp, {attributes:true, attributeFilter:['class']});
-    }
-  }catch(e){}
-})();
-</script>
-<div id="scalp-intro-pop">
+  <div id="scalp-intro-pop">
     <div class="sip-wrap">
-      <div class="sip-top"><button class="sip-close" onclick="var sp=document.getElementById('page-scalp');if(sp)sp.style.visibility='';document.body.style.overflow='';document.body.classList.remove('scalp-intro-loading');document.getElementById('scalp-intro-pop').style.display='none';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">×</button></div>
+      <div class="sip-top"><button class="sip-close" onclick="document.getElementById('scalp-intro-pop').style.display='none';var sp=document.getElementById('page-scalp');if(sp)sp.style.visibility='';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">×</button></div>
       <div class="sip-body">
         <div class="sip-hero">
           <div class="sip-badge">C-39 · BUJEOK LIFESTYLE</div>
@@ -9052,7 +9021,7 @@ body.scalp-intro-loading{overflow:hidden!important;}
         <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">💓 rPPG 자율신경 융합 (C-37 연동)</div><div class="sip-step-desc">먼저 <b>C-37 건강 예측</b>을 측정하시면 얼굴 rPPG·자율신경 데이터가 두피 분석에 융합됩니다. <b>세계 어떤 앱도 안 하는 FULI 차별점</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">5</div><div class="sip-step-body"><div class="sip-step-title">🤖 두피 케어 AI 상담</div><div class="sip-step-desc">두피·탈모 임상 지식 + 한의학 종합 1:1 맞춤 가이드 + 오행 라이프웨어(C-04·C-16·C-02) 자동 매칭.</div></div></div>
 
-        <button class="sip-cta" onclick="var sp=document.getElementById('page-scalp');if(sp)sp.style.visibility='';document.body.style.overflow='';document.body.classList.remove('scalp-intro-loading');document.getElementById('scalp-intro-pop').style.display='none';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">✓ 이해했어요, 시작하기</button>
+        <button class="sip-cta" onclick="document.getElementById('scalp-intro-pop').style.display='none';var sp=document.getElementById('page-scalp');if(sp)sp.style.visibility='';try{localStorage.setItem('scalp_intro_seen','1');}catch(e){}">✓ 이해했어요, 시작하기</button>
         <div class="sip-disc">⚠️ 본 도구는 의료 진단·예측·치료 기기가 아닙니다. 두피 라이프스타일 셀프 트래킹 참고용입니다. 의학적 판단은 피부과·트리코로지 전문의 상담을 권장드립니다.</div>
       </div>
     </div>
@@ -84677,19 +84646,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
-  // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (CSS 우선)
-  try {
-    if(arguments[0] === 'scalp'){
-      if(!localStorage.getItem('scalp_intro_seen')){
-        document.body.classList.add('scalp-intro-loading');
-      } else {
-        document.body.classList.remove('scalp-intro-loading');
+  // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (깜빡임 0)
+  if(arguments[0] === 'scalp'){
+    try {
+      var _seen = localStorage.getItem('scalp_intro_seen');
+      var p = document.getElementById('scalp-intro-pop');
+      if(p && !_seen){
+        // 본페이지 즉시 가림 (깜빡임 차단)
+        var sp = document.getElementById('page-scalp');
+        if(sp) sp.style.visibility = 'hidden';
+        p.style.display = 'block';
+        p.style.zIndex = '99999';
       }
-    } else {
-      // 다른 페이지 진입 시 무조건 class 제거 (안전 박입)
-      document.body.classList.remove('scalp-intro-loading');
-    }
-  } catch(e){}
+    } catch(e){}
+  }
   // 대시보드 이탈 시 스크롤 위치 저장
   if (_cgCurrent === 'dashboard' && page !== 'dashboard') {
     var _saveCt = document.querySelector('.content');
