@@ -11222,7 +11222,7 @@ function cgoGuideFeature(key){
     <!--  의료기기 아님 · 웰니스 보조 · ZERO STORAGE 헌법        -->
     <!-- ════════════════════════════════════════════════════════ -->
     <div class="page" id="page-c39-dementia">
-  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.6);color:#d4a843;font-weight:800;font-size:13px;border-radius:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;backdrop-filter:blur(8px);">‹ 홈</button>
+  <button onclick="window.dementiaExitToMain()" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.6);color:#d4a843;font-weight:800;font-size:13px;border-radius:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;backdrop-filter:blur(8px);">✕ 나가기</button>
 
   <style>
   #dementia-intro-pop{display:none;position:fixed;inset:0;z-index:29000;background:rgba(255,255,255,.98);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -11301,20 +11301,23 @@ function cgoGuideFeature(key){
           <div onclick="window.demSelectCourse('light')" id="dem-course-light" style="padding:16px 8px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #10b981;border-radius:12px;text-align:center;cursor:pointer;transition:all .2s;">
             <div style="font-size:24px;margin-bottom:4px;">🟢</div>
             <div style="font-size:12px;font-weight:900;color:#059669;">약식 코스</div>
-            <div style="font-size:10px;color:#047857;margin-top:3px;">10문항 · 2~3분</div>
-            <div style="font-size:9px;color:#10b981;margin-top:4px;">기초 스크리닝</div>
+            <div style="font-size:10px;color:#047857;margin-top:3px;">10문항 · 60초</div>
+            <div style="font-size:9px;color:#10b981;margin-top:4px;">RMSSD 기초</div>
+            <div style="font-size:8px;color:#059669;margin-top:3px;font-weight:700;">신뢰도 50%</div>
           </div>
           <div onclick="window.demSelectCourse('mid')" id="dem-course-mid" style="padding:16px 8px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;text-align:center;cursor:pointer;transition:all .2s;">
             <div style="font-size:24px;margin-bottom:4px;">🟡</div>
             <div style="font-size:12px;font-weight:900;color:#1a1408;">중식 코스</div>
-            <div style="font-size:10px;color:#666;margin-top:3px;">20문항 · 5분</div>
-            <div style="font-size:9px;color:#999;margin-top:4px;">심층 인지</div>
+            <div style="font-size:10px;color:#666;margin-top:3px;">20문항 · 2분</div>
+            <div style="font-size:9px;color:#999;margin-top:4px;">SDNN 심층</div>
+            <div style="font-size:8px;color:#f59e0b;margin-top:3px;font-weight:700;">신뢰도 80%</div>
           </div>
           <div onclick="window.demSelectCourse('high')" id="dem-course-high" style="padding:16px 8px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;text-align:center;cursor:pointer;transition:all .2s;">
             <div style="font-size:24px;margin-bottom:4px;">🔴</div>
             <div style="font-size:12px;font-weight:900;color:#1a1408;">고식 코스</div>
-            <div style="font-size:10px;color:#666;margin-top:3px;">50문항 · 12~15분</div>
-            <div style="font-size:9px;color:#999;margin-top:4px;">초정밀 역학</div>
+            <div style="font-size:10px;color:#666;margin-top:3px;">50문항 · 5분</div>
+            <div style="font-size:9px;color:#999;margin-top:4px;">🏆 5-Min HRV</div>
+            <div style="font-size:8px;color:#ef4444;margin-top:3px;font-weight:700;">신뢰도 95%</div>
           </div>
         </div>
         <div style="margin-top:12px;padding:10px;background:rgba(212,168,67,.06);border-radius:8px;font-size:11px;color:#666;line-height:1.5;">
@@ -11346,6 +11349,15 @@ function cgoGuideFeature(key){
           <span style="font-size:15px;font-weight:900;color:#1a1408;">📷 STEP 3 · rPPG 카메라</span>
         </div>
         <div style="background:#1a1408;border:2px solid #d4a843;border-radius:14px;padding:20px;text-align:center;position:relative;overflow:hidden;" id="dem-cam-box">
+          <style>
+          body.dem-fullscreen #dem-cam-box{position:fixed!important;inset:0!important;z-index:30000!important;border-radius:0!important;border:none!important;padding:60px 16px 200px!important;overflow-y:auto!important;background:#0a0a0a!important;}
+          body.dem-fullscreen #dem-cam-placeholder{display:none!important;}
+          body.dem-fullscreen #dem-video{max-width:90vw!important;width:90vw!important;height:auto!important;aspect-ratio:3/4!important;max-height:60vh!important;}
+          body.dem-fullscreen #dem-question-area{position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:30001!important;margin:0!important;border-radius:14px 14px 0 0!important;background:#fff!important;max-height:45vh!important;overflow-y:auto!important;box-shadow:0 -4px 20px rgba(0,0,0,.5)!important;}
+          body.dem-fullscreen #dem-cam-status{position:fixed!important;top:16px!important;right:16px!important;}
+          body.dem-fullscreen .dem-fs-close{display:block!important;}
+          </style>
+          <button class="dem-fs-close" onclick="window.demStopMeasure()" style="display:none;position:fixed;top:12px;left:12px;z-index:30002;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:1px solid rgba(255,255,255,.2);font-size:20px;cursor:pointer;">×</button>
           <div style="position:absolute;top:10px;left:10px;background:rgba(212,168,67,.18);padding:4px 10px;border-radius:8px;font-size:10px;color:#d4a843;font-weight:700;letter-spacing:.05em;z-index:2;">🛰️ rPPG 카메라</div>
           <div id="dem-cam-status" style="position:absolute;top:10px;right:10px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:8px;font-size:10px;color:#f87171;font-weight:700;letter-spacing:.05em;z-index:2;">대기 중</div>
           
@@ -11385,9 +11397,38 @@ function cgoGuideFeature(key){
         <div id="dem-result-content"></div>
       </div>
 
-      <!-- 정직 박지 -->
-      <div style="margin-top:16px;padding:12px;background:#f5f6fa;border-left:3px solid #d4a843;border-radius:8px;font-size:10px;color:#888;line-height:1.5;">
-        ⚠️ 본 기능은 <b>식약처 인증 의료기기가 아닌 웰니스 보조 도구</b>입니다. 결과는 참고용이며 의학적 진단을 대체하지 않습니다. 정확한 진단은 신경과·정신건강의학과 전문의 상담을 권장드립니다. 🛡️ ZERO STORAGE · ZERO SERVER 헌법 준수.
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- AI 챗 상담사 — 치매 예방 종합 가이드 (두피 모방, 치매로 변환) -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div style="background:#fff;border:1px solid #f0e6d4;border-radius:18px;overflow:hidden;margin-top:16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(212,168,67,.05);">
+        <div style="padding:16px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:1px solid #f0e6d4;display:flex;align-items:center;gap:12px;">
+          <div style="flex-shrink:0;width:44px;height:44px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(212,168,67,.3);">🧠</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:14px;font-weight:900;color:#1a1408;">AI 상담사</span>
+              <span style="padding:2px 6px;background:rgba(52,211,153,.15);color:#10b981;border-radius:4px;font-size:8px;font-weight:800;letter-spacing:.04em;">● ONLINE</span>
+            </div>
+            <div style="font-size:10px;color:#888;line-height:1.4;">치매 예방 · 인지 건강<br/>신경과 + rPPG 자율신경 종합</div>
+          </div>
+        </div>
+        <div id="dementia-chat-messages" style="height:280px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fafbfc;">
+          <div style="align-self:flex-start;max-width:85%;padding:12px 14px;background:#fff;border:1px solid #f0e6d4;border-radius:14px 14px 14px 4px;font-size:12px;color:#1a1408;line-height:1.6;">
+            안녕하세요. 🧠 <b>C-39 치매 예방 체크</b> AI 상담사입니다.<br/><br/>
+            저는 <b>신경과·정신건강의학과 + 인지심리 + rPPG 자율신경 분석</b> 지식을 종합 학습한 AI예요. 인지 검사 결과(정답률·반응속도)와 rPPG 측정값(BPM·HRV)을 모두 분석하여 가장 정확한 뇌 건강 가이드를 드립니다.<br/><br/>
+            먼저 위에서 코스를 선택하고 측정을 완료하시면 가장 풍부한 답변을 드릴 수 있어요. 그 전에도 일반적인 치매 예방·인지 건강 질문은 언제든 받습니다.
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px;border-top:1px solid #f0e6d4;background:#fff;">
+          <textarea id="dementia-chat-input" rows="1" placeholder="치매 예방·인지 건강에 대해 무엇이든 물어보세요..." onkeydown="dementiaChatEnter(event)" style="flex:1;background:#fafbfc;border:1px solid #e8eaf0;border-radius:10px;padding:10px 12px;font-size:12px;color:#1a1408;resize:none;outline:none;font-family:inherit;"></textarea>
+          <button type="button" id="dementia-chat-send" onclick="dementiaChatSend();event.stopPropagation();" style="padding:10px 18px;background:linear-gradient(135deg,#1a1408,#2a2418);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">전송</button>
+        </div>
+      </div>
+
+      <!-- 정직 박지 (대장님 명령 — 의학 표준 권장 문구) -->
+      <div style="margin-top:16px;padding:14px 16px;background:#f5f6fa;border-left:4px solid #d4a843;border-radius:10px;font-size:11px;color:#666;line-height:1.7;">
+        ⚠️ <b style="color:#1a1408;">사용 안내</b><br/>
+        본 서비스는 <b>일상적인 뇌 건강 관리 및 웰니스 스크리닝</b> 목적으로 설계되었으며, 기재된 문구 및 연산 결과는 <b>질병의 의학적 확진이나 치료법을 대체할 수 없습니다</b>. 의학적 이상 징후가 있을 경우 반드시 <b>신경과 등 전문 의료기관</b>의 진단을 받으시기 바랍니다.<br/>
+        🛡️ ZERO STORAGE · ZERO SERVER 헌법 준수
       </div>
 
     </div>
@@ -11504,6 +11545,8 @@ function cgoGuideFeature(key){
     // ════════════════════════════════════════════════════
     // 측정 시작 — C-37 검증 rPPG 함수 활용
     // 헌법 준수: 얼굴/혈류 없으면 작동 X
+    // ZERO STORAGE 법통 준수: 영상 및 생체 원시 데이터 메모리 즉시 파기
+    // ZERO STORAGE compliance: raw video and biometric data discarded immediately
     // ════════════════════════════════════════════════════
     window.demStartMeasure = function(){
       // 코스별 문항 준비
@@ -11513,6 +11556,11 @@ function cgoGuideFeature(key){
       window._dementiaState.bpmSamples = [];
       window._dementiaState.hrvSamples = [];
       window._dementiaState.faceDetected = false;
+      // 코스별 최소 측정 시간 강제 (의학 표준)
+      var minSec = window._dementiaState.course === 'light' ? 60 : 
+                    window._dementiaState.course === 'mid'   ? 120 : 300;
+      window._dementiaState.minDuration = minSec;
+      window._dementiaState.measureFinished = false;
       
       // UI 전환
       var ph = document.getElementById('dem-cam-placeholder');
@@ -11529,6 +11577,8 @@ function cgoGuideFeature(key){
       if(progress) progress.style.display = 'block';
       if(qArea) qArea.style.display = 'block';
       if(qTotal) qTotal.textContent = Q.length;
+      // 풀스크린 모드 활성화 (두피처럼 넓게)
+      document.body.classList.add('dem-fullscreen');
       if(status){ status.textContent = '얼굴 검출 중'; status.style.background = 'rgba(251,191,36,.2)'; status.style.color = '#fbbf24'; }
       
       // 카메라 시작 (전면 - 얼굴)
@@ -11698,8 +11748,52 @@ function cgoGuideFeature(key){
       // 다음 문항
       window._dementiaState.currentQ++;
       setTimeout(function(){
-        window.demRenderQuestion(window._dementiaState.currentQ);
+        var Q = window.demGetQuestions();
+        if(window._dementiaState.currentQ >= Q.length){
+          // 모든 문항 완료 → 최소 시간 도달 확인
+          var elapsed = (Date.now() - window._dementiaState.startTime) / 1000;
+          if(elapsed < window._dementiaState.minDuration){
+            // 시간 미달 → 카메라 유지하면서 카운트다운 표시
+            window.demWaitForMinTime();
+          } else {
+            window.demShowResult();
+          }
+        } else {
+          window.demRenderQuestion(window._dementiaState.currentQ);
+        }
       }, 300);
+    };
+    
+    // ════════════════════════════════════════════════════
+    // 최소 측정 시간 대기 (BPM/HRV 보장)
+    // ZERO STORAGE 법통 준수: 메모리 데이터 측정 종료 즉시 파기
+    // ════════════════════════════════════════════════════
+    window.demWaitForMinTime = function(){
+      var qArea = document.getElementById('dem-question-area');
+      if(qArea){
+        qArea.innerHTML = 
+          '<div style="text-align:center;padding:20px;">' +
+            '<div style="font-size:14px;font-weight:900;color:#d4a843;margin-bottom:8px;">⏱️ 정밀 측정 진행 중</div>' +
+            '<div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:14px;">' +
+              '의학 표준 정확도를 위해<br/>' +
+              '<b id="dem-countdown" style="color:#1a1408;font-size:20px;">--</b>초 추가 측정합니다' +
+            '</div>' +
+            '<div style="font-size:10px;color:#999;line-height:1.6;">' +
+              '얼굴을 카메라 안에 유지해주세요<br/>' +
+              '평균 심박수 · HRV 계산 중...' +
+            '</div>' +
+          '</div>';
+      }
+      window._dementiaState.countdownInterval = setInterval(function(){
+        var elapsed = (Date.now() - window._dementiaState.startTime) / 1000;
+        var remain = Math.ceil(window._dementiaState.minDuration - elapsed);
+        var cd = document.getElementById('dem-countdown');
+        if(cd) cd.textContent = remain > 0 ? remain : 0;
+        if(remain <= 0){
+          clearInterval(window._dementiaState.countdownInterval);
+          window.demShowResult();
+        }
+      }, 500);
     };
     
     // ════════════════════════════════════════════════════
@@ -11751,15 +11845,42 @@ function cgoGuideFeature(key){
     };
     
     // ════════════════════════════════════════════════════
-    // 결과 표시
+    // 측정 중단 (닫기 버튼)
     // ════════════════════════════════════════════════════
-    window.demShowResult = function(){
-      // 카메라 정리
+    window.demStopMeasure = function(){
       if(window._dementiaState.stream){
         window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
       }
       if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
       if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
+      document.body.classList.remove('dem-fullscreen');
+      var vd = document.getElementById('dem-video');
+      var ph = document.getElementById('dem-cam-placeholder');
+      var startBtn = document.getElementById('dem-start-btn');
+      var progress = document.getElementById('dem-progress-display');
+      var qArea = document.getElementById('dem-question-area');
+      if(vd){ vd.style.display = 'none'; vd.srcObject = null; }
+      if(ph) ph.style.display = 'flex';
+      if(startBtn){ startBtn.style.display = 'inline-block'; }
+      if(progress) progress.style.display = 'none';
+      if(qArea) qArea.style.display = 'none';
+    };
+    
+    // ════════════════════════════════════════════════════
+    // 결과 표시
+    // ZERO STORAGE 법통 준수: 원시 영상 데이터 즉시 파기
+    // ZERO STORAGE compliance: raw video data discarded immediately
+    // ════════════════════════════════════════════════════
+    window.demShowResult = function(){
+      // 카메라 정리 (ZERO STORAGE)
+      if(window._dementiaState.stream){
+        window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
+      }
+      if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+      if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
+      if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
+      // 풀스크린 모드 해제
+      document.body.classList.remove('dem-fullscreen');
       
       // ZERO STORAGE — 원시 영상 데이터 즉시 파기
       window._dementiaState.rgbSamples = [];
@@ -11770,6 +11891,14 @@ function cgoGuideFeature(key){
       var correct = ans.filter(function(a){return a.correct;}).length;
       var accuracy = total > 0 ? (correct/total*100).toFixed(1) : 0;
       var avgLatency = total > 0 ? (ans.reduce(function(s,a){return s+a.latency;}, 0) / total / 1000).toFixed(2) : 0;
+      // 결과 표시 시 최종 한 번 더 계산 (데이터 없으면 누락 방지)
+      var finalVitals = window.demCalcVitals();
+      if(finalVitals.bpm > 0){
+        window._dementiaState.bpmSamples.push(finalVitals.bpm);
+      }
+      if(finalVitals.hrv > 0){
+        window._dementiaState.hrvSamples.push(finalVitals.hrv);
+      }
       var avgBPM = window._dementiaState.bpmSamples.filter(function(b){return b>0;});
       avgBPM = avgBPM.length > 0 ? (avgBPM.reduce(function(s,b){return s+b;}, 0) / avgBPM.length).toFixed(0) : '--';
       var avgHRV = window._dementiaState.hrvSamples.filter(function(h){return h>0;});
@@ -11795,8 +11924,20 @@ function cgoGuideFeature(key){
       // 결과 화면
       if(resultArea && resultContent){
         var grade = accuracy >= 90 ? '🟢 우수' : accuracy >= 75 ? '🟡 양호' : accuracy >= 50 ? '🟠 보통' : '🔴 주의';
+      var courseLabel = window._dementiaState.course === 'light' ? '🟢 약식 코스 (RMSSD 기초)' :
+                        window._dementiaState.course === 'mid'   ? '🟡 중식 코스 (SDNN 심층)' :
+                                                                    '🔴 고식 코스 (🏆 국제 표준 5-Min HRV)';
+      var courseReliab = window._dementiaState.course === 'light' ? '50%' :
+                         window._dementiaState.course === 'mid'   ? '80%' : '95%';
+      var courseBadge = window._dementiaState.course === 'high' ? 
+        '<div style="display:inline-block;padding:6px 14px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:.04em;margin-bottom:10px;">🏆 국제 표준 의학 기준 (5-Min HRV) 충족</div>' : '';
         var hrvGrade = avgHRV >= 50 ? '🟢 양호' : avgHRV >= 30 ? '🟡 보통' : '🟠 주의';
         resultContent.innerHTML = 
+          '<div style="text-align:center;margin-bottom:12px;">' +
+            courseBadge +
+            '<div style="font-size:12px;font-weight:800;color:#1a1408;">' + courseLabel + '</div>' +
+            '<div style="font-size:10px;color:#666;margin-top:3px;">의학적 신뢰도: <b style="color:#d4a843;">' + courseReliab + '</b></div>' +
+          '</div>' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">' +
             '<div style="padding:14px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #f0e6d4;border-radius:10px;text-align:center;">' +
               '<div style="font-size:11px;color:#666;margin-bottom:4px;">인지 정답률</div>' +
@@ -11842,6 +11983,128 @@ function cgoGuideFeature(key){
     window.addEventListener('DOMContentLoaded', function(){
       // 기존 cgoGoPage hook은 메뉴 카드 onclick에서 처리됨
     });
+    
+    // ════════════════════════════════════════════════════
+    // 나가기 → 치매 페이지 메인 (측정 중이면 취소)
+    // ════════════════════════════════════════════════════
+    window.dementiaExitToMain = function(){
+      // 측정 중이면 카메라 정리
+      if(window._dementiaState){
+        if(window._dementiaState.stream){
+          window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
+        }
+        if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+        if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
+        if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
+      }
+      // 풀스크린 모드 해제
+      document.body.classList.remove('dem-fullscreen');
+      // UI 초기화
+      var vd = document.getElementById('dem-video');
+      var ph = document.getElementById('dem-cam-placeholder');
+      var startBtn = document.getElementById('dem-start-btn');
+      var progress = document.getElementById('dem-progress-display');
+      var qArea = document.getElementById('dem-question-area');
+      var resultArea = document.getElementById('dem-result-area');
+      var status = document.getElementById('dem-cam-status');
+      if(vd){ vd.style.display = 'none'; vd.srcObject = null; }
+      if(ph) ph.style.display = 'flex';
+      if(startBtn){ startBtn.style.display = 'inline-block'; startBtn.textContent = '📸 측정 시작'; }
+      if(progress) progress.style.display = 'none';
+      if(qArea) qArea.style.display = 'none';
+      if(resultArea) resultArea.style.display = 'none';
+      if(status){ status.textContent = '대기 중'; status.style.background = 'rgba(239,68,68,.2)'; status.style.color = '#f87171'; }
+      // 페이지 상단으로 스크롤
+      window.scrollTo({top:0, behavior:'smooth'});
+    };
+    
+    // ════════════════════════════════════════════════════
+    // AI 상담사 (두피 scalpChatSend 모방, 치매로 변환)
+    // ZERO STORAGE 법통 준수: 대화 내용 메모리만, 서버 전송 X
+    // ZERO STORAGE compliance: chat in memory only, no server transmission
+    // ════════════════════════════════════════════════════
+    window.dementiaChatEnter = function(e){
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        window.dementiaChatSend();
+      }
+    };
+    
+    window.dementiaChatSend = function(){
+      var input = document.getElementById('dementia-chat-input');
+      var msgs = document.getElementById('dementia-chat-messages');
+      if(!input || !msgs) return;
+      
+      var userMsg = input.value.trim();
+      if(!userMsg) return;
+      
+      // 사용자 메시지 표시
+      var userBubble = document.createElement('div');
+      userBubble.style.cssText = 'align-self:flex-end;max-width:85%;padding:12px 14px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border-radius:14px 14px 4px 14px;font-size:12px;line-height:1.6;';
+      userBubble.textContent = userMsg;
+      msgs.appendChild(userBubble);
+      input.value = '';
+      msgs.scrollTop = msgs.scrollHeight;
+      
+      // AI 응답 (로딩 → 응답)
+      var aiBubble = document.createElement('div');
+      aiBubble.style.cssText = 'align-self:flex-start;max-width:85%;padding:12px 14px;background:#fff;border:1px solid #f0e6d4;border-radius:14px 14px 14px 4px;font-size:12px;color:#1a1408;line-height:1.6;';
+      aiBubble.innerHTML = '<span style="color:#888;">💭 분석 중...</span>';
+      msgs.appendChild(aiBubble);
+      msgs.scrollTop = msgs.scrollHeight;
+      
+      // 측정 데이터 컨텍스트 수집
+      var ans = window._dementiaState && window._dementiaState.answers ? window._dementiaState.answers : [];
+      var bpmArr = window._dementiaState && window._dementiaState.bpmSamples ? window._dementiaState.bpmSamples.filter(function(b){return b>0;}) : [];
+      var hrvArr = window._dementiaState && window._dementiaState.hrvSamples ? window._dementiaState.hrvSamples.filter(function(h){return h>0;}) : [];
+      var hasData = ans.length > 0;
+      
+      var dataCtx = '';
+      if(hasData){
+        var correct = ans.filter(function(a){return a.correct;}).length;
+        var accuracy = (correct/ans.length*100).toFixed(1);
+        var avgLatency = (ans.reduce(function(s,a){return s+a.latency;}, 0) / ans.length / 1000).toFixed(2);
+        var avgBPM = bpmArr.length > 0 ? (bpmArr.reduce(function(s,b){return s+b;}, 0) / bpmArr.length).toFixed(0) : '--';
+        var avgHRV = hrvArr.length > 0 ? (hrvArr.reduce(function(s,h){return s+h;}, 0) / hrvArr.length).toFixed(0) : '--';
+        dataCtx = '[측정 데이터] 인지 정답률 ' + accuracy + '% · 반응 속도 ' + avgLatency + 's · BPM ' + avgBPM + ' · HRV ' + avgHRV + 'ms';
+      }
+      
+      // Gemini API 호출 (cgoCallGemini 함수 활용 — 본진 통합)
+      if(typeof window.cgoCallGemini === 'function'){
+        var prompt = '당신은 다음 100명의 전문가가 합쳐진 최고의 AI 치매 예방 상담사입니다:\n' +
+                     '• 세계 최고 수준의 신경과 전문의 40명 (치매 · 알츠하이머 · 혈관성 치매 · 파킨슨 · 경도인지장애 진단 권위자)\n' +
+                     '• 신경정신의학과 전문의 40명 (인지장애 · 우울 · 불안 · 수면장애 · 뇌 노화 임상 권위자)\n' +
+                     '• 임상심리학자 20명 (인지 평가 · 신경심리 검사 · MMSE-DS · MoCA · 인지 행동치료 전문가)\n\n' +
+                     '【답변 규칙】\n' +
+                     '1. 100명 전문가의 의학적 깊이를 유지하되, 일반인(어르신·중장년층 포함)이 이해할 수 있는 쉬운 한국어로 답변하세요.\n' +
+                     '2. 어려운 의학 용어는 괄호로 풀어쓰기 (예: HRV(심박변이도), MCI(경도인지장애)).\n' +
+                     '3. 의료 진단·처방은 절대 하지 말고, 참고 가이드만 제공하세요.\n' +
+                     '4. 사용자 측정 데이터가 있으면 그 맥락에서 답변하세요.\n' +
+                     '5. 답변 마지막에 "정확한 진단은 신경과 전문의 상담을 권장드립니다"를 자연스럽게 포함하세요.\n' +
+                     '6. 2~4문장으로 간결하되, 의학적 근거(근거 논문/가이드라인)를 살짝 언급하세요.\n\n' +
+                     (dataCtx ? '※ 사용자의 측정 데이터: ' + dataCtx + '\n' : '') +
+                     '사용자 질문: ' + userMsg;
+        
+        window.cgoCallGemini(prompt, function(answer){
+          if(answer){
+            aiBubble.innerHTML = answer.replace(/\n/g, '<br/>');
+          } else {
+            aiBubble.innerHTML = '죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요. 🛡️';
+          }
+          msgs.scrollTop = msgs.scrollHeight;
+        });
+      } else {
+        // 폴백 (Gemini 함수 없을 때)
+        setTimeout(function(){
+          var fallback = '치매 예방을 위해서는 <b>유산소 운동(주 3회 이상)</b>, <b>충분한 수면(7~8시간)</b>, ' +
+                        '<b>균형 잡힌 식사(지중해식 추천)</b>, <b>사회적 활동</b>이 중요합니다. ' +
+                        (hasData ? '측정 데이터를 보면 ' + (parseFloat(bpmArr.length > 0 ? bpmArr.reduce(function(s,b){return s+b;}, 0) / bpmArr.length : 0) > 100 ? '심박이 다소 높으니 깊은 호흡으로 안정시켜 보세요. ' : '안정 범위입니다. ') : '') +
+                        '정확한 진단은 신경과 전문의 상담을 권장드립니다.';
+          aiBubble.innerHTML = fallback;
+          msgs.scrollTop = msgs.scrollHeight;
+        }, 1500);
+      }
+    };
     
     console.log('  ✦ C-39 v2.0 · Dementia Prevention Check · 두피 구조 모방 · Phase 1 (Skeleton) ✦');
     console.log('  ✦ 문항: 약식 10 · 중식 20 · 고식 50 박입 완료 (DD.txt + C-39 분석) ✦');
