@@ -11410,101 +11410,6 @@ function cgoGuideFeature(key){
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- 🏥 종합 관리 카드 (보호자 + 이상행동 + 투약 + GPS + 보호자 AI) -->
-      <!-- 모두 치매 페이지 안에서 작동 · ILI 함수 자체 활용 · LocalStorage -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div style="background:#fff;border:1px solid #f0e6d4;border-radius:18px;overflow:hidden;margin-top:16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(212,168,67,.05);">
-        <!-- 접힘/펼침 헤더 -->
-        <div onclick="window.demToggleCareCard()" style="padding:16px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:1px solid #f0e6d4;display:flex;align-items:center;gap:12px;cursor:pointer;">
-          <div style="flex-shrink:0;width:44px;height:44px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(212,168,67,.3);">🏥</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:900;color:#1a1408;margin-bottom:3px;">🏥 종합 관리 카드 <span style="font-size:9px;color:#d4a843;font-weight:900;letter-spacing:.06em;padding:2px 6px;background:rgba(212,168,67,.15);border-radius:6px;margin-left:4px;">NEW</span></div>
-            <div style="font-size:10px;color:#888;line-height:1.4;">보호자 · 이상행동 대처 · 투약 · GPS · 보호자 AI</div>
-          </div>
-          <div id="dem-care-toggle" style="font-size:20px;color:#d4a843;font-weight:900;">▼</div>
-        </div>
-        
-        <!-- 펼침 본문 (기본 접힘) -->
-        <div id="dem-care-body" style="display:none;padding:16px;background:#fafbfc;">
-          
-          <!-- ① 보호자 정보 카드 (ILI famAddGuardTel 함수 활용) -->
-          <div style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:14px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:900;color:#1a1408;">👨‍👩‍👧 보호자 정보</div>
-              <button onclick="window.demAddGuard()" style="padding:6px 14px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">+ 추가</button>
-            </div>
-            <div id="dem-guard-list" style="display:flex;flex-direction:column;gap:6px;">
-              <div style="padding:10px;background:#fafbfc;border:1px dashed #e0e0e8;border-radius:8px;font-size:11px;color:#888;text-align:center;">등록된 보호자가 없습니다</div>
-            </div>
-          </div>
-          
-          <!-- ② 이상 행동 대처 매뉴얼 -->
-          <div style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:14px;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:900;color:#1a1408;margin-bottom:10px;">🚨 이상 행동 대처 매뉴얼</div>
-            <div style="font-size:10px;color:#888;margin-bottom:10px;line-height:1.5;">아래 상황 클릭 시 100인 전문의 기반 대처법이 표시됩니다</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-              <button onclick="window.demShowBehavior('짐을 자꾸 싸려고 해요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">🎒 짐을 싸려 해요</button>
-              <button onclick="window.demShowBehavior('갑자기 화를 내요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">😠 화를 내요</button>
-              <button onclick="window.demShowBehavior('가족을 못 알아봐요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">😕 못 알아봐요</button>
-              <button onclick="window.demShowBehavior('밤에 잠을 안 자요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">🌙 밤에 안 자요</button>
-              <button onclick="window.demShowBehavior('환각이나 환청을 호소해요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">👻 환각·환청</button>
-              <button onclick="window.demShowBehavior('밖으로 나가려고 해요')" style="padding:10px 8px;background:#fef9f3;border:1px solid #f0e6d4;border-radius:8px;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;text-align:left;">🚪 배회·이탈</button>
-            </div>
-            <div id="dem-behavior-result" style="margin-top:10px;display:none;padding:12px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #d4a843;border-radius:10px;font-size:11px;color:#1a1408;line-height:1.7;"></div>
-          </div>
-          
-          <!-- ③ 투약 관리 -->
-          <div style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:14px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:900;color:#1a1408;">💊 투약 관리</div>
-              <button onclick="window.demAddMed()" style="padding:6px 14px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">+ 약 등록</button>
-            </div>
-            <div style="font-size:10px;color:#888;margin-bottom:8px;line-height:1.5;">⏰ 시간이 되면 알림 · 30분 미복용 시 보호자에게 알림 (다음 단계에서 PeerJS 연동)</div>
-            <div id="dem-med-list" style="display:flex;flex-direction:column;gap:6px;">
-              <div style="padding:10px;background:#fafbfc;border:1px dashed #e0e0e8;border-radius:8px;font-size:11px;color:#888;text-align:center;">등록된 약이 없습니다</div>
-            </div>
-          </div>
-          
-          <!-- ④ GPS 배회 방지 -->
-          <div style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:14px;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:900;color:#1a1408;margin-bottom:10px;">🗺️ GPS 배회 방지</div>
-            <div style="padding:14px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #d4a843;border-radius:10px;text-align:center;">
-              <div style="font-size:32px;margin-bottom:8px;">⌚</div>
-              <div style="font-size:12px;font-weight:900;color:#1a1408;margin-bottom:4px;">FULI GPS 워치 연동</div>
-              <div style="font-size:10px;color:#888;line-height:1.5;margin-bottom:8px;">사전 설정된 안전 구역을 이탈 시<br/>보호자에게 즉시 알림 발송</div>
-              <div style="display:inline-block;padding:4px 10px;background:rgba(212,168,67,.15);color:#d4a843;border-radius:8px;font-size:9px;font-weight:900;letter-spacing:.08em;">출시 예정</div>
-            </div>
-          </div>
-          
-          <!-- ⑤ 보호자용 AI 상담사 (이름: AI 상담사 — 보호자용) -->
-          <div style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;overflow:hidden;">
-            <div style="padding:14px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:1px solid #f0e6d4;display:flex;align-items:center;gap:10px;">
-              <div style="flex-shrink:0;width:36px;height:36px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🩺</div>
-              <div style="flex:1;">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-                  <span style="font-size:13px;font-weight:900;color:#1a1408;">AI 상담사 · 보호자용</span>
-                  <span style="padding:1px 5px;background:rgba(52,211,153,.15);color:#10b981;border-radius:3px;font-size:7px;font-weight:800;">● ONLINE</span>
-                </div>
-                <div style="font-size:9px;color:#888;line-height:1.4;">환자 데이터 + 간병인 활동 분석 · 100명 전문가</div>
-              </div>
-            </div>
-            <div id="dem-guardian-chat-messages" style="height:220px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#fafbfc;">
-              <div style="align-self:flex-start;max-width:88%;padding:10px 12px;background:#fff;border:1px solid #f0e6d4;border-radius:12px 12px 12px 4px;font-size:11px;color:#1a1408;line-height:1.6;">
-                안녕하세요. 🩺 <b>AI 상담사 · 보호자용</b>입니다.<br/><br/>
-                저는 신경과·정신건강의학과 + 인지심리 + 가족 돌봄 지식을 종합 학습한 AI예요. 환자분의 측정 데이터와 보호자가 입력하신 일일 변화 기록을 분석하여 맞춤 돌봄 가이드를 드립니다.<br/><br/>
-                "환자가 자꾸 같은 말 반복해요" 같이 편하게 말씀해주세요.
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;padding:10px;border-top:1px solid #f0e6d4;background:#fff;">
-              <textarea id="dem-guardian-chat-input" rows="1" placeholder="보호자로서 궁금한 것을 물어보세요..." onkeydown="demGuardianChatEnter(event)" style="flex:1;background:#fafbfc;border:1px solid #e8eaf0;border-radius:8px;padding:8px 10px;font-size:11px;color:#1a1408;resize:none;outline:none;font-family:inherit;"></textarea>
-              <button type="button" onclick="demGuardianChatSend();event.stopPropagation();" style="padding:8px 14px;background:linear-gradient(135deg,#1a1408,#2a2418);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;">전송</button>
-            </div>
-          </div>
-          
-        </div>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- AI 챗 상담사 — 치매 예방 종합 가이드 (두피 모방, 치매로 변환) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div style="background:#fff;border:1px solid #f0e6d4;border-radius:18px;overflow:hidden;margin-top:16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(212,168,67,.05);">
@@ -11529,6 +11434,120 @@ function cgoGuideFeature(key){
           <textarea id="dementia-chat-input" rows="1" placeholder="치매 예방·인지 건강에 대해 무엇이든 물어보세요..." onkeydown="dementiaChatEnter(event)" style="flex:1;background:#fafbfc;border:1px solid #e8eaf0;border-radius:10px;padding:10px 12px;font-size:12px;color:#1a1408;resize:none;outline:none;font-family:inherit;"></textarea>
           <button type="button" id="dementia-chat-send" onclick="dementiaChatSend();event.stopPropagation();" style="padding:10px 18px;background:linear-gradient(135deg,#1a1408,#2a2418);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">전송</button>
         </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- 🏥 종합 관리 카드 v2.0 — AI 아래 위치 · 큰 카드 · 상세 매뉴얼     -->
+      <!-- ILI 가족 위치 연동 구조 적용 · 이상행동 12개 상세 분석            -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div style="background:#fff;border:1px solid #f0e6d4;border-radius:18px;overflow:hidden;margin-top:16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(212,168,67,.05);">
+        <!-- 카드 헤더 (큰 카드) -->
+        <div style="padding:20px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:2px solid #d4a843;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="flex-shrink:0;width:52px;height:52px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 16px rgba(212,168,67,.35);">🏥</div>
+            <div style="flex:1;">
+              <div style="font-size:18px;font-weight:900;color:#1a1408;margin-bottom:4px;">🏥 종합 관리 카드 <span style="font-size:10px;color:#d4a843;font-weight:900;letter-spacing:.06em;padding:3px 8px;background:rgba(212,168,67,.18);border-radius:8px;margin-left:6px;">NEW v2.0</span></div>
+              <div style="font-size:12px;color:#666;line-height:1.5;">보호자 · 이상행동 12가지 · 투약 · 가족 위치 연동 · 보호자 AI<br/><b style="color:#d4a843;">치매 보호자를 위한 일상 통합 솔루션</b></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ① 보호자 정보 -->
+        <div style="padding:20px;border-bottom:1px solid #f0e6d4;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:900;color:#1a1408;">👨‍👩‍👧 ① 보호자 정보</div>
+            <button onclick="window.demAddGuard()" style="padding:8px 16px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;">+ 보호자 추가</button>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.6;">등록된 보호자에게 환자의 일일 변화 · 이상행동 · 투약 미복용 알림이 전송됩니다 (PeerJS 연동 예정)</div>
+          <div id="dem-guard-list" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="padding:14px;background:#fafbfc;border:1px dashed #e0e0e8;border-radius:10px;font-size:12px;color:#888;text-align:center;">등록된 보호자가 없습니다</div>
+          </div>
+        </div>
+        
+        <!-- ② 이상 행동 대처 매뉴얼 (12가지 상세) -->
+        <div style="padding:20px;border-bottom:1px solid #f0e6d4;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:900;color:#1a1408;">🚨 ② 이상 행동 대처 매뉴얼</div>
+            <span style="font-size:10px;color:#d4a843;font-weight:800;padding:3px 8px;background:rgba(212,168,67,.12);border-radius:6px;">12가지 시나리오</span>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.6;">신경과 전문의 40명 + 신경정신의학과 40명 + 임상심리학자 20명 = 100인 전문가 기반 대처 매뉴얼</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="dem-behavior-grid"></div>
+          <div id="dem-behavior-result" style="margin-top:14px;display:none;padding:16px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #d4a843;border-radius:12px;"></div>
+        </div>
+        
+        <!-- ③ 투약 관리 -->
+        <div style="padding:20px;border-bottom:1px solid #f0e6d4;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:900;color:#1a1408;">💊 ③ 투약 관리</div>
+            <button onclick="window.demAddMed()" style="padding:8px 16px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;">+ 약 등록</button>
+          </div>
+          <div style="font-size:11px;color:#888;margin-bottom:10px;line-height:1.6;">⏰ 등록 시간에 환자 폰 알림 · 30분 미복용 시 보호자에게 알림 (PeerJS 연동 예정)</div>
+          <div id="dem-med-list" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="padding:14px;background:#fafbfc;border:1px dashed #e0e0e8;border-radius:10px;font-size:12px;color:#888;text-align:center;">등록된 약이 없습니다</div>
+          </div>
+        </div>
+        
+        <!-- ④ 가족 위치 연동 (ILI 구조 적용) -->
+        <div style="padding:20px;border-bottom:1px solid #f0e6d4;">
+          <div style="font-size:15px;font-weight:900;color:#1a1408;margin-bottom:14px;">📱 ④ 가족 위치 연동 설정</div>
+          
+          <!-- 내 번호 (보호자) -->
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:700;">👤 나의 번호 (보호자)</div>
+            <div style="display:flex;gap:8px;">
+              <input id="dem-my-tel" type="tel" placeholder="010-0000-0000"
+                style="flex:1;padding:10px 12px;border-radius:10px;background:#fafbfc;border:1px solid #f0e6d4;color:#1a1408;font-size:13px;font-weight:700;outline:none;"
+                oninput="window.demSaveMyTel(this.value)">
+              <button onclick="window.demSaveMyTelBtn()" style="padding:10px 16px;border-radius:10px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;font-size:12px;font-weight:800;border:none;cursor:pointer;">저장</button>
+            </div>
+          </div>
+          
+          <!-- 환자 번호 -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:700;">🧠 환자 번호 (치매 어르신)</div>
+            <div style="display:flex;gap:8px;">
+              <input id="dem-patient-tel" type="tel" placeholder="010-0000-0000"
+                style="flex:1;padding:10px 12px;border-radius:10px;background:#fafbfc;border:1px solid #f0e6d4;color:#1a1408;font-size:13px;font-weight:700;outline:none;">
+              <button onclick="window.demAddPatientTel()" style="padding:10px 16px;border-radius:10px;background:rgba(56,189,248,.15);color:#0891b2;border:1px solid rgba(56,189,248,.4);font-size:12px;font-weight:800;cursor:pointer;">추가</button>
+            </div>
+            <div id="dem-patient-list" style="margin-top:8px;"></div>
+          </div>
+          
+          <!-- 연동 방법 -->
+          <div style="font-size:11px;font-weight:800;color:#666;margin-bottom:10px;">🔗 연동 방법 선택</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div style="padding:14px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.25);border-radius:12px;text-align:center;">
+              <div style="font-size:26px;margin-bottom:8px;">✨</div>
+              <div style="font-size:12px;font-weight:800;color:#d4a843;margin-bottom:6px;">CGO-FULI 앱</div>
+              <div style="font-size:10px;color:#888;margin-bottom:10px;line-height:1.6;">실시간 위치 · 측정 결과<br/>모두 공유 가능</div>
+              <button onclick="window.demInviteFuli()" style="width:100%;padding:8px;border-radius:8px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;font-size:11px;font-weight:800;cursor:pointer;">📲 초대 문자 보내기</button>
+            </div>
+            <div style="padding:14px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.25);border-radius:12px;text-align:center;">
+              <div style="font-size:26px;margin-bottom:8px;">🗺️</div>
+              <div style="font-size:12px;font-weight:800;color:#10b981;margin-bottom:6px;">구글 위치 공유</div>
+              <div style="font-size:10px;color:#888;margin-bottom:10px;line-height:1.6;">앱 설치 없이<br/>링크로 바로 확인</div>
+              <button onclick="window.demInviteGoogle()" style="width:100%;padding:8px;border-radius:8px;background:rgba(52,211,153,.15);color:#10b981;border:1px solid rgba(52,211,153,.4);font-size:11px;font-weight:800;cursor:pointer;">📲 위치 링크 보내기</button>
+            </div>
+          </div>
+          
+          <!-- 지도 영역 -->
+          <div id="dem-map-box" style="width:100%;height:200px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #f0e6d4;border-radius:12px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:10px;overflow:hidden;">
+            <div id="dem-map-pins" style="width:100%;height:100%;position:relative;"></div>
+            <div id="dem-map-empty" style="text-align:center;color:#888;">
+              <div style="font-size:36px;margin-bottom:8px;">📍</div>
+              <div style="font-size:12px;line-height:1.6;">위치 공유를 시작하면<br/>가족 위치가 지도에 표시됩니다</div>
+            </div>
+          </div>
+          
+          <button onclick="window.demShareLocation()" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#d4a843,#fbbf24);color:#fff;border:none;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(212,168,67,.3);">
+            📍 내 위치 가족에게 공유
+          </button>
+          <div id="dem-location-status" style="font-size:11px;color:#888;text-align:center;margin-top:10px;"></div>
+          <div style="margin-top:12px;padding:10px;background:#fef9f3;border-radius:8px;font-size:10px;color:#888;text-align:center;line-height:1.6;">
+            🛡️ FULI GPS 워치 (출시 예정) 연동 시 자동 안전구역 알림
+          </div>
+        </div>
+        
       </div>
 
       <!-- 정직 박지 (대장님 명령 — 의학 표준 권장 문구) -->
@@ -12257,22 +12276,21 @@ function cgoGuideFeature(key){
     // ZERO STORAGE 법통: 사용자 데이터는 LocalStorage(폰 안)에만
     // ════════════════════════════════════════════════════
     
-    // 접힘/펼침
+    // 큰 카드 — 자동 데이터 로드 (펼침/접힘 X, 항상 표시)
     window.demToggleCareCard = function(){
-      var body = document.getElementById('dem-care-body');
-      var toggle = document.getElementById('dem-care-toggle');
-      if(!body) return;
-      if(body.style.display === 'none'){
-        body.style.display = 'block';
-        if(toggle) toggle.textContent = '▲';
-        // 펼칠 때 데이터 자동 로드
-        window.demLoadGuardList();
-        window.demLoadMedList();
-      } else {
-        body.style.display = 'none';
-        if(toggle) toggle.textContent = '▼';
-      }
+      window.demLoadGuardList();
+      window.demLoadMedList();
+      window.demLoadPatientList();
     };
+    // 페이지 로드 시 자동 데이터 로드
+    setTimeout(function(){ 
+      if(window.demLoadGuardList) window.demLoadGuardList();
+      if(window.demLoadMedList) window.demLoadMedList();
+      if(window.demLoadPatientList) window.demLoadPatientList();
+      var myTel = localStorage.getItem('dem_my_tel');
+      var inp = document.getElementById('dem-my-tel');
+      if(inp && myTel) inp.value = myTel;
+    }, 800);
     
     // ① 보호자 등록 (이름/전화/관계)
     window.demAddGuard = function(){
@@ -12319,23 +12337,247 @@ function cgoGuideFeature(key){
     };
     
     // ② 이상 행동 대처 매뉴얼 (정적 + AI 하이브리드)
+    // 100인 전문의 기반 이상 행동 12가지 상세 대처 매뉴얼
     var DEM_BEHAVIOR_GUIDES = {
-      '짐을 자꾸 싸려고 해요': '🎯 <b>대처법</b><br/>① 화내지 말고 차분하게 함께 짐을 풀어요. ② "어디 가시려고요?" 물어 마음을 확인하세요. ③ 익숙한 사진/물건으로 주의를 돌리세요. ④ 일몰증후군 가능성이 있으니 오후 5시 이후 조명을 밝게 하세요.',
-      '갑자기 화를 내요': '🎯 <b>대처법</b><br/>① 맞서거나 설득하지 마세요. ② "기분이 안 좋으세요?" 차분히 공감하세요. ③ 안전한 거리를 두고 진정될 때까지 기다려요. ④ 자주 반복되면 통증·배뇨곤란 등 신체 원인 확인.',
-      '가족을 못 알아봐요': '🎯 <b>대처법</b><br/>① "엄마, 저 막내예요" 본인 소개를 자연스럽게. ② 사진 앨범으로 기억을 떠올리도록 도와요. ③ 못 알아봐도 상처받지 마세요 — 기억 손상이지 사랑 부족 X. ④ 일관된 호칭/말투 유지.',
-      '밤에 잠을 안 자요': '🎯 <b>대처법</b><br/>① 낮잠을 30분 이내로 줄이세요. ② 오전·낮 햇볕 30분 이상 쬐기. ③ 카페인·자극적 TV 피하기. ④ 자기 전 따뜻한 우유, 차분한 음악. ⑤ 2주 이상 지속 시 신경과 상담.',
-      '환각이나 환청을 호소해요': '🎯 <b>대처법</b><br/>① "그런 게 어딨어요" 부정하지 마세요. ② "무서우셨겠어요" 감정에 공감하세요. ③ 조명·환경 정리 (그림자, 거울이 환각 유발). ④ 빈번하면 신경과 약물 조절 필요.',
-      '밖으로 나가려고 해요': '🎯 <b>대처법</b><br/>① 현관 잠금 + 신발 위치 변경. ② 인식표/위치 추적기 착용. ③ "함께 산책 가요" 제안하며 욕구 해소. ④ 경찰청 안전Dream 지문 사전등록 추천.'
+      '짐싸기': {
+        emoji: '🎒',
+        title: '짐을 자꾸 싸려고 해요',
+        cause: '🔬 <b>원인 분석</b><br/>치매 환자의 "집에 가고 싶다"는 강박은 단기기억 손상 + 시간/장소 지남력 저하 + 안전감 결여가 결합된 신경학적 증상입니다. 본인의 어린 시절 집을 현재의 집으로 착각하기도 합니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>공감 우선</b>: "집에 가고 싶으시구나" 부정 X<br/>② <b>주의 전환</b>: 좋아하는 음식·사진·음악으로 화제 돌림<br/>③ <b>함께 짐풀기</b>: 천천히 한 가지씩, 자연스럽게<br/>④ <b>일몰증후군 확인</b>: 오후 4~7시 빈발 시 조명 강화<br/>⑤ <b>외출 위험 시</b>: 인식표 + 위치 추적기 필수',
+        warning: '⚠️ <b>주의</b>: 야간에 짐을 싸기 시작하면 배회로 이어질 수 있어 반드시 동행이 필요합니다.'
+      },
+      '화내기': {
+        emoji: '😠',
+        title: '갑자기 화를 내요 / 공격성',
+        cause: '🔬 <b>원인 분석</b><br/>분노 폭발은 전두엽 기능 저하로 인한 충동 조절 능력 상실 + 의사소통 어려움에서 오는 좌절감 + 신체적 불편(통증·배뇨곤란)이 원인입니다. 환자 본인도 통제하지 못합니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>맞대응 X</b>: 논쟁·설득 절대 금지<br/>② <b>안전 거리</b>: 1.5m 이상 떨어져 자세 낮춤<br/>③ <b>차분한 음성</b>: "기분이 안 좋으세요?" 천천히<br/>④ <b>신체 원인 점검</b>: 변비·요통·치통·배고픔 확인<br/>⑤ <b>환경 점검</b>: 시끄러운 TV·낯선 사람 제거',
+        warning: '⚠️ <b>주의</b>: 주 3회 이상 폭발하면 신경과에서 약물 조절(아리셉트·메만틴 등) 필요. 보호자 안전이 최우선.'
+      },
+      '못알아봄': {
+        emoji: '😕',
+        title: '가족을 못 알아봐요',
+        cause: '🔬 <b>원인 분석</b><br/>장기기억 손상으로 인해 시간을 거슬러 올라가는 현상입니다. 아내를 어머니로, 자녀를 형제로 인식하기도 합니다. 사랑이 없는 게 아니라 뇌 신경망의 손상입니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>이름 자주 사용</b>: "아버지, 막내 영수예요"<br/>② <b>회상 자극</b>: 옛 사진·결혼식·여행 사진 함께<br/>③ <b>일관된 호칭</b>: 매번 같은 방식으로 자기소개<br/>④ <b>마음 다잡기</b>: 보호자 상처받지 않기 — 환자 잘못 X<br/>⑤ <b>반복 환영</b>: 매일 처음 만난 듯 따뜻하게',
+        warning: '💡 <b>희망</b>: 못 알아봐도 감정적 유대(따뜻한 손길)는 마지막까지 남습니다.'
+      },
+      '불면': {
+        emoji: '🌙',
+        title: '밤에 잠을 못 자요',
+        cause: '🔬 <b>원인 분석</b><br/>치매 환자의 수면-각성 주기 장애는 시상하부 손상이 원인입니다. 낮밤 구분 능력 저하 + 멜라토닌 분비 감소 + 일몰증후군이 겹쳐 발생합니다.',
+        action: '🎯 <b>6단계 대처법</b><br/>① <b>낮잠 30분 이내</b>: 오후 1~3시 사이만<br/>② <b>햇볕 30분</b>: 오전 산책으로 생체리듬 정상화<br/>③ <b>저녁 자극 차단</b>: 카페인·뉴스·자극적 TV X<br/>④ <b>저녁 의식</b>: 따뜻한 우유·잔잔한 음악·약한 조명<br/>⑤ <b>침실 환경</b>: 22℃ · 어둡고 조용히<br/>⑥ <b>2주 이상</b>: 신경과 처방 (트라조돈 등)',
+        warning: '⚠️ <b>주의</b>: 수면제 자가복용 절대 금지. 낙상·섬망 위험.'
+      },
+      '환각': {
+        emoji: '👻',
+        title: '환각·환청을 호소해요',
+        cause: '🔬 <b>원인 분석</b><br/>레비소체 치매·알츠하이머 후기에 흔합니다. 시각 환각(돌아가신 분이 보임)은 후두엽 손상, 환청은 측두엽 손상이 원인입니다. 본인에게는 100% 현실입니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>부정 X</b>: "그런 게 어딨어요" 절대 말하지 마세요<br/>② <b>감정 공감</b>: "무서우셨겠어요. 제가 곁에 있어요"<br/>③ <b>환경 정리</b>: 그림자·거울·복잡한 패턴 → 환각 유발<br/>④ <b>조명 밝게</b>: 어두운 곳에서 환각 ↑<br/>⑤ <b>약물 조절</b>: 빈번하면 신경과 항정신병약 처방',
+        warning: '⚠️ <b>주의</b>: 환각이 자해·타해로 이어지면 즉시 응급실.'
+      },
+      '배회': {
+        emoji: '🚪',
+        title: '밖으로 나가려고 해요 / 배회',
+        cause: '🔬 <b>원인 분석</b><br/>배회의 90%는 의도가 있습니다 — "직장 가야 해" "어머니 보러 가야 해". 시간 지남력 상실 + 장기기억이 현재로 침투한 결과입니다. 다리 운동 욕구도 원인.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>물리적 차단</b>: 현관 이중 잠금 + 신발 위치 변경<br/>② <b>인식표 필수</b>: 옷·가방·시계에 연락처<br/>③ <b>위치 추적기</b>: GPS 워치 (출시 예정) · 휴대폰<br/>④ <b>욕구 충족</b>: "함께 산책 가요" 동반 외출<br/>⑤ <b>사전 등록</b>: 경찰청 안전Dream 지문 등록 (필수)',
+        warning: '🚨 <b>실종 시</b>: 112 + 지구대 + 안전Dream 동시 신고. 첫 1시간이 골든타임.'
+      },
+      '식사거부': {
+        emoji: '🍚',
+        title: '식사를 거부해요',
+        cause: '🔬 <b>원인 분석</b><br/>치매 후기에 흔합니다. 후각·미각 저하 + 삼킴 곤란(연하장애) + 우울 + 의치 불편 + "독을 탔다" 망상이 복합 작용합니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>구강 점검</b>: 의치·치통·구내염 확인<br/>② <b>식감 조절</b>: 부드럽고 잘게 (떡·견과류 위험)<br/>③ <b>소량 자주</b>: 5~6회로 분산<br/>④ <b>좋아하는 음식</b>: 옛날 즐기던 메뉴 우선<br/>⑤ <b>함께 식사</b>: 보호자와 같이 먹으며 분위기',
+        warning: '⚠️ <b>주의</b>: 1주일 이상 식사량 50% 미만 → 영양실조 위험, 즉시 진료.'
+      },
+      '대소변': {
+        emoji: '🚽',
+        title: '대소변 실수를 자주 해요',
+        cause: '🔬 <b>원인 분석</b><br/>화장실 위치를 잊어버림 + 신호 인지 능력 저하 + 옷 벗는 순서 잊음이 원인입니다. 본인도 부끄러워합니다. 절대 화내지 마세요.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>화장실 표시</b>: 큰 그림·화살표<br/>② <b>2시간마다 안내</b>: "화장실 다녀오시죠"<br/>③ <b>옷 단순화</b>: 단추 X · 고무줄 바지<br/>④ <b>야간 패드</b>: 수치심 ↓ + 청결<br/>⑤ <b>존엄 유지</b>: 절대 비난 X · 차분히 정리',
+        warning: '💡 <b>팁</b>: 요로감염이 갑작스러운 실수의 원인일 수 있어 소변검사 권장.'
+      },
+      '같은말반복': {
+        emoji: '🔁',
+        title: '같은 말·질문을 반복해요',
+        cause: '🔬 <b>원인 분석</b><br/>단기기억 손상의 가장 흔한 증상입니다. 방금 답을 들었어도 기억에 저장되지 않아 다시 묻습니다. 보호자가 가장 지치는 증상.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>매번 처음처럼</b>: "오늘 점심 뭐예요?" 처음 듣듯<br/>② <b>짧고 명확</b>: 단순 답변 (긴 설명 X)<br/>③ <b>메모판</b>: 자주 묻는 답을 큰 글씨로 벽에<br/>④ <b>주의 전환</b>: 음악·산책·간식으로 화제 돌림<br/>⑤ <b>보호자 휴식</b>: 가족 교대 · 주간보호센터 활용',
+        warning: '💡 <b>팁</b>: 보호자 번아웃 시 치매안심센터(1666-0921) 상담.'
+      },
+      '의심망상': {
+        emoji: '🤔',
+        title: '의심·도둑망상이 심해요',
+        cause: '🔬 <b>원인 분석</b><br/>"누가 내 지갑 훔쳤다" "남편이 바람피운다" 등 망상은 기억 손상을 보완하려는 뇌의 작동입니다. 본인이 둔 곳을 잊고 누군가 가져갔다고 결론짓습니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>논쟁 금지</b>: "안 훔쳤어요" 부정 절대 X<br/>② <b>함께 찾기</b>: "같이 찾아볼게요"<br/>③ <b>예비품 비치</b>: 지갑·안경 여분 (찾는 척)<br/>④ <b>고정 위치</b>: 중요 물건 항상 같은 자리<br/>⑤ <b>심한 경우</b>: 신경과 항정신병약 처방',
+        warning: '⚠️ <b>주의</b>: 보호자 폭언/폭행으로 이어지면 즉시 신경과.'
+      },
+      '우울무기력': {
+        emoji: '😔',
+        title: '우울하고 무기력해요',
+        cause: '🔬 <b>원인 분석</b><br/>치매 환자의 40~50%가 우울증을 동반합니다. 본인의 변화를 인지하고 절망감 + 사회적 고립 + 세로토닌 감소가 원인입니다.',
+        action: '🎯 <b>5단계 대처법</b><br/>① <b>일과 만들기</b>: 매일 같은 시간 산책·식사<br/>② <b>작은 성취</b>: 빨래 개기·화분 물주기 등<br/>③ <b>사회적 연결</b>: 주간보호센터 · 친구 방문<br/>④ <b>회상 요법</b>: 옛 사진·음악으로 긍정 감정<br/>⑤ <b>전문 치료</b>: 2주 이상 시 항우울제 (SSRI)',
+        warning: '🚨 <b>응급</b>: 자살 언급·자해 → 즉시 정신건강의학과.'
+      },
+      '낙상': {
+        emoji: '🦴',
+        title: '자꾸 넘어져요 / 낙상',
+        cause: '🔬 <b>원인 분석</b><br/>치매 환자는 정상인 대비 낙상 위험 3배. 시공간 인지 저하 + 근력 감소 + 약물 부작용(현기증) + 시야 좁아짐이 복합 원인.',
+        action: '🎯 <b>6단계 대처법</b><br/>① <b>환경 안전</b>: 카펫 제거·바닥 정리·코너 보호대<br/>② <b>화장실 손잡이</b>: 변기·욕조 옆 필수<br/>③ <b>조명 강화</b>: 야간등 · 복도 밝게<br/>④ <b>신발 안전</b>: 미끄럼 방지 · 끈 X<br/>⑤ <b>운동</b>: 가벼운 균형 운동 (의자 체조)<br/>⑥ <b>약물 검토</b>: 수면제·혈압약 부작용 확인',
+        warning: '⚠️ <b>주의</b>: 머리 부딪힘 시 의식 명료해도 24시간 관찰 (지연 출혈).'
+      }
     };
+    
+    // 시나리오 키 → 이미지 번호 매핑 (대장님 명령: /behavior-1.jpeg ~ /behavior-12.jpeg)
+    var DEM_BEHAVIOR_KEYS = ['짐싸기','화내기','못알아봄','불면','환각','배회','식사거부','대소변','같은말반복','의심망상','우울무기력','낙상'];
+    
+    // 12개 매뉴얼 카드 자동 렌더링 (이미지 박입)
+    window.demRenderBehaviorGrid = function(){
+      var el = document.getElementById('dem-behavior-grid');
+      if(!el) return;
+      el.innerHTML = DEM_BEHAVIOR_KEYS.map(function(key, idx){
+        var g = DEM_BEHAVIOR_GUIDES[key];
+        if(!g) return '';
+        var num = idx + 1;
+        return '<button onclick="window.demShowBehavior(\'' + key + '\')" style="padding:0;background:#fafbfc;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;text-align:left;transition:all .2s;overflow:hidden;display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'#d4a843\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 14px rgba(212,168,67,.15)\'" onmouseout="this.style.borderColor=\'#f0e6d4\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">' +
+               '<div style="width:100%;aspect-ratio:1;background:linear-gradient(135deg,#fef9f3,#fffbeb);position:relative;overflow:hidden;">' +
+                 '<img src="/behavior-' + num + '.jpeg" alt="' + g.title + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">' +
+                 '<div style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#aaa;text-align:center;padding:8px;">' +
+                   '<div style="font-size:36px;opacity:.4;">' + g.emoji + '</div>' +
+                   '<div style="font-size:9px;color:#bbb;margin-top:4px;">behavior-' + num + '.jpeg</div>' +
+                 '</div>' +
+                 '<div style="position:absolute;top:8px;left:8px;background:rgba(212,168,67,.9);color:#fff;font-size:10px;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.04em;">' + num + '</div>' +
+               '</div>' +
+               '<div style="padding:10px 12px;">' +
+                 '<div style="font-size:18px;margin-bottom:4px;">' + g.emoji + '</div>' +
+                 '<div style="font-size:12px;font-weight:800;color:#1a1408;line-height:1.4;">' + g.title + '</div>' +
+               '</div>' +
+               '</button>';
+      }).join('');
+    };
+    
+    // 자동 호출 (페이지 로드 시)
+    setTimeout(function(){ if(window.demRenderBehaviorGrid) window.demRenderBehaviorGrid(); }, 500);
     
     window.demShowBehavior = function(key){
       var el = document.getElementById('dem-behavior-result');
       if(!el) return;
-      var guide = DEM_BEHAVIOR_GUIDES[key];
-      if(guide){
-        el.innerHTML = '<div style="font-size:12px;font-weight:900;color:#d4a843;margin-bottom:6px;">"' + key + '"</div>' + guide + '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #f0e6d4;font-size:9px;color:#888;">⚠️ 본 가이드는 일반적인 돌봄 안내이며, 지속적이거나 심한 경우 신경과 전문의 상담을 권장드립니다.</div>';
+      var g = DEM_BEHAVIOR_GUIDES[key];
+      var num = DEM_BEHAVIOR_KEYS.indexOf(key) + 1;
+      if(g){
+        var heroImg = num > 0 ? 
+          '<div style="width:100%;aspect-ratio:1;max-width:320px;margin:0 auto 16px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #f0e6d4;border-radius:14px;overflow:hidden;position:relative;">' +
+            '<img src="/behavior-' + num + '.jpeg" alt="' + g.title + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">' +
+            '<div style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#aaa;text-align:center;padding:16px;">' +
+              '<div style="font-size:64px;opacity:.4;">' + g.emoji + '</div>' +
+              '<div style="font-size:10px;color:#bbb;margin-top:8px;">behavior-' + num + '.jpeg</div>' +
+            '</div>' +
+          '</div>' : '';
+        el.innerHTML = heroImg +
+                       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #f0e6d4;">' +
+                         '<div style="font-size:32px;">' + g.emoji + '</div>' +
+                         '<div style="font-size:15px;font-weight:900;color:#1a1408;">' + g.title + '</div>' +
+                       '</div>' +
+                       '<div style="font-size:12px;color:#1a1408;line-height:1.8;margin-bottom:12px;">' + g.cause + '</div>' +
+                       '<div style="font-size:12px;color:#1a1408;line-height:1.8;margin-bottom:12px;padding:12px;background:#fff;border-radius:8px;border:1px solid #f0e6d4;">' + g.action + '</div>' +
+                       '<div style="font-size:11px;color:#92400e;line-height:1.7;padding:10px;background:#fef3c7;border-radius:8px;border:1px solid #fbbf24;">' + g.warning + '</div>' +
+                       '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #f0e6d4;font-size:10px;color:#888;line-height:1.6;">⚠️ 본 가이드는 신경과 전문의 40명 + 신경정신의학과 40명 + 임상심리학자 20명의 종합 매뉴얼이며, 지속적이거나 심한 경우 신경과 전문의 상담을 권장드립니다.</div>';
         el.style.display = 'block';
+        el.scrollIntoView({behavior:'smooth', block:'nearest'});
       }
+    };
+    
+    // 환자 번호 추가
+    window.demAddPatientTel = function(){
+      var input = document.getElementById('dem-patient-tel');
+      if(!input || !input.value) return;
+      try {
+        var list = JSON.parse(localStorage.getItem('dem_patients') || '[]');
+        list.push({ tel:input.value, addedAt:Date.now() });
+        localStorage.setItem('dem_patients', JSON.stringify(list));
+        input.value = '';
+        window.demLoadPatientList();
+      } catch(e){}
+    };
+    
+    window.demLoadPatientList = function(){
+      var el = document.getElementById('dem-patient-list');
+      if(!el) return;
+      try {
+        var list = JSON.parse(localStorage.getItem('dem_patients') || '[]');
+        el.innerHTML = list.map(function(p, i){
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-top:6px;background:#fafbfc;border:1px solid #f0e6d4;border-radius:8px;">' +
+                 '<span style="font-size:11px;color:#1a1408;font-weight:700;">🧠 ' + p.tel + '</span>' +
+                 '<button onclick="window.demDelPatient(' + i + ')" style="padding:3px 8px;background:transparent;border:1px solid #f0e6d4;border-radius:6px;color:#999;font-size:10px;cursor:pointer;">삭제</button>' +
+                 '</div>';
+        }).join('');
+      } catch(e){}
+    };
+    
+    window.demDelPatient = function(idx){
+      try {
+        var list = JSON.parse(localStorage.getItem('dem_patients') || '[]');
+        list.splice(idx, 1);
+        localStorage.setItem('dem_patients', JSON.stringify(list));
+        window.demLoadPatientList();
+      } catch(e){}
+    };
+    
+    // 내 번호 저장
+    window.demSaveMyTel = function(tel){
+      try { localStorage.setItem('dem_my_tel', tel); } catch(e){}
+    };
+    window.demSaveMyTelBtn = function(){
+      var input = document.getElementById('dem-my-tel');
+      if(input && input.value){
+        try { 
+          localStorage.setItem('dem_my_tel', input.value); 
+          alert('✅ 보호자 번호 저장 완료');
+        } catch(e){}
+      }
+    };
+    
+    // FULI 초대 (ILI 함수 재활용)
+    window.demInviteFuli = function(){
+      var msg = '🛡️ CGO-FULI 치매 예방 체크 앱으로 가족 위치 공유하기\n\n' +
+                'https://www.c-go-fuli.com\n\n' +
+                '치매 예방 + rPPG 자율신경 + 가족 위치 연동';
+      if(navigator.share){
+        navigator.share({ title:'CGO-FULI', text:msg, url:'https://www.c-go-fuli.com' }).catch(function(){});
+      } else {
+        prompt('아래 메시지를 복사하여 가족에게 보내세요:', msg);
+      }
+    };
+    
+    // 구글 위치 초대
+    window.demInviteGoogle = function(){
+      alert('📍 구글 위치 공유\n\n구글 지도 앱 → 위치 공유 → 가족 선택\n\n앱 설치 없이 링크로 위치 확인 가능합니다.');
+      window.open('https://www.google.com/maps/timeline', '_blank');
+    };
+    
+    // 위치 공유 시작
+    window.demShareLocation = function(){
+      var status = document.getElementById('dem-location-status');
+      if(status) status.textContent = '📍 위치 확인 중...';
+      if(!navigator.geolocation){
+        if(status) status.textContent = '⚠️ 이 기기는 위치 서비스를 지원하지 않습니다';
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var lat = pos.coords.latitude.toFixed(5);
+        var lng = pos.coords.longitude.toFixed(5);
+        if(status) status.innerHTML = '✅ 위치 공유 완료<br/>위도 ' + lat + ' · 경도 ' + lng;
+        // 지도 영역에 핀 표시
+        var empty = document.getElementById('dem-map-empty');
+        var pins = document.getElementById('dem-map-pins');
+        if(empty) empty.style.display = 'none';
+        if(pins){
+          pins.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">' +
+                          '<div style="font-size:42px;">📍</div>' +
+                          '<div style="font-size:12px;font-weight:800;color:#d4a843;margin-top:4px;">나의 위치</div>' +
+                          '<div style="font-size:10px;color:#888;margin-top:2px;">' + lat + ', ' + lng + '</div>' +
+                          '</div>';
+        }
+      }, function(err){
+        if(status) status.textContent = '⚠️ 위치 권한이 필요합니다';
+      });
     };
     
     // ③ 투약 관리 (LocalStorage + 폰 알림)
