@@ -92225,19 +92225,59 @@ function _rmaiStartScanCore(){
 
       var v2=document.getElementById('rmai-video');
       if(v2&&v2.videoWidth&&_rmai.offCtx){
+        // ★ A 박입 — FaceMesh 얼굴 검증 필수 (책상다리·손·옷 거부)
+        var _hasFace = false;
+        var _faceArea = 0;
+        var _faceLms = null;
+        try {
+          if(_rmaiAr && _rmaiAr.lastResults && _rmaiAr.lastResults.multiFaceLandmarks){
+            var _fl = _rmaiAr.lastResults.multiFaceLandmarks;
+            if(_fl && _fl.length > 0 && _fl[0].length >= 400){
+              _faceLms = _fl[0];
+              // 얼굴 바운딩 박스 계산 (얼굴이 화면의 몇 %를 차지하는가)
+              var minX=1, minY=1, maxX=0, maxY=0;
+              for(var k=0; k<_faceLms.length; k++){
+                if(_faceLms[k].x < minX) minX = _faceLms[k].x;
+                if(_faceLms[k].x > maxX) maxX = _faceLms[k].x;
+                if(_faceLms[k].y < minY) minY = _faceLms[k].y;
+                if(_faceLms[k].y > maxY) maxY = _faceLms[k].y;
+              }
+              _faceArea = (maxX - minX) * (maxY - minY);
+              // 얼굴 비율 검증: 화면의 15% 이상이어야 진짜 얼굴
+              _hasFace = (_faceArea >= 0.15);
+            }
+          }
+        } catch(e){ _hasFace = false; }
+        
         _rmai.offCanvas.width=64;_rmai.offCanvas.height=48;
         _rmai.offCtx.drawImage(v2,0,0,64,48);
         var px=_rmai.offCtx.getImageData(0,0,64,48).data;
         var rS=0,gS=0,bS=0,cnt=0;
         var vals=[];
-        for(var i=0;i<px.length;i+=4){rS+=px[i];gS+=px[i+1];bS+=px[i+2];cnt++;vals.push(px[i+1]);}
+        var skinPixCount=0;  // ★ B 박입 — 피부 픽셀만 별도 카운트
+        for(var i=0;i<px.length;i+=4){
+          var pr=px[i], pg=px[i+1], pb=px[i+2];
+          rS+=pr; gS+=pg; bS+=pb; cnt++; vals.push(pg);
+          // 개별 픽셀 피부 검증 (강화)
+          var pmx=Math.max(pr,pg,pb), pmn=Math.min(pr,pg,pb);
+          var ps = pmx>0?(pmx-pmn)/pmx:0;
+          // 피부 픽셀 엄격 조건 (책상 갈색·옷 거부)
+          if(pr>95 && pg>40 && pb>20 && pr>pg && pg>pb && (pr-pg)>15 && ps>0.15 && ps<0.6){
+            skinPixCount++;
+          }
+        }
         if(cnt){
           var r2=rS/cnt,g2=gS/cnt,b2=bS/cnt;
           var mx=Math.max(r2,g2,b2),mn=Math.min(r2,g2,b2);
           var s=mx>0?(mx-mn)/mx:0;
           var l=(mx+mn)/2/255;
-          var isSkin=(r2>60&&g2>40&&b2>20&&r2>g2&&r2>b2&&s>0.1&&s<0.75);
-          if(isSkin){
+          // ★ B 박입 — 피부 픽셀 비율 30% 이상 필수
+          var skinRatio = skinPixCount / cnt;
+          // ★ B 박입 — 강화된 isSkin (R/G 차이 + 채도 범위 좁힘)
+          var isSkin=(r2>95 && g2>50 && b2>20 && r2>g2 && g2>b2 && (r2-g2)>15 && s>0.15 && s<0.6 && skinRatio>=0.30);
+          // ★ A+B 통합 — FaceMesh 얼굴 OR 매우 강한 피부 영역 (안전망)
+          var isValidFace = (_hasFace && isSkin) || (isSkin && skinRatio >= 0.50);
+          if(isValidFace){
             _rmai.lostCount=0;
             _rmai._samples++;
             var mean=g2; var vr=0;
@@ -92264,7 +92304,11 @@ function _rmaiStartScanCore(){
             _rmai.lostCount++;
             if(_rmai.lostCount>0){
               var fs=document.getElementById('rmai-face-status');
-              if(fs){ fs.textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요'; fs.style.color='rgba(251,191,36,.8)'; }
+              if(fs){
+                if(!_hasFace) fs.textContent='⚠️ 얼굴을 카메라에 정면으로 가까이 대주세요';
+                else fs.textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요';
+                fs.style.color='rgba(251,191,36,.8)';
+              }
             }
           }
         }
