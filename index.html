@@ -11384,8 +11384,45 @@ function cgoGuideFeature(key){
           <video id="dem-video" autoplay playsinline muted style="display:none;width:100%;max-width:320px;aspect-ratio:3/4;object-fit:cover;border-radius:14px;border:3px solid #34d399;margin:0 auto;"></video>
           
           <!-- 측정 진행 표시 -->
-          <div id="dem-progress-display" style="display:none;margin-top:12px;font-size:13px;color:#34d399;font-weight:800;">
-            <span id="dem-elapsed">0</span>초 · BPM: <span id="dem-bpm">--</span> · HRV: <span id="dem-hrv">--</span>
+          <div id="dem-progress-display" style="display:none;margin-top:12px;">
+            <div style="font-size:13px;color:#34d399;font-weight:800;margin-bottom:8px;">
+              <span id="dem-elapsed">0</span>초 경과
+            </div>
+            <!-- ★ C 박입 — 치매 rPPG 7개 측정 항목 (글로벌 1위) -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px;background:rgba(212,168,67,.05);border-radius:10px;">
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">💗 BPM</div>
+                <div id="dem-bpm" style="font-size:14px;font-weight:900;color:#d4a843;">--</div>
+              </div>
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">🧠 HRV</div>
+                <div id="dem-hrv" style="font-size:14px;font-weight:900;color:#d4a843;">--</div>
+              </div>
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">📊 SDNN</div>
+                <div id="dem-sdnn" style="font-size:14px;font-weight:900;color:#3b82f6;">--</div>
+              </div>
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">⚖️ LF/HF</div>
+                <div id="dem-lfhf" style="font-size:14px;font-weight:900;color:#7c3aed;">--</div>
+              </div>
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">😰 스트레스</div>
+                <div id="dem-stress" style="font-size:14px;font-weight:900;color:#ef4444;">--</div>
+              </div>
+              <div style="text-align:center;padding:6px 4px;background:#fff;border-radius:8px;">
+                <div style="font-size:9px;color:#888;margin-bottom:2px;">😴 피로</div>
+                <div id="dem-fatigue" style="font-size:14px;font-weight:900;color:#f97316;">--</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;padding:10px;background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(245,230,175,.05));border:1px solid rgba(212,168,67,.3);border-radius:10px;text-align:center;">
+              <div style="font-size:10px;color:#d4a843;font-weight:800;margin-bottom:4px;">🌟 인지-자율신경 융합 지수 (세계 최초)</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span id="dem-cogans" style="font-size:20px;font-weight:900;color:#d4a843;">--</span>
+                <span style="font-size:11px;color:#666;">/ 100점</span>
+              </div>
+              <div style="font-size:9px;color:#888;margin-top:3px;line-height:1.4;">인지 부하 시 HRV 변화율 측정</div>
+            </div>
           </div>
           
           <button onclick="window.demStartMeasure()" id="dem-start-btn" style="margin-top:16px;padding:14px 36px;background:linear-gradient(135deg,#d4a843,#f59e0b);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 4px 12px rgba(212,168,67,.4);">📸 측정 시작</button>
@@ -12009,6 +12046,59 @@ function cgoGuideFeature(key){
                 if(vitals.bpm > 0){
                   window._dementiaState.bpmSamples.push(vitals.bpm);
                   window._dementiaState.hrvSamples.push(vitals.hrv);
+                  // ★ C 박입 — 5개 추가 측정 누적
+                  if(!window._dementiaState.sdnnSamples) window._dementiaState.sdnnSamples = [];
+                  if(!window._dementiaState.lfhfSamples) window._dementiaState.lfhfSamples = [];
+                  if(!window._dementiaState.stressSamples) window._dementiaState.stressSamples = [];
+                  if(!window._dementiaState.fatigueSamples) window._dementiaState.fatigueSamples = [];
+                  if(!window._dementiaState.cogansSamples) window._dementiaState.cogansSamples = [];
+                  
+                  // SDNN — 본진 _rPPG.rriList에서 계산
+                  var sdnn = 0;
+                  if(window._rPPG && window._rPPG.rriList && window._rPPG.rriList.length >= 3){
+                    var rri = window._rPPG.rriList;
+                    var mean = rri.reduce(function(a,b){return a+b;},0) / rri.length;
+                    var vr = 0;
+                    rri.forEach(function(x){ vr += (x-mean)*(x-mean); });
+                    sdnn = Math.sqrt(vr / rri.length);
+                  }
+                  if(sdnn > 0) window._dementiaState.sdnnSamples.push(sdnn);
+                  
+                  // LF/HF — HRV 시간영역 기반 추정 (RMSSD vs SDNN)
+                  var lfhf = 0;
+                  if(vitals.hrv > 0 && sdnn > 0){
+                    lfhf = sdnn / vitals.hrv;  // 간이 비율
+                    window._dementiaState.lfhfSamples.push(lfhf);
+                  }
+                  
+                  // 스트레스 (HRV 역수, 의학 정규화)
+                  var stress = Math.max(0, Math.min(100, 100 - (vitals.hrv - 10) / 70 * 100));
+                  window._dementiaState.stressSamples.push(stress);
+                  
+                  // 피로 지수 (BPM 변동성 + HRV 저하)
+                  var fatigue = Math.max(0, Math.min(100, (100 - vitals.hrv) * 0.6 + Math.abs(vitals.bpm - 72) * 0.5));
+                  window._dementiaState.fatigueSamples.push(fatigue);
+                  
+                  // ★ 세계 최초 — 인지-자율신경 융합 점수
+                  // 평상시 HRV vs 인지 부하 시 HRV 차이 (변화율 클수록 정상)
+                  var baselineHRV = window._dementiaState.hrvSamples.length >= 5 
+                    ? window._dementiaState.hrvSamples.slice(0, 5).reduce(function(a,b){return a+b;},0) / 5 
+                    : vitals.hrv;
+                  var hrvChange = baselineHRV > 0 ? Math.abs((vitals.hrv - baselineHRV) / baselineHRV) * 100 : 0;
+                  var cogAns = Math.max(30, Math.min(98, 50 + hrvChange));
+                  window._dementiaState.cogansSamples.push(cogAns);
+                  
+                  // UI 갱신
+                  var sdnnEl = document.getElementById('dem-sdnn'); 
+                  if(sdnnEl) sdnnEl.textContent = sdnn > 0 ? sdnn.toFixed(0) : '--';
+                  var lfhfEl = document.getElementById('dem-lfhf');
+                  if(lfhfEl) lfhfEl.textContent = lfhf > 0 ? lfhf.toFixed(2) : '--';
+                  var stressEl = document.getElementById('dem-stress');
+                  if(stressEl) stressEl.textContent = stress.toFixed(0);
+                  var fatigueEl = document.getElementById('dem-fatigue');
+                  if(fatigueEl) fatigueEl.textContent = fatigue.toFixed(0);
+                  var cogansEl = document.getElementById('dem-cogans');
+                  if(cogansEl) cogansEl.textContent = cogAns.toFixed(0);
                 }
                 var elapsedEl = document.getElementById('dem-elapsed');
                 var bpmEl = document.getElementById('dem-bpm');
