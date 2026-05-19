@@ -11222,7 +11222,7 @@ function cgoGuideFeature(key){
     <!--  의료기기 아님 · 웰니스 보조 · ZERO STORAGE 헌법        -->
     <!-- ════════════════════════════════════════════════════════ -->
     <div class="page" id="page-c39-dementia">
-  <button onclick="window.dementiaExitToMain()" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.6);color:#d4a843;font-weight:800;font-size:13px;border-radius:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;backdrop-filter:blur(8px);">✕ 나가기</button>
+  <button onclick="window.dementiaExitToDashboard()" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.6);color:#d4a843;font-weight:800;font-size:13px;border-radius:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;backdrop-filter:blur(8px);">✕ 나가기</button>
 
   <style>
   #dementia-intro-pop{display:none;position:fixed;inset:0;z-index:29000;background:rgba(255,255,255,.98);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -11350,11 +11350,12 @@ function cgoGuideFeature(key){
         </div>
         <div style="background:#1a1408;border:2px solid #d4a843;border-radius:14px;padding:20px;text-align:center;position:relative;overflow:hidden;" id="dem-cam-box">
           <style>
-          body.dem-fullscreen #dem-cam-box{position:fixed!important;inset:0!important;z-index:30000!important;border-radius:0!important;border:none!important;padding:60px 16px 200px!important;overflow-y:auto!important;background:#0a0a0a!important;}
+          body.dem-fullscreen #dem-cam-box{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;z-index:30000!important;height:38vh!important;border-radius:0 0 18px 18px!important;border:none!important;border-bottom:2px solid #d4a843!important;padding:50px 16px 12px!important;overflow:hidden!important;background:#0a0a0a!important;}
           body.dem-fullscreen #dem-cam-placeholder{display:none!important;}
-          body.dem-fullscreen #dem-video{max-width:90vw!important;width:90vw!important;height:auto!important;aspect-ratio:3/4!important;max-height:60vh!important;}
-          body.dem-fullscreen #dem-question-area{position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:30001!important;margin:0!important;border-radius:14px 14px 0 0!important;background:#fff!important;max-height:45vh!important;overflow-y:auto!important;box-shadow:0 -4px 20px rgba(0,0,0,.5)!important;}
-          body.dem-fullscreen #dem-cam-status{position:fixed!important;top:16px!important;right:16px!important;}
+          body.dem-fullscreen #dem-video{max-width:200px!important;width:200px!important;height:auto!important;aspect-ratio:3/4!important;max-height:26vh!important;display:block!important;margin:0 auto!important;}
+          body.dem-fullscreen #dem-progress-display{position:absolute!important;bottom:8px!important;left:0!important;right:0!important;text-align:center!important;margin:0!important;font-size:11px!important;}
+          body.dem-fullscreen #dem-question-area{position:fixed!important;top:38vh!important;bottom:0!important;left:0!important;right:0!important;z-index:30001!important;margin:0!important;border-radius:18px 18px 0 0!important;background:#fff!important;overflow-y:auto!important;box-shadow:0 -4px 20px rgba(0,0,0,.5)!important;padding:20px 16px!important;border:none!important;}
+          body.dem-fullscreen #dem-cam-status{position:fixed!important;top:12px!important;right:12px!important;}
           body.dem-fullscreen .dem-fs-close{display:block!important;}
           </style>
           <button class="dem-fs-close" onclick="window.demStopMeasure()" style="display:none;position:fixed;top:12px;left:12px;z-index:30002;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:1px solid rgba(255,255,255,.2);font-size:20px;cursor:pointer;">×</button>
@@ -11985,6 +11986,38 @@ function cgoGuideFeature(key){
     });
     
     // ════════════════════════════════════════════════════
+    // 나가기 → 대시보드(다른 기능 페이지로) 이동
+    // ════════════════════════════════════════════════════
+    window.dementiaExitToDashboard = function(){
+      // 측정 중이면 카메라 정리 (ZERO STORAGE)
+      if(window._dementiaState){
+        if(window._dementiaState.stream){
+          window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
+        }
+        if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+        if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
+        if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
+      }
+      // 풀스크린 모드 해제
+      document.body.classList.remove('dem-fullscreen');
+      // UI 초기화
+      var vd = document.getElementById('dem-video');
+      var ph = document.getElementById('dem-cam-placeholder');
+      var startBtn = document.getElementById('dem-start-btn');
+      var progress = document.getElementById('dem-progress-display');
+      var qArea = document.getElementById('dem-question-area');
+      var resultArea = document.getElementById('dem-result-area');
+      if(vd){ vd.style.display = 'none'; vd.srcObject = null; }
+      if(ph) ph.style.display = 'flex';
+      if(startBtn){ startBtn.style.display = 'inline-block'; startBtn.textContent = '📸 측정 시작'; }
+      if(progress) progress.style.display = 'none';
+      if(qArea) qArea.style.display = 'none';
+      if(resultArea) resultArea.style.display = 'none';
+      // 대시보드로 이동
+      cgoGoPage('dashboard');
+    };
+    
+    // ════════════════════════════════════════════════════
     // 나가기 → 치매 페이지 메인 (측정 중이면 취소)
     // ════════════════════════════════════════════════════
     window.dementiaExitToMain = function(){
@@ -12071,18 +12104,25 @@ function cgoGuideFeature(key){
       
       // Gemini API 호출 (cgoCallGemini 함수 활용 — 본진 통합)
       if(typeof window.cgoCallGemini === 'function'){
-        var prompt = '당신은 다음 100명의 전문가가 합쳐진 최고의 AI 치매 예방 상담사입니다:\n' +
-                     '• 세계 최고 수준의 신경과 전문의 40명 (치매 · 알츠하이머 · 혈관성 치매 · 파킨슨 · 경도인지장애 진단 권위자)\n' +
-                     '• 신경정신의학과 전문의 40명 (인지장애 · 우울 · 불안 · 수면장애 · 뇌 노화 임상 권위자)\n' +
-                     '• 임상심리학자 20명 (인지 평가 · 신경심리 검사 · MMSE-DS · MoCA · 인지 행동치료 전문가)\n\n' +
-                     '【답변 규칙】\n' +
-                     '1. 100명 전문가의 의학적 깊이를 유지하되, 일반인(어르신·중장년층 포함)이 이해할 수 있는 쉬운 한국어로 답변하세요.\n' +
-                     '2. 어려운 의학 용어는 괄호로 풀어쓰기 (예: HRV(심박변이도), MCI(경도인지장애)).\n' +
-                     '3. 의료 진단·처방은 절대 하지 말고, 참고 가이드만 제공하세요.\n' +
-                     '4. 사용자 측정 데이터가 있으면 그 맥락에서 답변하세요.\n' +
-                     '5. 답변 마지막에 "정확한 진단은 신경과 전문의 상담을 권장드립니다"를 자연스럽게 포함하세요.\n' +
-                     '6. 2~4문장으로 간결하되, 의학적 근거(근거 논문/가이드라인)를 살짝 언급하세요.\n\n' +
-                     (dataCtx ? '※ 사용자의 측정 데이터: ' + dataCtx + '\n' : '') +
+        var prompt = '당신은 다음 100명의 전문가가 합쳐진 최고의 AI 상담사입니다:\n' +
+                     '• 세계 최고 수준의 신경과 전문의 40명 (치매 · 알츠하이머 · 혈관성 치매 · 경도인지장애 권위자)\n' +
+                     '• 신경정신의학과 전문의 40명 (인지장애 · 우울 · 불안 · 수면 · 뇌 노화 임상 권위자)\n' +
+                     '• 임상심리학자 20명 (인지 평가 · 신경심리 · MMSE-DS · MoCA 전문가)\n\n' +
+                     '【🚨 절대 규칙 — 사용자 질문 의도를 정확히 파악하기】\n' +
+                     '사용자 질문을 표면 그대로 받아들이세요. 멋대로 의학적 해석으로 비약하지 마세요.\n\n' +
+                     '예시 1: "왜 측정이 안 되나요?" → 앱 작동/카메라 권한/얼굴 검출 등 기술적 문제에 대한 답변. 호흡법·전문의 X.\n' +
+                     '예시 2: "BPM이 뭐예요?" → BPM 용어 설명. 운동·치매 예방 강의 X.\n' +
+                     '예시 3: "카메라가 안 켜져요" → 권한 설정 안내. 의학 조언 X.\n' +
+                     '예시 4: "내 결과 어때요?" → 측정 데이터 해석. 이때만 의학 조언 포함.\n' +
+                     '예시 5: "치매 예방 운동" → 운동법 안내. 의학 조언 포함.\n\n' +
+                     '【답변 작성 규칙】\n' +
+                     '1. 사용자 질문의 실제 의도(기술 문제 / 용어 / 데이터 해석 / 의학 질문)를 먼저 파악하세요.\n' +
+                     '2. 의학 질문일 때만 100명 전문가 지식 활용. 기술 질문이면 친절한 안내만.\n' +
+                     '3. 어려운 용어는 괄호로 풀어쓰기.\n' +
+                     '4. 의료 진단·처방 X.\n' +
+                     '5. "전문의 상담 권장" 문구는 의학적 답변일 때만 자연스럽게 포함. 기술 질문에는 절대 X.\n' +
+                     '6. 2~4문장으로 친절하고 간결하게.\n\n' +
+                     (dataCtx ? '※ 사용자 측정 데이터(필요시 참고): ' + dataCtx + '\n' : '') +
                      '사용자 질문: ' + userMsg;
         
         window.cgoCallGemini(prompt, function(answer){
