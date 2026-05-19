@@ -11441,16 +11441,28 @@ function cgoGuideFeature(key){
       <!-- ILI 가족 위치 연동 구조 적용 · 이상행동 12개 상세 분석            -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div style="background:#fff;border:1px solid #f0e6d4;border-radius:18px;overflow:hidden;margin-top:16px;margin-bottom:16px;box-shadow:0 2px 12px rgba(212,168,67,.05);">
-        <!-- 카드 헤더 (큰 카드) -->
-        <div style="padding:20px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:2px solid #d4a843;">
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div style="flex-shrink:0;width:52px;height:52px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 16px rgba(212,168,67,.35);">🏥</div>
+        <!-- 카드 헤더 (크게 — 사용자 눈에 잘 띄게) -->
+        <div onclick="window.demToggleCareCard()" style="padding:32px 24px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-bottom:2px solid #d4a843;cursor:pointer;transition:all .25s;" onmouseover="this.style.background='linear-gradient(135deg,#fef3c7,#fffbeb)'" onmouseout="this.style.background='linear-gradient(135deg,#fef9f3,#fffbeb)'">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <div style="flex-shrink:0;width:80px;height:80px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 6px 20px rgba(212,168,67,.4);">🏥</div>
             <div style="flex:1;">
-              <div style="font-size:18px;font-weight:900;color:#1a1408;margin-bottom:4px;">🏥 종합 관리 카드 <span style="font-size:10px;color:#d4a843;font-weight:900;letter-spacing:.06em;padding:3px 8px;background:rgba(212,168,67,.18);border-radius:8px;margin-left:6px;">NEW v2.0</span></div>
-              <div style="font-size:12px;color:#666;line-height:1.5;">보호자 · 이상행동 12가지 · 투약 · 가족 위치 연동 · 보호자 AI<br/><b style="color:#d4a843;">치매 보호자를 위한 일상 통합 솔루션</b></div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+                <span style="font-size:22px;font-weight:900;color:#1a1408;">🏥 종합 관리 카드</span>
+                <span style="font-size:11px;color:#fff;font-weight:900;letter-spacing:.08em;padding:4px 10px;background:linear-gradient(135deg,#d4a843,#fbbf24);border-radius:8px;box-shadow:0 2px 8px rgba(212,168,67,.4);">NEW v2.0</span>
+              </div>
+              <div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:10px;">
+                👨‍👩‍👧 보호자 · 🚨 이상행동 12가지 · 💊 투약 · 📱 가족 위치 · 🩺 AI 상담사
+              </div>
+              <div style="display:inline-block;padding:8px 16px;background:#1a1408;color:#fff;border-radius:24px;font-size:12px;font-weight:800;letter-spacing:.02em;">
+                <span id="dem-care-label">▼ 탭하여 펼치기</span>
+              </div>
             </div>
+            <div id="dem-care-arrow" style="font-size:36px;color:#d4a843;font-weight:900;flex-shrink:0;transition:transform .25s;">▼</div>
           </div>
         </div>
+        
+        <!-- 펼침 본문 (기본 접힘) -->
+        <div id="dem-care-body" style="display:none;">
         
         <!-- ① 보호자 정보 -->
         <div style="padding:20px;border-bottom:1px solid #f0e6d4;">
@@ -11548,6 +11560,7 @@ function cgoGuideFeature(key){
           </div>
         </div>
         
+        </div><!-- /dem-care-body 펼침 영역 끝 -->
       </div>
 
       <!-- 정직 박지 (대장님 명령 — 의학 표준 권장 문구) -->
@@ -12276,21 +12289,35 @@ function cgoGuideFeature(key){
     // ZERO STORAGE 법통: 사용자 데이터는 LocalStorage(폰 안)에만
     // ════════════════════════════════════════════════════
     
-    // 큰 카드 — 자동 데이터 로드 (펼침/접힘 X, 항상 표시)
+    // 큰 페이지 카드 — 접힘/펼침 토글
     window.demToggleCareCard = function(){
-      window.demLoadGuardList();
-      window.demLoadMedList();
-      window.demLoadPatientList();
+      var body = document.getElementById('dem-care-body');
+      var arrow = document.getElementById('dem-care-arrow');
+      if(!body) return;
+      if(body.style.display === 'none' || !body.style.display){
+        body.style.display = 'block';
+        if(arrow) arrow.textContent = '▲';
+        var label = document.getElementById('dem-care-label');
+        if(label) label.textContent = '▲ 접기';
+        // 펼칠 때 데이터 자동 로드
+        if(window.demLoadGuardList) window.demLoadGuardList();
+        if(window.demLoadMedList) window.demLoadMedList();
+        if(window.demLoadPatientList) window.demLoadPatientList();
+        if(window.demRenderBehaviorGrid) window.demRenderBehaviorGrid();
+        var myTel = localStorage.getItem('dem_my_tel');
+        var inp = document.getElementById('dem-my-tel');
+        if(inp && myTel) inp.value = myTel;
+        // 펼쳐진 영역으로 부드럽게 스크롤
+        setTimeout(function(){
+          body.scrollIntoView({behavior:'smooth', block:'start'});
+        }, 100);
+      } else {
+        body.style.display = 'none';
+        if(arrow) arrow.textContent = '▼';
+        var label = document.getElementById('dem-care-label');
+        if(label) label.textContent = '▼ 탭하여 펼치기';
+      }
     };
-    // 페이지 로드 시 자동 데이터 로드
-    setTimeout(function(){ 
-      if(window.demLoadGuardList) window.demLoadGuardList();
-      if(window.demLoadMedList) window.demLoadMedList();
-      if(window.demLoadPatientList) window.demLoadPatientList();
-      var myTel = localStorage.getItem('dem_my_tel');
-      var inp = document.getElementById('dem-my-tel');
-      if(inp && myTel) inp.value = myTel;
-    }, 800);
     
     // ① 보호자 등록 (이름/전화/관계)
     window.demAddGuard = function(){
@@ -12453,8 +12480,7 @@ function cgoGuideFeature(key){
       }).join('');
     };
     
-    // 자동 호출 (페이지 로드 시)
-    setTimeout(function(){ if(window.demRenderBehaviorGrid) window.demRenderBehaviorGrid(); }, 500);
+    // 자동 호출 제거 — 카드 펼칠 때만 렌더링 (성능 최적화)
     
     window.demShowBehavior = function(key){
       var el = document.getElementById('dem-behavior-result');
