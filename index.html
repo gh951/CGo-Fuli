@@ -92025,44 +92025,44 @@ var _rmaiArRainbowSet = [
   {n:'보라', c:'#9333ea'}
 ];
 
-// ★ 사주 추천 모드 — 카테고리별 빨주노초파남보 톤 (28색)
-//   각 카테고리에 맞는 메이크업 톤 (립=선명 / 볼=살구·핑크 / 아이=어두움 / 베이스=파스텔)
+// ★ 사주 추천 모드 — 글로벌 명품 화장품 실제 색상 매칭 (28색)
+//   각 카테고리에 맞는 명품 브랜드 컬러 (립=샤넬·디올·맥 / 볼=나스·맥 / 아이=디올·로레알 / 베이스=에스티로더·랑콤)
 var _rmaiArOhengSet = {
-  lip: [  // 💋 진한 립스틱 톤 — 선명함
-    {n:'빨강', c:'#dc2626'},
-    {n:'주황', c:'#ea580c'},
-    {n:'노랑', c:'#ca8a04'},
-    {n:'초록', c:'#15803d'},
-    {n:'파랑', c:'#1d4ed8'},
-    {n:'남색', c:'#1e3a8a'},
-    {n:'보라', c:'#7c3aed'}
+  lip: [  // 💋 글로벌 명품 립스틱 베스트셀러 색상
+    {n:'CHANEL Rouge Allure 99 Pirate', c:'#a8141a'},
+    {n:'DIOR Rouge 999 Velvet', c:'#c8161d'},
+    {n:'YSL Rouge Pur 1966', c:'#9d2336'},
+    {n:'MAC Ruby Woo', c:'#bf1730'},
+    {n:'TOM FORD Cherry Lush', c:'#8b1c2c'},
+    {n:'GIVENCHY Le Rouge Carmin', c:'#b91c1c'},
+    {n:'HERA Rosy Nude', c:'#c66666'}
   ],
-  cheek: [  // 🌸 살구·핑크 톤 — 부드러운 블러셔
-    {n:'코랄', c:'#fb7185'},
-    {n:'살구', c:'#fdba74'},
-    {n:'베이지', c:'#fde68a'},
-    {n:'민트', c:'#86efac'},
-    {n:'스카이', c:'#93c5fd'},
-    {n:'라일락', c:'#c4b5fd'},
-    {n:'핑크', c:'#f9a8d4'}
+  cheek: [  // 🌸 글로벌 명품 블러셔 베스트셀러
+    {n:'NARS Orgasm Peach Coral', c:'#e69582'},
+    {n:'MAC Melba Soft Coral', c:'#f5a583'},
+    {n:'BENEFIT Dandelion Pink', c:'#f5b8c1'},
+    {n:'DIOR Rosy Glow 001', c:'#f0a0a8'},
+    {n:'CHANEL Joues Tweed Pink', c:'#eeb2b8'},
+    {n:'HOURGLASS Diffused Heat', c:'#e89090'},
+    {n:'MILANI Luminoso Peach', c:'#f4a98e'}
   ],
-  eye: [  // 👁️ 어두운 톤 — 스모키 아이쉐도우
-    {n:'와인', c:'#881337'},
-    {n:'브라운', c:'#92400e'},
-    {n:'골드', c:'#78350f'},
-    {n:'다크그린', c:'#14532d'},
-    {n:'미드나잇', c:'#172554'},
-    {n:'차콜', c:'#1e293b'},
-    {n:'퍼플', c:'#4c1d95'}
+  eye: [  // 👁️ 글로벌 명품 아이섀도 베스트셀러
+    {n:'CHARLOTTE Pillow Talk', c:'#7d4e57'},
+    {n:'URBAN DECAY Naked Half Baked', c:'#876848'},
+    {n:'MAC Soft Brown', c:'#7a5a48'},
+    {n:'DIOR 5 Couleurs Bronze', c:'#8b6b3d'},
+    {n:'TOM FORD Body Heat', c:'#6d3f2c'},
+    {n:'PAT McGRATH Astral Smoke', c:'#3d3a4a'},
+    {n:'STILA Kitten Champagne', c:'#a08068'}
   ],
-  base: [  // 🫧 파스텔 톤 — 자연 피부 보정
-    {n:'핑크', c:'#fecaca'},
-    {n:'살몬', c:'#fed7aa'},
-    {n:'크림', c:'#fef3c7'},
-    {n:'민트', c:'#d1fae5'},
-    {n:'스카이', c:'#dbeafe'},
-    {n:'라벤더', c:'#ddd6fe'},
-    {n:'모브', c:'#f3e8ff'}
+  base: [  // 🫧 글로벌 명품 베이스/파운데이션 톤
+    {n:'ESTÉE LAUDER Double Wear Ivory', c:'#f3d4ba'},
+    {n:'LANCÔME Teint Idole 220 Buff', c:'#eecaa6'},
+    {n:'NARS Sheer Glow Mont Blanc', c:'#f5dcc4'},
+    {n:'HERA Black Cushion 21N', c:'#e8c5a0'},
+    {n:'GIORGIO ARMANI Luminous 4.5', c:'#e6b890'},
+    {n:'CHANEL Vitalumière 22 Beige', c:'#eac9a2'},
+    {n:'CLINIQUE Even Better 18 Sand', c:'#dcb591'}
   ]
 };
 
@@ -92225,44 +92225,17 @@ function _rmaiStartScanCore(){
 
       var v2=document.getElementById('rmai-video');
       if(v2&&v2.videoWidth&&_rmai.offCtx){
-        // ★ A 박입 — FaceMesh 얼굴 검증 필수 (책상다리·손·옷 거부)
-        var _hasFace = false;
-        var _faceArea = 0;
-        var _faceLms = null;
-        try {
-          if(_rmaiAr && _rmaiAr.lastResults && _rmaiAr.lastResults.multiFaceLandmarks){
-            var _fl = _rmaiAr.lastResults.multiFaceLandmarks;
-            if(_fl && _fl.length > 0 && _fl[0].length >= 400){
-              _faceLms = _fl[0];
-              // 얼굴 바운딩 박스 계산 (얼굴이 화면의 몇 %를 차지하는가)
-              var minX=1, minY=1, maxX=0, maxY=0;
-              for(var k=0; k<_faceLms.length; k++){
-                if(_faceLms[k].x < minX) minX = _faceLms[k].x;
-                if(_faceLms[k].x > maxX) maxX = _faceLms[k].x;
-                if(_faceLms[k].y < minY) minY = _faceLms[k].y;
-                if(_faceLms[k].y > maxY) maxY = _faceLms[k].y;
-              }
-              _faceArea = (maxX - minX) * (maxY - minY);
-              // 얼굴 비율 검증: 화면의 15% 이상이어야 진짜 얼굴
-              _hasFace = (_faceArea >= 0.15);
-            }
-          }
-        } catch(e){ _hasFace = false; }
-        
         _rmai.offCanvas.width=64;_rmai.offCanvas.height=48;
         _rmai.offCtx.drawImage(v2,0,0,64,48);
         var px=_rmai.offCtx.getImageData(0,0,64,48).data;
         var rS=0,gS=0,bS=0,cnt=0;
         var vals=[];
-        var skinPixCount=0;  // ★ B 박입 — 피부 픽셀만 별도 카운트
+        var skinPixCount=0;  // ★ 피부 픽셀 카운트 (책상·옷 거부)
         for(var i=0;i<px.length;i+=4){
           var pr=px[i], pg=px[i+1], pb=px[i+2];
           rS+=pr; gS+=pg; bS+=pb; cnt++; vals.push(pg);
-          // 개별 픽셀 피부 검증 (강화)
-          var pmx=Math.max(pr,pg,pb), pmn=Math.min(pr,pg,pb);
-          var ps = pmx>0?(pmx-pmn)/pmx:0;
-          // 피부 픽셀 엄격 조건 (책상 갈색·옷 거부)
-          if(pr>95 && pg>40 && pb>20 && pr>pg && pg>pb && (pr-pg)>15 && ps>0.15 && ps<0.6){
+          // 피부 픽셀 적정 조건 (얼굴 통과 + 책상 거부)
+          if(pr>80 && pg>50 && pb>30 && pr>pg && pg>pb && (pr-pg)>=8){
             skinPixCount++;
           }
         }
@@ -92271,13 +92244,12 @@ function _rmaiStartScanCore(){
           var mx=Math.max(r2,g2,b2),mn=Math.min(r2,g2,b2);
           var s=mx>0?(mx-mn)/mx:0;
           var l=(mx+mn)/2/255;
-          // ★ B 박입 — 피부 픽셀 비율 30% 이상 필수
+          // ★ 피부 픽셀 비율 25% 이상 (적정 수준)
           var skinRatio = skinPixCount / cnt;
-          // ★ B 박입 — 강화된 isSkin (R/G 차이 + 채도 범위 좁힘)
-          var isSkin=(r2>95 && g2>50 && b2>20 && r2>g2 && g2>b2 && (r2-g2)>15 && s>0.15 && s<0.6 && skinRatio>=0.30);
-          // ★ A+B 통합 — FaceMesh 얼굴 OR 매우 강한 피부 영역 (안전망)
-          var isValidFace = (_hasFace && isSkin) || (isSkin && skinRatio >= 0.50);
-          if(isValidFace){
+          // ★ 평균 RGB 기반 isSkin (원래 + R-G 차이 조건만 추가)
+          // 원래 작동하던 조건 + 책상 거부 (R-G 차이만 살짝)
+          var isSkin=(r2>60 && g2>40 && b2>20 && r2>g2 && r2>b2 && s>0.1 && s<0.75 && (r2-g2)>=5);
+          if(isSkin){
             _rmai.lostCount=0;
             _rmai._samples++;
             var mean=g2; var vr=0;
@@ -92304,11 +92276,7 @@ function _rmaiStartScanCore(){
             _rmai.lostCount++;
             if(_rmai.lostCount>0){
               var fs=document.getElementById('rmai-face-status');
-              if(fs){
-                if(!_hasFace) fs.textContent='⚠️ 얼굴을 카메라에 정면으로 가까이 대주세요';
-                else fs.textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요';
-                fs.style.color='rgba(251,191,36,.8)';
-              }
+              if(fs){ fs.textContent='⚠️ 얼굴 전체를 화면에 맞춰주세요'; fs.style.color='rgba(251,191,36,.8)'; }
             }
           }
         }
