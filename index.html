@@ -24868,7 +24868,8 @@ window.tvyShowIntroPopup = function(){
         <button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;background:rgba(239,68,68,.85);border:none;border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">⏹ 정지</button>
       </div>
       <div id="rmai-ar-color-picker" style="margin-bottom:12px;"></div>
-        <button id="rmai-ar-capture-btn" onclick="rmaiArCapture()" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">📸 캡처 + 저장</button>
+        <!-- ★ C 박입 — 캡처 버튼 sticky 하단 고정 (스크롤 어디서나 클릭 가능) -->
+        <button id="rmai-ar-capture-btn" onclick="rmaiArCapture()" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;position:sticky;bottom:8px;z-index:50;box-shadow:0 4px 16px rgba(124,58,237,.4);">📸 캡처 + 저장</button>
       </div>
 
       <!-- 캡처 결과 영역 (㊴에서 활성화) -->
@@ -92089,6 +92090,7 @@ var _rmaiAr = {
   intensity: { lip:0.55, cheek:0.20, eye:0.35, base:0.35 }, // 카테고리별 alpha (0~1)
   cardMode: 'daily',      // ★ 600색 카드 모드: 'daily' | 'luxury' | 'oheng' (현실 우선)
   cardExpanded: { daily:true, luxury:false, oheng:false }, // 카드 펼침 상태
+  pickerCollapsed: false, // ★ 색상 패널 접힘 상태 (캡처 편의)
   faceSlim: 0,            // ㊺ 얼굴 슬림 강도 (0~50)
   eyeBigger: 0,           // ㊺ 눈 키우기 강도 (0~50)
   frameCount: 0,
@@ -93995,7 +93997,29 @@ function _rmaiArInitColorPicker(){
 
   var clearBtn = '<button onclick="rmaiArApplyColor(null,null)" style="margin-top:10px;width:100%;padding:8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:700;color:#666;cursor:pointer;font-family:inherit;">✕ '+currentCat.name+' 색 적용 해제</button>';
 
-  picker.innerHTML = cardModeUI + tabsHtml + paletteToggle + swatchHtml + sliderHtml + clearBtn;
+  // ★ C 박입 — 색상 패널 접기 토글 + 적용 색 미니 미리보기
+  var applied = _rmaiAr.appliedColors;
+  var miniPreview = '';
+  ['lip','cheek','eye','base'].forEach(function(cat){
+    if(applied[cat]){
+      var icon = cat==='lip'?'💋':cat==='cheek'?'🌸':cat==='eye'?'👁️':'🫧';
+      miniPreview += '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 7px;background:rgba(255,255,255,.7);border-radius:8px;font-size:10px;color:#444;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+applied[cat]+';border:1px solid rgba(0,0,0,.1);"></span>'+icon+'</span>';
+    }
+  });
+  if(!miniPreview) miniPreview = '<span style="font-size:10px;color:#999;">색을 골라 적용해 보세요</span>';
+  
+  var toggleBtn = '<button onclick="rmaiArTogglePicker()" style="width:100%;padding:10px 14px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:12px;color:#92400e;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:'+(_rmaiAr.pickerCollapsed?'0':'12px')+';display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+    +'<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🎨 컬러 패널 '+(_rmaiAr.pickerCollapsed?'펼치기':'접기')+' '+miniPreview+'</span>'
+    +'<span style="font-size:14px;">'+(_rmaiAr.pickerCollapsed?'▼':'▲')+'</span>'
+    +'</button>';
+  
+  if(_rmaiAr.pickerCollapsed){
+    // ★ 접힌 상태 — 토글 버튼만 표시 (캡처 즉시 가능)
+    picker.innerHTML = toggleBtn;
+  } else {
+    // ★ 펼친 상태 — 토글 버튼 + 전체 컬러 패널
+    picker.innerHTML = toggleBtn + cardModeUI + tabsHtml + paletteToggle + swatchHtml + sliderHtml + clearBtn;
+  }
 }
 
 // ★ 카테고리 전환 (4 카테고리만)
@@ -94027,6 +94051,12 @@ window.rmaiArSetCardMode = function(cardKey){
 window.rmaiArToggleCard = function(cardKey){
   if(['oheng','daily','luxury'].indexOf(cardKey) < 0) return;
   _rmaiAr.cardExpanded[cardKey] = !_rmaiAr.cardExpanded[cardKey];
+  _rmaiArInitColorPicker();
+}
+
+// ★ 색상 패널 전체 접기/펼치기 (캡처 편의 — 대장님 통찰)
+window.rmaiArTogglePicker = function(){
+  _rmaiAr.pickerCollapsed = !_rmaiAr.pickerCollapsed;
   _rmaiArInitColorPicker();
 };
 
