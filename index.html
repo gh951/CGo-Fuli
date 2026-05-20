@@ -24856,7 +24856,7 @@ window.tvyShowIntroPopup = function(){
       <div id="rmai-ar-section" style="display:none;background:#fff;border:1px solid #fbbf24;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 2px 12px rgba(251,191,36,.15);">
         <div style="font-size:13px;font-weight:900;color:#b45309;margin-bottom:14px;">🎥 AR 카메라 — 실시간 색 적용</div>
       <!-- AR 카메라 영역 — FaceMesh 468 랜드마크 추적 -->
-      <div id="rmai-ar-canvas-wrap" style="position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:14px;margin-bottom:12px;overflow:hidden;">
+      <div id="rmai-ar-canvas-wrap" style="position:relative;width:100%;aspect-ratio:3/4;background:#000;border-radius:14px;margin-bottom:12px;overflow:hidden;max-height:75vh;">
         <video id="rmai-ar-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1);"></video>
         <canvas id="rmai-ar-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;transform:scaleX(-1);"></canvas>
         <div id="rmai-ar-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px;">
@@ -92019,8 +92019,11 @@ var _cgoCameraAlertShown = false;
 // window.addEventListener('load', function(){ ... });
 
 // ★ 공통 카메라 권한 체크 (이미 허용됐으면 바로 실행)
-function cgoCameraCheck(onGranted){
-  if(_cgoCameraGranted){
+function cgoCameraCheck(onGranted, opts){
+  // ★ 방안 B 박입 — opts.constraints 지정 시 stream을 stop 안 하고 콜백에 전달
+  // 호출자가 같은 stream 재사용 → getUserMedia 1번만 (권한 팝업 1번)
+  opts = opts || {};
+  if(_cgoCameraGranted && !opts.constraints){
     onGranted();
     return;
   }
@@ -92028,11 +92031,19 @@ function cgoCameraCheck(onGranted){
     _cgoCameraAlert('이 브라우저는 카메라를 지원하지 않습니다.');
     return;
   }
-  navigator.mediaDevices.getUserMedia({video:true})
+  // constraints 지정되면 그대로 사용 (stream 재사용 모드), 아니면 video:true 후 stop (기존 동작)
+  var constraints = opts.constraints || {video:true};
+  navigator.mediaDevices.getUserMedia(constraints)
     .then(function(s){
-      s.getTracks().forEach(function(t){t.stop();});
       _cgoCameraGranted = true;
-      onGranted();
+      if(opts.constraints){
+        // ★ stream 재사용 모드 — stop 하지 않고 콜백에 전달
+        onGranted(s);
+      } else {
+        // 기존 모드 — 권한만 확인하고 stop
+        s.getTracks().forEach(function(t){t.stop();});
+        onGranted();
+      }
     })
     .catch(function(){
       _cgoCameraGranted = false;
@@ -92817,9 +92828,9 @@ var _rmaiBeforeData = null;
 var _rmai = { running:false, timer:null, sec:0, stream:null, offCanvas:null, offCtx:null, lostCount:0, uni:0, glow:0, cover:0, moist:0, _samples:0 };
 
 window.rmaiCaptureBeforePhoto = function(){
-  cgoCameraCheck(function(){
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}})
-    .then(function(stream){
+  // ★ 방안 B 박입 — cgoCameraCheck에 constraints 전달 → stream 재사용 → 권한 1번만
+  cgoCameraCheck(function(stream){
+    Promise.resolve(stream).then(function(stream){
       var v = document.createElement('video');
       v.srcObject = stream;
       v.autoplay = true;
@@ -92887,7 +92898,7 @@ window.rmaiCaptureBeforePhoto = function(){
       document.body.appendChild(popup);
     })
     .catch(function(){ _cgoCameraAlert('카메라를 열 수 없습니다.'); });
-  });
+  }, {constraints:{video:{facingMode:'user',width:320,height:240}}});
 };
 
 window.rmaiStartScan = function(){
