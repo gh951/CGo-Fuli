@@ -26,6 +26,26 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CGO-FULI">
 <title>GO Future — ILI 라이프 인덱스</title>
+
+<!-- ★ Open Graph (카톡·페북·트위터·디스코드 미리보기 — 글로벌 표준) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="GO Future — ILI 라이프 인덱스">
+<meta property="og:description" content="CGO-FULI · 인류 최초 단일 앱 · 정직 헬스케어 · 1억 보호자 가족 구원">
+<meta property="og:image" content="https://c-go-fuli.com/cgo-fuli-main.jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://c-go-fuli.com">
+<meta property="og:site_name" content="CGO-FULI">
+<meta property="og:locale" content="ko_KR">
+
+<!-- ★ Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GO Future — ILI 라이프 인덱스">
+<meta name="twitter:description" content="CGO-FULI · 정직 헬스케어 · 글로벌 1위">
+<meta name="twitter:image" content="https://c-go-fuli.com/cgo-fuli-main.jpeg">
+
+<!-- ★ 카톡 인앱 브라우저 추가 메타 -->
+<meta name="description" content="CGO-FULI · 인류 최초 단일 앱 · 정직 헬스케어">
 <!-- ✅ 언어 기본값 보장 — 반드시 최상단에서 실행 -->
 
 <script>
@@ -3551,11 +3571,12 @@ function cgoFetchEnvData() {
     })
     .catch(function(){ env.kp.status='fallback'; _check(); });
 
-  // ③ Open-Meteo 기상 (무료·키없음·위치기반)
+  // ③ 날씨 — Open-Meteo 우선, 실패 시 wttr.in 폴백 (CORS 안전망, 무료, 키없음)
   function _fetchWeather(lat, lon) {
+    // 1순위: Open-Meteo
     fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon
       +'&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m')
-      .then(function(r){ return r.json(); })
+      .then(function(r){ if(!r.ok) throw new Error('open-meteo fail'); return r.json(); })
       .then(function(d){
         var c = d.current || {};
         env.weather = {
@@ -3567,7 +3588,25 @@ function cgoFetchEnvData() {
         };
         _check();
       })
-      .catch(function(){ env.weather.status='fallback'; _check(); });
+      .catch(function(){
+        // 2순위 폴백: wttr.in (CORS 100% 작동, 무료)
+        try {
+          fetch('https://wttr.in/'+lat+','+lon+'?format=j1')
+            .then(function(r){ if(!r.ok) throw new Error('wttr.in fail'); return r.json(); })
+            .then(function(d){
+              var c = (d.current_condition && d.current_condition[0]) || {};
+              env.weather = {
+                temp:     parseFloat(c.temp_C)        || 15,
+                humidity: parseFloat(c.humidity)      || 60,
+                pressure: parseFloat(c.pressure)      || 1013,
+                wind:     parseFloat(c.windspeedKmph)/3.6 || 3,  // km/h → m/s
+                status:   'live-wttr'
+              };
+              _check();
+            })
+            .catch(function(){ env.weather.status='fallback'; _check(); });
+        } catch(e){ env.weather.status='fallback'; _check(); }
+      });
   }
   // ★ 위치 우선순위:
   // 1순위: 정보 입력의 현재 위치 좌표 (ipCurLat/ipCurLng)
@@ -4163,7 +4202,8 @@ function updateTransitSectionWithNASA(planets) {
           wrapSection(cheon, bio,   'cgosec2', _sp.section_cheon       ||'🌌 천지인 에너지');
           wrapSection(bio,   ili,   'cgosec3', _sp.section_bio         ||'🧬 생체 스캔');
           wrapSection(ili,   enrg,  'cgosec4', _sp.section_ili         ||'📊 ILI 점수');
-          wrapSection(enrg,  chat,  'cgosec5', _sp.section_energy_book ||'✦ CGO-FULI 에너지의 서');
+          // ★ cgosec5 중복 제거 (대장님 통찰 — '전체 메뉴' 밑 중복 박스 정직 제거)
+          // wrapSection(enrg, chat, 'cgosec5', '✦ CGO-FULI 에너지의 서');
           wrapSection(chat,  all,   'cgosec6', _sp.section_chat        ||'💬 CGO 메신저');
           wrapSection(all,   null,  'cgosec7', _sp.section_all         ||'✦ 전체 기능');
 
@@ -88237,11 +88277,41 @@ function _cgoUpdateWeather() {
         if(ohEl)   ohEl.textContent   = _cgoOhName(wData.oh) + (function(){var _s={ko:' 기운',en:' Energy',zh:'能量',zh_HK:'能量',ja:'エネルギー',ru:' Энергия',hi:' ऊर्जा',es:' Energía',de:' Energie',fr:' Énergie',pt:' Energia',vi:' Năng lượng',th:' พลังงาน',id:' Energi',ar:' طاقة',tr:' Enerjisi',it:' Energia',tl:' Enerhiya',ms:' Tenaga',uk:' Енергія',nl:' Energie'};return(_s[window._LANG||'ko']||' Energy');})();
       })
       .catch(function() {
+        // ★ wttr.in 폴백 시도 (CORS 100% 작동, 무료, 키없음)
+        try {
+          fetch('https://wttr.in/'+lat+','+lon+'?format=j1')
+          .then(function(r){ if(!r.ok) throw new Error('wttr fail'); return r.json(); })
+          .then(function(d){
+            var c = (d.current_condition && d.current_condition[0]) || {};
+            var tempC = Math.round(parseFloat(c.temp_C) || 0);
+            var hum = Math.round(parseFloat(c.humidity) || 0);
+            var wCode = parseInt(c.weatherCode || 0);
+            var wKey;
+            if(wCode===113) wKey='sunny';
+            else if(wCode===116 || wCode===119) wKey='cloudy';
+            else if(wCode===122 || wCode===143) wKey='overcast';
+            else if(wCode>=176 && wCode<=314) wKey='rain';
+            else if(wCode>=317 && wCode<=395) wKey='snow';
+            else if(wCode>=386) wKey='thunder';
+            else wKey = timeKey;
+            window._tzrWeatherKey = wKey;
+            window._tzrWeatherTemp = tempC;
+            var wData = weatherMap[wKey] || weatherMap[timeKey];
+            if(iconEl) iconEl.textContent = wData.icon;
+            if(tempEl) tempEl.textContent = tempC + '°C';
+            if(humEl)  humEl.textContent  = '습도 ' + hum + '%';
+            if(ohEl)   ohEl.textContent   = _cgoOhName(wData.oh) + ' 기운';
+            return; // 성공
+          })
+          .catch(function(){ _showWeatherFallback(); });
+        } catch(e){ _showWeatherFallback(); }
+        function _showWeatherFallback(){
         var wData = weatherMap[timeKey];
         if(iconEl) iconEl.textContent = wData.icon;
         if(tempEl) tempEl.textContent = '--°C';
         if(humEl)  humEl.textContent  = (function(){var _hl={ko:'습도 ',en:'Humidity ',zh:'湿度 ',zh_HK:'濕度 ',ja:'湿度 ',ru:'Влажность ',hi:'आर्द्रता ',es:'Humedad ',de:'Feuchtigkeit ',fr:'Humidité ',pt:'Umidade ',vi:'Độ ẩm ',th:'ความชื้น ',id:'Kelembaban ',ar:'الرطوبة ',tr:'Nem ',it:'Umidità ',tl:'Halumigmig ',ms:'Kelembapan ',uk:'Вологість ',nl:'Vochtigheid '};return(_hl[window._LANG||'ko']||'Humidity ');})()+ wData.hum;
         if(ohEl)   ohEl.textContent   = _cgoOhName(wData.oh) + (function(){var _s={ko:' 기운',en:' Energy',zh:'能量',zh_HK:'能量',ja:'エネルギー',ru:' Энергия',hi:' ऊर्जा',es:' Energía',de:' Energie',fr:' Énergie',pt:' Energia',vi:' Năng lượng',th:' พลังงาน',id:' Energi',ar:' طاقة',tr:' Enerjisi',it:' Energia',tl:' Enerhiya',ms:' Tenaga',uk:' Енергія',nl:' Energie'};return(_s[window._LANG||'ko']||' Energy');})();
+        }
       });
     }); // cgoGetLocation 닫기
   } else {
