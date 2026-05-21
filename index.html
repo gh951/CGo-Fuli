@@ -11958,6 +11958,18 @@ function cgoGuideFeature(key){
       window._dementiaState.bpmSamples = [];
       window._dementiaState.hrvSamples = [];
       window._dementiaState.faceDetected = false;
+      // ★ C-40 — 재시작 완전 초기화 (이전 측정 잔존 방지 · 헌법 v2.0 정직)
+      window._dementiaState.rgbSamples = [];
+      window._dementiaState.sdnnSamples = [];
+      window._dementiaState.lfhfSamples = [];
+      window._dementiaState.stressSamples = [];
+      window._dementiaState.fatigueSamples = [];
+      window._dementiaState.startTime = Date.now();  // 즉시 박입 (이전 startTime 잔존 차단)
+      // 측정 텍스트 모두 '--' 리셋 (정직 원칙: 측정 안 됐으면 표시도 X)
+      ['bpm','hrv','sdnn','lfhf','stress','fatigue','cogans','elapsed'].forEach(function(id){
+        var el = document.getElementById('dem-' + id);
+        if(el) el.textContent = '--';
+      });
       // 코스별 최소 측정 시간 강제 (의학 표준)
       var minSec = window._dementiaState.course === 'light' ? 60 : 
                     window._dementiaState.course === 'mid'   ? 120 : 300;
@@ -11989,7 +12001,29 @@ function cgoGuideFeature(key){
         .catch(function(){ return navigator.mediaDevices.getUserMedia({video:true,audio:false}); })
         .then(function(stream){
           window._dementiaState.stream = stream;
-          if(vd){ vd.srcObject = stream; vd.play().catch(function(){}); }
+          if(vd){
+            vd.srcObject = stream;
+            vd.play().catch(function(){
+              // ★ C-40 — 모바일 자동재생 정책 우회 (Samsung Internet · Chrome Android · iOS Safari)
+              if(status){
+                status.textContent = '👆 화면을 한 번 탭해주세요';
+                status.style.background = 'rgba(251,191,36,.3)';
+                status.style.color = '#fbbf24';
+              }
+              var tapToPlay = function(){
+                vd.play().then(function(){
+                  if(status){
+                    status.textContent = '얼굴 검출 중';
+                    status.style.background = 'rgba(251,191,36,.2)';
+                    status.style.color = '#fbbf24';
+                  }
+                }).catch(function(){});
+              };
+              vd.addEventListener('click', tapToPlay, {once:true});
+              var camBox = document.getElementById('dem-cam-box');
+              if(camBox) camBox.addEventListener('click', tapToPlay, {once:true});
+            });
+          }
           
           // C-37 검증 함수: BlazeFace + isSkin 활용
           window._dementiaState.startTime = Date.now();
@@ -12295,6 +12329,10 @@ function cgoGuideFeature(key){
         }
         hrv = Math.sqrt(diffs.reduce(function(a,b){return a+b;}, 0) / diffs.length);
       }
+      
+      // ★ C-40 — 헌법 v2.0 정직 가드 (측정 안 됐으면 0)
+      if(bpm === 0) hrv = 0;            // BPM 무효면 HRV도 무효
+      if(hrv < 5 || hrv > 150) hrv = 0; // HRV 정상 범위 (RMSSD 5~150ms) 밖 차단
       
       return {bpm: bpm, hrv: hrv};
     };
