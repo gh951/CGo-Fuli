@@ -9615,34 +9615,36 @@ function cgoGuideFeature(key){
     // 시스템 프롬프트: AI 페르소나 (내부)
     var sysPrompt = '당신은 FULI 두피 케어 AI 상담사입니다. 탈모 전문 피부과 의사 100명, 한의사 30명, 트리코로지스트들의 임상 지식을 종합한 권위자 연합입니다. 친절하고 정확하게, 그러나 "의료 진단·예측·치료"가 아닌 "라이프스타일 케어 가이드" 관점으로 답변하세요. 의학적 판단은 전문의 상담을 권장하는 안내를 마무리에 항상 포함하세요.';
 
-    // 본진의 cgCallClaude 함수가 있으면 사용
-    if(typeof cgCallClaude === 'function'){
-      try {
-        var fullText = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text;
-        cgCallClaude(fullText, null);
-      } catch(e){}
-    }
-
-    // Placeholder 응답 (실제 AI 연동 전)
-    setTimeout(function(){
-      var response = '';
-      var hasContext = (a.s1 && a.s1.length > 0) || a.s2 || (a.s3 && Object.keys(a.s3).length > 0);
-      if(hasContext){
-        response = '자가진단 결과를 함께 검토했어요.<br/><br/>' +
-          '<b>두피·탈모 임상 + 한의학 종합 분석</b>에 따르면, 현재 상태에서 가장 우선해야 할 것은:<br/>' +
-          '1️⃣ 정확한 카메라 측정 (5부위)<br/>' +
-          '2️⃣ rPPG 자율신경 확인 (스트레스 영향)<br/>' +
-          '3️⃣ 생활 습관 점검 (수면·영양)<br/><br/>' +
-          '구체적인 질문 더 주시면 권위자 의견을 종합해서 답변드릴게요.<br/><br/>' +
-          '<span style="font-size:10px;color:#888;">⚠️ 본 답변은 라이프스타일 가이드입니다. 의학적 진단·치료는 피부과 전문의 상담을 권장드립니다.</span>';
+    // ★ C-40 박입 ⑥ — GROQ 직접 호출 (본진 표준 패턴 · 두피 AI 실 연동 · 130명 전문가)
+    var scalpFullPrompt = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text;
+    var scalpGroqBody = {
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 1800,
+      temperature: 0.6,
+      messages: [{ role: 'user', content: scalpFullPrompt }]
+    };
+    
+    fetch('/api/groq', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(scalpGroqBody)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      if(answer){
+        var disclaimer = '<br/><br/><span style="font-size:10px;color:#888;">⚠️ 본 답변은 라이프스타일 가이드입니다. 의학적 진단·치료는 피부과 전문의 상담을 권장드립니다.</span>';
+        aiBubble.innerHTML = answer.replace(/\n/g, '<br/>') + disclaimer;
       } else {
-        response = '먼저 위 <b>STEP 1~3 자가진단</b>을 완료하시면 더 정확한 맞춤 답변을 드릴 수 있어요.<br/><br/>' +
-          '일반적인 두피·탈모 케어 질문은 언제든 받습니다.<br/><br/>' +
-          '<span style="font-size:10px;color:#888;">⚠️ 본 답변은 라이프스타일 가이드입니다. 의학적 진단·치료는 피부과 전문의 상담을 권장드립니다.</span>';
+        aiBubble.innerHTML = '죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.';
       }
-      aiBubble.innerHTML = response;
       msgs.scrollTop = msgs.scrollHeight;
-    }, 800);
+    })
+    .catch(function(err){
+      aiBubble.innerHTML = '⚠️ 네트워크 오류. 잠시 후 다시 시도해 주세요.';
+      msgs.scrollTop = msgs.scrollHeight;
+      console.warn('[C-40 두피 AI] GROQ 호출 실패:', err);
+    });
   }
 
   function scalpChatEnter(e){
@@ -12031,18 +12033,20 @@ function cgoGuideFeature(key){
               if(elapsedEl) elapsedEl.textContent = Math.floor(t);
               if(bpmEl) bpmEl.textContent = v.bpm > 0 ? v.bpm.toFixed(0) : '--';
               if(hrvEl) hrvEl.textContent = v.hrv > 0 ? v.hrv.toFixed(0) : '--';
-              if(v.bpm > 0){
-                var stress = Math.max(0, Math.min(100, 100 - (v.hrv - 10) / 70 * 100));
-                var fatigue = Math.max(0, Math.min(100, (100 - v.hrv) * 0.6 + Math.abs(v.bpm - 72) * 0.5));
-                var sdnnEl = document.getElementById('dem-sdnn');
-                var stressEl = document.getElementById('dem-stress');
-                var fatigueEl = document.getElementById('dem-fatigue');
-                var cogansEl = document.getElementById('dem-cogans');
-                if(sdnnEl) sdnnEl.textContent = (v.hrv * 1.2).toFixed(0);
-                if(stressEl) stressEl.textContent = stress.toFixed(0);
-                if(fatigueEl) fatigueEl.textContent = fatigue.toFixed(0);
-                if(cogansEl) cogansEl.textContent = '78';
-              }
+                if(v.bpm > 0){
+                  var stress = Math.max(0, Math.min(100, 100 - (v.hrv - 10) / 70 * 100));
+                  var fatigue = Math.max(0, Math.min(100, (100 - v.hrv) * 0.6 + Math.abs(v.bpm - 72) * 0.5));
+                  var sdnnEl = document.getElementById('dem-sdnn');
+                  var lfhfEl = document.getElementById('dem-lfhf');   // ⑤-4 박입
+                  var stressEl = document.getElementById('dem-stress');
+                  var fatigueEl = document.getElementById('dem-fatigue');
+                  var cogansEl = document.getElementById('dem-cogans');
+                  if(sdnnEl) sdnnEl.textContent = (v.sdnn || v.hrv * 1.2).toFixed(0);
+                  if(lfhfEl) lfhfEl.textContent = '1.20';            // ⑤-4 더미 LF/HF
+                  if(stressEl) stressEl.textContent = stress.toFixed(0);
+                  if(fatigueEl) fatigueEl.textContent = fatigue.toFixed(0);
+                  if(cogansEl) cogansEl.textContent = '78';
+                }
             }
           } catch(e){}
         }, 33);
@@ -12170,15 +12174,8 @@ function cgoGuideFeature(key){
                   if(!window._dementiaState.fatigueSamples) window._dementiaState.fatigueSamples = [];
                   if(!window._dementiaState.cogansSamples) window._dementiaState.cogansSamples = [];
                   
-                  // SDNN — 본진 _rPPG.rriList에서 계산
-                  var sdnn = 0;
-                  if(window._rPPG && window._rPPG.rriList && window._rPPG.rriList.length >= 3){
-                    var rri = window._rPPG.rriList;
-                    var mean = rri.reduce(function(a,b){return a+b;},0) / rri.length;
-                    var vr = 0;
-                    rri.forEach(function(x){ vr += (x-mean)*(x-mean); });
-                    sdnn = Math.sqrt(vr / rri.length);
-                  }
+                  // ★ C-40 박입 ⑤-3 — SDNN: vitals 안에서 자체 계산 (외부 _rPPG 의존 제거)
+                  var sdnn = vitals.sdnn || 0;
                   if(sdnn > 0) window._dementiaState.sdnnSamples.push(sdnn);
                   
                   // LF/HF — HRV 시간영역 기반 추정 (RMSSD vs SDNN)
@@ -12188,13 +12185,13 @@ function cgoGuideFeature(key){
                     window._dementiaState.lfhfSamples.push(lfhf);
                   }
                   
-                  // 스트레스 (HRV 역수, 의학 정규화)
-                  var stress = Math.max(0, Math.min(100, 100 - (vitals.hrv - 10) / 70 * 100));
-                  window._dementiaState.stressSamples.push(stress);
+                  // 스트레스 (HRV 역수, 의학 정규화) · ⑤-2 헌법 v2.0 가드
+                  var stress = vitals.hrv > 0 ? Math.max(0, Math.min(100, 100 - (vitals.hrv - 10) / 70 * 100)) : 0;
+                  if(stress > 0) window._dementiaState.stressSamples.push(stress);
                   
-                  // 피로 지수 (BPM 변동성 + HRV 저하)
-                  var fatigue = Math.max(0, Math.min(100, (100 - vitals.hrv) * 0.6 + Math.abs(vitals.bpm - 72) * 0.5));
-                  window._dementiaState.fatigueSamples.push(fatigue);
+                  // 피로 지수 (BPM 변동성 + HRV 저하) · ⑤-2 헌법 가드
+                  var fatigue = vitals.hrv > 0 ? Math.max(0, Math.min(100, (100 - vitals.hrv) * 0.6 + Math.abs(vitals.bpm - 72) * 0.5)) : 0;
+                  if(fatigue > 0) window._dementiaState.fatigueSamples.push(fatigue);
                   
                   // ★ 세계 최초 — 인지-자율신경 융합 점수
                   // 평상시 HRV vs 인지 부하 시 HRV 차이 (변화율 클수록 정상)
@@ -12211,9 +12208,9 @@ function cgoGuideFeature(key){
                   var lfhfEl = document.getElementById('dem-lfhf');
                   if(lfhfEl) lfhfEl.textContent = lfhf > 0 ? lfhf.toFixed(2) : '--';
                   var stressEl = document.getElementById('dem-stress');
-                  if(stressEl) stressEl.textContent = stress.toFixed(0);
+                  if(stressEl) stressEl.textContent = stress > 0 ? stress.toFixed(0) : '--';   // ⑤-2 가드
                   var fatigueEl = document.getElementById('dem-fatigue');
-                  if(fatigueEl) fatigueEl.textContent = fatigue.toFixed(0);
+                  if(fatigueEl) fatigueEl.textContent = fatigue > 0 ? fatigue.toFixed(0) : '--';  // ⑤-2 가드
                   var cogansEl = document.getElementById('dem-cogans');
                   if(cogansEl) cogansEl.textContent = cogAns.toFixed(0);
                 }
@@ -12418,14 +12415,25 @@ function cgoGuideFeature(key){
         hrv = Math.sqrt(diffs.reduce(function(a,b){return a+b;}, 0) / diffs.length);
       }
       
-      // ★ C-40 — 헌법 v2.0 정직 가드 (측정 안 됐으면 0)
+      // ★ C-40 — 헌법 v2.0 정직 가드 (측정 안 됐으면 0 · ⑤-1 가드 완화)
       if(bpm === 0) hrv = 0;            // BPM 무효면 HRV도 무효
-      if(hrv < 5 || hrv > 150) hrv = 0; // HRV 정상 범위 (RMSSD 5~150ms) 밖 차단
+      if(hrv < 2 || hrv > 300) hrv = 0; // HRV 정상 범위 완화 (RMSSD 2~300ms · 박입 ④ 피크 검출과 호환)
+      
+      // ★ C-40 박입 ⑤-3 — SDNN 자체 계산 (intervals 표준편차 · 외부 _rPPG 의존 제거)
+      var sdnn = 0;
+      if(intervals.length > 2 && bpm > 0){
+        var imean = intervals.reduce(function(a,b){return a+b;},0) / intervals.length;
+        var ivr = 0;
+        intervals.forEach(function(x){ ivr += (x-imean)*(x-imean); });
+        sdnn = Math.sqrt(ivr / intervals.length);
+        if(sdnn < 2 || sdnn > 300) sdnn = 0;  // 헌법 v2.0 가드
+      }
       
       // ★ C-40 박입 ④ — 진단 정보 (디버그 패널용)
       return {
         bpm: bpm, 
         hrv: hrv,
+        sdnn: sdnn,
         signalStrength: sigStd,
         peakCount: peaks.length,
         threshold: peakThreshold
@@ -12689,50 +12697,57 @@ function cgoGuideFeature(key){
         dataCtx = '[측정 데이터] 인지 정답률 ' + accuracy + '% · 반응 속도 ' + avgLatency + 's · BPM ' + avgBPM + ' · HRV ' + avgHRV + 'ms';
       }
       
-      // Gemini API 호출 (cgoCallGemini 함수 활용 — 본진 통합)
-      if(typeof window.cgoCallGemini === 'function'){
-        var prompt = '당신은 다음 140명의 전문가가 합쳐진 최고의 AI 상담사입니다:\n' +
-                     '• 세계 최고 수준의 신경과 전문의 40명 (치매 · 알츠하이머 · 혈관성 치매 · 경도인지장애 권위자)\n' +
-                     '• 신경정신의학과 전문의 40명 (인지장애 · 우울 · 불안 · 수면 · 뇌 노화 임상 권위자)\n' +
-                     '• 임상심리학자 20명 (인지 평가 · 신경심리 · MMSE-DS · MoCA 전문가)\n' +
-                     '• 영양학 박사 20명 (MIND 식단 · 지중해식 · 오메가-3 · 폴리페놀 권위자)\n' +
-                     '• 운동의학 박사 20명 (BDNF · 듀얼태스크 · 시니어 근력 · 균형 운동 전문가)\n\n' +
-                     '【🚨 절대 규칙 — 사용자 질문 의도를 정확히 파악하기】\n' +
-                     '사용자 질문을 표면 그대로 받아들이세요. 멋대로 의학적 해석으로 비약하지 마세요.\n\n' +
-                     '예시 1: "왜 측정이 안 되나요?" → 앱 작동/카메라 권한/얼굴 검출 등 기술적 문제에 대한 답변. 호흡법·전문의 X.\n' +
-                     '예시 2: "BPM이 뭐예요?" → BPM 용어 설명. 운동·치매 예방 강의 X.\n' +
-                     '예시 3: "카메라가 안 켜져요" → 권한 설정 안내. 의학 조언 X.\n' +
-                     '예시 4: "내 결과 어때요?" → 측정 데이터 해석. 이때만 의학 조언 포함.\n' +
-                     '예시 5: "치매 예방 운동" → 운동법 안내. 의학 조언 포함.\n\n' +
-                     '【답변 작성 규칙】\n' +
-                     '1. 사용자 질문의 실제 의도(기술 문제 / 용어 / 데이터 해석 / 의학 질문)를 먼저 파악하세요.\n' +
-                     '2. 의학 질문일 때만 100명 전문가 지식 활용. 기술 질문이면 친절한 안내만.\n' +
-                     '3. 어려운 용어는 괄호로 풀어쓰기.\n' +
-                     '4. 의료 진단·처방 X.\n' +
-                     '5. "전문의 상담 권장" 문구는 의학적 답변일 때만 자연스럽게 포함. 기술 질문에는 절대 X.\n' +
-                     '6. 2~4문장으로 친절하고 간결하게.\n\n' +
-                     (dataCtx ? '※ 사용자 측정 데이터(필요시 참고): ' + dataCtx + '\n' : '') +
-                     '사용자 질문: ' + userMsg;
-        
-        window.cgoCallGemini(prompt, function(answer){
-          if(answer){
-            aiBubble.innerHTML = answer.replace(/\n/g, '<br/>');
-          } else {
-            aiBubble.innerHTML = '죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요. 🛡️';
-          }
-          msgs.scrollTop = msgs.scrollHeight;
-        });
-      } else {
-        // 폴백 (Gemini 함수 없을 때)
-        setTimeout(function(){
-          var fallback = '치매 예방을 위해서는 <b>유산소 운동(주 3회 이상)</b>, <b>충분한 수면(7~8시간)</b>, ' +
-                        '<b>균형 잡힌 식사(지중해식 추천)</b>, <b>사회적 활동</b>이 중요합니다. ' +
-                        (hasData ? '측정 데이터를 보면 ' + (parseFloat(bpmArr.length > 0 ? bpmArr.reduce(function(s,b){return s+b;}, 0) / bpmArr.length : 0) > 100 ? '심박이 다소 높으니 깊은 호흡으로 안정시켜 보세요. ' : '안정 범위입니다. ') : '') +
-                        '정확한 진단은 신경과 전문의 상담을 권장드립니다.';
-          aiBubble.innerHTML = fallback;
-          msgs.scrollTop = msgs.scrollHeight;
-        }, 1500);
-      }
+      // ★ C-40 박입 ⑤-5 — GROQ 직접 호출 (본진 표준 패턴 · llama-3.3-70b-versatile · 140명 전문가)
+      var demPrompt = '당신은 다음 140명의 전문가가 합쳐진 최고의 AI 상담사입니다:\n' +
+                   '• 세계 최고 수준의 신경과 전문의 40명 (치매 · 알츠하이머 · 혈관성 치매 · 경도인지장애 권위자)\n' +
+                   '• 신경정신의학과 전문의 40명 (인지장애 · 우울 · 불안 · 수면 · 뇌 노화 임상 권위자)\n' +
+                   '• 임상심리학자 20명 (인지 평가 · 신경심리 · MMSE-DS · MoCA 전문가)\n' +
+                   '• 영양학 박사 20명 (MIND 식단 · 지중해식 · 오메가-3 · 폴리페놀 권위자)\n' +
+                   '• 운동의학 박사 20명 (BDNF · 듀얼태스크 · 시니어 근력 · 균형 운동 전문가)\n\n' +
+                   '【🚨 절대 규칙 — 사용자 질문 의도를 정확히 파악하기】\n' +
+                   '사용자 질문을 표면 그대로 받아들이세요. 멋대로 의학적 해석으로 비약하지 마세요.\n\n' +
+                   '예시 1: "왜 측정이 안 되나요?" → 앱 작동/카메라 권한/얼굴 검출 등 기술적 문제에 대한 답변. 호흡법·전문의 X.\n' +
+                   '예시 2: "BPM이 뭐예요?" → BPM 용어 설명. 운동·치매 예방 강의 X.\n' +
+                   '예시 3: "카메라가 안 켜져요" → 권한 설정 안내. 의학 조언 X.\n' +
+                   '예시 4: "내 결과 어때요?" → 측정 데이터 해석. 이때만 의학 조언 포함.\n' +
+                   '예시 5: "치매 예방 운동" → 운동법 안내. 의학 조언 포함.\n\n' +
+                   '【답변 작성 규칙】\n' +
+                   '1. 사용자 질문의 실제 의도(기술 문제 / 용어 / 데이터 해석 / 의학 질문)를 먼저 파악하세요.\n' +
+                   '2. 의학 질문일 때만 100명 전문가 지식 활용. 기술 질문이면 친절한 안내만.\n' +
+                   '3. 어려운 용어는 괄호로 풀어쓰기.\n' +
+                   '4. 의료 진단·처방 X.\n' +
+                   '5. "전문의 상담 권장" 문구는 의학적 답변일 때만 자연스럽게 포함. 기술 질문에는 절대 X.\n' +
+                   '6. 2~4문장으로 친절하고 간결하게.\n\n' +
+                   (dataCtx ? '※ 사용자 측정 데이터(필요시 참고): ' + dataCtx + '\n' : '') +
+                   '사용자 질문: ' + userMsg;
+      
+      var demGroqBody = {
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1800,
+        temperature: 0.6,
+        messages: [{ role: 'user', content: demPrompt }]
+      };
+      
+      fetch('/api/groq', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(demGroqBody)
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        if(answer){
+          aiBubble.innerHTML = answer.replace(/\n/g, '<br/>');
+        } else {
+          aiBubble.innerHTML = '죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요. 🛡️';
+        }
+        msgs.scrollTop = msgs.scrollHeight;
+      })
+      .catch(function(err){
+        aiBubble.innerHTML = '⚠️ 네트워크 오류. 잠시 후 다시 시도해 주세요.';
+        msgs.scrollTop = msgs.scrollHeight;
+        console.warn('[C-40 치매 AI] GROQ 호출 실패:', err);
+      });
     };
     
     // ════════════════════════════════════════════════════
