@@ -12102,13 +12102,7 @@ function cgoGuideFeature(key){
                 var r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
                 // isSkin 판정 (R > G > B, R-G > 15, 밝기 100~240)
                 var brightness = (r+g+b)/3;
-                // ★ C-40 박입 ⑦-5 — HSV 채도 검사 (책상/벽 = 채도 낮음 · 피부 = 채도 0.15~0.5)
-                var maxRGB = Math.max(r, g, b);
-                var minRGB = Math.min(r, g, b);
-                var sat = maxRGB > 0 ? (maxRGB - minRGB) / maxRGB : 0;
-                var isSkin = (r > g) && (g > b) && (r-g > 15) && (r-b > 30) 
-                           && (brightness > 100) && (brightness < 240)
-                           && (sat >= 0.15) && (sat <= 0.6);  // ⑦-5 채도 가드
+                var isSkin = (r > g) && (g > b) && (r-g > 15) && (r-b > 30) && (brightness > 100) && (brightness < 240);
                 if(isSkin){
                   skinPixels++;
                   rSum += r; gSum += g; bSum += b; validCnt++;
@@ -12117,8 +12111,8 @@ function cgoGuideFeature(key){
               
               var skinRatio = skinPixels / (imgData.data.length/4);
               
-              // ★ 헌법 준수: 피부 40% 미만 = 얼굴 없음 = 측정 중단 (⑦-4 강화 · 30% → 40%)
-              if(skinRatio < 0.4){
+              // ★ 헌법 준수: 피부 30% 미만 = 얼굴 없음 = 측정 중단
+              if(skinRatio < 0.3){
                 window._dementiaState.faceDetected = false;
                 if(status){ status.textContent = '⚠️ 얼굴 안 보임'; status.style.background = 'rgba(239,68,68,.2)'; status.style.color = '#f87171'; }
                 return;  // 측정 중단 (헌법 준수)
@@ -12400,10 +12394,6 @@ function cgoGuideFeature(key){
       }
       
       // BPM 계산
-      // ★ C-40 박입 ⑦-1 — 신호 강도 가드 (정적/노이즈 신호 차단 · σ < 1.5면 측정 무효)
-      if(sigStd < 1.5) return {bpm:0, hrv:0, sdnn:0, signalStrength:sigStd, peakCount:peaks.length, threshold:peakThreshold};
-      // ★ C-40 박입 ⑦-2 — 피크 갯수 가드 (10초간 심박 5개 미만이면 노이즈)
-      if(peaks.length < 5) return {bpm:0, hrv:0, sdnn:0, signalStrength:sigStd, peakCount:peaks.length, threshold:peakThreshold};
       if(peaks.length < 2) return {bpm:0, hrv:0};
       var intervals = [];
       for(var i=1; i<peaks.length; i++){
@@ -12414,17 +12404,6 @@ function cgoGuideFeature(key){
       
       // 정상 범위 보정
       if(bpm < 40 || bpm > 180) bpm = 0;
-      
-      // ★ C-40 박입 ⑦-3 — 피크 간격 일관성 가드 (CV > 0.4면 노이즈 · 진짜 심박은 균일)
-      var icvOK = true;
-      if(intervals.length > 2 && avgInterval > 0){
-        var ivar = 0;
-        intervals.forEach(function(x){ ivar += (x - avgInterval) * (x - avgInterval); });
-        var istd = Math.sqrt(ivar / intervals.length);
-        var icv = istd / avgInterval;
-        if(icv > 0.4) icvOK = false;  // 변동계수 40% 초과 = 노이즈
-      }
-      if(!icvOK) bpm = 0;
       
       // HRV (RMSSD)
       var hrv = 0;
