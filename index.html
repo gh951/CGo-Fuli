@@ -11433,6 +11433,8 @@ function cgoGuideFeature(key){
               </div>
               <div style="font-size:9px;color:#888;margin-top:3px;line-height:1.4;">인지 부하 시 HRV 변화율 측정</div>
             </div>
+            <!-- ★ C-40 박입 ④ — 화면 디버그 패널 (실시간 신호 상태 · 사용자도 신뢰 가능) -->
+            <div id="dem-debug-panel" style="margin-top:6px;padding:5px 10px;background:rgba(0,0,0,.55);border:1px solid rgba(212,168,67,.25);border-radius:8px;font-size:9.5px;color:rgba(245,230,175,.85);font-family:'Courier New',monospace;letter-spacing:.02em;">📊 신호 측정 대기 중...</div>
           </div>
           
           <button onclick="window.demStartMeasure()" id="dem-start-btn" style="margin-top:16px;padding:14px 36px;background:linear-gradient(135deg,#d4a843,#f59e0b);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.04em;box-shadow:0 4px 12px rgba(212,168,67,.4);">📸 측정 시작</button>
@@ -11951,6 +11953,10 @@ function cgoGuideFeature(key){
     // ZERO STORAGE compliance: raw video and biometric data discarded immediately
     // ════════════════════════════════════════════════════
     window.demStartMeasure = function(){
+      // ★ C-40 박입 ④ — 개발자 모드 (PC 카메라 없이 검증 · ?cgoDev=1 URL에서만)
+      var _cgoDevMode = false;
+      try { _cgoDevMode = location.search.indexOf('cgoDev=1') !== -1; } catch(e){}
+      window._dementiaState._devMode = _cgoDevMode;
       // 코스별 문항 준비
       var Q = window.demGetQuestions();
       window._dementiaState.currentQ = 0;
@@ -11997,6 +12003,51 @@ function cgoGuideFeature(key){
       
       // 카메라 시작 (전면 - 얼굴)
       var constraints = { video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:30} }, audio:false };
+      // ★ C-40 박입 ④ — 개발자 모드: 카메라 없이 더미 신호 시뮬레이션
+      if(_cgoDevMode){
+        if(status){ status.textContent = '🛠️ 개발 모드 (DUMMY)'; status.style.background = 'rgba(167,139,250,.25)'; status.style.color = '#a78bfa'; }
+        window._dementiaState.faceDetected = true;
+        window._dementiaState.startTime = Date.now();
+        window._dementiaState.rgbSamples = [];
+        // 즉시 첫 문제 표시
+        window.demRenderQuestion(0);
+        // 더미 CHROM 신호 생성 (BPM 72 = 0.83초 주기)
+        window._dementiaState.rppgInterval = setInterval(function(){
+          try{
+            var t = (Date.now() - window._dementiaState.startTime) / 1000;
+            // 1.2 Hz 사인파 (BPM 72) + 작은 노이즈
+            var sig = Math.sin(2 * Math.PI * 1.2 * t) * 8 + (Math.random()-0.5) * 1.5;
+            window._dementiaState.rgbSamples.push({ t:t, x:sig, skin:0.5 });
+            if(window._dementiaState.rgbSamples.length > 1800) window._dementiaState.rgbSamples.shift();
+            // 매 3초 측정값 갱신
+            if(window._dementiaState.rgbSamples.length % 90 === 0 && window._dementiaState.rgbSamples.length > 90){
+              var v = window.demCalcVitals();
+              var debugEl = document.getElementById('dem-debug-panel');
+              if(debugEl) debugEl.innerHTML = '🛠️ DEV · BPM <b>'+v.bpm.toFixed(0)+'</b> · 피크 <b>'+v.peakCount+'</b> · σ <b>'+(v.signalStrength||0).toFixed(2)+'</b>';
+              if(t < 10){ if(status){ status.textContent = '🔄 (DEV) 안정화 '+Math.ceil(10-t)+'초'; } return; }
+              var bpmEl = document.getElementById('dem-bpm');
+              var hrvEl = document.getElementById('dem-hrv');
+              var elapsedEl = document.getElementById('dem-elapsed');
+              if(elapsedEl) elapsedEl.textContent = Math.floor(t);
+              if(bpmEl) bpmEl.textContent = v.bpm > 0 ? v.bpm.toFixed(0) : '--';
+              if(hrvEl) hrvEl.textContent = v.hrv > 0 ? v.hrv.toFixed(0) : '--';
+              if(v.bpm > 0){
+                var stress = Math.max(0, Math.min(100, 100 - (v.hrv - 10) / 70 * 100));
+                var fatigue = Math.max(0, Math.min(100, (100 - v.hrv) * 0.6 + Math.abs(v.bpm - 72) * 0.5));
+                var sdnnEl = document.getElementById('dem-sdnn');
+                var stressEl = document.getElementById('dem-stress');
+                var fatigueEl = document.getElementById('dem-fatigue');
+                var cogansEl = document.getElementById('dem-cogans');
+                if(sdnnEl) sdnnEl.textContent = (v.hrv * 1.2).toFixed(0);
+                if(stressEl) stressEl.textContent = stress.toFixed(0);
+                if(fatigueEl) fatigueEl.textContent = fatigue.toFixed(0);
+                if(cogansEl) cogansEl.textContent = '78';
+              }
+            }
+          } catch(e){}
+        }, 33);
+        return;  // 실 카메라 흐름 우회
+      }
       navigator.mediaDevices.getUserMedia(constraints)
         .catch(function(){ return navigator.mediaDevices.getUserMedia({video:true,audio:false}); })
         .then(function(stream){
@@ -12087,6 +12138,28 @@ function cgoGuideFeature(key){
               // 매 3초 BPM/HRV 계산
               if(window._dementiaState.rgbSamples.length % 90 === 0 && window._dementiaState.rgbSamples.length > 90){
                 var vitals = window.demCalcVitals();
+                // ★ C-40 박입 ④ — 워밍업 10초 + 화면 디버그 패널 (헌법 v2.0 정직)
+                var measureT = (Date.now() - window._dementiaState.startTime) / 1000;
+                var debugEl = document.getElementById('dem-debug-panel');
+                if(debugEl){
+                  // 신호 강도 등급 (시그마 기준)
+                  var sigLevel = vitals.signalStrength > 1.5 ? '강' : vitals.signalStrength > 0.6 ? '중' : '약';
+                  var sigColor = vitals.signalStrength > 1.5 ? '#34d399' : vitals.signalStrength > 0.6 ? '#fbbf24' : '#f87171';
+                  debugEl.innerHTML = '📊 신호 <b style="color:'+sigColor+'">'+sigLevel+'</b> · 피크 <b>'+vitals.peakCount+'</b>개 · σ <b>'+(vitals.signalStrength||0).toFixed(2)+'</b>';
+                }
+                // 워밍업 10초 (헌법 v2.0: 측정 안 안정화되면 표시 X)
+                if(measureT < 10){
+                  if(status){
+                    status.textContent = '🔄 신호 안정화 중 ('+Math.ceil(10-measureT)+'초)';
+                    status.style.background = 'rgba(251,191,36,.2)';
+                    status.style.color = '#fbbf24';
+                  }
+                  return;  // 첫 10초는 측정값 갱신 X (가짜 값 차단)
+                } else if(status && status.textContent.indexOf('안정화') !== -1){
+                  status.textContent = '✅ 측정 중';
+                  status.style.background = 'rgba(52,211,153,.2)';
+                  status.style.color = '#34d399';
+                }
                 if(vitals.bpm > 0){
                   window._dementiaState.bpmSamples.push(vitals.bpm);
                   window._dementiaState.hrvSamples.push(vitals.hrv);
@@ -12300,12 +12373,27 @@ function cgoGuideFeature(key){
       var mean = xVals.reduce(function(a,b){return a+b;}, 0) / xVals.length;
       var detrended = xVals.map(function(v){ return v - mean; });
       
-      // 피크 검출 (간이 — 양수 크로싱)
+      // ★ C-40 박입 ④ — 피크 검출 강화 (동적 임계값 + 슬라이딩 윈도우 + 최소 간격)
+      // 표준편차 기반 동적 임계값: 노이즈는 작고 진짜 심박은 σ의 0.3배 이상
+      var sigStd = 0;
+      for(var sk=0; sk<detrended.length; sk++){ sigStd += detrended[sk]*detrended[sk]; }
+      sigStd = Math.sqrt(sigStd / detrended.length);
+      var peakThreshold = sigStd * 0.3;
+      var minPeakInterval = 0.33;  // BPM 180 상한 = 0.33초 (10 samples @ 30fps)
+      var lastPeakT = -1;
+      var WIN = 3;  // 좌우 3포인트 비교 (강건한 피크 검출)
       var peaks = [];
-      for(var i=1; i<detrended.length-1; i++){
-        if(detrended[i] > 0 && detrended[i] > detrended[i-1] && detrended[i] >= detrended[i+1]){
-          peaks.push(recent[i].t);
+      for(var i=WIN; i<detrended.length-WIN; i++){
+        if(detrended[i] < peakThreshold) continue;
+        var isPk = true;
+        for(var w=1; w<=WIN; w++){
+          if(detrended[i] < detrended[i-w] || detrended[i] < detrended[i+w]){ isPk=false; break; }
         }
+        if(!isPk) continue;
+        var pt = recent[i].t;
+        if(pt - lastPeakT < minPeakInterval) continue;
+        peaks.push(pt);
+        lastPeakT = pt;
       }
       
       // BPM 계산
@@ -12334,7 +12422,14 @@ function cgoGuideFeature(key){
       if(bpm === 0) hrv = 0;            // BPM 무효면 HRV도 무효
       if(hrv < 5 || hrv > 150) hrv = 0; // HRV 정상 범위 (RMSSD 5~150ms) 밖 차단
       
-      return {bpm: bpm, hrv: hrv};
+      // ★ C-40 박입 ④ — 진단 정보 (디버그 패널용)
+      return {
+        bpm: bpm, 
+        hrv: hrv,
+        signalStrength: sigStd,
+        peakCount: peaks.length,
+        threshold: peakThreshold
+      };
     };
     
     // ════════════════════════════════════════════════════
