@@ -16412,9 +16412,8 @@ if(document.readyState === 'loading'){
     // ★ C-40 박입 — IQ × rPPG 융합 측정 (치매 패턴 + 기존 IQ 입구 박제)
     
     // ★ C-40 박입 ⑫ — 진짜 IQ 문제 + 100장 이미지 박제 (대장님 작품)
-    // 이미지: GitHub Pages https://gh951.github.io/CGo-Fuli/pattern-images/p001~p100.jpeg
-    //                       https://gh951.github.io/CGo-Fuli/spatial-images/s001~s030.jpeg
-    var IQ_IMG_BASE = 'https://gh951.github.io/CGo-Fuli/';
+    // 이미지: 상대 경로 'pattern-images/p001.jpeg' (원본 그대로)
+    // iqImgFail 함수가 4가지 폴백 자동 시도 → 어느 폴더에 있든 OK
     
 var _cgo36PatternAnswers = {
   'p001': { a:0, c:['더 큰 검정 원','작은 검정 원','검정 사각형','세 개의 작은 원'] },
@@ -16703,8 +16702,10 @@ var Q_POOL = {
             opts: q.choices,
             answer: q.answer,
             domain: domainEmoji[d],
-            image: q.image ? (IQ_IMG_BASE + q.image) : null,
-            pattern: q.pattern || null
+            image: q.image || null,         // 원본 상대 경로 그대로 (cgo36ImgFail 4경로 폴백 박제)
+            pattern: q.pattern || null,
+            _pid: q._pid || null,            // 패턴 ID (폴백 시 필요)
+            _sid: q._sid || null             // 공간 ID (폴백 시 필요)
           });
         }
       });
@@ -16956,6 +16957,64 @@ var Q_POOL = {
       window.iqRenderQuestion();
     };
     
+    // ★ C-40 박입 ⑬ — 원본 cgo36ImgFail 4가지 폴백 함수 박제 (대장님 폴더 어디든 자동 시도)
+    window.iqImgFail = function(imgEl){
+      var box = imgEl.parentElement;
+      var st = window._iqState;
+      var q = IQ_QUESTIONS[st.currentQ];
+      if(!q) return;
+      
+      var tries = parseInt(imgEl.dataset.tries || '0', 10);
+      var pid = q._pid || (q.image && q.image.indexOf('p') >= 0 ? q.image.match(/p\d{3}/) : null);
+      var sid = q._sid || (q.image && q.image.indexOf('s') >= 0 ? q.image.match(/s\d{3}/) : null);
+      if(pid && pid[0]) pid = pid[0];
+      if(sid && sid[0]) sid = sid[0];
+      
+      var alternatePaths = [];
+      if(pid){
+        alternatePaths = [
+          'pattern-images/' + pid + '.jpeg',           // 시도 1 (상대)
+          'images/pattern-images/' + pid + '.jpeg',    // 시도 2
+          './pattern-images/' + pid + '.jpeg',         // 시도 3
+          '/pattern-images/' + pid + '.jpeg'           // 시도 4 (절대)
+        ];
+      } else if(sid){
+        alternatePaths = [
+          'spatial-images/' + sid + '.jpeg',
+          'images/spatial-images/' + sid + '.jpeg',
+          './spatial-images/' + sid + '.jpeg',
+          '/spatial-images/' + sid + '.jpeg'
+        ];
+      }
+      
+      // 다음 경로 시도
+      if(tries < alternatePaths.length){
+        imgEl.dataset.tries = (tries + 1).toString();
+        imgEl.src = alternatePaths[tries] + '?t=' + Date.now();
+        return;
+      }
+      
+      // 모든 경로 실패 → 텍스트 폴백 (난이도 보존)
+      imgEl.style.display = 'none';
+      if(box){
+        var existingNotice = box.querySelector('.iq-img-notice');
+        if(!existingNotice){
+          var notice = document.createElement('div');
+          notice.className = 'iq-img-notice';
+          notice.style.cssText = 'font-size:14px;color:#64748b;font-weight:600;text-align:center;padding:20px 16px;border:1px dashed rgba(212,168,67,.4);border-radius:12px;background:rgba(212,168,67,.05);margin:10px auto;max-width:280px;';
+          notice.innerHTML = '⏳ 도형 로딩 실패<br><span style="font-size:11px;color:#94a3b8;">잠시 후 자동 재시도</span>';
+          box.appendChild(notice);
+          // 3초 후 자동 재시도 (원본 패턴)
+          setTimeout(function(){
+            imgEl.style.display = '';
+            imgEl.dataset.tries = '0';
+            imgEl.src = (q.image || '') + '?t=' + Date.now();
+            notice.remove();
+          }, 3000);
+        }
+      }
+    };
+    
     window.iqRenderQuestion = function(){
       var st = window._iqState;
       if(st.currentQ >= IQ_QUESTIONS.length){ window.iqShowResult(); return; }
@@ -16968,7 +17027,7 @@ var Q_POOL = {
       var qTextEl = document.getElementById('iq-question-text');
       var qHTML = '<div style="margin-bottom:14px;">' + q.q + '</div>';
       if(q.image){
-        qHTML += '<img src="' + q.image + '" alt="문제 도형" style="max-width:280px;width:100%;height:auto;display:block;margin:10px auto;border-radius:8px;border:1px solid #e5e7eb;" onerror="this.style.display=\'none\';var fb=this.nextElementSibling;if(fb)fb.style.display=\'block\';">';
+        qHTML += '<img src="' + q.image + '" alt="문제 도형" data-tries="1" style="max-width:280px;width:100%;height:auto;display:block;margin:10px auto;border-radius:8px;border:1px solid #e5e7eb;" onerror="window.iqImgFail(this);">';
         if(q.pattern){
           qHTML += '<div style="display:none;font-family:monospace;font-size:18px;color:#d4a843;background:#fef3c7;padding:14px;border-radius:8px;margin:10px auto;max-width:280px;">' + q.pattern + '</div>';
         }
