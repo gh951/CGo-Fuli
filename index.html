@@ -93054,10 +93054,9 @@ if('serviceWorker' in navigator){
 }
 </script>
 
-<!-- ══ FULI 양자내성 입구 (MUFE-GATE) ══ -->
-<script src="mufe_pq.js"></script>
+<!-- ══ FULI 양자내성 입구 — 무패 독립 게이트 (iframe 격리) ══ -->
 <script>
-  // mufe-gate 통과 시 — 대시보드로 진입
+  // 입구 통과 시 — FULI 대시보드로 진입
   window.onMufeGatePass = function(){
     try{
       document.querySelectorAll('.page.active').forEach(function(p){ p.classList.remove('active'); });
@@ -93066,8 +93065,25 @@ if('serviceWorker' in navigator){
       window.scrollTo(0,0);
     }catch(e){}
   };
+  // 무패 입구를 전체화면 iframe으로 — 무패 100% 그대로, FULI와 격리(충돌 0)
+  (function(){
+    function mount(){
+      if(document.getElementById('fuliGateFrame')) return;
+      var f=document.createElement('iframe');
+      f.id='fuliGateFrame'; f.src='/fuli-gate.html';
+      f.setAttribute('allow','camera; microphone');  // 고보안 동공(rPPG)용 권한 전달
+      f.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;border:0;margin:0;padding:0;z-index:2147483647;background:#03070d';
+      (document.body||document.documentElement).appendChild(f);
+    }
+    if(document.body) mount(); else window.addEventListener('DOMContentLoaded', mount);
+    window.addEventListener('message', function(e){
+      if(e && e.data==='fuli-gate-pass'){
+        var ff=document.getElementById('fuliGateFrame'); if(ff) ff.remove();
+        try{ if(typeof window.onMufeGatePass==='function') window.onMufeGatePass(); }catch(_){}
+      }
+    });
+  })();
 </script>
-<script src="mufe-gate.js"></script>
 
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
