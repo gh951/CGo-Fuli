@@ -17,7 +17,7 @@ const ready = () =>
 module.exports = {
   isKVAvailable: () => ready(),
   kvGet: async (k) => { try { return ready() ? await kv.get(k) : null; } catch (e) { return null; } },
-  kvSet: async (k, v) => { try { if (ready()) await kv.set(k, v); return true; } catch (e) { return false; } },
+  kvSet: async (k, v, opts) => { try { if (ready()) await kv.set(k, v, opts || undefined); return true; } catch (e) { return false; } },
   kvDel: async (k) => { try { if (ready()) await kv.del(k); return true; } catch (e) { return false; } },
   kvIncr: async (k) => { try { return ready() ? await kv.incr(k) : null; } catch (e) { return null; } },
 };

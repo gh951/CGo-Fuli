@@ -60,12 +60,14 @@ module.exports = async (req, res) => {
   if (!SECRET) return res.status(500).json({ error: 'server-misconfigured' });
 
   try {
-    const { passcode, format } = req.body || {};
+    const { passcode, format, imageSeq } = req.body || {};
     if (!passcode || passcode.length < 1) return res.status(400).json({ error: '비번을 입력해주세요' });
     if (!VALID_FORMATS.includes(format)) return res.status(400).json({ error: '유효한 형식을 입력해주세요' });
 
     const userId = getUserId(passcode);
     const passHash = hashPasscodeV3(passcode, userId);   // [#9] 새 가입은 처음부터 Argon2id
+    // [이미지암호] 선택 순서(예 "3-47-12")도 해시로 — 비번과 별개의 둘째 재료
+    const imageHash = imageSeq ? hashPasscodeV3('img:' + imageSeq, userId) : null;
 
     let existingUser = null;
     if (isKVAvailable()) existingUser = await kvGet(`user:${userId}`);
@@ -87,7 +89,7 @@ module.exports = async (req, res) => {
     }
 
     if (isKVAvailable()) {
-      await kvSet(`user:${userId}`, { passHash, format, createdAt: Date.now() });
+      await kvSet(`user:${userId}`, { passHash, imageHash, format, createdAt: Date.now() });
       await kvIncr('stats:user:registered');
     }
 

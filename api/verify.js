@@ -12,6 +12,7 @@
 const crypto = require('crypto');
 const { kvGet, kvSet, kvIncr, isKVAvailable } = require('./_kv');
 const { argon2id } = require('@noble/hashes/argon2.js');   // [#9] 메모리-하드 비번 해시(Argon2id)
+const pq = require('./pq');   // [양자] ML-KEM 공유키로 암호화된 답을 복호
 
 const SECRET = process.env.MUFE_SECRET;   // 기본값 fallback 제거
 
@@ -171,8 +172,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { userToken, challengeId, caughtWord, answer } = req.body || {};
-    if (!userToken || !challengeId || !caughtWord || !answer) {
+    const { userToken, challengeId, caughtWord, answer, encAnswer, imageSeq } = req.body || {};
+    if (!userToken || !challengeId || !caughtWord || (!answer && !encAnswer)) {
       return res.status(400).json({ error: '모든 필드가 필요합니다' });
     }
 
@@ -192,17 +193,41 @@ module.exports = async (req, res) => {
       return sendDecoy(res);
     }
 
-    const userAnswer = (answer || '').trim();
+    // [양자내성] 암호화된 답(encAnswer)이 오면 — challengeId에 묶인 공유키로 복호.
+    //   공유키는 challenge 단계에서 금고(KV)에 'pqss:'+challengeId 로 10분 보관됨.
+    //   복호 실패·공유키 만료 = 미끼(연산지옥). 평문 answer(구버전)면 그대로 통과(하위호환).
+    let _answer = answer;
+    let _imageSeq = imageSeq || null;
+    if (encAnswer) {
+      try {
+        const ssB64 = await kvGet('pqss:' + challengeId);
+        if (!ssB64) {
+          if (isKVAvailable()) await kvIncr('stats:auth:trapped-pq-expired');
+          return sendDecoy(res);
+        }
+        const plain = pq.aesDecrypt(ssB64, encAnswer);
+        // 양자 페이로드 = JSON {answer, imageSeq} (옛 버전은 그냥 문자열)
+        try { const o = JSON.parse(plain); _answer = o.answer; if (o.imageSeq) _imageSeq = o.imageSeq; }
+        catch (e) { _answer = plain; }
+      } catch (e) {
+        if (isKVAvailable()) await kvIncr('stats:auth:trapped-pq-baddec');
+        return sendDecoy(res);
+      }
+    }
+
+    const userAnswer = (_answer || '').trim();
     const userId = userData.userId || null;
 
     // 저장된 비번 해시 + 형식 — 우선 창고(KV)에서, 없으면 옛 토큰에서(이행기)
     let storedPassHash = null;
+    let storedImageHash = null;
     let userFormat = userData.format || null;
 
     if (userId && isKVAvailable()) {
       const u = await kvGet(`user:${userId}`);
       if (u && u.passHash) {
         storedPassHash = u.passHash;
+        storedImageHash = u.imageHash || null;
         userFormat = u.format || userFormat;
       }
     }
@@ -241,6 +266,14 @@ module.exports = async (req, res) => {
 
     // 등록한 형식과 일치 = 진짜 통과
     if (matchedFormat && matchedFormat === userFormat) {
+      // [이미지암호] 등록 때 이미지 순서를 설정했으면 — 그것도 맞아야 통과
+      if (storedImageHash) {
+        const imgOk = _imageSeq && verifyPass('img:' + _imageSeq, userId, storedImageHash);
+        if (!imgOk) {
+          if (isKVAvailable()) await kvIncr('stats:auth:trapped-wrong-image');
+          return await sendDecoy(res, generateAuthToken('decoy', userId, userFormat), 'wrong-image');
+        }
+      }
       // [#9] 옛 HMAC 해시면 → PBKDF2로 자동 격상 저장(1회). 실패해도 통과엔 영향 없음.
       if (matchedCand != null && isKVAvailable() && userId && !(typeof storedPassHash === 'string' && storedPassHash.startsWith('p3:'))) {
         try {
