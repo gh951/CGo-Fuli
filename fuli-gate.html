@@ -14188,10 +14188,24 @@ window.mufeSplitUI = (function(){
   // [FULI] 무패 자체 대문(entryGate) 스킵 → 바로 인증창 (무패 대문 한 겹 제거)
   function skipEntryGate(){
     try{
+      if(document.getElementById('fuliCardWrap')) return;
       var g=document.getElementById('entryGate'); if(g) g.style.display='none';
-      var app=document.getElementById('mufeApp'); if(app) app.style.display='block';  // 무패 홈 — 간편/고보안 카드부터
+      var app=document.getElementById('mufeApp');
+      var modal=document.getElementById('authModal');
+      // 인증 모달(비번 만들기/로그인)을 body로 옮김 — 무패 본체 숨겨도 모달은 뜨게
+      if(modal && modal.parentElement!==document.body) document.body.appendChild(modal);
+      // 간편/고보안 카드 2개만 깔끔한 화면에 (무패 본체는 완전 숨김)
       var cards=document.querySelector('.mufe-home-auth-cards');
-      if(cards) cards.scrollIntoView({block:'center'});
+      var wrap=document.createElement('div');
+      wrap.id='fuliCardWrap';
+      wrap.style.cssText='position:fixed;inset:0;z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:radial-gradient(circle at 50% 30%,#0d1b2a 0%,#060d16 70%,#03070d 100%);overflow-y:auto;font-family:Pretendard,system-ui,sans-serif;';
+      var title=document.createElement('div');
+      title.style.cssText='text-align:center;margin-bottom:6px;';
+      title.innerHTML='<div style="color:#5eead4;font-size:13px;letter-spacing:4px;font-weight:700;">FULI</div><div style="color:#fff;font-size:24px;font-weight:800;margin-top:2px;">인증 방식 선택</div>';
+      wrap.appendChild(title);
+      if(cards){ cards.style.maxWidth='460px'; cards.style.width='100%'; wrap.appendChild(cards); }
+      document.body.appendChild(wrap);
+      if(app) app.style.display='none';  // 무패 본체(검사·통계 등) 완전 숨김
     }catch(e){}
   }
   if(document.readyState==='complete') setTimeout(skipEntryGate,300);
