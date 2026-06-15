@@ -14184,6 +14184,17 @@ window.mufeSplitUI = (function(){
   }
   if(document.readyState==='complete') hookUnlock(); else window.addEventListener('load', hookUnlock);
   setTimeout(hookUnlock, 1500);  // 무패가 늦게 재정의해도 다시 덮어쓰기
+
+  // [FULI] 무패 자체 대문(entryGate) 스킵 → 바로 인증창 (무패 대문 한 겹 제거)
+  function skipEntryGate(){
+    try{
+      var g=document.getElementById('entryGate'); if(g) g.style.display='none';
+      var m=document.getElementById('authModal');
+      if(typeof openAuthModal==='function' && (!m || !m.classList.contains('show'))) openAuthModal('high');
+    }catch(e){}
+  }
+  if(document.readyState==='complete') setTimeout(skipEntryGate,300);
+  else window.addEventListener('load', function(){ setTimeout(skipEntryGate,300); });
 })();
 </script>
 </body>

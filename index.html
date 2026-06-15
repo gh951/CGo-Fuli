@@ -93056,16 +93056,24 @@ if('serviceWorker' in navigator){
 
 <!-- ══ FULI 양자내성 입구 — 무패 독립 게이트 (iframe 격리) ══ -->
 <script>
-  // 입구 통과 시 — FULI 대시보드로 진입
+  // FULI 자체 대문(언어선택/황금사다리 비번/약관/황금대문) 끔 — 무패가 유일 입구
+  function killFuliGate(){
+    ['phase0','phase1','phase2','phase3','phase35','phase4'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el){ el.style.display='none'; el.classList.remove('active','open'); }
+    });
+  }
+  // 입구 통과 시 — FULI 대문 제거 + 본체(대시보드) 직행
   window.onMufeGatePass = function(){
     try{
+      killFuliGate();
       document.querySelectorAll('.page.active').forEach(function(p){ p.classList.remove('active'); });
       var d = document.getElementById('page-dashboard');
       if(d) d.classList.add('active');
       window.scrollTo(0,0);
     }catch(e){}
   };
-  // 무패 입구를 전체화면 iframe으로 — 무패 100% 그대로, FULI와 격리(충돌 0)
+  // 무패 양자 입구를 전체화면 iframe으로 — 이게 유일한 대문 (FULI 비번 대문은 끔)
   (function(){
     function mount(){
       if(document.getElementById('fuliGateFrame')) return;
@@ -93075,7 +93083,10 @@ if('serviceWorker' in navigator){
       f.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;border:0;margin:0;padding:0;z-index:2147483647;background:#03070d';
       (document.body||document.documentElement).appendChild(f);
     }
-    if(document.body) mount(); else window.addEventListener('DOMContentLoaded', mount);
+    function boot(){ killFuliGate(); mount(); }
+    if(document.body) boot(); else window.addEventListener('DOMContentLoaded', boot);
+    // FULI 대문이 늦게 떠도 계속 눌러둠 (무패가 유일 입구)
+    [150,500,1000,2000].forEach(function(ms){ setTimeout(killFuliGate, ms); });
     window.addEventListener('message', function(e){
       if(e && e.data==='fuli-gate-pass'){
         var ff=document.getElementById('fuliGateFrame'); if(ff) ff.remove();
