@@ -14208,6 +14208,17 @@ window.mufeSplitUI = (function(){
       if(app) app.style.display='none';  // 무패 본체(검사·통계 등) 완전 숨김
     }catch(e){}
   }
+  // [FULI] 무패 대문(entryGate) 처음부터 CSS 숨김 — 잠깐도 안 보이게
+  (function(){ var s=document.createElement('style'); s.id='fuliHideGate'; s.textContent='#entryGate{display:none!important}'; (document.head||document.documentElement).appendChild(s); })();
+  // [FULI] 모달 닫기(엑박) → 무패 대문 복귀 대신 카드 화면으로
+  function fuliRelock(){
+    window.mufeRelockGate = function(){
+      try{ var g=document.getElementById('entryGate'); if(g) g.style.display='none'; }catch(e){}
+      var w=document.getElementById('fuliCardWrap'); if(w) w.style.display='flex';
+    };
+  }
+  if(document.readyState!=='loading') fuliRelock(); else window.addEventListener('DOMContentLoaded', fuliRelock);
+  [150,600,1200].forEach(function(ms){ setTimeout(fuliRelock, ms); });
   if(document.readyState==='complete') setTimeout(skipEntryGate,300);
   else window.addEventListener('load', function(){ setTimeout(skipEntryGate,300); });
 })();
