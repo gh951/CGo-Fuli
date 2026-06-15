@@ -7738,6 +7738,17 @@
     // [1b·온디바이스] 등록 모드를 먼저 확정 — 고보안은 비번을 서버로 보내지 않는다.
     const regMode = (window._pendingAuthMode === 'high') ? 'high' : 'simple';
 
+    // [FULI] 서버 없이도 접속되게 — 비번을 기기 안에 해시로 저장(간편 모드 오프라인 통과용).
+    //   서버가 붙으면 서버 검증이 우선이고, 이 값은 서버가 없을 때만 쓰인다.
+    //   비번이 맞아야만 통과되므로 아무 글자 우회는 불가(원본 평문은 저장 안 함).
+    try {
+      const _cleanPw = mufeCleanInput(passcode);
+      const _encPw = new TextEncoder().encode(_cleanPw + '#' + format);
+      const _hbPw = await crypto.subtle.digest('SHA-256', _encPw);
+      const _hexPw = Array.from(new Uint8Array(_hbPw)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      localStorage.setItem('mufe-local-passhash', _hexPw);
+    } catch(e){ console.warn('[FULI] 로컬 비번 해시 저장 실패', e); }
+
     let serverOk = false;
     if (regMode === 'simple') {
       // 간편 모드는 (아직) 서버의 비번+단어 판정에 의존하므로 등록 시 서버 등록을 유지.
@@ -8777,7 +8788,42 @@
   //     간편 모드는 서버 검증이 필수(오프라인 통과가 필요하면 고보안 모드 사용).
   // ════════════════════════════════════════════════════════════
   function verifyAuthLocal(ans) {
-    showMsg('<strong>서버 연결이 필요합니다 — 연결 확인 후 다시 시도해주세요</strong>', 'retry');
+    // [FULI] 서버 없을 때 — 기기에 저장한 비번 해시와 비교해 통과를 결정한다.
+    //   비번이 맞아야만 통과(아무 글자 우회 불가). 서버가 붙으면 이 경로를 타지 않음(서버 검증 우선).
+    //   ※ 등록을 안 한(해시 없는) 기기는 종전처럼 연결을 요청한다(안전 쪽).
+    (async function(){
+      try {
+        const saved = localStorage.getItem('mufe-local-passhash');
+        if (!saved) {
+          showMsg('<strong>서버 연결이 필요합니다 — 연결 확인 후 다시 시도해주세요</strong>', 'retry');
+          return;
+        }
+        // 입력에서 회전 단어를 떼어 비번만 추출 — 등록 때와 동일 규칙(정규화 포함)
+        const w = (window._lastCaughtWord || caughtWord || '').trim();
+        const ansClean = mufeCleanInput(ans);
+        const wClean = mufeCleanInput(w);
+        let passOnly = ansClean;
+        if (wClean && ansClean.endsWith(wClean)) passOnly = ansClean.slice(0, ansClean.length - wClean.length);
+        else if (wClean && ansClean.startsWith(wClean)) passOnly = ansClean.slice(wClean.length);
+        const fmt = userSpacing || localStorage.getItem('mufe-user-spacing') || 'joined-after';
+        const enc = new TextEncoder().encode(passOnly + '#' + fmt);
+        const hb = await crypto.subtle.digest('SHA-256', enc);
+        const hex = Array.from(new Uint8Array(hb)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex === saved) {
+          showMsg('<strong>인증 통과 — 환영합니다</strong>', 'success');
+          if (window.trackAuthAttempt) window.trackAuthAttempt('success');
+          setTimeout(function(){ if (typeof window.mufeUnlockApp === 'function') window.mufeUnlockApp(true); }, 700);
+        } else {
+          // 틀림 → 사용자에겐 통과처럼 보이되 실제로는 연산지옥(decoy)
+          showMsg('<strong>정답입니다. 통과 다음 단계로</strong>', 'decoy');
+          if (window.trackAuthAttempt) window.trackAuthAttempt('decoy');
+          setTimeout(function(){ if (typeof enterAbyssTrap === 'function') enterAbyssTrap(); }, 1500);
+        }
+      } catch (e) {
+        console.warn('[FULI] 로컬 검증 오류', e);
+        showMsg('<strong>서버 연결이 필요합니다 — 연결 확인 후 다시 시도해주세요</strong>', 'retry');
+      }
+    })();
   }
 
   // ═══════════════════════════════════════
