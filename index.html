@@ -38,8 +38,8 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
   var C = window.CryptoJS;
   if(!C || !window.localStorage){ return; }
   var PFX='QV1::';
-  var SENS=[/^cgm_rooms$/];   // 메시지부터 — 확인 후 확대
-  function isSens(k){ for(var i=0;i<SENS.length;i++){ if(SENS[i].test(k)) return true; } return false; }
+  // [FULI 전체 적용] 기기 키(__fuli_qv_k)만 빼고, 앱이 저장하는 모든 데이터를 암호화
+  function isSens(k){ return k!=='__fuli_qv_k'; }
   var _set,_get;
   try{ _set=localStorage.setItem.bind(localStorage); _get=localStorage.getItem.bind(localStorage); }catch(e){ return; }
   function deviceKey(){
@@ -56,7 +56,16 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
     try{ if(v&&isSens(key)&&v.indexOf(PFX)===0){ var pt=C.AES.decrypt(v.slice(PFX.length),deviceKey()).toString(C.enc.Utf8); return pt||v; } }catch(e){ return v; }
     return v;
   };
-  try{ if(console&&console.log) console.log('[FULI-QV] 메시지 양자 금고 활성 (AES-256)'); }catch(e){}
+  // [전체 적용] 기존에 평문으로 저장돼 있던 데이터를 1회 암호화로 전환 (각 키 독립 — 하나 실패해도 나머지 진행)
+  try{
+    var _migKeys=[];
+    for(var _i=0;_i<localStorage.length;_i++){ var _k=localStorage.key(_i); if(_k && _k!=='__fuli_qv_k') _migKeys.push(_k); }
+    var _migN=0;
+    for(var _j=0;_j<_migKeys.length;_j++){
+      try{ var _v=_get(_migKeys[_j]); if(_v && _v.indexOf(PFX)!==0){ localStorage.setItem(_migKeys[_j], _v); _migN++; } }catch(e){}
+    }
+    if(console&&console.log) console.log('[FULI-QV] 앱 전체 데이터 양자 금고 활성 (AES-256) · 전환 '+_migN+'건');
+  }catch(e){}
 })();
 </script>
 
