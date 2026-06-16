@@ -62228,8 +62228,11 @@ function _cgoVisionStartScan(){
           total++;
         }
       }
-      // 전체 픽셀 중 20% 이상 피부색 → 피사체 있음 (빈 화면 오감지 방지)
-      return (skinCount / total) > 0.20;
+      // 피사체가 화면 중앙을 충분히 채워야 통과 (관상·혀와 동일 원칙: 대상 없으면 멈춤)
+      // ★ 손금은 후면 카메라라 책상·벽·옷 같은 베이지 배경을 살색으로 오인하기 쉬움 →
+      //   손바닥이 확실히 화면을 채울 때만 통과하도록 임계 강화 (관상·혀처럼 동작시키기)
+      var _skinThr = (window._cgoVisionMode === 'palm') ? 0.40 : 0.20;
+      return (skinCount / total) > _skinThr;
     } catch(e){ return false; }
   }
 
