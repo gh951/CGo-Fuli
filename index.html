@@ -26238,6 +26238,34 @@ window.tvyShowIntroPopup = function(){
         <button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;background:rgba(239,68,68,.85);border:none;border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">⏹ 정지</button>
       </div>
       <div id="rmai-ar-color-picker" style="margin-bottom:12px;"></div>
+<div class="svi-color-tools-card" id="svi-color-tools-card-makeup" style="background:linear-gradient(135deg,rgba(255,255,255,0.9),rgba(252,231,243,0.5));border-radius:18px;padding:18px;margin-top:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);">
+      <div style="font-size:13px;font-weight:900;color:#0d3a3a;margin-bottom:14px;">🎨 미세 색상 조정 (12만 색)</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#0d3a3a;display:block;margin-bottom:4px;">색조 (Hue) <span id="svi-hue-val-m" style="color:#be185d;font-weight:900;">0°</span></label>
+          <input id="svi-hue-bar-m" max="360" min="0" oninput="window.makeupUpdateHsl()" type="range" value="0" style="width:100%;height:8px;border-radius:4px;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#0d3a3a;display:block;margin-bottom:4px;">채도 (Saturation) <span id="svi-sat-val-m" style="color:#be185d;font-weight:900;">80%</span></label>
+          <input id="svi-sat-bar-m" max="100" min="0" oninput="window.makeupUpdateHsl()" style="width:100%;height:8px;border-radius:4px;background:linear-gradient(to right,#888,#ff0080);" type="range" value="80"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#0d3a3a;display:block;margin-bottom:4px;">명도 (Lightness) <span id="svi-light-val-m" style="color:#be185d;font-weight:900;">50%</span></label>
+          <input id="svi-light-bar-m" max="100" min="0" oninput="window.makeupUpdateHsl()" style="width:100%;height:8px;border-radius:4px;background:linear-gradient(to right,#000,#fff);" type="range" value="50"/>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin:14px 0 8px;padding:12px;background:rgba(255,255,255,0.7);border-radius:12px;">
+        <div style="font-size:11px;font-weight:700;color:#0d3a3a;flex-shrink:0;">현재 색</div>
+        <div id="svi-hsl-preview-m" style="flex:1;height:32px;border-radius:8px;background:#ff5588;border:1px solid rgba(0,0,0,0.1);"></div>
+        <div id="svi-hsl-hex-m" style="font-family:monospace;font-size:12px;font-weight:900;color:#0d3a3a;">#FF5588</div>
+        <button onclick="window.makeupApplyHslColor()" style="padding:8px 14px;background:linear-gradient(135deg,#059669,#10b981);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:900;cursor:pointer;font-family:inherit;">✓ 적용</button>
+      </div>
+      <div style="margin-top:14px;">
+        <label style="font-size:11px;font-weight:700;color:#0d3a3a;display:block;margin-bottom:4px;">✨ 물광 강도 <span id="svi-gloss-val-m" style="color:#0284c7;font-weight:900;">0%</span></label>
+        <input id="svi-gloss-bar-m" max="100" min="0" oninput="window.makeupUpdateGloss()" type="range" value="50" style="width:100%;height:8px;border-radius:4px;background:linear-gradient(to right,#e0f2fe,#0ea5e9);"/>
+      </div>
+    </div>
+
         <!-- ★ C 박입 — 캡처 버튼 sticky 하단 고정 (스크롤 어디서나 클릭 가능) -->
         <button id="rmai-ar-capture-btn" onclick="rmaiArCapture()" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;position:sticky;bottom:8px;z-index:50;box-shadow:0 4px 16px rgba(124,58,237,.4);">📸 캡처 + 저장</button>
       </div>
@@ -96529,6 +96557,270 @@ function _rmaiArProcessFrame(){
   }
 }
 
+
+/* ════ AR 메이크업 HSL·물광·글로우 (메신저 이식) ════ */
+
+
+function ensureRmaiInit(){
+    if(typeof _rmaiAr === 'undefined'){ setTimeout(ensureRmaiInit, 300); return; }
+
+    // ★ 메신저는 명품(luxury) 카드 모드 기본 — 오행은 보너스 토글
+    if(!_rmaiAr.cardMode) _rmaiAr.cardMode = 'luxury';
+    if(!_rmaiAr.cardExpanded) _rmaiAr.cardExpanded = {oheng:false, daily:false, luxury:true};
+    if(!_rmaiAr.glossLevel) _rmaiAr.glossLevel = 0;
+
+    console.log('[c42] _rmaiAr 초기화 보강:', _rmaiAr.cardMode, _rmaiAr.currentPalette);
+  }
+function hslToHex(h, s, l){
+    s /= 100; l /= 100;
+    var c = (1 - Math.abs(2*l-1)) * s;
+    var x = c * (1 - Math.abs((h/60)%2 - 1));
+    var m = l - c/2;
+    var r, g, b;
+    if(h<60){ r=c; g=x; b=0; }
+    else if(h<120){ r=x; g=c; b=0; }
+    else if(h<180){ r=0; g=c; b=x; }
+    else if(h<240){ r=0; g=x; b=c; }
+    else if(h<300){ r=x; g=0; b=c; }
+    else { r=c; g=0; b=x; }
+    var toHex = function(v){ return ('0'+Math.round((v+m)*255).toString(16)).slice(-2); };
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+  }
+makeupApplyHslColor = function(){
+    var hex = document.getElementById('svi-hsl-hex-m').textContent;
+    if(typeof window.rmaiArApplyColor === 'function'){
+      window.rmaiArApplyColor(hex, null);
+    }
+  }
+makeupUpdateGloss = function(){
+    var v = +document.getElementById('svi-gloss-bar-m').value;
+    document.getElementById('svi-gloss-val-m').textContent = v + '%';
+    if(typeof _rmaiAr !== 'undefined'){
+      _rmaiAr.glossLevel = v / 100;
+    }
+  }
+makeupUpdateHsl = function(){
+    var h = +document.getElementById('svi-hue-bar-m').value;
+    var s = +document.getElementById('svi-sat-bar-m').value;
+    var l = +document.getElementById('svi-light-bar-m').value;
+    document.getElementById('svi-hue-val-m').textContent = h + '°';
+    document.getElementById('svi-sat-val-m').textContent = s + '%';
+    document.getElementById('svi-light-val-m').textContent = l + '%';
+    // HSL → HEX
+    var hex = hslToHex(h, s, l);
+    document.getElementById('svi-hsl-preview-m').style.background = hex;
+    document.getElementById('svi-hsl-hex-m').textContent = hex.toUpperCase();
+  }
+syncSlidersToCategory = function(catKey){
+    if(typeof _rmaiAr === 'undefined') return;
+    catKey = catKey || _rmaiAr.currentCategory || 'base';
+
+    // 물광 슬라이더 값 갱신
+    var glossBar = document.getElementById('svi-gloss-bar-m');
+    var glossVal = document.getElementById('svi-gloss-val-m');
+    if(glossBar && _rmaiAr.glossByCategory){
+      var g = Math.round((_rmaiAr.glossByCategory[catKey] || 0) * 100);
+      glossBar.value = g;
+      if(glossVal) glossVal.textContent = g + '%';
+      // 현재 카테고리 표시 라벨 추가
+      _rmaiAr.glossLevel = _rmaiAr.glossByCategory[catKey];
+    }
+
+    // HSL 슬라이더 값 갱신
+    var hueBar = document.getElementById('svi-hue-bar-m');
+    var satBar = document.getElementById('svi-sat-bar-m');
+    var lightBar = document.getElementById('svi-light-bar-m');
+    if(hueBar && _rmaiAr.hslByCategory){
+      var hsl = _rmaiAr.hslByCategory[catKey] || {h:0, s:80, l:50};
+      hueBar.value = hsl.h;
+      satBar.value = hsl.s;
+      lightBar.value = hsl.l;
+      document.getElementById('svi-hue-val-m').textContent = hsl.h + '°';
+      document.getElementById('svi-sat-val-m').textContent = hsl.s + '%';
+      document.getElementById('svi-light-val-m').textContent = hsl.l + '%';
+      // 미리보기 갱신
+      if(typeof window.makeupUpdateHsl === 'function') window.makeupUpdateHsl();
+    }
+
+    // 화장 강도 슬라이더 값 갱신 (핀셋 수정 — 카테고리별 보존)
+    var intBar = document.getElementById('svi-intensity-bar-m');
+    var intVal = document.getElementById('svi-intensity-val-m');
+    if(intBar && _rmaiAr.intensity){
+      var iv = Math.round((_rmaiAr.intensity[catKey] || 0.5) * 100);
+      intBar.value = iv;
+      if(intVal) intVal.textContent = iv + '%';
+    }
+  }
+toHex = function(v){ return ('0'+Math.round((v+m)*255).toString(16)).slice(-2); }
+function wrapRmaiStart(){
+    if(typeof window.rmaiArStart !== 'function'){ setTimeout(wrapRmaiStart, 300); return; }
+    if(window._rmaiArStartWrapped) return;
+    var orig = window.rmaiArStart;
+    window.rmaiArStart = function(){
+      orig.apply(this, arguments);
+      setTimeout(tryFresnelHook, 1000);
+    };
+    window._rmaiArStartWrapped = true;
+    console.log('[c42] rmaiArStart wrapped — 시작 후 물광 자동 hook');
+  }
+try{window.ensureRmaiInit=ensureRmaiInit;}catch(e){}
+try{window.hslToHex=hslToHex;}catch(e){}
+try{window.makeupApplyHslColor=makeupApplyHslColor;}catch(e){}
+try{window.makeupUpdateGloss=makeupUpdateGloss;}catch(e){}
+try{window.makeupUpdateHsl=makeupUpdateHsl;}catch(e){}
+try{window.syncSlidersToCategory=syncSlidersToCategory;}catch(e){}
+try{window.toHex=toHex;}catch(e){}
+try{window.wrapRmaiStart=wrapRmaiStart;}catch(e){}
+
+
+/* ══ 물광 Fresnel 워터글로우 본체 (메신저 이식) ══ */
+if(!window._fresnelT0){ window._fresnelT0 = Date.now()/1000; }
+window.drawFresnelWaterGlow = function(ctx, canvas, landmarks, glossLevel){
+    if(!ctx || !canvas || !landmarks || glossLevel <= 0) return;
+
+    // ─── BS 측정값 → 셰이더 uniform 변수 ───
+    var bpm = (typeof BS !== 'undefined' && BS.bpm) ? BS.bpm : 75;
+    var hrv = (typeof BS !== 'undefined' && BS.hrv) ? BS.hrv : 40;
+    var bpmHz = bpm / 60;
+    var t = (Date.now() / 1000) - window._fresnelT0;
+    var pulse = 0.95 + 0.05 * Math.sin(2 * Math.PI * (bpmHz/2.5) * t);  // ★ 진폭 0.05 (3배↓) + 주기 2.5배↓ — 깜박깜박 제거
+    var glossiness = 0.4 + Math.min(1, hrv / 80) * 0.6;
+
+    // ═══ MediaPipe FaceMesh 얼굴 윤곽 36점 (FACE_OVAL) ═══
+    var FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+                     397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+                     172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+
+    ctx.save();
+
+    // ─── ① 얼굴 영역 클리핑 (배경에 광 새지 않게) ───
+    ctx.beginPath();
+    var first = true;
+    for(var i=0; i<FACE_OVAL.length; i++){
+      var lmO = landmarks[FACE_OVAL[i]];
+      if(!lmO) continue;
+      var ox = lmO.x * canvas.width;
+      var oy = lmO.y * canvas.height;
+      if(first){ ctx.moveTo(ox, oy); first = false; }
+      else ctx.lineTo(ox, oy);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    // ─── ② 얼굴 전체 큰 radial grad (부드러운 광택 베이스) ───
+    //   박입 87 — A) 피부톤 샘플링 후 그 색 + 밝기 ↑ (옐로 베이스 보정)
+    //          B) screen → soft-light (어두운 부위 보호)
+    //          D) 강도 ↓ (0.32 → 0.18)
+    //
+    // 피부톤 샘플링: 코 양옆 + 볼 중심 RGB 평균 → 살색 보존
+    var skinTone = (function(){
+      // 캐시 (10프레임마다 갱신)
+      if(!window._skinSampleCache) window._skinSampleCache = {ts:0, color:null};
+      var now = Date.now();
+      if(window._skinSampleCache.color && now - window._skinSampleCache.ts < 333){
+        return window._skinSampleCache.color;
+      }
+      try{
+        // 코 옆 + 볼 중심 4점 픽셀 샘플링
+        var samplePoints = [landmarks[50], landmarks[280], landmarks[117], landmarks[346]];
+        var rSum=0, gSum=0, bSum=0, n=0;
+        for(var sp=0; sp<samplePoints.length; sp++){
+          var pt = samplePoints[sp];
+          if(!pt) continue;
+          var px = Math.round(pt.x * canvas.width);
+          var py = Math.round(pt.y * canvas.height);
+          if(px<0 || py<0 || px>=canvas.width || py>=canvas.height) continue;
+          var pix = ctx.getImageData(px, py, 1, 1).data;
+          rSum += pix[0]; gSum += pix[1]; bSum += pix[2]; n++;
+        }
+        if(n === 0) return {r:255, g:240, b:220};  // 기본 살색
+        // 평균 + 밝기 1.2배 (광택 표현)
+        var r = Math.min(255, Math.round(rSum/n * 1.18));
+        var g = Math.min(255, Math.round(gSum/n * 1.15));
+        var b = Math.min(255, Math.round(bSum/n * 1.10));
+        var c = {r:r, g:g, b:b};
+        window._skinSampleCache = {ts:now, color:c};
+        return c;
+      } catch(e){
+        return {r:255, g:240, b:220};
+      }
+    })();
+    var skinColor = skinTone.r + ',' + skinTone.g + ',' + skinTone.b;
+
+    ctx.globalCompositeOperation = 'soft-light';  // ★ 박입 87B — screen → soft-light
+    var noseCenter = landmarks[1];
+    var foreheadTop = landmarks[10];
+    var chinBottom = landmarks[152];
+    if(noseCenter && foreheadTop && chinBottom){
+      var cx = noseCenter.x * canvas.width;
+      var cy = noseCenter.y * canvas.height;
+      var faceH = Math.abs((chinBottom.y - foreheadTop.y) * canvas.height);
+      var baseAlpha = glossLevel * glossiness * pulse * 0.18;  // ★ 박입 87D — 0.32 → 0.18
+      var gradBase = ctx.createRadialGradient(cx, cy*0.92, 0, cx, cy, faceH * 0.75);
+      gradBase.addColorStop(0,    'rgba(' + skinColor + ',' + baseAlpha + ')');
+      gradBase.addColorStop(0.45, 'rgba(' + skinColor + ',' + (baseAlpha*0.55) + ')');
+      gradBase.addColorStop(1,    'rgba(' + skinColor + ',0)');
+      ctx.fillStyle = gradBase;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ─── ③ 12 핵심 highlight (N·V 프레넬 cross product) ───
+    //   박입 87 — composite 'screen' 으로 highlight 만 살림 (베이스는 soft-light)
+    ctx.globalCompositeOperation = 'screen';
+    var glowAreas = [
+      {c: 117, n1: 50,  n2: 187, r: 48},   // 좌측 광대
+      {c: 346, n1: 280, n2: 411, r: 48},   // 우측 광대
+      {c: 50,  n1: 117, n2: 36,  r: 36},   // 광대-볼 좌
+      {c: 280, n1: 346, n2: 266, r: 36},   // 광대-볼 우
+      {c: 6,   n1: 197, n2: 4,   r: 30},   // 콧대 중
+      {c: 4,   n1: 1,   n2: 19,  r: 24},   // 코끝
+      {c: 10,  n1: 338, n2: 109, r: 40},   // 이마 중앙
+      {c: 67,  n1: 109, n2: 103, r: 30},   // 이마 좌
+      {c: 297, n1: 338, n2: 332, r: 30},   // 이마 우
+      {c: 0,   n1: 13,  n2: 17,  r: 24},   // 윗입술
+      {c: 17,  n1: 314, n2: 84,  r: 22},   // 아랫입술
+      {c: 175, n1: 152, n2: 199, r: 28}    // 턱 중앙
+    ];
+
+    glowAreas.forEach(function(area){
+      var p0 = landmarks[area.c];
+      var p1 = landmarks[area.n1];
+      var p2 = landmarks[area.n2];
+      if(!p0 || !p1 || !p2) return;
+
+      // Cross product 법선
+      var v1x = p1.x - p0.x, v1y = p1.y - p0.y, v1z = (p1.z || 0) - (p0.z || 0);
+      var v2x = p2.x - p0.x, v2y = p2.y - p0.y, v2z = (p2.z || 0) - (p0.z || 0);
+      var nx = v1y * v2z - v1z * v2y;
+      var ny = v1z * v2x - v1x * v2z;
+      var nz = v1x * v2y - v1y * v2x;
+      var len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      if(len < 0.0001) return;
+      var Nz = Math.abs(nz / len);
+
+      // 프레넬 pow(1-N·V, 3)
+      var fresnel = Math.pow(1.0 - Nz, 3.0);
+      var intensity = fresnel * glossiness * pulse * glossLevel;
+      var alpha = Math.min(1, intensity * 0.7);  // ★ 박입 87D — 1.6 → 0.7
+      if(alpha < 0.015) return;
+
+      var x = p0.x * canvas.width;
+      var y = p0.y * canvas.height;
+      var grad = ctx.createRadialGradient(x, y, 0, x, y, area.r);
+      // ★ 박입 87A — 중심은 살색-밝게, 가장자리는 살색-자연
+      grad.addColorStop(0,    'rgba(255,253,247,' + alpha + ')');
+      grad.addColorStop(0.45, 'rgba(' + skinColor + ',' + (alpha*0.5) + ')');
+      grad.addColorStop(1,    'rgba(' + skinColor + ',0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, area.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+try{window.drawFresnelWaterGlow=window.drawFresnelWaterGlow;}catch(e){}
+
 function _rmaiArOnResults(results){
   var ctx = _rmaiAr.ctx;
   var canvas = _rmaiAr.canvas;
@@ -96562,13 +96854,200 @@ function _rmaiArOnResults(results){
     // 4. 립 (가장 위)
     if(ac.lip) _rmaiArDrawLip(ctx, canvas, landmarks, ac.lip);
 
-    // ★ 468 랜드마크 점 (옅게)
-    ctx.fillStyle = 'rgba(255, 80, 80, 0.35)';
-    landmarks.forEach(function(lm){
-      ctx.beginPath();
-      ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 0.8, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    // ★ 물광(Fresnel 워터글로우) — 메신저 본체 이식
+    try {
+      var _gl = (typeof _rmaiAr !== 'undefined' && typeof _rmaiAr.glossLevel === 'number') ? _rmaiAr.glossLevel : 0.5;
+      if(_gl > 0 && window.drawFresnelWaterGlow){
+        if(!window._fresnelT0) window._fresnelT0 = Date.now()/1000;
+        window.drawFresnelWaterGlow(ctx, canvas, landmarks, _gl);
+      }
+    } catch(e){}
+
+    // 5. ★ 박입 58 — 헤어 (메인 파이프라인 직결, wrap chain 우회)
+    //    구글 AI 진단: 두 페이지 입구 + 41 wrap chain → silently fail
+    //    fix: _rmaiArOnResults 본체에 직접 박입 (캔버스 clear 후 즉시 적용)
+    //    좌표: 글로벌 표준 — landmark 10 (이마 탑) 기준, 얼굴 높이의 0.6 위로 확장
+    if(ac.hair){
+      try {
+        window._inj58Stats = window._inj58Stats || {frameCount:0, paintCount:0};
+        window._inj58Stats.frameCount++;
+
+        // ★ 박입 60 — 좌표 정밀 보정 (천장 떠다님 fix)
+        //   진단: 박입 59 가 lm10 (이마 탑) 위로 0.6 확장했는데 영상이 실제로는 더 작아서 천장 잡음
+        //   해법: face oval 의 minY 기준 + 위로 0.3 만 확장 (정수리 잡고 천장은 피함)
+        //         그리고 아래로 +0.05 확장 (앞머리 추가 보장)
+        var FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397,
+                         365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58,
+                         132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+        var ovalMinX = canvas.width, ovalMaxX = 0;
+        var ovalMinY = canvas.height, ovalMaxY = 0;
+        for(var oi = 0; oi < FACE_OVAL.length; oi++){
+          var lmO = landmarks[FACE_OVAL[oi]];
+          if(!lmO) continue;
+          var lx = lmO.x * canvas.width;
+          var ly = lmO.y * canvas.height;
+          if(lx < ovalMinX) ovalMinX = lx;
+          if(lx > ovalMaxX) ovalMaxX = lx;
+          if(ly < ovalMinY) ovalMinY = ly;
+          if(ly > ovalMaxY) ovalMaxY = ly;
+        }
+        if(ovalMaxX > ovalMinX && ovalMaxY > ovalMinY){
+          var faceH = ovalMaxY - ovalMinY;
+          var faceW = ovalMaxX - ovalMinX;
+
+          // ★ 박입 69 — 좌우 영역 확장 (옆머리 잡기)
+          //   파트너님 진단: 옆머리 짧아서 안 잡힘
+          //   0.30 → 0.45 좌우 확장, 1.6 → 1.9 가로
+          var hairY = Math.max(0, Math.floor(ovalMinY - faceH * 0.65));
+          var hairH = Math.floor(faceH * 0.75);
+          var hairX = Math.max(0, Math.floor(ovalMinX - faceW * 0.45));
+          var hairW = Math.floor(faceW * 1.9);
+          hairW = Math.min(canvas.width - hairX, hairW);
+          hairH = Math.min(canvas.height - hairY, hairH);
+
+          if(hairW > 10 && hairH > 10){
+            window._inj58Stats.lastRegion = {x:hairX, y:hairY, w:hairW, h:hairH};
+
+            var hairImgData = ctx.getImageData(hairX, hairY, hairW, hairH);
+            var hairData = hairImgData.data;
+
+            // 헤어 색 분해
+            var hexH = ac.hair;
+            var tintR = parseInt(hexH.substr(1,2), 16);
+            var tintG = parseInt(hexH.substr(3,2), 16);
+            var tintB = parseInt(hexH.substr(5,2), 16);
+
+            var hairInt = (_rmaiAr.intensity && _rmaiAr.intensity.hair !== undefined) ? _rmaiAr.intensity.hair : 0.75;
+            var painted = 0;
+
+            // ★ 박입 72 — 박입 71 의 오버 fix dial back
+            //   박입 71 (6개 landmark 평균) → 코쪽 점 포함되어 머리 영역까지 보호됨
+            //   복구: lm10 (이마 탑) + lm151 (이마 정중앙) 2개만 — 코 제외
+            var foreheadLms = [10, 151];
+            var foreheadYSum = 0, foreheadYCount = 0;
+            for(var fli = 0; fli < foreheadLms.length; fli++){
+              var flm = landmarks[foreheadLms[fli]];
+              if(flm){
+                foreheadYSum += flm.y * canvas.height;
+                foreheadYCount++;
+              }
+            }
+            var foreheadY = foreheadYCount > 0 ? (foreheadYSum / foreheadYCount) : ovalMinY;
+            // ★ 박입 72 — 마진 -8 → -3 (덜 빡빡, 머리 영역 보호 안 함)
+            var foreheadInRegion = foreheadY - hairY - 3;
+
+            // ★ 박입 62 — Gaussian 감쇄 중심 (영역 중앙 약간 위)
+            var gaussCx = hairW / 2;
+            var gaussCy = hairH * 0.45;
+            // ★ 박입 63 — sigma 0.55 → 0.35 (도넛 안개 제거, 정수리만 컴팩트)
+            var gaussSigma = Math.min(hairW, hairH) * 0.35;
+
+            if(true){
+              for(var hi = 0; hi < hairData.length; hi += 4){
+                var pixelIdx = hi / 4;
+                var px = pixelIdx % hairW;
+                var py = Math.floor(pixelIdx / hairW);
+
+                // ★ 박입 69 — 수평 균등 + 수직 Gaussian (양옆 머리 잡기)
+                //   파트너님 통찰: "픽셀의 등분화" — 가운데만 진하고 양옆 약한 문제 해결
+                //   수평 (X): 거의 균등 (sigma 매우 크게 — 가장자리 살짝 페이드)
+                //   수직 (Y): 기존 Gaussian (정수리 ~ 이마 자연 감쇄)
+                var dx = px - gaussCx;
+                var dy = py - gaussCy;
+                var sigmaX = hairW * 0.55;   // 가로 — 매우 크게 (양옆 균등)
+                var sigmaY = hairH * 0.32;   // 세로 — Gaussian 자연 감쇄
+                var attenX = Math.exp(-(dx*dx) / (2 * sigmaX * sigmaX));
+                var attenY = Math.exp(-(dy*dy) / (2 * sigmaY * sigmaY));
+                var gaussAttenuation = attenX * attenY;
+                if(gaussAttenuation <= 0.05) continue;
+
+                var hr = hairData[hi], hg = hairData[hi+1], hb = hairData[hi+2];
+                var hlum = 0.2126*hr + 0.7152*hg + 0.0722*hb;
+                if(hlum > 180) continue;
+
+                // ★ 박입 73 — 박입 71/72 사이 균형점 (이마 침범 막되 머리 안 깎음)
+                //   휘도 108 (박입 71 105 와 72 112 의 중간)
+                //   R-B 95 (박입 71 100 과 72 85 의 중간)
+                var isInForeheadZone = (py >= foreheadInRegion - 5);
+                if(isInForeheadZone && hlum >= 108){
+                  var isSkinTone = (hr > hg - 6) && (hg > hb - 6) && (hr - hb < 95);
+                  if(isSkinTone) continue;
+                }
+
+                // ★ 박입 71 — 박입 70 한정 알파 폐기 (진짜 머리카락 가닥 보존)
+                //   대신 이마 보호 강화로 침범 fix
+                //   머리카락 가닥은 우리 차별점 — 깎으면 손해
+
+                // 인종 통합 머리카락 판정
+                var rbDiff = hr - hb;
+                var isBlondOrGinger = (hr > 140 && hg > 110 && hb < 100 && rbDiff > 55);
+                var isWhiteHair = (hlum > 175 && Math.abs(hr-hg) < 12 && Math.abs(hg-hb) < 12);
+                var isDarkHair = hlum < 110;
+
+                if(!isDarkHair && !isBlondOrGinger && !isWhiteHair && hlum > 110) continue;
+
+                // ★ 박입 68 — 슬라이더 dynamic 시스템 (C-44 죽이게 진짜 100% 동작)
+                //   hairInt 0~0.85 → 정규화 sliderRatio 0~1 → 3개 파라미터 동시 dynamic 제어
+                //   slider 0   = 머리 그대로 (lift 0.6, additive 0.20, alpha 0.55)
+                //   slider 50  = 자연 와인빛 (lift 1.4, additive 0.52, alpha 0.78)
+                //   slider 100 = 비비드 핫핑크 (lift 2.2, additive 0.85, alpha 1.00) ★ 진짜 100%
+                var sliderRatio = Math.min(1.0, hairInt / 0.85);  // 0~1 정규화
+                var DYN_LIFT_K     = 0.6  + (1.6  * sliderRatio);   // 0.6 ~ 2.2
+                var DYN_ADD        = 0.20 + (0.65 * sliderRatio);   // 0.20 ~ 0.85
+                var DYN_ALPHA_CAP  = 0.55 + (0.45 * sliderRatio);   // 0.55 ~ 1.00
+
+                // Lift (흑발 → 색조 자리)
+                var workR = hr, workG = hg, workB = hb;
+                if(hlum < 110){
+                  var darkness = (110 - hlum) / 110;
+                  var lift = 1 + darkness * (190/Math.max(hlum,1) - 1) * DYN_LIFT_K;
+                  workR = Math.min(255, hr * lift);
+                  workG = Math.min(255, hg * lift);
+                  workB = Math.min(255, hb * lift);
+                }
+
+                // multiplicative blend (텍스처 보존)
+                var multR = (workR * tintR) / 255;
+                var multG = (workG * tintG) / 255;
+                var multB = (workB * tintB) / 255;
+
+                // Additive (흑발에 색 더 진하게)
+                if(hlum < 80){
+                  var darkBoost = (1 - hlum/80);
+                  multR = multR * (1 - DYN_ADD) + tintR * DYN_ADD * darkBoost;
+                  multG = multG * (1 - DYN_ADD) + tintG * DYN_ADD * darkBoost;
+                  multB = multB * (1 - DYN_ADD) + tintB * DYN_ADD * darkBoost;
+                }
+
+                // alpha (dynamic cap — slider 100 = 진짜 1.0)
+                var hairWeight = (180 - hlum) / 180;
+                var alpha = Math.min(DYN_ALPHA_CAP, hairInt * Math.pow(hairWeight, 0.5) * gaussAttenuation);
+
+                hairData[hi]   = Math.round(hr * (1 - alpha) + multR * alpha);
+                hairData[hi+1] = Math.round(hg * (1 - alpha) + multG * alpha);
+                hairData[hi+2] = Math.round(hb * (1 - alpha) + multB * alpha);
+                painted++;
+              }
+              ctx.putImageData(hairImgData, hairX, hairY);
+              window._inj58Stats.paintCount = painted;
+
+              // 박입 53 진단 박스 호환 (stats 공유)
+              window._inj51Stats = window._inj51Stats || {};
+              window._inj51Stats.frameCount = window._inj58Stats.frameCount;
+              window._inj51Stats.paintCount = painted;
+              window._inj51Stats.lastRegion = window._inj58Stats.lastRegion;
+            }
+          }
+        }
+      } catch(eh){
+        window._inj58Stats = window._inj58Stats || {};
+        window._inj58Stats.lastError = eh.message;
+      }
+    }
+
+    // ★ C-42 — 빨간 478점 시각화 제거 (사용자 요청 — 사진 보기 흉함)
+    // 원본 cgo-fuli 디버그용 코드. 메신저에서는 숨김.
+    // landmarks 478점 추적은 그대로 — 시각화만 제거.
 
     _rmaiAr.frameCount++;
     if(_rmaiAr.frameCount % 30 === 0){
@@ -97073,11 +97552,42 @@ function _rmaiArInitColorPicker(){
 
 // ★ 카테고리 전환 (4 카테고리만)
 window.rmaiArSetCategory = function(catKey){
-  if(['lip','cheek','eye','base'].indexOf(catKey) < 0) return;
-  _rmaiAr.currentCategory = catKey;
-  
-  _rmaiArInitColorPicker();
-};
+      if(typeof _rmaiAr === 'undefined') return;
+
+      // ★ 박입 44: scrSkinage 활성 시 base 강제 (피부 전용 페이지)
+      try {
+        var scrSkinage = document.getElementById('scrSkinage');
+        if(scrSkinage && scrSkinage.classList.contains('active')){
+          catKey = 'base';  // 피부 페이지 → base 만
+        }
+      } catch(e){}
+
+      _rmaiAr.currentCategory = catKey;  // ★ 그대로
+      if(typeof _rmaiArInitColorPicker === 'function'){
+        try { _rmaiArInitColorPicker(); } catch(e){}
+      }
+      // ★ 박입 43 — 카테고리별 slider 자동 동기
+      if(typeof window.syncSlidersToCategory === 'function'){
+        setTimeout(function(){ window.syncSlidersToCategory(catKey); }, 50);
+      }
+      // 카테고리 버튼 시각 강조
+      var picker = document.getElementById('rmai-ar-color-picker');
+      if(picker){
+        var btns = picker.querySelectorAll('button[onclick*="rmaiArSetCategory"]');
+        btns.forEach(function(b){
+          var on = b.getAttribute('onclick') || '';
+          if(on.indexOf("'" + catKey + "'") > -1){
+            b.style.background = 'linear-gradient(135deg,#fbbf24,#f59e0b)';
+            b.style.color = '#1a1408';
+            b.style.fontWeight = '900';
+          } else {
+            b.style.background = '#f3f4f6';
+            b.style.color = '#888';
+            b.style.fontWeight = '700';
+          }
+        });
+      }
+    };
 
 // ★ 팔레트 전환 (사주 ↔ 무지개)
 window.rmaiArSetPalette = function(palKey){
@@ -97122,15 +97632,64 @@ window.rmaiArSetIntensity = function(val){
 
 // ★ 색 적용 — 현재 카테고리에 저장
 window.rmaiArApplyColor = function(hexColor, btnEl){
-  var cat = _rmaiAr.currentCategory;
-  if(cat === 'face'){
-    // 얼굴 변형 카테고리는 색 없음
-  } else {
-    _rmaiAr.appliedColors[cat] = hexColor;
-    _rmaiAr.currentColor = hexColor;
-  }
-  _rmaiArInitColorPicker();
-};
+      if(typeof _rmaiAr === 'undefined') return;
+      var cat = _rmaiAr.currentCategory || 'base';
+      _rmaiAr.appliedColors = _rmaiAr.appliedColors || {};
+      _rmaiAr.appliedColors[cat] = hexColor;  // ★ 현재 카테고리에 정확히 박음
+      _rmaiAr.currentColor = hexColor;
+
+      // ★ HEX → HSL 변환 후 미세 색상 슬라이더 강제 동기
+      try {
+        if(hexColor && hexColor.charAt(0)==='#' && hexColor.length===7){
+          var R = parseInt(hexColor.substr(1,2),16)/255;
+          var G = parseInt(hexColor.substr(3,2),16)/255;
+          var B = parseInt(hexColor.substr(5,2),16)/255;
+          var mx = Math.max(R,G,B), mn = Math.min(R,G,B);
+          var H, S, L = (mx+mn)/2;
+          if(mx===mn){ H=0; S=0; }
+          else {
+            var d = mx-mn;
+            S = L>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+            if(mx===R) H = ((G-B)/d + (G<B?6:0));
+            else if(mx===G) H = ((B-R)/d + 2);
+            else H = ((R-G)/d + 4);
+            H /= 6;
+          }
+          var Hd = Math.round(H*360), Sp = Math.round(S*100), Lp = Math.round(L*100);
+          var hueBar = document.getElementById('svi-hue-bar-m');
+          var satBar = document.getElementById('svi-sat-bar-m');
+          var lightBar = document.getElementById('svi-light-bar-m');
+          if(hueBar && satBar && lightBar){
+            hueBar.value = Hd; satBar.value = Sp; lightBar.value = Lp;
+            // 라벨 직접 갱신 (makeupUpdateHsl 의존 X)
+            var hueVal = document.getElementById('svi-hue-val-m');
+            var satVal = document.getElementById('svi-sat-val-m');
+            var lightVal = document.getElementById('svi-light-val-m');
+            if(hueVal) hueVal.textContent = Hd + '°';
+            if(satVal) satVal.textContent = Sp + '%';
+            if(lightVal) lightVal.textContent = Lp + '%';
+            // ★ 박입 50 핵심 — 현재색 박스 + HEX 표시 직접 갱신 (hslToHex scope 의존 X)
+            var preview = document.getElementById('svi-hsl-preview-m');
+            var hexBox = document.getElementById('svi-hsl-hex-m');
+            if(preview) preview.style.background = hexColor;
+            if(hexBox) hexBox.textContent = hexColor.toUpperCase();
+            // hslByCategory 자동 저장 (makeupUpdateHsl override 가 처리)
+            if(typeof window.makeupUpdateHsl === 'function'){
+              try { window.makeupUpdateHsl(); } catch(e){}
+            }
+          }
+        }
+      } catch(e){}
+
+      // ★ 박입 50 핵심 — picker 강제 새로고침 (선택 표시 gold ring 출력)
+      try {
+        if(typeof window._rmaiArInitColorPicker === 'function'){
+          window._rmaiArInitColorPicker();
+        } else if(typeof _rmaiArInitColorPicker === 'function'){
+          _rmaiArInitColorPicker();
+        }
+      } catch(e){}
+    };
 
 // ═══════════════════════════════════════════════════
 // ★ rmaiArStop — AR 정지
