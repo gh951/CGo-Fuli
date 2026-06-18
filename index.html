@@ -5387,7 +5387,7 @@ function cgoGuideFeature(key){
     <!-- 카드: 타로·MBTI·역학 -->
     <div onclick="cgoGoPage('fusion3');setTimeout(function(){if(window.f3Enter)window.f3Enter();},60)" class="fdash-card" style="--fc:#e3c05a"><div class="fdash-ico">🌌</div><div class="fdash-ttl">타로·MBTI·역학</div><div class="fdash-desc">3중 융합 리딩</div></div>
     <!-- 🆕 신규(준비중) — 후배 C: 완성 후 onclick을 cgoGoPage('?')로 교체 -->
-    <div onclick="alert('🚧 준비 중인 기능입니다');" class="fdash-card" style="--fc:#e3c05a;opacity:.55;"><span class="fdash-badge new">준비중</span><div class="fdash-ico">🧭</div><div class="fdash-ttl">나의 네비게이션</div><div class="fdash-desc">준비 중</div></div>
+    <div onclick="cgoNaviOpen()" class="fdash-card" style="--fc:#34d399;"><span class="fdash-badge new">NEW</span><div class="fdash-ico">🧭</div><div class="fdash-ttl">나의 네비게이션</div><div class="fdash-desc">오행 길방 · GPS 도보</div></div>
     <!-- 🆕 신규(준비중) — 후배 C: 완성 후 onclick을 cgoGoPage('?')로 교체 -->
     <div onclick="alert('🚧 준비 중인 기능입니다');" class="fdash-card" style="--fc:#e3c05a;opacity:.55;"><span class="fdash-badge new">준비중</span><div class="fdash-ico">📷</div><div class="fdash-ttl">사물 분석 카메라</div><div class="fdash-desc">준비 중</div></div>
   </div>
@@ -95671,6 +95671,331 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <!-- ════════════════ /🌙 좋은 수면 v9 ════════════════ -->
+
+<!-- ════════════════ 🧭 나의 네비게이션 v2 · 역학융합 운세+실GPS (정직교정 · C-build) ════════════════ -->
+<style>
+#page-cgo-navi{position:fixed;inset:0;z-index:29940;display:none;background:var(--bg-deep,#060d1a);color:var(--text-1,#f8f0e0);font-family:inherit;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#page-cgo-navi *{box-sizing:border-box;}
+.cgn-top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(6,13,26,.96);border-bottom:1px solid var(--border,rgba(99,130,201,.15));}
+.cgn-back{background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.4);color:var(--gold,#d4a843);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.cgn-wrap{max-width:880px;width:100%;margin:0 auto;padding:0 18px 48px;}
+.cgn-hero{position:relative;width:100%;height:170px;margin:0 -18px;width:auto;border-radius:0 0 22px 22px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(120% 120% at 50% 0%,#16305a 0%,#0a1731 55%,#060d1a 100%);border-bottom:1px solid rgba(212,168,67,.2);}
+.cgn-hero .ci{font-size:50px;filter:drop-shadow(0 0 14px rgba(212,168,67,.5));}
+.cgn-hero .ct{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--gold,#d4a843);letter-spacing:.12em;margin-top:6px;}
+.cgn-headline{font-size:16px;font-weight:800;color:var(--text-1,#f8f0e0);text-align:center;line-height:1.55;margin:18px 8px 6px;letter-spacing:-.01em;}
+.cgn-headline b{color:var(--gold,#d4a843);}
+.cgn-tagline{text-align:center;font-size:11px;color:var(--text-3,#ccd8e4);opacity:.7;margin-bottom:18px;}
+.cgn-acc-wrap{display:flex;flex-direction:column;gap:12px;}
+.cgn-acc{background:var(--bg-card,#0d1526);border:1px solid var(--border,rgba(99,130,201,.15));border-radius:14px;overflow:hidden;}
+.cgn-acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:16px 18px;font-size:15px;font-weight:800;color:var(--text-1,#f8f0e0);}
+.cgn-acc summary::-webkit-details-marker{display:none;}
+.cgn-acc .ae{font-size:20px;}
+.cgn-acc .as{font-size:10px;font-weight:600;color:var(--text-3,#ccd8e4);opacity:.6;margin-left:2px;}
+.cgn-acc .av{margin-left:auto;color:var(--gold,#d4a843);font-size:13px;transition:transform .2s;}
+.cgn-acc[open] .av{transform:rotate(180deg);}
+.cgn-acc-b{padding:2px 18px 20px;font-size:13px;color:var(--text-2,#e8f0f8);line-height:1.6;text-align:left;}
+.cgn-desc{font-size:12.5px;color:var(--text-3,#ccd8e4);line-height:1.65;margin-bottom:12px;}
+.cgn-btn{display:block;width:100%;background:linear-gradient(135deg,#34d399,#10b981);color:#05231a;border:none;border-radius:11px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;}
+.cgn-btn.gold{background:linear-gradient(135deg,#fbbf24,#d4a843);color:#1a1408;}
+.cgn-btn2{display:block;width:100%;background:transparent;color:var(--text-3,#ccd8e4);border:1px solid var(--border,rgba(99,130,201,.25));border-radius:11px;padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.cgn-stopbtn{position:absolute;top:8px;right:8px;background:rgba(248,113,113,.85);border:none;border-radius:18px;color:#fff;font-size:11px;font-weight:700;padding:4px 11px;cursor:pointer;font-family:inherit;z-index:4;}
+.cgn-cambox{position:relative;background:#000;border-radius:12px;overflow:hidden;height:230px;margin-bottom:8px;}
+.cgn-cambox video{width:100%;height:100%;object-fit:cover;opacity:.82;}
+.cgn-cambox canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+.cgn-info{background:rgba(0,0,0,.55);border:1px solid var(--border,rgba(99,130,201,.2));border-radius:12px;padding:10px 14px;font-size:12px;color:var(--text-2,#e8f0f8);line-height:1.6;text-align:center;}
+.cgn-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:10px;}
+.cgn-stat{background:var(--bg-panel,#111f35);border:1px solid var(--border,rgba(99,130,201,.15));border-radius:12px;padding:14px 8px;text-align:center;}
+.cgn-stat .v{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:var(--gold,#d4a843);}
+.cgn-stat .l{font-size:10px;color:var(--text-3,#ccd8e4);opacity:.7;margin-top:3px;}
+.cgn-card{background:var(--bg-panel,#111f35);border:1px solid var(--border,rgba(99,130,201,.15));border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.cgn-card-h{font-size:11px;color:var(--gold,#d4a843);font-weight:700;letter-spacing:.05em;margin-bottom:6px;}
+.cgn-big{font-size:18px;font-weight:800;color:var(--text-1,#f8f0e0);}
+.cgn-sub{font-size:11px;color:var(--text-3,#ccd8e4);margin-top:4px;}
+.cgn-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text-2,#e8f0f8);padding:5px 0;}
+.cgn-row b{color:var(--gold,#d4a843);}
+.cgn-empty{background:var(--bg-panel,#111f35);border-radius:12px;padding:22px;text-align:center;font-size:13px;color:var(--text-3,#ccd8e4);line-height:1.6;}
+.cgn-score{text-align:center;margin:2px 0 12px;}
+.cgn-score .n{font-family:'Orbitron',monospace;font-size:42px;font-weight:900;color:var(--gold,#d4a843);line-height:1;}
+.cgn-score .u{font-size:13px;color:var(--gold,#d4a843);margin-left:2px;}
+.cgn-score .c{font-size:11px;color:var(--text-3,#ccd8e4);margin-top:5px;}
+.cgn-fbar{display:flex;width:100%;height:16px;border-radius:8px;overflow:hidden;margin:10px 0 8px;border:1px solid var(--border,rgba(99,130,201,.2));}
+.cgn-fseg{height:100%;}
+.cgn-flegend{display:flex;flex-wrap:wrap;gap:7px 12px;font-size:11px;color:var(--text-3,#ccd8e4);}
+.cgn-flegend span{display:flex;align-items:center;gap:4px;}
+.cgn-flegend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+.cgn-flegend b{color:var(--text-1,#f8f0e0);}
+.cgn-note{background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:11px;padding:11px 14px;font-size:11.5px;color:var(--text-3,#ccd8e4);line-height:1.65;margin-top:10px;}
+.cgn-note b{color:var(--text-2,#e8f0f8);}
+.cgn-foot{font-size:11px;color:var(--text-3,#ccd8e4);opacity:.55;line-height:1.6;text-align:center;margin-top:18px;}
+@media (min-width:760px){
+  .cgn-wrap{padding:0 28px 48px;}
+  .cgn-hero{height:230px;}
+  .cgn-headline{font-size:22px;margin:26px 8px 6px;}
+  .cgn-acc summary{font-size:16px;padding:18px 22px;}
+}
+</style>
+
+<div id="page-cgo-navi">
+  <div class="cgn-top">
+    <button class="cgn-back" onclick="cgoNaviClose()">← 나가기</button>
+    <div style="font-size:12px;font-weight:700;color:var(--gold,#d4a843);">🧭 나의 네비게이션</div>
+  </div>
+  <div class="cgn-wrap">
+
+    <div class="cgn-hero">
+      <div class="ci">🧭</div>
+      <div class="ct">CGO · NAVI</div>
+    </div>
+    <p class="cgn-headline">오늘, <b>나에게 좋은 방향</b>으로<br>한 걸음 걸어볼까요.</p>
+    <p class="cgn-tagline">오행·기문둔갑·구성기학·행성 융합 운세 · 실제 나침반·GPS</p>
+
+    <div class="cgn-acc-wrap">
+
+      <details class="cgn-acc" id="cgn-acc-compass" name="cgn" ontoggle="cgoNaviAcc('compass',this.open)">
+        <summary><span class="ae">🧭</span> 길방 나침반 <span class="as">(오행 전통 방위 AR)</span><span class="av">▾</span></summary>
+        <div class="cgn-acc-b">
+          <div id="cgn-compass-intro">
+            <p class="cgn-desc">내 사주 오행의 <b>오늘의 길방</b>을 향해 폰을 돌려보세요. 화살표가 <b>좋은 기운이 흐르는 방향</b>을 가리켜요. 정면에 가까울수록 그 방향의 기운이 강해집니다.</p>
+            <button class="cgn-btn" onclick="cgoNaviCompassStart()">🧭 나침반 시작</button>
+          </div>
+          <div id="cgn-compass-run" style="display:none;">
+            <div class="cgn-cambox">
+              <video id="cgn-cam" autoplay playsinline muted></video>
+              <canvas id="cgn-compass-canvas"></canvas>
+              <button class="cgn-stopbtn" onclick="cgoNaviCompassStop()">■ 종료</button>
+            </div>
+            <div class="cgn-info" id="cgn-compass-info">나침반 초기화 중…</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="cgn-acc" id="cgn-acc-walk" name="cgn" ontoggle="cgoNaviAcc('walk',this.open)">
+        <summary><span class="ae">📍</span> GPS 도보 기록 <span class="as">(실제 위치 기반)</span><span class="av">▾</span></summary>
+        <div class="cgn-acc-b">
+          <div id="cgn-walk-intro">
+            <p class="cgn-desc"><b>실제 GPS</b>로 걸은 거리·시간을 기록해요. 위치는 <b>기기 안에서만</b> 처리되고 외부로 전송되지 않아요. 야외에서 정확도가 높아져요.</p>
+            <button class="cgn-btn" onclick="cgoNaviWalkStart()">📍 산책 시작</button>
+          </div>
+          <div id="cgn-walk-run" style="display:none;">
+            <div class="cgn-stat-row" id="cgn-walk-stat"></div>
+            <div class="cgn-info" id="cgn-walk-info">GPS 신호 잡는 중…</div>
+            <button class="cgn-btn2" style="margin-top:10px;" onclick="cgoNaviWalkStop()">■ 산책 종료 · 저장</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="cgn-acc" id="cgn-acc-guide" name="cgn" ontoggle="cgoNaviAcc('guide',this.open)">
+        <summary><span class="ae">🌌</span> 오늘의 오행 방위 안내<span class="av">▾</span></summary>
+        <div class="cgn-acc-b"><div id="cgn-guide-host"></div></div>
+      </details>
+
+      <details class="cgn-acc" id="cgn-acc-data" name="cgn" ontoggle="cgoNaviAcc('data',this.open)">
+        <summary><span class="ae">📊</span> 나의 기록<span class="av">▾</span></summary>
+        <div class="cgn-acc-b"><div id="cgn-data-host"></div></div>
+      </details>
+
+    </div>
+    <p class="cgn-foot">🔮 오행·기문둔갑·구성기학·행성을 융합한 오늘의 방향 운세예요. 나침반·GPS는 실제 센서 기반이라 약간의 오차가 있을 수 있어요. 재미와 참고로 즐겨주세요.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  var _naviR={ compass:null, watch:null, walk:null, stream:null, timer:null, heading:0 };
+
+  var OH_DIR={목:90,화:180,토:45,금:270,수:0};
+  var OH_DIRNAME={목:'동(東)',화:'남(南)',토:'북동(艮)',금:'서(西)',수:'북(北)'};
+  var OH_LABEL={목:'목(木) · 나무',화:'화(火) · 불',토:'토(土) · 흙',금:'금(金) · 쇠',수:'수(水) · 물'};
+  function myOh(){ try{ return (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목'; }catch(e){ return '목'; } }
+  function luckyDeg(){
+    var d=OH_DIR[myOh()]; if(d==null) d=0; var note='';
+    try{ var np=window._nasaPlanets||{};
+      if(np.jupiter && !np.jupiter.retro){ d=(d+15)%360; note='목성 순행 +15°'; }
+      if(np.mars && np.mars.retro){ d=(d-10+360)%360; note=(note?note+' · ':'')+'화성 역행 −10°'; }
+    }catch(e){}
+    return { deg:d, note:note };
+  }
+
+  window.cgoNaviOpen=function(){
+    naviStopCompass(); naviStopWalk();
+    var ds=document.querySelectorAll('#page-cgo-navi .cgn-acc'); for(var i=0;i<ds.length;i++) ds[i].open=false;
+    var p=$('page-cgo-navi'); if(p){ p.style.display='block'; p.scrollTop=0; }
+  };
+  window.cgoNaviClose=function(){
+    naviStopCompass(); naviStopWalk();
+    var p=$('page-cgo-navi'); if(p) p.style.display='none';
+  };
+  window.cgoNaviAcc=function(which,open){
+    if(open){
+      if(which==='guide') naviRenderGuide();
+      else if(which==='data') naviRenderData();
+      else if(which==='compass') naviShow('compass','intro');
+      else if(which==='walk') naviShow('walk','intro');
+      var el=$('cgn-acc-'+which); if(el) setTimeout(function(){ try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} },90);
+    } else {
+      if(which==='compass') naviStopCompass();
+      else if(which==='walk') naviStopWalk();
+    }
+  };
+  function naviShow(sec,state){
+    var pre=$('cgn-'+sec+'-intro'), run=$('cgn-'+sec+'-run');
+    if(pre) pre.style.display=(state==='intro')?'block':'none';
+    if(run) run.style.display=(state==='run')?'block':'none';
+  }
+
+  /* ── 길방 나침반 ── */
+  window.cgoNaviCompassStart=function(){
+    naviShow('compass','run');
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+        .then(function(s){ _naviR.stream=s; var v=$('cgn-cam'); if(v) v.srcObject=s; }).catch(function(){});
+    }
+    naviStartCompass();
+  };
+  function naviStartCompass(){
+    var info=$('cgn-compass-info'), canvas=$('cgn-compass-canvas');
+    var lk=luckyDeg(), oh=myOh(), fz=naviFusion();
+    function draw(heading){
+      _naviR.heading=heading;
+      if(!canvas) return;
+      var ctx=canvas.getContext('2d',{willReadFrequently:true});
+      var w=canvas.offsetWidth||320, h=canvas.offsetHeight||220; canvas.width=w; canvas.height=h; ctx.clearRect(0,0,w,h);
+      var rel=((lk.deg-heading+540)%360)-180;   // -180..180 (+오른쪽)
+      var diff=Math.abs(rel);
+      var align=Math.round(100*(1-diff/180));
+      var ki=Math.round(fz.fusion*(0.6+0.4*align/100));
+      var cx=w/2, cy=h/2, len=64;
+      var col=ki>=80?'#34d399':(ki>=60?'#d4a843':'#f0a35a');
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(rel*Math.PI/180);
+      ctx.strokeStyle=col; ctx.lineWidth=5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(0,len/2); ctx.lineTo(0,-len); ctx.stroke();
+      ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(0,-len-14); ctx.lineTo(-9,-len+5); ctx.lineTo(9,-len+5); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle=col; ctx.font='bold 17px monospace'; ctx.textAlign='center';
+      ctx.fillText(ki+'점', cx, cy+36);
+      var turn = diff<12 ? '정면 — 이 방향이 길방이에요 ✨' : (rel>0 ? '오른쪽으로 '+Math.round(diff)+'° 도세요 ↻' : '왼쪽으로 '+Math.round(diff)+'° 도세요 ↺');
+      if(info) info.innerHTML='<b style="color:'+col+'">오늘의 방향 기운 '+ki+'점</b> · '+turn+'<br><span style="opacity:.6;font-size:10px;">'+OH_LABEL[oh]+' 길방 = '+OH_DIRNAME[oh]+' · 융합 '+fz.fusion+'점</span>';
+    }
+    _naviR.compass=function(e){
+      var hh=(e.webkitCompassHeading!=null)?e.webkitCompassHeading:(e.alpha!=null?(360-e.alpha):null);
+      if(hh==null){ if(info) info.textContent='이 기기는 나침반 센서를 지원하지 않아요.'; return; }
+      draw(hh);
+    };
+    function attach(){
+      if('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute',_naviR.compass,true);
+      else window.addEventListener('deviceorientation',_naviR.compass,true);
+      draw(lk.deg);
+      if(info) info.textContent='나침반 감지 중… 폰을 수평으로 들어주세요.';
+    }
+    if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+      DeviceOrientationEvent.requestPermission().then(function(r){ if(r==='granted') attach(); else if(info) info.textContent='나침반 권한이 필요해요. 허용 후 다시 시작해주세요.'; }).catch(function(){ if(info) info.textContent='나침반 권한 요청에 실패했어요.'; });
+    } else attach();
+  }
+  function naviStopCompass(){
+    if(_naviR.compass){ window.removeEventListener('deviceorientationabsolute',_naviR.compass,true); window.removeEventListener('deviceorientation',_naviR.compass,true); _naviR.compass=null; }
+    if(_naviR.stream){ try{ _naviR.stream.getTracks().forEach(function(t){t.stop();}); }catch(e){} _naviR.stream=null; }
+  }
+  window.cgoNaviCompassStop=function(){ naviStopCompass(); naviShow('compass','intro'); };
+
+  /* ── GPS 도보 기록 ── */
+  function hav(a,b){ var R=6371000, toR=Math.PI/180; var dLat=(b.lat-a.lat)*toR, dLon=(b.lon-a.lon)*toR; var la1=a.lat*toR, la2=b.lat*toR; var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)*Math.sin(dLon/2); return 2*R*Math.asin(Math.min(1,Math.sqrt(x))); }
+  window.cgoNaviWalkStart=function(){
+    if(!navigator.geolocation){ alert('이 기기는 GPS를 지원하지 않아요.'); return; }
+    naviShow('walk','run');
+    _naviR.walk={ start:Date.now(), dist:0, last:null, pts:0, acc:null };
+    if(_naviR.timer) clearInterval(_naviR.timer);
+    _naviR.timer=setInterval(naviWalkRender,1000);
+    naviWalkRender();
+    _naviR.watch=navigator.geolocation.watchPosition(function(pos){
+      var c=pos.coords, cur={lat:c.latitude,lon:c.longitude};
+      _naviR.walk.acc=c.accuracy;
+      if(_naviR.walk.last){ var d=hav(_naviR.walk.last,cur); if(d>1 && d<60) _naviR.walk.dist+=d; }
+      _naviR.walk.last=cur; _naviR.walk.pts++;
+      naviWalkRender();
+    }, function(err){ var info=$('cgn-walk-info'); if(info) info.textContent='GPS 신호를 받지 못했어요. 야외에서 위치 권한을 허용하고 다시 시도해주세요.'; },
+    { enableHighAccuracy:true, maximumAge:1000, timeout:20000 });
+  };
+  function naviWalkRender(){
+    if(!_naviR.walk) return;
+    var sec=Math.floor((Date.now()-_naviR.walk.start)/1000);
+    var mm=Math.floor(sec/60), ss=sec%60, km=_naviR.walk.dist/1000;
+    var st=$('cgn-walk-stat');
+    if(st) st.innerHTML='<div class="cgn-stat"><div class="v">'+(km>=1?km.toFixed(2)+'km':Math.round(_naviR.walk.dist)+'m')+'</div><div class="l">걸은 거리</div></div>'+
+      '<div class="cgn-stat"><div class="v">'+mm+':'+(ss<10?'0':'')+ss+'</div><div class="l">시간</div></div>'+
+      '<div class="cgn-stat"><div class="v">'+(_naviR.walk.acc?'±'+Math.round(_naviR.walk.acc)+'m':'—')+'</div><div class="l">GPS 정확도</div></div>';
+    var info=$('cgn-walk-info');
+    if(info) info.textContent=(_naviR.walk.acc && _naviR.walk.acc>30)?'GPS 정확도가 낮아요(실내·고층). 야외일수록 정확해져요.':'실제 GPS로 거리를 기록 중… 위치는 기기 안에서만 처리돼요.';
+  }
+  function naviStopWalk(){
+    if(_naviR.watch!=null){ try{ navigator.geolocation.clearWatch(_naviR.watch); }catch(e){} _naviR.watch=null; }
+    if(_naviR.timer){ clearInterval(_naviR.timer); _naviR.timer=null; }
+  }
+  window.cgoNaviWalkStop=function(){
+    naviStopWalk();
+    if(_naviR.walk && _naviR.walk.dist>0){
+      var sec=Math.floor((Date.now()-_naviR.walk.start)/1000);
+      try{ localStorage.setItem('cgo_navi_walk', JSON.stringify({ t:Date.now(), dist:Math.round(_naviR.walk.dist), sec:sec })); }catch(e){}
+    }
+    _naviR.walk=null;
+    naviShow('walk','intro');
+  };
+
+  /* ── 역학 융합 (결정론적 · 실제 입력 기반) ── */
+  function _seed(str){ var h=2166136261; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967295; }
+  function naviFusion(){
+    var oh=myOh(), d=new Date(), dk=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    var np=window._nasaPlanets||{}, jR=(np.jupiter&&np.jupiter.retro)?1:0, mR=(np.mars&&np.mars.retro)?1:0;
+    var lenses=[{k:'오행 방위',c:'#34d399'},{k:'기문둔갑 8문',c:'#d4a843'},{k:'구성기학',c:'#60a5fa'},{k:'행성 트랜짓',c:'#a78bfa'}];
+    for(var i=0;i<lenses.length;i++){
+      var sc=Math.round(58+_seed(oh+'|'+dk+'|'+lenses[i].k)*37); // 58~95
+      if(i===3){ sc=sc+(jR?6:0)-(mR?9:0); } // 행성은 실제 역행 반영
+      lenses[i].score=Math.max(40,Math.min(98,sc));
+    }
+    var sum=lenses.reduce(function(a,l){return a+l.score;},0);
+    var fusion=Math.round(sum/lenses.length), accS=0;
+    for(var j=0;j<lenses.length;j++){ lenses[j].share=Math.round(lenses[j].score/sum*100); accS+=lenses[j].share; }
+    lenses[0].share+=100-accS; // 합 100 보정
+    return { oh:oh, lenses:lenses, fusion:fusion };
+  }
+  function naviFusionBarHTML(f){
+    var s='<div class="cgn-fbar">';
+    for(var i=0;i<f.lenses.length;i++){ var l=f.lenses[i]; s+='<div class="cgn-fseg" style="width:'+l.share+'%;background:'+l.c+';"></div>'; }
+    s+='</div><div class="cgn-flegend">';
+    for(var k=0;k<f.lenses.length;k++){ var x=f.lenses[k]; s+='<span><i style="background:'+x.c+'"></i>'+x.k+' <b>'+x.score+'</b></span>'; }
+    return s+'</div>';
+  }
+  function naviGrade(s){ return s>=85?'대길(大吉) — 흐름이 아주 좋아요':(s>=70?'길(吉) — 무난히 좋은 날':(s>=55?'평(平) — 차분히 가면 좋아요':'주의 — 무리하지 마세요')); }
+  function naviReading(oh,s){
+    var by={목:'새로운 시작과 만남',화:'표현과 추진',토:'안정과 마무리',금:'결단과 정리',수:'지혜와 휴식'};
+    var t=s>=70?'길방으로 한 걸음 내디뎌 보세요.':(s>=55?'서두르지 말고 길방을 의식하며 걸어보세요.':'오늘은 큰 결정보다 가벼운 산책이 좋아요.');
+    return (by[oh]||'좋은 기운')+'에 좋은 기운이 흐르는 날이에요. '+t;
+  }
+  /* ── 오늘의 방위 안내 ── */
+  function naviRenderGuide(){
+    var el=$('cgn-guide-host'); if(!el) return;
+    var oh=myOh(), lk=luckyDeg(), f=naviFusion();
+    el.innerHTML='<div class="cgn-card"><div class="cgn-card-h">🔮 오늘의 길방 융합 점수</div>'+
+      '<div class="cgn-score"><span class="n">'+f.fusion+'</span><span class="u">점</span><div class="c">'+naviGrade(f.fusion)+'</div></div>'+
+      naviFusionBarHTML(f)+'</div>'+
+      '<div class="cgn-card"><div class="cgn-card-h">내 오행 · 오늘의 길방</div><div class="cgn-big">'+OH_LABEL[oh]+' → '+OH_DIRNAME[oh]+' ('+Math.round(lk.deg)+'°)</div>'+(lk.note?'<div class="cgn-sub">'+lk.note+' <span style="opacity:.55;">· 실시간 NASA 행성 반영</span></div>':'')+'</div>'+
+      '<div class="cgn-card"><div class="cgn-card-h">오늘의 한마디</div><div class="cgn-big" style="font-size:14px;font-weight:600;line-height:1.65;">'+naviReading(oh,f.fusion)+'</div></div>'+
+      '<div class="cgn-note">🔮 오행·기문둔갑·구성기학·행성을 <b>융합</b>한 오늘의 방향 운세예요. 같은 날엔 같은 결과가 나와요. 재미와 참고로 즐겨주세요.</div>';
+  }
+  function naviRenderData(){
+    var el=$('cgn-data-host'); if(!el) return;
+    var w=null; try{ w=JSON.parse(localStorage.getItem('cgo_navi_walk')); }catch(e){}
+    function ago(t){ var d=Math.floor((Date.now()-t)/86400000); return d<=0?'오늘':d+'일 전'; }
+    if(w){ var km=w.dist/1000, mm=Math.floor(w.sec/60), ss=w.sec%60;
+      el.innerHTML='<div class="cgn-card"><div class="cgn-card-h">최근 도보 기록 · '+ago(w.t)+'</div><div class="cgn-row"><span>걸은 거리</span><b>'+(km>=1?km.toFixed(2)+' km':w.dist+' m')+'</b></div><div class="cgn-row"><span>시간</span><b>'+mm+'분 '+ss+'초</b></div></div><div class="cgn-note">기록은 이 기기 브라우저에만 저장돼요(<b>서버 0 · 외부 전송 없음</b>). 언제든 사라질 수 있어요.</div>';
+    } else el.innerHTML='<div class="cgn-empty">아직 도보 기록이 없어요.<br>「GPS 도보 기록」에서 산책을 시작해보세요.</div>';
+  }
+})();
+</script>
+<!-- ════════════════ /🧭 나의 네비게이션 v2 ════════════════ -->
+
+
 
 
 
