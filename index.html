@@ -5389,7 +5389,7 @@ function cgoGuideFeature(key){
     <!-- 🆕 신규(준비중) — 후배 C: 완성 후 onclick을 cgoGoPage('?')로 교체 -->
     <div onclick="cgoNaviOpen()" class="fdash-card" style="--fc:#34d399;"><span class="fdash-badge new">NEW</span><div class="fdash-ico">🧭</div><div class="fdash-ttl">나의 네비게이션</div><div class="fdash-desc">오행 길방 · GPS 도보</div></div>
     <!-- 🆕 신규(준비중) — 후배 C: 완성 후 onclick을 cgoGoPage('?')로 교체 -->
-    <div onclick="alert('🚧 준비 중인 기능입니다');" class="fdash-card" style="--fc:#e3c05a;opacity:.55;"><span class="fdash-badge new">준비중</span><div class="fdash-ico">📷</div><div class="fdash-ttl">사물 분석 카메라</div><div class="fdash-desc">준비 중</div></div>
+    <div onclick="cgoPhotoOpen()" class="fdash-card" style="--fc:#a78bfa;"><span class="fdash-badge new">NEW</span><div class="fdash-ico">📸</div><div class="fdash-ttl">에너지 사진 분석</div><div class="fdash-desc">사진 색·기운 → 오행 궁합</div></div>
   </div>
 </div>
 
@@ -96035,6 +96035,241 @@ if('serviceWorker' in navigator){
 })();
 </script>
 <!-- ════════════════ /🧭 나의 네비게이션 v6 ════════════════ -->
+
+<!-- ════════════════ 📸 에너지 사진 분석 v1 · 오행 색분석 궁합 (흰배경·PC2단 · C-build) ════════════════ -->
+<style>
+#page-cgo-photo{position:fixed;inset:0;z-index:29938;display:none;background:#ffffff;color:#1a1408;font-family:inherit;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#page-cgo-photo *{box-sizing:border-box;}
+.cgp-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:rgba(255,255,255,.96);border-bottom:1px solid #eef0f4;backdrop-filter:saturate(180%) blur(6px);}
+.cgp-back{background:#fff;border:1px solid #e2e6ee;color:#444;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.cgp-help-btn{width:34px;height:34px;border-radius:50%;border:1px solid #e2e6ee;background:#fff;color:#a78bfa;font-size:15px;font-weight:800;cursor:pointer;}
+.cgp-wrap{max-width:1000px;margin:0 auto;padding:14px 18px 40px;}
+.cgp-title{text-align:center;font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;letter-spacing:.1em;color:#1a1408;margin:4px 0 8px;}
+.cgp-headline{text-align:center;font-size:13px;font-weight:600;line-height:1.6;color:#555;margin:0 auto 16px;max-width:640px;}
+.cgp-headline .q{color:#a78bfa;font-weight:800;}
+.cgp-stage{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;}
+.cgp-cam{position:relative;width:100%;aspect-ratio:1/1;max-height:50vh;background:#11131a;border-radius:18px;overflow:hidden;border:1px solid #e7e9ef;box-shadow:0 8px 26px rgba(20,20,40,.08);}
+.cgp-cam video,.cgp-cam canvas{width:100%;height:100%;object-fit:cover;display:block;}
+.cgp-shot{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:linear-gradient(135deg,#a78bfa,#7c5cf0);color:#fff;border:none;border-radius:30px;padding:12px 26px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(124,92,240,.4);}
+.cgp-retake{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.55);border:none;border-radius:16px;color:#fff;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;font-family:inherit;}
+.cgp-cam-idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#241b3a,#120e22);color:#cfc6e6;text-align:center;padding:20px;}
+.cgp-cam-idle .ic{font-size:40px;}
+.cgp-cam-idle .tx{font-size:12px;line-height:1.5;opacity:.85;}
+.cgp-start{background:linear-gradient(135deg,#a78bfa,#7c5cf0);color:#fff;border:none;border-radius:12px;padding:12px 22px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
+.cgp-score{background:linear-gradient(150deg,#241b3a,#120e22);border-radius:18px;padding:18px;color:#eee9fb;border:1px solid #2c2348;box-shadow:0 8px 26px rgba(20,20,40,.1);}
+.cgp-lab{font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:.04em;}
+.cgp-big{font-family:'Orbitron',sans-serif;font-size:46px;font-weight:900;color:#a78bfa;line-height:1;margin-top:2px;}
+.cgp-big small{font-size:15px;margin-left:3px;}
+.cgp-grade{font-size:12px;color:#b6acd4;margin-top:3px;}
+.cgp-sech{font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:.04em;margin:14px 0 5px;padding-top:13px;border-top:1px solid rgba(255,255,255,.1);}
+.cgp-fbar{display:flex;width:100%;height:15px;border-radius:8px;overflow:hidden;margin:6px 0 8px;border:1px solid rgba(255,255,255,.12);}
+.cgp-fseg{height:100%;}
+.cgp-flegend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:#b6acd4;}
+.cgp-flegend span{display:flex;align-items:center;gap:4px;}
+.cgp-flegend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+.cgp-flegend b{color:#eee9fb;}
+.cgp-dir{font-size:16px;font-weight:800;color:#fff;}
+.cgp-read{font-size:12.5px;color:#b6acd4;line-height:1.65;margin-top:6px;}
+.cgp-note2{font-size:11px;color:#9b90c4;opacity:.85;margin-top:4px;}
+.cgp-hint{font-size:12px;color:#9b90c4;line-height:1.6;text-align:center;margin-top:8px;}
+.cgp-hint b{color:#cbb8ff;}
+@media (min-width:780px){
+  .cgp-title{font-size:24px;}
+  .cgp-headline{font-size:15px;}
+  .cgp-stage{grid-template-columns:1.05fr .95fr;}
+  .cgp-cam{max-height:none;aspect-ratio:4/5;}
+}
+/* 사용법 팝업 */
+#cgp-help{position:fixed;inset:0;z-index:29992;display:none;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.cgp-help-wrap{max-width:560px;margin:0 auto;padding:18px 20px 40px;}
+.cgp-help-x{position:absolute;top:12px;right:16px;width:34px;height:34px;border-radius:50%;border:1px solid #e2e6ee;background:#fff;font-size:16px;cursor:pointer;color:#666;}
+.cgp-help-h{font-size:20px;font-weight:900;color:#1a1408;text-align:center;margin:8px 0 4px;}
+.cgp-help-s{font-size:12px;color:#888;text-align:center;margin-bottom:18px;}
+.cgp-step{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #ece4f7;border-radius:14px;padding:14px;margin-bottom:10px;}
+.cgp-step .n{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#a78bfa;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;}
+.cgp-step .t{font-size:13px;font-weight:800;color:#1a1408;}
+.cgp-step .d{font-size:12px;color:#666;line-height:1.55;margin-top:3px;}
+.cgp-help-note{background:#faf7ff;border:1px solid #ece4f7;border-radius:12px;padding:12px 14px;font-size:11.5px;color:#7d70a5;line-height:1.65;margin-top:6px;}
+</style>
+
+<div id="page-cgo-photo">
+  <div class="cgp-top">
+    <button class="cgp-back" onclick="cgoPhotoClose()">← 나가기</button>
+    <div style="font-size:13px;font-weight:800;color:#1a1408;">📸 에너지 사진 분석</div>
+    <button class="cgp-help-btn" onclick="cgoPhotoHelp(true)">?</button>
+  </div>
+  <div class="cgp-wrap">
+    <div class="cgp-title">CGO · FULI</div>
+    <p class="cgp-headline"><span class="q">"</span>처음 마주한 그 찰나, 색과 기운을 오행으로 담아 나와의 인연을 비춰보세요.<span class="q">"</span><br>사진의 색·기운으로 보는 재미 오행 궁합이에요.</p>
+
+    <div class="cgp-stage">
+      <div class="cgp-cam" id="cgp-cam">
+        <video id="cgp-video" autoplay playsinline muted></video>
+        <canvas id="cgp-canvas" style="display:none;"></canvas>
+        <button class="cgp-shot" id="cgp-shot" onclick="cgoPhotoCapture()" style="display:none;">📸 촬영</button>
+        <button class="cgp-retake" id="cgp-retake" onclick="cgoPhotoRetake()" style="display:none;">↻ 다시 촬영</button>
+        <div class="cgp-cam-idle" id="cgp-idle">
+          <div class="ic">📸</div>
+          <div class="tx">사람·사물·풍경을 카메라에 담으면<br>그 <b>색과 기운의 오행</b>과 나와의 궁합이 나와요.</div>
+          <button class="cgp-start" onclick="cgoPhotoStart()">📷 카메라 켜기</button>
+        </div>
+      </div>
+
+      <div class="cgp-score" id="cgp-score"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 사용법 팝업 -->
+<div id="cgp-help">
+  <button class="cgp-help-x" onclick="cgoPhotoHelp(false)">✕</button>
+  <div class="cgp-help-wrap">
+    <div class="cgp-help-h">📸 에너지 사진 분석 사용법</div>
+    <div class="cgp-help-s">사진의 색·기운을 오행으로 → 나와의 궁합</div>
+    <div class="cgp-step"><div class="n">1</div><div><div class="t">📷 카메라 켜기</div><div class="d">버튼을 누르고 카메라 권한을 허용하면 화면이 떠요. (모바일·HTTPS에서 작동)</div></div></div>
+    <div class="cgp-step"><div class="n">2</div><div><div class="t">📸 찰나를 촬영</div><div class="d">사람·사물·풍경을 화면에 담고 촬영하면, 그 사진의 <b>색을 픽셀 단위로 분석</b>해 오행(목·화·토·금·수) 분포를 측정해요.</div></div></div>
+    <div class="cgp-step"><div class="n">3</div><div><div class="t">🔮 나와의 궁합</div><div class="d">사진의 대표 오행과 <b>내 오행</b>을 오행 <b>상생·상극</b>으로 맞춰 궁합 점수와 <b>나에게 맞는 색</b>을 보여줘요.</div></div></div>
+    <div class="cgp-help-note">🔮 이건 사진의 <b>색과 기운</b>으로 보는 <b>재미 오행 궁합</b>이에요. 관상을 단정하거나 사람을 평가·예언하는 기능이 아니에요. 사진은 <b>기기 안에서만</b> 분석되고 저장·전송되지 않아요.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  var ST={ stream:null };
+  var OHK=['목','화','토','금','수'];
+  var OH_COL={목:'#34d399',화:'#f0584e',토:'#e3b341',금:'#cfd6e0',수:'#4f86d6'};
+  var OH_LABEL={목:'목(木)·나무',화:'화(火)·불',토:'토(土)·흙',금:'금(金)·쇠',수:'수(水)·물'};
+  var OH_COLNAME={목:'초록·청록',화:'빨강·주황',토:'노랑·황토',금:'흰색·은색',수:'파랑·검정'};
+  function myOh(){ try{ return (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목'; }catch(e){ return '목'; } }
+
+  // 상생(生): 목→화→토→금→수→목 / 상극(克): 목→토→수→화→금→목
+  var SHENG={목:'화',화:'토',토:'금',금:'수',수:'목'};   // A生B
+  var KE={목:'토',화:'금',토:'수',금:'목',수:'화'};        // A克B
+  function genOf(x){ for(var k in SHENG){ if(SHENG[k]===x) return k; } return x; } // 나를 生하는 것
+
+  window.cgoPhotoOpen=function(){
+    stopCam();
+    renderIdle();
+    setMode('idle');
+    cgoPhotoHelp(false);
+    var p=$('page-cgo-photo'); if(p){ p.style.display='block'; p.scrollTop=0; }
+  };
+  window.cgoPhotoClose=function(){ stopCam(); var p=$('page-cgo-photo'); if(p) p.style.display='none'; };
+  window.cgoPhotoHelp=function(on){ var h=$('cgp-help'); if(h) h.style.display=on?'block':'none'; };
+
+  function setMode(m){
+    var idle=$('cgp-idle'), vid=$('cgp-video'), cv=$('cgp-canvas'), shot=$('cgp-shot'), re=$('cgp-retake');
+    if(m==='idle'){ if(idle)idle.style.display='flex'; if(vid)vid.style.display='block'; if(cv)cv.style.display='none'; if(shot)shot.style.display='none'; if(re)re.style.display='none'; }
+    else if(m==='live'){ if(idle)idle.style.display='none'; if(vid)vid.style.display='block'; if(cv)cv.style.display='none'; if(shot)shot.style.display='block'; if(re)re.style.display='none'; }
+    else if(m==='shot'){ if(idle)idle.style.display='none'; if(vid)vid.style.display='none'; if(cv)cv.style.display='block'; if(shot)shot.style.display='none'; if(re)re.style.display='block'; }
+  }
+
+  function renderIdle(){
+    var el=$('cgp-score'); if(!el) return;
+    el.innerHTML='<div class="cgp-lab">📸 사진 오행 궁합</div><div class="cgp-big" style="opacity:.3;">—</div><div class="cgp-hint"><b>「📷 카메라 켜기」</b> 후 <b>「📸 촬영」</b>하면 사진의 오행과 나와의 궁합이 나와요</div>';
+  }
+
+  window.cgoPhotoStart=function(){
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})
+        .then(function(s){ ST.stream=s; var v=$('cgp-video'); if(v){ v.srcObject=s; v.play(); } setMode('live'); })
+        .catch(function(){ alert('카메라를 켤 수 없어요. 권한을 확인해주세요.'); });
+    } else alert('이 기기는 카메라를 지원하지 않아요.');
+  };
+  window.cgoPhotoRetake=function(){
+    if(ST.stream){ var v=$('cgp-video'); if(v && !v.srcObject) v.srcObject=ST.stream; }
+    if(!ST.stream){ cgoPhotoStart(); return; }
+    setMode('live'); renderIdle();
+  };
+
+  window.cgoPhotoCapture=function(){
+    var v=$('cgp-video'), cv=$('cgp-canvas'); if(!v||!cv||!v.videoWidth){ return; }
+    var w=v.videoWidth, h=v.videoHeight;
+    cv.width=w; cv.height=h;
+    var ctx=cv.getContext('2d'); ctx.drawImage(v,0,0,w,h);
+    setMode('shot');
+    var res=analyze(cv);
+    renderResult(res);
+  };
+
+  // ── 실제 픽셀 색 분석 → 오행 분포 ──
+  function analyze(cv){
+    var ow=120, oh2=Math.round(120*cv.height/cv.width);
+    var off=document.createElement('canvas'); off.width=ow; off.height=oh2;
+    var octx=off.getContext('2d',{willReadFrequently:true}); octx.drawImage(cv,0,0,ow,oh2);
+    var data=octx.getImageData(0,0,ow,oh2).data;
+    var w={목:0,화:0,토:0,금:0,수:0}, tot=0;
+    for(var i=0;i<data.length;i+=4){
+      var r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255;
+      var mx=Math.max(r,g,b), mn=Math.min(r,g,b), L=(mx+mn)/2, d=mx-mn;
+      var sat=d===0?0:(L>0.5?d/(2-mx-mn):d/(mx+mn));
+      var hue=0;
+      if(d!==0){ if(mx===r) hue=((g-b)/d)%6; else if(mx===g) hue=(b-r)/d+2; else hue=(r-g)/d+4; hue*=60; if(hue<0)hue+=360; }
+      var oh;
+      if(L>0.82 && sat<0.16) oh='금';            // 밝고 무채색 → 백(금)
+      else if(L<0.18) oh='수';                    // 매우 어두움 → 흑(수)
+      else if(hue<35||hue>=330) oh='화';          // 적 → 화
+      else if(hue<70) oh='토';                    // 황 → 토
+      else if(hue<170) oh='목';                   // 청록 → 목
+      else if(hue<260) oh='수';                   // 청 → 수
+      else oh='화';                               // 자주 → 화 경향
+      var wt=0.4+sat*0.6;                          // 선명할수록 가중
+      w[oh]+=wt; tot+=wt;
+    }
+    var pct={}; for(var k=0;k<OHK.length;k++){ pct[OHK[k]]=tot>0?w[OHK[k]]/tot:0; }
+    // 정수 % (합 100)
+    var arr=OHK.map(function(o){return {o:o, p:Math.round(pct[o]*100)};});
+    var acc=arr.reduce(function(a,x){return a+x.p;},0); arr[0].p+=100-acc;
+    arr.sort(function(a,b){return b.p-a.p;});
+    var dom=arr[0].o;
+    return { dist:arr, dom:dom };
+  }
+
+  function compat(me, photo){
+    if(me===photo) return { s:78, rel:'비화(比和) — 같은 기운, 편안한 인연' };
+    if(SHENG[photo]===me) return { s:92, rel:'상생 — 상대가 나를 채워주는 인연 ✨' }; // photo生me
+    if(SHENG[me]===photo) return { s:86, rel:'상생 — 내가 북돋아주는 인연' };            // me生photo
+    if(KE[photo]===me) return { s:56, rel:'상극 — 기가 눌릴 수 있는 관계' };             // photo克me
+    if(KE[me]===photo) return { s:63, rel:'상극 — 내가 끌고 가는 관계' };                // me克photo
+    return { s:70, rel:'무난한 흐름' };
+  }
+  function colorFit(me, dist){
+    // 나를 살리는 색 = 나를 生하는 오행색 + 내 오행색
+    var good1=genOf(me), good2=me, m={}; dist.forEach(function(x){m[x.o]=x.p;});
+    var fit=Math.min(100,(m[good1]||0)+(m[good2]||0));
+    return { fit:fit, c1:good1, c2:good2 };
+  }
+  function grade(s){ return s>=88?'천생연분급 — 흐름이 아주 좋아요':(s>=78?'좋은 궁합 — 편안해요':(s>=65?'무난한 궁합':'조심스러운 궁합 — 천천히')); }
+
+  function renderResult(res){
+    var me=myOh(), c=compat(me,res.dom), cf=colorFit(me,res.dist);
+    var bar='<div class="cgp-fbar">';
+    for(var i=0;i<res.dist.length;i++){ var x=res.dist[i]; bar+='<div class="cgp-fseg" style="width:'+x.p+'%;background:'+OH_COL[x.o]+';"></div>'; }
+    bar+='</div><div class="cgp-flegend">';
+    for(var k=0;k<res.dist.length;k++){ var y=res.dist[k]; bar+='<span><i style="background:'+OH_COL[y.o]+'"></i>'+y.o+' <b>'+y.p+'%</b></span>'; }
+    bar+='</div>';
+    $('cgp-score').innerHTML=
+      '<div class="cgp-lab">🔮 나와의 인연 궁합</div>'+
+      '<div class="cgp-big">'+c.s+'<small>점</small></div>'+
+      '<div class="cgp-grade">'+grade(c.s)+' · '+c.rel+'</div>'+
+      '<div class="cgp-sech">📸 이 사진의 오행 기운</div>'+
+      bar+
+      '<div class="cgp-dir">대표 기운 · '+OH_LABEL[res.dom]+'</div>'+
+      '<div class="cgp-sech">🎨 색 궁합</div>'+
+      '<div class="cgp-dir">'+cf.fit+'<small style="font-size:14px;"> %</small></div>'+
+      '<div class="cgp-note2">나를 살리는 색은 <b style="color:'+OH_COL[cf.c1]+'">'+OH_COLNAME[cf.c1]+'</b> · <b style="color:'+OH_COL[cf.c2]+'">'+OH_COLNAME[cf.c2]+'</b> 계열 — 이 사진에 이 색이 많을수록 나와 잘 맞아요.</div>'+
+      '<div class="cgp-sech">한마디</div>'+
+      '<div class="cgp-read">내 오행 '+OH_LABEL[me]+'와(과) 이 사진의 '+OH_LABEL[res.dom]+' 기운이 만났어요. '+(c.s>=78?'함께 있으면 기운이 살아나는 인연이에요.':(c.s>=65?'서로 다른 결이지만 배울 게 있는 만남이에요.':'조금 조심스럽지만, 거리를 두면 편해지는 관계예요.'))+'</div>';
+  }
+
+  function stopCam(){ if(ST.stream){ try{ST.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} ST.stream=null; } }
+})();
+</script>
+<!-- ════════════════ /📸 에너지 사진 분석 v1 ════════════════ -->
+
+
 
 
 
