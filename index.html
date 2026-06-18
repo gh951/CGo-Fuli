@@ -95776,7 +95776,7 @@ if('serviceWorker' in navigator){
 </script>
 <!-- ════════════════ /🌙 좋은 수면 v9 ════════════════ -->
 
-<!-- ════════════════ 🧭 나의 네비게이션 v4 · 단일화면 실시간점수 (PC 2단 · C-build) ════════════════ -->
+<!-- ════════════════ 🧭 나의 네비게이션 v5 · 시작=점수만/멈춤=상세 (PC 2단 · C-build) ════════════════ -->
 <style>
 #page-cgo-navi{position:fixed;inset:0;z-index:29940;display:none;background:#ffffff;color:#1a1408;font-family:inherit;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #page-cgo-navi *{box-sizing:border-box;}
@@ -95813,6 +95813,8 @@ if('serviceWorker' in navigator){
 .cgn-flegend b{color:#eaf0fb;}
 .cgn-dir{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:15px;font-weight:800;color:#fff;}
 .cgn-read{font-size:12.5px;color:#aab8d4;line-height:1.65;margin-top:8px;}
+.cgn-runhint{font-size:12px;color:#8ea1c4;line-height:1.6;margin-top:14px;text-align:center;}
+.cgn-runhint b{color:#f0d28a;}
 .cgn-live{display:inline-block;margin-top:10px;background:rgba(212,168,67,.14);border:1px solid rgba(212,168,67,.35);color:#f0d28a;font-size:11px;font-weight:700;padding:5px 12px;border-radius:14px;}
 .cgn-foot{font-size:11px;color:#9aa3b2;line-height:1.6;text-align:center;margin-top:18px;}
 @media (min-width:780px){
@@ -95927,31 +95929,39 @@ if('serviceWorker' in navigator){
   function renderPanel(mode, heading, stamp){
     CURMODE=mode; CURHEAD=heading;
     if(!BASE) refreshBase();
-    var f=liveFusion(BASE.base, heading);
-    var bar='<div class="cgn-fbar">';
-    for(var i=0;i<BASE.lenses.length;i++){ var l=BASE.lenses[i]; bar+='<div class="cgn-fseg" style="width:'+l.share+'%;background:'+l.c+';"></div>'; }
-    bar+='</div><div class="cgn-flegend">';
-    for(var k=0;k<BASE.lenses.length;k++){ var x=BASE.lenses[k]; bar+='<span><i style="background:'+x.c+'"></i>'+x.k+' <b>'+x.score+'</b></span>'; }
-    bar+='</div>';
-    var lv = mode==='run' ? '지금 방향으로 측정 중… 몸을 돌려보세요'
-           : (mode==='frozen' ? ((stamp||'')+' 기준 · 다시 측정하면 때·방위·환경에 따라 달라져요')
-           : '나침반을 켜고 「분석」하면 현재 점수가 잡혀요');
-    $('cgn-score').innerHTML=
-      '<div class="lab" id="cgn-lab">'+panelTitle(mode)+'</div>'+
-      '<div class="big"><span id="cgn-bignum">'+f+'</span><small>점</small></div>'+
-      '<div class="grade" id="cgn-grade">'+grade(f)+'</div>'+
-      bar+
-      '<div class="cgn-dir">'+OH_LABEL[OH]+' → '+OH_DIRNAME[OH]+' ('+Math.round(LK.deg)+'°)</div>'+
-      '<div class="cgn-read" id="cgn-read">'+reading(OH,f)+(LK.note?'<br><span style="opacity:.6;">'+LK.note+' · 실시간 NASA 행성 반영</span>':'')+'</div>'+
-      '<span class="cgn-live" id="cgn-live">'+lv+'</span>';
+    var host=$('cgn-score'); if(!host) return;
+    if(mode==='frozen'){
+      var f=liveFusion(BASE.base, heading);
+      var bar='<div class="cgn-fbar">';
+      for(var i=0;i<BASE.lenses.length;i++){ var l=BASE.lenses[i]; bar+='<div class="cgn-fseg" style="width:'+l.share+'%;background:'+l.c+';"></div>'; }
+      bar+='</div><div class="cgn-flegend">';
+      for(var k=0;k<BASE.lenses.length;k++){ var x=BASE.lenses[k]; bar+='<span><i style="background:'+x.c+'"></i>'+x.k+' <b>'+x.score+'</b></span>'; }
+      bar+='</div>';
+      host.innerHTML=
+        '<div class="lab">🔮 현재의 길방 융합 점수</div>'+
+        '<div class="big"><span id="cgn-bignum">'+f+'</span><small>점</small></div>'+
+        '<div class="grade">'+grade(f)+'</div>'+
+        bar+
+        '<div class="cgn-dir">'+OH_LABEL[OH]+' → '+OH_DIRNAME[OH]+' ('+Math.round(LK.deg)+'°)</div>'+
+        '<div class="cgn-read">'+reading(OH,f)+(LK.note?'<br><span style="opacity:.6;">'+LK.note+' · 실시간 NASA 행성 반영</span>':'')+'</div>'+
+        '<span class="cgn-live">'+(stamp||'')+' 기준 · 다시 측정하면 때·방위·환경에 따라 달라져요</span>';
+    } else if(mode==='run'){
+      var fr=liveFusion(BASE.base, heading);
+      host.innerHTML=
+        '<div class="lab">🔮 측정 중…</div>'+
+        '<div class="big"><span id="cgn-bignum">'+fr+'</span><small>점</small></div>'+
+        '<div class="cgn-runhint">몸을 천천히 돌려보세요<br><b>「📊 분석」</b>을 누르면 자세한 결과가 나와요</div>';
+    } else {
+      host.innerHTML=
+        '<div class="lab">🔮 길방 융합 점수</div>'+
+        '<div class="big" style="opacity:.3;"><span id="cgn-bignum">—</span></div>'+
+        '<div class="cgn-runhint"><b>「📷 나침반 시작」</b>을 누르면 측정이 시작돼요</div>';
+    }
   }
   function updateLive(heading){
     CURHEAD=heading;
     var m=new Date().getMinutes(); if(updateLive._m!==m){ updateLive._m=m; refreshBase(); }
-    var f=liveFusion(BASE.base, heading);
-    var bn=$('cgn-bignum'), gr=$('cgn-grade'), rd=$('cgn-read');
-    if(bn) bn.textContent=f; if(gr) gr.textContent=grade(f);
-    if(rd) rd.innerHTML=reading(OH,f)+(LK.note?'<br><span style="opacity:.6;">'+LK.note+' · 실시간 NASA 행성 반영</span>':'');
+    var bn=$('cgn-bignum'); if(bn) bn.textContent=liveFusion(BASE.base, heading);
   }
 
   window.cgoNaviOpen=function(){
@@ -96029,7 +96039,7 @@ if('serviceWorker' in navigator){
   }
 })();
 </script>
-<!-- ════════════════ /🧭 나의 네비게이션 v4 ════════════════ -->
+<!-- ════════════════ /🧭 나의 네비게이션 v5 ════════════════ -->
 
 
 
