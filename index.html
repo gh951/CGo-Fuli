@@ -95776,7 +95776,7 @@ if('serviceWorker' in navigator){
 </script>
 <!-- ════════════════ /🌙 좋은 수면 v9 ════════════════ -->
 
-<!-- ════════════════ 🧭 나의 네비게이션 v5 · 시작=점수만/멈춤=상세 (PC 2단 · C-build) ════════════════ -->
+<!-- ════════════════ 🧭 나의 네비게이션 v6 · 점수=평균일치 · 상세복원 (PC 2단 · C-build) ════════════════ -->
 <style>
 #page-cgo-navi{position:fixed;inset:0;z-index:29940;display:none;background:#ffffff;color:#1a1408;font-family:inherit;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #page-cgo-navi *{box-sizing:border-box;}
@@ -95811,7 +95811,9 @@ if('serviceWorker' in navigator){
 .cgn-flegend span{display:flex;align-items:center;gap:4px;}
 .cgn-flegend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
 .cgn-flegend b{color:#eaf0fb;}
-.cgn-dir{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:15px;font-weight:800;color:#fff;}
+.cgn-sech{font-size:11px;font-weight:700;color:#d4a843;letter-spacing:.04em;margin:14px 0 5px;padding-top:13px;border-top:1px solid rgba(255,255,255,.1);}
+.cgn-dir{font-size:17px;font-weight:800;color:#fff;}
+.cgn-note2{font-size:11px;color:#9fb0cc;opacity:.85;margin-top:4px;}
 .cgn-read{font-size:12.5px;color:#aab8d4;line-height:1.65;margin-top:8px;}
 .cgn-runhint{font-size:12px;color:#8ea1c4;line-height:1.6;margin-top:14px;text-align:center;}
 .cgn-runhint b{color:#f0d28a;}
@@ -95899,69 +95901,62 @@ if('serviceWorker' in navigator){
     return { deg:d, note:note };
   }
   function _seed(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967295; }
-  function naviBase(){
+  // 점수 = 4개 렌즈 평균(표시값과 항상 일치). 때·시(분단위)·환경(위치)·방위(나침반) 반영
+  function computeLenses(heading){
     var oh=myOh(), dt=new Date();
-    // 때와 시: 분(分) 단위로 변함 / 환경: 위치 좌표 거칠게 반영
     var tk=dt.getFullYear()+'-'+(dt.getMonth()+1)+'-'+dt.getDate()+'-'+dt.getHours()+'-'+dt.getMinutes();
     var env=window._naviEnv||'';
     var np=window._nasaPlanets||{}, jR=(np.jupiter&&np.jupiter.retro)?1:0, mR=(np.mars&&np.mars.retro)?1:0;
-    var L=[{k:'오행 방위',c:'#34d399'},{k:'기문둔갑',c:'#d4a843'},{k:'구성기학',c:'#60a5fa'},{k:'행성',c:'#a78bfa'}];
+    if(!LK) LK=luckyDeg();
+    var L=[{k:'오행 방위',c:'#34d399'},{k:'기문둔갑 8문',c:'#d4a843'},{k:'구성기학',c:'#60a5fa'},{k:'행성 트랜짓',c:'#a78bfa'}];
     for(var i=0;i<L.length;i++){ var sc=Math.round(55+_seed(oh+'|'+tk+'|'+env+'|'+L[i].k)*40); if(i===3) sc=sc+(jR?6:0)-(mR?9:0); L[i].score=Math.max(40,Math.min(98,sc)); }
-    var sum=L.reduce(function(a,l){return a+l.score;},0), base=Math.round(sum/L.length), acc=0;
+    // 방위(나침반)를 '오행 방위' 렌즈에 직접 반영 — 길방을 향할수록 높아짐
+    if(heading!=null){ var rel=Math.abs(((LK.deg-heading+540)%360)-180), align=1-rel/180; L[0].score=Math.max(40,Math.min(98, Math.round(46+align*52))); }
+    var sum=L.reduce(function(a,l){return a+l.score;},0), fusion=Math.round(sum/L.length), acc=0;
     for(var j=0;j<L.length;j++){ L[j].share=Math.round(L[j].score/sum*100); acc+=L[j].share; }
     L[0].share+=100-acc;
-    return { oh:oh, lenses:L, base:base };
-  }
-  function liveFusion(base, heading){
-    if(!LK) LK=luckyDeg();
-    if(heading==null) return base;
-    var rel=Math.abs(((LK.deg-heading+540)%360)-180), align=1-rel/180; // 방위 정렬도 0~1
-    return Math.max(40,Math.min(99, Math.round(base*(0.78+0.22*align)) ));
+    return { oh:oh, lenses:L, fusion:fusion };
   }
   function grade(s){ return s>=85?'대길(大吉) — 흐름이 아주 좋아요':(s>=70?'길(吉) — 무난히 좋은 날':(s>=55?'평(平) — 차분히 가면 좋아요':'주의 — 무리하지 마세요')); }
   function reading(oh,s){ var by={목:'새로운 시작과 만남',화:'표현과 추진',토:'안정과 마무리',금:'결단과 정리',수:'지혜와 휴식'};
     var t=s>=70?'길방으로 한 걸음 내디뎌 보세요.':(s>=55?'서두르지 말고 길방을 의식하며 걸어보세요.':'오늘은 큰 결정보다 가벼운 산책이 좋아요.');
     return (by[oh]||'좋은 기운')+'에 좋은 기운이 흐르는 날이에요. '+t; }
 
-  var BASE=null, LK=null, OH=null, CURMODE='idle', CURHEAD=null;
-  function refreshBase(){ LK=luckyDeg(); BASE=naviBase(); OH=BASE.oh; }
-  function panelTitle(m){ return m==='frozen'?'🔮 현재의 길방 융합 점수':(m==='run'?'🔮 측정 중… 길방 융합 점수':'🔮 길방 융합 점수'); }
+  var LK=null, OH=null, CURMODE='idle', CURHEAD=null;
+  function refreshBase(){ LK=luckyDeg(); OH=myOh(); }
   function renderPanel(mode, heading, stamp){
     CURMODE=mode; CURHEAD=heading;
-    if(!BASE) refreshBase();
     var host=$('cgn-score'); if(!host) return;
-    if(mode==='frozen'){
-      var f=liveFusion(BASE.base, heading);
-      var bar='<div class="cgn-fbar">';
-      for(var i=0;i<BASE.lenses.length;i++){ var l=BASE.lenses[i]; bar+='<div class="cgn-fseg" style="width:'+l.share+'%;background:'+l.c+';"></div>'; }
-      bar+='</div><div class="cgn-flegend">';
-      for(var k=0;k<BASE.lenses.length;k++){ var x=BASE.lenses[k]; bar+='<span><i style="background:'+x.c+'"></i>'+x.k+' <b>'+x.score+'</b></span>'; }
-      bar+='</div>';
-      host.innerHTML=
-        '<div class="lab">🔮 현재의 길방 융합 점수</div>'+
-        '<div class="big"><span id="cgn-bignum">'+f+'</span><small>점</small></div>'+
-        '<div class="grade">'+grade(f)+'</div>'+
-        bar+
-        '<div class="cgn-dir">'+OH_LABEL[OH]+' → '+OH_DIRNAME[OH]+' ('+Math.round(LK.deg)+'°)</div>'+
-        '<div class="cgn-read">'+reading(OH,f)+(LK.note?'<br><span style="opacity:.6;">'+LK.note+' · 실시간 NASA 행성 반영</span>':'')+'</div>'+
-        '<span class="cgn-live">'+(stamp||'')+' 기준 · 다시 측정하면 때·방위·환경에 따라 달라져요</span>';
-    } else if(mode==='run'){
-      var fr=liveFusion(BASE.base, heading);
-      host.innerHTML=
-        '<div class="lab">🔮 측정 중…</div>'+
-        '<div class="big"><span id="cgn-bignum">'+fr+'</span><small>점</small></div>'+
-        '<div class="cgn-runhint">몸을 천천히 돌려보세요<br><b>「📊 분석」</b>을 누르면 자세한 결과가 나와요</div>';
-    } else {
-      host.innerHTML=
-        '<div class="lab">🔮 길방 융합 점수</div>'+
-        '<div class="big" style="opacity:.3;"><span id="cgn-bignum">—</span></div>'+
-        '<div class="cgn-runhint"><b>「📷 나침반 시작」</b>을 누르면 측정이 시작돼요</div>';
+    if(mode==='idle'){
+      host.innerHTML='<div class="lab">🔮 길방 융합 점수</div><div class="big" style="opacity:.3;"><span id="cgn-bignum">—</span></div><div class="cgn-runhint"><b>「📷 나침반 시작」</b>을 누르면 측정이 시작돼요</div>';
+      return;
     }
+    var d=computeLenses(heading);
+    if(mode==='run'){
+      host.innerHTML='<div class="lab">🔮 측정 중…</div><div class="big"><span id="cgn-bignum">'+d.fusion+'</span><small>점</small></div><div class="cgn-runhint">몸을 천천히 돌려보세요<br><b>「📊 분석」</b>을 누르면 자세한 결과가 나와요</div>';
+      return;
+    }
+    // frozen — 상세 전체 (이미지처럼 · 풀 라벨 · 소제목)
+    var bar='<div class="cgn-fbar">';
+    for(var i=0;i<d.lenses.length;i++){ var l=d.lenses[i]; bar+='<div class="cgn-fseg" style="width:'+l.share+'%;background:'+l.c+';"></div>'; }
+    bar+='</div><div class="cgn-flegend">';
+    for(var k=0;k<d.lenses.length;k++){ var x=d.lenses[k]; bar+='<span><i style="background:'+x.c+'"></i>'+x.k+' <b>'+x.score+'</b></span>'; }
+    bar+='</div>';
+    host.innerHTML=
+      '<div class="lab">🔮 현재의 길방 융합 점수</div>'+
+      '<div class="big"><span id="cgn-bignum">'+d.fusion+'</span><small>점</small></div>'+
+      '<div class="grade">'+grade(d.fusion)+'</div>'+
+      bar+
+      '<div class="cgn-sech">내 오행 · 현재의 길방</div>'+
+      '<div class="cgn-dir">'+OH_LABEL[OH]+' → '+OH_DIRNAME[OH]+' ('+Math.round(LK.deg)+'°)</div>'+
+      (LK.note?'<div class="cgn-note2">'+LK.note+' · 실시간 NASA 행성 반영</div>':'')+
+      '<div class="cgn-sech">오늘의 한마디</div>'+
+      '<div class="cgn-read">'+reading(OH,d.fusion)+'</div>'+
+      '<span class="cgn-live">'+(stamp||'')+' 기준 · 다시 측정하면 때·방위·환경에 따라 달라져요</span>';
   }
   function updateLive(heading){
     CURHEAD=heading;
-    var m=new Date().getMinutes(); if(updateLive._m!==m){ updateLive._m=m; refreshBase(); }
-    var bn=$('cgn-bignum'); if(bn) bn.textContent=liveFusion(BASE.base, heading);
+    var bn=$('cgn-bignum'); if(bn){ var d=computeLenses(heading); bn.textContent=d.fusion; }
   }
 
   window.cgoNaviOpen=function(){
@@ -96039,7 +96034,7 @@ if('serviceWorker' in navigator){
   }
 })();
 </script>
-<!-- ════════════════ /🧭 나의 네비게이션 v5 ════════════════ -->
+<!-- ════════════════ /🧭 나의 네비게이션 v6 ════════════════ -->
 
 
 
