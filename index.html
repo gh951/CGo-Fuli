@@ -4241,6 +4241,15 @@ function updateTransitSectionWithNASA(planets) {
             if(arr6 && arr6.parentNode){ arr6.parentNode.style.display = 'none'; }
             var s6 = document.getElementById('cgosec6');
             if(s6) s6.style.display = 'none';
+            // [3칸삭제 A] 천지인(cgosec2)·ILI(cgosec4)·에너지서(cgosec5) 헤더+본문 숨김 (내용 제거됨)
+            ['cgosec2','cgosec4','cgosec5'].forEach(function(sid){
+              var a=document.getElementById('cgo-arr-'+sid);
+              if(a&&a.parentNode) a.parentNode.style.display='none';
+              var s=document.getElementById(sid);
+              if(s) s.style.display='none';
+            });
+            // [3칸삭제 A] 퀵네비 탭 qn2/qn4/qn5 숨김
+            ['qn2','qn4','qn5'].forEach(function(q){ var e=document.getElementById(q); if(e) e.style.display='none'; });
           }, 300);
 
           // ── STEP 5: 원하는 순서로 재정렬
@@ -4858,10 +4867,8 @@ function cgoGuideFeature(key){
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
       <div id="sec-cheon"></div>
-      <!-- ═══ /COSMIC ORDER ═══ -->
-
-
-        <div id="sec-bio"></div>
+<!-- [3칸삭제 A] 천지인 내용 제거 · 마커 유지 · 복구:index_before_3del.html -->
+<div id="sec-bio"></div>
         <!-- ✦ CGO FULI 생체 경계선 ✦ -->
         <div style="margin:22px 0;position:relative;display:flex;align-items:center;gap:12px;">
           <div style="flex:1;height:2px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.6));"></div>
@@ -4953,69 +4960,8 @@ function cgoGuideFeature(key){
           <!-- bioSkinResult 배너 제거 -->
         </div>
         <div id="sec-ili"></div>
-        <!-- ILI / BAI 카드 — 이미지 구조 그대로 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <!-- 왼쪽: ILI/CEI 게이지 -->
-          <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-              <div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:700;letter-spacing:.08em;" id="dash-score-label">ILI</div>
-              <!-- 스캔 완료 시 CEI 배지 표시 -->
-              <div id="dash-cei-badge" style="display:none;font-size:9px;padding:2px 7px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);border-radius:8px;color:#34d399;font-weight:800;">🧬 CEI</div>
-            </div>
-            <div style="font-size:11px;color:rgba(240,230,200,.6);margin-bottom:4px;" id="dash-score-sublabel">통합 라이프 인덱스</div>
-            <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px;">
-              <span id="dash-ili-num" style="font-size:48px;font-weight:900;color:#d4a843;font-family:'Orbitron',monospace;line-height:1;">--</span>
-              <span style="font-size:12px;color:rgba(240,230,200,.4);">/100</span>
-            </div>
-            <div id="dash-ili-bar-wrap" style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-              <div id="dash-ili-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#d4a843,#fbbf24);border-radius:3px;transition:width 1s;"></div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <div id="dash-ili-grade" style="display:inline-block;padding:2px 10px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:10px;font-size:11px;color:#d4a843;font-weight:700;">--</div>
-              <!-- ✦ C-25: NBTI 보정 시각화 뱃지 (검사 완료 시에만 표시) ✦ -->
-              <div id="dash-ili-nbti-badge" style="display:none;padding:2px 9px;background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(212,168,67,.08));border:1px solid rgba(168,85,247,.4);border-radius:10px;font-size:10px;color:#c4b5fd;font-weight:700;letter-spacing:.02em;" title="NBTI 검사 결과가 ILI에 반영되었습니다"></div>
-            </div>
-            <!-- 점수 구성 설명 (스캔 완료 시 표시) -->
-            <div id="dash-score-breakdown" style="display:none;margin-top:8px;padding:7px 10px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:8px;font-size:10px;color:rgba(240,230,200,.6);line-height:1.7;white-space:pre-line;"></div>
-          </div>
-          <!-- 오른쪽: BAI 카드들 -->
-          <div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
-            <div style="font-size:11px;color:rgba(240,230,200,.7);font-weight:700;margin-bottom:10px;">생체 활성도 지수 (BAI)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div>
-                <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:3px;">HRV</div>
-                <div id="dash-hrv-num" style="font-size:26px;font-weight:900;color:#38bdf8;font-family:'Orbitron',monospace;">--</div>
-                <div style="font-size:10px;color:rgba(240,230,200,.4);">ms 심박변이도</div>
-              </div>
-              <div>
-                <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:3px;">FCI</div>
-                <div id="dash-fci-num" style="font-size:26px;font-weight:900;color:#fbbf24;font-family:'Orbitron',monospace;">--</div>
-                <div style="font-size:10px;color:rgba(240,230,200,.4);">안면 혈색 지수</div>
-              </div>
-              <div>
-                <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:3px;">FMA</div>
-                <div id="dash-fma-num" style="font-size:26px;font-weight:900;color:#34d399;font-family:'Orbitron',monospace;">--</div>
-                <div style="font-size:10px;color:rgba(240,230,200,.4);">표정 활성도</div>
-              </div>
-              <div>
-                <div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:3px;">BLI</div>
-                <div id="dash-bli-num" style="font-size:26px;font-weight:900;color:#a78bfa;font-family:'Orbitron',monospace;">--</div>
-                <div style="font-size:10px;color:rgba(240,230,200,.4);">손금 분기 지수</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-
-
-
-
-        <!-- ✦ 4-7-8 아래 ✦ -->
-
-        <!-- ══ CGO-FULI 3권의 서 ══ -->
-        <!-- ★ C-40 박입 ⑩-1 — 대장님 명령: 대시보드에서 숨김 (데이터·JS 보존) -->
-        <div style="margin:32px 0 16px;display:none;">
+<!-- [3칸삭제 A] ILI 내용 제거 · 마커 유지 · 복구:index_before_3del.html -->
+<div style="margin:32px 0 16px;display:none;">
           <!-- 상단 구분선 -->
           <!-- ★ C-40 박입 ⑪ v5 — STEP 3가 이사시켜도 자기 style은 가져가므로 직접 박입 -->
           <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.4),rgba(167,139,250,.3),transparent);margin-bottom:18px;display:none;"></div>
@@ -5030,116 +4976,8 @@ function cgoGuideFeature(key){
           </div>
 
           <div id="sec-energy"></div>
-          <!-- 📜 Book 1: 순수 에너지 — 책 디자인 -->
-          <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){var t=document.getElementById('pure-lock-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}return;}_cgoBookOpen(1);})()"
-            style="position:relative;margin-bottom:12px;cursor:pointer;transition:all .25s;"
-            onmouseover="this.querySelector('.book-cover').style.boxShadow='0 6px 24px rgba(212,168,67,.4)'"
-            onmouseout="this.querySelector('.book-cover').style.boxShadow='0 3px 12px rgba(0,0,0,.4)'">
-            <div class="book-cover" style="position:relative;background:linear-gradient(135deg,#1a1206,#2a1e08,#1a1206);border:1px solid rgba(212,168,67,.5);border-left:6px solid rgba(212,168,67,.8);border-radius:3px 10px 10px 3px;padding:16px 18px 16px 16px;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.4);overflow:hidden;">
-              <!-- 책 무늬 배경 -->
-              <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(212,168,67,.03) 28px,rgba(212,168,67,.03) 29px);pointer-events:none;"></div>
-              <div style="position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(212,168,67,.15),transparent);pointer-events:none;"></div>
-              <div style="display:flex;align-items:center;gap:12px;position:relative;">
-                <div style="font-size:26px;filter:drop-shadow(0 0 10px rgba(212,168,67,.7));">📜</div>
-                <div style="flex:1;">
-                  <div style="font-size:13px;font-weight:900;color:#d4a843;letter-spacing:.04em;text-shadow:0 0 8px rgba(212,168,67,.4);">순수 역학 분석</div>
-                  <div style="font-size:10px;color:rgba(212,168,67,.55);margin-top:2px;">50대 역학 — 탭하여 정밀 분석</div>
-                  <div style="font-size:9px;color:rgba(52,211,153,.7);margin-top:4px;">✅ 정보 입력 즉시 활성화</div>
-                </div>
-                <div style="font-size:16px;color:rgba(212,168,67,.5);">›</div>
-              </div>
-              <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;position:relative;">
-                <span style="padding:2px 7px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);border-radius:10px;font-size:9px;color:#38bdf8;">아시아</span>
-                <span style="padding:2px 7px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:9px;color:#34d399;">유럽</span>
-                <span style="padding:2px 7px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:10px;font-size:9px;color:#d4a843;">중동</span>
-                <span style="padding:2px 7px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;font-size:9px;color:#a78bfa;">아메리카</span>
-              </div>
-              <!-- 페이지 두께 효과 -->
-              <div style="position:absolute;right:-3px;top:4px;bottom:4px;width:4px;background:linear-gradient(90deg,rgba(212,168,67,.2),rgba(240,230,200,.15));border-radius:0 2px 2px 0;"></div>
-            </div>
-          </div>
-
-          <!-- 🛸 Book 2: 실시간 에너지 — 책 디자인 (계단 8px) -->
-          <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){alert('먼저 정보를 입력하고 ⚡ 자동 계산을 눌러주세요!');return;}_cgoBookOpen(2);})()"
-            style="position:relative;margin-bottom:10px;cursor:pointer;transition:all .25s;"
-            onmouseover="this.querySelector('.book-cover').style.boxShadow='0 6px 24px rgba(56,189,248,.4)'"
-            onmouseout="this.querySelector('.book-cover').style.boxShadow='0 3px 12px rgba(0,0,0,.4)'">
-            <div class="book-cover" style="position:relative;background:linear-gradient(135deg,#061825,#0a2035,#061825);border:1px solid rgba(56,189,248,.5);border-left:6px solid rgba(56,189,248,.8);border-radius:3px 10px 10px 3px;padding:16px 18px 16px 16px;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.5);overflow:hidden;">
-              <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(56,189,248,.03) 28px,rgba(56,189,248,.03) 29px);pointer-events:none;"></div>
-              <div style="position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.15),transparent);pointer-events:none;"></div>
-              <div style="display:flex;align-items:center;gap:12px;position:relative;">
-                <div style="font-size:26px;filter:drop-shadow(0 0 10px rgba(56,189,248,.7));">🛸</div>
-                <div style="flex:1;">
-                  <div style="font-size:13px;font-weight:900;color:#38bdf8;letter-spacing:.04em;text-shadow:0 0 8px rgba(56,189,248,.4);">실시간 데이터 연동 분석</div>
-                  <div style="font-size:10px;color:rgba(56,189,248,.55);margin-top:2px;">NASA × 기상 — 탭하여 정밀 분석</div>
-                  <div style="font-size:9px;color:rgba(52,211,153,.7);margin-top:4px;">✅ 정보 입력 즉시 활성화</div>
-                </div>
-                <div style="font-size:16px;color:rgba(56,189,248,.5);">›</div>
-              </div>
-              <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;position:relative;">
-                <span style="padding:2px 7px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);border-radius:10px;font-size:9px;color:#38bdf8;">🛸 NASA 실시간</span>
-                <span style="padding:2px 7px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:9px;color:#34d399;">🌡️ 기상 연동</span>
-                <span style="padding:2px 7px;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.3);border-radius:10px;font-size:9px;color:#d4a843;">🧭 방위 에너지</span>
-              </div>
-              <div style="position:absolute;right:-3px;top:4px;bottom:4px;width:4px;background:linear-gradient(90deg,rgba(56,189,248,.2),rgba(200,230,255,.15));border-radius:0 2px 2px 0;"></div>
-            </div>
-          </div>
-
-          <!-- 🧬 Book 3: rPPG 생체 에너지 — 책 디자인 (계단 16px) -->
-          <div id="book3-card" onclick="(function(){var bfd=window._bioFinalData||{};var ok=window._baiScanned||(bfd.fci>0||bfd.hrv>0);if(!ok){var t=document.getElementById('book3-tip');if(t){t.style.display='block';setTimeout(function(){t.style.display='none';},3000);}return;}_cgoBookOpen(3);})()"
-            style="position:relative;margin-bottom:10px;cursor:pointer;transition:all .25s;opacity:.75;"
-            onmouseover="this.querySelector('.book-cover').style.boxShadow='0 6px 24px rgba(52,211,153,.4)'"
-            onmouseout="this.querySelector('.book-cover').style.boxShadow='0 3px 12px rgba(0,0,0,.4)'">
-            <div class="book-cover" style="position:relative;background:linear-gradient(135deg,#041a10,#082a18,#041a10);border:1px solid rgba(52,211,153,.35);border-left:6px solid rgba(52,211,153,.7);border-radius:3px 10px 10px 3px;padding:16px 18px 16px 16px;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.5);overflow:hidden;">
-              <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(52,211,153,.03) 28px,rgba(52,211,153,.03) 29px);pointer-events:none;"></div>
-              <div style="display:flex;align-items:center;gap:12px;position:relative;">
-                <div style="font-size:26px;filter:drop-shadow(0 0 10px rgba(52,211,153,.5));">🧬</div>
-                <div style="flex:1;">
-                  <div style="font-size:13px;font-weight:900;color:#34d399;letter-spacing:.04em;">실시간 rPPG 데이터 연동 분석</div>
-                  <div style="font-size:10px;color:rgba(52,211,153,.55);margin-top:2px;">생체 신호 × NASA × 역학 융합</div>
-                  <div id="book3-status" style="font-size:9px;color:rgba(248,113,113,.7);margin-top:4px;">🔒 CGO FULI 생체 스캔 완료 후 활성화</div>
-                </div>
-                <div style="font-size:16px;color:rgba(52,211,153,.3);">›</div>
-              </div>
-              <div style="margin-top:8px;display:flex;gap:4px;position:relative;">
-                <span style="padding:2px 7px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);border-radius:10px;font-size:9px;color:#34d399;">🧬 rPPG 생체</span>
-                <span style="padding:2px 7px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:10px;font-size:9px;color:#fca5a5;">❤️ 심박·HRV</span>
-              </div>
-              <div style="position:absolute;right:-3px;top:4px;bottom:4px;width:4px;background:linear-gradient(90deg,rgba(52,211,153,.2),rgba(180,255,220,.15));border-radius:0 2px 2px 0;"></div>
-              <div id="book3-tip" style="display:none;position:absolute;bottom:0;left:0;right:0;padding:5px 10px;background:rgba(248,113,113,.15);border-top:1px solid rgba(248,113,113,.3);font-size:9px;color:#fca5a5;text-align:center;">CGO FULI 생체 스캔을 먼저 완료해주세요 🔒</div>
-            </div>
-          </div>
-
-          <!-- 🔮 Book 4: 심층 심리·운명의 서 -->
-          <div onclick="(function(){var r=window.calcResult;if(!r||!r.y||!r.name){alert('먼저 정보를 입력하고 ⚡ 자동 계산을 눌러주세요!');return;}_cgoBookOpen(4);})()"
-            style="position:relative;margin-bottom:10px;cursor:pointer;transition:all .25s;"
-            onmouseover="this.querySelector('.book-cover').style.boxShadow='0 6px 24px rgba(168,85,247,.4)'"
-            onmouseout="this.querySelector('.book-cover').style.boxShadow='0 4px 16px rgba(0,0,0,.5)'">
-            <div class="book-cover" style="position:relative;background:linear-gradient(135deg,#110820,#1e0f35,#110820);border:1px solid rgba(168,85,247,.5);border-left:6px solid rgba(168,85,247,.8);border-radius:3px 10px 10px 3px;padding:16px 18px 16px 16px;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.5);overflow:hidden;">
-              <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(168,85,247,.03) 28px,rgba(168,85,247,.03) 29px);pointer-events:none;"></div>
-              <div style="position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.15),transparent);pointer-events:none;"></div>
-              <div style="display:flex;align-items:center;gap:12px;position:relative;">
-                <div style="font-size:26px;filter:drop-shadow(0 0 10px rgba(168,85,247,.8));">🔮</div>
-                <div style="flex:1;">
-                  <div style="font-size:13px;font-weight:900;color:#c4b5fd;letter-spacing:.04em;text-shadow:0 0 8px rgba(168,85,247,.4);">심층 심리 · 운명의 서</div>
-                  <div style="font-size:10px;color:rgba(168,85,247,.55);margin-top:2px;">CGO-NBTI 성격 × 타로 78장 × 역학 융합</div>
-                  <div style="font-size:9px;color:rgba(52,211,153,.7);margin-top:4px;">✅ 정보 입력 즉시 활성화</div>
-                </div>
-                <div style="font-size:16px;color:rgba(168,85,247,.5);">›</div>
-              </div>
-              <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;position:relative;">
-                <span style="padding:2px 7px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.3);border-radius:10px;font-size:9px;color:#d4a843;">🃏 타로 78장</span>
-                <span style="padding:2px 7px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;font-size:9px;color:#c4b5fd;">🧠 NBTI 연동</span>
-                <span style="padding:2px 7px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:10px;font-size:9px;color:#38bdf8;">📚 역학 10개</span>
-                <span style="padding:2px 7px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:9px;color:#34d399;">🤖 AI 상담</span>
-              </div>
-              <div style="position:absolute;right:-3px;top:4px;bottom:4px;width:4px;background:linear-gradient(90deg,rgba(168,85,247,.2),rgba(220,200,255,.15));border-radius:0 2px 2px 0;"></div>
-            </div>
-          </div>
-          <!-- 하단 구분선 -->
-          <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.3),rgba(212,168,67,.4),transparent);margin:8px 0 16px;"></div>
-
-          <div id="sec-chat"></div>
+<!-- [3칸삭제 A] 에너지서 내용 제거 · 마커 유지 · 복구:index_before_3del.html -->
+<div id="sec-chat"></div>
           <!-- 💬 CGO 메신저 카드 -->
           <!-- [메신저 분리] 대시보드 메신저 카드 제거 -->
         <!-- ═══ 팝업1: 메인 전체화면 ═══ -->
