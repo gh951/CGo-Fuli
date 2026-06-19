@@ -5229,7 +5229,7 @@ function cgoGuideFeature(key){
         </div>
 
         <!-- ═══ 팝업2: 카드 확대 (팝업1 위) ═══ -->
-        <div id="qt-card-popup" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(2,5,12,.96);flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+        <div id="qt-card-popup" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(2,5,12,.96);flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;">
           <div style="position:relative;max-width:320px;width:100%;">
             <img id="qt-zoom-img" alt="" style="width:100%;border-radius:16px;border:3px solid rgba(212,168,67,.6);box-shadow:0 0 40px rgba(212,168,67,.3);">
             <div style="text-align:center;margin-top:12px;">
@@ -27160,11 +27160,13 @@ window.tvyShowIntroPopup = function(){
     #page-tnbti .tn-btn.primary{background:linear-gradient(135deg,#c79bff,#7c5cff);color:#fff;}
     #page-tnbti .tn-btn.gold{background:linear-gradient(135deg,#d4a843,#fbbf24);color:#1a1306;}
     #page-tnbti .tn-btn.ghost{background:rgba(255,255,255,.05);color:#efe9f6;border:1px solid rgba(255,255,255,.12);}
-    #page-tnbti .tn-card{position:relative;margin:0 auto;width:170px;aspect-ratio:2/3;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px solid rgba(212,168,67,.5);background:linear-gradient(160deg,#1a1230,#241640,#1a1230);box-shadow:0 10px 40px rgba(124,92,255,.25);}
-    #page-tnbti .tn-card .num{position:absolute;top:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(212,168,67,.7);letter-spacing:.2em;}
-    #page-tnbti .tn-card .ico{font-size:46px;filter:drop-shadow(0 0 14px rgba(199,155,255,.6));}
-    #page-tnbti .tn-card .kr{font-size:18px;font-weight:900;color:#f0e6c8;}
-    #page-tnbti .tn-card .en{font-size:10px;color:rgba(199,155,255,.7);letter-spacing:.08em;}
+    #page-tnbti .tn-card{position:relative;margin:0 auto;width:min(72vw,230px);aspect-ratio:2/3;border-radius:16px;overflow:hidden;border:2px solid rgba(212,168,67,.5);background:linear-gradient(160deg,#1a1230,#241640,#1a1230);box-shadow:0 10px 40px rgba(124,92,255,.25);}
+    #page-tnbti .tn-card .num{position:absolute;top:10px;left:0;right:0;z-index:2;text-align:center;font-size:11px;color:rgba(212,168,67,.9);letter-spacing:.2em;text-shadow:0 1px 4px rgba(0,0,0,.8);}
+    #page-tnbti .tn-card .tn-cimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+    #page-tnbti .tn-card .tn-cfb{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:54px;filter:drop-shadow(0 0 14px rgba(199,155,255,.6));}
+    #page-tnbti .tn-card .tn-cname{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:16px 8px 10px;text-align:center;background:linear-gradient(0deg,rgba(10,7,18,.96),rgba(10,7,18,.5),transparent);}
+    #page-tnbti .tn-card .tn-cname .kr{display:block;font-size:18px;font-weight:900;color:#fff;}
+    #page-tnbti .tn-card .tn-cname .en{font-size:10px;color:rgba(220,210,255,.85);letter-spacing:.08em;}
     #page-tnbti .tn-label{text-align:center;font-size:12px;font-weight:800;color:#c79bff;margin:18px 0 6px;letter-spacing:.05em;}
     #page-tnbti .tn-soul{text-align:center;font-size:12px;color:rgba(235,228,248,.7);line-height:1.7;padding:0 12px;margin-top:10px;}
     #page-tnbti .tn-mean{text-align:center;font-size:12px;color:rgba(235,228,248,.6);margin-top:10px;line-height:1.7;}
@@ -27220,11 +27222,10 @@ window.tvyShowIntroPopup = function(){
   var TN_IMG='https://raw.githubusercontent.com/gh951/CGo-Fuli/main/CGO-FULI-Tarot/';
   function setCard(elId, card){
     var el=$(elId);
-    el.querySelector('.num').textContent='✦ '+String(card[0])+' ✦';
-    var ico=el.querySelector('.ico');
-    ico.innerHTML='<img src="'+TN_IMG+card[0]+'.jpeg" alt="" style="width:120px;height:auto;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.45);display:block;" onerror="this.parentNode.textContent=\'🃏\';">';
-    el.querySelector('.kr').textContent=card[1];
-    el.querySelector('.en').textContent=card[2];
+    el.innerHTML='<div class="num">✦ '+card[0]+' ✦</div>'
+      +'<img class="tn-cimg" src="'+(window.tarotImgFile?window.tarotImgFile(card[0]):TN_IMG+card[0]+'.jpeg')+'" alt="" onerror="this.style.display=\'none\';this.parentNode.querySelector(\'.tn-cfb\').style.display=\'flex\';">'
+      +'<div class="tn-cfb">🃏</div>'
+      +'<div class="tn-cname"><span class="kr">'+card[1]+'</span><span class="en">'+card[2]+'</span></div>';
   }
   window.tnShow=function(name){
     ['need','soul','result'].forEach(function(s){ var el=$('tn-'+s); if(el) el.classList.toggle('on', s===name); });
@@ -27313,7 +27314,7 @@ window.tvyShowIntroPopup = function(){
     #page-fusion3 .f3-back:hover{border-color:rgba(212,168,67,.9);transform:translateY(-3px);} #page-fusion3 .f3-back:active{transform:scale(.94);}
     #page-fusion3 .f3-back-star{font-size:20px;color:rgba(212,168,67,.6);animation:f3tw 2.5s ease-in-out infinite;} @keyframes f3tw{0%,100%{opacity:.35}50%{opacity:1}}
     #page-fusion3 .f3-back-lbl{font-size:7px;letter-spacing:.15em;color:rgba(212,168,67,.45);font-weight:800;}
-    #page-fusion3 .f3-card{position:relative;margin:6px auto 0;width:160px;aspect-ratio:2/3;border-radius:14px;overflow:hidden;border:2px solid rgba(212,168,67,.55);background:linear-gradient(160deg,#1a1230,#241640);animation:f3flip .55s ease;}
+    #page-fusion3 .f3-card{position:relative;margin:6px auto 0;width:min(70vw,240px);aspect-ratio:2/3;border-radius:14px;overflow:hidden;border:2px solid rgba(212,168,67,.55);background:linear-gradient(160deg,#1a1230,#241640);animation:f3flip .55s ease;}
     @keyframes f3flip{0%{transform:rotateY(90deg);opacity:.2}100%{transform:rotateY(0);opacity:1}}
     #page-fusion3 .f3-cimg{width:100%;height:100%;object-fit:cover;display:block;} #page-fusion3 .f3-cfb{width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;} #page-fusion3 .f3-cfb .ico{font-size:42px;} #page-fusion3 .f3-cfb .kr{font-size:14px;font-weight:900;color:#f0e6c8;}
     #page-fusion3 .f3-cname{position:absolute;left:0;right:0;bottom:0;padding:8px 6px;text-align:center;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(0deg,rgba(10,7,18,.93),transparent);}
@@ -27538,7 +27539,7 @@ window.tvyShowIntroPopup = function(){
   var CC={'동양':'#38bdf8','인도':'#f472b6','서양':'#a78bfa','기타':'#d4a843'};
   var curCard=null, f3sel=[], chatHist=[], spread=[], curMode='pure', lastAnalysis='', lastMode='';
   function $(id){return document.getElementById(id);}
-  function imgUrl(id){return TBASE+id+'.jpeg';}
+  function imgUrl(id){return (window.tarotImgFile?window.tarotImgFile(id):TBASE+id+'.jpeg');}
   function mbti(){try{return localStorage.getItem('cgo_mbti52_type')||'';}catch(e){return '';}}
   window.f3Enter=function(){ f3SyncMbti(); f3RenderPicker(); f3UpdateSel(); f3SpreadTarot(); f3Baseline(); if(!$('f3-msgs').childElementCount) f3Greet(); };
   window.f3Acc=function(k){var b=$('f3-body-'+k),a=$('f3-arr-'+k);if(!b)return;var o=b.classList.toggle('on');if(a)a.textContent=o?'▲':'▼';};
@@ -54877,7 +54878,7 @@ function cgoFusionRender() {
   // ── 타로 카드 키워드 ──
   var _cardKey = (_card.key && _card.key.length) ? _card.key.join(' · ') : (_card.name || '카드');
   var _cardIcon = _card.icon || '🃏';
-  var _cardImg = _card.img || '';
+  var _cardImg = (window.tarotImgFile ? window.tarotImgFile(_card.id) : (_card.img || ''));
   var _cardKeyArr = _card.key || [_card.name];
 
   // ── ILI 등급 ──
@@ -57427,6 +57428,19 @@ document.addEventListener('DOMContentLoaded',function(){
 var _GK = [''].join('');
 // ✦ CGO-FULI 타로 79장 (메이저 22 + FULI 조커 + 마이너 56)
 var _TAROT_IMG_BASE = 'https://raw.githubusercontent.com/gh951/CGo-Fuli/main/CGO-FULI-Tarot/';
+// ★ 타로 id → 실제 파일명 (메이저 0~22=숫자 / 마이너 23~78=wand_/cup_/sword_/pent_ 이름)
+window.tarotImgFile=function(id){
+  id=+id; var B=_TAROT_IMG_BASE;
+  if(isNaN(id)) return B+'0.jpeg';
+  if(id<=22) return B+id+'.jpeg';
+  var s,o;
+  if(id<=36){s='wand';o=id-23;}
+  else if(id<=50){s='cup';o=id-37;}
+  else if(id<=64){s='sword';o=id-51;}
+  else {s='pent';o=id-65;}
+  var r=(o<=9)?String(o+1):['page','knight','queen','king'][o-10];
+  return B+s+'_'+r+'.jpeg';
+};
 var QT_TAROT = [
   {id:0,  name:'바보',           icon:'🌟', key:['자유','새출발','용기'],      img:_TAROT_IMG_BASE+'0.jpeg'},
   {id:1,  name:'마법사',         icon:'🪄', key:['의지','창조','실행'],        img:_TAROT_IMG_BASE+'1.jpeg'},
