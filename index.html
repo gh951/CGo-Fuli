@@ -82408,15 +82408,16 @@ function stkLiveTopStocks(myIdx) {
       // ★ 100% 정직 - 앱 표준 패턴 (여행 페이지와 동일)
       // total = ss.score + nasaBonus + wave + _stkPersonal
       var nameHash = c.n.split('').reduce(function(h,ch){ return h*31+ch.charCodeAt(0); }, 0);
-      var tkHash = (c.t||'').split('').reduce(function(h,ch){ return h*17+ch.charCodeAt(0); }, 0);
-      var wave = Math.round(Math.sin((tick + nameHash*1.7) * 0.4) * 4);  // ±4 실시간
-      // ★ FIX: 종목 고유 기운(이름·티커 기반 안정값) — 같은 섹터라도 종목마다 점수 차별화
-      var stockOwn = (Math.abs(nameHash) % 15) - 7 + (Math.abs(tkHash) % 9) - 4;  // 약 ±11
+      var tkHash = (c.t||'').split('').reduce(function(h,ch){ return (h*17+ch.charCodeAt(0))>>>0; }, 0);
+      var wave = Math.round(Math.sin((tick + nameHash*1.7) * 0.4) * 3);  // ±3 실시간 미세변동
+      // ★ FIX2: 종목 고유 기운 0~99 균일값(이름·티커·설립일) — 수천 종목이 5종값에 몰리던 문제 해결
+      var fNum = parseInt((((c.f||'')+'').replace(/\D/g,'')).slice(0,8),10) || 19900101;
+      var ownSeed = ((Math.abs(nameHash)>>>0) ^ ((tkHash*2654435761)>>>0) ^ ((fNum*40503)>>>0))>>>0;
+      var ownEnergy = ownSeed % 100;  // 0~99 종목 고유 기운
 
-      // ★ FIX: 사주 궁합(compat)을 점수에 실제 반영 + 종목 고유기운 → TOP 30이 종목마다 다른 점수
-      // 점수 = 섹터 오행 랭킹*0.45 + 사주궁합*0.38 + 종목고유 + NASA + 파동 + 개인보정
-      var total = Math.min(96, Math.max(38, Math.round(
-        ss.score*0.45 + compat.score*0.38 + stockOwn + nasaBonus + wave + _stkPersonal + 6
+      // 점수 = 종목 고유기운(주 60%) + 사주궁합 28% + 섹터 10% + NASA + 개인 + 미세파동
+      var total = Math.min(98, Math.max(32, Math.round(
+        ownEnergy*0.60 + compat.score*0.28 + ss.score*0.10 + nasaBonus + _stkPersonal + wave
       )));
       return {
         name:c.n, ticker:c.t, flag:c.c||'🌐',
@@ -82627,15 +82628,17 @@ function stkRenderToday() {
     var ei = (rawEi >= 0 && rawEi <= 4) ? rawEi : 3;
     var ss = sectorScores.find(function(s){ return s.idx === ei; }) || {score:50};
     
-    // 종목별 고유 파동 (날짜 고정, ±4)
+    // 종목별 고유 기운 (날짜 고정)
     var nameHash = c.n.split('').reduce(function(h,ch){ return h*31+ch.charCodeAt(0); }, 0);
-    var tkHash = (c.t||'').split('').reduce(function(h,ch){ return h*17+ch.charCodeAt(0); }, 0);
-    var wave = Math.round(Math.sin((dateSeed + nameHash*1.7) * 0.4) * 4);
-    // ★ FIX: 종목 고유 기운(이름·티커) — 같은 오행이라도 종목마다 점수 차별화 (전엔 다 동일 55)
-    var stockOwn = (Math.abs(nameHash) % 15) - 7 + (Math.abs(tkHash) % 9) - 4;  // 약 ±11
+    var tkHash = (c.t||'').split('').reduce(function(h,ch){ return (h*17+ch.charCodeAt(0))>>>0; }, 0);
+    var wave = Math.round(Math.sin((dateSeed + nameHash*1.7) * 0.4) * 3);
+    // ★ FIX2: 종목 고유 기운 0~99(이름·티커·설립일) — 같은 오행이라도 종목마다 다름
+    var fNum = parseInt((((c.f||'')+'').replace(/\D/g,'')).slice(0,8),10) || 19900101;
+    var ownSeed = ((Math.abs(nameHash)>>>0) ^ ((tkHash*2654435761)>>>0) ^ ((fNum*40503)>>>0))>>>0;
+    var ownEnergy = ownSeed % 100;
 
-    // ★ FIX: 종목 고유기운 반영 → TOP 5가 종목마다 다른 점수 (운수 픽이라 높은 점수대)
-    var total = Math.min(97, Math.max(58, Math.round(ss.score*0.5 + stockOwn + nasaBonus + wave + _stkPersonal + 42)));
+    // 점수 = 종목 고유기운(주) + 섹터 오행 + NASA + 개인 + 미세파동 (운수 픽이라 높은 대)
+    var total = Math.min(98, Math.max(60, Math.round(ownEnergy*0.42 + ss.score*0.28 + nasaBonus + _stkPersonal + wave + 30)));
     
     return {
       name: c.n, ticker: c.t, flag: c.c || '🌐',
