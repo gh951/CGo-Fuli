@@ -82627,12 +82627,15 @@ function stkRenderToday() {
     var ei = (rawEi >= 0 && rawEi <= 4) ? rawEi : 3;
     var ss = sectorScores.find(function(s){ return s.idx === ei; }) || {score:50};
     
-    // 종목별 고유 파동 (사용자 어지럼 X, ±4)
+    // 종목별 고유 파동 (날짜 고정, ±4)
     var nameHash = c.n.split('').reduce(function(h,ch){ return h*31+ch.charCodeAt(0); }, 0);
+    var tkHash = (c.t||'').split('').reduce(function(h,ch){ return h*17+ch.charCodeAt(0); }, 0);
     var wave = Math.round(Math.sin((dateSeed + nameHash*1.7) * 0.4) * 4);
-    
-    // 앱 표준 공식: ss.score + nasaBonus + wave + _stkPersonal
-    var total = Math.min(95, Math.max(40, ss.score + nasaBonus + wave + _stkPersonal));
+    // ★ FIX: 종목 고유 기운(이름·티커) — 같은 오행이라도 종목마다 점수 차별화 (전엔 다 동일 55)
+    var stockOwn = (Math.abs(nameHash) % 15) - 7 + (Math.abs(tkHash) % 9) - 4;  // 약 ±11
+
+    // ★ FIX: 종목 고유기운 반영 → TOP 5가 종목마다 다른 점수 (운수 픽이라 높은 점수대)
+    var total = Math.min(97, Math.max(58, Math.round(ss.score*0.5 + stockOwn + nasaBonus + wave + _stkPersonal + 42)));
     
     return {
       name: c.n, ticker: c.t, flag: c.c || '🌐',
