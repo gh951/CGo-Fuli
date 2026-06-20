@@ -106116,7 +106116,7 @@ function stkLiveTopStocks(myIdx) {
     if(sampledDB.indexOf(STK_AI_CACHE[k]) < 0) sampledDB.push(STK_AI_CACHE[k]);
   });
 
-  return sampledDB.filter(function(c){ return c.t && c.t !== 'N/A'; })
+  var _arr = sampledDB.filter(function(c){ return c.t && c.t !== 'N/A'; })
     .map(function(c, i){
       // ★ v2.0.2 핀셋: ei 값 0~4로 안전 처리 (5는 STK_ELEM 범위 밖)
       var rawEi = c.ei !== undefined ? c.ei : 3;
@@ -106147,6 +106147,9 @@ function stkLiveTopStocks(myIdx) {
     })
     .sort(function(a,b){ return b.rank_seed - a.rank_seed; })
     .slice(0, 30);
+  // 동점 제거: 같은 점수면 1씩 내려 고유 순위 (실제 랭킹처럼)
+  for(var _i=1;_i<_arr.length;_i++){ if(_arr[_i].score>=_arr[_i-1].score){ _arr[_i].score=Math.max(40,_arr[_i-1].score-1); } }
+  return _arr;
 }
 
 
@@ -106378,6 +106381,8 @@ function stkRenderToday() {
   })
   .sort(function(a,b){ return b.score - a.score; })
   .slice(0, 5);
+  // 동점 제거: 같은 점수면 1씩 내려 고유 순위
+  for(var _pi=1;_pi<picks.length;_pi++){ if(picks[_pi].score>=picks[_pi-1].score){ picks[_pi].score=Math.max(40,picks[_pi-1].score-1); } }
   
   // 렌더링
   if (picks.length === 0) {
