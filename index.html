@@ -115799,10 +115799,10 @@ function stkPickItem(obj) {
 // ── 선택 정보 칩 표시 ─────────────────────────────────────
 // ── 실시간 시세 연동 (Twelve Data via /api/stock) C-build ──
 var STK_KR_TICKERS = {'삼성전자':'005930','SK하이닉스':'000660','현대차':'005380','기아':'000270','카카오':'035720','네이버':'035420','NAVER':'035420','LG에너지솔루션':'373220','삼성바이오로직스':'207940','삼성SDI':'006400','삼성전기':'009150','삼성생명':'032830','삼성물산':'028260','POSCO홀딩스':'005490','포스코':'005490','셀트리온':'068270','KB금융':'105560','신한지주':'055550','하나금융지주':'086790','현대모비스':'012330','LG화학':'051910','SK이노베이션':'096770','한화에어로스페이스':'012450','두산에너빌리티':'034020','HD현대중공업':'329180','한화오션':'042660','크래프톤':'259960','카카오뱅크':'323410','SK스퀘어':'402340','기아차':'000270'};
-var STK_COUNTRY_CODES = {'KR':1,'US':1,'JP':1,'CN':1,'TW':1,'DE':1,'FR':1,'NL':1,'GB':1,'IN':1,'CA':1,'AU':1,'HK':1,'SG':1,'한국':1,'해외':1,'home':1,'symbol':1,'shape':1,'':1};
+var STK_COUNTRY_CODES = {'KR':1,'US':1,'JP':1,'CN':1,'TW':1,'DE':1,'FR':1,'NL':1,'GB':1,'IN':1,'CA':1,'AU':1,'HK':1,'SG':1,'UK':1,'한국':1,'해외':1,'기타':1,'home':1,'symbol':1,'shape':1,'':1};
 function stkResolveSymbol(obj){
   var t=(obj.t||'').trim();
-  if(t && !STK_COUNTRY_CODES[t] && (/^[A-Z]{1,5}([.\-][A-Z0-9]+)?$/.test(t) || /^\d{4,6}$/.test(t))) return {symbol:t, kr:/^\d/.test(t)};
+  if(t && !STK_COUNTRY_CODES[t] && /^[A-Za-z0-9][A-Za-z0-9.\-]{0,11}$/.test(t)) return {symbol:t, kr:/^\d{6}$/.test(t)};
   if(STK_KR_TICKERS[obj.n]) return {symbol:STK_KR_TICKERS[obj.n], kr:true};
   return null;
 }
@@ -115813,7 +115813,8 @@ function stkFetchPrice(obj){
   if(!sym){ box.style.display='none'; return; }
   box.style.display='block';
   box.innerHTML='<span style="font-size:11px;color:rgba(180,200,216,.7)">💰 현재가 불러오는 중…</span>';
-  fetch('/api/stock?symbol='+encodeURIComponent(sym.symbol)+(sym.kr?'&country=KR':''))
+  var _cc=''; try{ if(obj.c && typeof _stkFlagCode==='function') _cc=_stkFlagCode(obj.c); }catch(e){} if(!_cc && sym.kr) _cc='KR';
+  fetch('/api/stock?symbol='+encodeURIComponent(sym.symbol)+'&cc='+encodeURIComponent(_cc))
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||!d.ok||d.price==null){ box.style.display='none'; return; }
