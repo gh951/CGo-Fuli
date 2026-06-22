@@ -20724,6 +20724,8 @@ var fcSystems = {
           </div>
           <!-- 실제 주가 표시 패널 (C-build 시세연동) 복구:index_before_price.html -->
           <div id="stk-live-price" style="display:none;margin-top:10px;padding:9px 14px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.22);border-radius:8px;"></div>
+          <!-- 🌐 뉴스 오행 날씨 (C-60) -->
+          <div id="stk-news-weather" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.2);border-radius:8px;"></div>
           <!-- 빠른 선택 버튼 -->
           <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px;">
             <span style="font-size:10px;color:var(--text-3);width:100%;margin-bottom:2px;">🔥 인기 종목</span>
@@ -115780,6 +115782,32 @@ function stkResolveSymbol(obj){
   if(STK_KR_TICKERS[obj.n]) return {symbol:STK_KR_TICKERS[obj.n], kr:true};
   return null;
 }
+function stkFetchNews(obj){
+  var box=document.getElementById('stk-news-weather'); if(!box) return;
+  if(!obj || !obj.n){ box.style.display='none'; return; }
+  var cc=''; try{ if(obj.c && typeof _stkFlagCode==='function') cc=_stkFlagCode(obj.c); }catch(e){}
+  var LG={KR:['ko','KR'],US:['en','US'],JP:['ja','JP'],CN:['zh','CN'],GB:['en','GB'],DE:['de','DE'],FR:['fr','FR'],IT:['it','IT'],ES:['es','ES'],BR:['pt','BR'],IN:['en','IN'],ID:['id','ID'],NL:['nl','NL'],CA:['en','CA'],AU:['en','AU'],SE:['sv','SE'],NO:['no','NO']};
+  var lg=LG[cc]||['en','US'];
+  box.style.display='block';
+  box.innerHTML='<div style="font-size:11px;color:rgba(180,200,216,0.7);">🌐 뉴스 기운 분석 중...</div>';
+  fetch('/api/news?q='+encodeURIComponent(obj.n)+'&lang='+lg[0]+'&gl='+lg[1])
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d || !d.ok){ box.style.display='none'; return; }
+      var heads='';
+      (d.headlines||[]).forEach(function(h){
+        var ttl=(h.title||'').replace(/</g,'&lt;');
+        heads+='<a href="'+(h.link||'#')+'" target="_blank" rel="noopener" style="display:block;font-size:10.5px;color:rgba(200,215,230,0.78);text-decoration:none;margin-top:4px;line-height:1.45;border-left:2px solid rgba(255,255,255,0.12);padding-left:7px;">• '+ttl+(h.source?' <span style=\'color:rgba(150,170,190,0.6);\'>('+h.source+')</span>':'')+'</a>';
+      });
+      box.innerHTML='<div style="display:flex;align-items:center;gap:8px;">'
+        +'<span style="font-size:22px;">'+d.weather+'</span>'
+        +'<div><div style="font-size:12.5px;font-weight:800;color:'+d.color+';">오늘 뉴스 기운: '+d.weatherLabel+' · '+d.element+'</div>'
+        +'<div style="font-size:10.5px;color:rgba(190,205,220,0.72);margin-top:1px;">'+d.message+'</div></div></div>'
+        +(heads?'<div style="margin-top:7px;">'+heads+'</div>':'')
+        +'<div style="font-size:9px;color:rgba(150,165,180,0.55);margin-top:6px;">⚠️ '+(d.disclaimer||'뉴스 기운은 참고용이며 투자 권유가 아닙니다.')+'</div>';
+    })
+    .catch(function(){ box.style.display='none'; });
+}
 function stkFetchPrice(obj){
   var box=document.getElementById('stk-live-price');
   if(!box) return;
@@ -115813,7 +115841,7 @@ function stkFetchPrice(obj){
 }
 function stkResetPage(){
   try{ window.stkSelected=null; }catch(e){}
-  ['stk-selected-info','stk-result','stk-ai-status'].forEach(function(id){
+  ['stk-selected-info','stk-result','stk-ai-status','stk-news-weather'].forEach(function(id){
     var el=document.getElementById(id); if(el){ el.style.display='none'; }
   });
   var s=document.getElementById('stk-search'); if(s) s.value='';
@@ -115835,6 +115863,7 @@ function stkShowSelectedChip(obj) {
   elemEl.style.background = eInfo.color.replace('#','rgba(') + ',0.1)';
   document.getElementById('stk-sel-source').textContent = obj._aiFound ? '🤖 AI 검색' : '📦 DB';
   try { stkFetchPrice(obj); } catch(e){}
+  try { stkFetchNews(obj); } catch(e){}
 }
 
 // ── 빠른 선택 버튼 → 검색 + 즉시 분석 ───────────────────
