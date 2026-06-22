@@ -4225,7 +4225,7 @@ function updateTransitSectionWithNASA(planets) {
           wrapSection(ili,   enrg,  'cgosec4', _sp.section_ili         ||'📊 ILI 점수');
           wrapSection(enrg,  chat,  'cgosec5', _sp.section_energy_book ||'✦ CGO-FULI 에너지의 서');
           wrapSection(chat,  all,   'cgosec6', _sp.section_chat        ||'💬 CGO 메신저');
-          wrapSection(all,   null,  'cgosec7', _sp.section_all         ||'✦ 전체 기능 — 정보입력 후 사용');
+          wrapSection(all,   null,  'cgosec7', _sp.section_all         ||'✦ 전체 기능 — 정보 입력 후 사용');
           // ★ C-40 박입 ⑪ v4 — 대장님 명령: cgosec5 결과물만 숨김 (화살표 ID 기반 정확 매칭)
           // makeBar는 화살표에 unique ID 'cgo-arr-{wrapId}'를 박입함. 그 부모 = 헤더 바
           setTimeout(function(){
@@ -4751,6 +4751,28 @@ var _cgoFD={
   mai:{t:'💄 화장 흡수 분석 (MAI)',b:'세계 최초! 화장품 바르기 전·후 <b style="color:#f0e0a8;">피부 혈류 반응을 카메라로 측정</b>해 흡수율을 수치화합니다.<br><br>📋 <b>사용법:</b><br>① 전체기능 → 화장 흡수 분석 진입<br>② 화장 전 사진 촬영 (Before)<br>③ 화장품 바른 후 카메라로 스캔 (After)<br>④ 흡수율 수치 + 오행 분석 결과 확인<br><br>💡 스킨케어·파운데이션·세럼 등 제품별 흡수율을 비교해 보세요!'},
   svi:{t:'💪 피부 탄력 분석 (SVI)',b:'세계 최초! <b style="color:#f0e0a8;">피부를 눌렀다 뗄 때 회복 속도</b>를 카메라가 감지해 콜라겐 밀도를 수치화합니다.<br><br>📋 <b>사용법:</b><br>① 전체기능 → 피부 탄력 분석 진입<br>② 밝은 조명 아래 카메라를 피부에 가까이<br>③ 화면의 원 위를 손가락으로 꾹 눌렀다 떼기<br>④ 탄력 지수 + 맞춤 관리법 확인<br><br>💡 2~3주 간격으로 측정하면 탄력 변화를 추적할 수 있어요!'}
 };
+/* ✦ 기능 팝업 통일 템플릿 헬퍼 — 건강예측 기준 (C-60) */
+function _fdTpl(o){
+  o=o||{}; var h='';
+  if(o.summary) h+='<div class="fd-sum">'+o.summary+'</div>';
+  if(o.howto&&o.howto.length){
+    h+='<div class="fd-card"><div class="fd-ctitle">📋 사용법</div><div class="fd-text">';
+    var mk=['①','②','③','④','⑤','⑥','⑦'];
+    o.howto.forEach(function(s,i){ h+='<div>'+(mk[i]||'•')+' '+s+'</div>'; });
+    h+='</div></div>';
+  }
+  if(o.tip) h+='<div class="fd-card-g"><div class="fd-ctitle-g">💡 핵심 팁</div><div class="fd-text">'+o.tip+'</div></div>';
+  if(o.note) h+='<div class="fd-note">'+o.note+'</div>';
+  if(o.launch) h+='<button class="fd-btn" onclick="cgoGoPage(\''+o.launch.page+'\')">▶ '+(o.launch.label||'기능 시작하기')+'</button>';
+  return h;
+}
+// 샘플 통일 ①: 별 충전소 (건강예측 디자인 적용 · 기존 16개는 그대로)
+_cgoFD.star = { t:'⭐ 별 충전소', b:_fdTpl({
+  summary:'역학 지식 · 앱 사용법 · 운세 정보를 <b>무료로</b> 충전하는 공간입니다.',
+  howto:['전체 기능 → 별 충전소 진입','카테고리 선택 (사주 · 풍수 · 건강 등)','무료 콘텐츠 열람'],
+  tip:'CGO-FULI의 각 기능을 더 깊이 이해하는 데 도움이 됩니다. 매주 업데이트!',
+  launch:{page:'star', label:'별 충전소 열기'}
+}) };
 function cgoGuideFeature(key){
   var d=_cgoFD[key];
   if(!d)return;
@@ -5183,6 +5205,42 @@ function cgoGuideFeature(key){
           <!-- 17개 리스트 — 접혀있음 -->
           <div id="menuListBody" style="display:none;margin-top:6px;">
 <style id="fdash-style">
+/* ✦ 기능 페이지 통일 디자인 시스템 — 건강예측 기준 · 앱 백화점 (C-60) */
+.cgop{--acc:#10b981;--acc2:#059669;}
+.cgop-wrap{max-width:560px;margin:0 auto;padding:0 0 110px;}
+.cgop-top{position:sticky;top:0;z-index:50;background:rgba(240,253,249,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(16,185,129,.2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.cgop-logo{display:flex;align-items:center;gap:7px;font-size:17px;font-weight:900;color:var(--acc);letter-spacing:-.03em;}
+.cgop-hero{position:relative;text-align:center;padding:34px 18px 28px;background:radial-gradient(ellipse at 30% 18%,rgba(16,185,129,.22),transparent 62%),linear-gradient(160deg,#0f3d33,#0b2a4a);border-radius:0 0 26px 26px;color:#fff;margin-bottom:18px;overflow:hidden;}
+.cgop-badge{display:inline-block;padding:5px 13px;border-radius:100px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);font-size:10px;font-weight:800;color:#fff;margin-bottom:12px;letter-spacing:.04em;}
+.cgop-hero-ico{font-size:46px;margin-bottom:8px;display:inline-block;}
+.cgop-hero-title{font-size:23px;font-weight:900;letter-spacing:-.03em;color:#fff;margin-bottom:5px;}
+.cgop-hero-sub{font-size:11px;color:rgba(255,255,255,.82);line-height:1.6;}
+.cgop-card{background:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(15,93,71,.10);border:1px solid rgba(16,185,129,.14);padding:18px;margin:0 14px 16px;}
+.cgop-ctitle{font-size:12px;font-weight:800;color:var(--acc);letter-spacing:.03em;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.cgop-cta{width:100%;padding:15px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;border-radius:13px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:.02em;}
+/* PC 와이드: 컨테이너 펴고 카드 꽉 채움 (건강예측 기준) */
+@media (min-width:768px){
+  .cgop-body{max-width:1040px !important;}
+  .cgop-top{max-width:1040px;margin:0 auto;padding:16px 28px;}
+  .cgop-hero{padding:56px 40px 46px;}
+  .cgop-hero-title{font-size:38px;}
+  .cgop-hero-ico{font-size:60px;}
+  .cgop-hero-sub{font-size:14px;}
+  /* 내부 그리드/카드 2~3열로 꽉 채움 */
+  .cgop-body > div[style*="grid"]{grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) !important;}
+}
+/* ✦ 기능 팝업 통일 디자인 시스템 — 건강예측 기준 (C-60) */
+.fd-sum{font-size:12px;color:rgba(240,230,200,.8);line-height:1.8;margin-bottom:14px;}
+.fd-sum b{color:#f0e0a8;}
+.fd-card{background:rgba(255,255,255,.03);border:1px solid rgba(212,168,67,.2);border-radius:12px;padding:14px;margin-bottom:12px;}
+.fd-card-g{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;}
+.fd-ctitle{font-size:11px;font-weight:800;color:#d4a843;margin-bottom:10px;letter-spacing:.05em;}
+.fd-ctitle-g{font-size:11px;font-weight:800;color:#34d399;margin-bottom:8px;}
+.fd-text{font-size:11px;color:rgba(240,230,200,.8);line-height:2;}
+.fd-text b{color:#f0e0a8;}
+.fd-note{font-size:10px;color:rgba(200,180,140,.6);line-height:1.7;margin-bottom:12px;}
+.fd-btn{width:100%;padding:12px;background:linear-gradient(135deg,#d4a843,#b8923a);border:none;border-radius:10px;color:#1a1206;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.03em;}
+.fd-btn:hover{filter:brightness(1.08);}
 .fdash-wrap{margin-top:8px;}.fdash-cat{margin:0 0 20px;}
 .fdash-ch{display:flex;align-items:center;gap:8px;padding:2px 2px 10px;}
 .fdash-ch .fdash-dot{width:8px;height:8px;border-radius:50%;background:var(--fc);box-shadow:0 0 10px var(--fc);}
@@ -18485,43 +18543,50 @@ var fcSystems = {
     <!-- ══ 작명 서비스 ══ -->
 
 <!-- ===================== ⭐ 별 충전소 페이지 ===================== -->
-<div class="page" id="page-star">
-  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
-<div style="padding:16px;max-width:480px;margin:0 auto;">
+<div class="page" id="page-star" class="cgop" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--acc:#b8860b;--acc2:#8a6508;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#10b981;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
 
-  <!-- 헤더 -->
-  <div style="text-align:center;margin-bottom:20px;">
-    <div style="font-size:48px;margin-bottom:8px;animation:vipPulse 2s ease-in-out infinite;display:inline-block;">⭐</div>
-    <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:#fbbf24;letter-spacing:.1em;">별 충전소</div>
-    <div style="font-size:11px;color:rgba(251,191,36,0.7);margin-top:4px;">CGO-FULI 에너지 화폐 시스템</div>
+  <!-- ✦ 통일 sticky 헤더 (건강예측 프레임 기준 · C-60) -->
+  <div style="position:sticky;top:0;z-index:50;background:rgba(240,253,249,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(52,211,153,.2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;max-width:560px;margin:0 auto;">
+    <div style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:#10b981;letter-spacing:-.04em;"><span style="font-size:22px;">⭐</span> FULI<span style="color:#0284c7;font-size:11px;margin-left:5px;font-weight:800;letter-spacing:0;">별충전소</span></div>
+    <button onclick="cgoGoPage('dashboard')" style="padding:6px 12px;border:1px solid rgba(52,211,153,.5);border-radius:8px;background:rgba(52,211,153,.08);color:#10b981;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">대시보드</button>
   </div>
+  <div class="cgop-hero">
+    <div class="cgop-badge">CGO-FULI 에너지 화폐</div>
+    <div class="cgop-hero-ico" style="animation:vipPulse 2s ease-in-out infinite;">⭐</div>
+    <div class="cgop-hero-title">별 충전소</div>
+    <div class="cgop-hero-sub">역학 지식 · 앱 사용법 · 운세 정보를<br>무료로 충전하는 에너지 공간</div>
+  </div>
+<div class="cgop-body" style="padding:16px;max-width:560px;margin:0 auto;">
+
+
 
   <!-- 현재 보유 별 -->
-  <div style="background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06));border:1px solid rgba(251,191,36,0.4);border-radius:16px;padding:18px;text-align:center;margin-bottom:16px;">
-    <div style="font-size:11px;color:rgba(251,191,36,0.7);margin-bottom:6px;letter-spacing:.08em;">현재 보유 별</div>
-    <div style="font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#fbbf24;" id="star-count">0</div>
-    <div style="font-size:10px;color:rgba(251,191,36,0.5);margin-top:4px;" id="star-plan-label">무료 플랜</div>
+  <div style="background:linear-gradient(135deg,#fffdf3,#fffbeb);border:1px solid rgba(184,134,11,.32);border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(184,134,11,.10);text-align:center;margin-bottom:16px;">
+    <div style="font-size:11px;color:rgba(180,83,9,0.85);margin-bottom:6px;letter-spacing:.08em;">현재 보유 별</div>
+    <div style="font-family:'Orbitron',monospace;font-size:36px;font-weight:900;color:#b45309;" id="star-count">0</div>
+    <div style="font-size:10px;color:rgba(180,83,9,0.65);margin-top:4px;" id="star-plan-label">무료 플랜</div>
     <!-- 일일 사용 현황 -->
     <div style="margin-top:12px;display:flex;justify-content:center;gap:16px;">
       <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--text-3);">도보 네비</div>
-        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-navi-left">10분 남음</div>
+        <div style="font-size:10px;color:#334155;">도보 네비</div>
+        <div style="font-size:12px;font-weight:700;color:#334155;" id="star-navi-left">10분 남음</div>
       </div>
       <div style="width:1px;background:rgba(251,191,36,0.2);"></div>
       <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--text-3);">인상 분석</div>
-        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-face-left">2회 남음</div>
+        <div style="font-size:10px;color:#334155;">인상 분석</div>
+        <div style="font-size:12px;font-weight:700;color:#334155;" id="star-face-left">2회 남음</div>
       </div>
       <div style="width:1px;background:rgba(251,191,36,0.2);"></div>
       <div style="text-align:center;">
-        <div style="font-size:10px;color:var(--text-3);">사물 분석</div>
-        <div style="font-size:12px;font-weight:700;color:#e2e8f0;" id="star-obj-left">3회 남음</div>
+        <div style="font-size:10px;color:#334155;">사물 분석</div>
+        <div style="font-size:12px;font-weight:700;color:#334155;" id="star-obj-left">3회 남음</div>
       </div>
     </div>
   </div>
 
   <!-- 플랜 선택 -->
-  <div style="font-size:11px;color:rgba(251,191,36,0.7);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">📋 플랜 선택</div>
+  <div style="font-size:11px;color:rgba(180,83,9,0.85);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">📋 플랜 선택</div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
 
     <!-- 무료 플랜 -->
@@ -18530,17 +18595,17 @@ var fcSystems = {
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:18px;">🆓</span>
           <div>
-            <div style="font-size:13px;font-weight:700;color:#e2e8f0;">무료 플랜</div>
-            <div style="font-size:10px;color:var(--text-3);">매일 자동 충전</div>
+            <div style="font-size:13px;font-weight:700;color:#334155;">무료 플랜</div>
+            <div style="font-size:10px;color:#334155;">매일 자동 충전</div>
           </div>
         </div>
         <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#34d399;">0원</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#e2e8f0;">10분/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#e2e8f0;">2회/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#e2e8f0;">3회/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">📊 분석 결과 <b style="color:#e2e8f0;">%표시</b></div>
+        <div style="font-size:10px;color:#334155;">🗺️ 도보 네비 <b style="color:#334155;">10분/일</b></div>
+        <div style="font-size:10px;color:#334155;">👤 인상 분석 <b style="color:#334155;">2회/일</b></div>
+        <div style="font-size:10px;color:#334155;">🔍 사물 분석 <b style="color:#334155;">3회/일</b></div>
+        <div style="font-size:10px;color:#334155;">📊 분석 결과 <b style="color:#334155;">%표시</b></div>
       </div>
     </div>
 
@@ -18551,23 +18616,23 @@ var fcSystems = {
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:18px;">⭐</span>
           <div>
-            <div style="font-size:13px;font-weight:700;color:#fbbf24;">별 플랜</div>
-            <div style="font-size:10px;color:var(--text-3);">월정액 구독</div>
+            <div style="font-size:13px;font-weight:700;color:#b45309;">별 플랜</div>
+            <div style="font-size:10px;color:#334155;">월정액 구독</div>
           </div>
         </div>
         <div>
-          <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#fbbf24;">4,900원</div>
-          <div style="font-size:9px;color:var(--text-3);text-align:right;">/월</div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#b45309;">4,900원</div>
+          <div style="font-size:9px;color:#334155;text-align:right;">/월</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#fbbf24;">60분/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#fbbf24;">30회/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#fbbf24;">50회/일</b></div>
-        <div style="font-size:10px;color:var(--text-3);">📊 분석 결과 <b style="color:#fbbf24;">%상세표시</b></div>
+        <div style="font-size:10px;color:#334155;">🗺️ 도보 네비 <b style="color:#b45309;">60분/일</b></div>
+        <div style="font-size:10px;color:#334155;">👤 인상 분석 <b style="color:#b45309;">30회/일</b></div>
+        <div style="font-size:10px;color:#334155;">🔍 사물 분석 <b style="color:#b45309;">50회/일</b></div>
+        <div style="font-size:10px;color:#334155;">📊 분석 결과 <b style="color:#b45309;">%상세표시</b></div>
       </div>
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(251,191,36,0.15);">
-        <div style="font-size:10px;color:rgba(251,191,36,0.8);">✦ AI 언어 분석 답변 포함 &nbsp;✦ 우선 서버 접속</div>
+        <div style="font-size:10px;color:rgba(180,83,9,0.9);">✦ AI 언어 분석 답변 포함 &nbsp;✦ 우선 서버 접속</div>
       </div>
     </div>
 
@@ -18578,35 +18643,35 @@ var fcSystems = {
           <span style="font-size:18px;">💎</span>
           <div>
             <div style="font-size:13px;font-weight:700;color:#d4a843;">VVIP 프리미엄</div>
-            <div style="font-size:10px;color:var(--text-3);">단건 구매</div>
+            <div style="font-size:10px;color:#334155;">단건 구매</div>
           </div>
         </div>
         <div>
           <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:#d4a843;">50,000원</div>
-          <div style="font-size:9px;color:var(--text-3);text-align:right;">/회</div>
+          <div style="font-size:9px;color:#334155;text-align:right;">/회</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-        <div style="font-size:10px;color:var(--text-3);">🗺️ 도보 네비 <b style="color:#d4a843;">무제한</b></div>
-        <div style="font-size:10px;color:var(--text-3);">👤 인상 분석 <b style="color:#d4a843;">무제한</b></div>
-        <div style="font-size:10px;color:var(--text-3);">🔍 사물 분석 <b style="color:#d4a843;">무제한</b></div>
-        <div style="font-size:10px;color:var(--text-3);">💎 50대 역학 중 <b style="color:#d4a843;">심층분석</b></div>
+        <div style="font-size:10px;color:#334155;">🗺️ 도보 네비 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:#334155;">👤 인상 분석 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:#334155;">🔍 사물 분석 <b style="color:#d4a843;">무제한</b></div>
+        <div style="font-size:10px;color:#334155;">💎 50대 역학 중 <b style="color:#d4a843;">심층분석</b></div>
       </div>
     </div>
   </div>
 
   <!-- 기능 미리보기 -->
-  <div style="font-size:11px;color:rgba(251,191,36,0.7);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">🔭 별 기능 미리보기</div>
+  <div style="font-size:11px;color:rgba(180,83,9,0.85);font-weight:700;letter-spacing:.08em;margin-bottom:10px;">🔭 별 기능 미리보기</div>
   <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
 
     <!-- 도보 네비 -->
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px;">
+    <div style="background:#fff;border:1px solid rgba(16,185,129,.16);border-radius:14px;padding:16px;box-shadow:0 6px 20px rgba(15,93,71,.06);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:16px;">🗺️</span>
           <div>
-            <div style="font-size:12px;font-weight:700;color:#e2e8f0;">방위 에너지 도보 네비</div>
-            <div style="font-size:10px;color:var(--text-3);">기문둔갑 × GPS × 나침반 AR</div>
+            <div style="font-size:12px;font-weight:700;color:#334155;">방위 에너지 도보 네비</div>
+            <div style="font-size:10px;color:#334155;">기문둔갑 × GPS × 나침반 AR</div>
           </div>
         </div>
         <button onclick="starLaunchNavi()" style="padding:5px 12px;border-radius:20px;background:linear-gradient(135deg,rgba(52,211,153,0.2),rgba(16,185,129,0.1));border:1px solid rgba(52,211,153,0.4);color:#34d399;font-size:10px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">▶ 시작</button>
@@ -18623,13 +18688,13 @@ var fcSystems = {
     </div>
 
     <!-- 인상+사물 분석 -->
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px;">
+    <div style="background:#fff;border:1px solid rgba(16,185,129,.16);border-radius:14px;padding:16px;box-shadow:0 6px 20px rgba(15,93,71,.06);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:16px;">📸</span>
           <div>
-            <div style="font-size:12px;font-weight:700;color:#e2e8f0;">에너지 사진 분석</div>
-            <div style="font-size:10px;color:var(--text-3);">인상·사물·색상 → 오행 에너지 %</div>
+            <div style="font-size:12px;font-weight:700;color:#334155;">에너지 사진 분석</div>
+            <div style="font-size:10px;color:#334155;">인상·사물·색상 → 오행 에너지 %</div>
           </div>
         </div>
         <button onclick="starLaunchCam()" style="padding:5px 12px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,0.2),rgba(124,58,237,0.1));border:1px solid rgba(167,139,250,0.4);color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">📷 촬영</button>
@@ -18638,7 +18703,7 @@ var fcSystems = {
         <!-- 안내 문구 -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:8px 10px;background:rgba(167,139,250,0.1);border-radius:8px;border:1px solid rgba(167,139,250,0.2);">
           <span style="font-size:14px;">💡</span>
-          <span style="font-size:10px;color:rgba(226,232,240,0.8);line-height:1.5;">분석할 <b style="color:#a78bfa;">사물·옷·가구·얼굴</b> 을<br>아래 <b style="color:#fbbf24;">노란 네모칸</b> 안에 맞춰 주세요!</span>
+          <span style="font-size:10px;color:rgba(51,65,85,0.9);line-height:1.5;">분석할 <b style="color:#a78bfa;">사물·옷·가구·얼굴</b> 을<br>아래 <b style="color:#b45309;">노란 네모칸</b> 안에 맞춰 주세요!</span>
         </div>
         <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;height:260px;margin-bottom:8px;">
           <video id="star-cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
@@ -18651,7 +18716,7 @@ var fcSystems = {
             <div style="position:absolute;bottom:-3px;left:-3px;width:18px;height:18px;border-bottom:4px solid #fbbf24;border-left:4px solid #fbbf24;border-radius:0 0 0 4px;"></div>
             <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-bottom:4px solid #fbbf24;border-right:4px solid #fbbf24;border-radius:0 0 4px 0;"></div>
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
-              <div style="font-size:10px;color:rgba(251,191,36,0.7);background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:10px;">여기에 맞춰주세요</div>
+              <div style="font-size:10px;color:rgba(180,83,9,0.85);background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:10px;">여기에 맞춰주세요</div>
             </div>
           </div>
           <button onclick="starSnapPhoto()" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:3px solid #fff;cursor:pointer;font-size:22px;box-shadow:0 2px 12px rgba(167,139,250,0.5);">📸</button>
@@ -18659,13 +18724,13 @@ var fcSystems = {
         </div>
       </div>
       <!-- 분석 결과 -->
-      <div id="star-cam-result" style="display:none;background:var(--bg-panel);border-radius:12px;padding:14px;margin-top:8px;">
+      <div id="star-cam-result" style="display:none;background:#f1f5f9;border-radius:12px;padding:14px;margin-top:8px;">
         <!-- 결과 헤더 -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
           <span style="font-size:16px;">⚡</span>
           <div>
             <div style="font-size:12px;font-weight:700;color:#a78bfa;">에너지 분석 결과</div>
-            <div style="font-size:10px;color:var(--text-3);">오행(五行) 에너지 비율</div>
+            <div style="font-size:10px;color:#334155;">오행(五行) 에너지 비율</div>
           </div>
         </div>
         <!-- 오행 설명 한 줄 -->
@@ -18674,7 +18739,7 @@ var fcSystems = {
           <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(52,211,153,0.15);color:#34d399;">🟢목=나무·성장</span>
           <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(96,165,250,0.15);color:#60a5fa;">🔵수=물·지혜</span>
           <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(167,139,250,0.15);color:#a78bfa;">🟣금=쇠·결단</span>
-          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(251,191,36,0.15);color:#fbbf24;">🟡토=흙·안정</span>
+          <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:rgba(251,191,36,0.15);color:#b45309;">🟡토=흙·안정</span>
         </div>
         <!-- 게이지 바 -->
         <div id="star-oh-bars" style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;"></div>
@@ -18692,7 +18757,7 @@ var fcSystems = {
 
   <!-- 안내 -->
   <div style="text-align:center;padding:10px;border:1px solid rgba(251,191,36,0.15);border-radius:10px;background:rgba(251,191,36,0.03);">
-    <div style="font-size:10px;color:rgba(251,191,36,0.5);line-height:1.7;">
+    <div style="font-size:10px;color:rgba(180,83,9,0.65);line-height:1.7;">
       ✦ 모든 분석은 역학 참고자료입니다<br>
       ✦ 온디바이스 AI 기반 — 개인정보 서버 전송 없음<br>
       ✦ 별 기능은 GPS·카메라 권한이 필요합니다
@@ -26391,35 +26456,28 @@ window.tvyShowIntroPopup = function(){
 </div>
 
 <!-- ══ page-svi: 피부 탄력 분석 ══ -->
-<div class="page" id="page-svi">
-  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
-  <div style="max-width:480px;margin:0 auto;padding:0 4px 40px;">
+<div class="page" id="page-svi" class="cgop" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--acc:#0284c7;--acc2:#0369a1;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#10b981;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+  <div class="cgop-top"><div class="cgop-logo">💪 피부 탄력 분석</div></div>
+  <div class="cgop-hero" style="background:radial-gradient(ellipse at 30% 18%,rgba(56,189,248,.28),transparent 62%),linear-gradient(160deg,#0b3a52,#0b2a4a);">
+    <div class="cgop-badge">WORLD FIRST · SVI TECHNOLOGY</div>
+    <div class="cgop-hero-ico">💪</div>
+    <div class="cgop-hero-title">피부 탄력 분석</div>
+    <div class="cgop-hero-sub">Skin Vitality Index · 세계 최초 광학 × 오행 융합 피부 탄력 수치화</div>
+  </div>
+  <div class="cgop-body" style="max-width:480px;margin:0 auto;padding:0 4px 40px;">
 
-    <!-- 헤더 -->
-    <div style="background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(52,211,153,.08));border:1px solid rgba(56,189,248,.3);border-radius:20px;padding:22px 20px;margin-bottom:18px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#38bdf8,#34d399,#38bdf8);"></div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-        <span style="font-size:32px;">💪</span>
-        <div>
-          <div style="font-size:10px;font-weight:800;color:#38bdf8;letter-spacing:.2em;">WORLD FIRST · SVI TECHNOLOGY</div>
-          <div style="font-size:18px;font-weight:900;color:#f0f9ff;margin-top:2px;">피부 탄력 분석</div>
-          <div style="font-size:11px;color:rgba(56,189,248,.7);margin-top:2px;">Skin Vitality Index</div>
-        </div>
-      </div>
-      <div style="font-size:12px;color:rgba(220,240,255,.75);line-height:1.8;padding:12px 14px;background:rgba(0,0,0,.2);border-radius:12px;border-left:3px solid rgba(56,189,248,.5);">
-        세계 최초로 카메라 기반 광학 분석과 동양 역학(오행)을 융합하여 피부 탄력을 수치화합니다. <b style="color:#38bdf8;">SVI(피부활력지수)</b> 측정 후 개인 맞춤 수분·운동·식단 처방을 제공합니다.
-      </div>
-    </div>
+    
 
     <!-- 사용법 -->
     <div style="padding:14px 16px;background:rgba(0,0,0,.25);border:1px solid rgba(56,189,248,.2);border-radius:14px;margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:800;color:#38bdf8;margin-bottom:8px;display:flex;align-items:center;gap:6px;">📋 사용 방법</div>
+      <div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:8px;display:flex;align-items:center;gap:6px;">📋 사용 방법</div>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">①</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">세안 후 30분 이상 경과</b>한 상태에서 측정하세요.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">②</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">밝은 조명</b> 아래에서 얼굴을 화면 중앙에 맞추세요.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">③</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#34d399;">볼을 살짝 눌렀다가 떼세요!</b> 복원 속도로 탄력을 측정합니다.</div></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">④</span><div style="font-size:11px;color:rgba(220,240,255,.8);line-height:1.6;"><b style="color:#38bdf8;">SVI 점수</b>와 오행 기반 맞춤 처방을 확인하세요.</div></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;padding:8px;background:rgba(52,211,153,.08);border-radius:8px;border-left:3px solid rgba(52,211,153,.5);"><span style="font-size:16px;">💡</span><div style="font-size:10px;color:rgba(52,211,153,.8);line-height:1.5;">피부 점탄성(viscoelasticity) 원리 — 볼 복원 속도가 빠를수록 탄력이 좋습니다</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">①</span><div style="font-size:11px;color:rgba(51,65,85,.8);line-height:1.6;"><b style="color:#0f172a;">세안 후 30분 이상 경과</b>한 상태에서 측정하세요.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">②</span><div style="font-size:11px;color:rgba(51,65,85,.8);line-height:1.6;"><b style="color:#0f172a;">밝은 조명</b> 아래에서 얼굴을 화면 중앙에 맞추세요.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">③</span><div style="font-size:11px;color:rgba(51,65,85,.8);line-height:1.6;"><b style="color:#0f172a;">볼을 살짝 눌렀다가 떼세요!</b> 복원 속도로 탄력을 측정합니다.</div></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:14px;flex-shrink:0;">④</span><div style="font-size:11px;color:rgba(51,65,85,.8);line-height:1.6;"><b style="color:#0f172a;">SVI 점수</b>와 오행 기반 맞춤 처방을 확인하세요.</div></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;padding:8px;background:rgba(52,211,153,.08);border-radius:8px;border-left:3px solid rgba(52,211,153,.5);"><span style="font-size:16px;">💡</span><div style="font-size:10px;color:rgba(15,23,42,.8);line-height:1.5;">피부 점탄성(viscoelasticity) 원리 — 볼 복원 속도가 빠를수록 탄력이 좋습니다</div></div>
       </div>
     </div>
 
@@ -26427,23 +26485,23 @@ window.tvyShowIntroPopup = function(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
       <div style="padding:12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:12px;">
         <div style="font-size:16px;margin-bottom:4px;">✨</div>
-        <div style="font-size:11px;font-weight:700;color:#38bdf8;">피부 윤기</div>
-        <div style="font-size:10px;color:rgba(220,240,255,.5);margin-top:2px;">광학적 윤기 지수 측정</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;">피부 윤기</div>
+        <div style="font-size:10px;color:#334155;margin-top:2px;">광학적 윤기 지수 측정</div>
       </div>
       <div style="padding:12px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;">
         <div style="font-size:16px;margin-bottom:4px;">💪</div>
-        <div style="font-size:11px;font-weight:700;color:#34d399;">탄력 지수</div>
-        <div style="font-size:10px;color:rgba(220,240,255,.5);margin-top:2px;">피부 탄성 광학 분석</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;">탄력 지수</div>
+        <div style="font-size:10px;color:#334155;margin-top:2px;">피부 탄성 광학 분석</div>
       </div>
       <div style="padding:12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:12px;">
         <div style="font-size:16px;margin-bottom:4px;">🔬</div>
-        <div style="font-size:11px;font-weight:700;color:#38bdf8;">피부결 균일도</div>
-        <div style="font-size:10px;color:rgba(220,240,255,.5);margin-top:2px;">텍스처 분산 분석</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;">피부결 균일도</div>
+        <div style="font-size:10px;color:#334155;margin-top:2px;">텍스처 분산 분석</div>
       </div>
       <div style="padding:12px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;">
         <div style="font-size:16px;margin-bottom:4px;">❤️</div>
-        <div style="font-size:11px;font-weight:700;color:#34d399;">혈색 활력</div>
-        <div style="font-size:10px;color:rgba(220,240,255,.5);margin-top:2px;">혈색 에너지 지수</div>
+        <div style="font-size:11px;font-weight:700;color:#0f172a;">혈색 활력</div>
+        <div style="font-size:10px;color:#334155;margin-top:2px;">혈색 에너지 지수</div>
       </div>
     </div>
 
@@ -26460,48 +26518,48 @@ window.tvyShowIntroPopup = function(){
         </div>
         <div id="svi-placeholder" style="width:100%;height:200px;background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(52,211,153,.06));border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
           <span style="font-size:48px;">💪</span>
-          <div style="font-size:12px;color:rgba(56,189,248,.7);">카메라 준비 중...</div>
+          <div style="font-size:12px;color:rgba(15,23,42,.7);">카메라 준비 중...</div>
         </div>
       </div>
 
-      <div id="svi-face-status" style="font-size:11px;color:rgba(220,240,255,.5);margin-bottom:12px;">얼굴을 화면 중앙에 맞춰주세요</div>
+      <div id="svi-face-status" style="font-size:11px;color:#334155;margin-bottom:12px;">얼굴을 화면 중앙에 맞춰주세요</div>
 
-      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+      <div style="height:4px;background:#ffffff;border-radius:2px;overflow:hidden;margin-bottom:8px;">
         <div id="svi-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#38bdf8,#34d399);border-radius:2px;transition:width .3s;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-        <div id="svi-timer" style="font-size:11px;color:rgba(56,189,248,.6);">30초 스캔</div>
-        <div id="svi-score-live" style="font-size:11px;color:rgba(56,189,248,.6);">SVI 측정 중...</div>
+        <div id="svi-timer" style="font-size:11px;color:rgba(15,23,42,.6);">30초 스캔</div>
+        <div id="svi-score-live" style="font-size:11px;color:rgba(15,23,42,.6);">SVI 측정 중...</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
         <div style="padding:8px;background:rgba(56,189,248,.06);border-radius:8px;">
-          <div style="font-size:9px;color:rgba(56,189,248,.6);margin-bottom:2px;">피부 윤기</div>
-          <div id="svi-luster" style="font-size:18px;font-weight:800;color:#38bdf8;">--</div>
+          <div style="font-size:9px;color:rgba(15,23,42,.6);margin-bottom:2px;">피부 윤기</div>
+          <div id="svi-luster" style="font-size:18px;font-weight:800;color:#0f172a;">--</div>
         </div>
         <div style="padding:8px;background:rgba(52,211,153,.06);border-radius:8px;">
-          <div style="font-size:9px;color:rgba(52,211,153,.6);margin-bottom:2px;">탄력 지수</div>
-          <div id="svi-elastic" style="font-size:18px;font-weight:800;color:#34d399;">--</div>
+          <div style="font-size:9px;color:rgba(15,23,42,.6);margin-bottom:2px;">탄력 지수</div>
+          <div id="svi-elastic" style="font-size:18px;font-weight:800;color:#0f172a;">--</div>
         </div>
         <div style="padding:8px;background:rgba(56,189,248,.06);border-radius:8px;">
-          <div style="font-size:9px;color:rgba(56,189,248,.6);margin-bottom:2px;">피부결</div>
-          <div id="svi-texture" style="font-size:18px;font-weight:800;color:#38bdf8;">--</div>
+          <div style="font-size:9px;color:rgba(15,23,42,.6);margin-bottom:2px;">피부결</div>
+          <div id="svi-texture" style="font-size:18px;font-weight:800;color:#0f172a;">--</div>
         </div>
         <div style="padding:8px;background:rgba(52,211,153,.06);border-radius:8px;">
-          <div style="font-size:9px;color:rgba(52,211,153,.6);margin-bottom:2px;">혈색 활력</div>
-          <div id="svi-vitality" style="font-size:18px;font-weight:800;color:#34d399;">--</div>
+          <div style="font-size:9px;color:rgba(15,23,42,.6);margin-bottom:2px;">혈색 활력</div>
+          <div id="svi-vitality" style="font-size:18px;font-weight:800;color:#0f172a;">--</div>
         </div>
       </div>
 
       <!-- ★ 1단계 박입 — 눌렀다 뗌 회복 검출 영역 -->
 <div id="svi-press-area" style="display:none;width:100%;margin:14px 0;padding:20px;background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(52,211,153,.06));border:2px dashed rgba(56,189,248,.4);border-radius:14px;text-align:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">
   <div style="font-size:32px;margin-bottom:8px;">👇</div>
-  <div style="font-size:13px;font-weight:800;color:#38bdf8;margin-bottom:6px;">손가락으로 화면을 꾹 눌렀다 떼세요</div>
-  <div id="svi-press-hint" style="font-size:11px;color:rgba(245,230,175,.7);line-height:1.5;min-height:18px;">측정 시작 후 화면을 1~2초 눌렀다 떼면 회복 속도가 자동 측정됩니다</div>
+  <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px;">손가락으로 화면을 꾹 눌렀다 떼세요</div>
+  <div id="svi-press-hint" style="font-size:11px;color:rgba(51,65,85,.7);line-height:1.5;min-height:18px;">측정 시작 후 화면을 1~2초 눌렀다 떼면 회복 속도가 자동 측정됩니다</div>
   <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;gap:8px;">
-    <span style="font-size:11px;color:rgba(245,230,175,.5);">콜라겐 밀도</span>
-    <span id="svi-collagen" style="font-size:18px;font-weight:900;color:#fbbf24;">--</span>
-    <span style="font-size:11px;color:rgba(245,230,175,.5);">/ 100</span>
+    <span style="font-size:11px;color:#334155;">콜라겐 밀도</span>
+    <span id="svi-collagen" style="font-size:18px;font-weight:900;color:#b45309;">--</span>
+    <span style="font-size:11px;color:#334155;">/ 100</span>
   </div>
 </div>
 
@@ -26510,40 +26568,40 @@ window.tvyShowIntroPopup = function(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">🎯</span>
-      <span style="font-size:13px;font-weight:800;color:#38bdf8;">6부위 정밀 분석</span>
+      <span style="font-size:13px;font-weight:800;color:#0f172a;">6부위 정밀 분석</span>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <span style="font-size:10px;color:rgba(245,230,175,.5);">평균</span>
-      <span id="svi-zone-avg" style="font-size:16px;font-weight:900;color:#fbbf24;">--</span>
+      <span style="font-size:10px;color:#334155;">평균</span>
+      <span id="svi-zone-avg" style="font-size:16px;font-weight:900;color:#b45309;">--</span>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">🧠 이마</div>
-      <div id="svi-zone-forehead" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">🧠 이마</div>
+      <div id="svi-zone-forehead" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">😐 미간</div>
-      <div id="svi-zone-brow" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">😐 미간</div>
+      <div id="svi-zone-brow" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">👁️ 눈가</div>
-      <div id="svi-zone-eye" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">👁️ 눈가</div>
+      <div id="svi-zone-eye" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">🌸 볼</div>
-      <div id="svi-zone-cheek" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">🌸 볼</div>
+      <div id="svi-zone-cheek" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">💎 턱</div>
-      <div id="svi-zone-jaw" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">💎 턱</div>
+      <div id="svi-zone-jaw" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">👄 입가</div>
-      <div id="svi-zone-mouth" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">👄 입가</div>
+      <div id="svi-zone-mouth" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
   </div>
-  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:rgba(245,230,175,.45);text-align:center;line-height:1.5;">
+  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:#334155;text-align:center;line-height:1.5;">
     🛡️ MediaPipe FaceMesh 468 포인트로 안면 6부위 분리 분석<br/>각 부위의 윤기·균일도·혈색 종합 SVI
   </div>
 </div>
@@ -26553,28 +26611,28 @@ window.tvyShowIntroPopup = function(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">💗</span>
-      <span style="font-size:13px;font-weight:800;color:#f472b6;">rPPG 동시 측정 — 스트레스→노화 인과</span>
+      <span style="font-size:13px;font-weight:800;color:#be185d;">rPPG 동시 측정 — 스트레스→노화 인과</span>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">💗 심박수 BPM</div>
-      <div id="svi-rppg-bpm" style="font-size:18px;font-weight:900;color:#f472b6;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">💗 심박수 BPM</div>
+      <div id="svi-rppg-bpm" style="font-size:18px;font-weight:900;color:#be185d;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">🧠 HRV (RMSSD)</div>
-      <div id="svi-rppg-hrv" style="font-size:18px;font-weight:900;color:#f472b6;">-- <span style="font-size:9px;font-weight:600;">ms</span></div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">🧠 HRV (RMSSD)</div>
+      <div id="svi-rppg-hrv" style="font-size:18px;font-weight:900;color:#be185d;">-- <span style="font-size:9px;font-weight:600;">ms</span></div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">😰 스트레스</div>
-      <div id="svi-rppg-stress" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">😰 스트레스</div>
+      <div id="svi-rppg-stress" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
-    <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-      <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">⏳ 피부 노화</div>
-      <div id="svi-rppg-age" style="font-size:18px;font-weight:900;color:#fbbf24;">--</div>
+    <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+      <div style="font-size:10px;color:#334155;margin-bottom:3px;">⏳ 피부 노화</div>
+      <div id="svi-rppg-age" style="font-size:18px;font-weight:900;color:#b45309;">--</div>
     </div>
   </div>
-  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:rgba(245,230,175,.5);text-align:center;line-height:1.6;">
+  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:#334155;text-align:center;line-height:1.6;">
     🔬 C-37 CHROM 알고리즘 적용 · 자율신경 실측<br/>
     <span style="color:rgba(244,114,182,.7);">스트레스 → 코르티솔 ↑ → 콜라겐 분해 ↑ → 노화 가속</span>
   </div>
@@ -26587,34 +26645,34 @@ window.tvyShowIntroPopup = function(){
       <span style="font-size:18px;">⏳</span>
       <span style="font-size:13px;font-weight:800;color:#c084fc;">피부 나이 측정 (순수 기술)</span>
     </div>
-    <span style="font-size:9px;color:rgba(245,230,175,.4);padding:3px 6px;background:rgba(255,255,255,.05);border-radius:4px;">SaMD 표준</span>
+    <span style="font-size:9px;color:#334155;padding:3px 6px;background:#ffffff;border-radius:4px;">SaMD 표준</span>
   </div>
   
   <div style="display:flex;gap:8px;margin-bottom:10px;">
-    <input type="number" id="svi-real-age-input" placeholder="실제 나이" min="15" max="100" style="flex:1;padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#f0e0a8;font-size:13px;text-align:center;">
+    <input type="number" id="svi-real-age-input" placeholder="실제 나이" min="15" max="100" style="flex:1;padding:10px;background:#ffffff;border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#f0e0a8;font-size:13px;text-align:center;">
     <button onclick="sviCalcSkinAge()" style="padding:10px 16px;background:linear-gradient(135deg,#c084fc,#a855f7);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">측정</button>
   </div>
   
   <div id="svi-age-result" style="display:none;">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-        <div style="font-size:10px;color:rgba(245,230,175,.5);margin-bottom:3px;">실제 나이</div>
-        <div id="svi-real-age-val" style="font-size:16px;font-weight:900;color:rgba(245,230,175,.9);">--</div>
+      <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+        <div style="font-size:10px;color:#334155;margin-bottom:3px;">실제 나이</div>
+        <div id="svi-real-age-val" style="font-size:16px;font-weight:900;color:rgba(51,65,85,.9);">--</div>
       </div>
       <div style="padding:10px 6px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:10px;text-align:center;">
         <div style="font-size:10px;color:rgba(192,132,252,.7);margin-bottom:3px;">피부 나이</div>
         <div id="svi-skin-age-val" style="font-size:18px;font-weight:900;color:#c084fc;">--</div>
       </div>
-      <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-        <div style="font-size:10px;color:rgba(245,230,175,.5);margin-bottom:3px;">편차</div>
-        <div id="svi-age-delta" style="font-size:16px;font-weight:900;color:#fbbf24;">--</div>
+      <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+        <div style="font-size:10px;color:#334155;margin-bottom:3px;">편차</div>
+        <div id="svi-age-delta" style="font-size:16px;font-weight:900;color:#b45309;">--</div>
       </div>
     </div>
-    <div id="svi-age-grade" style="text-align:center;font-size:14px;font-weight:900;padding:10px;background:rgba(255,255,255,.04);border-radius:10px;margin-bottom:8px;color:#fbbf24;">--</div>
-    <div id="svi-age-detail" style="font-size:11px;color:rgba(245,230,175,.7);line-height:1.7;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;"></div>
+    <div id="svi-age-grade" style="text-align:center;font-size:14px;font-weight:900;padding:10px;background:#ffffff;border-radius:10px;margin-bottom:8px;color:#b45309;">--</div>
+    <div id="svi-age-detail" style="font-size:11px;color:rgba(51,65,85,.7);line-height:1.7;padding:10px;background:#ffffff;border-radius:8px;"></div>
   </div>
   
-  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:rgba(245,230,175,.45);text-align:center;line-height:1.6;">
+  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:#334155;text-align:center;line-height:1.6;">
     🔬 순수 기술 알고리즘 (역학 X)<br/>
     <span style="color:rgba(192,132,252,.7);">광학 4지표 50% + 콜라겐 회복 30% + 자율신경 20%</span>
   </div>
@@ -26625,25 +26683,25 @@ window.tvyShowIntroPopup = function(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">⚖️</span>
-      <span style="font-size:13px;font-weight:800;color:#818cf8;">좌우 비대칭 분석</span>
+      <span style="font-size:13px;font-weight:800;color:#0f172a;">좌우 비대칭 분석</span>
     </div>
-    <button onclick="sviAnalyzeAsymmetry()" style="padding:6px 12px;background:rgba(99,102,241,.15);border:1px solid rgba(129,140,248,.4);border-radius:8px;color:#818cf8;font-size:11px;font-weight:800;cursor:pointer;">측정</button>
+    <button onclick="sviAnalyzeAsymmetry()" style="padding:6px 12px;background:rgba(99,102,241,.15);border:1px solid rgba(129,140,248,.4);border-radius:8px;color:#0f172a;font-size:11px;font-weight:800;cursor:pointer;">측정</button>
   </div>
   <div id="svi-asym-result" style="display:none;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-        <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">대칭 점수</div>
-        <div id="svi-asym-score" style="font-size:18px;font-weight:900;color:#818cf8;">--</div>
+      <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+        <div style="font-size:10px;color:#334155;margin-bottom:3px;">대칭 점수</div>
+        <div id="svi-asym-score" style="font-size:18px;font-weight:900;color:#0f172a;">--</div>
       </div>
-      <div style="padding:10px 6px;background:rgba(255,255,255,.04);border-radius:10px;text-align:center;">
-        <div style="font-size:10px;color:rgba(245,230,175,.6);margin-bottom:3px;">우세</div>
+      <div style="padding:10px 6px;background:#ffffff;border-radius:10px;text-align:center;">
+        <div style="font-size:10px;color:#334155;margin-bottom:3px;">우세</div>
         <div id="svi-asym-yinyang" style="font-size:14px;font-weight:900;color:#a78bfa;">--</div>
       </div>
     </div>
     <div id="svi-asym-detail" style="margin-bottom:8px;"></div>
-    <div id="svi-asym-msg" style="font-size:11px;color:rgba(245,230,175,.75);padding:10px;background:rgba(255,255,255,.03);border-radius:8px;text-align:center;line-height:1.6;"></div>
+    <div id="svi-asym-msg" style="font-size:11px;color:rgba(51,65,85,.75);padding:10px;background:#ffffff;border-radius:8px;text-align:center;line-height:1.6;"></div>
   </div>
-  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:rgba(245,230,175,.45);text-align:center;line-height:1.6;">
+  <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:10px;color:#334155;text-align:center;line-height:1.6;">
     🔬 MediaPipe 468 좌우 분리 비교 · 잠자세·식습관 진단
   </div>
 </div>
@@ -26653,19 +26711,19 @@ window.tvyShowIntroPopup = function(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">📈</span>
-      <span style="font-size:13px;font-weight:800;color:#38bdf8;">시간 추이 그래프</span>
+      <span style="font-size:13px;font-weight:800;color:#0f172a;">시간 추이 그래프</span>
     </div>
-    <span id="svi-history-count" style="font-size:11px;color:rgba(245,230,175,.5);">--</span>
+    <span id="svi-history-count" style="font-size:11px;color:#334155;">--</span>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:10px;">
     <button id="svi-history-week" class="svi-history-period-btn" onclick="sviHistoryPeriod('week')" style="flex:1;padding:8px;background:linear-gradient(135deg,#38bdf8,#34d399);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:800;cursor:pointer;">주</button>
-    <button id="svi-history-month" class="svi-history-period-btn" onclick="sviHistoryPeriod('month')" style="flex:1;padding:8px;background:rgba(255,255,255,.05);border:none;border-radius:8px;color:rgba(245,230,175,.6);font-size:11px;font-weight:800;cursor:pointer;">월</button>
-    <button id="svi-history-all" class="svi-history-period-btn" onclick="sviHistoryPeriod('all')" style="flex:1;padding:8px;background:rgba(255,255,255,.05);border:none;border-radius:8px;color:rgba(245,230,175,.6);font-size:11px;font-weight:800;cursor:pointer;">전체</button>
+    <button id="svi-history-month" class="svi-history-period-btn" onclick="sviHistoryPeriod('month')" style="flex:1;padding:8px;background:#ffffff;border:none;border-radius:8px;color:#334155;font-size:11px;font-weight:800;cursor:pointer;">월</button>
+    <button id="svi-history-all" class="svi-history-period-btn" onclick="sviHistoryPeriod('all')" style="flex:1;padding:8px;background:#ffffff;border:none;border-radius:8px;color:#334155;font-size:11px;font-weight:800;cursor:pointer;">전체</button>
   </div>
-  <div id="svi-history-empty" style="display:none;padding:20px;text-align:center;color:rgba(245,230,175,.4);font-size:12px;">측정 기록이 없습니다. 첫 측정을 시작해주세요.</div>
+  <div id="svi-history-empty" style="display:none;padding:20px;text-align:center;color:#334155;font-size:12px;">측정 기록이 없습니다. 첫 측정을 시작해주세요.</div>
   <div id="svi-history-graph" style="padding:8px;background:rgba(0,0,0,.15);border-radius:10px;min-height:140px;"></div>
-  <div id="svi-history-trend" style="margin-top:8px;text-align:center;font-size:11px;color:rgba(245,230,175,.7);"></div>
-  <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:9px;color:rgba(245,230,175,.4);text-align:center;line-height:1.5;">
+  <div id="svi-history-trend" style="margin-top:8px;text-align:center;font-size:11px;color:rgba(51,65,85,.7);"></div>
+  <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.08);font-size:9px;color:#334155;text-align:center;line-height:1.5;">
     🔵 SVI 평균 · 🟣 콜라겐 (점선) · 100회 기록 자동 저장
   </div>
 </div>
@@ -26676,16 +26734,16 @@ window.tvyShowIntroPopup = function(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">🌿</span>
-      <span style="font-size:13px;font-weight:800;color:#34d399;">AI 컨설턴트 (100인 전문가)</span>
+      <span style="font-size:13px;font-weight:800;color:#0f172a;">AI 컨설턴트 (100인 전문가)</span>
     </div>
-    <button onclick="sviChatToggle()" style="background:transparent;border:none;color:rgba(245,230,175,.5);font-size:18px;cursor:pointer;">✕</button>
+    <button onclick="sviChatToggle()" style="background:transparent;border:none;color:#334155;font-size:18px;cursor:pointer;">✕</button>
   </div>
   <div id="svi-chat-messages" style="max-height:280px;overflow-y:auto;padding:8px;background:rgba(0,0,0,.15);border-radius:10px;margin-bottom:10px;"></div>
   <div style="display:flex;gap:6px;">
-    <input type="text" id="svi-chat-input" placeholder="피부에 대해 물어보세요..." onkeypress="if(event.key==='Enter')sviChatSend()" style="flex:1;padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#f0e0a8;font-size:12px;">
+    <input type="text" id="svi-chat-input" placeholder="피부에 대해 물어보세요..." onkeypress="if(event.key==='Enter')sviChatSend()" style="flex:1;padding:10px;background:#ffffff;border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#f0e0a8;font-size:12px;">
     <button onclick="sviChatSend()" style="padding:10px 14px;background:linear-gradient(135deg,#10b981,#34d399);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;">전송</button>
   </div>
-  <div style="margin-top:8px;font-size:9px;color:rgba(245,230,175,.4);text-align:center;line-height:1.5;">
+  <div style="margin-top:8px;font-size:9px;color:#334155;text-align:center;line-height:1.5;">
     🔬 피부과 40명 · 한방 40명 · 영양사 20명 통합 지식
   </div>
 </div>
@@ -26697,32 +26755,32 @@ window.tvyShowIntroPopup = function(){
     <div id="svi-result" style="display:none;">
       <!-- SVI 점수 -->
       <div style="background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(52,211,153,.08));border:1px solid rgba(56,189,248,.3);border-radius:20px;padding:24px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:11px;font-weight:700;color:rgba(56,189,248,.7);letter-spacing:.15em;margin-bottom:8px;">피부 활력 지수 (SVI)</div>
-        <div id="svi-total" style="font-size:56px;font-weight:900;color:#38bdf8;line-height:1;">--</div>
-        <div style="font-size:12px;color:rgba(220,240,255,.5);margin-top:4px;">/ 100점</div>
-        <div id="svi-grade" style="margin-top:12px;font-size:14px;font-weight:700;color:#f0f9ff;"></div>
+        <div style="font-size:11px;font-weight:700;color:rgba(15,23,42,.7);letter-spacing:.15em;margin-bottom:8px;">피부 활력 지수 (SVI)</div>
+        <div id="svi-total" style="font-size:56px;font-weight:900;color:#0f172a;line-height:1;">--</div>
+        <div style="font-size:12px;color:#334155;margin-top:4px;">/ 100점</div>
+        <div id="svi-grade" style="margin-top:12px;font-size:14px;font-weight:700;color:#0f172a;"></div>
       </div>
 
       <!-- 맞춤 처방 3종 -->
-      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(56,189,248,.2);border-radius:16px;padding:18px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:800;color:#38bdf8;margin-bottom:14px;">💊 당신만의 탄력 처방</div>
+      <div style="background:#f1f5f9;border:1px solid rgba(56,189,248,.2);border-radius:16px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:14px;">💊 당신만의 탄력 처방</div>
 
         <!-- 수분 -->
         <div style="padding:14px;background:rgba(56,189,248,.06);border-radius:12px;margin-bottom:10px;border-left:3px solid rgba(56,189,248,.5);">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="font-size:18px;">💧</span>
-            <div style="font-size:12px;font-weight:700;color:#38bdf8;">하루 권장 수분량</div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a;">하루 권장 수분량</div>
           </div>
-          <div id="svi-water" style="font-size:13px;color:rgba(220,240,255,.85);line-height:1.7;"></div>
+          <div id="svi-water" style="font-size:13px;color:rgba(51,65,85,.85);line-height:1.7;"></div>
         </div>
 
         <!-- 운동 -->
         <div style="padding:14px;background:rgba(52,211,153,.06);border-radius:12px;margin-bottom:10px;border-left:3px solid rgba(52,211,153,.5);">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="font-size:18px;">🏃</span>
-            <div style="font-size:12px;font-weight:700;color:#34d399;">탄력 운동 루틴</div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a;">탄력 운동 루틴</div>
           </div>
-          <div id="svi-exercise" style="font-size:13px;color:rgba(220,240,255,.85);line-height:1.7;"></div>
+          <div id="svi-exercise" style="font-size:13px;color:rgba(51,65,85,.85);line-height:1.7;"></div>
         </div>
 
         <!-- 식단 -->
@@ -26731,17 +26789,17 @@ window.tvyShowIntroPopup = function(){
             <span style="font-size:18px;">🥗</span>
             <div style="font-size:12px;font-weight:700;color:#d4a843;">당신만의 탄력 식단</div>
           </div>
-          <div id="svi-diet" style="font-size:13px;color:rgba(220,240,255,.85);line-height:1.7;"></div>
+          <div id="svi-diet" style="font-size:13px;color:rgba(51,65,85,.85);line-height:1.7;"></div>
         </div>
       </div>
 
       <!-- 오행 연동 -->
-      <div id="svi-oh-card" style="background:rgba(0,0,0,.2);border:1px solid rgba(52,211,153,.2);border-radius:16px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:8px;">✦ 오행 에너지 연동 분석</div>
-        <div id="svi-oh-text" style="font-size:12px;color:rgba(220,240,255,.8);line-height:1.8;"></div>
+      <div id="svi-oh-card" style="background:#f1f5f9;border:1px solid rgba(52,211,153,.2);border-radius:16px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:8px;">✦ 오행 에너지 연동 분석</div>
+        <div id="svi-oh-text" style="font-size:12px;color:rgba(51,65,85,.8);line-height:1.8;"></div>
       </div>
 
-      <button onclick="sviStartScan()" style="width:100%;padding:14px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:12px;color:#38bdf8;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 분석</button>
+      <button onclick="sviStartScan()" style="width:100%;padding:14px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);border-radius:12px;color:#0f172a;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 분석</button>
     </div>
 
   </div>
