@@ -20817,7 +20817,7 @@ var fcSystems = {
 
             <!-- NASA 행성 현황 -->
             <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;">
-              <div style="font-size:13px;font-weight:700;color:#60a5fa;margin-bottom:12px;display:flex;align-items:center;gap:6px;">🪐 NASA 행성 시장 에너지</div>
+              <div style="font-size:13px;font-weight:700;color:#60a5fa;margin-bottom:12px;display:flex;align-items:center;gap:6px;">🪐 NASA 행성 시장 에너지 <span style="font-size:9px;color:rgba(96,165,250,0.65);font-weight:500;">· 행성 누르면 상세 ›</span></div>
               <div id="stk-planet-list" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
 
@@ -116609,6 +116609,96 @@ function stkOpenModal(name, score, trend, trendColor) {
   }
 }
 
+var STK_PLANET_DATA = {
+  '태양': { icon:'☀️', origin:'천문 · 태양계 중심 항성 (지름 약 139만 km)',
+    summary:'시장 전체의 활력과 큰 흐름, 대장주의 주도 에너지를 상징합니다.',
+    desc:'태양은 태양계 질량의 약 99.8퍼센트를 차지하는 중심 항성으로, 점성학에서는 자아·생명력·핵심 방향을 의미합니다. 시장 에너지로 해석하면 지수 전체의 활력, 시가총액 상위 대장주의 주도력, 시장의 근본 추세를 나타냅니다. 태양의 황도 위치가 활성 구간에 들면 시장 전반에 생기가 도는 에너지로 읽습니다.',
+    stock:'관련 섹터: 지수 ETF · 대형 우량주 · 시장 주도주',
+    tip:'태양 에너지가 강할 때는 개별 종목보다 큰 흐름(지수·대장주)을 살피는 참고 자료로 쓰세요.',
+    retroNote:['태양은 항상 순행하며 시장 전체에 안정적인 활력 에너지를 공급합니다.','태양은 역행하지 않습니다.'] },
+  '달': { icon:'🌙', origin:'천문 · 지구의 위성 (평균 거리 약 38만 km)',
+    summary:'단기 감성과 변동성, 투자 심리의 밀물과 썰물을 상징합니다.',
+    desc:'달은 약 29.5일 주기로 차오르고 기우는 지구의 위성으로, 점성학에서 감정·무의식·단기 리듬을 의미합니다. 시장 에너지로는 하루하루의 투자 심리, 개인 투자자의 분위기, 단기 변동성을 나타냅니다. 보름·그믐 같은 위상 변화 구간에는 감정적 매매가 늘어나는 에너지로 읽습니다.',
+    stock:'관련 섹터: 단기 테마주 · 변동성 큰 종목 · 심리 민감주',
+    tip:'달 에너지가 강한 날은 단기 변동이 커질 수 있으니 감정적 매매를 경계하는 참고로 쓰세요.',
+    retroNote:['달이 순행하며 단기 심리가 비교적 안정적으로 흐르는 국면입니다.','달은 역행하지 않습니다.'] },
+  '수성': { icon:'☿', origin:'천문 · 태양에 가장 가까운 최내행성',
+    summary:'소통·거래·정보의 흐름, IT와 통신 섹터의 에너지를 상징합니다.',
+    desc:'수성은 태양에 가장 가까운 행성으로 약 88일에 한 번 공전하며, 점성학에서 소통·계약·이동·정보를 의미합니다. 시장 에너지로는 거래의 속도, 정보 전달, IT·통신·반도체 섹터의 활력을 나타냅니다. 특히 수성 역행 구간은 점성학에서 통신 오류·계약 지연으로 유명하여, 거래 혼선이나 정보 왜곡을 경계하는 참고 에너지로 읽습니다.',
+    stock:'관련 섹터: IT · 통신 · 반도체 · 거래량 민감주',
+    tip:'수성 역행 구간에는 계약·거래의 착오 가능성을 한 번 더 점검하는 참고로 쓰세요.',
+    retroNote:['수성이 순행하여 정보와 거래의 흐름이 원활한 에너지 국면입니다.','수성이 역행 중이라 거래 혼선·정보 지연의 에너지가 작용할 수 있으니 신중함이 권장됩니다.'] },
+  '금성': { icon:'♀', origin:'천문 · 지구의 안쪽 두 번째 행성 (가장 밝은 행성)',
+    summary:'소비·금전·미적 가치, 럭셔리와 금융의 에너지를 상징합니다.',
+    desc:'금성은 밤하늘에서 가장 밝게 빛나는 행성으로, 점성학에서 사랑·미적 감각·금전·가치를 의미합니다. 시장 에너지로는 소비재·럭셔리·미용·금융 섹터의 활력과 자금의 흐름을 나타냅니다. 금성 에너지가 활성화되면 소비 심리와 가치 평가에 온기가 도는 흐름으로 읽습니다.',
+    stock:'관련 섹터: 소비재 · 럭셔리 · 미용 · 금융 · 엔터',
+    tip:'금성 에너지가 강할 때는 소비·가치주 흐름을 살피는 참고 자료로 쓰세요.',
+    retroNote:['금성이 순행하여 소비와 가치의 에너지가 매끄럽게 흐르는 국면입니다.','금성이 역행 중이라 가치 재평가·소비 위축의 에너지가 나타날 수 있어 관망이 권장됩니다.'] },
+  '화성': { icon:'♂', origin:'천문 · 지구 바깥쪽 붉은 행성',
+    summary:'행동·에너지·공격성, 에너지와 방산 섹터의 추진력을 상징합니다.',
+    desc:'화성은 붉게 빛나는 행성으로 점성학에서 행동·용기·갈등·추진력을 의미합니다. 시장 에너지로는 공격적인 매매 심리, 에너지·방산·원자재 섹터의 활력, 단기 급등락의 추동력을 나타냅니다. 화성 에너지가 강하면 변동이 격해지는 에너지로 읽습니다.',
+    stock:'관련 섹터: 에너지 · 방산 · 원자재 · 중공업',
+    tip:'화성 에너지가 강할 때는 변동성이 커질 수 있으니 과열을 경계하는 참고로 쓰세요.',
+    retroNote:['화성이 순행하여 추진 에너지가 한 방향으로 흐르는 국면입니다.','화성이 역행 중이라 추진력이 안으로 수렴하며 갈등·정체의 에너지가 작용할 수 있습니다.'] },
+  '목성': { icon:'♃', origin:'천문 · 태양계 최대 행성 (지구 부피의 약 1300배)',
+    summary:'확장·행운·성장, 금융과 성장주의 낙관 에너지를 상징합니다.',
+    desc:'목성은 태양계에서 가장 큰 행성으로 약 12년에 한 번 공전하며, 점성학에서 확장·행운·성장·관용을 의미합니다. 시장 에너지로는 낙관·확장 국면, 금융·성장주의 활력, 강세장의 에너지를 나타냅니다. 목성 에너지가 활성화되면 성장 기대가 커지는 흐름으로 읽습니다.',
+    stock:'관련 섹터: 금융 · 성장주 · 글로벌 대형주',
+    tip:'목성 에너지가 강할 때는 확장·성장 테마를 살피되 과낙관을 경계하는 참고로 쓰세요.',
+    retroNote:['목성이 순행하여 확장과 성장의 에너지가 시원하게 흐르는 국면입니다.','목성이 역행 중이라 확장이 잠시 안으로 다지는 내실화 에너지로 읽힙니다.'] },
+  '토성': { icon:'♄', origin:'천문 · 고리를 가진 태양계 두 번째 큰 행성',
+    summary:'인내·제약·구조와 규율, 안정과 조정의 에너지를 상징합니다.',
+    desc:'토성은 아름다운 고리를 가진 행성으로 약 29년에 한 번 공전하며, 점성학에서 인내·책임·제약·구조를 의미합니다. 시장 에너지로는 규율과 안정, 채권·우량주·배당주의 흐름, 그리고 조정·수렴 국면을 나타냅니다. 토성 에너지가 강하면 시장이 신중하게 구조를 다지는 에너지로 읽습니다.',
+    stock:'관련 섹터: 채권 · 우량주 · 배당주 · 인프라',
+    tip:'토성 에너지가 강할 때는 안정·방어 자산의 흐름을 살피는 참고 자료로 쓰세요.',
+    retroNote:['토성이 순행하여 구조와 규율의 에너지가 차분히 작동하는 국면입니다.','토성이 역행 중이라 제약과 점검의 에너지가 강해져 보수적 흐름이 권장됩니다.'] },
+  '천왕성': { icon:'♅', origin:'천문 · 옆으로 누워 자전하는 얼음 거대행성',
+    summary:'혁신·급변·파괴적 변화, 신기술과 돌발 변동의 에너지를 상징합니다.',
+    desc:'천왕성은 자전축이 거의 옆으로 누운 독특한 행성으로 약 84년에 한 번 공전하며, 점성학에서 혁신·변화·자유·돌발을 의미합니다. 시장 에너지로는 기술 혁신, 파괴적 변화, 예측하기 어려운 급변동의 에너지를 나타냅니다. 천왕성 에너지가 활성화되면 갑작스러운 전환의 흐름으로 읽습니다.',
+    stock:'관련 섹터: 신기술 · 혁신 테크 · 변동성 테마',
+    tip:'천왕성 에너지가 강할 때는 돌발 변동 가능성을 염두에 두는 참고로 쓰세요.',
+    retroNote:['천왕성이 순행하여 혁신 에너지가 바깥으로 표출되는 국면입니다.','천왕성이 역행 중이라 변화의 에너지가 안으로 축적되는 잠복기로 읽힙니다.'] },
+  '해왕성': { icon:'♆', origin:'천문 · 태양계 가장 바깥의 푸른 얼음 행성',
+    summary:'꿈·환상·영성과 거품, 투기와 상상력의 에너지를 상징합니다.',
+    desc:'해왕성은 태양계 가장 바깥의 푸른 행성으로 약 165년에 한 번 공전하며, 점성학에서 꿈·영성·환상·모호함을 의미합니다. 시장 에너지로는 기대와 상상, 바이오·엔터·투기 테마의 활력, 그리고 거품과 과열의 에너지를 나타냅니다. 해왕성 에너지가 강하면 실체보다 기대가 앞서는 흐름으로 읽으니 분별이 권장됩니다.',
+    stock:'관련 섹터: 바이오 · 엔터 · 투기 테마 · 신약 기대주',
+    tip:'해왕성 에너지가 강할 때는 기대와 실체를 구분하는 분별의 참고 자료로 쓰세요.',
+    retroNote:['해왕성이 순행하여 상상과 기대의 에너지가 퍼지는 국면입니다.','해왕성이 역행 중이라 환상이 걷히고 실체를 점검하는 에너지로 읽힙니다.'] }
+};
+function stkOpenPlanetModal(idx){
+  var planets = stkCalcPlanets();
+  var p = planets[idx]; if(!p) return;
+  var cleanName = (p.name||'').replace(/[^가-힣]/g,'').trim();
+  var d = STK_PLANET_DATA[cleanName]; if(!d) return;
+  var energyLvl=['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
+  var energyClr=['#34d399','#60a5fa','#94a3b8','#fbbf24','#f87171'];
+  var lvIdx = p.retro?4:Math.floor((p.lon%180)/36);
+  var score = Math.round(95 - lvIdx*13);
+  var trend = ['📈 강한 순행','📈 순행','➡️ 중립','📉 역행 접근','📉 역행 중'][lvIdx];
+  var trendColor = energyClr[lvIdx];
+  var coName = (typeof stkSelected!=='undefined' && stkSelected) ? stkSelected.n : '종목';
+  var coEl = (typeof stkSelected!=='undefined' && stkSelected) ? STK_ELEM[stkSelected.ei||3] : STK_ELEM[3];
+  var nowText = '<b>'+coName+'</b>의 흐름에 '+p.name+' 에너지가 현재 <b style="color:'+trendColor+';">'+energyLvl[lvIdx]+'</b> 상태로 작용하고 있습니다 ('+Math.round(p.lon)+'° · '+p.sector+'). '+d.retroNote[p.retro?1:0]+' '+coEl.emoji+' '+coEl.label+' 오행 종목과의 흐름을 참고용으로만 살피세요.';
+  document.getElementById('m-icon').textContent = d.icon;
+  document.getElementById('m-name').textContent = cleanName;
+  document.getElementById('m-origin').textContent = d.origin;
+  document.getElementById('m-score').textContent = score;
+  document.getElementById('m-score').style.color = trendColor;
+  document.getElementById('m-trend').textContent = trend;
+  document.getElementById('m-trend').style.color = trendColor;
+  document.getElementById('m-bar').style.width = score+'%';
+  document.getElementById('m-bar').style.background = 'linear-gradient(90deg,'+trendColor+','+trendColor+'88)';
+  document.getElementById('m-summary').textContent = d.summary;
+  document.getElementById('m-desc').textContent = d.desc;
+  document.getElementById('m-stock').textContent = d.stock;
+  document.getElementById('m-now').innerHTML = nowText;
+  document.getElementById('m-tip').textContent = d.tip;
+  var modal = document.getElementById('stk-algo-modal');
+  modal.style.display = 'flex';
+  setTimeout(function(){ modal.style.opacity='1'; }, 10);
+  if (window._LANG && window._LANG !== 'ko') { setTimeout(function(){ _cgoTransPopup('stk-algo-modal'); }, 300); }
+}
+
 function stkCloseModal() {
   document.getElementById('stk-algo-modal').style.display = 'none';
 }
@@ -116769,9 +116859,9 @@ function _runAnalysisCore() {
   planetList.innerHTML = '';
   var energyLvl=['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
   var energyClr=['#34d399','#60a5fa','#94a3b8','#fbbf24','#f87171'];
-  planets.forEach(function(p){
+  planets.forEach(function(p,_pi){
     var idx = p.retro?4:Math.floor((p.lon%180)/36);
-    planetList.innerHTML += '<div style="padding:7px 10px;background:var(--bg-panel);border-radius:7px;margin-bottom:4px;">'
+    planetList.innerHTML += '<div onclick="stkOpenPlanetModal('+_pi+')" style="padding:7px 10px;background:var(--bg-panel);border-radius:7px;margin-bottom:4px;cursor:pointer;transition:background .15s;">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;">'
       +'<span style="font-size:12px;color:var(--text-1);">'+p.name+(p.retro?' <span style="color:#f87171;font-size:10px;">역행</span>':'')+' <span style="font-size:10px;color:var(--text-3);">'+p.sector+'</span></span>'
       +'<span style="font-size:11px;color:'+energyClr[idx]+';">'+energyLvl[idx]+'</span>'
