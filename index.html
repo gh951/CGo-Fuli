@@ -115811,6 +115811,14 @@ function stkFetchPrice(obj){
     })
     .catch(function(){ if(box) box.style.display='none'; });
 }
+function stkResetPage(){
+  try{ window.stkSelected=null; }catch(e){}
+  ['stk-selected-info','stk-result','stk-ai-status'].forEach(function(id){
+    var el=document.getElementById(id); if(el){ el.style.display='none'; }
+  });
+  var s=document.getElementById('stk-search'); if(s) s.value='';
+  var lp=document.getElementById('stk-live-price'); if(lp){ lp.style.display='none'; lp.innerHTML=''; }
+}
 function stkShowSelectedChip(obj) {
   var info = document.getElementById('stk-selected-info');
   if (!info) return;
@@ -123445,6 +123453,8 @@ function cgoGoPage(page){
       }
     } catch(e){}
   }
+  // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
+  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
   // 대시보드 이탈 시 스크롤 위치 저장
   if (_cgCurrent === 'dashboard' && page !== 'dashboard') {
     var _saveCt = document.querySelector('.content');
