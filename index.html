@@ -57843,9 +57843,7 @@ function qtOpenMainPopup(){
     p.style.display='block';
   }
   document.body.style.overflow='hidden';
-  qtRenderMainGrid();
-  qtRenderSystemTags();
-  if(_qt.chatHistory.length===0) setTimeout(qtInitChat,400);
+  qtRestart();
 }
 function qtCloseMainPopup(){
   var p=document.getElementById('qt-main-popup');
@@ -58230,6 +58228,10 @@ function qtCallAI(userMsg,callback){
   var oh=r?(r.domOh||'토'):'';
   var nbti=window._mbtiResult?window._mbtiResult.type:'';
   var card=_qt.selectedCard;
+  var _sN=window._qtSpread||1, _sC=window._qtSpreadCards||[];
+  var _useSpread=_sN>1 && _sC.length>=_sN;
+  var _sPos=(window.qtSpreadPos&&window.qtSpreadPos[_sN])||[];
+  var _sName=(window.qtSpreadName&&window.qtSpreadName[_sN])||(_sN+'장');
   var sys=_qt.selectedSystems.map(function(id){var s=QT_SYSTEMS.find(function(x){return x.id===id;});return s?s.name:'';}).filter(Boolean).join(', ');
 
   // ★ 카드 정보 최상단 — 8B 모델용 강력 잠금
@@ -58249,6 +58251,10 @@ function qtCallAI(userMsg,callback){
     '4. 답변의 첫 문장은 반드시 "「' + card.name + '」 카드는" 으로 시작하세요.',
     ''
   ].join('\n') : '⚠️ 카드 미선택 상태입니다. 사용자에게 카드 선택을 안내하세요.';
+  if(_useSpread){
+    var _sl=_sC.map(function(c,i){return '  '+(i+1)+'. ['+(_sPos[i]||('카드'+(i+1)))+'] \u300c'+c.name+'\u300d ('+c.key.join(' \u00b7 ')+')';}).join('\n');
+    cardLockBlock=['\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550','  \uc0ac\uc6a9\uc790\uac00 \ubf51\uc740 '+_sN+'\uc7a5 \uc2a4\ud504\ub808\ub4dc ('+_sName+') \u2014 \uc774 \uce74\ub4dc\ub4e4\ub9cc \ubd84\uc11d','\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550',_sl,'\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550','','\u26a0\ufe0f \uc808\ub300 \uaddc\uce59 \u26a0\ufe0f','1. \uc704 '+_sN+'\uc7a5 \uc678\uc758 \ub2e4\ub978 \uce74\ub4dc \uc774\ub984\uc744 \ub9cc\ub4e4\uac70\ub098 \uc5b8\uae09\ud558\uc9c0 \ub9c8\uc138\uc694.','2. \uac01 \uce74\ub4dc\ub97c \ud574\ub2f9 \uc704\uce58\uc758 \uc758\ubbf8(\uc608: \uacfc\uac70/\ud604\uc7ac/\ubbf8\ub798)\uc5d0 \ub9de\uac8c \ud574\uc11d\ud558\uc138\uc694.','3. \uce74\ub4dc\ub4e4\uc774 \uc774\uc5b4\uc9c0\ub294 \uc804\uccb4 \ud750\ub984\uc744 \uc885\ud569\ud574\uc11c \uc0c1\ub2f4\ud558\uc138\uc694.',''].join('\n');
+  }
 
   var sysPrompt=[
     cardLockBlock,
@@ -58262,15 +58268,15 @@ function qtCallAI(userMsg,callback){
     '• "~합니다 / ~입니다" 정중한 톤.',
     '',
     '【답변 구조 — 반드시 이 형식】',
-    '① 카드의 핵심 의미 (2~3문장)',
-    '② 정방향 의미 (1~2문장)',
-    '③ 역방향 의미 (1~2문장)',
-    '④ 사용자에게 드리는 구체적 조언 (실천 가능한 것 1~2개)',
+    _useSpread ? '① 각 위치별 카드 의미를 위치명과 함께 짚기' : '① 카드의 핵심 의미 (2~3문장)',
+    _useSpread ? '② 카드들이 이어지는 전체 흐름 종합' : '② 정방향 의미 (1~2문장)',
+    _useSpread ? '③ 사용자에게 드리는 구체적 조언 (실천 가능한 것 1~2개)' : '③ 역방향 의미 (1~2문장)',
+    _useSpread ? '' : '④ 사용자에게 드리는 구체적 조언 (실천 가능한 것 1~2개)',
     '',
     '【금지】',
     '• "반드시 / 확실히 / 100%" 단정 표현 금지',
     '• 근거 없는 숫자·% 금지',
-    card ? '• 「' + card.name + '」 외 다른 카드 이름 절대 금지' : '',
+    _useSpread ? ('• 위 '+_sN+'장 외 다른 카드 이름 절대 금지') : (card ? '• 「' + card.name + '」 외 다른 카드 이름 절대 금지' : ''),
     '• 영어·외래어 금지',
     '',
     // 부가 정보는 끝에 작게 — 카드 환각 만들지 못하게
@@ -58311,8 +58317,16 @@ function qtChatSend(){
   if(!inp||!inp.value.trim()) return;
   var msg=inp.value.trim(); inp.value='';
   qtAddMsg('user',msg);
-  var _card=_qt.selectedCard;
-  var enrichedMsg=_card?'[선택카드:'+_card.name+'('+_card.id+'번)/키워드:'+_card.key.join(',')+']\n'+msg:msg;
+  var _sN=window._qtSpread||1, _sC=window._qtSpreadCards||[];
+  var enrichedMsg;
+  if(_sN>1 && _sC.length>=_sN){
+    var _sP=(window.qtSpreadPos&&window.qtSpreadPos[_sN])||[];
+    var _L=_sC.map(function(c,i){return (i+1)+'.['+(_sP[i]||('카드'+(i+1)))+']'+c.name+'('+c.id+'번)';}).join(' ');
+    enrichedMsg='[스프레드 '+_sN+'장: '+_L+']\n'+msg;
+  } else {
+    var _card=_qt.selectedCard;
+    enrichedMsg=_card?'[선택카드:'+_card.name+'('+_card.id+'번)/키워드:'+_card.key.join(',')+']\n'+msg:msg;
+  }
   qtCallAI(enrichedMsg,null);
 }
 
@@ -58359,6 +58373,10 @@ function qtRunAnalysis(){
 
 function qtRestart(){
   _qt={chatHistory:[],selectedCard:null,pendingCard:null,selectedSystems:[]};
+  window._qtSpread=1; window._qtSpreadCards=[];
+  var spw=document.getElementById('qt-spread-wrap'); if(spw){spw.style.display='none';spw.innerHTML='';}
+  var spsel=document.getElementById('qt-spread-sel'); if(spsel){spsel.style.display='none';spsel.textContent='';}
+  try{var _so=document.querySelectorAll('.qt-spread-opt');for(var _i=0;_i<_so.length;_i++)_so[_i].classList.remove('sel');}catch(e){}
   var msgs=document.getElementById('qt-chat-messages'); if(msgs) msgs.innerHTML='';
   var grid=document.getElementById('qt-main-card-grid'); if(grid) grid.innerHTML='';
   var sw=document.getElementById('qt-selected-wrap'); if(sw) sw.style.display='none';
