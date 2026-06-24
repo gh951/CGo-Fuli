@@ -4787,6 +4787,7 @@ function cgoGuideFeature(key){
 
       <div id="sec-ip" class="input-panel">
         <div class="ip-title" data-i18n="ipTitle">📋 정보 입력 — 빈칸을 채우면 자동으로 분석합니다 (일부 제외)</div>
+          <div id="cgoInfoGateBanner" style="margin:8px 0;padding:11px 12px;border-radius:10px;font-size:12.5px;font-weight:800;text-align:center;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);color:#dc2626;">🔒 정보를 입력하세요 — 입력해야 분석 기능이 열립니다</div>
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
@@ -4843,7 +4844,7 @@ function cgoGuideFeature(key){
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
                   <input type="text" id="ipBirthPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 강남구 역삼동, 군산 나운동, Tokyo...)" autocomplete="off"
-                    oninput="ipAutoSuggest(this.value,'birth')"
+                    oninput="ipAutoSuggest(this.value,'birth');if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();"
                     onblur="setTimeout(function(){var d=document.getElementById('ipBirthDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                    onblur="if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();">
@@ -4865,7 +4866,7 @@ function cgoGuideFeature(key){
               <div style="display:flex;gap:6px;align-items:center">
                 <div style="position:relative;flex:1">
                   <input type="text" id="ipCurPlace" class="ip-field" placeholder="동/읍/면까지 입력 (예: 분당구 정자동, 군산 수송동, London...)" autocomplete="off"
-                    oninput="ipAutoSuggest(this.value,'cur')"
+                    oninput="ipAutoSuggest(this.value,'cur');if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();"
                     onblur="setTimeout(function(){var d=document.getElementById('ipCurDrop');if(d)d.style.display='none';},350)"
                     style="width:100%;padding-right:28px"
                    onblur="if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();">
@@ -17448,10 +17449,13 @@ var fcAnalysisData = null;
 
 /* ✦ 통일 라이트 인트로 셰 (건강예측 톤) — _cgo*IntroPopup 통일용 by C-60 */
 /* ✦ 사용자 정보 저장/자동복원 (한 번 입력 → 계속 유지) by C-60 */
+var _cgoInfoToastT=0;
+function _cgoInfoToast(msg){ try{ if(window._cgoRestoring) return; var now=Date.now(); if(now-_cgoInfoToastT<1400) return; _cgoInfoToastT=now; var t=document.getElementById('_cgoInfoToastEl'); if(!t){ t=document.createElement('div'); t.id='_cgoInfoToastEl'; t.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#0b1220;color:#34d399;font-size:13px;font-weight:700;padding:9px 16px;border-radius:20px;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .3s;pointer-events:none;'; (document.body||document.documentElement).appendChild(t); } t.textContent=msg; t.style.opacity='1'; clearTimeout(t._h); t._h=setTimeout(function(){ if(t) t.style.opacity='0'; },1600); }catch(e){} }
 function _cgoSaveUserInfo(){ try{ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); }catch(e){} }
-function _cgoRestoreUserInfo(){ try{ var raw=localStorage.getItem('cgo_saved_info'); if(!raw) return; var o=JSON.parse(raw); var map={ipName:'name',ipBirthY:'birthY',ipBirthM:'birthM',ipBirthD:'birthD',ipGender:'gender',ipTime:'time',ipBirthPlace:'birthPlace',ipCurPlace:'curPlace',ipCalType:'calType'}; Object.keys(map).forEach(function(id){var el=document.getElementById(id),v=o[map[id]]; if(el&&v&&!el.value) el.value=v;}); }catch(e){} }
+function _cgoRestoreUserInfo(){ try{ if(typeof cgoLoadUserInfo==='function') cgoLoadUserInfo(); }catch(e){} }
 function _cgoBindUserInfo(){ try{ ['ipName','ipBirthY','ipBirthM','ipBirthD','ipBirthPlace','ipCurPlace','ipGender','ipTime','ipCalType'].forEach(function(id){var el=document.getElementById(id); if(el && !el._cgoBnd){ el._cgoBnd=1; el.addEventListener('change',_cgoSaveUserInfo); el.addEventListener('input',_cgoSaveUserInfo); }}); }catch(e){} }
-function _cgoUserInfoInit(){ _cgoRestoreUserInfo(); _cgoBindUserInfo(); }
+function _cgoUpdateInfoGate(){ try{ var bn=document.getElementById('cgoInfoGateBanner'); if(!bn) return; var nm=(document.getElementById('ipName')||{}).value||''; var by=(document.getElementById('ipBirthY')||{}).value||''; var bm=(document.getElementById('ipBirthM')||{}).value||''; var bd=(document.getElementById('ipBirthD')||{}).value||''; var ok=nm.trim()&&by&&bm&&bd; try{ if(!ok && localStorage.getItem('cgo_saved_info')) ok=true; }catch(e){} if(ok){ bn.style.background='rgba(5,150,105,.1)'; bn.style.borderColor='rgba(5,150,105,.35)'; bn.style.color='#059669'; bn.textContent='✅ 정보 입력 완료 — 모든 분석 기능이 열렸어요'; } else { bn.style.background='rgba(220,38,38,.1)'; bn.style.borderColor='rgba(220,38,38,.3)'; bn.style.color='#dc2626'; bn.textContent='🔒 정보를 입력하세요 — 입력해야 분석 기능이 열립니다'; } }catch(e){} }
+function _cgoUserInfoInit(){ _cgoRestoreUserInfo(); _cgoBindUserInfo(); try{ if(typeof _cgoUpdateInfoGate==='function') setTimeout(_cgoUpdateInfoGate,100); }catch(e){} }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _cgoUserInfoInit); } else { _cgoUserInfoInit(); }
 try{ setTimeout(_cgoUserInfoInit,400); setTimeout(_cgoUserInfoInit,1500); }catch(e){}
 
@@ -48241,8 +48245,8 @@ function _cgoAutoSaveInputs(){
   var bp = (document.getElementById('ipBirthPlace')||{}).value||'';
   var cp = (document.getElementById('ipCurPlace')||{}).value||'';
 
-  // 개인정보 localStorage 저장 비활성화 (보안)
-  try{ /* 이름·생년월일·출생지 저장 안 함 */ }catch(e){}
+  // 개인정보 저장 켜짐 (사용자 편의 — 재입력 방지, 이 기기 localStorage만)
+  try{ var _ck=document.getElementById('chkSaveInfo'); if(_ck && _ck.checked){ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); } }catch(e){}
 
   // 전페이지 동기화 - 이름 표시
   if(nm){
@@ -48295,6 +48299,7 @@ function _cgoAutoSaveInputs(){
   if (typeof _cgoAutoFillAll === 'function') {
     try { _cgoAutoFillAll(); } catch(e) {}
   }
+  try{ if(typeof _cgoUpdateInfoGate==='function') _cgoUpdateInfoGate(); }catch(e){}
 }
 
 
@@ -67691,7 +67696,7 @@ window.addEventListener('load', function(){
     </div>
 
     <!-- 결과 영역 -->
-    <div id="tf-result" style="display:none;background:#0b1220;border-radius:14px;padding:12px 10px;margin-top:8px;">
+    <div id="tf-result" style="display:none;background:#0b1220;border-radius:14px;padding:12px 10px;margin:8px auto 0;max-width:560px;">
       <div id="tf-result-body" class="fortune-popup-body" style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
       </div>
       <!-- 호환용 hidden 요소 -->
@@ -67706,7 +67711,7 @@ window.addEventListener('load', function(){
     </div>
 
     <!-- 실시간 연동 전용 결과 영역 -->
-    <div id="tf-rt-result" style="display:none;">
+    <div id="tf-rt-result" style="display:none;background:#0b1220;border-radius:14px;padding:12px 10px;margin:8px auto 0;max-width:560px;">
       <div id="tf-rt-result-body" class="fortune-popup-body" style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
       </div>
     </div>
@@ -123042,6 +123047,7 @@ function _cgoRppgScanDone(type){
 })();
 
 function cgoRunRppgAnalysis(){
+  try{ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); }catch(e){}
   var selectedEngines=_TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
   if(selectedEngines.length===0){alert('역학을 1개 이상 선택해 주세요!');return;}
   var r=window.calcResult;
@@ -123363,6 +123369,7 @@ function cgoRunRppgAnalysis(){
 
 // ── 실시간 데이터 연동 전용 분석 ──
 function cgoRunRealtimeAnalysis(){
+  try{ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); }catch(e){}
   var selectedEngines=_TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
   if(selectedEngines.length===0){alert('역학을 1개 이상 선택해 주세요!');return;}
   var r=window.calcResult;
@@ -123477,6 +123484,7 @@ function cgoRunRealtimeAnalysis(){
 
 // ══ 실시간 데이터 연동 전용 분석 ══
 function cgoRunRealtimeAnalysis(){
+  try{ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); }catch(e){}
   var selectedEngines=_TF_ENGINES.filter(function(e){return _tfSelected[e.id];});
   if(selectedEngines.length===0){alert('분석할 역학을 최소 1개 선택해 주세요!');return;}
   var r=window.calcResult;
@@ -126931,13 +126939,34 @@ function cgoYtClose() {
 
 <script>
 // ══ 정보 자동 저장 & 로드 ══
+function _cgoInfoOK(){ try{ var g=function(id){return ((document.getElementById(id)||{}).value||'').trim();}; if(g('ipName')&&g('ipBirthY')&&g('ipBirthM')&&g('ipBirthD')) return true; if(localStorage.getItem('cgo_saved_info')) return true; }catch(e){} return false; }
+function _cgoSaveInfoRobust(){
+  var g=function(id){return (document.getElementById(id)||{}).value||'';};
+  var nm=g('ipName').trim(), by=g('ipBirthY');
+  if(!nm||!by) return {ok:false, reason:'noinfo'};
+  var info={name:nm,birthY:by,birthM:g('ipBirthM'),birthD:g('ipBirthD'),gender:g('ipGender')||'M',time:g('ipTime'),birthPlace:g('ipBirthPlace'),curPlace:g('ipCurPlace'),calType:g('ipCalType')||'solar'};
+  var raw=JSON.stringify(info);
+  function trySave(){ try{ localStorage.setItem('cgo_saved_info', raw); var v=localStorage.getItem('cgo_saved_info'); return v? true : new Error('readback-null'); }catch(e){ return e||new Error('unknown'); } }
+  var r=trySave();
+  if(r===true) return {ok:true, freed:0};
+  // 저장 실패 → 불필요 데이터 비워 공간 확보 후 재시도 (개인정보 보존 우선)
+  var freed=0, junk=['cgo_food_chat','dementia_intro_seen','scalp_intro_seen','iq_intro_seen','eye_intro_seen','cgo_food_profile'];
+  for(var i=0;i<junk.length;i++){ try{ if(localStorage.getItem(junk[i])!=null){ localStorage.removeItem(junk[i]); freed++; } }catch(e){} }
+  var r2=trySave();
+  if(r2===true) return {ok:true, freed:freed};
+  return {ok:false, reason:((r2&&r2.name)||(r2&&r2.message)||'unknown'), freed:freed};
+}
 function cgoSaveInfoToggle() {
   var chk = document.getElementById('chkSaveInfo');
   if (!chk) return;
   if (chk.checked) {
-    cgoSaveUserInfo();
+    var res=(typeof _cgoSaveInfoRobust==='function')?_cgoSaveInfoRobust():{ok:false,reason:'nofunc'};
+    if(res.ok){ if(typeof _cgoInfoToast==='function') _cgoInfoToast(res.freed? ('✅ 정보 저장됨 (공간 정리 '+res.freed+'건)') : '✅ 정보 저장됨 — 다음에 자동 입력'); }
+    else if(res.reason==='noinfo'){ chk.checked=false; if(typeof _cgoInfoToast==='function') _cgoInfoToast('⚠️ 이름·생년월일을 먼저 입력하세요'); }
+    else { if(typeof _cgoInfoToast==='function') _cgoInfoToast('⚠️ 저장 실패: '+res.reason); }
   } else {
     localStorage.removeItem('cgo_saved_info');
+    if(typeof _cgoInfoToast==='function') _cgoInfoToast('저장 해제됨');
   }
 }
 
@@ -126958,7 +126987,7 @@ function cgoSaveUserInfo() {
 }
 
 function cgoLoadUserInfo() {
-  try {
+  try { window._cgoRestoring=true; try{ setTimeout(function(){ window._cgoRestoring=false; },250); }catch(e){ window._cgoRestoring=false; }
     var saved = localStorage.getItem('cgo_saved_info');
     if (!saved) return;
     var info = JSON.parse(saved);
@@ -126991,7 +127020,11 @@ function cgoLoadUserInfo() {
     if (label) label.textContent = '💾 ' + info.name + '님 정보 자동 로드됨 ✅';
 
   } catch(e) {}
+  try{ setTimeout(function(){ window._cgoRestoring=false; },120); }catch(e){ window._cgoRestoring=false; }
 }
+
+/* C-60: cgoLoadUserInfo 정의 직후 — 정의 보장된 시점에 로드 호출 (앞쪽 init은 정의 전이라 건너뜀) */
+(function(){ function _cgoLoadNow(){ try{ if(typeof cgoLoadUserInfo==='function') cgoLoadUserInfo(); }catch(e){} } if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _cgoLoadNow); } else { _cgoLoadNow(); } try{ setTimeout(_cgoLoadNow,400); setTimeout(_cgoLoadNow,1200); setTimeout(_cgoLoadNow,2500); }catch(e){} })();
 
 // 입력 변경 시 자동 저장 (체크된 경우만)
 function cgoAutoSaveIfChecked() {
@@ -127077,6 +127110,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
+  /* C-60 게이트: 정보 미입력 시 기능 페이지 비활성화 (홈/프로필/상점만 허용) */
+  try{ var _wl={dashboard:1,profile:1,shop:1}; if(page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
   if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
   if(page === 'naming'){ try{ if(typeof namingResetPage==='function') namingResetPage(); }catch(e){} }
