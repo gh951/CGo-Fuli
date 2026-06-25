@@ -116151,7 +116151,7 @@ function stkFetchNews(obj){
   fetch('/api/news?q='+encodeURIComponent(obj.n)+'&lang='+lg[0]+'&gl='+lg[1])
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d || !d.ok){ box.style.display='none'; return; }
+      if(!d || !d.ok){ box.style.display='block'; box.innerHTML='<div style=\"font-size:10.5px;color:#64748b;line-height:1.5;\">📰 실시간 뉴스를 불러오지 못했습니다.<br>(네트워크 또는 /api/news 응답 없음 · 잠시 후 자동 재시도)</div>'; return; }
       var heads='';
       (d.headlines||[]).forEach(function(h){
         var ttl=(h.title||'').replace(/</g,'&lt;');
@@ -116164,20 +116164,20 @@ function stkFetchNews(obj){
         +(heads?'<div style="margin-top:7px;">'+heads+'</div>':'')
         +'<div style="font-size:9px;color:rgba(150,165,180,0.55);margin-top:6px;">⚠️ '+(d.disclaimer||'뉴스 기운은 참고용이며 투자 권유가 아닙니다.')+'</div>';
     })
-    .catch(function(){ box.style.display='none'; });
+    .catch(function(){ box.style.display='block'; box.innerHTML='<div style=\"font-size:10.5px;color:#64748b;line-height:1.5;\">📰 실시간 뉴스를 불러오지 못했습니다.<br>(네트워크 또는 /api/news 응답 없음 · 잠시 후 자동 재시도)</div>'; });
 }
 function stkFetchPrice(obj){
   var box=document.getElementById('stk-live-price');
   if(!box) return;
   var sym=stkResolveSymbol(obj);
-  if(!sym){ box.style.display='none'; return; }
+  if(!sym){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;line-height:1.5;\">📋 이 종목은 실시간 시세 미지원입니다 — 종목코드(티커)가 등록되지 않았습니다. <b style=\"color:#334155\">사주 궁합 분석</b>은 정상 제공됩니다.</span>'; return; }
   box.style.display='block';
   box.innerHTML='<span style="font-size:11px;color:#334155">💰 현재가 불러오는 중…</span>';
   var _cc=''; try{ if(obj.c && typeof _stkFlagCode==='function') _cc=_stkFlagCode(obj.c); }catch(e){} if(!_cc && sym.kr) _cc='KR';
   fetch('/api/stock?symbol='+encodeURIComponent(sym.symbol)+'&cc='+encodeURIComponent(_cc))
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d||!d.ok||d.price==null){ box.style.display='none'; return; }
+      if(!d||!d.ok||d.price==null){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; return; }
       var _cur=(d.currency||'USD').toUpperCase();
       var _noDec={KRW:1,JPY:1,IDR:1,CLP:1,HUF:1,TWD:1};
       var _sufCur={KRW:'원',SEK:' kr',NOK:' kr',DKK:' kr',CZK:' Kč',PLN:' zł'};
@@ -116195,7 +116195,7 @@ function stkFetchPrice(obj){
         +'</div>'
         +'<div style="font-size:9px;color:#64748b;margin-top:3px;">⚠️ 시세는 정보 제공용(지연 가능)이며, 실제 투자 판단은 본인 책임입니다.</div>';
     })
-    .catch(function(){ if(box) box.style.display='none'; });
+    .catch(function(){ if(box){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; } });
 }
 function stkResetPage(){
   try{ window.stkSelected=null; }catch(e){}
