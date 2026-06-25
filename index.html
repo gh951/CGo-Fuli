@@ -74581,94 +74581,33 @@ function pmYtOpen(vid,title,ch){
 function pmYtFetch(oh,sj,ili,cid,_retry){
   var box=document.getElementById(cid);
   if(!box)return;
-
-  // 로딩 표시
   var isLight=(cid==='mfu-yt-live');
-  var cLoad=isLight?'#475569':'rgba(240,230,200,.4)',cNum=isLight?'#b45309':'rgba(212,168,67,.7)',cTitle=isLight?'#0f172a':'rgba(240,230,200,.95)',cArtist=isLight?'#64748b':'rgba(200,185,140,.55)',cReason=isLight?'#047857':'rgba(52,211,153,.7)';
-  box.innerHTML='<div style="text-align:center;padding:18px;font-size:11px;color:'+cLoad+';">🤖 AI가 오늘 당신의 주파수를 분석 중...</div>';
-
-  // 사용자 데이터 수집
-  var bfd=window._bioFinalData||{};
-  var bpm=bfd.bpm||72, hrv=bfd.hrv||45, fci=bfd.fci||80;
-  var scanned=window._baiScanned||(bfd.fci>0||bfd.hrv>0);
-  var _sjNm=['자시(23~1시)','축시(1~3시)','인시(3~5시)','묘시(5~7시)','진시(7~9시)','사시(9~11시)','오시(11~13시)','미시(13~15시)','신시(15~17시)','유시(17~19시)','술시(19~21시)','해시(21~23시)'];
-  var _ohDesc={'목':'목(木) - 성장·창의·간 에너지, 녹색 에너지','화':'화(火) - 열정·소통·심장 에너지, 빨간 에너지','토':'토(土) - 안정·신뢰·만물 에너지, 노란 에너지','금':'금(金) - 집중·명예·폐 에너지, 하얼 에너지','수':'수(水) - 지혜·감성·신장 에너지, 파란 에너지'};
-
-  var bioInfo = scanned
-    ? '심박수(BPM): '+bpm+', HRV: '+hrv+'ms, 안면혁색지수(FCI): '+fci+'%'
-    : '생체 스캔 미완료 (기본값 사용)';
-
-  var _wl2=(typeof _mfuSampleWL==='function'&&window.MUSIC_WHITELIST_V2)?_mfuSampleWL(oh):null;
-  var _dbStr='';
-  if(_wl2){['목','화','토','금','수','주파수'].forEach(function(k){var ar=_wl2[k]||[];if(!ar.length)return;_dbStr+='\n['+k+'] '+ar.map(function(s){return '"'+s.t+'"·'+s.a;}).join(', ');});}
-  var prompt = _wl2
-    ? ('사용자 오행: '+(_ohDesc[oh]||oh)+' / 시진: '+(_sjNm[sj]||'현재')+' / 계절: '+(window._pmSeason||'봄')+'\n\n'
-      + '[\u2605 검증된 음악 DB \u2014 이 안에서만 선택 \u2605]'+_dbStr+'\n\n'
-      + '위 DB에서 사용자에게 가장 어울리는 음악 정확히 5개 선택.\n'
-      + '아래 JSON 배열로만 응답(코드블록·설명 금지):\n'
-      + '[{"title":"곡명","artist":"아티스트","reason":"이유 15자내","query":"곡명 가수명"}]\n\n'
-      + '[절대규칙] 1.title/artist는 위 DB와 글자 그대로 일치(창작·변경 절대금지) 2.DB 외 곡 금지 3.정확히 5개,같은가수 1곡만 4.query는 "곡명 가수명"')
-    : ('사용자 오행 '+(_ohDesc[oh]||oh)+'에 맞는 실제 존재하는 음악 5개를 JSON으로만: [{"title","artist","reason","query"}]. 없는 곡 금지.');
-
-  fetch('/api/groq',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'llama-3.1-8b-instant',
-      messages:[
-        {role:'system',content:'당신은 음악 치료사이자 역학 전문가입니다. 사용자의 오행·생체·시간 에너지를 분석하여 가장 적합한 주파수 음악을 추천합니다. JSON으로만 응답하세요.'},
-        {role:'user',content:prompt}
-      ],
-      max_tokens:800,
-      temperature:0.4
-    })
-  })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var raw=(data.choices&&data.choices[0]&&data.choices[0].message)
-      ?data.choices[0].message.content:null;
-    if(!raw)throw new Error('no response');
-
-    // JSON 파싱 (코드블록 제거)
-    var cleaned=raw.replace(/```json|```/g,'').trim();
-    var arr; try{arr=JSON.parse(cleaned);}catch(pe){var m=cleaned.match(/\[[sS]*\]/);arr=m?JSON.parse(m[0]):[];}
-    if(!Array.isArray(arr)||!arr.length)throw new Error('empty');
-
-    // 카드 UI 생성
-    var wrap=document.createElement('div');
-    wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
-    arr.slice(0,5).forEach(function(c,idx){
-      var ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(c.query||((c.title||'')+' '+(c.artist||'')));
-      var row=document.createElement('a');
-      row.href=ytUrl;
-      row.target='_blank';
-      row.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;text-decoration:none;transition:all .2s;';
-      row.onmouseover=function(){this.style.borderColor='rgba(255,60,60,.4)';this.style.background='rgba(255,0,0,.06)';};
-      row.onmouseout=function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';};
-      var nums=['①','②','③','④','⑤'];
-      row.innerHTML=
-        '<div style="font-size:18px;font-weight:900;color:'+cNum+';flex-shrink:0;width:22px;text-align:center;">'+(nums[idx]||idx+1)+'</div>'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div style="font-size:12px;font-weight:700;color:'+cTitle+';">'+(c.title||'')+(c.artist?' <span style="font-size:10px;color:'+cArtist+';font-weight:400;">— '+(c.artist)+'</span>':'')+'</div>'
-        +'<div style="font-size:10px;color:'+cReason+';margin-top:2px;">'+(c.reason||'')+'</div>'
-        +'</div>'
-        +'<div style="flex-shrink:0;padding:5px 10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:8px;font-size:10px;font-weight:700;color:#ff6666;">YouTube »</div>';
-      wrap.appendChild(row);
-    });
-    box.innerHTML='';
-    box.appendChild(wrap);
-  })
-  .catch(function(){
-    // 실패 시 기존 커드 카드로 폴백
-    var _fbCards={'목':[{t:'🌿 528Hz 자연 치유',q:'528hz nature healing meditation'},{t:'🎵 좋은 날 — 아이유',q:'아이유 좋은날'}],'화':[{t:'🔥 에너지 부스트',q:'fire energy motivation music'},{t:'🎵 Dynamite — BTS',q:'BTS Dynamite MV'}],'토':[{t:'🌳 396Hz 대지 안정',q:'396hz earth grounding music'},{t:'🎵 흥에 살리라',q:'패티진 흥에살리라'}],'금':[{t:'🪄 741Hz 명리성',q:'741hz crystal clarity music'},{t:'🎵 비상 — 이소라',q:'이소라 비상'}],'수':[{t:'🌊 852Hz 바다 치유',q:'852hz ocean wisdom healing'},{t:'🎵 기적 — 이적',q:'이적 기적'}]};
-    var fb=_fbCards[oh]||_fbCards['수'];
-    var fbHtml='<div style="font-size:10px;color:'+(isLight?'#dc2626':'rgba(255,100,100,.5)')+';text-align:center;padding:6px;margin-bottom:8px;">AI 연결 실패 — 기본 추천</div><div style="display:flex;flex-direction:column;gap:5px;">';
-    fb.forEach(function(c){
-      fbHtml+='<a href="https://www.youtube.com/results?search_query='+encodeURIComponent(c.q)+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;text-decoration:none;"><div style="font-size:12px;color:'+(isLight?'#0f172a':'rgba(240,230,200,.9)')+';font-weight:'+(isLight?'700':'400')+';flex:1;">'+c.t+'</div><div style="font-size:10px;color:#ff6666;flex-shrink:0;">YouTube »</div></a>';
-    });
-    fbHtml+='</div>';
-    box.innerHTML=fbHtml;
+  var cNum=isLight?'#b45309':'rgba(212,168,67,.7)',cTitle=isLight?'#0f172a':'rgba(240,230,200,.95)',cArtist=isLight?'#64748b':'rgba(200,185,140,.55)',cReason=isLight?'#047857':'rgba(52,211,153,.7)';
+  // ★ AI 제거 — 2,643곡 검증 DB에서 코드가 직접 5곡 무작위 추출 (오행 4 + 솔페지오 1)
+  var V=window.MUSIC_WHITELIST_V2||{};
+  function _pk(arr,n){arr=(arr||[]).slice();for(var i=arr.length-1;i>0;i--){var k=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[k];arr[k]=t;}return arr.slice(0,n);}
+  var sel=_pk(V[oh],4).concat(_pk(V['주파수'],1));
+  if(!sel.length){ sel=[{t:'528Hz 세포 치유 음악',a:'Solfeggio',cat:'주파수',m:'DNA 회복'},{t:'Weightless',a:'Marconi Union',cat:'해외',m:'심신 이완'}]; }
+  var nums=['①','②','③','④','⑤'];
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;gap:6px;';
+  sel.slice(0,5).forEach(function(c,idx){
+    var qy=(c.t||'')+' '+(c.a||'');
+    var ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(qy);
+    var row=document.createElement('a');
+    row.href=ytUrl; row.target='_blank'; row.rel='noopener';
+    row.onclick=function(e){ if(typeof cgoYtSearch==='function'){ e.preventDefault(); try{ cgoYtSearch(qy, c.t||'', c.a||''); }catch(err){ window.open(ytUrl,'_blank'); } } };
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,'+(isLight?'.5':'.04')+');border:1px solid rgba('+(isLight?'0,0,0,.06':'255,255,255,.08')+');border-radius:10px;text-decoration:none;cursor:pointer;';
+    row.innerHTML=
+      '<div style="font-size:18px;font-weight:900;color:'+cNum+';flex-shrink:0;width:22px;text-align:center;">'+(nums[idx]||(idx+1))+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:12px;font-weight:700;color:'+cTitle+';">'+(c.t||'')+(c.a?' <span style="font-size:10px;color:'+cArtist+';font-weight:400;">\u2014 '+c.a+'</span>':'')+'</div>'
+      +'<div style="font-size:10px;color:'+cReason+';margin-top:2px;">'+(c.m||(c.cat==='주파수'?'솔페지오 치유 주파수':'오행 '+oh+' 에너지 매칭'))+'</div>'
+      +'</div>'
+      +'<div style="flex-shrink:0;padding:5px 10px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:8px;font-size:10px;font-weight:700;color:#ff6666;">\u25b6 \uc7ac\uc0dd</div>';
+    wrap.appendChild(row);
   });
+  box.innerHTML=''; box.appendChild(wrap);
 }
 
 // == CGO 전체 음악 AI 추천 ==
