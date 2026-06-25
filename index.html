@@ -74596,7 +74596,6 @@ function pmYtFetch(oh,sj,ili,cid,_retry){
     var ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(qy);
     var row=document.createElement('a');
     row.href=ytUrl; row.target='_blank'; row.rel='noopener';
-    row.onclick=function(e){ if(typeof cgoYtSearch==='function'){ e.preventDefault(); try{ cgoYtSearch(qy, c.t||'', c.a||''); }catch(err){ window.open(ytUrl,'_blank'); } } };
     row.style.cssText='display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(255,255,255,'+(isLight?'.5':'.04')+');border:1px solid rgba('+(isLight?'0,0,0,.06':'255,255,255,.08')+');border-radius:10px;text-decoration:none;cursor:pointer;';
     row.innerHTML=
       '<div style="font-size:18px;font-weight:900;color:'+cNum+';flex-shrink:0;width:22px;text-align:center;">'+(nums[idx]||(idx+1))+'</div>'
@@ -74712,85 +74711,46 @@ function _mfuSampleWL(userOh){
 function pmGroqFullMusic(oh,sj,season,ili,bpm,hrv,cid){
   var box=document.getElementById(cid);
   if(!box)return;
-  var _ohD={'목':'목(木) 성장·수목·간 에너지','화':'화(火) 열정·소통·심장 에너지','토':'토(土) 안정·신뢰·대지 에너지','금':'금(金) 집중·명예·폐 에너지','수':'수(水) 지혜·감성·신장 에너지'};
-  var _sjNm=['자시(23~1시)','축시(1~3시)','인시(3~5시)','묘시(5~7시)','진시(7~9시)','사시(9~11시)','오시(11~13시)','미시(13~15시)','신시(15~17시)','유시(17~19시)','술시(19~21시)','해시(21~23시)'];
-  var scanned=window._baiScanned||((window._bioFinalData||{}).fci>0);
-  var bioTxt=scanned?'\n- 심박수: '+bpm+'BPM, HRV: '+hrv+'ms (생체 스캔 완료)':'';
-  
-  // ★ 화이트리스트 50곡을 프롬프트에 포함 (28번째 — 환각 0% 보장)
-  var WL = (typeof _mfuSampleWL==='function' && window.MUSIC_WHITELIST_V2) ? _mfuSampleWL(oh) : (window.MUSIC_WHITELIST_V1 || {});
-  var dbStr = '';
-  ['목','화','토','금','수','주파수'].forEach(function(k){
-    var arr = WL[k] || [];
-    if(!arr.length) return;
-    dbStr += '\n['+k+'] ';
-    dbStr += arr.map(function(s,i){return (i+1)+'."'+s.t+'"·'+s.a;}).join(', ');
-  });
-  
-  var prompt='사용자 에너지:\n'
-    +'- 오행: '+(_ohD[oh]||oh)+'\n'
-    +'- ILI 점수: '+ili+'점\n'
-    +'- 시진: '+(_sjNm[sj]||'현재')+'\n'
-    +'- 계절: '+season+bioTxt+'\n\n'
-    +'[★ 검증된 음악 DB — 이 50곡 안에서만 선택 ★]'+dbStr+'\n\n'
-    +'위 DB에서 사용자 오행("'+oh+'") 우선 + 시진/계절 고려하여 음악 9곡 선택.\n'
-    +'아래 JSON 배열로만 응답 (코드블록 없이):\n'
-    +'[{"category":"한국","title":"곡명","artist":"아티스트","reason":"추천이유 15자이내","query":"YouTube검색어"},...]\n\n'
-    +'구성 (총 9곡): "한국" 4개 + "해외" 3개 + "주파수" 2개\n\n'
-    +'[★ 절대 규칙 ★]\n'
-    +'1. title/artist는 반드시 위 DB와 *글자 그대로 일치* (한 글자도 변경 금지)\n'
-    +'2. query는 DB의 q필드 *그대로 복사* (절대 만들지 말 것)\n'
-    +'3. DB 외 곡은 절대 추천 X (환각 금지)\n'
-    +'4. 사용자 오행("'+oh+'") 카테고리에서 우선 선택\n'
-    +'5. reason은 한국어 15자 이내 (예: "오행 조화", "심신 안정")\n'
-    +'6. 동일 가수 중복 금지 (한 가수 1곡만)';
-  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'llama-3.1-8b-instant',
-      messages:[
-        {role:'system',content:'음악 큐레이터. DB의 곡만 선택. 한국어로만 응답. JSON 배열만 출력. ★DB 외 곡 절대 추천 금지 — 글자 그대로 일치.'},
-        {role:'user',content:prompt}
-      ],max_tokens:1000,temperature:0.5})
-  })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var raw=(data.choices&&data.choices[0]&&data.choices[0].message)?data.choices[0].message.content:null;
-    if(!raw)throw new Error('no data');
-    var cleaned=raw.replace(/```json|```/g,'').trim();
-    var arr; try{arr=JSON.parse(cleaned);}catch(pe){var m=cleaned.match(/\[[sS]*\]/);arr=m?JSON.parse(m[0]):[];}
-    if(!Array.isArray(arr)||!arr.length)throw new Error('empty');
-    var cats={'한국':[],'해외':[],'주파수':[],'국악':[]};
-    arr.forEach(function(c){var ct=c.category||'한국';if(!cats[ct])cats[ct]=[];cats[ct].push(c);});
-    var isLight=(cid==='mfu-groq-music');
-    var _cs={'한국':{icon:'🇰🇷',color:'#d4a843',dc:'#b45309',bg:'rgba(212,168,67,.06)',bd:'rgba(212,168,67,.2)'},'해외':{icon:'🌐',color:'#a78bfa',dc:'#7c3aed',bg:'rgba(167,139,250,.06)',bd:'rgba(167,139,250,.2)'},'주파수':{icon:'🔬',color:'#38bdf8',dc:'#0369a1',bg:'rgba(56,189,248,.06)',bd:'rgba(56,189,248,.2)'},'국악':{icon:'🪘',color:'#fbbf24',dc:'#b45309',bg:'rgba(251,191,36,.06)',bd:'rgba(251,191,36,.2)'}};
-    var wrap=document.createElement('div');
-    wrap.style.cssText='display:flex;flex-direction:column;gap:10px;';
-    ['한국','해외','주파수','국악'].forEach(function(cat){
-      var items=cats[cat];if(!items||!items.length)return;
-      var st=_cs[cat];
-      var sec=document.createElement('div');
-      sec.style.cssText='background:'+st.bg+';border:1px solid '+st.bd+';border-radius:12px;padding:10px 12px;';
-      sec.innerHTML='<div style="font-size:10px;font-weight:800;color:'+(isLight?st.dc:st.color)+';letter-spacing:.1em;margin-bottom:8px;">'+st.icon+' '+cat+'</div>';
-      items.forEach(function(c,idx){
-        var ytUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(c.query||((c.title||'')+' '+(c.artist||'')));
-        var row=document.createElement('a');
-        row.href=ytUrl;row.target='_blank';
-        row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,.03);border-radius:8px;text-decoration:none;transition:all .2s;'+(idx<items.length-1?'margin-bottom:5px;':'');
-        row.onmouseover=function(){this.style.background='rgba(255,255,255,.07)';};
-        row.onmouseout=function(){this.style.background='rgba(255,255,255,.03)';};
-        var nums=['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
-        row.innerHTML='<div style="font-size:15px;color:'+(isLight?st.dc:st.color)+';opacity:'+(isLight?'1':'.7')+';width:20px;text-align:center;flex-shrink:0;">'+nums[idx]+'</div>'
-          +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:'+(isLight?'#0f172a':'rgba(240,230,200,.95)')+';">'+c.title+(c.artist?' <span style="font-size:10px;color:'+(isLight?'#64748b':'rgba(200,185,140,.5)')+';">— '+c.artist+'</span>':'')+'</div>'
-          +'<div style="font-size:10px;color:'+(isLight?'#047857':'rgba(52,211,153,.7)')+';margin-top:1px;">'+(c.reason||'')+'</div></div>'
-          +'<div style="flex-shrink:0;padding:4px 9px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:7px;font-size:9px;font-weight:700;color:#ff6666;">YouTube»</div>';
-        sec.appendChild(row);
-      });
-      wrap.appendChild(sec);
-    });
-    box.innerHTML='';box.appendChild(wrap);
-  })
-  .catch(function(){
-    box.innerHTML='<div style="font-size:11px;color:rgba(255,100,100,.5);text-align:center;padding:12px;">AI 연결 실패. 잠시 후 다시 시도해 주세요.</div>';
-  });
+  var isLight=(cid==='mfu-groq-music');
+  var cTitle=isLight?'#0f172a':'rgba(240,230,200,.95)',cArtist=isLight?'#64748b':'rgba(200,185,140,.55)',cReason=isLight?'#047857':'rgba(52,211,153,.7)',cNew=isLight?'#dc2626':'#ff8a8a';
+  var V=window.MUSIC_WHITELIST_V2||{};
+  function _pk(arr,n){arr=(arr||[]).slice();for(var i=arr.length-1;i>0;i--){var k=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[k];arr[k]=t;}return arr.slice(0,n);}
+  // ★ AI 제거 — DB에서 4곡 (오행 3 + 솔페지오 1) 코드 추출
+  var dbSel=_pk(V[oh],3).concat(_pk(V['주파수'],1));
+  if(!dbSel.length){dbSel=[{t:'528Hz 세포 치유 음악',a:'Solfeggio',cat:'주파수',m:'DNA 회복'}];}
+  function _card(c,idx,isNew){
+    var qy=(c.t||'')+' '+(c.a||'');
+    var url=c.vid?('https://www.youtube.com/watch?v='+c.vid):('https://www.youtube.com/results?search_query='+encodeURIComponent(qy));
+    return '<a href="'+url+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:rgba(255,255,255,'+(isLight?'.5':'.04')+');border:1px solid '+(isNew?'rgba(220,38,38,.35)':'rgba('+(isLight?'0,0,0,.06':'255,255,255,.08')+')')+';border-radius:9px;text-decoration:none;margin-bottom:5px;">'
+      +'<div style="font-size:14px;flex-shrink:0;width:22px;text-align:center;">'+(isNew?'\U0001F195':(idx+1))+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:'+(isNew?cNew:cTitle)+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(c.t||'')+(c.a?' <span style="font-size:10px;color:'+cArtist+';font-weight:400;">\u2014 '+c.a+'</span>':'')+'</div>'
+      +'<div style="font-size:10px;color:'+(isNew?cNew:cReason)+';margin-top:1px;">'+(isNew?'\U0001F195 오늘 발매 \u00b7 오행 매칭':(c.m||('오행 '+oh+' 에너지 매칭')))+'</div></div>'
+      +'<div style="flex-shrink:0;padding:4px 9px;background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.3);border-radius:7px;font-size:9px;font-weight:700;color:#ff6666;">\u25b6</div></a>';
+  }
+  function _render(newSong){
+    var h='';
+    dbSel.forEach(function(c,i){h+=_card(c,i,false);});
+    if(newSong)h+=_card(newSong,99,true);
+    box.innerHTML=h;
+  }
+  // ① DB 4곡 즉시 (AI·API 무관)
+  _render(null);
+  // ② API 신곡 1곡 (실패해도 4곡 유지) — 세션 캐시로 쿼터 절약
+  try{
+    window._mfuNewCache=window._mfuNewCache||{};
+    if(window._mfuNewCache[oh]){ _render(window._mfuNewCache[oh]); return; }
+    if(typeof _CGO_YT_KEY!=='undefined' && _CGO_YT_KEY){
+      var mood={'목':'발라드 봄 신곡','화':'댄스 신나는 신곡','토':'감성 잔잔 신곡','금':'웅장 록 신곡','수':'알앤비 감성 신곡'}[oh]||'신곡';
+      var u='https://www.googleapis.com/youtube/v3/search?part=snippet&q='+encodeURIComponent(mood+' official 2026')+'&order=date&type=video&maxResults=5&videoEmbeddable=true&relevanceLanguage=ko&key='+_CGO_YT_KEY;
+      fetch(u).then(function(r){return r.json();}).then(function(d){
+        if(d&&d.items&&d.items.length){
+          var it=d.items[0];
+          var ns={t:(it.snippet.title||'').replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g,'').slice(0,42),a:it.snippet.channelTitle||'',vid:(it.id&&it.id.videoId)||'',cat:'신곡'};
+          if(ns.vid&&ns.t){ window._mfuNewCache[oh]=ns; _render(ns); }
+        }
+      }).catch(function(){});
+    }
+  }catch(e){}
 }
 function _showMusicList(el,bs,avg){
   el.style.display='block';
