@@ -4124,6 +4124,12 @@ function updateTransitSectionWithNASA(planets) {
           var isOpen=sec.style.display!=='none';
           // ✦ 전체 기능 클릭 → 이 섹션만 펼치고 33개 기능 탭으로 (C-60)
           if(wrapId==='cgosec7'){
+            // ★ 정보 입력 게이트 (C-60) — 입력 전엔 전체기능 잠금
+            if(!(window.calcResult && window.calcResult.y)){
+              alert('📋 먼저 정보를 입력해 주세요!\n\n이름·생년월일·시간을 입력하면 전체 기능이 열립니다.');
+              try{ var _ipw=document.getElementById('cgoip'); var _ipa=document.getElementById('cgo-arr-cgoip'); if(_ipw){ _ipw.style.display=''; if(_ipa)_ipa.classList.add('open'); _ipw.scrollIntoView({behavior:'smooth',block:'center'}); } }catch(e){}
+              return;
+            }
             var willOpen=!isOpen;
             sec.style.display=willOpen?'':'none';
             if(arr) arr.classList.toggle('open',willOpen);
@@ -4285,7 +4291,14 @@ function updateTransitSectionWithNASA(planets) {
         }
 
         /* ── 퀵 탭 클릭: 해당 섹션 펼치기 + 스크롤 ── */
+        window._cgoFeatGate=function(){
+          if(window.calcResult && window.calcResult.y) return true;
+          alert('📋 먼저 정보를 입력해 주세요!\n\n이름·생년월일·시간을 입력하면 전체 기능이 열립니다.');
+          try{ var _ipw=document.getElementById('cgoip'); var _ipa=document.getElementById('cgo-arr-cgoip'); if(_ipw){ _ipw.style.display=''; if(_ipa)_ipa.classList.add('open'); _ipw.scrollIntoView({behavior:'smooth',block:'center'}); } }catch(e){}
+          return false;
+        };
         window.cgoQJ=function(n){
+          if(n===7 && window._cgoFeatGate && !_cgoFeatGate()) return;
           // 탭 하이라이트
           for(var i=1;i<=7;i++){
             var el=document.getElementById('qn'+i);
@@ -5165,7 +5178,7 @@ function cgoGuideFeature(key){
         <div id="menuSection" class="menu-locked" style="margin-bottom:20px;">
 
           <!-- 📋 전체 기능 모음 — 접이식 책 카드 -->
-          <div onclick="(function(){var b=document.getElementById('menuListBody');var a=document.getElementById('menuArrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
+          <div onclick="(function(){if(window._cgoFeatGate&&!_cgoFeatGate())return;var b=document.getElementById('menuListBody');var a=document.getElementById('menuArrow');if(b.style.display==='none'){b.style.display='block';a.textContent='▲';}else{b.style.display='none';a.textContent='▼';}})()"
             style="position:relative;cursor:pointer;margin-bottom:0;"
             onmouseover="this.querySelector('.bk').style.boxShadow='0 8px 32px rgba(212,168,67,.5)',this.querySelector('.bk').style.borderColor='rgba(212,168,67,.8)'"
             onmouseout="this.querySelector('.bk').style.boxShadow='0 4px 20px rgba(0,0,0,.6)',this.querySelector('.bk').style.borderColor='rgba(212,168,67,.45)'">
@@ -127088,7 +127101,20 @@ function _cgoSaveInfoRobust(){
   for(var i=0;i<junk.length;i++){ try{ if(localStorage.getItem(junk[i])!=null){ localStorage.removeItem(junk[i]); freed++; } }catch(e){} }
   var r2=trySave();
   if(r2===true) return {ok:true, freed:freed};
-  return {ok:false, reason:((r2&&r2.name)||(r2&&r2.message)||'unknown'), freed:freed};
+  // 2차: 비핵심 캐시 전부 정리 (개인정보·등급·보상·설정 보존, 큰 것부터 제거)
+  try{
+    var keep={cgo_saved_info:1,cgo_grade_code:1,cgo_device_id:1,cgo_zoom:1,cgo_noti:1,cgo_stars:1,cgo_star_pieces:1,cgo_passes:1,cgo_grade:1};
+    var keys=[];
+    for(var k=0;k<localStorage.length;k++){ var kk=localStorage.key(k); if(kk && !keep[kk]) keys.push(kk); }
+    keys.sort(function(a,b){ return ((localStorage.getItem(b)||'').length)-((localStorage.getItem(a)||'').length); });
+    for(var j=0;j<keys.length;j++){
+      try{ localStorage.removeItem(keys[j]); freed++; }catch(e){}
+      if(trySave()===true) return {ok:true, freed:freed};
+    }
+  }catch(e){}
+  var r3=trySave();
+  if(r3===true) return {ok:true, freed:freed};
+  return {ok:false, reason:((r3&&r3.name)||(r3&&r3.message)||'unknown'), freed:freed};
 }
 function cgoSaveInfoToggle() {
   var chk = document.getElementById('chkSaveInfo');
