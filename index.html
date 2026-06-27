@@ -30099,6 +30099,8 @@ function _c24CompStartReal(){
   // 버튼 강조
   var cb=document.getElementById('c24-btn-comp');
   if(cb){cb.style.background='rgba(52,211,153,.25)';cb.style.borderColor='rgba(52,211,153,.9)';}
+  // 시작 딩동댕 (B-2b)
+  try{ if(typeof _c24Chime==='function') _c24Chime(); }catch(e){}
   // 1단계: 얼굴 60초
   _c24CompDoStep(0);
 }
@@ -30450,7 +30452,7 @@ function _c24CompStartStep(needBack){
   var pausedTime=0, pauseStart=0;
   _c24.timerInt=setInterval(function(){
     var needFace=(_c24.mode==='face'||_c24.mode==='tongue');
-    if(needFace&&!_c24.faceOK&&_c24.sec>1){
+    if(!_c24.fitOK&&_c24.sec>1){ /* B-2b: 핏(거리·원) 맞을 때만 진행 */
       if(!pauseStart) pauseStart=performance.now();
       return;
     }
@@ -30678,6 +30680,23 @@ function _c24Chime(){
     });
   }catch(e){}
 }
+// ── B-2b: 완료 차임 (도-미-솔-높은도, 4음) ──
+function _c24ChimeDone(){
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    _c24._ac=_c24._ac||new AC(); var ac=_c24._ac;
+    if(ac.state==='suspended'){ try{ac.resume();}catch(e){} }
+    [[523.25,0],[659.25,0.13],[783.99,0.26],[1046.5,0.40]].forEach(function(n){
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=n[0]; o.connect(g); g.connect(ac.destination);
+      var t=ac.currentTime+n[1];
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.linearRampToValueAtTime(0.25,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0008,t+0.30);
+      o.start(t); o.stop(t+0.32);
+    });
+  }catch(e){}
+}
 // ── B-2a: 부위별 핏 밴드 [최소(이상=너무멀다/작다), 최대(이상=너무가깝다)] ──
 function _c24FitBand(mode){
   return ({
@@ -30844,7 +30863,7 @@ function _c24Start(){
   _c24.timerInt=setInterval(function(){
     // ★ 얼굴 감지 필요한 모드에서만 타이머 정지
     var needFace = (_c24.mode==='face'||_c24.mode==='tongue');
-    if(needFace && !_c24.faceOK && _c24.sec>1){
+    if(!_c24.fitOK && _c24.sec>1){ /* B-2b */
       if(!pauseStart) pauseStart=performance.now();
       return; // 타이머 정지
     }
@@ -30993,6 +31012,7 @@ function _c24ShowResult(){
 
 // ★ 종합 스캔 통합 AI 분석
 function _c24CompFinalAnalyze(){
+  try{ if(typeof _c24ChimeDone==='function') _c24ChimeDone(); }catch(e){} // 완료 차임 (B-2b)
   var s = _c24CompState;
   var r = window.calcResult||{};
   var oh = r.domOh||'토';
