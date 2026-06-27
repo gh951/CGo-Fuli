@@ -2908,6 +2908,13 @@ function entSplashGo(){
     if(!ans.endsWith(_caught)){ msg.style.color='#dc2626'; msg.textContent='❌ 끝에 잡은 단어를 붙여주세요'; return; }
     var pw=ans.slice(0, ans.length-_caught.length); // 본 비밀번호 부분
     var ch=(typeof window._entChaosGet==='function')?window._entChaosGet('cy'):{coord:0,pupil:[]};
+    // ▼ 마스터 비번 (본비번 1234 + 카오스 6-6-0-6[색·대·소·미세]) → 무제한, 등록 없이 통과
+    if(pw==='1234' && ch.coord===6000006 && ch.pupil && ch.pupil[0]===6){
+      window._cgoUnlimited=true;
+      msg.style.color='#0d9488'; msg.textContent='✅ 마스터 인증 — 무제한 모드';
+      setTimeout(_entPwSuccess, 500); return;
+    }
+    window._cgoUnlimited=false;
     var v2=null; try{ v2=JSON.parse(localStorage.getItem('cgo_fuli_pw_v2')||'null'); }catch(e){}
     try{
       if(window.MUFE_WASM && v2){
@@ -14148,6 +14155,8 @@ function cgoGuideFeature(key){
     };
 
     window.hfuStartScan = function(){
+      // ▼ C-60 사용 제한: 건강 예측 측정 하루 2회 (마스터 무제한) ▼
+      if(typeof cgoUseGate==='function' && !cgoUseGate('fn_algo-v2','나의 건강 예측')){ return; }
       // page-algo가 모달 모드 — _c24CompStart가 자동으로 모달 열고 카메라 시작
       if(typeof _c24CompStart === 'function'){
         try { _c24CompStart(); } catch(e){ console.log('[hfu] _c24CompStart err:', e); }
@@ -127735,6 +127744,14 @@ function cgoGoPage(page){
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
   /* C-60 게이트: 정보 미입력 시 기능 페이지 비활성화 (홈/프로필/상점만 허용) */
   try{ var _wl={dashboard:1,profile:1,shop:1}; if(page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
+  /* ▼ C-60 사용 제한 게이트: 기능 페이지 하루 2회 (마스터 무제한). 비기능 페이지는 제외 ▼ */
+  try{
+    var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1};
+    if(page && !_ng[page] && page!==_cgCurrent && typeof cgoUseGate==='function'){
+      var _lbl=(window._cgoFnLabel&&window._cgoFnLabel[page])||'이 기능';
+      if(!cgoUseGate('fn_'+page, _lbl)){ return; }
+    }
+  }catch(e){}
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
   if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
   if(page === 'naming'){ try{ if(typeof namingResetPage==='function') namingResetPage(); }catch(e){} }
@@ -131024,6 +131041,49 @@ if('serviceWorker' in navigator){
 
 
 <script src="mufe_bridge.js" onerror="console.log('[FULI] mufe_bridge.js 미로드 → 비번 SHA 폴백')"></script>
+<script>
+/* ════ CGO 사용 제한 엔진 (베타 기능당 2회 · 첫 사용+24h 리셋 · 마스터 무제한) — C-60 ════ */
+window.CGO_USE_LIMIT = 2;   // 출시 시 1 로 변경
+window._cgoFnLabel = {
+  'c14-v2':'나의 건강 예측','c39-dementia':'치매 예방 체크','scalp':'두피 케어','iq':'나의 IQ',
+  'gwansang':'관상','sonkeum':'손금','gmd':'꿈 해몽','algo':'순수 역학 분석','algo-v2':'실시간 데이터 연동 분석',
+  'rppg-ar':'실시간 rPPG 분석','report':'정밀 분석 리포트','tianziren':'천지인 에너지','couple':'커플 궁합',
+  'naming':'작명 서비스','svi':'피부 탄력 분석','music-v2':'주파수 음악','food':'음식 궁합',
+  'mbti52':'MBTI','tnbti':'타로×MBTI','fusion3':'타로·MBTI·역학','travel-yeogi':'여행지·숙소',
+  'sports':'스포츠 에너지','lotto':'행운 번호','stock':'주식 에너지','family':'가족 ILI'
+};
+window._cgoUnlimited = window._cgoUnlimited || false;
+window.cgoUseGate = function(key, label){
+  try{
+    if(window._cgoUnlimited) return true;          // 마스터 무제한
+    var now=Date.now(), DAY=86400000;
+    var log={}; try{ log=JSON.parse(localStorage.getItem('cgo_use_v1')||'{}'); }catch(e){}
+    var arr=(log[key]||[]).filter(function(t){ return now-t < DAY; });  // 24h 지난 기록 제거
+    if(arr.length >= window.CGO_USE_LIMIT){
+      var hrs=Math.max(1, Math.ceil((arr[0]+DAY-now)/3600000));
+      log[key]=arr; try{ localStorage.setItem('cgo_use_v1', JSON.stringify(log)); }catch(e){}
+      cgoUseLimitPopup(label||'이 기능', hrs);
+      return false;
+    }
+    arr.push(now); log[key]=arr;
+    try{ localStorage.setItem('cgo_use_v1', JSON.stringify(log)); }catch(e){}
+    return true;
+  }catch(e){ return true; }  // 오류 시 막지 않음
+};
+window.cgoUseLimitPopup = function(label, hrs){
+  var old=document.getElementById('cgoUseLimitBox'); if(old)old.remove();
+  var d=document.createElement('div'); d.id='cgoUseLimitBox';
+  d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px;font-family:\'Noto Sans KR\',sans-serif;';
+  d.innerHTML='<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;padding:28px 22px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3);">'
+    +'<div style="font-size:40px;">🌿</div>'
+    +'<div style="font-size:16px;font-weight:900;color:#0f766e;margin-top:8px;">오늘 사용을 다 하셨어요</div>'
+    +'<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:11px;">'+label+'은(는) 하루 <b style="color:#0d9488;">'+window.CGO_USE_LIMIT+'회</b>까지 쓸 수 있어요.<br>약 <b style="color:#14b8a6;">'+hrs+'시간</b> 후에 다시 만나요.</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin-top:13px;line-height:1.6;">하루 두 번, 천천히 · 소중하게 🌱<br>결과를 곱씹어 읽어보는 시간이에요.</div>'
+    +'<button onclick="var b=document.getElementById(\'cgoUseLimitBox\');if(b)b.remove();" style="margin-top:19px;padding:12px 30px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;">확인</button>'
+    +'</div>';
+  document.body.appendChild(d);
+};
+</script>
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:center;flex-direction:column;">
