@@ -2802,9 +2802,25 @@ function entSplashGo(){
     }
   }
 
+  function _entHideScreens(except){ ['entTerms','entSignup','entPay','entPw'].forEach(function(id){ if(id!==except){ var e=document.getElementById(id); if(e) e.style.display='none'; } }); }
+  window.cgoShowEntStart=function(){ var has=false; try{ has=!!(localStorage.getItem('cgo_fuli_pw_v2')||localStorage.getItem('cgo_fuli_pw')); }catch(e){} if(has){ cgoShowEntPw(); } else { cgoShowTerms(); } };
+  window.cgoShowTerms=function(){ _entHideScreens('entTerms'); var e=document.getElementById('entTerms'); if(e) e.style.display='flex'; };
+  window.cgoShowSignup=function(){ _entHideScreens('entSignup'); var e=document.getElementById('entSignup'); if(e) e.style.display='flex'; };
+  window.cgoShowPay=function(){ _entHideScreens('entPay'); var e=document.getElementById('entPay'); if(e) e.style.display='flex'; };
+  window._entTermsAll=function(c){ ['etReq1','etReq2','etMkt'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=c;}); _entTermsChk(); };
+  window._entTermsChk=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var all=document.getElementById('etAll'); if(all)all.checked=!!(r1&&r2&&mk); var btn=document.getElementById('etNextBtn'); if(btn){ var ok=!!(r1&&r2); btn.disabled=!ok; btn.style.opacity=ok?'1':'.5'; btn.style.cursor=ok?'pointer':'not-allowed'; } };
+  window._entTermsToggleView=function(id){ var e=document.getElementById(id); if(e) e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none'; };
+  window._entTermsNext=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked; if(!(r1&&r2))return; var mk=(document.getElementById('etMkt')||{}).checked; try{ localStorage.setItem('cgo_terms', JSON.stringify({v:'1.0',t:Date.now(),service:true,privacy:true,marketing:!!mk})); }catch(e){} cgoShowSignup(); };
+  window._entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoShowEntPw(); };
+  window._entSignupEmail=function(){ var v=(document.getElementById('esEmail')||{}).value||''; var msg=document.getElementById('esMsg'); if(v.length<4){ if(msg){msg.textContent='⚠️ 이메일 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; } try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'email_phone',id:v,t:Date.now()})); }catch(e){} cgoShowEntPw(); };
+  window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} _entGo(); };
+  window._entPaySkip=function(){ _entGo(); };
+  function _entGo(){ if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }
+
   window.cgoShowEntPw=function(){
     var box=document.getElementById('entPw'); if(!box)return;
     box.style.display='flex';
+    if(typeof _entHideScreens==='function')_entHideScreens('entPw');
     var has=false; try{ has=!!(localStorage.getItem('cgo_fuli_pw_v2')||localStorage.getItem('cgo_fuli_pw')); }catch(e){}
     var c=document.getElementById('entPwCreate'), l=document.getElementById('entPwLogin');
     var t=document.getElementById('entPwTitle'), sub=document.getElementById('entPwSub');
@@ -2902,13 +2918,110 @@ function entSplashGo(){
     if(_spin){clearInterval(_spin);_spin=null;}
     var box=document.getElementById('entPw');
     if(box){ box.style.transition='opacity .4s'; box.style.opacity='0'; setTimeout(function(){ box.style.display='none'; box.style.opacity='1'; },420); }
-    // 커튼(황금문) 열림 → 대시보드
-    if(typeof openGate==='function'){ openGate(); }
-    else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); }
+    // 비번 완료 → 결제(3일 무료) → 커튼 → 대시보드
+    setTimeout(function(){ if(typeof cgoShowPay==='function'){ cgoShowPay(); } else if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }, 430);
   }
 })();
 </script>
 
+
+
+<!-- ══════════ 약관 동의 (entTerms) · C-60 ══════════ -->
+<div id="entTerms" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div style="text-align:center;margin-bottom:16px;padding:0 24px;">
+    <div style="font-size:19px;font-weight:900;color:#0f766e;">📋 약관 동의</div>
+    <div style="font-size:11px;color:#5b8a85;margin-top:5px;">서비스 이용을 위해 동의해 주세요 · 양자 방어</div>
+  </div>
+  <div style="width:min(340px,90vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:20px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
+    <!-- 모두 동의 -->
+    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:#f0fdfa;border:1px solid rgba(13,148,136,.2);border-radius:13px;cursor:pointer;">
+      <input type="checkbox" id="etAll" onchange="_entTermsAll(this.checked)" style="width:19px;height:19px;accent-color:#0d9488;">
+      <span style="font-size:13px;font-weight:800;color:#0f766e;">전체 동의 (선택 포함)</span>
+    </label>
+    <div style="height:1px;background:#e2e8f0;margin:13px 0;"></div>
+    <!-- 필수1 -->
+    <div style="margin-bottom:11px;">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+        <input type="checkbox" id="etReq1" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
+        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 서비스 이용약관</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etv1')" style="font-size:10px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
+      </label>
+      <div id="etv1" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:9.5px;color:#64748b;line-height:1.7;max-height:120px;overflow-y:auto;">CGO-FULI(이하 "서비스")는 사주·관상·생체분석 등 통합 라이프 인덱스 정보를 제공합니다. 제공되는 모든 결과는 인포테인먼트·웰니스 참고용이며 의료·법률·투자 자문이 아닙니다. 이용자는 본인 책임 하에 서비스를 이용하며, 서비스는 천재지변·기술적 장애 등 불가항력에 대해 책임지지 않습니다. 유료 구독은 별도 결제 약관을 따릅니다.</div>
+    </div>
+    <!-- 필수2 (개인정보 — 데이터 확보 대비) -->
+    <div style="margin-bottom:11px;">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+        <input type="checkbox" id="etReq2" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
+        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 개인정보 수집·이용 동의</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etv2')" style="font-size:10px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
+      </label>
+      <div id="etv2" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:9.5px;color:#64748b;line-height:1.7;max-height:140px;overflow-y:auto;">
+        <b style="color:#475569;">① 수집 항목</b> — 이메일/전화번호, 닉네임, 생년월일시(역학 분석용), 생체분석 결과(rPPG·관상·손금 등), 서비스 이용기록.<br>
+        <b style="color:#475569;">② 이용 목적</b> — 서비스 제공·개인 맞춤 분석, 통계·연구를 통한 서비스 개선, <b>향후 CGO 자체 서버 구축 시 분석 데이터의 저장·통계·품질 향상</b>.<br>
+        <b style="color:#475569;">③ 보유 기간</b> — 회원 탈퇴 시까지 또는 관련 법령이 정한 기간.<br>
+        <b style="color:#475569;">④ 현재 저장 방식</b> — 초기에는 이용자 기기에 저장되며, 서버 구축 이후 동의 범위 내에서 안전하게 이전·보관됩니다. 이용자는 동의를 거부할 수 있으나 일부 기능이 제한될 수 있습니다.
+      </div>
+    </div>
+    <!-- 선택 -->
+    <div style="margin-bottom:4px;">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+        <input type="checkbox" id="etMkt" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
+        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#94a3b8;">(선택)</b> 마케팅·혜택 알림 수신</span>
+      </label>
+    </div>
+    <button id="etNextBtn" onclick="_entTermsNext()" disabled style="width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:14px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">동의하고 계속 →</button>
+    <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:8px;">필수 항목에 동의해야 진행됩니다 · 동의 기록은 안전하게 보관됩니다</div>
+  </div>
+</div>
+
+<!-- ══════════ 가입 (entSignup) · 소셜 우선 · C-60 ══════════ -->
+<div id="entSignup" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div style="text-align:center;margin-bottom:18px;padding:0 24px;">
+    <div style="font-size:19px;font-weight:900;color:#0f766e;">🚀 시작하기</div>
+    <div style="font-size:11px;color:#5b8a85;margin-top:5px;">소셜 계정으로 간편하게 시작하세요</div>
+  </div>
+  <div style="width:min(330px,90vw);display:flex;flex-direction:column;gap:9px;">
+    <button onclick="_entSignupSocial('google')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#fff;border:1.5px solid #e2e8f0;border-radius:13px;font-size:13.5px;font-weight:700;color:#334155;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.05);"><span style="font-size:17px;">🟦</span> Google로 계속</button>
+    <button onclick="_entSignupSocial('apple')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#000;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;"></span> Apple로 계속</button>
+    <button onclick="_entSignupSocial('kakao')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#FEE500;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#3c1e1e;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">💬</span> 카카오로 계속</button>
+    <button onclick="_entSignupSocial('naver')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#03C75A;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">Ⓝ</span> 네이버로 계속</button>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
+      <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+      <span style="font-size:10px;color:#94a3b8;">또는</span>
+      <div style="flex:1;height:1px;background:#cbd5e1;"></div>
+    </div>
+
+    <div style="background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:15px;padding:16px;box-shadow:0 4px 16px rgba(15,118,110,.08);">
+      <div style="font-size:11px;font-weight:700;color:#0f766e;margin-bottom:7px;">이메일 또는 전화번호로 가입</div>
+      <input id="esEmail" type="text" placeholder="이메일 또는 전화번호 입력" style="width:100%;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:13px;color:#1f2937;outline:none;box-sizing:border-box;" oninput="this.style.borderColor='#14b8a6'">
+      <div id="esMsg" style="font-size:10px;margin:6px 2px 0;min-height:13px;"></div>
+      <button onclick="_entSignupEmail()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;">이메일로 시작하기 →</button>
+    </div>
+    <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:4px;line-height:1.6;">가입 시 이용약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다</div>
+  </div>
+</div>
+
+<!-- ══════════ 결제 (entPay) · 3일 무료 · C-60 ══════════ -->
+<div id="entPay" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 28%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div style="text-align:center;margin-bottom:16px;padding:0 24px;">
+    <div style="font-size:13px;font-weight:800;color:#14b8a6;letter-spacing:.05em;">🎁 3일 무료 체험</div>
+    <div style="font-size:21px;font-weight:900;color:#0f766e;margin-top:4px;">지금 시작하면 <span style="color:#14b8a6;">3일간 0원</span></div>
+    <div style="font-size:11px;color:#5b8a85;margin-top:5px;">이후 월 9,900원 (하루 330원) · 언제든 해지 가능</div>
+  </div>
+  <div style="width:min(330px,90vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:22px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
+    <div style="font-size:11px;font-weight:800;color:#0f766e;margin-bottom:10px;">✨ 모든 기능 무제한</div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:11.5px;color:#334155;">
+      <div>✅ 33가지 전체 기능 (건강·역학·뷰티·유틸)</div>
+      <div>✅ 실시간 rPPG 생체분석 + 50역학 연동</div>
+      <div>✅ 정밀 분석 리포트 무제한</div>
+      <div>✅ 양자 방어 보안 (ML-KEM-768)</div>
+    </div>
+    <button onclick="_entPayStart()" style="width:100%;margin-top:18px;padding:15px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,148,136,.3);">3일 무료로 시작하기 🎁</button>
+    <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:9px;line-height:1.6;">3일간 무료 · 무료 기간 종료 전 알림 · 기간 내 해지 시 0원</div>
+  </div>
+  <button onclick="_entPaySkip()" style="margin-top:14px;background:none;border:none;color:#5b8a85;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;">나중에 둘러보기</button>
+</div>
 
 <!-- ══ PHASE 0: 언어선택 + 바로입장 ══ -->
 <div id="phase0" style="position:fixed;inset:0;z-index:300;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 50%,#ecfdf5 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;">
@@ -127054,7 +127167,7 @@ function cgpShow(){
         if(agreed) {
           // 약관 완료 → MUFE 양자 방어 비밀번호 (C-60)
           var _p3=document.getElementById('phase3'); if(_p3) _p3.style.display='none';
-          if(typeof cgoShowEntPw==='function'){ cgoShowEntPw(); }
+          if(typeof cgoShowEntStart==='function'){ cgoShowEntStart(); } else if(typeof cgoShowEntPw==='function'){ cgoShowEntPw(); }
         } else {
           // 약관 먼저
           var p35 = document.getElementById('phase35');
