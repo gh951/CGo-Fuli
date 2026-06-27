@@ -2749,9 +2749,11 @@ function entSplashGo(){
   <div id="entPwLogin" style="display:none;width:min(330px,88vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:22px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
     <div style="font-size:10.5px;color:#0d9488;text-align:center;margin-bottom:10px;line-height:1.6;">🟢 회전하는 단어 중 원하는 시점에 <b>STOP</b><br>잡은 단어 + 등록한 비밀번호 = 답</div>
     <!-- 회전 단어 -->
-    <div style="background:#f0fdfa;border:1px solid rgba(13,148,136,.2);border-radius:13px;padding:16px;text-align:center;">
-      <div id="entPwWord" style="font-size:26px;font-weight:900;color:#0f766e;letter-spacing:.06em;min-height:34px;">— — —</div>
-      <button id="entPwStopBtn" onclick="cgoEntPwStop()" style="margin-top:10px;padding:9px 26px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">⏹ STOP — 단어 잡기</button>
+    <div style="position:relative;overflow:hidden;background:#0a1f3a;border:1px solid rgba(13,148,136,.35);border-radius:13px;padding:18px 16px;text-align:center;">
+      <img id="entPwBg" src="" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5;display:none;" onerror="_entPwBgErr(this)">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,184,166,.18) 0%,rgba(10,31,58,.78) 78%);"></div>
+      <div id="entPwWord" style="position:relative;font-size:27px;font-weight:900;color:#fff;letter-spacing:.06em;min-height:36px;text-shadow:0 0 20px rgba(94,234,212,.85),0 2px 7px rgba(0,0,0,.6);">— — —</div>
+      <button id="entPwStopBtn" onclick="cgoEntPwStop()" style="position:relative;margin-top:11px;padding:9px 26px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(0,0,0,.3);">⏹ STOP — 단어 잡기</button>
     </div>
     <div id="entPwCaught" style="display:none;margin-top:12px;">
       <div style="font-size:10px;color:#64748b;text-align:center;">잡힌 단어</div>
@@ -2836,8 +2838,21 @@ function entSplashGo(){
     }
   };
 
+  window._entPwBgErr=function(img){
+    var t=parseInt(img.dataset.try||'0'); var n=img.dataset.n||'000';
+    if(t===0){ img.dataset.try='1'; img.src='/무폐 이미지/chaos-'+n+'.png.jpeg'; }
+    else if(t===1){ img.dataset.try='2'; img.src='/images/chaos-'+n+'.png'; }
+    else { img.style.display='none'; }
+  };
+  function _entPwSetBg(){
+    var img=document.getElementById('entPwBg'); if(!img)return;
+    var i=Math.floor(Math.random()*101); var n=String(i).padStart(3,'0');
+    img.dataset.n=n; img.dataset.try='0'; img.style.display='block';
+    img.src='/무폐 이미지/chaos-'+n+'.png';
+  }
   function _startSpin(){
     var w=document.getElementById('entPwWord'); if(!w)return;
+    if(typeof _entPwSetBg==='function')_entPwSetBg();
     var sb=document.getElementById('entPwStopBtn'); if(sb){sb.disabled=false;sb.style.opacity='1';}
     var cg=document.getElementById('entPwCaught'); if(cg)cg.style.display='none';
     if(_spin)clearInterval(_spin);
