@@ -30400,6 +30400,7 @@ function _c24CompStartStep(needBack){
   _c24.sec=0; _c24.prevR=0; _c24.prevG=0;
   _c24.capturedImage=null;
   _c24.faceOK=false;
+  _c24.gotVitals=false; /* B-1: 유효 맥동 신호 1회라도 잡혔는지 */
   _c24.isRunning=true;
 
   _c24.offCanvas=document.createElement('canvas');
@@ -30625,13 +30626,15 @@ function _c24Loop(){
         var sv=mx2>0?(mx2-mn2)/mx2:0;
         if(pr>70&&pg>40&&pb>20&&pr>pg&&pr>pb&&(pr-pg)>10&&sv>0.15&&sv<0.7) skinCnt++;
       }
-      if(cnt&&skinCnt/cnt>=0.15){
+      var _skinNeed=(_c24.mode==='face'||_c24.mode==='tongue')?0.18:0.15; /* B-1: 얼굴/혀만 강화 */
+      if(cnt&&skinCnt/cnt>=_skinNeed){
         _c24.faceOK = true;
         _c24ChromStep(rSum/cnt,gSum/cnt,bSum/cnt);
         // 실시간 BPM 업데이트 (3초 후)
         if(_c24.sec>3){
           var v2=_c24CalcVitals();
           if(v2){
+            _c24.gotVitals=true; /* B-1: 진짜 맥동 신호 획득 */
             _c24.bpm=v2.bpm;
             var lb=document.getElementById('c24-live-bpm');
             if(lb){ lb.style.display='block'; lb.textContent='💓 '+v2.bpm; }
@@ -30640,6 +30643,13 @@ function _c24Loop(){
       } else {
         _c24.faceOK = (_c24.mode!=='face' && _c24.mode!=='tongue');
       }
+      // ── B-2a: 거리/ROI 핏 상태 계산 (게이트는 B-2b에서 연결) ──
+      var _ratioFit = cnt ? skinCnt/cnt : 0;
+      var _band = _c24FitBand(_c24.mode);
+      _c24.fitOK = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
+      _c24.fitState = _ratioFit<_band[0] ? 'far' : (_ratioFit>_band[1] ? 'near' : 'ok');
+      if(_c24.fitOK){ if(!_c24._wasFit){ _c24._wasFit=true; _c24Chime(); } }
+      else { _c24._wasFit=false; }
       // ★ 얼굴 가이드 원 그리기
       _c24DrawGuide(skinCnt/(cnt||1));
     }
@@ -30648,6 +30658,37 @@ function _c24Loop(){
 }
 
 // ★ 얼굴 가이드 원 그리기
+// ── B-2a: 딩동댕 차임 (Web Audio · 파일 불필요) ──
+function _c24Chime(){
+  try{
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    _c24._ac=_c24._ac||new AC(); var ac=_c24._ac;
+    if(ac.state==='suspended'){ try{ac.resume();}catch(e){} }
+    var now=performance.now();
+    if(_c24._lastChime && now-_c24._lastChime<1500) return; // 연타 방지
+    _c24._lastChime=now;
+    [[523.25,0],[659.25,0.11],[783.99,0.22]].forEach(function(n){ // 딩(도)-동(미)-댕(솔)
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=n[0]; o.connect(g); g.connect(ac.destination);
+      var t=ac.currentTime+n[1];
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.linearRampToValueAtTime(0.22,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0008,t+0.20);
+      o.start(t); o.stop(t+0.22);
+    });
+  }catch(e){}
+}
+// ── B-2a: 부위별 핏 밴드 [최소(이상=너무멀다/작다), 최대(이상=너무가깝다)] ──
+function _c24FitBand(mode){
+  return ({
+    face:   [0.28, 0.85],
+    tongue: [0.16, 0.70],
+    eye:    [0.10, 0.60],
+    skin:   [0.30, 0.95],
+    hand:   [0.20, 0.92]
+  })[mode] || [0.15, 0.95];
+}
+
 function _c24DrawGuide(skinRatio){
   var cv = document.getElementById('c24-guide-canvas');
   if(!cv||!cv.style||cv.style.display==='none') return;
@@ -30661,13 +30702,16 @@ function _c24DrawGuide(skinRatio){
   var mode = _c24.mode;
   var isHandMode = (mode==='hand'||mode==='hand_back'||mode==='hand_palm');
   var ok = _c24.faceOK;
+  var _fs = _c24.fitState || (ok?'ok':'far');
+  var _fcol = _fs==='ok'?'rgba(52,211,153,.92)':_fs==='near'?'rgba(251,191,36,.95)':'rgba(248,113,113,.85)';
+  var _hint = _fs==='ok'?'✅ 딱 맞아요 — 측정 중':_fs==='near'?'➡️ 조금 멀어지세요':'⬅️ 더 가까이 · 원 안에 맞춰주세요';
 
   if(isHandMode){
     // 손 모드: 사각형 가이드
     var rx=cv.width*0.1, ry=cv.height*0.15;
     var rw=cv.width*0.8, rh=cv.height*0.7;
-    ctx.strokeStyle = ok?'rgba(52,211,153,.8)':'rgba(248,113,113,.8)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = _fcol;
+    ctx.lineWidth = 2.5;
     ctx.setLineDash([8,4]);
     ctx.strokeRect(rx,ry,rw,rh);
     ctx.setLineDash([]);
@@ -30677,11 +30721,18 @@ function _c24DrawGuide(skinRatio){
     var ex=cv.width*0.38, ey=cv.height*0.42;
     ctx.beginPath();
     ctx.ellipse(cx2,cy2,ex,ey,0,0,Math.PI*2);
-    ctx.strokeStyle = ok?'rgba(52,211,153,.8)':'rgba(248,113,113,.6)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash(ok?[]:[6,4]);
+    ctx.strokeStyle = _fcol;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash(_fs==='ok'?[]:[6,4]);
     ctx.stroke();
     ctx.setLineDash([]);
+    // 원안에원 — 혀·눈은 안쪽 작은 원 (더 가까이 유도)
+    if(mode==='tongue'||mode==='eye'){
+      ctx.beginPath();
+      ctx.ellipse(cx2,cy2,ex*0.5,ey*0.5,0,0,Math.PI*2);
+      ctx.strokeStyle=_fcol; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
     // 코너 강조
     var corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
     corners.forEach(function(c3){
@@ -30695,6 +30746,13 @@ function _c24DrawGuide(skinRatio){
   // 얼굴 없으면 경고
   var warn=document.getElementById('c24-face-warn');
   if(warn) warn.style.display=(!ok&&mode!=='hand_back'&&mode!=='hand_palm')?'block':'none';
+  // B-2a: 핏 안내 텍스트
+  try{
+    ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+    ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=4;
+    ctx.fillStyle=_fcol; ctx.fillText(_hint, cv.width*0.5, cv.height*0.94);
+    ctx.shadowBlur=0;
+  }catch(e){}
 }
 
 // ★ 단계 오버레이 업데이트
@@ -30743,6 +30801,7 @@ function _c24Start(){
   _c24.sec=0; _c24.prevR=0; _c24.prevG=0;
   _c24.capturedImage=null;
   _c24.faceOK=false; // ★ 얼굴 감지 초기화
+  _c24.gotVitals=false; /* B-1 */
   _c24.isRunning=true;
 
   // offCanvas
@@ -33049,11 +33108,12 @@ function hltBioCardTap(type){
   var bfd = window._bioFinalData || {};
   var HV  = window._HV || {};
   var scores = {
-    face:   Math.min(95,Math.max(30,(bfd.fci||0))) || HV.v4 || 0,
-    palm:   bfd.bli || HV.v5 || 0,
-    tongue: (window._bioSkinData&&window._bioSkinData.tongue) ? HV.tScore||60 : 0,
-    breath: HV.bScore || 0,
-    temp:   HV.tmpScore || 0
+    // ▼ C-60 정직 통일: 측정 안 되면 가짜 floor 없이 0 (손바닥과 동일 기준) ▼
+    face:   (bfd.fci>0 ? Math.min(95,bfd.fci) : (HV.v4>0?HV.v4:0)),
+    palm:   (bfd.bli>0 ? bfd.bli : (HV.v5>0?HV.v5:0)),
+    tongue: ((window._bioSkinData&&window._bioSkinData.tongue&&HV.tScore>0) ? HV.tScore : 0),
+    breath: (HV.bScore>0 ? HV.bScore : 0),
+    temp:   (HV.tmpScore>0 ? HV.tmpScore : 0)
   };
   var sc = scores[type];
   var info = sc>0 ? '현재 점수: '+sc+'점' : '아직 측정 전입니다.';
