@@ -2440,6 +2440,7 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 </style>
 <!-- PeerJS WebRTC — 커플 실시간 영상 연결 -->
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <script>
@@ -2828,12 +2829,24 @@ function entSplashGo(){
   window._entTermsToggleView=function(id){ var e=document.getElementById(id); if(e) e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none'; };
   window._entTermsNext=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, r3=(document.getElementById('etReq3')||{}).checked; if(!(r1&&r2&&r3))return; var dt=(document.getElementById('etData')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var rg=(document.getElementById('etRegion')||{}).value||'GLOBAL'; var _regMap={KR:'PIPA_KR',US:'CCPA_US',CN:'PIPL_CN',HK:'PDPO_HK',JP:'APPI_JP',RU:'152FZ_RU',SA:'PDPL_SA',TR:'KVKK_TR',IN:'DPDP_IN',ES:'GDPR_EU',DE:'GDPR_EU',FR:'GDPR_EU',IT:'GDPR_EU',BR:'LGPD_BR',NL:'GDPR_EU',UA:'UADPL_UA',VN:'PDPD_VN',TH:'PDPA_TH',ID:'PDP_ID',MY:'PDPA_MY',PH:'DPA_PH',GLOBAL:'GLOBAL'}; try{ localStorage.setItem('cgo_terms', JSON.stringify({v:'2.0',t:Date.now(),region:rg,compliance:(_regMap[rg]||'GLOBAL'),service:true,privacy:true,biometric:true,dataResearch:!!dt,marketing:!!mk})); }catch(e){} cgoShowSignup(); };
   window.window._entToggleMore=function(){ var m=document.getElementById('entMoreLogins'); var t=document.getElementById('entMoreToggle'); if(!m)return; if(m.style.display==='none'||!m.style.display){ m.style.display='grid'; if(t)t.textContent='🌐 다른 방법으로 계속 (글로벌·로컬) ▴'; } else { m.style.display='none'; if(t)t.textContent='🌐 다른 방법으로 계속 (글로벌·로컬) ▾'; } };
-  _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoShowPay(); };
+  // ── Supabase 서버 연결 (C-60) ──
+  var SUPABASE_URL='https://vtqejikgqsmaulkayekv.supabase.co';
+  var SUPABASE_ANON_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
+  var _sb=null;
+  try{ if(window.supabase && SUPABASE_ANON_KEY!=='YOUR_ANON_KEY'){ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); } }catch(e){ console.warn('sb init',e); }
+  function cgoSaveSignup(method,identifier,country){
+    if(!_sb) return;
+    try{
+      _sb.from('signups').insert({ method:method||'unknown', identifier:identifier||'', country:country||null })
+        .then(function(r){ if(r&&r.error) console.warn('signup save',r.error); });
+    }catch(e){ console.warn('signup save fail',e); }
+  }
+  _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoSaveSignup(p,'',null); cgoShowPay(); };
   window._entSignupEmail=function(){ var em=(document.getElementById('esEmail')||{}).value||''; var ph=(document.getElementById('esPhone')||{}).value||''; var cc=(document.getElementById('esCountryCode')||{}).value||''; var msg=document.getElementById('esMsg'); var method='', id='';
     if(em.indexOf('@')>0 && em.length>=5){ method='email'; id=em.trim(); }
     else if(ph.replace(/\D/g,'').length>=7){ method='phone'; id=cc+' '+ph.trim(); }
     else { if(msg){msg.textContent='⚠️ 올바른 이메일(예: name@mail.com) 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; }
-    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:method,id:id,t:Date.now()})); }catch(e){} cgoShowPay(); };
+    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:method,id:id,t:Date.now()})); }catch(e){} cgoSaveSignup(method,id,(method==='phone'?cc:null)); cgoShowPay(); };
   window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} cgoShowEntPw(); };
   window._entPaySkip=function(){ cgoShowEntPw(); };
   window._entPickPay=function(el,m){ try{ var ch=document.querySelectorAll('#entPayMethods .entpay-chip'); for(var i=0;i<ch.length;i++){ ch[i].style.background='#fff'; ch[i].style.borderColor='rgba(13,148,136,.25)'; ch[i].style.color='#334155'; ch[i].style.fontWeight='400'; } el.style.background='linear-gradient(135deg,#0d9488,#14b8a6)'; el.style.borderColor='#0d9488'; el.style.color='#fff'; el.style.fontWeight='800'; localStorage.setItem('cgo_paymethod',m);
