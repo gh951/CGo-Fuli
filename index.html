@@ -2679,7 +2679,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="e-glow" style="position:absolute;width:185px;height:185px;border-radius:50%;background:radial-gradient(circle,rgba(20,184,166,.5),transparent 70%);"></div>
     <div class="e-logo" id="entLogoSlot" style="position:relative;width:175px;height:148px;display:flex;align-items:center;justify-content:center;">
       <!-- ▼ 로고 파일: 리포지토리 루트(index.html과 같은 폴더)에 cgo-logo.png 를 넣으세요 ▼ -->
-      <img src="/cgo-logo.png?v=c60d" alt="" id="entLogoImg" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(13,148,136,.35));" onerror="var P=['cgo-logo.png','./cgo-logo.png','/CGO-FULI.png','/cgo_logo.png','/logo.png','/icon-512.png'];var t=parseInt(this.dataset.t||'0');if(t<P.length){this.dataset.t=String(t+1);this.src=P[t]+'?v=c60d';}else{this.style.opacity='0';}">
+      <img src="/icon-512.png?v=c60e" alt="" id="entLogoImg" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 20px rgba(13,148,136,.35));" onerror="var P=['/cgo-logo.png','cgo-logo.png','/icon-192.png','/logo.png'];var t=parseInt(this.dataset.t||'0');if(t<P.length){this.dataset.t=String(t+1);this.src=P[t]+'?v=c60e';}else{this.style.opacity='0';}">
     </div>
   </div>
 
@@ -5941,7 +5941,7 @@ function cgoGuideFeature(key){
 .fdash-ch .fdash-tag{font-size:9px;color:rgba(240,230,200,.45);border:1px solid rgba(240,230,200,.18);padding:2px 7px;border-radius:999px;}
 .fdash-ch .fdash-num{margin-left:auto;font-size:10px;color:rgba(240,230,200,.4);}
 .fdash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-.fdash-card{position:relative;background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:18px 10px 14px;text-align:center;cursor:pointer;overflow:hidden;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .2s,border-color .2s,background .2s;}
+.fdash-card{position:relative;background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(52,211,153,.55);border-radius:16px;box-shadow:0 0 0 1px rgba(52,211,153,.12);padding:18px 10px 14px;text-align:center;cursor:pointer;overflow:hidden;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .2s,border-color .2s,background .2s;}
 .fdash-card::before{content:"";position:absolute;inset:0;background:radial-gradient(110px 70px at 50% 0%,var(--fc) 0%,transparent 70%);opacity:.12;pointer-events:none;}
 .fdash-card:hover{transform:translateY(-3px);border-color:var(--fc);background:rgba(255,255,255,.06);}
 .fdash-card:active{transform:scale(.97);}
@@ -49238,23 +49238,29 @@ function ipHideSuggest(type){
   if(el)el.style.display='none';
 }
 function ipGetMyLocation(){
-  if(!navigator.geolocation){alert('이 브라우저는 위치 정보를 지원하지 않습니다.');return;}
-  cgoGetLocation(function(pos){
-  if(!pos){alert('위치 정보를 가져올 수 없습니다.');return;}
+  if(!navigator.geolocation){ alert('이 브라우저는 위치 정보를 지원하지 않습니다.'); return; }
+  var plEl=document.getElementById('ipCurPlace');
+  if(plEl){ plEl.value='📡 위치 확인 중...'; }
+  navigator.geolocation.getCurrentPosition(function(pos){
     var lat=pos.coords.latitude, lng=pos.coords.longitude;
-    document.getElementById('ipCurLat').value=lat.toFixed(4);
-    document.getElementById('ipCurLng').value=lng.toFixed(4);
-    // 가장 가까운 도시 찾기 — 위도 1도≒111km, 경도 보정 포함한 실제 거리 계산
-    var cosLat = Math.cos(lat * Math.PI / 180);
+    var latEl=document.getElementById('ipCurLat'), lngEl=document.getElementById('ipCurLng');
+    if(latEl) latEl.value=lat.toFixed(4);
+    if(lngEl) lngEl.value=lng.toFixed(4);
+    var cosLat=Math.cos(lat*Math.PI/180);
     var closest=_CITIES.reduce(function(a,b){
-      var dlat = (b.lat - lat) * 111;
-      var dlng = (b.lng - lng) * 111 * cosLat;
-      var dist = dlat*dlat + dlng*dlng; // km² 단위 제곱 거리
-      return dist < a.d ? {c:b, d:dist} : a;
-    },{c:_CITIES[0], d:999999});
-    document.getElementById('ipCurPlace').value=closest.c.n+' ('+lat.toFixed(2)+'°N '+lng.toFixed(2)+'°E)';
+      var dlat=(b.lat-lat)*111, dlng=(b.lng-lng)*111*cosLat;
+      var dist=dlat*dlat+dlng*dlng;
+      return dist<a.d ? {c:b,d:dist} : a;
+    },{c:_CITIES[0], d:9e9});
+    if(plEl) plEl.value=closest.c.n+' ('+lat.toFixed(2)+'\u00b0N '+lng.toFixed(2)+'\u00b0E)';
     window._selectedCurLat=lat; window._selectedCurLng=lng; window._selectedCurName=closest.c.n;
-  },function(){alert('위치 정보를 가져올 수 없습니다. 직접 입력해주세요.');},{enableHighAccuracy:true,timeout:10000});
+  }, function(err){
+    if(plEl) plEl.value='';
+    var msg = (err && err.code===1)
+      ? '\uD83D\uDCCD 위치 권한이 꺼져 있어요.\n\n브라우저 설정에서 이 사이트의 위치를 \'허용\'으로 바꾼 뒤 다시 눌러주세요.\n(또는 현재 거주지를 직접 입력하셔도 됩니다)'
+      : '위치 정보를 가져올 수 없습니다. 잠시 후 다시 시도하거나 직접 입력해 주세요.';
+    alert(msg);
+  }, { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
 }
 // ── 양력/음력 토글 ──
 function ipSetCalType(type){
