@@ -80,7 +80,6 @@ c.mode.CTRGladman=function(){var t=c.lib.BlockCipherMode.extend();function e(t){
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   background-color: #f0fdfa;       /* 불투명 베이스 — 합성 중 검은 깜빡임 방지 */
-  touch-action: pan-y;             /* 입구 핀치줌 차단 — 줌 난리 원천 차단 (본앱은 그대로) */
   -webkit-tap-highlight-color: transparent;
 }
 /* isolation/will-change 제거 — 모바일 검은깜빡임·메모리 부작용 원인 */
@@ -2716,7 +2715,7 @@ function entSplashGo(){
 
 
 <!-- ══ MUFE식 양자 방어 비밀번호 (만들기 / 검증) · C-60 ══ -->
-<div id="entPw" style="display:none;position:fixed;inset:0;z-index:350;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 50%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+<div id="entPw" style="display:none;position:fixed;inset:0;z-index:350;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 50%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
 
   <!-- 헤더 -->
   <div style="text-align:center;margin-bottom:20px;padding:0 24px;">
@@ -2823,14 +2822,43 @@ function entSplashGo(){
   window.cgoShowTerms=function(){ _entHideScreens('entTerms'); var e=document.getElementById('entTerms'); if(e) e.style.display='flex'; var sc=document.getElementById('entSkipFlow'); if(sc){ try{ sc.checked=(localStorage.getItem('cgo_signup_skip')==='1'); }catch(e){} } };
   window.cgoShowSignup=function(){ _entHideScreens('entSignup'); var e=document.getElementById('entSignup'); if(e) e.style.display='flex'; };
   window.cgoShowPay=function(){ _entHideScreens('entPay'); var e=document.getElementById('entPay'); if(e) e.style.display='flex'; };
-  window._entTermsAll=function(c){ ['etReq1','etReq2','etMkt'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=c;}); _entTermsChk(); };
-  window._entTermsChk=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var all=document.getElementById('etAll'); if(all)all.checked=!!(r1&&r2&&mk); var btn=document.getElementById('etNextBtn'); if(btn){ var ok=!!(r1&&r2); btn.disabled=!ok; btn.style.opacity=ok?'1':'.5'; btn.style.cursor=ok?'pointer':'not-allowed'; } };
+  window._entTermsAll=function(c){ ['etReq1','etReq2','etReq3','etData','etMkt'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=c;}); _entTermsChk(); };
+  window._entTermsChk=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, r3=(document.getElementById('etReq3')||{}).checked, dt=(document.getElementById('etData')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var all=document.getElementById('etAll'); if(all)all.checked=!!(r1&&r2&&r3&&dt&&mk); var btn=document.getElementById('etNextBtn'); if(btn){ var ok=!!(r1&&r2&&r3); btn.disabled=!ok; btn.style.opacity=ok?'1':'.5'; btn.style.cursor=ok?'pointer':'not-allowed'; } };
   window._entTermsToggleView=function(id){ var e=document.getElementById(id); if(e) e.style.display=(e.style.display==='none'||!e.style.display)?'block':'none'; };
-  window._entTermsNext=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked; if(!(r1&&r2))return; var mk=(document.getElementById('etMkt')||{}).checked; try{ localStorage.setItem('cgo_terms', JSON.stringify({v:'1.0',t:Date.now(),service:true,privacy:true,marketing:!!mk})); }catch(e){} cgoShowSignup(); };
-  window._entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoShowEntPw(); };
-  window._entSignupEmail=function(){ var v=(document.getElementById('esEmail')||{}).value||''; var msg=document.getElementById('esMsg'); if(v.length<4){ if(msg){msg.textContent='⚠️ 이메일 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; } try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'email_phone',id:v,t:Date.now()})); }catch(e){} cgoShowEntPw(); };
-  window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} _entGo(); };
-  window._entPaySkip=function(){ _entGo(); };
+  window._entTermsNext=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, r3=(document.getElementById('etReq3')||{}).checked; if(!(r1&&r2&&r3))return; var dt=(document.getElementById('etData')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var rg=(document.getElementById('etRegion')||{}).value||'GLOBAL'; var _regMap={KR:'PIPA_KR',US:'CCPA_US',CN:'PIPL_CN',HK:'PDPO_HK',JP:'APPI_JP',RU:'152FZ_RU',SA:'PDPL_SA',TR:'KVKK_TR',IN:'DPDP_IN',ES:'GDPR_EU',DE:'GDPR_EU',FR:'GDPR_EU',IT:'GDPR_EU',BR:'LGPD_BR',NL:'GDPR_EU',UA:'UADPL_UA',VN:'PDPD_VN',TH:'PDPA_TH',ID:'PDP_ID',MY:'PDPA_MY',PH:'DPA_PH',GLOBAL:'GLOBAL'}; try{ localStorage.setItem('cgo_terms', JSON.stringify({v:'2.0',t:Date.now(),region:rg,compliance:(_regMap[rg]||'GLOBAL'),service:true,privacy:true,biometric:true,dataResearch:!!dt,marketing:!!mk})); }catch(e){} cgoShowSignup(); };
+  window._entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoShowPay(); };
+  window._entSignupEmail=function(){ var v=(document.getElementById('esEmail')||{}).value||''; var msg=document.getElementById('esMsg'); if(v.length<4){ if(msg){msg.textContent='⚠️ 이메일 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; } try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'email_phone',id:v,t:Date.now()})); }catch(e){} cgoShowPay(); };
+  window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} cgoShowEntPw(); };
+  window._entPaySkip=function(){ cgoShowEntPw(); };
+  window._entPickPay=function(el,m){ try{ var ch=document.querySelectorAll('#entPayMethods .entpay-chip'); for(var i=0;i<ch.length;i++){ ch[i].style.background='#fff'; ch[i].style.borderColor='rgba(13,148,136,.25)'; ch[i].style.color='#334155'; ch[i].style.fontWeight='400'; } el.style.background='linear-gradient(135deg,#0d9488,#14b8a6)'; el.style.borderColor='#0d9488'; el.style.color='#fff'; el.style.fontWeight='800'; localStorage.setItem('cgo_paymethod',m);
+    if(m==='card'){ _entCardOpen(); }
+    else if(m==='kakao'){ alert('🟡 카카오페이 연결\n\n결제 시 카카오톡 앱으로 연결되어 간편하게 결제됩니다.\n(정식 출시 후 활성화)'); }
+    else if(m==='naver'){ alert('🟢 네이버페이 연결\n\n결제 시 네이버페이로 연결되어 간편하게 결제됩니다.\n(정식 출시 후 활성화)'); }
+    else if(m==='apple'){ alert('🍏 Apple Pay\n\nApp Store에서 다운로드한 경우 Apple 인앱결제로 진행됩니다.\n설정 > Apple ID > 구독에서 관리합니다.'); }
+    else if(m==='google'){ alert('🤖 Google Pay\n\nGoogle Play에서 다운로드한 경우 Google 인앱결제로 진행됩니다.\nPlay 스토어 > 결제 및 정기결제에서 관리합니다.'); }
+  }catch(e){} };
+  window._entCardOpen=function(){ var f=document.getElementById('entCardForm'); if(f) f.style.display='flex'; };
+  window._entCardClose=function(){ var f=document.getElementById('entCardForm'); if(f) f.style.display='none'; };
+  window._entCardFmt=function(field){
+    if(field==='num'){ var e=document.getElementById('ecNum'); var v=e.value.replace(/\D/g,'').slice(0,16); var p=v.replace(/(.{4})/g,'$1 ').trim(); e.value=p; var pv=document.getElementById('cardPrevNum'); if(pv) pv.textContent=(p||'•••• •••• •••• ••••').padEnd(19,'•').replace(/•(?=•••$| )/g,'•'); if(pv) pv.textContent=p? p.padEnd(19,'•') : '•••• •••• •••• ••••'; }
+    else if(field==='exp'){ var e2=document.getElementById('ecExp'); var v2=e2.value.replace(/\D/g,'').slice(0,4); if(v2.length>=3) v2=v2.slice(0,2)+'/'+v2.slice(2); e2.value=v2; var pe=document.getElementById('cardPrevExp'); if(pe) pe.textContent=v2||'MM/YY'; }
+    else if(field==='name'){ var e3=document.getElementById('ecName'); var pn=document.getElementById('cardPrevName'); if(pn) pn.textContent=(e3.value||'CARD HOLDER').toUpperCase(); }
+  };
+  window._entCardSave=function(){
+    var num=(document.getElementById('ecNum')||{}).value||''; var exp=(document.getElementById('ecExp')||{}).value||''; var cvc=(document.getElementById('ecCvc')||{}).value||''; var nm=(document.getElementById('ecName')||{}).value||''; var ct=(document.getElementById('ecCountry')||{}).value||'KR';
+    var msg=document.getElementById('ecMsg'); var digits=num.replace(/\D/g,'');
+    if(digits.length<13){ if(msg){msg.textContent='⚠️ 카드 번호를 확인해주세요';msg.style.color='#dc2626';} return; }
+    if(exp.length<5){ if(msg){msg.textContent='⚠️ 유효기간(MM/YY)을 입력하세요';msg.style.color='#dc2626';} return; }
+    if(cvc.length<3){ if(msg){msg.textContent='⚠️ CVC를 입력하세요';msg.style.color='#dc2626';} return; }
+    if(nm.trim().length<2){ if(msg){msg.textContent='⚠️ 카드 소유자명을 입력하세요';msg.style.color='#dc2626';} return; }
+    try{ localStorage.setItem('cgo_card', JSON.stringify({last4:digits.slice(-4),country:ct,t:Date.now()})); }catch(e){}
+    if(msg){msg.textContent='✅ 카드가 등록되었습니다 (••••'+digits.slice(-4)+')';msg.style.color='#0d9488';}
+    setTimeout(function(){ _entCardClose(); }, 1200);
+  };
+  
+  window._entPayGuide=function(){ var g=document.getElementById('entPayGuide'); if(g) g.style.display='flex'; };
+  window._entPayGuideClose=function(){ var g=document.getElementById('entPayGuide'); if(g) g.style.display='none'; };
+  window._entRefundInfo=function(){ alert('💳 구독 취소·환불 안내\n\n무료 기간(3일) 내 해지 시 청구되지 않습니다.\n\n▶ 웹 직접 결제: 마이페이지 > 구독 관리\n▶ Apple App Store: 설정 > Apple ID > 구독 > CGO-FULI\n▶ Google Play: Play 스토어 > 결제 및 정기결제\n\n가입한 결제 경로에서 1초 만에 해지할 수 있습니다.'); };
   function _entGo(){
     // C-60: 앱 진입 시 입구 오버레이 전부 제거 — 무한 애니메이션·고정레이어 합성부담 해소 (렌더링 청소)
     try{ ['entSplash','entPw','entTerms','entSignup','entPay'].forEach(function(id){ var e=document.getElementById(id); if(e){ e.style.display='none'; e.style.animation='none'; } }); }catch(e){}
@@ -2958,8 +2986,8 @@ function entSplashGo(){
     if(_spin){clearInterval(_spin);_spin=null;}
     var box=document.getElementById('entPw');
     if(box){ box.style.transition='opacity .4s'; box.style.opacity='0'; setTimeout(function(){ box.style.display='none'; box.style.opacity='1'; },420); }
-    // 비번 완료 → 결제(3일 무료) → 커튼 → 대시보드
-    setTimeout(function(){ if(typeof cgoShowPay==='function'){ cgoShowPay(); } else if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }, 430);
+    // 비번 완료 → 커튼 → 대시보드 (결제는 이미 앞 단계에서 진행)
+    setTimeout(function(){ if(typeof _entGo==='function'){ _entGo(); } else if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }, 430);
   }
 })();
 </script>
@@ -2967,62 +2995,116 @@ function entSplashGo(){
 
 
 <!-- ══════════ 약관 동의 (entTerms) · C-60 ══════════ -->
-<div id="entTerms" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+<div id="entTerms" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
   <div style="text-align:center;margin-bottom:16px;padding:0 24px;">
-    <div style="font-size:19px;font-weight:900;color:#0f766e;">📋 약관 동의</div>
-    <div style="font-size:11px;color:#5b8a85;margin-top:5px;">서비스 이용을 위해 동의해 주세요 · 양자 방어</div>
+    <div style="font-size:24.7px;font-weight:900;color:#0f766e;">📋 약관 동의</div>
+    <div style="font-size:14.3px;color:#5b8a85;margin-top:5px;">서비스 이용을 위해 동의해 주세요 · 양자 방어</div>
   </div>
-  <div style="width:min(340px,90vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:20px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
+  <div style="width:min(370px,94vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:20px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
+<!-- 🌐 국가/지역 선택 (지역별 법적 대응 · C-60 2.0) -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:14.3px;font-weight:700;color:#0f766e;margin-bottom:6px;">🌐 거주 국가·지역 (Region)</div>
+      <select id="etRegion" style="width:100%;padding:11px;border:1px solid rgba(13,148,136,.3);border-radius:11px;font-size:16.9px;color:#334155;background:#f0fdfa;">
+        <option value="KR">🇰🇷 한국어</option>
+        <option value="US">🇺🇸 English</option>
+        <option value="CN">🇨🇳 中文</option>
+        <option value="HK">🇭🇰 廣東話</option>
+        <option value="JP">🇯🇵 日本語</option>
+        <option value="RU">🇷🇺 Русский</option>
+        <option value="SA">🇸🇦 العربية</option>
+        <option value="TR">🇹🇷 Türkçe</option>
+        <option value="IN">🇮🇳 हिन्दी</option>
+        <option value="ES">🇪🇸 Español</option>
+        <option value="DE">🇩🇪 Deutsch</option>
+        <option value="FR">🇫🇷 Français</option>
+        <option value="IT">🇮🇹 Italiano</option>
+        <option value="BR">🇧🇷 Português</option>
+        <option value="NL">🇳🇱 Nederlands</option>
+        <option value="UA">🇺🇦 Українська</option>
+        <option value="VN">🇻🇳 Tiếng Việt</option>
+        <option value="TH">🇹🇭 ภาษาไทย</option>
+        <option value="ID">🇮🇩 Indonesia</option>
+        <option value="MY">🇲🇾 Melayu</option>
+        <option value="PH">🇵🇭 Filipino</option>
+        <option value="GLOBAL">🌍 Global</option>
+      </select>
+      <div style="font-size:11.7px;color:#94a3b8;margin-top:4px;">선택한 지역의 개인정보 규정에 맞춰 동의가 기록됩니다.</div>
+    </div>
+    <div style="height:1px;background:#e2e8f0;margin:0 0 13px;"></div>
     <!-- 모두 동의 -->
     <label style="display:flex;align-items:center;gap:10px;padding:12px;background:#f0fdfa;border:1px solid rgba(13,148,136,.2);border-radius:13px;cursor:pointer;">
       <input type="checkbox" id="etAll" onchange="_entTermsAll(this.checked)" style="width:19px;height:19px;accent-color:#0d9488;">
-      <span style="font-size:13px;font-weight:800;color:#0f766e;">전체 동의 (선택 포함)</span>
+      <span style="font-size:16.9px;font-weight:800;color:#0f766e;">전체 동의 (선택 포함)</span>
     </label>
     <div style="height:1px;background:#e2e8f0;margin:13px 0;"></div>
     <!-- 필수1 -->
     <div style="margin-bottom:11px;">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
         <input type="checkbox" id="etReq1" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
-        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 서비스 이용약관</span>
-        <span onclick="event.preventDefault();_entTermsToggleView('etv1')" style="font-size:10px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
+        <span style="flex:1;font-size:15.6px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 서비스 이용약관</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etv1')" style="font-size:13px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
       </label>
-      <div id="etv1" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:9.5px;color:#64748b;line-height:1.7;max-height:120px;overflow-y:auto;">CGO-FULI(이하 "서비스")는 사주·관상·생체분석 등 통합 라이프 인덱스 정보를 제공합니다. 제공되는 모든 결과는 인포테인먼트·웰니스 참고용이며 의료·법률·투자 자문이 아닙니다. 이용자는 본인 책임 하에 서비스를 이용하며, 서비스는 천재지변·기술적 장애 등 불가항력에 대해 책임지지 않습니다. 유료 구독은 별도 결제 약관을 따릅니다.</div>
+      <div id="etv1" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:12.3px;color:#64748b;line-height:1.7;max-height:120px;overflow-y:auto;">CGO-FULI(이하 "서비스")는 <b>생체분석(rPPG·관상·손금)</b>을 중심으로 사주·역학 등 통합 라이프 인덱스 정보를 제공합니다. 본 서비스의 핵심은 생체분석이며, 사주·관상은 보조 지표입니다. 제공되는 모든 결과는 인포테인먼트·웰니스 참고용이며 의료·법률·투자 자문이 아닙니다. 이용자는 본인 책임 하에 서비스를 이용하며, 서비스는 천재지변·기술적 장애 등 불가항력에 대해 책임지지 않습니다. 유료 구독은 별도 결제 약관을 따릅니다.</div>
     </div>
     <!-- 필수2 (개인정보 — 데이터 확보 대비) -->
     <div style="margin-bottom:11px;">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
         <input type="checkbox" id="etReq2" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
-        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 개인정보 수집·이용 동의</span>
-        <span onclick="event.preventDefault();_entTermsToggleView('etv2')" style="font-size:10px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
+        <span style="flex:1;font-size:15.6px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 개인정보 수집·이용 동의</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etv2')" style="font-size:13px;color:#94a3b8;text-decoration:underline;cursor:pointer;">보기</span>
       </label>
-      <div id="etv2" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:9.5px;color:#64748b;line-height:1.7;max-height:140px;overflow-y:auto;">
+      <div id="etv2" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:12.3px;color:#64748b;line-height:1.7;max-height:140px;overflow-y:auto;">
         <b style="color:#475569;">① 수집 항목</b> — 이메일/전화번호, 닉네임, 생년월일시(역학 분석용), 생체분석 결과(rPPG·관상·손금 등), 서비스 이용기록.<br>
         <b style="color:#475569;">② 이용 목적</b> — 서비스 제공·개인 맞춤 분석, 통계·연구를 통한 서비스 개선, <b>향후 CGO 자체 서버 구축 시 분석 데이터의 저장·통계·품질 향상</b>.<br>
         <b style="color:#475569;">③ 보유 기간</b> — 회원 탈퇴 시까지 또는 관련 법령이 정한 기간.<br>
         <b style="color:#475569;">④ 현재 저장 방식</b> — 초기에는 이용자 기기에 저장되며, 서버 구축 이후 동의 범위 내에서 안전하게 이전·보관됩니다. 이용자는 동의를 거부할 수 있으나 일부 기능이 제한될 수 있습니다.
       </div>
     </div>
+<!-- 필수3: 바이오(rPPG) 민감정보 온디바이스 (C-60 2.0) -->
+    <div style="margin-bottom:11px;">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+        <input type="checkbox" id="etReq3" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
+        <span style="flex:1;font-size:15.6px;color:#334155;"><b style="color:#0d9488;">(필수)</b> 🧬 바이오(rPPG)<br>민감정보 기기내 연산 동의</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etv3')" style="font-size:13px;color:#94a3b8;text-decoration:underline;cursor:pointer;">내용 보기</span>
+      </label>
+      <div id="etv3" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:13.7px;color:#64748b;line-height:1.6;">
+        안면·혀·손 등의 <b>영상 원본은 기기 내부에서만 분석</b>되며, 분석 직후 파기되어 서버로 전송되지 않습니다. 분석으로 산출된 결과 수치만 (동의 시) 비식별 처리되어 활용될 수 있습니다.
+      </div>
+    </div>
+    <!-- 선택: 비식별 데이터 연구·통계 활용 (데이터 사업 대비 · GDPR상 반드시 '선택') -->
+    <div style="margin-bottom:11px;">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
+        <input type="checkbox" id="etData" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
+        <span style="flex:1;font-size:15.6px;color:#334155;"><b style="color:#94a3b8;">(선택)</b> 📊 비식별<br>데이터 연구·통계·서비스개선 활용</span>
+        <span onclick="event.preventDefault();_entTermsToggleView('etvd')" style="font-size:13px;color:#94a3b8;text-decoration:underline;cursor:pointer;">내용 보기</span>
+      </label>
+      <div id="etvd" style="display:none;margin:7px 0 0 26px;padding:10px;background:#f8fafc;border-radius:9px;font-size:13.7px;color:#64748b;line-height:1.6;">
+        측정 결과 수치(BPM·HRV·찰색 변수·오행 가중치 등)는 이름·이메일과 <b>분리·비식별 처리</b>된 뒤, 동의 시 서비스 개선·학술 연구·통계 및 향후 제휴 연구기관 제공·데이터셋 활용에 쓰일 수 있습니다. 비식별 처리는 재식별 위험을 크게 낮추지만 <b>어떤 기술도 위험을 완전히 없앨 수는 없습니다.</b> 본 동의는 <b>선택이며, 동의하지 않아도 서비스를 이용</b>할 수 있고 언제든 철회·삭제 가능합니다.
+      </div>
+    </div>
     <!-- 선택 -->
     <div style="margin-bottom:4px;">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
         <input type="checkbox" id="etMkt" onchange="_entTermsChk()" style="width:17px;height:17px;accent-color:#0d9488;">
-        <span style="flex:1;font-size:12px;color:#334155;"><b style="color:#94a3b8;">(선택)</b> 마케팅·혜택 알림 수신</span>
+        <span style="flex:1;font-size:15.6px;color:#334155;"><b style="color:#94a3b8;">(선택)</b> 마케팅·혜택 알림 수신</span>
       </label>
     </div>
-    <!-- C-60: 다음부터 가입 안내 건너뛰기 (분석/구성용 매번보기 ↔ 정상 건너뛰기) -->
+    <!-- ⚖️ 철회권 (GDPR/CCPA) -->
+<div style="margin-top:12px;padding:9px 11px;background:#f0fdfa;border-radius:9px;font-size:12.3px;color:#5b8a85;line-height:1.55;">⚖️ 귀하는 동의를 거부할 권리가 있으며(필수 미동의 시 서비스 이용이 제한될 수 있음), 가입 후 언제든 설정에서 동의를 철회하고 데이터를 삭제할 수 있습니다.</div>
+<!-- C-60: 다음부터 가입 안내 건너뛰기 (분석/구성용 매번보기 ↔ 정상 건너뛰기) -->
 <div style="margin:12px 0 2px;padding-top:10px;border-top:1px dashed #e2e8f0;">
 <label style="display:flex;align-items:center;gap:9px;cursor:pointer;">
 <input type="checkbox" id="entSkipFlow" onchange="_entSkipFlowToggle()" style="width:17px;height:17px;accent-color:#0d9488;">
-<span style="flex:1;font-size:11.5px;color:#64748b;">✓ 다음부터 이 가입 안내 건너뛰기 <span style="color:#cbd5e1;">(체크 해제 시 매번 보기)</span></span>
+<span style="flex:1;font-size:15px;color:#64748b;">✓ 다음부터 이 가입 안내 건너뛰기<br><span style="color:#cbd5e1;">(체크 해제 시 매번 보기)</span></span>
 </label>
 </div>
-<button id="etNextBtn" onclick="_entTermsNext()" disabled style="width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:14px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">동의하고 계속 →</button>
-    <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:8px;">필수 항목에 동의해야 진행됩니다 · 동의 기록은 안전하게 보관됩니다</div>
+<button id="etNextBtn" onclick="_entTermsNext()" disabled style="width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:18.2px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">동의하고 계속 →</button>
+    <div style="font-size:11.1px;color:#94a3b8;text-align:center;margin-top:8px;">필수 항목에 동의해야 진행됩니다 · 동의 기록은 안전하게 보관됩니다</div>
   </div>
 </div>
 
 <!-- ══════════ 가입 (entSignup) · 소셜 우선 · C-60 ══════════ -->
-<div id="entSignup" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+<div id="entSignup" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 30%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
   <div style="text-align:center;margin-bottom:18px;padding:0 24px;">
     <div style="font-size:19px;font-weight:900;color:#0f766e;">🚀 시작하기</div>
     <div style="font-size:11px;color:#5b8a85;margin-top:5px;">소셜 계정으로 간편하게 시작하세요</div>
@@ -3050,25 +3132,137 @@ function entSplashGo(){
 </div>
 
 <!-- ══════════ 결제 (entPay) · 3일 무료 · C-60 ══════════ -->
-<div id="entPay" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 28%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+<div id="entPay" style="display:none;position:fixed;inset:0;z-index:360;background:radial-gradient(circle at 50% 28%,#ffffff 0%,#f0fdfa 55%,#ecfdf5 100%);flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:30px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div onclick="_entPaySkip()" style="position:absolute;top:16px;right:18px;width:34px;height:34px;border-radius:50%;background:rgba(15,118,110,.08);display:flex;align-items:center;justify-content:center;font-size:18px;color:#5b8a85;cursor:pointer;z-index:5;">✕</div>
   <div style="text-align:center;margin-bottom:16px;padding:0 24px;">
-    <div style="font-size:13px;font-weight:800;color:#14b8a6;letter-spacing:.05em;">🎁 3일 무료 체험</div>
-    <div style="font-size:21px;font-weight:900;color:#0f766e;margin-top:4px;">지금 시작하면 <span style="color:#14b8a6;">3일간 0원</span></div>
-    <div style="font-size:11px;color:#5b8a85;margin-top:5px;">이후 월 9,900원 (하루 330원) · 언제든 해지 가능</div>
+    <div style="font-size:14px;font-weight:800;color:#14b8a6;letter-spacing:.05em;">🪐 CGO-FULI VIP 멤버십</div>
+    <div style="font-size:23px;font-weight:900;color:#0f766e;margin-top:6px;">지금 시작하면 <span style="color:#14b8a6;">3일간 0원</span></div>
+    <div style="font-size:12px;color:#5b8a85;margin-top:6px;">이후 월 9,900원 (하루 약 330원)<br>언제든 위약금 없이 해지 가능</div>
   </div>
-  <div style="width:min(330px,90vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:22px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
-    <div style="font-size:11px;font-weight:800;color:#0f766e;margin-bottom:10px;">✨ 모든 기능 무제한</div>
-    <div style="display:flex;flex-direction:column;gap:7px;font-size:11.5px;color:#334155;">
-      <div>✅ 33가지 전체 기능 (건강·역학·뷰티·유틸)</div>
-      <div>✅ 실시간 rPPG 생체분석 + 50역학 연동</div>
+  <div style="width:min(370px,93vw);background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:20px;padding:22px;box-shadow:0 8px 28px rgba(15,118,110,.12);">
+    <div style="background:linear-gradient(135deg,#f0fdfa,#ecfdf5);border:1px solid rgba(20,184,166,.3);border-radius:14px;padding:14px;text-align:center;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:900;color:#0f766e;">🎁 3일간 무료 체험 (0원)</div>
+      <div style="font-size:12px;color:#5b8a85;margin-top:4px;">이후 월 9,900원 · 무료 기간 내 해지 시 청구 없음</div>
+    </div>
+    <!-- 결제 타임라인 -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:12.5px;font-weight:800;color:#0f766e;margin-bottom:11px;">📅 결제는 이렇게 진행돼요</div>
+      <div style="display:flex;justify-content:space-between;text-align:center;gap:4px;">
+        <div style="flex:1;"><div style="font-size:22px;">🎁</div><div style="font-size:11.5px;font-weight:800;color:#0d9488;margin-top:2px;">오늘</div><div style="font-size:10px;color:#64748b;margin-top:1px;">무료 시작<br><b>0원</b></div></div>
+        <div style="align-self:center;color:#cbd5e1;font-size:14px;">→</div>
+        <div style="flex:1;"><div style="font-size:22px;">🔔</div><div style="font-size:11.5px;font-weight:800;color:#f59e0b;margin-top:2px;">2일 후</div><div style="font-size:10px;color:#64748b;margin-top:1px;">종료 24시간 전<br><b>알림</b></div></div>
+        <div style="align-self:center;color:#cbd5e1;font-size:14px;">→</div>
+        <div style="flex:1;"><div style="font-size:22px;">💳</div><div style="font-size:11.5px;font-weight:800;color:#7c3aed;margin-top:2px;">3일 후</div><div style="font-size:10px;color:#64748b;margin-top:1px;">첫 결제<br><b>9,900원</b></div></div>
+      </div>
+      <div style="font-size:9.5px;color:#94a3b8;text-align:center;margin-top:9px;">2일차 알림을 받고, 원치 않으면 결제 전에 해지하면 됩니다.</div>
+    </div>
+    <div style="font-size:12.5px;font-weight:800;color:#0f766e;margin-bottom:10px;">✨ 모든 기능 무제한 (VIP)</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#334155;line-height:1.4;">
+      <div>✅ 33가지 전체 기능<br><span style="color:#94a3b8;font-size:11px;">건강예측 · 10방위 풍수 · 뷰티 · 유틸</span></div>
+      <div>✅ 3단계 실시간 rPPG 생체분석<br><span style="color:#94a3b8;font-size:11px;">× 50역학 초융합 리포트</span></div>
       <div>✅ 정밀 분석 리포트 무제한</div>
       <div>✅ 양자 방어 보안 (ML-KEM-768)</div>
     </div>
-    <button onclick="_entPayStart()" style="width:100%;margin-top:18px;padding:15px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,148,136,.3);">3일 무료로 시작하기 🎁</button>
-    <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:9px;line-height:1.6;">3일간 무료 · 무료 기간 종료 전 알림 · 기간 내 해지 시 0원</div>
+    <!-- 결제 수단 선택 -->
+    <div style="margin-top:18px;">
+      <div style="font-size:12.5px;font-weight:800;color:#0f766e;margin-bottom:9px;">💳 결제 수단 선택</div>
+      <div id="entPayMethods" style="display:flex;flex-wrap:wrap;gap:7px;">
+        <div class="entpay-chip" onclick="_entPickPay(this,'card')" style="padding:9px 12px;border:1.5px solid rgba(13,148,136,.25);border-radius:10px;font-size:12px;color:#334155;cursor:pointer;background:#fff;">💳 카드</div>
+        <div class="entpay-chip" onclick="_entPickPay(this,'kakao')" style="padding:9px 12px;border:1.5px solid rgba(13,148,136,.25);border-radius:10px;font-size:12px;color:#334155;cursor:pointer;background:#fff;">🟡 카카오페이</div>
+        <div class="entpay-chip" onclick="_entPickPay(this,'naver')" style="padding:9px 12px;border:1.5px solid rgba(13,148,136,.25);border-radius:10px;font-size:12px;color:#334155;cursor:pointer;background:#fff;">🟢 네이버페이</div>
+        <div class="entpay-chip" onclick="_entPickPay(this,'apple')" style="padding:9px 12px;border:1.5px solid rgba(13,148,136,.25);border-radius:10px;font-size:12px;color:#334155;cursor:pointer;background:#fff;">🍏 Apple Pay</div>
+        <div class="entpay-chip" onclick="_entPickPay(this,'google')" style="padding:9px 12px;border:1.5px solid rgba(13,148,136,.25);border-radius:10px;font-size:12px;color:#334155;cursor:pointer;background:#fff;">🤖 Google Pay</div>
+      </div>
+      <div style="font-size:9.5px;color:#94a3b8;margin-top:6px;">앱 다운로드 경로(App Store·Google Play)는 해당 스토어 결제로 진행됩니다.</div>
+    </div>
+    <button onclick="_entPayStart()" style="width:100%;margin-top:18px;padding:16px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:13px;color:#fff;font-size:15.5px;font-weight:900;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(13,148,136,.3);">🚀 3일 무료로 시작하기</button>
+    <div style="font-size:9.5px;color:#94a3b8;text-align:center;margin-top:10px;line-height:1.6;">3일간 무료 · <b style="color:#5b8a85;">무료 종료 24시간 전 사전 알림</b> · 즉시 해지 가능</div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #eef2f7;font-size:10px;color:#94a3b8;line-height:1.6;text-align:center;">
+      본 요금제는 정기 구독 상품이며, 무료 기간 종료 후 자동 청구됩니다.<br>
+      <span onclick="_entPayGuide()" style="color:#0d9488;text-decoration:underline;cursor:pointer;font-weight:700;">📖 결제·해지·환불 안내 자세히 보기</span>
+    </div>
   </div>
-  <button onclick="_entPaySkip()" style="margin-top:14px;background:none;border:none;color:#5b8a85;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;">나중에 둘러보기</button>
+  <button onclick="_entPaySkip()" style="margin-top:14px;background:none;border:none;color:#5b8a85;font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit;">나중에 둘러보기</button>
 </div>
+<!-- ══════════ 결제·해지·환불 상세 안내 (entPayGuide) · C-60 ══════════ -->
+<div id="entPayGuide" style="display:none;position:fixed;inset:0;z-index:380;background:rgba(15,23,42,.5);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div style="width:min(380px,92vw);background:#fff;border-radius:20px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25);margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:17px;font-weight:900;color:#0f766e;">📖 결제·해지·환불 안내</div>
+      <div onclick="_entPayGuideClose()" style="width:30px;height:30px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;color:#64748b;cursor:pointer;">✕</div>
+    </div>
+    <div style="font-size:12.5px;color:#334155;line-height:1.75;">
+      <div style="font-weight:800;color:#0d9488;margin-bottom:5px;">① 무료 체험 &amp; 결제 시점</div>
+      <div style="margin-bottom:14px;">가입 시 <b>3일간 무료(0원)</b>로 모든 VIP 기능을 이용합니다. 무료 시작 시점부터 <b>2일 차(48시간 후)</b>에 종료 24시간 전 알림을 보내드리고, <b>3일 차에 첫 결제(월 9,900원)</b>가 진행됩니다. 무료 기간 내 해지하면 <b>한 푼도 청구되지 않습니다.</b></div>
+
+      <div style="font-weight:800;color:#0d9488;margin-bottom:5px;">② 결제 수단</div>
+      <div style="margin-bottom:14px;">· <b>웹/직접 결제:</b> 신용·체크카드, 카카오페이, 네이버페이<br>· <b>iOS 앱:</b> Apple App Store 인앱결제<br>· <b>Android 앱:</b> Google Play 인앱결제<br><span style="color:#94a3b8;font-size:11px;">가입한 경로(플랫폼)에서 결제·관리가 진행됩니다.</span></div>
+
+      <div style="font-weight:800;color:#0d9488;margin-bottom:5px;">③ 해지 방법 (플랫폼별)</div>
+      <div style="margin-bottom:14px;">· <b>웹/직접 결제:</b> 마이페이지 &gt; 구독 및 라이선스 관리<br>· <b>Apple:</b> 설정 &gt; Apple ID &gt; 구독 &gt; CGO-FULI<br>· <b>Google:</b> Play 스토어 &gt; 결제 및 정기결제 &gt; CGO-FULI<br><span style="color:#0d9488;font-size:11px;">해지는 다음 결제일 전까지 언제든 가능하며 즉시 반영됩니다.</span></div>
+
+      <div style="font-weight:800;color:#0d9488;margin-bottom:5px;">④ 환불 정책</div>
+      <div style="margin-bottom:14px;">· <b>무료 기간 내 해지:</b> 청구 없음(0원)<br>· <b>웹/직접 결제:</b> 마이페이지에서 환불 요청 → 관련 법령(전자상거래법) 및 PG 정책에 따라 처리<br>· <b>Apple/Google:</b> 각 스토어 환불 정책에 따라 신청(reportaproblem.apple.com / Google Play 환불)</div>
+
+      <div style="font-weight:800;color:#0d9488;margin-bottom:5px;">⑤ 자동 결제 고지</div>
+      <div style="margin-bottom:8px;">본 상품은 <b>정기 구독</b>이며, 해지하지 않으면 매월 자동으로 결제·갱신됩니다. 모든 결제 전 사전 알림을 보내드려, 원치 않는 결제를 방지합니다.</div>
+      <div style="font-size:10px;color:#94a3b8;line-height:1.6;border-top:1px solid #eef2f7;padding-top:10px;margin-top:10px;">※ 실제 결제·청구는 정식 출시(PG/스토어 연동) 이후 적용됩니다. 현재는 체험 시작 기록만 저장됩니다.</div>
+    </div>
+    <button onclick="_entPayGuideClose()" style="width:100%;margin-top:16px;padding:13px;background:#0d9488;border:none;border-radius:11px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">확인</button>
+  </div>
+</div>
+
+<!-- ══════════ 글로벌 카드 등록 (entCardForm) · C-60 ══════════ -->
+<div id="entCardForm" style="display:none;position:fixed;inset:0;z-index:385;background:rgba(15,23,42,.5);align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 0;font-family:'Noto Sans KR',sans-serif;">
+  <div style="width:min(360px,92vw);background:#fff;border-radius:20px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25);margin:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:17px;font-weight:900;color:#0f766e;">💳 카드 등록</div>
+      <div onclick="_entCardClose()" style="width:30px;height:30px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;color:#64748b;cursor:pointer;">✕</div>
+    </div>
+    <!-- 카드 미리보기 -->
+    <div style="background:linear-gradient(135deg,#0f766e,#14b8a6);border-radius:16px;padding:18px;color:#fff;margin-bottom:18px;box-shadow:0 6px 18px rgba(13,148,136,.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:800;opacity:.9;">CGO-FULI</span><span style="font-size:20px;">💳</span></div>
+      <div id="cardPrevNum" style="font-size:17px;letter-spacing:2px;margin:16px 0 12px;font-family:monospace;">•••• •••• •••• ••••</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;"><span id="cardPrevName" style="text-transform:uppercase;opacity:.9;">CARD HOLDER</span><span id="cardPrevExp" style="opacity:.9;">MM/YY</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px;">
+      <div>
+        <div style="font-size:11.5px;font-weight:700;color:#0f766e;margin-bottom:5px;">🌐 카드 발급 국가</div>
+        <select id="ecCountry" style="width:100%;padding:11px;border:1px solid rgba(13,148,136,.3);border-radius:10px;font-size:13px;color:#334155;background:#f0fdfa;">
+          <option value="KR">🇰🇷 대한민국</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="JP">🇯🇵 日本</option>
+          <option value="CN">🇨🇳 中国</option>
+          <option value="EU">🇪🇺 Europe</option>
+          <option value="GLOBAL">🌍 Other / Global</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11.5px;font-weight:700;color:#0f766e;margin-bottom:5px;">카드 번호</div>
+        <input id="ecNum" inputmode="numeric" oninput="_entCardFmt('num')" maxlength="19" placeholder="1234 5678 9012 3456" style="width:100%;padding:12px;border:1px solid rgba(13,148,136,.3);border-radius:10px;font-size:14px;color:#0f172a;box-sizing:border-box;font-family:monospace;">
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11.5px;font-weight:700;color:#0f766e;margin-bottom:5px;">유효기간</div>
+          <input id="ecExp" inputmode="numeric" oninput="_entCardFmt('exp')" maxlength="5" placeholder="MM/YY" style="width:100%;padding:12px;border:1px solid rgba(13,148,136,.3);border-radius:10px;font-size:14px;color:#0f172a;box-sizing:border-box;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11.5px;font-weight:700;color:#0f766e;margin-bottom:5px;">CVC</div>
+          <input id="ecCvc" inputmode="numeric" maxlength="4" placeholder="•••" style="width:100%;padding:12px;border:1px solid rgba(13,148,136,.3);border-radius:10px;font-size:14px;color:#0f172a;box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;font-weight:700;color:#0f766e;margin-bottom:5px;">카드 소유자명</div>
+        <input id="ecName" oninput="_entCardFmt('name')" placeholder="HONG GILDONG" style="width:100%;padding:12px;border:1px solid rgba(13,148,136,.3);border-radius:10px;font-size:14px;color:#0f172a;box-sizing:border-box;text-transform:uppercase;">
+      </div>
+    </div>
+    <div id="ecMsg" style="font-size:11px;text-align:center;margin-top:10px;min-height:14px;"></div>
+    <button onclick="_entCardSave()" style="width:100%;margin-top:8px;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;">🔐 카드 등록하기</button>
+    <div style="font-size:9.5px;color:#94a3b8;text-align:center;margin-top:10px;line-height:1.6;">🔒 카드 정보는 안전하게 처리됩니다. ※ 실제 결제·청구는 정식 출시(PG 연동) 이후 적용되며, 현재는 등록만 저장됩니다.</div>
+  </div>
+</div>
+
+
 
 <!-- ══ PHASE 0: 언어선택 + 바로입장 ══ -->
 <div id="phase0" style="position:fixed;inset:0;z-index:300;background:linear-gradient(135deg,#ffffff 0%,#f0fdfa 50%,#ecfdf5 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden;">
@@ -19495,7 +19689,8 @@ window._myPop=function(id){
     +'<button class="mypg-btnd" onclick="_myShred()" style="text-align:center;font-size:15px;">\u274C 즉시 탈퇴 (기기 데이터 분쇄)</button>'
     +'<div class="mypg-note" style="line-height:1.9;font-size:11.5px;text-align:center;"><div style="font-weight:800;color:#475569;margin-bottom:5px;">\u203B 온디바이스 분쇄 (기기 내 완전 삭제)</div>탈퇴하는 즉시, 이 기기에 저장된 모든 데이터<br>(건강 기록 \u00b7 플레이리스트 \u00b7 설정 \u00b7 기기 ID)가<br>1초 만에 완전 삭제되며 복구할 수 없습니다.<br>서버에 저장된 것이 없어 흔적이 남지 않습니다.<div style="font-weight:800;color:#475569;margin:12px 0 5px;">\u203B 유료 구독 해지 안내</div>유료 구독 해지는 App Store \u00b7 Google Play의<br>구독 관리에서 별도로 진행해 주세요.</div>'};
   D.billing={t:'💳 구독 및 라이선스 관리',h:
-    '<div class="mypg-box"><div style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:11px;">구독 상태</div><div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:7px;"><span style="color:#64748b;">현재 요금제</span><span style="font-weight:800;color:'+gi.c+';">'+gi.lab+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:13px;"><span style="color:#64748b;">다음 결제일</span><span style="color:#0f172a;">'+(localStorage.getItem('cgo_nextbill')||'-')+'</span></div><button onclick="_myUpgrade()" style="width:100%;padding:12px;border:none;border-radius:11px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💎 프리미엄 업그레이드</button></div>'
+    '<div class="mypg-note" style="text-align:center;background:#f0fdfa;border:1px solid rgba(13,148,136,.2);border-radius:10px;padding:10px;margin-bottom:9px;font-size:11.5px;line-height:1.6;">📍 현재 접속 환경: <b style="color:#0d9488;">'+(function(){var ua=(navigator.userAgent||'');if(/iPhone|iPad|iPod/i.test(ua))return 'iOS · App Store';if(/Android/i.test(ua))return 'Android · Google Play';return '웹 / PWA · 직접 결제';})()+'</b><br>가입하신 결제 경로에서 관리하세요</div>'
+    +'<div class="mypg-box"><div style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:11px;">구독 상태</div><div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:7px;"><span style="color:#64748b;">현재 요금제</span><span style="font-weight:800;color:'+gi.c+';">'+gi.lab+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:13px;"><span style="color:#64748b;">다음 결제일</span><span style="color:#0f172a;">'+(localStorage.getItem('cgo_nextbill')||'-')+'</span></div><button onclick="_myUpgrade()" style="width:100%;padding:12px;border:none;border-radius:11px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">💎 프리미엄 업그레이드</button></div>'
     +'<div class="mypg-box"><div style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:3px;">결제 수단</div><div style="font-size:11px;color:#94a3b8;margin-bottom:9px;">가입하신 결제 경로에서 직접 관리됩니다</div><div onclick="_myDirectPay()" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:linear-gradient(135deg,#ecfeff,#faf5ff);border:1.5px solid rgba(124,58,237,.3);border-radius:10px;cursor:pointer;margin-bottom:8px;"><span style="font-size:17px;flex-shrink:0;">🌐</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#7c3aed;">직접 결제 (카드·카카오·네이버)</div><div style="font-size:10px;color:#94a3b8;">직접 다운로드 회원 전용</div></div><span style="color:#7c3aed;flex-shrink:0;font-weight:800;">💎</span></div><a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:10px;text-decoration:none;margin-bottom:8px;"><span style="font-size:17px;flex-shrink:0;">🍏</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#0f172a;">App Store 구독 관리</div><div style="font-size:10px;color:#94a3b8;">계정 → 구독</div></div><span style="color:#06b6d4;flex-shrink:0;">→</span></a><a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:10px;text-decoration:none;"><span style="font-size:17px;flex-shrink:0;">🤖</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#0f172a;">Google Play 결제 관리</div><div style="font-size:10px;color:#94a3b8;">결제 및 정기결제</div></div><span style="color:#06b6d4;flex-shrink:0;">→</span></a></div>'
     +'<div class="mypg-box"><div style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:9px;">💸 결제 취소·환불 신청</div><div onclick="_myDirectRefund()" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:linear-gradient(135deg,#fff5f5,#faf5ff);border:1.5px solid rgba(124,58,237,.3);border-radius:10px;cursor:pointer;margin-bottom:8px;"><span style="font-size:17px;flex-shrink:0;">🌐</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#7c3aed;">FULI 다이렉트 환불 요청</div><div style="font-size:10px;color:#94a3b8;">직접 결제건 · 빠른 환불</div></div><span style="color:#7c3aed;flex-shrink:0;font-weight:800;">💸</span></div><a href="https://reportaproblem.apple.com" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:#fff5f5;border:1px solid rgba(220,38,38,.22);border-radius:10px;text-decoration:none;margin-bottom:8px;"><span style="font-size:17px;flex-shrink:0;">🍏</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#dc2626;">Apple 환불 신청</div><div style="font-size:10px;color:#94a3b8;">reportaproblem.apple.com</div></div><span style="color:#dc2626;flex-shrink:0;">→</span></a><a href="https://support.google.com/googleplay/answer/2479637" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:#fff5f5;border:1px solid rgba(220,38,38,.22);border-radius:10px;text-decoration:none;"><span style="font-size:17px;flex-shrink:0;">🤖</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#dc2626;">Google 환불 신청</div><div style="font-size:10px;color:#94a3b8;">Google Play 환불</div></div><span style="color:#dc2626;flex-shrink:0;">→</span></a></div>'
     +'<div class="mypg-note" style="text-align:center;line-height:1.85;">※ 환불 신청은 즉시 접수됩니다.<br><b style="color:#7c3aed;">· 직접 결제(PG):</b> 출시 후 PG사를 통해 빠르게 처리<br><b>· App Store·Google Play:</b> 각 스토어 정책에 따르며,<br>결과는 스토어 메일·앱에서 확인</div>'};
