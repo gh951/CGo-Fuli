@@ -2833,13 +2833,15 @@ function entSplashGo(){
   var SUPABASE_URL='https://vtqejikgqsmaulkayekv.supabase.co';
   var SUPABASE_ANON_KEY='sb_publishable_dF_1MT-oQzFqWOk64CUHQQ_64qjcIYL';
   var _sb=null;
-  try{ if(window.supabase && SUPABASE_ANON_KEY!=='YOUR_ANON_KEY'){ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); } }catch(e){ console.warn('sb init',e); }
+  try{ if(window.supabase && SUPABASE_ANON_KEY!=='YOUR_ANON_KEY'){ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); } }catch(e){ console.warn('[CGO-SB] init error',e); }
+  console.log('[CGO-SB] 라이브러리:', !!window.supabase, '| 키설정:', SUPABASE_ANON_KEY!=='YOUR_ANON_KEY', '| 연결객체:', !!_sb);
   function cgoSaveSignup(method,identifier,country){
-    if(!_sb) return;
+    console.log('[CGO-SB] 저장 시도:', method, identifier, '| 연결:', !!_sb);
+    if(!_sb){ console.warn('[CGO-SB] ⚠️ 연결객체 없음 — 저장 못함'); return; }
     try{
       _sb.from('signups').insert({ method:method||'unknown', identifier:identifier||'', country:country||null })
-        .then(function(r){ if(r&&r.error) console.warn('signup save',r.error); });
-    }catch(e){ console.warn('signup save fail',e); }
+        .then(function(r){ if(r&&r.error){ console.warn('[CGO-SB] ❌ 저장 실패:', r.error); } else { console.log('[CGO-SB] ✅ 저장 성공!'); } });
+    }catch(e){ console.warn('[CGO-SB] 저장 예외:',e); }
   }
   _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoSaveSignup(p,'',null); cgoShowPay(); };
   window._entSignupEmail=function(){ var em=(document.getElementById('esEmail')||{}).value||''; var ph=(document.getElementById('esPhone')||{}).value||''; var cc=(document.getElementById('esCountryCode')||{}).value||''; var msg=document.getElementById('esMsg'); var method='', id='';
