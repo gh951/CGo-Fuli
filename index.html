@@ -30116,6 +30116,8 @@ function _c24CompStartReal(){
   if(cb){cb.style.background='rgba(52,211,153,.25)';cb.style.borderColor='rgba(52,211,153,.9)';}
   // 시작 딩동댕 (B-2b)
   try{ if(typeof _c24Chime==='function') _c24Chime(); }catch(e){}
+  // AR-1: FaceMesh 정밀 인터록 준비 (실패 시 살색비율 폴백)
+  try{ if(typeof _c24EnsureFM==='function') _c24EnsureFM(); }catch(e){}
   // 1단계: 얼굴 60초
   _c24CompDoStep(0);
 }
@@ -30660,11 +30662,22 @@ function _c24Loop(){
       } else {
         _c24.faceOK = (_c24.mode!=='face' && _c24.mode!=='tongue');
       }
-      // ── B-2a: 거리/ROI 핏 상태 계산 (게이트는 B-2b에서 연결) ──
+      // ── AR-1: FaceMesh 우선(정밀) + 살색비율 폴백 ──
       var _ratioFit = cnt ? skinCnt/cnt : 0;
       var _band = _c24FitBand(_c24.mode);
-      _c24.fitOK = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
-      _c24.fitState = _ratioFit<_band[0] ? 'far' : (_ratioFit>_band[1] ? 'near' : 'ok');
+      var _skinFit = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
+      try{ if((_c24.mode==='face'||_c24.mode==='tongue')) _c24SendFM(document.getElementById('c24-video')); }catch(e){}
+      var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue');
+      var _lmsFresh = !!(_c24._faceLms && (performance.now()-(_c24._faceLmsTime||0) < 700));
+      if(_fmActive){
+        // 진짜 얼굴 랜드마크 있어야 통과 (없으면 정지 = 정확)
+        _c24.fitOK = _skinFit && _lmsFresh;
+        _c24.fitState = !_lmsFresh ? 'far' : (_ratioFit<_band[0] ? 'far' : (_ratioFit>_band[1] ? 'near' : 'ok'));
+      } else {
+        // 폴백: 살색 비율 (FaceMesh 미로드/실패 시)
+        _c24.fitOK = _skinFit;
+        _c24.fitState = _ratioFit<_band[0] ? 'far' : (_ratioFit>_band[1] ? 'near' : 'ok');
+      }
       if(_c24.fitOK){ if(!_c24._wasFit){ _c24._wasFit=true; _c24Chime(); } }
       else { _c24._wasFit=false; }
       // ★ 얼굴 가이드 원 그리기
@@ -30721,6 +30734,53 @@ function _c24FitBand(mode){
     skin:   [0.30, 0.95],
     hand:   [0.20, 0.92]
   })[mode] || [0.15, 0.95];
+}
+
+// ── AR-1: 건강예측 전용 FaceMesh (정밀 얼굴 인터록) · 실패 시 살색비율 자동 폴백 ──
+function _c24InitFM(){
+  try{
+    if(_c24.fm) return;
+    _c24.fm=new FaceMesh({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f;}});
+    _c24.fm.setOptions({maxNumFaces:1,refineLandmarks:false,minDetectionConfidence:0.7,minTrackingConfidence:0.7});
+    _c24.fm.onResults(function(r){
+      try{
+        if(r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0){
+          _c24._faceLms=r.multiFaceLandmarks[0]; _c24._faceLmsTime=performance.now();
+        } else { _c24._faceLms=null; }
+      }catch(e){}
+    });
+  }catch(e){ _c24.fm=null; }
+}
+function _c24EnsureFM(){
+  try{
+    if(_c24.fm || _c24._fmLoading) return;
+    if(typeof FaceMesh!=='undefined'){ _c24InitFM(); return; }
+    _c24._fmLoading=true;
+    if(!document.querySelector('script[data-c24-facemesh]')){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
+      s.setAttribute('data-c24-facemesh','1'); s.crossOrigin='anonymous';
+      document.head.appendChild(s);
+    }
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      if(typeof FaceMesh!=='undefined'){ clearInterval(iv); _c24._fmLoading=false; _c24InitFM(); }
+      else if(tries>60){ clearInterval(iv); _c24._fmLoading=false; } /* 6초 실패 → 살색비율 폴백 */
+    },100);
+  }catch(e){ _c24._fmLoading=false; }
+}
+function _c24SendFM(v){
+  try{
+    if(!_c24.fm || !v || !v.videoWidth) return;
+    if(_c24._fmSending) return;
+    _c24._fmFrame=(_c24._fmFrame||0)+1;
+    if(_c24._fmFrame%4!==0) return; /* 4프레임마다 (CPU 절약) */
+    _c24._fmSending=true;
+    var p=_c24.fm.send({image:v});
+    if(p&&p.then){ p.then(function(){_c24._fmSending=false;}).catch(function(){_c24._fmSending=false;}); }
+    else { _c24._fmSending=false; }
+  }catch(e){ _c24._fmSending=false; }
 }
 
 function _c24DrawGuide(skinRatio){
