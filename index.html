@@ -2831,7 +2831,11 @@ function entSplashGo(){
   window._entSignupEmail=function(){ var v=(document.getElementById('esEmail')||{}).value||''; var msg=document.getElementById('esMsg'); if(v.length<4){ if(msg){msg.textContent='⚠️ 이메일 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; } try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'email_phone',id:v,t:Date.now()})); }catch(e){} cgoShowEntPw(); };
   window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} _entGo(); };
   window._entPaySkip=function(){ _entGo(); };
-  function _entGo(){ if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }
+  function _entGo(){
+    // C-60: 앱 진입 시 입구 오버레이 전부 제거 — 무한 애니메이션·고정레이어 합성부담 해소 (렌더링 청소)
+    try{ ['entSplash','entPw','entTerms','entSignup','entPay'].forEach(function(id){ var e=document.getElementById(id); if(e){ e.style.display='none'; e.style.animation='none'; } }); }catch(e){}
+    if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); }
+  }
 
   window.cgoShowEntPw=function(){
     var box=document.getElementById('entPw'); if(!box)return;
