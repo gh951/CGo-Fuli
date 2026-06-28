@@ -2829,7 +2829,11 @@ function entSplashGo(){
   window._entTermsNext=function(){ var r1=(document.getElementById('etReq1')||{}).checked, r2=(document.getElementById('etReq2')||{}).checked, r3=(document.getElementById('etReq3')||{}).checked; if(!(r1&&r2&&r3))return; var dt=(document.getElementById('etData')||{}).checked, mk=(document.getElementById('etMkt')||{}).checked; var rg=(document.getElementById('etRegion')||{}).value||'GLOBAL'; var _regMap={KR:'PIPA_KR',US:'CCPA_US',CN:'PIPL_CN',HK:'PDPO_HK',JP:'APPI_JP',RU:'152FZ_RU',SA:'PDPL_SA',TR:'KVKK_TR',IN:'DPDP_IN',ES:'GDPR_EU',DE:'GDPR_EU',FR:'GDPR_EU',IT:'GDPR_EU',BR:'LGPD_BR',NL:'GDPR_EU',UA:'UADPL_UA',VN:'PDPD_VN',TH:'PDPA_TH',ID:'PDP_ID',MY:'PDPA_MY',PH:'DPA_PH',GLOBAL:'GLOBAL'}; try{ localStorage.setItem('cgo_terms', JSON.stringify({v:'2.0',t:Date.now(),region:rg,compliance:(_regMap[rg]||'GLOBAL'),service:true,privacy:true,biometric:true,dataResearch:!!dt,marketing:!!mk})); }catch(e){} cgoShowSignup(); };
   window.window._entToggleMore=function(){ var m=document.getElementById('entMoreLogins'); var t=document.getElementById('entMoreToggle'); if(!m)return; if(m.style.display==='none'||!m.style.display){ m.style.display='grid'; if(t)t.textContent='🌐 다른 방법으로 계속 (글로벌·로컬) ▴'; } else { m.style.display='none'; if(t)t.textContent='🌐 다른 방법으로 계속 (글로벌·로컬) ▾'; } };
   _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoShowPay(); };
-  window._entSignupEmail=function(){ var v=(document.getElementById('esEmail')||{}).value||''; var msg=document.getElementById('esMsg'); if(v.length<4){ if(msg){msg.textContent='⚠️ 이메일 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; } try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'email_phone',id:v,t:Date.now()})); }catch(e){} cgoShowPay(); };
+  window._entSignupEmail=function(){ var em=(document.getElementById('esEmail')||{}).value||''; var ph=(document.getElementById('esPhone')||{}).value||''; var cc=(document.getElementById('esCountryCode')||{}).value||''; var msg=document.getElementById('esMsg'); var method='', id='';
+    if(em.indexOf('@')>0 && em.length>=5){ method='email'; id=em.trim(); }
+    else if(ph.replace(/\D/g,'').length>=7){ method='phone'; id=cc+' '+ph.trim(); }
+    else { if(msg){msg.textContent='⚠️ 올바른 이메일(예: name@mail.com) 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; }
+    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:method,id:id,t:Date.now()})); }catch(e){} cgoShowPay(); };
   window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} cgoShowEntPw(); };
   window._entPaySkip=function(){ cgoShowEntPw(); };
   window._entPickPay=function(el,m){ try{ var ch=document.querySelectorAll('#entPayMethods .entpay-chip'); for(var i=0;i<ch.length;i++){ ch[i].style.background='#fff'; ch[i].style.borderColor='rgba(13,148,136,.25)'; ch[i].style.color='#334155'; ch[i].style.fontWeight='400'; } el.style.background='linear-gradient(135deg,#0d9488,#14b8a6)'; el.style.borderColor='#0d9488'; el.style.color='#fff'; el.style.fontWeight='800'; localStorage.setItem('cgo_paymethod',m);
@@ -3114,21 +3118,21 @@ function entSplashGo(){
   <div style="width:min(330px,90vw);display:flex;flex-direction:column;gap:9px;">
     <button onclick="_entSignupSocial('google')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#fff;border:1.5px solid #e2e8f0;border-radius:13px;font-size:13.5px;font-weight:700;color:#334155;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.05);"><span style="font-size:17px;">🟦</span> Google로 계속</button>
     <button onclick="_entSignupSocial('apple')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#000;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;"></span> Apple로 계속</button>
-    <button onclick="_entSignupSocial('kakao')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#FEE500;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#3c1e1e;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">💬</span> 카카오로 계속</button>
-    <button onclick="_entSignupSocial('naver')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#03C75A;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">Ⓝ</span> 네이버로 계속</button>
+    <button onclick="_entSignupSocial('facebook')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#1877F2;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">📘</span> Facebook으로 계속</button>
+    <button onclick="_entSignupSocial('yahoo')" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#6001D2;border:none;border-radius:13px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;"><span style="font-size:17px;">Y!</span> Yahoo로 계속</button>
 
     <!-- 🌐 글로벌·로컬 로그인 더보기 (C-60) -->
     <div style="margin-top:2px;">
       <div onclick="_entToggleMore()" id="entMoreToggle" style="text-align:center;font-size:11px;color:#0d9488;font-weight:700;cursor:pointer;padding:6px;">🌐 다른 방법으로 계속 (글로벌·로컬) ▾</div>
       <div id="entMoreLogins" style="display:none;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:6px;">
-        <button onclick="_entSignupSocial('facebook')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#1877F2;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">📘 Facebook</button>
+        <button onclick="_entSignupSocial('kakao')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#FEE500;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#3c1e1e;cursor:pointer;font-family:inherit;">💬 카카오</button>
         <button onclick="_entSignupSocial('line')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#06C755;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">💚 LINE</button>
         <button onclick="_entSignupSocial('wechat')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#07C160;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">💬 WeChat 微信</button>
         <button onclick="_entSignupSocial('alipay')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#1677FF;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">🅰️ Alipay 支付宝</button>
         <button onclick="_entSignupSocial('vk')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#0077FF;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Ⓥ VK</button>
         <button onclick="_entSignupSocial('yandex')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#FC3F1D;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Я Yandex</button>
         <button onclick="_entSignupSocial('zalo')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#0068FF;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">🇿 Zalo</button>
-        <button onclick="_entSignupSocial('yahoojp')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#FF0033;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Y! JAPAN</button>
+        <button onclick="_entSignupSocial('naver')" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;background:#03C75A;border:none;border-radius:11px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Ⓝ 네이버</button>
       </div>
     </div>
 
@@ -3139,10 +3143,38 @@ function entSplashGo(){
     </div>
 
     <div style="background:#fff;border:1px solid rgba(13,148,136,.18);border-radius:15px;padding:16px;box-shadow:0 4px 16px rgba(15,118,110,.08);">
-      <div style="font-size:11px;font-weight:700;color:#0f766e;margin-bottom:7px;">이메일 또는 전화번호로 가입</div>
-      <input id="esEmail" type="text" placeholder="이메일 또는 전화번호 입력" style="width:100%;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:13px;color:#1f2937;outline:none;box-sizing:border-box;" oninput="this.style.borderColor='#14b8a6'">
+      <div style="font-size:11px;font-weight:700;color:#0f766e;margin-bottom:7px;">📧 이메일 / 전화번호로 가입</div>
+      <input id="esEmail" type="text" placeholder="이메일 입력" style="width:100%;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:13px;color:#1f2937;outline:none;box-sizing:border-box;" oninput="this.style.borderColor='#14b8a6'">
       <div id="esMsg" style="font-size:10px;margin:6px 2px 0;min-height:13px;"></div>
-      <button onclick="_entSignupEmail()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;">이메일로 시작하기 →</button>
+      <div style="display:flex;gap:6px;margin-top:9px;">
+        <select id="esCountryCode" style="width:118px;padding:12px 6px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:12.5px;color:#1f2937;background:#fff;outline:none;box-sizing:border-box;">
+          <option value="+82">🇰🇷 +82</option>
+          <option value="+1">🇺🇸 +1</option>
+          <option value="+44">🇬🇧 +44</option>
+          <option value="+86">🇨🇳 +86</option>
+          <option value="+852">🇭🇰 +852</option>
+          <option value="+81">🇯🇵 +81</option>
+          <option value="+7">🇷🇺 +7</option>
+          <option value="+91">🇮🇳 +91</option>
+          <option value="+84">🇻🇳 +84</option>
+          <option value="+66">🇹🇭 +66</option>
+          <option value="+62">🇮🇩 +62</option>
+          <option value="+60">🇲🇾 +60</option>
+          <option value="+63">🇵🇭 +63</option>
+          <option value="+49">🇩🇪 +49</option>
+          <option value="+33">🇫🇷 +33</option>
+          <option value="+34">🇪🇸 +34</option>
+          <option value="+39">🇮🇹 +39</option>
+          <option value="+31">🇳🇱 +31</option>
+          <option value="+55">🇧🇷 +55</option>
+          <option value="+90">🇹🇷 +90</option>
+          <option value="+966">🇸🇦 +966</option>
+          <option value="+380">🇺🇦 +380</option>
+        </select>
+        <input id="esPhone" type="tel" inputmode="numeric" placeholder="전화번호 입력" style="flex:1;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:13px;color:#1f2937;outline:none;box-sizing:border-box;" oninput="this.style.borderColor='#14b8a6'">
+      </div>
+
+      <button onclick="_entSignupEmail()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;">가입하고 시작하기 →</button>
     </div>
     <div style="font-size:8.5px;color:#94a3b8;text-align:center;margin-top:4px;line-height:1.6;">가입 시 이용약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다</div>
   </div>
