@@ -131542,6 +131542,41 @@ window.cgoUseLimitPopup = function(label, hrs){
     +'</div>';
   document.body.appendChild(d);
 };
+/* ════ 마스터 무제한 — 제작자 전용 콘솔 도구 (C-60) ════
+   ※ 비번을 소스에 박지 않는다. 제작자가 콘솔에서 직접 정한 비번의
+     SHA-256 해시만 이 기기(localStorage)에 저장된다. 소스엔 비번/해시 없음.
+   사용법(F12 콘솔):
+     1) 최초 1회:  cgoSetMaster('내가정한비번')
+     2) 켜기:      cgoMaster('내가정한비번')   → 이 기기 무제한 ON (계속 유지)
+     3) 끄기:      cgoMasterOff()
+   ※ 일반 사용자는 콘솔을 안 쓰므로 그대로 하루 2회 유지된다.
+   ※ 클라이언트 도구라 최종 강제는 서버/mufe 단계에서 잠근다(예정). */
+async function _cgoSha(s){
+  try{ var b=new TextEncoder().encode(String(s));
+    var h=await crypto.subtle.digest('SHA-256',b);
+    return Array.from(new Uint8Array(h)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+  }catch(e){ return ''; }
+}
+window.cgoSetMaster = async function(pw){
+  if(!pw){ alert('비번을 넣으세요: cgoSetMaster(\'비번\')'); return; }
+  var hsh=await _cgoSha(pw); if(!hsh){ alert('해시 실패'); return; }
+  try{ localStorage.setItem('cgo_master_h', hsh); }catch(e){}
+  alert('✅ 마스터 비번 설정 완료\n이제  cgoMaster(\'비번\')  로 무제한을 켜세요.');
+};
+window.cgoMaster = async function(pw){
+  var saved=''; try{ saved=localStorage.getItem('cgo_master_h')||''; }catch(e){}
+  if(!saved){ alert('먼저  cgoSetMaster(\'비번\')  으로 비번을 정하세요.'); return; }
+  if(await _cgoSha(pw)===saved){
+    window._cgoUnlimited=true; try{ localStorage.setItem('cgo_master_on','1'); }catch(e){}
+    alert('✅ 마스터 무제한 ON (이 기기 계속 유지)');
+  } else { alert('❌ 비번 불일치'); }
+};
+window.cgoMasterOff = function(){
+  window._cgoUnlimited=false; try{ localStorage.removeItem('cgo_master_on'); }catch(e){}
+  alert('마스터 무제한 OFF');
+};
+/* 로드 시 이 기기가 마스터로 켜져 있으면 복구 */
+try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; }catch(e){}
 </script>
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
