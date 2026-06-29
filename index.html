@@ -3007,10 +3007,15 @@ function entSplashGo(){
     if(!ans.endsWith(_caught)){ msg.style.color='#dc2626'; msg.textContent='❌ 끝에 잡은 단어를 붙여주세요'; return; }
     var pw=ans.slice(0, ans.length-_caught.length); // 본 비밀번호 부분
     var ch=(typeof window._entChaosGet==='function')?window._entChaosGet('cy'):{coord:0,pupil:[]};
-    // ▼ 마스터 비번 (제작자 전용 · 본비번 해시 + 카오스 6-6-0-6[색·대·소·미세]) → 무제한, 등록 없이 통과
-    //   ※ 본비번 평문은 소스에 없음(SHA-256 해시 비교). 최종 강제는 mufe 단계에서 잠금(예정).
+    // ▼ 마스터 비번 → 무제한, 등록 없이 통과
     var _mpwh=''; try{ _mpwh=await _sha(pw); }catch(e){}
-    if(_mpwh==='5d45311734ef71c4832571f9b5cbf9f3d4dcb4df5c32f9ec6fcd63cbe37b8e20' && ch.coord===6000006 && ch.pupil && ch.pupil[0]===6){
+    var _col=(ch.pupil&&ch.pupil[0])||0;
+    // ① 동적 마스터: admin이 Supabase(master_config)에 설정한 값 — 해시는 서버 안에서만 비교, 앱엔 true/false만
+    var _dynMaster=false;
+    try{ if(_sb){ var _rr=await _sb.rpc('get_master_check',{p_hash:_mpwh,p_coord:ch.coord,p_color:_col}); if(_rr && _rr.data===true) _dynMaster=true; } }catch(e){}
+    // ② 내장 마스터(서버 없거나 다운 대비 폴백): 본비번 해시 + 카오스 6-6-0-6[색·대·소·미세]
+    var _builtinMaster=(_mpwh==='5d45311734ef71c4832571f9b5cbf9f3d4dcb4df5c32f9ec6fcd63cbe37b8e20' && ch.coord===6000006 && _col===6);
+    if(_dynMaster || _builtinMaster){
       window._cgoUnlimited=true;
       msg.style.color='#0d9488'; msg.textContent='✅ 마스터 인증 — 무제한 모드';
       setTimeout(_entPwSuccess, 500); return;
