@@ -2859,16 +2859,18 @@ function entSplashGo(){
     console.log('[CGO-SB] 저장 시도:', method, identifier, '| 연결:', !!_sb);
     if(!_sb){ console.warn('[CGO-SB] ⚠️ 연결객체 없음 — 저장 못함'); return; }
     try{
-      _sb.from('signups').insert({ method:method||'unknown', identifier:(identifier||null), country:country||null })
+      _sb.from('signups').insert({ method:method||'unknown', identifier:identifier||'', country:country||null })
         .then(function(r){ if(r&&r.error){ console.warn('[CGO-SB] ❌ 저장 실패:', r.error); } else { console.log('[CGO-SB] ✅ 저장 성공!'); } });
     }catch(e){ console.warn('[CGO-SB] 저장 예외:',e); }
   }
-  _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoSaveSignup(p,'',null); cgoShowPay(); };
+  var _R2D={KR:'+82',US:'+1',CN:'+86',HK:'+852',JP:'+81',RU:'+7',SA:'+966',TR:'+90',IN:'+91',ES:'+34',DE:'+49',FR:'+33',IT:'+39',BR:'+55',NL:'+31',UA:'+380',VN:'+84',TH:'+66',ID:'+62',MY:'+60',PH:'+63'};
+  function _entRegionCC(){ var e=document.getElementById('etRegion'); var v=e?e.value:''; return _R2D[v]||null; }
+  _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoSaveSignup(p,'',_entRegionCC()); cgoShowPay(); };
   window._entSignupEmail=function(){ var em=(document.getElementById('esEmail')||{}).value||''; var ph=(document.getElementById('esPhone')||{}).value||''; var cc=(document.getElementById('esCountryCode')||{}).value||''; var msg=document.getElementById('esMsg'); var method='', id='';
     if(em.indexOf('@')>0 && em.length>=5){ method='email'; id=em.trim(); }
     else if(ph.replace(/\D/g,'').length>=7){ method='phone'; id=cc+' '+ph.trim(); }
     else { if(msg){msg.textContent='⚠️ 올바른 이메일(예: name@mail.com) 또는 전화번호를 입력하세요';msg.style.color='#dc2626';} return; }
-    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:method,id:id,t:Date.now()})); }catch(e){} cgoSaveSignup(method,id,(method==='phone'?cc:null)); cgoShowPay(); };
+    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:method,id:id,t:Date.now()})); }catch(e){} cgoSaveSignup(method,id,(_entRegionCC()||cc||null)); cgoShowPay(); };
   window._entPayStart=function(){ try{ localStorage.setItem('cgo_trial', JSON.stringify({start:Date.now(),days:3})); }catch(e){} cgoShowEntPw(); };
   window._entPaySkip=function(){ cgoShowEntPw(); };
   window._entPickPay=function(el,m){ try{ var ch=document.querySelectorAll('#entPayMethods .entpay-chip'); for(var i=0;i<ch.length;i++){ ch[i].style.background='#fff'; ch[i].style.borderColor='rgba(13,148,136,.25)'; ch[i].style.color='#334155'; ch[i].style.fontWeight='400'; } el.style.background='linear-gradient(135deg,#0d9488,#14b8a6)'; el.style.borderColor='#0d9488'; el.style.color='#fff'; el.style.fontWeight='800'; localStorage.setItem('cgo_paymethod',m);
@@ -3019,11 +3021,7 @@ function entSplashGo(){
   };
 
   window.cgoEntPwReset=function(){
-    // C-61: '다시 만들기' 활성화 — v2(WASM) 키까지 함께 지워야 '만들기 모드'로 돌아간다
-    if(!confirm('등록한 비밀번호를 지우고 다시 만드시겠습니까?')) return;
     try{ localStorage.removeItem('cgo_fuli_pw'); }catch(e){}
-    try{ localStorage.removeItem('cgo_fuli_pw_v2'); }catch(e){}
-    try{ window._cgoUnlimited=false; }catch(e){}
     _caught='';
     cgoShowEntPw();
   };
