@@ -2877,20 +2877,28 @@ function entSplashGo(){
     try{
       if(!_sb) return;
       if(sessionStorage.getItem('cgo_region_sent')) return;
-      // 1순위: 정보입력 현재 위치
-      var la=parseFloat((document.getElementById('ipCurLat')||{}).value)||window._selectedCurLat||0;
-      var lo=parseFloat((document.getElementById('ipCurLng')||{}).value)||window._selectedCurLng||0;
-      if(la&&lo){ window.cgoSendRegion(la,lo); return; }
-      // 2순위: 계산 결과 좌표
-      var r=window.calcResult;
-      if(r&&r.curLat&&r.curLng){ window.cgoSendRegion(r.curLat,r.curLng); return; }
-      if(r&&r.birthLat&&r.birthLng){ window.cgoSendRegion(r.birthLat,r.birthLng); return; }
-      // 3순위: GPS (앱이 이미 위치 권한을 쓰므로 보통 조용히 통과)
+      // 백업: 정보입력 거주지 좌표 (GPS 안 될 때만)
+      function _fromInputs(){
+        var la=parseFloat((document.getElementById('ipCurLat')||{}).value)||window._selectedCurLat||0;
+        var lo=parseFloat((document.getElementById('ipCurLng')||{}).value)||window._selectedCurLng||0;
+        if(la&&lo) return [la,lo];
+        var r=window.calcResult;
+        if(r&&r.curLat&&r.curLng) return [r.curLat,r.curLng];
+        if(r&&r.birthLat&&r.birthLng) return [r.birthLat,r.birthLng];
+        return null;
+      }
+      // 1순위: 진짜 GPS (지금 실제 위치 — 전주에 있으면 전주)
       if(navigator.geolocation){
         navigator.geolocation.getCurrentPosition(
-          function(p){ if(p&&p.coords) window.cgoSendRegion(p.coords.latitude,p.coords.longitude); },
-          function(){}, { timeout:8000, maximumAge:600000, enableHighAccuracy:false }
+          function(p){
+            if(p&&p.coords){ window.cgoSendRegion(p.coords.latitude,p.coords.longitude); }
+            else { var c=_fromInputs(); if(c) window.cgoSendRegion(c[0],c[1]); }
+          },
+          function(){ var c=_fromInputs(); if(c) window.cgoSendRegion(c[0],c[1]); }, // 권한 거부/실패 → 거주지 백업
+          { timeout:9000, maximumAge:0, enableHighAccuracy:true }
         );
+      } else {
+        var c=_fromInputs(); if(c) window.cgoSendRegion(c[0],c[1]);
       }
     }catch(e){}
   };
