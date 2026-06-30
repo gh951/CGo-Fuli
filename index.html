@@ -2863,6 +2863,16 @@ function entSplashGo(){
         .then(function(r){ if(r&&r.error){ console.warn('[CGO-SB] ❌ 저장 실패:', r.error); } else { console.log('[CGO-SB] ✅ 저장 성공!'); } });
     }catch(e){ console.warn('[CGO-SB] 저장 예외:',e); }
   }
+  window.cgoSaveComplaint=function(email,content,cb){
+    if(!_sb){ if(cb)cb(false,'서버 연결이 없습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    try{
+      _sb.from('complaints').insert({ email:email||'', content:content||'', device_id:(localStorage.getItem('cgo_device_id')||''), lang:(window._LANG||'ko') })
+        .then(function(r){
+          if(r&&r.error){ console.warn('[CGO-SB] 민원 저장 실패:', r.error); if(cb)cb(false,'접수에 실패했어요. 잠시 후 다시 시도해 주세요.'); }
+          else { console.log('[CGO-SB] ✅ 민원 접수 성공'); if(cb)cb(true,''); }
+        });
+    }catch(e){ console.warn('[CGO-SB] 민원 예외:',e); if(cb)cb(false,'오류가 발생했어요. 잠시 후 다시 시도해 주세요.'); }
+  };
   var _hbLat=null,_hbLng=null;   // 실시간 하트비트 공유 위치
   window.cgoSendRegion=function(lat,lng){
     try{
@@ -19808,7 +19818,51 @@ window._myReload=function(){location.reload(true);};
 window._myCacheClear=function(){try{if(window.caches&&caches.keys){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}alert('캐시를 삭제했습니다. 새로고침됩니다.');setTimeout(function(){location.reload(true);},400);};
 window._myZoom=function(z){try{document.body.style.zoom=z;localStorage.setItem('cgo_zoom',z);}catch(e){}};
 window._myToggle=function(key,el){var v=(localStorage.getItem(key)==='on')?'off':'on';localStorage.setItem(key,v);el.textContent=(v==='on'?'ON':'OFF');el.style.background=(v==='on'?'#06b6d4':'#cbd5e1');el.style.color=(v==='on'?'#fff':'#475569');};
-window.window.cgoSupportChat=function(){
+window.cgoComplaintForm=function(){
+  var pop=document.getElementById('mypage-pop');
+  var title=document.getElementById('mypage-pop-title');
+  var content=document.getElementById('mypage-pop-content');
+  if(!pop||!content) return;
+  if(title) title.innerHTML='\U0001F4E7 \uBBFC\uC6D0\u00B7\uBB38\uC758 \uC811\uC218';
+  content.innerHTML=
+    '<div style="font-size:12px;color:#475569;line-height:1.6;margin:0 2px 14px;">\uBD88\uD3B8\uD558\uC2E0 \uC810\uC774\uB098 \uBB38\uC758 \uB0B4\uC6A9\uC744 \uC801\uC5B4 \uBCF4\uB0B4\uC8FC\uC138\uC694. \uC6B4\uC601\uC790\uC5D0\uAC8C \uBC14\uB85C \uC804\uB2EC\uB429\uB2C8\uB2E4. \uB2F5\uBCC0\uBC1B\uC744 \uBA54\uC77C \uC8FC\uC18C\uB97C \uD568\uAED8 \uB0A8\uACA8\uC8FC\uC138\uC694.</div>'
+    +'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:5px;">\uB2F5\uBCC0\uBC1B\uC744 \uBA54\uC77C \uC8FC\uC18C</div>'
+      +'<input id="cmp-email" type="email" placeholder="example@email.com" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid rgba(6,182,212,.3);border-radius:12px;font-size:13px;outline:none;color:#1a1408;font-family:inherit;" /></div>'
+    +'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:5px;">\uBBFC\uC6D0\u00B7\uBB38\uC758 \uB0B4\uC6A9</div>'
+      +'<textarea id="cmp-content" rows="6" placeholder="\uBD88\uD3B8\uD558\uC2E0 \uC810, \uC624\uB958, \uACB0\uC81C\u00B7\uD658\uBD88 \uBB38\uC758 \uB4F1\uC744 \uC790\uC138\uD788 \uC801\uC5B4\uC8FC\uC138\uC694..." style="width:100%;box-sizing:border-box;padding:11px 14px;border:1px solid rgba(6,182,212,.3);border-radius:12px;font-size:13px;outline:none;color:#1a1408;font-family:inherit;resize:vertical;line-height:1.5;"></textarea></div>'
+    +'<button id="cmp-send" onclick="cgoComplaintSubmit()" style="width:100%;padding:13px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">\U0001F4E8 \uC811\uC218\uD558\uAE30</button>'
+    +'<div id="cmp-status" style="font-size:12px;text-align:center;margin-top:12px;line-height:1.5;"></div>'
+    +'<div style="font-size:10px;color:#94a3b8;margin:12px 2px 2px;line-height:1.5;">\u203B \uC811\uC218\uB41C \uBBFC\uC6D0\uC740 \uC6B4\uC601\uC790\uC5D0\uAC8C \uC548\uC804\uD558\uAC8C \uC804\uB2EC\uB429\uB2C8\uB2E4. \uC0AC\uC9C4 \uCCA8\uBD80\uAC00 \uD544\uC694\uD558\uBA74 \uB0B4\uC6A9\uC5D0 \uC0C1\uD669\uC744 \uC790\uC138\uD788 \uC801\uC5B4\uC8FC\uC138\uC694.</div>';
+  pop.style.display='flex';
+  setTimeout(function(){var el=document.getElementById('cmp-email');if(el)el.focus();},120);
+};
+window.cgoComplaintSubmit=function(){
+  var emailEl=document.getElementById('cmp-email');
+  var contentEl=document.getElementById('cmp-content');
+  var statusEl=document.getElementById('cmp-status');
+  var btn=document.getElementById('cmp-send');
+  if(!emailEl||!contentEl||!statusEl) return;
+  var email=(emailEl.value||'').trim();
+  var content=(contentEl.value||'').trim();
+  if(!content){ statusEl.style.color='#dc2626'; statusEl.innerHTML='\uBBFC\uC6D0 \uB0B4\uC6A9\uC744 \uC801\uC5B4\uC8FC\uC138\uC694.'; contentEl.focus(); return; }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ statusEl.style.color='#dc2626'; statusEl.innerHTML='\uBA54\uC77C \uC8FC\uC18C \uD615\uC2DD\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694.'; emailEl.focus(); return; }
+  if(btn){ btn.disabled=true; btn.style.opacity='0.6'; btn.innerHTML='\uC811\uC218 \uC911...'; }
+  statusEl.style.color='#64748b'; statusEl.innerHTML='\U0001F4E8 \uC811\uC218 \uC911\uC785\uB2C8\uB2E4...';
+  if(typeof cgoSaveComplaint!=='function'){ statusEl.style.color='#dc2626'; statusEl.innerHTML='\uC811\uC218 \uAE30\uB2A5\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.'; if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='\U0001F4E8 \uC811\uC218\uD558\uAE30';} return; }
+  cgoSaveComplaint(email,content,function(ok,msg){
+    if(ok){
+      statusEl.style.color='#0e7490';
+      statusEl.innerHTML='\u2705 \uC811\uC218 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.<br>\uC18C\uC911\uD55C \uC758\uACAC \uAC10\uC0AC\uD569\uB2C8\uB2E4. \uBE60\uB974\uAC8C \uD655\uC778\uD558\uACA0\uC2B5\uB2C8\uB2E4.';
+      contentEl.value=''; emailEl.value='';
+      if(btn){ btn.style.display='none'; }
+    }else{
+      statusEl.style.color='#dc2626';
+      statusEl.innerHTML='\u274C '+(msg||'\uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.');
+      if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML='\U0001F4E8 \uC811\uC218\uD558\uAE30'; }
+    }
+  });
+};
+window.cgoSupportChat=function(){
   var pop=document.getElementById('mypage-pop');
   var title=document.getElementById('mypage-pop-title');
   var content=document.getElementById('mypage-pop-content');
@@ -19913,7 +19967,7 @@ _myPop=function(id){
     +'<div class="mypg-box"><div style="font-size:13px;color:#0f172a;font-weight:700;">\u2139\uFE0F 버전 정보</div><div style="font-size:12px;color:#64748b;margin-top:6px;">현재 버전: <b>'+ver+'</b><br>최신 버전을 쓰려면 위의 캐시 삭제 후 강력 새로고침을 하세요.</div></div>'};
   D.support={t:'📞 고객지원 및 안내',h:
     '<div onclick="if(typeof cgoSupportChat===\'function\')cgoSupportChat();" class="mypg-btn" style="cursor:pointer;border-color:rgba(6,182,212,.4);background:#ecfeff;">🤖 고객지원 AI 상담사 (민원·문의)<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">결제·환불·오류·계정 등 불편사항을 접수·안내합니다</div></div>'
-    +'<a class="mypg-btn" href="'+mail('[CGO-FULI] 1:1 문의','문의 내용을 적어주세요:\n\n닉네임: \n이메일: ')+'">📧 이메일 1:1 문의<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">상담원 직접 문의 ('+EMAIL+')</div></a>'
+    +'<div onclick="if(typeof cgoComplaintForm===\'function\')cgoComplaintForm();" class="mypg-btn" style="cursor:pointer;">📧 민원·문의 접수 (1:1)<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">내용을 적어 보내면 운영자에게 바로 전달됩니다</div></div>'
     +'<div class="mypg-note" style="margin:-2px 2px 14px;">\u203B 터치하시면 스마트폰 메일 앱이 자동으로 실행됩니다.</div>'
     +'<button class="mypg-btn" onclick="_mySub(\'terms\')">📄 서비스 이용약관</button>'
     +'<button class="mypg-btn" onclick="_mySub(\'privacy\')">🔒 개인정보 처리방침</button>'
