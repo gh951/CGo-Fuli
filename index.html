@@ -2872,6 +2872,32 @@ function entSplashGo(){
         .then(function(r){ if(!(r&&r.error)){ try{ sessionStorage.setItem('cgo_region_sent','1'); }catch(e){} } });
     }catch(e){}
   };
+  // 📍 위치 자동 전송 — 날씨 화면을 안 거쳐도 앱 켜면 한 번 보냄 (지역 통계용)
+  window.cgoAutoRegion=function(){
+    try{
+      if(!_sb) return;
+      if(sessionStorage.getItem('cgo_region_sent')) return;
+      // 1순위: 정보입력 현재 위치
+      var la=parseFloat((document.getElementById('ipCurLat')||{}).value)||window._selectedCurLat||0;
+      var lo=parseFloat((document.getElementById('ipCurLng')||{}).value)||window._selectedCurLng||0;
+      if(la&&lo){ window.cgoSendRegion(la,lo); return; }
+      // 2순위: 계산 결과 좌표
+      var r=window.calcResult;
+      if(r&&r.curLat&&r.curLng){ window.cgoSendRegion(r.curLat,r.curLng); return; }
+      if(r&&r.birthLat&&r.birthLng){ window.cgoSendRegion(r.birthLat,r.birthLng); return; }
+      // 3순위: GPS (앱이 이미 위치 권한을 쓰므로 보통 조용히 통과)
+      if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+          function(p){ if(p&&p.coords) window.cgoSendRegion(p.coords.latitude,p.coords.longitude); },
+          function(){}, { timeout:8000, maximumAge:600000, enableHighAccuracy:false }
+        );
+      }
+    }catch(e){}
+  };
+  try{
+    setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 7000);
+    setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 20000);
+  }catch(e){}
   var _R2D={KR:'+82',US:'+1',CN:'+86',HK:'+852',JP:'+81',RU:'+7',SA:'+966',TR:'+90',IN:'+91',ES:'+34',DE:'+49',FR:'+33',IT:'+39',BR:'+55',NL:'+31',UA:'+380',VN:'+84',TH:'+66',ID:'+62',MY:'+60',PH:'+63'};
   function _entRegionCC(){ var e=document.getElementById('etRegion'); var v=e?e.value:''; return _R2D[v]||null; }
   _entSignupSocial=function(p){ try{ localStorage.setItem('cgo_signup', JSON.stringify({method:p,t:Date.now()})); }catch(e){} cgoSaveSignup(p,'',_entRegionCC()); cgoShowPay(); };
