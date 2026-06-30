@@ -2906,7 +2906,7 @@ function entSplashGo(){
   };
   // ⏱️ 실시간 접속 하트비트 — 30초마다 "접속 중" 신호 (90초 무신호 시 자동 제거)
   function _cgoSid(){ try{ var s=sessionStorage.getItem('cgo_sid'); if(!s){ s='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); sessionStorage.setItem('cgo_sid',s);} return s; }catch(e){ return 's'+Date.now(); } }
-  function _cgoBeat(){ try{ if(!_sb) return; _sb.rpc('cgo_heartbeat',{p_sid:_cgoSid(),p_lat:_hbLat,p_lng:_hbLng}); }catch(e){} }
+  function _cgoBeat(){ try{ if(!_sb) return; _sb.rpc('cgo_heartbeat',{p_sid:_cgoSid(),p_lat:_hbLat,p_lng:_hbLng}).then(function(r){ if(r&&r.error){ console.warn('[CGO-HB] 신호 실패:', r.error); } else { console.log('%c[CGO-HB] ✅ 실시간 신호 전송 (LIVE-0630)','color:#34d399;font-weight:700'); } }); }catch(e){ console.warn('[CGO-HB] 예외:', e); } }
   try{
     setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 7000);
     setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 20000);
