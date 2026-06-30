@@ -2863,8 +2863,10 @@ function entSplashGo(){
         .then(function(r){ if(r&&r.error){ console.warn('[CGO-SB] ❌ 저장 실패:', r.error); } else { console.log('[CGO-SB] ✅ 저장 성공!'); } });
     }catch(e){ console.warn('[CGO-SB] 저장 예외:',e); }
   }
+  var _hbLat=null,_hbLng=null;   // 실시간 하트비트 공유 위치
   window.cgoSendRegion=function(lat,lng){
     try{
+      if(lat&&lng){ _hbLat=lat; _hbLng=lng; }
       if(!_sb || !lat || !lng) return;
       if(sessionStorage.getItem('cgo_region_sent')) return; // 세션 1회만
       var rlat=Math.round(lat*10)/10, rlng=Math.round(lng*10)/10; // 시/도 수준 거칠게(약 11km) — 정밀 좌표 저장 안 함
@@ -2902,9 +2904,14 @@ function entSplashGo(){
       }
     }catch(e){}
   };
+  // ⏱️ 실시간 접속 하트비트 — 30초마다 "접속 중" 신호 (90초 무신호 시 자동 제거)
+  function _cgoSid(){ try{ var s=sessionStorage.getItem('cgo_sid'); if(!s){ s='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); sessionStorage.setItem('cgo_sid',s);} return s; }catch(e){ return 's'+Date.now(); } }
+  function _cgoBeat(){ try{ if(!_sb) return; _sb.rpc('cgo_heartbeat',{p_sid:_cgoSid(),p_lat:_hbLat,p_lng:_hbLng}); }catch(e){} }
   try{
     setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 7000);
     setTimeout(function(){ try{ window.cgoAutoRegion(); }catch(e){} }, 20000);
+    setTimeout(_cgoBeat, 4000);
+    setInterval(_cgoBeat, 30000);
   }catch(e){}
   var _R2D={KR:'+82',US:'+1',CN:'+86',HK:'+852',JP:'+81',RU:'+7',SA:'+966',TR:'+90',IN:'+91',ES:'+34',DE:'+49',FR:'+33',IT:'+39',BR:'+55',NL:'+31',UA:'+380',VN:'+84',TH:'+66',ID:'+62',MY:'+60',PH:'+63'};
   function _entRegionCC(){ var e=document.getElementById('etRegion'); var v=e?e.value:''; return _R2D[v]||null; }
