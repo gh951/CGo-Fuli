@@ -19808,7 +19808,62 @@ window._myReload=function(){location.reload(true);};
 window._myCacheClear=function(){try{if(window.caches&&caches.keys){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}alert('캐시를 삭제했습니다. 새로고침됩니다.');setTimeout(function(){location.reload(true);},400);};
 window._myZoom=function(z){try{document.body.style.zoom=z;localStorage.setItem('cgo_zoom',z);}catch(e){}};
 window._myToggle=function(key,el){var v=(localStorage.getItem(key)==='on')?'off':'on';localStorage.setItem(key,v);el.textContent=(v==='on'?'ON':'OFF');el.style.background=(v==='on'?'#06b6d4':'#cbd5e1');el.style.color=(v==='on'?'#fff':'#475569');};
-window._myPop=function(id){
+window.window.cgoSupportChat=function(){
+  var pop=document.getElementById('mypage-pop');
+  var title=document.getElementById('mypage-pop-title');
+  var content=document.getElementById('mypage-pop-content');
+  if(!pop||!content) return;
+  if(title) title.innerHTML='🤖 고객지원 AI 상담사';
+  content.innerHTML=
+    '<div style="font-size:11px;color:#64748b;line-height:1.5;margin:0 2px 10px;">결제·환불·오류·계정 등 <b>불편사항·민원</b>을 도와드려요. 특정 기능 사용법은 각 기능의 전용 AI 상담사를 이용해 주세요.</div>'
+    +'<div id="sup-chat-messages" style="display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto;padding:8px 2px;margin-bottom:10px;">'
+      +'<div style="align-self:flex-start;max-width:88%;padding:12px 14px;background:#fff;border:1px solid #f0e6d4;border-radius:14px 14px 14px 4px;font-size:12px;color:#1a1408;line-height:1.6;">안녕하세요. 📞 <b>CGO-FULI 고객지원 상담사</b>입니다.<br/><br/>결제·구독·환불, 오류·버그 신고, 로그인·계정·탈퇴 등 <b>불편하신 점</b>을 말씀해 주세요. 빠르게 도와드릴게요.</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;">'
+      +'<input id="sup-chat-input" type="text" placeholder="불편하신 점을 적어주세요..." onkeypress="if(event.key===\'Enter\')cgoSupportSend()" style="flex:1;padding:11px 14px;border:1px solid rgba(6,182,212,.3);border-radius:12px;font-size:12px;outline:none;color:#1a1408;font-family:inherit;" />'
+      +'<button onclick="cgoSupportSend()" style="padding:0 18px;height:42px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">전송</button>'
+    +'</div>'
+    +'<div style="font-size:10px;color:#94a3b8;margin:10px 2px 2px;line-height:1.5;">⚠️ AI 상담은 일반 안내용입니다. 해결이 어려운 사안은 📧 이메일 1:1 문의로 접수해 주세요.</div>';
+  pop.style.display='flex';
+  setTimeout(function(){var el=document.getElementById('sup-chat-input');if(el)el.focus();},120);
+};
+window.cgoSupportSend=function(){
+  var input=document.getElementById('sup-chat-input');
+  var msgs=document.getElementById('sup-chat-messages');
+  if(!input||!msgs) return;
+  var text=(input.value||'').trim();
+  if(!text) return;
+  var userBubble=document.createElement('div');
+  userBubble.style.cssText='align-self:flex-end;max-width:88%;padding:12px 14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border-radius:14px 14px 4px 14px;font-size:12px;line-height:1.5;';
+  userBubble.textContent=text;
+  msgs.appendChild(userBubble);
+  input.value='';
+  msgs.scrollTop=msgs.scrollHeight;
+  var aiBubble=document.createElement('div');
+  aiBubble.style.cssText='align-self:flex-start;max-width:88%;padding:12px 14px;background:#fff;border:1px solid #f0e6d4;border-radius:14px 14px 14px 4px;font-size:12px;color:#1a1408;line-height:1.6;';
+  aiBubble.innerHTML='💭 확인 중...';
+  msgs.appendChild(aiBubble);
+  msgs.scrollTop=msgs.scrollHeight;
+  var sysPrompt='당신은 CGO-FULI 앱의 고객지원(민원) AI 상담사입니다. 역할은 결제·구독·환불 문의, 오류·버그 신고 접수, 로그인·계정·회원탈퇴·보안(양자 방어/MUFE) 관련 불편사항 처리입니다. 친절하고 공감하는 말투로, 사용자의 불편을 먼저 인정하고 해결 절차를 단계로 안내하세요. 사주·관상·손금·풍수·rPPG·주파수음악 등 개별 기능의 사용법이나 해석을 물으면, 직접 답하지 말고 "해당 기능 화면 안의 전용 AI 상담사에게 문의해 주세요"라고 안내하세요. 결제·환불은 App Store/Google Play 또는 가입한 결제 경로의 구독관리에서 진행해야 함을 안내하세요. 해결이 어려운 사안은 이메일 1:1 문의 접수를 권하세요. 답변은 간결하게, 한국어로 하세요.';
+  var fullPrompt=sysPrompt+'\n\n[사용자 민원]: '+text;
+  var body={model:'llama-3.1-8b-instant',max_tokens:1200,temperature:0.5,messages:[{role:'user',content:fullPrompt}]};
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var answer=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    if(answer){
+      aiBubble.innerHTML=answer.replace(/\n/g,'<br/>');
+    }else{
+      aiBubble.innerHTML='죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도하거나, 📧 이메일 1:1 문의로 접수해 주세요.';
+    }
+    msgs.scrollTop=msgs.scrollHeight;
+  })
+  .catch(function(){
+    aiBubble.innerHTML='네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
+    msgs.scrollTop=msgs.scrollHeight;
+  });
+};
+_myPop=function(id){
   if(id==='vault'){var _pp=document.getElementById('mypage-pop');if(_pp)_pp.style.display='flex';if(window._mission&&_mission.render)_mission.render();return;}
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
@@ -19857,7 +19912,7 @@ window._myPop=function(id){
     +'<div class="mypg-box"><div style="font-size:13px;color:#0f172a;font-weight:700;margin-bottom:10px;">🧹 용량 및 시스템 최적화</div><button class="mypg-btn" onclick="_myCacheClear()" style="margin-bottom:4px;">🧹 캐시 데이터 삭제 (용량 관리)</button><div style="font-size:10.5px;color:#94a3b8;margin:0 2px 13px;line-height:1.5;">※ 주파수 음악 임시 저장 파일과 누적된 로그를 안전하게 정리합니다.</div><button class="mypg-btn" onclick="_myReload()" style="margin-bottom:4px;background:#ecfeff;border-color:rgba(6,182,212,.4);color:#0e7490;">🔄 앱 강력 새로고침 (최신 데이터 동기화)</button><div style="font-size:10.5px;color:#94a3b8;margin:0 2px;line-height:1.5;">※ 시스템을 최신 상태로 강제 재로드합니다. 업데이트나 캐시 삭제 후 눌러주세요.</div></div>'
     +'<div class="mypg-box"><div style="font-size:13px;color:#0f172a;font-weight:700;">\u2139\uFE0F 버전 정보</div><div style="font-size:12px;color:#64748b;margin-top:6px;">현재 버전: <b>'+ver+'</b><br>최신 버전을 쓰려면 위의 캐시 삭제 후 강력 새로고침을 하세요.</div></div>'};
   D.support={t:'📞 고객지원 및 안내',h:
-    '<div onclick="_myPopClose();if(typeof cgoGoPage===\'function\')cgoGoPage(\'chat\');" class="mypg-btn" style="cursor:pointer;border-color:rgba(6,182,212,.4);background:#ecfeff;">🤖 CGO-FULI AI 상담사 (1:1 대화)<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">33가지 전체 기능 및 오류 해결법을 학습한 전용 AI</div></div>'
+    '<div onclick="if(typeof cgoSupportChat===\'function\')cgoSupportChat();" class="mypg-btn" style="cursor:pointer;border-color:rgba(6,182,212,.4);background:#ecfeff;">🤖 고객지원 AI 상담사 (민원·문의)<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">결제·환불·오류·계정 등 불편사항을 접수·안내합니다</div></div>'
     +'<a class="mypg-btn" href="'+mail('[CGO-FULI] 1:1 문의','문의 내용을 적어주세요:\n\n닉네임: \n이메일: ')+'">📧 이메일 1:1 문의<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:3px;">상담원 직접 문의 ('+EMAIL+')</div></a>'
     +'<div class="mypg-note" style="margin:-2px 2px 14px;">\u203B 터치하시면 스마트폰 메일 앱이 자동으로 실행됩니다.</div>'
     +'<button class="mypg-btn" onclick="_mySub(\'terms\')">📄 서비스 이용약관</button>'
