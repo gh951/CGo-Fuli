@@ -19949,22 +19949,66 @@ window.cgoDiagGate=function(){
 /* ── C-61 회계 로직 ── */
 // ══ C-61 회계 카테고리 시스템 + 도넛 차트 ══
 window._cgoAccCats = [
-  { key:'재료',   icon:'🍅', color:'#ef4444', kw:['재료','식자재','원재료','농산','정육','수산','청과'] },
-  { key:'배달',   icon:'🛵', color:'#f97316', kw:['배달','수수료','플랫폼','배민','쿠팡','요기요'] },
-  { key:'임대료', icon:'🏠', color:'#8b5cf6', kw:['월세','임대','임차','보증','관리비','상가'] },
-  { key:'인건비', icon:'👥', color:'#0ea5e9', kw:['인건','급여','월급','알바','아르바이트','시급','직원'] },
-  { key:'공과금', icon:'💡', color:'#eab308', kw:['전기','가스','수도','통신','인터넷','공과'] },
-  { key:'세금',   icon:'🧾', color:'#64748b', kw:['세금','부가세','종소세','소득세','4대보험','보험료'] },
-  { key:'비품',   icon:'📦', color:'#14b8a6', kw:['비품','소모','포장','용기','청소','세제'] },
-  { key:'기타',   icon:'📌', color:'#94a3b8', kw:[] }
+  // ── 매출(수입) 카테고리 ──
+  { key:'매장매출', icon:'🛒', color:'#16a34a', t:'sales', kw:['매장','홀','현장','대면'] },
+  { key:'배달매출', icon:'🛵', color:'#22c55e', t:'sales', kw:['배달매출','배달수입','배민매출','쿠팡매출','요기요매출'] },
+  { key:'카드매출', icon:'💳', color:'#10b981', t:'sales', kw:['카드매출','카드수입','카드결제'] },
+  { key:'현금매출', icon:'💵', color:'#059669', t:'sales', kw:['현금매출','현금수입'] },
+  { key:'온라인',   icon:'🌐', color:'#0d9488', t:'sales', kw:['온라인','스마트스토어','쇼핑몰','네이버','인터넷판매'] },
+  { key:'기타수입', icon:'🎁', color:'#14b8a6', t:'sales', kw:['수입','입금','받','기타매출'] },
+  // ── 매입(지출) 카테고리 ──
+  { key:'재료비',   icon:'🍅', color:'#ef4444', t:'buy', kw:['재료','식자재','원재료','농산','정육','수산','청과','식재료'] },
+  { key:'부자재',   icon:'📦', color:'#f97316', t:'buy', kw:['부자재','포장','용기','비닐','종이컵','일회용'] },
+  { key:'인건비',   icon:'👥', color:'#0ea5e9', t:'buy', kw:['인건','급여','월급','알바','아르바이트','시급','직원','임금','일당'] },
+  { key:'임대료',   icon:'🏠', color:'#8b5cf6', t:'buy', kw:['월세','임대','임차','보증','관리비','상가'] },
+  { key:'공과금',   icon:'💡', color:'#eab308', t:'buy', kw:['전기','가스','수도','공과','전기세','가스비','수도세'] },
+  { key:'통신비',   icon:'📱', color:'#6366f1', t:'buy', kw:['통신','인터넷','전화','휴대폰','와이파이'] },
+  { key:'배달수수료',icon:'🛵', color:'#fb923c', t:'buy', kw:['배달수수료','배민수수료','쿠팡수수료','요기요','플랫폼수수료','배달비'] },
+  { key:'카드수수료',icon:'💳', color:'#a855f7', t:'buy', kw:['카드수수료','결제수수료','pg','밴수수료'] },
+  { key:'세금',     icon:'🧾', color:'#64748b', t:'buy', kw:['세금','부가세','종소세','소득세','지방세','원천세'] },
+  { key:'4대보험',  icon:'🛡️', color:'#475569', t:'buy', kw:['4대보험','국민연금','건강보험','고용보험','산재','보험료'] },
+  { key:'운반비',   icon:'🚚', color:'#0891b2', t:'buy', kw:['운반','배송비','택배','물류','퀵'] },
+  { key:'광고비',   icon:'📢', color:'#ec4899', t:'buy', kw:['광고','마케팅','홍보','전단','sns광고'] },
+  { key:'소모품',   icon:'🧽', color:'#14b8a6', t:'buy', kw:['소모','비품','청소','세제','장갑','수세미'] },
+  { key:'차량유지', icon:'🚗', color:'#f59e0b', t:'buy', kw:['차량','주유','기름','기름값','주차','통행료','자동차'] },
+  { key:'복리후생', icon:'🍚', color:'#84cc16', t:'buy', kw:['복리','식대','회식','간식','밥값','직원식사'] },
+  { key:'이자비용', icon:'💰', color:'#d97706', t:'buy', kw:['이자','대출','상환','융자'] },
+  { key:'기타',     icon:'📌', color:'#94a3b8', t:'buy', kw:[] }
 ];
-window._cgoAccCatOf = function(item){
+window._cgoAccCatOf = function(item, type){
   var t=(item||'');
+  // 수동 지정 카테고리 우선
+  if(window._cgoAccPickedCat){ var pk=window._cgoAccPickedCat; window._cgoAccPickedCat=null; 
+    for(var p=0;p<_cgoAccCats.length;p++){ if(_cgoAccCats[p].key===pk) return _cgoAccCats[p]; } }
+  // type 맞는 카테고리 내에서 키워드 매칭
   for(var i=0;i<_cgoAccCats.length;i++){
     var c=_cgoAccCats[i];
+    if(type && c.t!==type) continue;
     for(var j=0;j<c.kw.length;j++){ if(t.indexOf(c.kw[j])>=0) return c; }
   }
-  return _cgoAccCats[_cgoAccCats.length-1]; // 기타
+  // 못 찾으면 해당 type의 기타
+  if(type==='sales'){ for(var s=0;s<_cgoAccCats.length;s++){ if(_cgoAccCats[s].key==='기타수입') return _cgoAccCats[s]; } }
+  return _cgoAccCats[_cgoAccCats.length-1]; // 기타(지출)
+};
+// 카테고리 버튼 렌더 (매출/매입 선택에 따라)
+window.cgoAccRenderCatButtons = function(){
+  var wrap=document.getElementById('acc-cat-buttons');
+  if(!wrap) return;
+  var type=window._cgoAccType||'sales';
+  var html='';
+  _cgoAccCats.forEach(function(c){
+    if(c.t!==type) return;
+    var on=(window._cgoAccPickedCat===c.key);
+    html+='<button onclick="cgoAccPickCat(\''+c.key+'\')" style="display:inline-flex;align-items:center;gap:3px;padding:7px 10px;margin:0 6px 6px 0;background:'+(on?c.color:'#f8fafc')+';color:'+(on?'#fff':'#475569')+';border:1px solid '+(on?c.color:'#e2e8f0')+';border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">'+c.icon+' '+c.key+'</button>';
+  });
+  wrap.innerHTML=html;
+};
+window.cgoAccPickCat = function(key){
+  window._cgoAccPickedCat = (window._cgoAccPickedCat===key) ? null : key;
+  // 항목칸에 카테고리명 자동 채우기(비어있을 때)
+  var itemEl=document.getElementById('acc-item');
+  if(itemEl && !itemEl.value.trim() && window._cgoAccPickedCat){ itemEl.value=key; }
+  cgoAccRenderCatButtons();
 };
 // 도넛 차트 그리기 (지출=매입 항목 비율)
 window._cgoAccRenderDonut = function(book){
@@ -19976,7 +20020,9 @@ window._cgoAccRenderDonut = function(book){
   var sums={};
   book.forEach(function(x){
     if(x.type!=='buy') return;
-    var c=_cgoAccCatOf(x.item);
+    var c=null;
+    if(x.cat){ for(var _di=0;_di<_cgoAccCats.length;_di++){ if(_cgoAccCats[_di].key===x.cat){ c=_cgoAccCats[_di]; break; } } }
+    if(!c){ window._cgoAccPickedCat=null; c=_cgoAccCatOf(x.item, 'buy'); }
     sums[c.key]=(sums[c.key]||0)+x.amount;
   });
   var entries=Object.keys(sums).map(function(k){
@@ -20082,6 +20128,8 @@ window._cgoAccRenderGoal = function(book){
 window._cgoAccType = 'sales';
 window.cgoAccSetType = function(t){
   window._cgoAccType = t;
+  window._cgoAccPickedCat = null;
+  if(typeof cgoAccRenderCatButtons==='function') cgoAccRenderCatButtons();
   var s=document.getElementById('acc-type-sales'), b=document.getElementById('acc-type-buy');
   if(t==='sales'){
     s.style.background='#059669'; s.style.color='#fff'; s.style.border='none';
@@ -20104,8 +20152,12 @@ window.cgoAccAdd = function(){
   if(!item){ alert('항목을 입력해 주세요.'); return; }
   if(!amount || amount<=0){ alert('금액을 올바르게 입력해 주세요.'); return; }
   var book=_cgoAccLoad();
-  book.push({ id:Date.now(), type:window._cgoAccType, item:item, amount:amount, date:date });
+  // 카테고리 확정 (수동선택 우선, 없으면 자동분류)
+  var catKey = window._cgoAccPickedCat || (typeof _cgoAccCatOf==='function' ? _cgoAccCatOf(item, window._cgoAccType).key : '');
+  book.push({ id:Date.now(), type:window._cgoAccType, item:item, amount:amount, date:date, cat:catKey });
   _cgoAccSave(book);
+  window._cgoAccPickedCat=null;
+  if(typeof cgoAccRenderCatButtons==='function') cgoAccRenderCatButtons();
   document.getElementById('acc-item').value='';
   document.getElementById('acc-amount').value='';
   cgoAccRender();
@@ -20143,8 +20195,10 @@ window.cgoAccRender = function(){
   var html='';
   book.forEach(function(x){
     var isS=(x.type==='sales');
-    var _cat = (!isS && typeof _cgoAccCatOf==='function') ? _cgoAccCatOf(x.item) : null;
-    var _ico = isS ? '💵' : (_cat ? _cat.icon : '💸');
+    var _cat = null;
+    if(x.cat){ for(var _ci=0;_ci<_cgoAccCats.length;_ci++){ if(_cgoAccCats[_ci].key===x.cat){ _cat=_cgoAccCats[_ci]; break; } } }
+    if(!_cat && typeof _cgoAccCatOf==='function'){ window._cgoAccPickedCat=null; _cat=_cgoAccCatOf(x.item, x.type); }
+    var _ico = (_cat ? _cat.icon : (isS?'💵':'💸'));
     html+='<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:12px 14px;margin-bottom:8px;">'
       +'<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+_ico+' '+x.item+'</div>'
       +'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+x.date+'</div></div>'
@@ -21353,10 +21407,12 @@ function checkHealth(){
     <!-- 입력 카드 -->
     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;">
       <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;">➕ 내역 입력</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
         <button id="acc-type-sales" onclick="cgoAccSetType('sales')" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;">💵 매출(수입)</button>
         <button id="acc-type-buy" onclick="cgoAccSetType('buy')" style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">💸 매입(지출)</button>
       </div>
+      <div style="font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px;">📂 카테고리 선택 (탭하거나, 말·직접입력 시 자동 분류)</div>
+      <div id="acc-cat-buttons" style="margin-bottom:12px;"></div>
       <input id="acc-item" type="text" placeholder="항목 (예: 재료비, 배달수수료, 매장매출)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-amount" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-date" type="date" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:12px;" />
@@ -126027,7 +126083,7 @@ function cgoGoPage(page){
     if(page === 'mypage' && typeof cgoFillProfileSummary==='function'){ try{ cgoFillProfileSummary(); }catch(e){} }
     if(typeof cgoShowDiagIfMaster==='function'){ try{ cgoShowDiagIfMaster(); }catch(e){} }
     if(page === 'diag' && typeof cgoDiagChecklist==='function'){ try{ cgoDiagChecklist(); }catch(e){} }
-    if(page === 'account' && typeof cgoAccRender==='function'){ try{ cgoAccRender(); }catch(e){} }
+    if(page === 'account' && typeof cgoAccRender==='function'){ try{ cgoAccRender(); if(typeof cgoAccRenderCatButtons==='function') cgoAccRenderCatButtons(); }catch(e){} }
   }
   // 메신저는 오직 cgoOpenMessenger()로만 열림
   var _chatEl = document.getElementById('page-chat');
