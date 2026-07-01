@@ -19995,27 +19995,48 @@ window.cgoAccRenderCatButtons = function(){
   var wrap=document.getElementById('acc-cat-buttons');
   if(!wrap) return;
   var type=window._cgoAccType||'sales';
-  var html='';
+  // 버튼이 이미 그려져 있고 type이 같으면 → 색만 갱신 (innerHTML 재생성 안함, 클릭 끊김 방지)
+  if(wrap._builtType===type && wrap.children.length>0){
+    for(var i=0;i<wrap.children.length;i++){
+      var btn=wrap.children[i];
+      var k=btn.getAttribute('data-cat');
+      var cat=null;
+      for(var j=0;j<_cgoAccCats.length;j++){ if(_cgoAccCats[j].key===k){ cat=_cgoAccCats[j]; break; } }
+      if(!cat) continue;
+      var on=(window._cgoAccPickedCat===k);
+      btn.style.background = on?cat.color:'#f8fafc';
+      btn.style.color = on?'#fff':'#475569';
+      btn.style.borderColor = on?cat.color:'#e2e8f0';
+    }
+    return;
+  }
+  // type이 바뀌었거나 처음 → 새로 그림
+  wrap.innerHTML='';
   _cgoAccCats.forEach(function(c){
     if(c.t!==type) return;
     var on=(window._cgoAccPickedCat===c.key);
-    html+='<button onclick="cgoAccPickCat(\''+c.key+'\')" style="display:inline-flex;align-items:center;gap:3px;padding:7px 10px;margin:0 6px 6px 0;background:'+(on?c.color:'#f8fafc')+';color:'+(on?'#fff':'#475569')+';border:1px solid '+(on?c.color:'#e2e8f0')+';border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">'+c.icon+' '+c.key+'</button>';
+    var btn=document.createElement('button');
+    btn.setAttribute('data-cat', c.key);
+    btn.style.cssText='display:inline-flex;align-items:center;gap:3px;padding:7px 10px;margin:0 6px 6px 0;background:'+(on?c.color:'#f8fafc')+';color:'+(on?'#fff':'#475569')+';border:1px solid '+(on?c.color:'#e2e8f0')+';border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;';
+    btn.textContent=c.icon+' '+c.key;
+    btn.onclick=function(){ cgoAccPickCat(this.getAttribute('data-cat')); };
+    wrap.appendChild(btn);
   });
-  wrap.innerHTML=html;
+  wrap._builtType=type;
 };
 window.cgoAccPickCat = function(key){
   var itemEl=document.getElementById('acc-item');
   var prev=window._cgoAccPickedCat;
-  window._cgoAccPickedCat = (prev===key) ? null : key;
-  // 항목칸 자동 채우기: 비어있거나, 이전 카테고리명이 그대로 들어있을 때만 교체 (사용자 직접입력은 보존)
-  if(itemEl){
-    var cur=(itemEl.value||'').trim();
-    var isPrevCatName = prev && cur===prev;
-    if(window._cgoAccPickedCat){
-      if(cur==='' || isPrevCatName){ itemEl.value=key; }
-    } else {
-      // 선택 해제 시, 카테고리명이면 비움
-      if(cur===key){ itemEl.value=''; }
+  if(prev===key){
+    // 같은 것 다시 누르면 선택 해제
+    window._cgoAccPickedCat=null;
+    if(itemEl && window._cgoAccItemAuto){ itemEl.value=''; window._cgoAccItemAuto=false; }
+  } else {
+    window._cgoAccPickedCat=key;
+    // 항목칸이 비었거나, 자동으로 채웠던 값이면 → 새 카테고리명으로 교체 (사용자 직접입력은 보존)
+    if(itemEl){
+      var cur=(itemEl.value||'').trim();
+      if(cur==='' || window._cgoAccItemAuto){ itemEl.value=key; window._cgoAccItemAuto=true; }
     }
   }
   cgoAccRenderCatButtons();
@@ -20139,6 +20160,9 @@ window._cgoAccType = 'sales';
 window.cgoAccSetType = function(t){
   window._cgoAccType = t;
   window._cgoAccPickedCat = null;
+  // 자동으로 채웠던 항목명이면 비우기 (사용자 직접입력은 보존)
+  var _ie=document.getElementById('acc-item');
+  if(_ie && window._cgoAccItemAuto){ _ie.value=''; window._cgoAccItemAuto=false; }
   if(typeof cgoAccRenderCatButtons==='function') cgoAccRenderCatButtons();
   var s=document.getElementById('acc-type-sales'), b=document.getElementById('acc-type-buy');
   if(t==='sales'){
@@ -21478,7 +21502,7 @@ function checkHealth(){
       </div>
       <div style="font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px;">📂 카테고리 선택 (탭하거나, 말·직접입력 시 자동 분류)</div>
       <div id="acc-cat-buttons" style="margin-bottom:12px;"></div>
-      <input id="acc-item" type="text" placeholder="항목 (예: 재료비, 배달수수료, 매장매출)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
+      <input id="acc-item" type="text" placeholder="항목 (예: 재료비, 배달수수료, 매장매출)" oninput="window._cgoAccItemAuto=false;" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-amount" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-date" type="date" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:12px;" />
       <button onclick="cgoAccAdd()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;">＋ 직접 기록</button>
