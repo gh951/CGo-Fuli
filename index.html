@@ -5,6 +5,8 @@
 <script>
 /* C-61 전역 에러 로거 — 실행 중 터진 에러를 자동 기록 */
 window._cgoErrLog=window._cgoErrLog||[];
+/* 마스터 무제한 조기 복원 — 사용제한 체크보다 먼저 */
+try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; }catch(e){}
 (function(){
   function rec(type,msg,src,line,col){
     try{
@@ -128790,7 +128792,7 @@ function cgoGoPage(page){
   try{ var _wl={dashboard:1,profile:1,shop:1}; if(page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
   /* ▼ C-60 사용 제한 게이트: 기능 페이지 하루 2회 (마스터 무제한). 비기능 페이지는 제외 ▼ */
   try{
-    var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1};
+    var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1,diag:1};
     if(page && !_ng[page] && page!==_cgCurrent && typeof cgoUseGate==='function'){
       var _lbl=(window._cgoFnLabel&&window._cgoFnLabel[page])||'이 기능';
       if(!cgoUseGate('fn_'+page, _lbl)){ return; }
