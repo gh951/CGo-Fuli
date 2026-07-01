@@ -6229,7 +6229,7 @@ function cgoGuideFeature(key){
 <div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
   <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
   <div class="fdash-grid" style="grid-template-columns:1fr">
-    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoRunDiagnosis();return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
+    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('diag');return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
   </div>
 </div>
 
@@ -19875,6 +19875,149 @@ window.cgoFillProfileSummary=function(){
 };
 
 window._cgoDiagPass=false;
+// ══ C-61 진단 페이지 로직 ══
+window._cgoDiagItems=[
+  {id:'deadbtn', name:'죽은 버튼 검사', desc:'클릭해도 반응 없는 버튼(연결 끊긴 함수) 탐지'},
+  {id:'dupid',   name:'중복 ID 검사', desc:'같은 id가 여러 개라 JS 오작동 유발하는 곳 탐지'},
+  {id:'img',     name:'깨진 이미지 검사', desc:'로딩 실패한 이미지(잘못된 경로) 탐지'},
+  {id:'server',  name:'서버(Supabase) 연결', desc:'회원가입·민원 저장용 서버 연결 상태 확인'},
+  {id:'core',    name:'핵심 함수 존재', desc:'페이지 이동·언어 전환 등 필수 함수 작동 확인'},
+  {id:'empty',   name:'빈 링크·버튼 검사', desc:'onclick이 비었거나 href="#"인 무동작 요소 탐지'},
+  {id:'i18n',    name:'번역 누락 검사', desc:'현재 언어에서 번역 안 된 채 한국어로 남은 요소 탐지'}
+];
+window.cgoDiagChecklist=function(){
+  var box=document.getElementById('cgo-diag-checklist');
+  if(!box) return;
+  var html='';
+  for(var i=0;i<_cgoDiagItems.length;i++){
+    var it=_cgoDiagItems[i];
+    html+='<label style="display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid #eef2f7;border-radius:11px;margin-bottom:8px;cursor:pointer;background:#fafdfc;">'
+      +'<input type="checkbox" class="cgo-diag-chk" value="'+it.id+'" checked style="width:18px;height:18px;margin-top:1px;accent-color:#059669;cursor:pointer;flex-shrink:0;" />'
+      +'<div><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+it.name+'</div>'
+      +'<div style="font-size:11.5px;color:#94a3b8;margin-top:2px;line-height:1.45;">'+it.desc+'</div></div>'
+    +'</label>';
+  }
+  box.innerHTML=html;
+};
+window.cgoDiagSelectAll=function(on){
+  var chks=document.querySelectorAll('.cgo-diag-chk');
+  for(var i=0;i<chks.length;i++) chks[i].checked=on;
+};
+window.cgoDiagRun=function(){
+  var result=document.getElementById('cgo-diag-result');
+  if(!result) return;
+  var chks=document.querySelectorAll('.cgo-diag-chk:checked');
+  if(chks.length===0){ result.innerHTML='<div style="text-align:center;color:#dc2626;font-size:13px;padding:16px;">검사할 항목을 하나 이상 선택하세요.</div>'; return; }
+  var sel={}; for(var i=0;i<chks.length;i++) sel[chks[i].value]=true;
+  result.innerHTML='<div style="text-align:center;color:#64748b;font-size:13px;padding:24px;">🔍 정밀 점검 중입니다...</div>';
+
+  setTimeout(function(){
+    var errors=[], suspects=[], oks=[];
+    var jsBuiltins={parseInt:1,parseFloat:1,alert:1,confirm:1,prompt:1,setTimeout:1,setInterval:1,fetch:1,eval:1,isNaN:1,encodeURIComponent:1,decodeURIComponent:1,Boolean:1,Number:1,String:1,Array:1,Object:1,preventDefault:1,stopPropagation:1,getElementById:1,querySelector:1,querySelectorAll:1,appendChild:1,removeChild:1,getItem:1,setItem:1,removeItem:1,getAttribute:1,setAttribute:1,removeAttribute:1,addEventListener:1,removeEventListener:1,click:1,focus:1,blur:1,closest:1,forEach:1,map:1,filter:1,push:1,indexOf:1,replace:1,split:1,join:1,scrollIntoView:1,getContext:1,toFixed:1,toString:1,reload:1,writeText:1,then:1,catch:1,dispatchEvent:1,createElement:1,contains:1,toggle:1,add:1,remove:1,item:1,play:1,pause:1};
+
+    // 죽은 버튼
+    if(sel.deadbtn){
+      try{
+        var dead=[]; var els=document.querySelectorAll('[onclick]'); var ck={};
+        for(var i=0;i<els.length;i++){
+          var oc=els[i].getAttribute('onclick')||'';
+          var m=oc.match(/([a-zA-Z_$][\w$]*)\s*\(/g); if(!m) continue;
+          for(var k=0;k<m.length;k++){
+            var fn=m[k].replace(/\s*\($/,'');
+            if(ck[fn]) continue; ck[fn]=1;
+            if(oc.indexOf(fn+' &&')>=0||oc.indexOf(fn+'&&')>=0||oc.indexOf('typeof '+fn)>=0) continue;
+            var isG=false; try{ isG=(typeof window[fn]==='function'); }catch(e){}
+            if(!isG && !jsBuiltins[fn] && fn.length>3 && !/^(if|for|while|return|new|typeof|function|catch|var|let|const)$/.test(fn)) dead.push(fn);
+          }
+        }
+        dead=dead.filter(function(v,i,a){return a.indexOf(v)===i;});
+        if(dead.length===0) oks.push({m:'죽은 버튼 없음 — 모든 버튼이 정상 연결됨'});
+        else errors.push({m:'연결 끊긴 버튼 '+dead.length+'개',d:dead.join(', '),fix:'해당 함수가 삭제됐거나 이름이 바뀐 것입니다. 함수 정의를 추가하거나 버튼의 함수명을 올바르게 수정하세요.'});
+      }catch(e){ suspects.push({m:'죽은 버튼 검사 중 오류',d:e.message,fix:'검사 로직 예외'}); }
+    }
+    // 중복 ID
+    if(sel.dupid){
+      try{
+        var all=document.querySelectorAll('[id]'); var seen={}, dups={};
+        for(var i=0;i<all.length;i++){ var id=all[i].id; if(seen[id]) dups[id]=(dups[id]||1)+1; seen[id]=1; }
+        var dl=Object.keys(dups);
+        if(dl.length===0) oks.push({m:'중복 ID 없음'});
+        else suspects.push({m:'중복 ID '+dl.length+'개',d:dl.join(', '),fix:'같은 id가 여러 개면 JS가 첫 번째만 인식해 두 번째부터 오작동할 수 있습니다. 각 id를 고유하게 바꾸세요(예: stars → stars2).'});
+      }catch(e){}
+    }
+    // 깨진 이미지
+    if(sel.img){
+      try{
+        var imgs=document.querySelectorAll('img'); var broken=[];
+        for(var i=0;i<imgs.length;i++){ if(imgs[i].complete && imgs[i].naturalWidth===0){ broken.push(imgs[i].src||imgs[i].getAttribute('src')||'(경로없음)'); } }
+        if(broken.length===0) oks.push({m:'이미지 정상 — 깨진 이미지 없음'});
+        else suspects.push({m:'깨진 이미지 '+broken.length+'개',d:broken.slice(0,4).join(' / '),fix:'이미지 경로(src)가 잘못됐거나 파일이 없습니다. 경로를 확인하거나 이미지를 다시 업로드하세요. (아직 로드 전인 이미지는 오탐일 수 있음)'});
+      }catch(e){}
+    }
+    // 서버
+    if(sel.server){
+      try{
+        if(typeof window.supabase!=='undefined') oks.push({m:'서버(Supabase) 라이브러리 로드됨 — 정상'});
+        else errors.push({m:'서버(Supabase) 미연결',d:'supabase 라이브러리 없음',fix:'인터넷 연결을 확인하거나, 서버 스크립트가 로드되는지 확인하세요. 회원가입·민원 저장 기능에 영향을 줍니다.'});
+      }catch(e){}
+    }
+    // 핵심 함수
+    if(sel.core){
+      try{
+        var core=['cgoGoPage','_myPop','setLang','cgoSaveSignup'];
+        var miss=core.filter(function(f){ return typeof window[f]!=='function'; });
+        if(miss.length===0) oks.push({m:'핵심 함수 모두 정상 (페이지이동·팝업·언어·가입저장)'});
+        else errors.push({m:'없는 핵심 함수 '+miss.length+'개',d:miss.join(', '),fix:'앱의 필수 함수가 로드되지 않았습니다. 스크립트 오류로 중간에 멈췄을 수 있으니 콘솔 오류를 확인하세요.'});
+      }catch(e){}
+    }
+    // 빈 링크·버튼
+    if(sel.empty){
+      try{
+        var empties=0;
+        var links=document.querySelectorAll('a[href="#"], a[href=""], [onclick=""]');
+        empties=links.length;
+        if(empties===0) oks.push({m:'빈 링크·버튼 없음'});
+        else suspects.push({m:'무동작 요소 '+empties+'개',d:'href="#" 또는 빈 onclick',fix:'클릭해도 아무 동작 안 하는 요소입니다. 준비 중이면 "준비 중" 안내를, 아니면 기능을 연결하세요.'});
+      }catch(e){}
+    }
+    // 번역 누락
+    if(sel.i18n){
+      try{
+        var lang=window._LANG||'ko';
+        if(lang==='ko'){ oks.push({m:'현재 한국어 모드 — 번역 검사 해당 없음'}); }
+        else {
+          var i18nEls=document.querySelectorAll('[data-i18n]');
+          var korLeft=0;
+          for(var i=0;i<i18nEls.length;i++){ if(/[가-힣]/.test(i18nEls[i].textContent||'')) korLeft++; }
+          if(korLeft===0) oks.push({m:'번역 정상 — 한국어 잔존 없음'});
+          else suspects.push({m:'번역 누락 의심 '+korLeft+'곳',d:'현재 언어('+lang+')인데 한국어로 표시된 요소',fix:'해당 언어 사전에 번역값이 빠졌습니다. CGO_I18N.'+lang+' 사전에 키를 채우세요.'});
+        }
+      }catch(e){}
+    }
+
+    // 렌더
+    var html='<div style="display:flex;gap:9px;margin-bottom:18px;">'
+      +'<div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:13px;text-align:center;"><div style="font-size:11px;color:#dc2626;font-weight:800;">🔴 오류</div><div style="font-size:24px;font-weight:900;color:#dc2626;">'+errors.length+'</div></div>'
+      +'<div style="flex:1;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:13px;text-align:center;"><div style="font-size:11px;color:#d97706;font-weight:800;">🟡 의심</div><div style="font-size:24px;font-weight:900;color:#d97706;">'+suspects.length+'</div></div>'
+      +'<div style="flex:1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:13px;text-align:center;"><div style="font-size:11px;color:#059669;font-weight:800;">🟢 정상</div><div style="font-size:24px;font-weight:900;color:#059669;">'+oks.length+'</div></div>'
+    +'</div>';
+
+    function card(item, color, bg, border, icon){
+      var h='<div style="background:'+bg+';border:1px solid '+border+';border-radius:12px;padding:14px 16px;margin-bottom:10px;">'
+        +'<div style="font-size:13.5px;font-weight:800;color:'+color+';">'+icon+' '+item.m+'</div>';
+      if(item.d) h+='<div style="font-size:12px;color:#475569;margin-top:6px;line-height:1.5;word-break:break-all;">'+item.d+'</div>';
+      if(item.fix) h+='<div style="font-size:12px;color:#0f172a;margin-top:8px;padding:9px 11px;background:rgba(255,255,255,.7);border-radius:8px;line-height:1.55;"><b>🔧 수정 방법:</b> '+item.fix+'</div>';
+      h+='</div>';
+      return h;
+    }
+    if(errors.length){ html+='<div style="font-size:14px;font-weight:900;color:#dc2626;margin:16px 0 10px;">🔴 오류 — 즉시 수정 권장</div>'; for(var i=0;i<errors.length;i++) html+=card(errors[i],'#991b1b','#fef2f2','#fecaca','🔴'); }
+    if(suspects.length){ html+='<div style="font-size:14px;font-weight:900;color:#d97706;margin:16px 0 10px;">🟡 의심 — 확인 필요</div>'; for(var i=0;i<suspects.length;i++) html+=card(suspects[i],'#92400e','#fffbeb','#fde68a','🟡'); }
+    if(oks.length){ html+='<div style="font-size:14px;font-weight:900;color:#059669;margin:16px 0 10px;">🟢 정상</div>'; for(var i=0;i<oks.length;i++) html+=card(oks[i],'#065f46','#ecfdf5','#a7f3d0','🟢'); }
+    html+='<div style="font-size:10.5px;color:#94a3b8;margin-top:16px;line-height:1.5;">※ 현재 화면에 로드된 요소 기준입니다. 각 기능 페이지를 방문한 뒤 다시 진단하면 그 페이지의 문제까지 잡을 수 있습니다.</div>';
+    result.innerHTML=html;
+  }, 500);
+};
+
 window.cgoRunDiagnosis=function(){
   // 기존 진단 팝업 있으면 제거 (재실행 대비)
   var old=document.getElementById('cgo-diag-popup');
@@ -20665,6 +20808,39 @@ function checkHealth(){
 </div>
 </div>
 <!-- /page-star -->
+<!-- ══ C-61 자동 앱 검증 페이지 ══ -->
+<div class="page cgop" id="page-diag" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--acc:#059669;--acc2:#047857;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#0284c7;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);">🏠 대시보드</button>
+
+  <div style="max-width:760px;margin:0 auto;padding:22px 16px 110px;">
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:26px;">🔍</span>
+      <div style="font-size:22px;font-weight:900;color:#059669;">C-61 자동 앱 검증</div>
+    </div>
+    <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">15만 줄 규모의 앱을 항목별로 정밀 점검합니다. 검사할 항목을 선택하고 <b>진단 실행</b>을 누르세요. 결과는 <b style="color:#dc2626;">🔴 오류</b> · <b style="color:#d97706;">🟡 의심</b> · <b style="color:#059669;">🟢 정상</b>으로 구분됩니다.</div>
+
+    <!-- 검사 항목 선택 -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:800;color:#0f172a;">📋 검사 항목</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="cgoDiagSelectAll(true)" style="padding:6px 12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;">전체 선택</button>
+          <button onclick="cgoDiagSelectAll(false)" style="padding:6px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;color:#64748b;cursor:pointer;">전체 해제</button>
+        </div>
+      </div>
+      <div id="cgo-diag-checklist"></div>
+    </div>
+
+    <!-- 진단 실행 버튼 -->
+    <button onclick="cgoDiagRun()" style="width:100%;padding:16px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 4px 16px rgba(5,150,105,.3);margin-bottom:20px;">▶ 진단 실행</button>
+
+    <!-- 결과 영역 -->
+    <div id="cgo-diag-result"></div>
+  </div>
+</div>
+<!-- /page-diag -->
+
 
     <div class="page cgop" id="page-naming" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;--cyan:#0284c7;--acc:#b8860b;--acc2:#8a6508;">
   <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#0284c7;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
@@ -125296,6 +125472,7 @@ function cgoGoPage(page){
     if(page === 'chat') target.style.display = 'flex';
     if(page === 'mypage' && typeof cgoFillProfileSummary==='function'){ try{ cgoFillProfileSummary(); }catch(e){} }
     if(typeof cgoShowDiagIfMaster==='function'){ try{ cgoShowDiagIfMaster(); }catch(e){} }
+    if(page === 'diag' && typeof cgoDiagChecklist==='function'){ try{ cgoDiagChecklist(); }catch(e){} }
   }
   // 메신저는 오직 cgoOpenMessenger()로만 열림
   var _chatEl = document.getElementById('page-chat');
