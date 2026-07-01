@@ -5157,6 +5157,15 @@ function updateTransitSectionWithNASA(planets) {
         </div>
       </div>
 
+<!-- ════════════════ C-61 소상공인 회계 ════════════════ -->
+<div id="cgo-acct-cat" class="fdash-cat" style="--fc:#0284c7">
+  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">소상공인 회계 · 세무비용 절약</span><span class="fdash-num">C-61</span></div>
+  <div class="fdash-grid" style="grid-template-columns:1fr">
+    <div id="cgo-acct-card" class="fdash-card" style="--fc:#0284c7;border-color:rgba(2,132,199,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('account');return false;"><div class="fdash-ico">💰</div><div class="fdash-ttl">C-61 소상공인 회계</div><div class="fdash-desc">💵 세무사 비용 없이 · 간편 장부 · 사진판독 500원</div></div>
+  </div>
+</div>
+
+
       <!-- ✨ CGO-FULI 사용 가이드 카드 -->
       <!-- 슬림 클릭 카드 (칸 통일 C-60) -->
       <div onclick="document.getElementById('cgoGuidePopup').style.display='flex'" style="position:relative;border:1.5px solid rgba(212,168,67,.5);border-radius:14px;padding:13px 16px;margin:0 0 10px;background:linear-gradient(135deg,rgba(10,18,38,.97),rgba(18,28,52,.95));cursor:pointer;overflow:hidden;box-shadow:0 2px 14px rgba(212,168,67,.12);transition:background .2s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(15,25,50,.98),rgba(25,38,68,.97))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(10,18,38,.97),rgba(18,28,52,.95))'">
@@ -6248,13 +6257,7 @@ function cgoGuideFeature(key){
   </div>
 </div>
 
-<!-- ════════════════ C-36 소상공인 회계 ════════════════ -->
-<div id="cgo-acct-cat" class="fdash-cat" style="--fc:#0284c7">
-  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">소상공인 회계 · 세무비용 절약</span><span class="fdash-num">C-36</span></div>
-  <div class="fdash-grid" style="grid-template-columns:1fr">
-    <div id="cgo-acct-card" class="fdash-card" style="--fc:#0284c7;border-color:rgba(2,132,199,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('account');return false;"><div class="fdash-ico">💰</div><div class="fdash-ttl">C-36 소상공인 회계</div><div class="fdash-desc">💵 세무사 비용 없이 · 간편 장부 · 폰에만 저장</div></div>
-  </div>
-</div>
+
 
 <!-- ════════════════ 7. 시스템 진단 (마스터 전용) ════════════════ -->
 <div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
@@ -19943,8 +19946,8 @@ window.cgoDiagGate=function(){
     else { alert('❌ 비밀번호가 올바르지 않습니다.'); }
   })();
 };
-/* ── C-36 회계 로직 ── */
-// ══ C-36 소상공인 회계 로직 (폰 저장, 서버 0원) ══
+/* ── C-61 회계 로직 ── */
+// ══ C-61 소상공인 회계 로직 (폰 저장, 서버 0원) ══
 window._cgoAccType = 'sales';
 window.cgoAccSetType = function(t){
   window._cgoAccType = t;
@@ -20038,6 +20041,129 @@ window.cgoAccExport = function(){
     URL.revokeObjectURL(url);
   }catch(e){ alert('내보내기에 실패했습니다: '+e.message); }
 };
+// ══ C-61 회계 음성 입력 (브라우저 음성인식 — 무료) ══
+window.cgoAccVoice = function(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert('이 브라우저는 음성 입력을 지원하지 않습니다. 크롬 브라우저를 사용해 주세요.'); return; }
+  var status=document.getElementById('acc-ai-status');
+  if(status) status.textContent='🎤 듣고 있어요... "재료비 5만원" 처럼 말해보세요';
+  var rec=new SR();
+  rec.lang='ko-KR'; rec.interimResults=false; rec.maxAlternatives=1;
+  rec.onresult=function(e){
+    var txt=e.results[0][0].transcript;
+    if(status) status.textContent='들은 내용: "'+txt+'"';
+    cgoAccParseVoice(txt);
+  };
+  rec.onerror=function(e){ if(status) status.textContent='음성 인식 실패: '+e.error; };
+  rec.onend=function(){};
+  try{ rec.start(); }catch(e){ if(status) status.textContent='마이크를 켤 수 없습니다.'; }
+};
+// 말에서 금액·항목·구분 뽑아내기
+window.cgoAccParseVoice = function(txt){
+  // 금액 추출 (만원 단위 처리)
+  var amount=0;
+  var manMatch=txt.match(/(\d+)\s*만/);
+  if(manMatch){ amount=parseInt(manMatch[1],10)*10000; }
+  var wonMatch=txt.match(/(\d[\d,]{2,})\s*원?/);
+  if(!amount && wonMatch){ amount=parseInt(wonMatch[1].replace(/,/g,''),10); }
+  // 매출/매입 구분 (키워드)
+  var isSales=/매출|수입|받|판매|들어온|입금/.test(txt);
+  var isBuy=/재료|비용|지출|샀|구입|매입|나간|월세|임대|배달|수수료|전기|가스|인건|급여/.test(txt);
+  var type = isSales ? 'sales' : (isBuy ? 'buy' : 'buy');
+  // 항목명 (금액·숫자 뺀 나머지에서 추출)
+  var item=txt.replace(/\d+\s*만\s*원?/g,'').replace(/\d[\d,]*\s*원?/g,'').replace(/매출|수입|매입|지출/g,'').replace(/들어왔어요|들어왔어|들어옴|나갔어요|나갔어|나감|썼어요|썼어|받았어요|받았어|샀어요|샀어|냈어요|냈어|이야|입니다|이에요|예요|했어요|했어|임|음/g,'').replace(/\s+/g,' ').trim();
+  if(!item) item = (type==='sales') ? '매출' : '지출';
+  // 입력칸 채우기
+  document.getElementById('acc-item').value=item;
+  document.getElementById('acc-amount').value=amount||'';
+  if(typeof cgoAccSetType==='function') cgoAccSetType(type);
+  var status=document.getElementById('acc-ai-status');
+  if(status){
+    if(amount>0) status.innerHTML='✅ "'+item+' '+amount.toLocaleString()+'원" 인식됨. <b>＋ 직접 기록</b>을 눌러 저장하세요.';
+    else status.textContent='금액을 못 알아들었어요. 다시 말하거나 직접 입력해 주세요.';
+  }
+};
+// ══ AI 회계 상담사 (/api/groq) ══
+window._accChatHist = [];
+window.cgoAccChatSend = function(){
+  var inp=document.getElementById('acc-chat-input');
+  var txt=(inp.value||'').trim();
+  if(!txt) return;
+  inp.value='';
+  var log=document.getElementById('acc-chat-log');
+  // 사용자 말풍선
+  log.innerHTML += '<div style="text-align:right;margin-bottom:8px;"><span style="display:inline-block;background:#0284c7;color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;font-size:13px;max-width:80%;text-align:left;">'+txt.replace(/</g,'&lt;')+'</span></div>';
+  // AI 로딩 말풍선
+  var aiId='acc-ai-'+Date.now();
+  log.innerHTML += '<div style="text-align:left;margin-bottom:8px;"><span id="'+aiId+'" style="display:inline-block;background:#f1f5f9;color:#0f172a;padding:9px 13px;border-radius:14px 14px 14px 3px;font-size:13px;max-width:80%;">⏳ 생각 중...</span></div>';
+  log.scrollTop=log.scrollHeight;
+
+  var body={
+    messages:[
+      {role:'system', content:'당신은 한국 소상공인을 돕는 친절한 회계·세무 상담사입니다. 부가세, 경비처리, 절세, 4대보험, 종합소득세 등을 쉽고 짧게 설명하세요. 전문용어는 풀어서 말하고, 답변 끝에는 항상 "정확한 신고는 세무사나 홈택스에서 확인하세요"를 붙이세요. 답변은 4~6문장으로 간결하게.'},
+      {role:'user', content:txt}
+    ]
+  };
+  fetch('/api/groq', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var ans=(data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    var el=document.getElementById(aiId);
+    if(el){ el.innerHTML = ans ? ans.replace(/</g,'&lt;').replace(/\n/g,'<br/>') : '죄송해요, 잠시 후 다시 시도해 주세요.'; }
+    log.scrollTop=log.scrollHeight;
+  })
+  .catch(function(err){
+    var el=document.getElementById(aiId);
+    if(el) el.innerHTML='⚠️ 네트워크 오류. 잠시 후 다시 시도해 주세요.';
+    log.scrollTop=log.scrollHeight;
+  });
+};
+// ══ 사진 판독 (500원 — /api/groq 비전) ══
+window.cgoAccPhoto = function(input){
+  var file=input.files && input.files[0];
+  if(!file) return;
+  var status=document.getElementById('acc-ai-status');
+  if(status) status.textContent='📷 사진을 읽는 중입니다... (약 3~5초)';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var dataUrl=e.target.result;
+    var body={
+      messages:[
+        {role:'system', content:'당신은 영수증·메모 판독 AI입니다. 이미지에서 금액과 항목(가게이름 또는 품목)을 찾아 JSON만 출력하세요. 형식: {"item":"항목명","amount":숫자,"type":"buy또는sales"}. 설명 없이 JSON만.'},
+        {role:'user', content:[
+          {type:'text', text:'이 영수증/메모에서 항목과 금액을 뽑아 JSON으로 주세요.'},
+          {type:'image_url', image_url:{url:dataUrl}}
+        ]}
+      ],
+      vision:true
+    };
+    fetch('/api/groq', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var ans=(data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      var parsed=null;
+      try{ var m=ans.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch(e){}
+      if(parsed && parsed.amount){
+        document.getElementById('acc-item').value=parsed.item||'영수증';
+        document.getElementById('acc-amount').value=parsed.amount;
+        if(typeof cgoAccSetType==='function') cgoAccSetType(parsed.type==='sales'?'sales':'buy');
+        if(status) status.innerHTML='✅ "'+(parsed.item||'')+' '+Number(parsed.amount).toLocaleString()+'원" 판독됨. 확인 후 <b>＋ 직접 기록</b>을 누르세요.';
+      } else {
+        if(status) status.textContent='사진에서 금액을 못 읽었어요. 더 선명하게 찍거나 직접 입력해 주세요.';
+      }
+    })
+    .catch(function(err){
+      if(status) status.textContent='⚠️ 판독 실패. 잠시 후 다시 시도해 주세요.';
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+};
+
 
 window.cgoDiagChecklist=function(){
   var box=document.getElementById('cgo-diag-checklist');
@@ -21036,7 +21162,7 @@ function checkHealth(){
   </div>
 </div>
 <!-- /page-diag -->
-<!-- ══ C-36 소상공인 회계 페이지 ══ -->
+<!-- ══ C-61 소상공인 회계 페이지 ══ -->
 <div class="page cgop" id="page-account" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--acc:#0284c7;--acc2:#0369a1;">
   <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(2,132,199,.25),rgba(56,189,248,.15));border:2px solid rgba(2,132,199,.7);border-radius:22px;color:#0284c7;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(2,132,199,.3);">🏠 대시보드</button>
 
@@ -21044,7 +21170,7 @@ function checkHealth(){
     <!-- 헤더 -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
       <span style="font-size:26px;">💰</span>
-      <div style="font-size:22px;font-weight:900;color:#0284c7;">C-36 소상공인 회계</div>
+      <div style="font-size:22px;font-weight:900;color:#0284c7;">C-61 소상공인 회계</div>
     </div>
     <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">세무사 비용 없이 사장님이 직접 관리하는 간편 장부입니다. 매출·매입을 입력하면 자동으로 합계·손익을 계산합니다. <b style="color:#0284c7;">모든 데이터는 이 폰에만 저장</b>되며 외부로 전송되지 않습니다.</div>
 
@@ -21074,7 +21200,13 @@ function checkHealth(){
       <input id="acc-item" type="text" placeholder="항목 (예: 재료비, 배달수수료, 매장매출)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-amount" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
       <input id="acc-date" type="date" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:12px;" />
-      <button onclick="cgoAccAdd()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">＋ 장부에 기록</button>
+      <button onclick="cgoAccAdd()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;">＋ 직접 기록</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="cgoAccVoice()" style="flex:1;padding:12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:13px;font-weight:700;color:#0284c7;cursor:pointer;">🎤 음성 입력</button>
+        <button onclick="document.getElementById('acc-photo-input').click()" style="flex:1;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;font-weight:700;color:#059669;cursor:pointer;">📷 사진 판독 <span style="font-size:10px;color:#94a3b8;">(500원)</span></button>
+        <input id="acc-photo-input" type="file" accept="image/*" capture="environment" style="display:none;" onchange="cgoAccPhoto(this)" />
+      </div>
+      <div id="acc-ai-status" style="font-size:12px;color:#64748b;margin-top:10px;text-align:center;min-height:16px;"></div>
     </div>
 
     <!-- 내역 목록 -->
@@ -21083,6 +21215,20 @@ function checkHealth(){
       <button onclick="cgoAccExport()" style="padding:7px 13px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;">📤 엑셀 내보내기</button>
     </div>
     <div id="acc-list"></div>
+
+    <!-- AI 회계 상담사 -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-top:20px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span style="font-size:20px;">💬</span>
+        <div style="font-size:15px;font-weight:800;color:#0f172a;">AI 회계 상담사</div>
+      </div>
+      <div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">부가세·경비처리·절세 등 회계 질문을 물어보세요. (참고용 안내이며 정확한 신고는 세무사·홈택스 확인)</div>
+      <div id="acc-chat-log" style="max-height:280px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="acc-chat-input" type="text" placeholder="예: 밥값도 경비 처리 되나요?" style="flex:1;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;" onkeydown="if(event.key==='Enter')cgoAccChatSend()" />
+        <button onclick="cgoAccChatSend()" style="padding:12px 18px;background:#0284c7;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">전송</button>
+      </div>
+    </div>
   </div>
 </div>
 <!-- /page-account -->
@@ -128960,7 +129106,7 @@ function cgoGoPage(page){
   try{ var _wl={dashboard:1,profile:1,shop:1}; if(page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
   /* ▼ C-60 사용 제한 게이트: 기능 페이지 하루 2회 (마스터 무제한). 비기능 페이지는 제외 ▼ */
   try{
-    var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1,diag:1};
+    var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1,diag:1,account:1};
     if(page && !_ng[page] && page!==_cgCurrent && typeof cgoUseGate==='function'){
       var _lbl=(window._cgoFnLabel&&window._cgoFnLabel[page])||'이 기능';
       if(!cgoUseGate('fn_'+page, _lbl)){ return; }
