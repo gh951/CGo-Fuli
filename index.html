@@ -20012,6 +20012,72 @@ window._cgoAccRenderDonut = function(book){
   legendEl.innerHTML=lg;
 };
 
+// ══ C-61 월별 막대 차트 ══
+window._cgoAccRenderMonthly = function(book){
+  var wrap=document.getElementById('acc-monthly-wrap');
+  var el=document.getElementById('acc-monthly');
+  if(!wrap||!el) return;
+  // 월별 집계
+  var months={};
+  book.forEach(function(x){
+    var m=(x.date||'').slice(0,7); // YYYY-MM
+    if(!m) return;
+    if(!months[m]) months[m]={sales:0,buy:0};
+    if(x.type==='sales') months[m].sales+=x.amount; else months[m].buy+=x.amount;
+  });
+  var keys=Object.keys(months).sort().slice(-6); // 최근 6개월
+  if(keys.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  // 최대값
+  var maxV=1;
+  keys.forEach(function(k){ maxV=Math.max(maxV, months[k].sales, months[k].buy); });
+  var html='<div style="display:flex;align-items:flex-end;gap:10px;height:120px;padding:0 4px;">';
+  keys.forEach(function(k){
+    var s=months[k].sales, b=months[k].buy;
+    var sh=Math.round(s/maxV*90), bh=Math.round(b/maxV*90);
+    var mLabel=k.slice(5)+'월';
+    html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+      +'<div style="display:flex;align-items:flex-end;gap:3px;height:90px;">'
+      +'<div title="매출" style="width:11px;height:'+sh+'px;background:linear-gradient(180deg,#22c55e,#16a34a);border-radius:3px 3px 0 0;"></div>'
+      +'<div title="매입" style="width:11px;height:'+bh+'px;background:linear-gradient(180deg,#f87171,#dc2626);border-radius:3px 3px 0 0;"></div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:#94a3b8;font-weight:600;">'+mLabel+'</div></div>';
+  });
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;">'
+    +'<span style="font-size:11px;color:#16a34a;">■ 매출</span>'
+    +'<span style="font-size:11px;color:#dc2626;">■ 매입</span></div>';
+  el.innerHTML=html;
+};
+// ══ C-61 매출 목표 ══
+window.cgoAccSetGoal = function(){
+  var cur=localStorage.getItem('cgo_acc_goal')||'';
+  var v=prompt('이번 달 매출 목표를 입력하세요 (원)', cur);
+  if(v===null) return;
+  var n=parseInt((v||'').replace(/[^0-9]/g,''),10);
+  if(!n||n<=0){ localStorage.removeItem('cgo_acc_goal'); }
+  else { localStorage.setItem('cgo_acc_goal', String(n)); }
+  cgoAccRender();
+};
+window._cgoAccRenderGoal = function(book){
+  var bar=document.getElementById('acc-goal-bar');
+  var txt=document.getElementById('acc-goal-text');
+  if(!bar||!txt) return;
+  var goal=parseInt(localStorage.getItem('cgo_acc_goal')||'0',10);
+  // 이번 달 매출 합
+  var thisMonth=new Date().toISOString().slice(0,7);
+  var sales=0;
+  book.forEach(function(x){ if(x.type==='sales' && (x.date||'').slice(0,7)===thisMonth) sales+=x.amount; });
+  if(!goal||goal<=0){
+    bar.style.width='0%';
+    txt.textContent='목표를 설정해 보세요';
+    return;
+  }
+  var pct=Math.min(100, Math.round(sales/goal*100));
+  bar.style.width=pct+'%';
+  txt.innerHTML='<b style="color:#16a34a;">'+sales.toLocaleString()+'원</b> / '+goal.toLocaleString()+'원 · <b>'+pct+'%</b> 달성';
+};
+
 // ══ C-61 소상공인 회계 로직 (폰 저장, 서버 0원) ══
 window._cgoAccType = 'sales';
 window.cgoAccSetType = function(t){
@@ -20065,6 +20131,8 @@ window.cgoAccRender = function(){
   if(elB) elB.textContent=_cgoAccWon(totalBuy);
   if(elP){ elP.textContent=_cgoAccWon(profit); elP.style.color = profit>=0 ? '#2563eb' : '#dc2626'; }
   if(typeof _cgoAccRenderDonut==='function') _cgoAccRenderDonut(book);
+  if(typeof _cgoAccRenderMonthly==='function') _cgoAccRenderMonthly(book);
+  if(typeof _cgoAccRenderGoal==='function') _cgoAccRenderGoal(book);
   // 목록
   var list=document.getElementById('acc-list');
   if(!list) return;
@@ -21242,20 +21310,32 @@ function checkHealth(){
     </div>
     <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">세무사 비용 없이 사장님이 직접 관리하는 간편 장부입니다. 매출·매입을 입력하면 자동으로 합계·손익을 계산합니다. <b style="color:#0284c7;">모든 데이터는 이 폰에만 저장</b>되며 외부로 전송되지 않습니다.</div>
 
-    <!-- 자금 현황 대시보드 -->
-    <div style="display:flex;gap:9px;margin-bottom:18px;">
-      <div style="flex:1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:15px;text-align:center;">
-        <div style="font-size:11px;color:#059669;font-weight:800;">💵 총 매출</div>
-        <div id="acc-total-sales" style="font-size:19px;font-weight:900;color:#059669;margin-top:4px;">0원</div>
+    <!-- 자금 현황 (캐시노트 스타일) -->
+    <div style="background:linear-gradient(135deg,#0284c7,#0369a1);border-radius:20px;padding:22px 20px;margin-bottom:14px;box-shadow:0 8px 24px rgba(2,132,199,.25);">
+      <div style="font-size:12px;color:rgba(255,255,255,.85);font-weight:700;margin-bottom:6px;">📊 이번 손익 (매출 − 매입)</div>
+      <div id="acc-profit" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.5px;">0원</div>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <div style="flex:1;background:rgba(255,255,255,.15);border-radius:14px;padding:13px 14px;">
+          <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:700;">💵 총 매출</div>
+          <div id="acc-total-sales" style="font-size:17px;font-weight:900;color:#fff;margin-top:3px;">0원</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,.15);border-radius:14px;padding:13px 14px;">
+          <div style="font-size:11px;color:rgba(255,255,255,.8);font-weight:700;">💸 총 매입</div>
+          <div id="acc-total-buy" style="font-size:17px;font-weight:900;color:#fff;margin-top:3px;">0원</div>
+        </div>
       </div>
-      <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:15px;text-align:center;">
-        <div style="font-size:11px;color:#dc2626;font-weight:800;">💸 총 매입</div>
-        <div id="acc-total-buy" style="font-size:19px;font-weight:900;color:#dc2626;margin-top:4px;">0원</div>
+    </div>
+
+    <!-- 매출 목표 달성률 -->
+    <div id="acc-goal-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px 18px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">🎯 이번 달 매출 목표</div>
+        <button onclick="cgoAccSetGoal()" style="font-size:11px;color:#0284c7;background:#f0f9ff;border:1px solid #bae6fd;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer;">목표 설정</button>
       </div>
-      <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:15px;text-align:center;">
-        <div style="font-size:11px;color:#2563eb;font-weight:800;">📊 손익</div>
-        <div id="acc-profit" style="font-size:19px;font-weight:900;color:#2563eb;margin-top:4px;">0원</div>
+      <div style="background:#f1f5f9;border-radius:10px;height:14px;overflow:hidden;margin-bottom:7px;">
+        <div id="acc-goal-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:10px;transition:width .5s;"></div>
       </div>
+      <div id="acc-goal-text" style="font-size:12px;color:#64748b;text-align:right;">목표를 설정해 보세요</div>
     </div>
     <!-- 지출 분석 (도넛 + 카테고리) -->
     <div id="acc-analysis" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;display:none;">
@@ -21263,6 +21343,10 @@ function checkHealth(){
       <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
         <div id="acc-donut" style="flex-shrink:0;"></div>
         <div id="acc-legend" style="flex:1;min-width:140px;"></div>
+      </div>
+      <div id="acc-monthly-wrap" style="margin-top:18px;padding-top:16px;border-top:1px solid #f1f5f9;display:none;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:12px;">📅 월별 매출·매입 흐름</div>
+        <div id="acc-monthly"></div>
       </div>
     </div>
 
