@@ -6252,7 +6252,7 @@ function cgoGuideFeature(key){
 <div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
   <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
   <div class="fdash-grid" style="grid-template-columns:1fr">
-    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('diag');return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
+    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoDiagGate();return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
   </div>
 </div>
 
@@ -19921,6 +19921,20 @@ window._cgoDiagItems=[
   {id:'storage2', name:'저장소 용량', desc:'localStorage 사용량(가득 차면 저장 실패)', cat:'서버·저장'},
   {id:'encoding', name:'텍스트 인코딩 깨짐', desc:'□□□ 또는 깨진 글자(대용량 텍스트 인코딩 오류)', cat:'리소스'}
 ];
+window.cgoDiagGate=function(){
+  // 마스터면 바로 통과
+  if(window._cgoUnlimited===true || window._cgoDiagPass===true){ cgoGoPage('diag'); return; }
+  // 아니면 암호 확인
+  var inp=prompt('🔒 C-61 자동 검증 — 관리자 비밀번호');
+  if(inp===null) return;
+  var okHash='b9db349344a9e6ccffad4602768161b2b9a73ac4fc8db89114876f015a28f5cb';
+  (async function(){
+    var inHash='';
+    try{ var buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inp)); inHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join(''); }catch(e){}
+    if(inHash===okHash){ window._cgoDiagPass=true; cgoGoPage('diag'); }
+    else { alert('❌ 비밀번호가 올바르지 않습니다.'); }
+  })();
+};
 window.cgoDiagChecklist=function(){
   var box=document.getElementById('cgo-diag-checklist');
   if(!box) return;
