@@ -20298,21 +20298,143 @@ window.cgoAccDelete = function(id){
 window._cgoAccWon = function(n){
   return (n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
 };
+// ══ C-61 실적 캘린더 ══
+window._accCalYM = null; // {y, m} 현재 보는 월
+window.cgoAccCalMove = function(delta){
+  if(!window._accCalYM){ var n=new Date(); window._accCalYM={y:n.getFullYear(), m:n.getMonth()}; }
+  var m=window._accCalYM.m+delta;
+  var y=window._accCalYM.y;
+  if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+  window._accCalYM={y:y, m:m};
+  cgoAccRenderCalendar();
+};
+window.cgoAccRenderCalendar = function(){
+  var grid=document.getElementById('acc-cal-grid');
+  var title=document.getElementById('acc-cal-title');
+  if(!grid||!title) return;
+  if(!window._accCalYM){ var n=new Date(); window._accCalYM={y:n.getFullYear(), m:n.getMonth()}; }
+  var y=window._accCalYM.y, m=window._accCalYM.m;
+  title.textContent=y+'년 '+(m+1)+'월';
+  // 날짜별 매출/매입 집계
+  var book=_cgoAccLoad();
+  var byDay={};
+  var ymPrefix=y+'-'+String(m+1).padStart(2,'0');
+  book.forEach(function(x){
+    if((x.date||'').slice(0,7)!==ymPrefix) return;
+    var d=parseInt((x.date||'').slice(8,10),10);
+    if(!byDay[d]) byDay[d]={sales:0,buy:0};
+    if(x.type==='sales') byDay[d].sales+=x.amount; else byDay[d].buy+=x.amount;
+  });
+  // 그리드 그리기
+  var firstDay=new Date(y,m,1).getDay(); // 0=일
+  var lastDate=new Date(y,m+1,0).getDate();
+  var todayStr=new Date().toISOString().slice(0,10);
+  var html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+  var wk=['일','월','화','수','목','금','토'];
+  wk.forEach(function(w,i){
+    var c=(i===0?'#ef4444':(i===6?'#3b82f6':'#94a3b8'));
+    html+='<div style="text-align:center;font-size:11px;font-weight:700;color:'+c+';padding:4px 0;">'+w+'</div>';
+  });
+  for(var i=0;i<firstDay;i++){ html+='<div></div>'; }
+  for(var d=1;d<=lastDate;d++){
+    var dateStr=ymPrefix+'-'+String(d).padStart(2,'0');
+    var info=byDay[d];
+    var isToday=(dateStr===todayStr);
+    var net = info ? (info.sales-info.buy) : null;
+    var bg = isToday ? '#eff6ff' : (info ? '#f8fafc' : '#fff');
+    var netStr='';
+    if(info){
+      var netMan = Math.round(net/10000);
+      var netColor = net>=0 ? '#16a34a' : '#dc2626';
+      netStr='<div style="font-size:8.5px;font-weight:700;color:'+netColor+';line-height:1.1;">'+(net>=0?'+':'')+netMan+'만</div>';
+    }
+    html+='<div onclick="cgoAccCalDay(\''+dateStr+'\')" style="min-height:42px;background:'+bg+';border:1px solid '+(isToday?'#3b82f6':'#f1f5f9')+';border-radius:7px;padding:3px 2px;cursor:pointer;text-align:center;">'
+      +'<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'#2563eb':'#475569')+';">'+d+'</div>'
+      +netStr+'</div>';
+  }
+  html+='</div>';
+  grid.innerHTML=html;
+  // 상세 초기화
+  var detail=document.getElementById('acc-cal-detail');
+  if(detail) detail.innerHTML='<div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px 0;">날짜를 누르면 그날 내역이 표시됩니다</div>';
+};
+// 특정 날짜 클릭 → 상세
+window.cgoAccCalDay = function(dateStr){
+  var detail=document.getElementById('acc-cal-detail');
+  if(!detail) return;
+  var book=_cgoAccLoad().filter(function(x){ return x.date===dateStr; });
+  var parts=dateStr.split('-');
+  var dLabel=parts[0]+'.'+parts[1]+'.'+parts[2];
+  if(book.length===0){
+    detail.innerHTML='<div style="background:#f8fafc;border-radius:10px;padding:14px;text-align:center;font-size:12.5px;color:#94a3b8;">'+dLabel+' — 기록이 없습니다</div>';
+    return;
+  }
+  var sales=0,buy=0;
+  book.forEach(function(x){ if(x.type==='sales') sales+=x.amount; else buy+=x.amount; });
+  var html='<div style="background:#f8fafc;border-radius:12px;padding:14px;">';
+  html+='<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'
+    +'<div style="font-size:13px;font-weight:800;color:#0f172a;">📅 '+dLabel+'</div>'
+    +'<div style="font-size:13px;font-weight:800;color:'+((sales-buy)>=0?'#16a34a':'#dc2626')+';">손익 '+(sales-buy>=0?'+':'')+(sales-buy).toLocaleString()+'원</div></div>';
+  html+='<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +'<div style="flex:1;background:#ecfdf5;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:#059669;">매출</div><div style="font-size:13px;font-weight:800;color:#059669;">'+sales.toLocaleString()+'</div></div>'
+    +'<div style="flex:1;background:#fef2f2;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:#dc2626;">매입</div><div style="font-size:13px;font-weight:800;color:#dc2626;">'+buy.toLocaleString()+'</div></div></div>';
+  book.forEach(function(x){
+    var isS=(x.type==='sales');
+    var cat=null; if(x.cat){ for(var i=0;i<_cgoAccCats.length;i++){ if(_cgoAccCats[i].key===x.cat){ cat=_cgoAccCats[i]; break; } } }
+    var ico=cat?cat.icon:(isS?'💵':'💸');
+    html+='<div style="display:flex;justify-content:space-between;padding:6px 4px;border-top:1px solid #eef2f7;font-size:12.5px;">'
+      +'<span style="color:#475569;">'+ico+' '+x.item+'</span>'
+      +'<span style="font-weight:700;color:'+(isS?'#059669':'#dc2626')+';">'+(isS?'+':'-')+x.amount.toLocaleString()+'</span></div>';
+  });
+  html+='</div>';
+  detail.innerHTML=html;
+};
+
+window._cgoAccPeriod = 'today';
+window.cgoAccSetPeriod = function(p){
+  window._cgoAccPeriod = p;
+  var ids={today:'acc-period-today', month:'acc-period-month', all:'acc-period-all'};
+  for(var k in ids){
+    var btn=document.getElementById(ids[k]);
+    if(!btn) continue;
+    if(k===p){ btn.style.background='rgba(255,255,255,.28)'; btn.style.color='#fff'; btn.style.fontWeight='800'; }
+    else { btn.style.background='rgba(255,255,255,.12)'; btn.style.color='rgba(255,255,255,.75)'; btn.style.fontWeight='700'; }
+  }
+  cgoAccRender();
+};
 window.cgoAccRender = function(){
   var book=_cgoAccLoad();
   // 정렬: 최신 날짜 위로
   book.sort(function(a,b){ return (b.date>a.date)?1:(b.date<a.date?-1:b.id-a.id); });
+  // 기간 필터 (today/month/all)
+  var period = window._cgoAccPeriod || 'today';
+  var now = new Date();
+  var todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  var monthStr = todayStr.slice(0,7);
+  function inPeriod(d){
+    if(period==='all') return true;
+    if(period==='today') return (d||'')===todayStr;
+    if(period==='month') return (d||'').slice(0,7)===monthStr;
+    return true;
+  }
   var totalSales=0, totalBuy=0;
-  book.forEach(function(x){ if(x.type==='sales') totalSales+=x.amount; else totalBuy+=x.amount; });
+  book.forEach(function(x){
+    if(!inPeriod(x.date)) return;
+    if(x.type==='sales') totalSales+=x.amount; else totalBuy+=x.amount;
+  });
   var profit=totalSales-totalBuy;
   var elS=document.getElementById('acc-total-sales'), elB=document.getElementById('acc-total-buy'), elP=document.getElementById('acc-profit');
   if(elS) elS.textContent=_cgoAccWon(totalSales);
   if(elB) elB.textContent=_cgoAccWon(totalBuy);
-  if(elP){ elP.textContent=_cgoAccWon(profit); elP.style.color = profit>=0 ? '#2563eb' : '#dc2626'; }
+  if(elP){ elP.textContent=_cgoAccWon(profit); elP.style.color = profit>=0 ? '#e2e8f0' : '#fecaca'; }
+  // 라벨 갱신
+  var lbl=document.getElementById('acc-profit-label');
+  if(lbl){ var pn=(period==='today'?'오늘':(period==='month'?'이번 달':'전체')); lbl.textContent='📊 '+pn+' 손익 (매출 − 매입)'; }
   if(typeof _cgoAccRenderDonut==='function') _cgoAccRenderDonut(book);
   if(typeof _cgoAccRenderMonthly==='function') _cgoAccRenderMonthly(book);
   if(typeof _cgoAccRenderGoal==='function') _cgoAccRenderGoal(book);
   if(typeof _cgoAccRenderVat==='function') _cgoAccRenderVat(book);
+  if(typeof cgoAccRenderCalendar==='function') cgoAccRenderCalendar();
   // 목록
   var list=document.getElementById('acc-list');
   if(!list) return;
@@ -21653,7 +21775,12 @@ function checkHealth(){
 
     <!-- 자금 현황 (캐시노트 스타일) -->
     <div style="background:linear-gradient(135deg,#0284c7,#0369a1);border-radius:20px;padding:22px 20px;margin-bottom:14px;box-shadow:0 8px 24px rgba(2,132,199,.25);">
-      <div style="font-size:12px;color:rgba(255,255,255,.85);font-weight:700;margin-bottom:6px;">📊 이번 손익 (매출 − 매입)</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;">
+        <button id="acc-period-today" onclick="cgoAccSetPeriod('today')" style="flex:1;padding:8px;background:rgba(255,255,255,.28);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;">오늘</button>
+        <button id="acc-period-month" onclick="cgoAccSetPeriod('month')" style="flex:1;padding:8px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">이번 달</button>
+        <button id="acc-period-all" onclick="cgoAccSetPeriod('all')" style="flex:1;padding:8px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.75);border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">전체</button>
+      </div>
+      <div id="acc-profit-label" style="font-size:12px;color:rgba(255,255,255,.85);font-weight:700;margin-bottom:6px;">📊 오늘 손익 (매출 − 매입)</div>
       <div id="acc-profit" style="font-size:32px;font-weight:900;color:#fff;letter-spacing:-.5px;">0원</div>
       <div style="display:flex;gap:10px;margin-top:18px;">
         <div style="flex:1;background:rgba(255,255,255,.15);border-radius:14px;padding:13px 14px;">
@@ -21690,7 +21817,18 @@ function checkHealth(){
       </div>
       <div id="acc-goal-text" style="font-size:12px;color:#64748b;text-align:right;">목표를 설정해 보세요</div>
     </div>
-    <!-- 지출 분석 (도넛 + 카테고리) -->
+    <!-- 실적 캘린더 -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <button onclick="cgoAccCalMove(-1)" style="width:34px;height:34px;background:#f1f5f9;border:none;border-radius:9px;font-size:16px;cursor:pointer;color:#475569;">‹</button>
+        <div id="acc-cal-title" style="font-size:15px;font-weight:800;color:#0f172a;">2026년 7월</div>
+        <button onclick="cgoAccCalMove(1)" style="width:34px;height:34px;background:#f1f5f9;border:none;border-radius:9px;font-size:16px;cursor:pointer;color:#475569;">›</button>
+      </div>
+      <div id="acc-cal-grid"></div>
+      <div id="acc-cal-detail" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- 지출 분석 (도넘 + 카테고리) -->
     <div id="acc-analysis" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;display:none;">
       <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;">📊 지출 분석</div>
       <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
