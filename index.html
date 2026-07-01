@@ -20325,10 +20325,68 @@ window.cgoAccPhoto = function(input){
   var file=input.files && input.files[0];
   if(!file) return;
   var status=document.getElementById('acc-ai-status');
-  if(status) status.textContent='📷 사진을 읽는 중입니다... (약 3~5초)';
+  if(status) status.textContent='📷 사진 품질을 확인하는 중...';
   var reader=new FileReader();
   reader.onload=function(e){
     var dataUrl=e.target.result;
+    // ── 환경(밝기) + 거리(선명도) 체크 ──
+    var img=new Image();
+    img.onload=function(){
+      var q=_cgoAccPhotoQuality(img);
+      if(q.tooDark){
+        if(status) status.textContent='⚠️ 사진이 너무 어두워요 (밝기 '+q.brightness+'/255). 밝은 곳에서 📷 사진 판독을 다시 눌러 찍어주세요.'; return;
+      }
+      if(q.tooBlurry){
+        if(status) status.textContent='⚠️ 사진이 흐릿해요 (거리·초점 확인). 영수증에 더 가까이 또렷하게, 📷 사진 판독을 다시 눌러 찍어주세요.'; return;
+      }
+      // 품질 OK → 판독 진행
+      if(status) status.textContent='✅ 사진 양호 (밝기 '+q.brightness+', 선명도 '+q.sharpness+'). 판독 중... (약 3~5초)';
+      _cgoAccPhotoOCR(dataUrl, status);
+    };
+    img.onerror=function(){ _cgoAccPhotoOCR(dataUrl, status); }; // 품질체크 실패시 그냥 판독
+    img.src=dataUrl;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+};
+// 사진 품질 검사 (환경=밝기, 거리=선명도)
+window._cgoAccPhotoQuality = function(img){
+  try{
+    var cv=document.createElement('canvas');
+    var W=160, H=Math.round(160*img.height/img.width)||120;
+    cv.width=W; cv.height=H;
+    var cx=cv.getContext('2d',{willReadFrequently:true});
+    cx.drawImage(img,0,0,W,H);
+    var px=cx.getImageData(0,0,W,H).data;
+    // 밝기: 평균 명도
+    var sum=0, n=0, gray=[];
+    for(var i=0;i<px.length;i+=4){
+      var g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114);
+      gray.push(g); sum+=g; n++;
+    }
+    var brightness=Math.round(sum/n);
+    // 선명도: 인접 픽셀 밝기차의 분산(라플라시안 근사) — 낮으면 흐림
+    var lapSum=0, lapN=0;
+    for(var y=1;y<H-1;y++){
+      for(var x=1;x<W-1;x++){
+        var idx=y*W+x;
+        var lap=Math.abs(4*gray[idx]-gray[idx-1]-gray[idx+1]-gray[idx-W]-gray[idx+W]);
+        lapSum+=lap*lap; lapN++;
+      }
+    }
+    var sharpness=Math.round(Math.sqrt(lapSum/Math.max(1,lapN)));
+    return {
+      brightness:brightness,
+      sharpness:sharpness,
+      tooDark: brightness<55,
+      tooBlurry: sharpness<8
+    };
+  }catch(e){
+    return {brightness:128, sharpness:20, tooDark:false, tooBlurry:false};
+  }
+};
+// 실제 OCR 판독
+window._cgoAccPhotoOCR = function(dataUrl, status){
     var body={
       messages:[
         {role:'system', content:'당신은 영수증·메모 판독 AI입니다. 이미지에서 금액과 항목(가게이름 또는 품목)을 찾아 JSON만 출력하세요. 형식: {"item":"항목명","amount":숫자,"type":"buy또는sales"}. 설명 없이 JSON만.'},
@@ -20359,9 +20417,6 @@ window.cgoAccPhoto = function(input){
     .catch(function(err){
       if(status) status.textContent='⚠️ 판독 실패. 잠시 후 다시 시도해 주세요.';
     });
-  };
-  reader.readAsDataURL(file);
-  input.value='';
 };
 
 
