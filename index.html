@@ -4682,7 +4682,7 @@ function updateTransitSectionWithNASA(planets) {
 
       </div>
       <button class="icon-btn" onclick="refreshData()" title="새로고침">↻</button>
-      <div class="user-chip" onclick="showPage('profile')" style="cursor:pointer;transition:all .2s" title="프로필 보기">
+      <div class="user-chip" onclick="cgoProfileCard()" style="cursor:pointer;transition:all .2s" title="프로필 보기">
         <div class="user-av" id="topAvatar">?</div>
         <div class="user-nm" id="topName">이름 입력</div>
       </div>
@@ -19818,6 +19818,49 @@ window._myReload=function(){location.reload(true);};
 window._myCacheClear=function(){try{if(window.caches&&caches.keys){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}alert('캐시를 삭제했습니다. 새로고침됩니다.');setTimeout(function(){location.reload(true);},400);};
 window._myZoom=function(z){try{document.body.style.zoom=z;localStorage.setItem('cgo_zoom',z);}catch(e){}};
 window._myToggle=function(key,el){var v=(localStorage.getItem(key)==='on')?'off':'on';localStorage.setItem(key,v);el.textContent=(v==='on'?'ON':'OFF');el.style.background=(v==='on'?'#06b6d4':'#cbd5e1');el.style.color=(v==='on'?'#fff':'#475569');};
+window.cgoProfileCard=function(){
+  var pop=document.getElementById('mypage-pop');
+  var title=document.getElementById('mypage-pop-title');
+  var content=document.getElementById('mypage-pop-content');
+  if(!pop||!content) return;
+  var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
+  var points=localStorage.getItem('cgo_points')||'0';
+  var gcode=localStorage.getItem('cgo_grade_code')||'free';
+  var isUnlimited=(window._cgoUnlimited===true);
+  var gradeLabel, gradeColor, gradeBg, expireLine;
+  if(isUnlimited){
+    gradeLabel='👑 마스터 · 무제한';
+    gradeColor='#b8860b';
+    gradeBg='linear-gradient(135deg,#fff7e6,#fde68a)';
+    expireLine='<div style="font-size:12px;color:#64748b;">이용 기간 &nbsp;<b style="color:#b8860b;">무제한</b></div>';
+  } else {
+    var G={free:{l:'무료 회원',c:'#64748b',b:'#f1f5f9'},member:{l:'⭐ 멤버',c:'#0e7490',b:'#ecfeff'},vvip:{l:'💎 VVIP',c:'#7c3aed',b:'linear-gradient(135deg,#f5e6ff,#fff7e6)'}};
+    var g=G[gcode]||G.free;
+    gradeLabel=g.l; gradeColor=g.c; gradeBg=g.b;
+    var exp=localStorage.getItem('cgo_expire')||'';
+    if(gcode!=='free' && exp){ expireLine='<div style="font-size:12px;color:#64748b;">이용 종료일 &nbsp;<b style="color:#0f172a;">'+exp+'</b></div>'; }
+    else { expireLine='<div style="font-size:12px;color:#94a3b8;">현재 구독 없음</div>'; }
+  }
+  if(title) title.innerHTML='👤 내 프로필';
+  content.innerHTML=
+    '<div style="text-align:center;padding:6px 0 14px;">'
+      +'<div style="width:64px;height:64px;border-radius:50%;background:'+gradeBg+';display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 10px;">👤</div>'
+      +'<div style="font-size:17px;font-weight:800;color:#0f172a;">'+nick+'</div>'
+      +'<div style="display:inline-block;margin-top:7px;padding:5px 14px;border-radius:20px;background:'+gradeBg+';color:'+gradeColor+';font-size:13px;font-weight:800;">'+gradeLabel+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:10px;margin-bottom:14px;">'
+      +'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">'
+        +'<div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">보유 포인트</div>'
+        +'<div style="font-size:18px;font-weight:800;color:#0e7490;">'+points+' P</div></div>'
+      +'<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;text-align:center;">'
+        +'<div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">이용 상태</div>'
+        +'<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px;">'+(isUnlimited?'무제한':(gcode==='free'?'무료':'이용중'))+'</div></div>'
+    +'</div>'
+    +expireLine
+    +'<button onclick="if(typeof _myPop===\'function\')_myPop(\'profile\');" style="width:100%;margin-top:16px;padding:13px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">📋 마이페이지에서 자세히 보기</button>';
+  pop.style.display='flex';
+};
+
 window.cgoComplaintForm=function(){
   var pop=document.getElementById('mypage-pop');
   var title=document.getElementById('mypage-pop-title');
