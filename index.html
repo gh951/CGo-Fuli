@@ -4953,9 +4953,8 @@ function updateTransitSectionWithNASA(planets) {
             var ref = anchorEl.nextSibling;
             parent.insertBefore(bar,  ref);
             parent.insertBefore(wrap, bar.nextSibling);
-            // 다음 앵커 전까지 wrap 안으로 이동 (진단 섹션은 제외 — 항상 밖에 유지)
+            // 다음 앵커 전까지 wrap 안으로 이동
             while(wrap.nextSibling && wrap.nextSibling !== nextAnchorEl){
-              if(wrap.nextSibling.id === 'cgo-diag-cat') break;
               wrap.appendChild(wrap.nextSibling);
             }
           }
@@ -6226,6 +6225,15 @@ function cgoGuideFeature(key){
   </div>
 </div>
 
+<!-- ════════════════ 7. 시스템 진단 (마스터 전용) ════════════════ -->
+<div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
+  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
+  <div class="fdash-grid" style="grid-template-columns:1fr">
+    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoRunDiagnosis();return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
+  </div>
+</div>
+
+
 
 </div>
         </div>
@@ -6238,13 +6246,7 @@ function cgoGuideFeature(key){
 
       </div>
 
-<!-- ════════════════ 7. 시스템 진단 (마스터 전용) ════════════════ -->
-<div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
-  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
-  <div class="fdash-grid" style="grid-template-columns:1fr">
-    <div id="cgo-diag-card" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)" onclick="event.stopPropagation();event.preventDefault();cgoRunDiagnosis();return false;"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">🔒 앱 오류를 스스로 찾아 수정법 추천 · 마스터 전용</div></div>
-  </div>
-</div>
+
 
 
 
@@ -19873,16 +19875,7 @@ window.cgoFillProfileSummary=function(){
 };
 
 window._cgoDiagPass=false;
-window.cgoRunDiagnosis=async function(){
-  if(window._cgoUnlimited!==true && window._cgoDiagPass!==true){
-    var inp=prompt('🔒 관리자 진단 비밀번호를 입력하세요');
-    if(inp===null) return;
-    var okHash='b9db349344a9e6ccffad4602768161b2b9a73ac4fc8db89114876f015a28f5cb';
-    var inHash='';
-    try{ var buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inp)); inHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join(''); }catch(e){}
-    if(inHash!==okHash){ alert('❌ 비밀번호가 올바르지 않습니다.'); return; }
-    window._cgoDiagPass=true;
-  }
+window.cgoRunDiagnosis=function(){
   var pop=document.getElementById('mypage-pop');
   var title=document.getElementById('mypage-pop-title');
   var content=document.getElementById('mypage-pop-content');
