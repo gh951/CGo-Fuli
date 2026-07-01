@@ -20331,7 +20331,7 @@ window.cgoAccRender = function(){
     if(!isS && _cat && typeof _cat.vat!=='undefined'){ _vatBadge = _cat.vat ? ' <span style="font-size:9px;color:#059669;background:#ecfdf5;padding:1px 5px;border-radius:5px;font-weight:700;">공제</span>' : ' <span style="font-size:9px;color:#dc2626;background:#fef2f2;padding:1px 5px;border-radius:5px;font-weight:700;">불공제</span>'; }
     html+='<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:12px 14px;margin-bottom:8px;">'
       +'<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+_ico+' '+x.item+_vatBadge+'</div>'
-      +'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+x.date+'</div></div>'
+      +'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+(x.date||'').replace(/-/g,'.')+'</div></div>'
       +'<div style="font-size:14px;font-weight:800;color:'+(isS?'#059669':'#dc2626')+';margin:0 10px;white-space:nowrap;">'+(isS?'+':'-')+_cgoAccWon(x.amount)+'</div>'
       +'<div onclick="cgoAccDelete('+x.id+')" style="cursor:pointer;color:#cbd5e1;font-size:16px;padding:4px;">🗑</div>'
     +'</div>';
@@ -20405,6 +20405,10 @@ window.cgoAccParseVoice = function(txt){
 };
 // ══ AI 회계 상담사 (/api/groq) ══
 window._accChatHist = [];
+window.cgoAccFaq = function(q){
+  var inp=document.getElementById('acc-chat-input');
+  if(inp){ inp.value=q; cgoAccChatSend(); }
+};
 window.cgoAccChatSend = function(){
   var inp=document.getElementById('acc-chat-input');
   var txt=(inp.value||'').trim();
@@ -20441,6 +20445,104 @@ window.cgoAccChatSend = function(){
   });
 };
 // ══ 사진 판독 (/api/groq 비전) ══
+// ══ C-61 회계 내장 카메라 ══
+window._accCamStream = null;
+window._accCamRAF = null;
+window.cgoAccCamOpen = function(){
+  var overlay=document.getElementById('acc-cam-overlay');
+  var video=document.getElementById('acc-cam-video');
+  if(!overlay||!video) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('이 브라우저는 카메라를 지원하지 않습니다. 🖼️ 사진 선택을 이용해 주세요.');
+    return;
+  }
+  overlay.style.display='flex';
+  navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} },
+    audio:false
+  }).then(function(stream){
+    window._accCamStream=stream;
+    video.srcObject=stream;
+    video.play();
+    cgoAccCamQualityLoop();
+  }).catch(function(err){
+    overlay.style.display='none';
+    alert('카메라를 켤 수 없습니다: '+err.message+'\n🖼️ 사진 선택을 이용해 주세요.');
+  });
+};
+window.cgoAccCamClose = function(){
+  var overlay=document.getElementById('acc-cam-overlay');
+  if(window._accCamRAF){ cancelAnimationFrame(window._accCamRAF); window._accCamRAF=null; }
+  if(window._accCamStream){
+    window._accCamStream.getTracks().forEach(function(t){ t.stop(); });
+    window._accCamStream=null;
+  }
+  if(overlay) overlay.style.display='none';
+};
+// 실시간 품질(환경=밝기, 거리=선명도) 체크 루프
+window.cgoAccCamQualityLoop = function(){
+  var video=document.getElementById('acc-cam-video');
+  var qEl=document.getElementById('acc-cam-quality');
+  var shootBtn=document.getElementById('acc-cam-shoot');
+  if(!video||!qEl){ return; }
+  var cv=document.createElement('canvas');
+  var last=0;
+  function tick(ts){
+    if(!window._accCamStream){ return; }
+    // 약 4fps로 체크 (부하 줄임)
+    if(ts-last>250 && video.videoWidth>0){
+      last=ts;
+      try{
+        var W=120, H=90;
+        cv.width=W; cv.height=H;
+        var cx=cv.getContext('2d',{willReadFrequently:true});
+        cx.drawImage(video,0,0,W,H);
+        var px=cx.getImageData(0,0,W,H).data;
+        var sum=0,n=0,gray=[];
+        for(var i=0;i<px.length;i+=4){ var g=px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114; gray.push(g); sum+=g; n++; }
+        var bright=Math.round(sum/n);
+        var lapSum=0,lapN=0;
+        for(var y=1;y<H-1;y++){ for(var x=1;x<W-1;x++){ var idx=y*W+x; var lap=Math.abs(4*gray[idx]-gray[idx-1]-gray[idx+1]-gray[idx-W]-gray[idx+W]); lapSum+=lap*lap; lapN++; } }
+        var sharp=Math.round(Math.sqrt(lapSum/Math.max(1,lapN)));
+        // 판정
+        var ok=true, msg='', color='';
+        if(bright<55){ ok=false; msg='🌑 너무 어두워요 — 밝은 곳으로'; color='#f87171'; }
+        else if(bright>230){ ok=false; msg='☀️ 너무 밝아요 — 반사 주의'; color='#fbbf24'; }
+        else if(sharp<10){ ok=false; msg='🔍 흐릿해요 — 더 가까이/또렷하게'; color='#fbbf24'; }
+        else { ok=true; msg='✅ 좋아요! 지금 찍으세요'; color='#4ade80'; }
+        qEl.textContent=msg;
+        qEl.style.color=color;
+        if(shootBtn){
+          shootBtn.style.borderColor = ok ? 'rgba(74,222,128,.8)' : 'rgba(255,255,255,.4)';
+          shootBtn.style.background = ok ? '#4ade80' : '#fff';
+        }
+        window._accCamQualityOk=ok;
+      }catch(e){}
+    }
+    window._accCamRAF=requestAnimationFrame(tick);
+  }
+  window._accCamRAF=requestAnimationFrame(tick);
+};
+// 촬영 → 판독
+window.cgoAccCamShoot = function(){
+  var video=document.getElementById('acc-cam-video');
+  if(!video||!video.videoWidth){ return; }
+  // 품질 나쁘면 확인
+  if(window._accCamQualityOk===false){
+    if(!confirm('사진 품질이 좋지 않아요. 그래도 찍을까요?\n(취소하고 조정하는 걸 권장해요)')) return;
+  }
+  var cv=document.createElement('canvas');
+  cv.width=video.videoWidth; cv.height=video.videoHeight;
+  var cx=cv.getContext('2d');
+  cx.drawImage(video,0,0);
+  var dataUrl=cv.toDataURL('image/jpeg', 0.85);
+  cgoAccCamClose();
+  // C-61 사진 판독으로 바로 넘김
+  var status=document.getElementById('acc-ai-status');
+  if(status) status.textContent='📷 촬영 완료. 판독 중... (약 3~5초)';
+  if(typeof _cgoAccPhotoOCR==='function'){ _cgoAccPhotoOCR(dataUrl, status); }
+};
+
 window.cgoAccPhoto = function(input){
   var file=input.files && input.files[0];
   if(!file) return;
@@ -21547,7 +21649,7 @@ function checkHealth(){
       <span style="font-size:26px;">💰</span>
       <div style="font-size:22px;font-weight:900;color:#0284c7;">C-61 소상공인 회계</div>
     </div>
-    <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">세무사 비용 없이 사장님이 직접 관리하는 간편 장부입니다. 매출·매입을 입력하면 자동으로 합계·손익을 계산합니다. <b style="color:#0284c7;">모든 데이터는 이 폰에만 저장</b>되며 외부로 전송되지 않습니다.</div>
+    <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">세무사에게 넘기기 전, 사장님이 직접 챙기는 쉬운 매장 손익 장부입니다. 매출·매입을 입력하면 자동으로 합계·손익을 계산해요. <b style="color:#0284c7;">모든 데이터는 이 폰에만 저장</b>되며 외부로 전송되지 않습니다. 🌱 소상공인 사장님들을 응원하는 마음으로 만들었습니다.</div>
 
     <!-- 자금 현황 (캐시노트 스타일) -->
     <div style="background:linear-gradient(135deg,#0284c7,#0369a1);border-radius:20px;padding:22px 20px;margin-bottom:14px;box-shadow:0 8px 24px rgba(2,132,199,.25);">
@@ -21616,7 +21718,8 @@ function checkHealth(){
       <button onclick="cgoAccAdd()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:10px;">＋ 직접 기록</button>
       <div style="display:flex;gap:8px;">
         <button onclick="cgoAccVoice()" style="flex:1;padding:12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:13px;font-weight:700;color:#0284c7;cursor:pointer;">🎤 음성 입력</button>
-        <button onclick="document.getElementById('acc-photo-input').click()" style="flex:1;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;font-weight:700;color:#059669;cursor:pointer;">📷 사진 판독</button>
+        <button onclick="cgoAccCamOpen()" style="flex:1;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;font-weight:700;color:#059669;cursor:pointer;">📸 카메라로 찍기</button>
+        <button onclick="document.getElementById('acc-photo-input').click()" style="flex:1;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;font-weight:700;color:#059669;cursor:pointer;">🖼️ 사진 선택</button>
         <input id="acc-photo-input" type="file" accept="image/*" capture="environment" style="display:none;" onchange="cgoAccPhoto(this)" />
       </div>
       <div id="acc-ai-status" style="font-size:12px;color:#64748b;margin-top:10px;text-align:center;min-height:16px;"></div>
@@ -21637,7 +21740,7 @@ function checkHealth(){
     <!-- 내역 목록 -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div style="font-size:15px;font-weight:800;color:#0f172a;">📒 장부 내역</div>
-      <button onclick="cgoAccExport()" style="padding:7px 13px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;">📤 엑셀 내보내기</button>
+      <button onclick="cgoAccExport()" style="padding:10px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;border-radius:10px;font-size:13px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(22,163,74,.3);">📤 세무사 제출용 엑셀</button>
     </div>
     <div id="acc-list"></div>
 
@@ -21649,6 +21752,11 @@ function checkHealth(){
       </div>
       <div style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">부가세·경비처리·절세 등 회계 질문을 물어보세요. (참고용 안내이며 정확한 신고는 세무사·홈택스 확인)</div>
       <div id="acc-chat-log" style="max-height:280px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        <button onclick="cgoAccFaq('밥값도 경비 처리 되나요?')" style="font-size:11.5px;padding:6px 11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;color:#0284c7;font-weight:600;cursor:pointer;">💡 밥값 경비처리</button>
+        <button onclick="cgoAccFaq('부가세 환급 받을 수 있는 항목은 뭐예요?')" style="font-size:11.5px;padding:6px 11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;color:#0284c7;font-weight:600;cursor:pointer;">💡 부가세 환급</button>
+        <button onclick="cgoAccFaq('종합소득세 경비 인정 기준이 궁금해요')" style="font-size:11.5px;padding:6px 11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;color:#0284c7;font-weight:600;cursor:pointer;">💡 종소세 경비</button>
+      </div>
       <div style="display:flex;gap:8px;">
         <input id="acc-chat-input" type="text" placeholder="예: 밥값도 경비 처리 되나요?" style="flex:1;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;" onkeydown="if(event.key==='Enter')cgoAccChatSend()" />
         <button onclick="cgoAccChatSend()" style="padding:12px 18px;background:#0284c7;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">전송</button>
@@ -21656,6 +21764,27 @@ function checkHealth(){
     </div>
   </div>
 </div>
+
+<!-- ══ C-61 회계 카메라 뷰 ══ -->
+<div id="acc-cam-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;flex-direction:column;">
+  <div style="position:relative;flex:1;overflow:hidden;">
+    <video id="acc-cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+    <!-- 영수증 가이드 프레임 -->
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:60%;border:2px dashed rgba(255,255,255,.7);border-radius:12px;pointer-events:none;"></div>
+    <!-- 실시간 품질 표시 -->
+    <div id="acc-cam-quality" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 16px;border-radius:20px;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;">품질 확인 중...</div>
+    <!-- 안내 -->
+    <div style="position:absolute;bottom:130px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);padding:6px 14px;border-radius:14px;color:rgba(255,255,255,.9);font-size:12px;white-space:nowrap;">영수증을 점선 안에 맞춰주세요</div>
+  </div>
+  <!-- 컨트롤 -->
+  <div style="background:#000;padding:20px 16px 34px;display:flex;align-items:center;justify-content:space-between;">
+    <button onclick="cgoAccCamClose()" style="width:60px;height:44px;background:rgba(255,255,255,.15);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">닫기</button>
+    <button id="acc-cam-shoot" onclick="cgoAccCamShoot()" style="width:72px;height:72px;background:#fff;border:5px solid rgba(255,255,255,.4);border-radius:50%;cursor:pointer;box-shadow:0 0 20px rgba(255,255,255,.3);"></button>
+    <div style="width:60px;"></div>
+  </div>
+</div>
+<!-- /acc-cam-overlay -->
+
 <!-- /page-account -->
 
 
