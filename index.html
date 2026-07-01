@@ -19862,8 +19862,17 @@ window.cgoFillProfileSummary=function(){
     +'</div>';
 };
 
-window.cgoRunDiagnosis=function(){
-  if(window._cgoUnlimited!==true){ alert('🔒 관리자(마스터) 전용 기능입니다.'); return; }
+window._cgoDiagPass=false;
+window.cgoRunDiagnosis=async function(){
+  if(window._cgoUnlimited!==true && window._cgoDiagPass!==true){
+    var inp=prompt('🔒 관리자 진단 비밀번호를 입력하세요');
+    if(inp===null) return;
+    var okHash='b9db349344a9e6ccffad4602768161b2b9a73ac4fc8db89114876f015a28f5cb';
+    var inHash='';
+    try{ var buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inp)); inHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join(''); }catch(e){}
+    if(inHash!==okHash){ alert('❌ 비밀번호가 올바르지 않습니다.'); return; }
+    window._cgoDiagPass=true;
+  }
   var pop=document.getElementById('mypage-pop');
   var title=document.getElementById('mypage-pop-title');
   var content=document.getElementById('mypage-pop-content');
