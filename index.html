@@ -5161,7 +5161,7 @@ function updateTransitSectionWithNASA(planets) {
 <div id="cgo-acct-cat" class="fdash-cat" style="--fc:#0284c7">
   <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">소상공인 회계 · 세무비용 절약</span><span class="fdash-num">C-61</span></div>
   <div class="fdash-grid" style="grid-template-columns:1fr">
-    <div id="cgo-acct-card" class="fdash-card" style="--fc:#0284c7;border-color:rgba(2,132,199,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('account');return false;"><div class="fdash-ico">💰</div><div class="fdash-ttl">C-61 소상공인 회계</div><div class="fdash-desc">💵 세무사 비용 없이 · 간편 장부 · 사진판독 500원</div></div>
+    <div id="cgo-acct-card" class="fdash-card" style="--fc:#0284c7;border-color:rgba(2,132,199,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('account');return false;"><div class="fdash-ico">💰📒</div><div class="fdash-ttl">C-61 소상공인 회계</div><div class="fdash-desc">💵 세무사 비용 없이 · 간편 장부 · 사진판독 500원</div></div>
   </div>
 </div>
 
@@ -20004,10 +20004,20 @@ window.cgoAccRenderCatButtons = function(){
   wrap.innerHTML=html;
 };
 window.cgoAccPickCat = function(key){
-  window._cgoAccPickedCat = (window._cgoAccPickedCat===key) ? null : key;
-  // 항목칸에 카테고리명 자동 채우기(비어있을 때)
   var itemEl=document.getElementById('acc-item');
-  if(itemEl && !itemEl.value.trim() && window._cgoAccPickedCat){ itemEl.value=key; }
+  var prev=window._cgoAccPickedCat;
+  window._cgoAccPickedCat = (prev===key) ? null : key;
+  // 항목칸 자동 채우기: 비어있거나, 이전 카테고리명이 그대로 들어있을 때만 교체 (사용자 직접입력은 보존)
+  if(itemEl){
+    var cur=(itemEl.value||'').trim();
+    var isPrevCatName = prev && cur===prev;
+    if(window._cgoAccPickedCat){
+      if(cur==='' || isPrevCatName){ itemEl.value=key; }
+    } else {
+      // 선택 해제 시, 카테고리명이면 비움
+      if(cur===key){ itemEl.value=''; }
+    }
+  }
   cgoAccRenderCatButtons();
 };
 // 도넛 차트 그리기 (지출=매입 항목 비율)
