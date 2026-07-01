@@ -19947,6 +19947,71 @@ window.cgoDiagGate=function(){
   })();
 };
 /* ── C-61 회계 로직 ── */
+// ══ C-61 회계 카테고리 시스템 + 도넛 차트 ══
+window._cgoAccCats = [
+  { key:'재료',   icon:'🍅', color:'#ef4444', kw:['재료','식자재','원재료','농산','정육','수산','청과'] },
+  { key:'배달',   icon:'🛵', color:'#f97316', kw:['배달','수수료','플랫폼','배민','쿠팡','요기요'] },
+  { key:'임대료', icon:'🏠', color:'#8b5cf6', kw:['월세','임대','임차','보증','관리비','상가'] },
+  { key:'인건비', icon:'👥', color:'#0ea5e9', kw:['인건','급여','월급','알바','아르바이트','시급','직원'] },
+  { key:'공과금', icon:'💡', color:'#eab308', kw:['전기','가스','수도','통신','인터넷','공과'] },
+  { key:'세금',   icon:'🧾', color:'#64748b', kw:['세금','부가세','종소세','소득세','4대보험','보험료'] },
+  { key:'비품',   icon:'📦', color:'#14b8a6', kw:['비품','소모','포장','용기','청소','세제'] },
+  { key:'기타',   icon:'📌', color:'#94a3b8', kw:[] }
+];
+window._cgoAccCatOf = function(item){
+  var t=(item||'');
+  for(var i=0;i<_cgoAccCats.length;i++){
+    var c=_cgoAccCats[i];
+    for(var j=0;j<c.kw.length;j++){ if(t.indexOf(c.kw[j])>=0) return c; }
+  }
+  return _cgoAccCats[_cgoAccCats.length-1]; // 기타
+};
+// 도넛 차트 그리기 (지출=매입 항목 비율)
+window._cgoAccRenderDonut = function(book){
+  var analysis=document.getElementById('acc-analysis');
+  var donutEl=document.getElementById('acc-donut');
+  var legendEl=document.getElementById('acc-legend');
+  if(!analysis||!donutEl||!legendEl) return;
+  // 매입(지출)만 카테고리별 합산
+  var sums={};
+  book.forEach(function(x){
+    if(x.type!=='buy') return;
+    var c=_cgoAccCatOf(x.item);
+    sums[c.key]=(sums[c.key]||0)+x.amount;
+  });
+  var entries=Object.keys(sums).map(function(k){
+    var cat=_cgoAccCats.filter(function(c){return c.key===k;})[0];
+    return { key:k, amount:sums[k], cat:cat };
+  }).sort(function(a,b){ return b.amount-a.amount; });
+  var total=entries.reduce(function(s,e){ return s+e.amount; }, 0);
+  if(total<=0){ analysis.style.display='none'; return; }
+  analysis.style.display='block';
+  // SVG 도넛
+  var R=54, CIR=2*Math.PI*R, cx=64, cy=64;
+  var offset=0, arcs='';
+  entries.forEach(function(e){
+    var frac=e.amount/total;
+    var len=frac*CIR;
+    arcs+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="'+e.cat.color+'" stroke-width="18" '
+      +'stroke-dasharray="'+len+' '+(CIR-len)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 '+cx+' '+cy+')"/>';
+    offset+=len;
+  });
+  donutEl.innerHTML='<svg width="128" height="128" viewBox="0 0 128 128">'+arcs
+    +'<text x="64" y="60" text-anchor="middle" font-size="11" fill="#94a3b8">총 지출</text>'
+    +'<text x="64" y="78" text-anchor="middle" font-size="15" font-weight="800" fill="#0f172a">'+(total>=10000?Math.round(total/10000)+'만':total)+'</text></svg>';
+  // 범례
+  var lg='';
+  entries.forEach(function(e){
+    var pct=Math.round(e.amount/total*100);
+    lg+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">'
+      +'<span style="font-size:15px;">'+e.cat.icon+'</span>'
+      +'<span style="width:10px;height:10px;border-radius:3px;background:'+e.cat.color+';flex-shrink:0;"></span>'
+      +'<span style="font-size:12.5px;color:#475569;flex:1;">'+e.key+'</span>'
+      +'<span style="font-size:12.5px;font-weight:700;color:#0f172a;">'+pct+'%</span></div>';
+  });
+  legendEl.innerHTML=lg;
+};
+
 // ══ C-61 소상공인 회계 로직 (폰 저장, 서버 0원) ══
 window._cgoAccType = 'sales';
 window.cgoAccSetType = function(t){
@@ -19999,6 +20064,7 @@ window.cgoAccRender = function(){
   if(elS) elS.textContent=_cgoAccWon(totalSales);
   if(elB) elB.textContent=_cgoAccWon(totalBuy);
   if(elP){ elP.textContent=_cgoAccWon(profit); elP.style.color = profit>=0 ? '#2563eb' : '#dc2626'; }
+  if(typeof _cgoAccRenderDonut==='function') _cgoAccRenderDonut(book);
   // 목록
   var list=document.getElementById('acc-list');
   if(!list) return;
@@ -20009,8 +20075,10 @@ window.cgoAccRender = function(){
   var html='';
   book.forEach(function(x){
     var isS=(x.type==='sales');
+    var _cat = (!isS && typeof _cgoAccCatOf==='function') ? _cgoAccCatOf(x.item) : null;
+    var _ico = isS ? '💵' : (_cat ? _cat.icon : '💸');
     html+='<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:12px 14px;margin-bottom:8px;">'
-      +'<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+(isS?'💵 ':'💸 ')+x.item+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+_ico+' '+x.item+'</div>'
       +'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+x.date+'</div></div>'
       +'<div style="font-size:14px;font-weight:800;color:'+(isS?'#059669':'#dc2626')+';margin:0 10px;white-space:nowrap;">'+(isS?'+':'-')+_cgoAccWon(x.amount)+'</div>'
       +'<div onclick="cgoAccDelete('+x.id+')" style="cursor:pointer;color:#cbd5e1;font-size:16px;padding:4px;">🗑</div>'
@@ -21187,6 +21255,14 @@ function checkHealth(){
       <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:15px;text-align:center;">
         <div style="font-size:11px;color:#2563eb;font-weight:800;">📊 손익</div>
         <div id="acc-profit" style="font-size:19px;font-weight:900;color:#2563eb;margin-top:4px;">0원</div>
+      </div>
+    </div>
+    <!-- 지출 분석 (도넛 + 카테고리) -->
+    <div id="acc-analysis" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;display:none;">
+      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;">📊 지출 분석</div>
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div id="acc-donut" style="flex-shrink:0;"></div>
+        <div id="acc-legend" style="flex:1;min-width:140px;"></div>
       </div>
     </div>
 
