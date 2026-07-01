@@ -6221,6 +6221,14 @@ function cgoGuideFeature(key){
     <div onclick="if(typeof cgoVipEntry==='function')cgoVipEntry()" class="fdash-card menu-lock-item" style="--fc:#fbbf24"><span class="fdash-badge vip">VIP</span><div class="fdash-ico">💎</div><div class="fdash-ttl">VIP</div><div class="fdash-desc">프리미엄 전용</div></div>
   </div>
 </div>
+
+<!-- ════════════════ 7. 시스템 진단 (마스터 전용) ════════════════ -->
+<div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399;display:none">
+  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
+  <div class="fdash-grid" style="grid-template-columns:1fr">
+    <div onclick="if(typeof cgoRunDiagnosis==='function')cgoRunDiagnosis()" class="fdash-card" style="--fc:#34d399;border-color:rgba(52,211,153,.5)"><div class="fdash-ico">🔍</div><div class="fdash-ttl">C-61 자동 진단</div><div class="fdash-desc">앱 전체 오류를 스스로 찾아 수정법까지 추천 (관리자 전용)</div></div>
+  </div>
+</div>
 </div>
         </div>
 
@@ -19852,6 +19860,104 @@ window.cgoFillProfileSummary=function(){
         +'<div style="font-size:11px;color:#94a3b8;margin-bottom:2px;">이용 기간</div>'
         +'<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px;">'+expText+'</div></div>'
     +'</div>';
+};
+
+window.cgoRunDiagnosis=function(){
+  if(window._cgoUnlimited!==true){ alert('🔒 관리자(마스터) 전용 기능입니다.'); return; }
+  var pop=document.getElementById('mypage-pop');
+  var title=document.getElementById('mypage-pop-title');
+  var content=document.getElementById('mypage-pop-content');
+  if(!pop||!content){ alert('진단 창을 열 수 없습니다.'); return; }
+  if(title) title.innerHTML='🔍 C-61 자동 진단';
+  content.innerHTML='<div style="text-align:center;padding:30px 0;color:#64748b;font-size:13px;">🔍 앱 전체를 점검하는 중입니다...</div>';
+  pop.style.display='flex';
+  setTimeout(function(){
+    var report=[];
+    var okCount=0, warnCount=0;
+    // 1) 죽은 onclick 함수 검사
+    try{
+      var deadFns=[];
+      var els=document.querySelectorAll('[onclick]');
+      var checked={};
+      for(var i=0;i<els.length;i++){
+        var oc=els[i].getAttribute('onclick')||'';
+        var m=oc.match(/([a-zA-Z_$][\w$]*)\s*\(/g);
+        if(!m) continue;
+        for(var k=0;k<m.length;k++){
+          var fn=m[k].replace(/\s*\($/,'');
+          if(checked[fn]) continue; checked[fn]=1;
+          // 방어호출(fn && fn())이면 스킵
+          if(oc.indexOf(fn+' &&')>=0 || oc.indexOf(fn+'&&')>=0) continue;
+          if(oc.indexOf("typeof "+fn)>=0) continue;
+          var isGlobal=false;
+          try{ isGlobal=(typeof window[fn]==='function'); }catch(e){}
+          var builtin={showPage:1};
+          if(!isGlobal && typeof eval('typeof '+fn)==='undefined'){
+            if(fn.length>3 && !/^(if|for|while|return|new|typeof)$/.test(fn)) deadFns.push(fn);
+          }
+        }
+      }
+      // 중복제거
+      deadFns=deadFns.filter(function(v,i,a){return a.indexOf(v)===i;});
+      if(deadFns.length===0){ report.push({t:'ok',m:'화면 버튼 함수 — 모두 정상'}); okCount++; }
+      else { report.push({t:'warn',m:'연결 안 된(죽은) 버튼 함수 '+deadFns.length+'개: '+deadFns.slice(0,8).join(', ')}); warnCount++; }
+    }catch(e){ report.push({t:'warn',m:'버튼 검사 중 오류: '+e.message}); warnCount++; }
+
+    // 2) 중복 ID 검사
+    try{
+      var all=document.querySelectorAll('[id]'); var seen={}, dups={};
+      for(var i=0;i<all.length;i++){ var id=all[i].id; if(seen[id]) dups[id]=1; seen[id]=1; }
+      var dupList=Object.keys(dups);
+      if(dupList.length===0){ report.push({t:'ok',m:'중복 ID — 없음'}); okCount++; }
+      else { report.push({t:'warn',m:'중복된 ID '+dupList.length+'개: '+dupList.slice(0,6).join(', ')}); warnCount++; }
+    }catch(e){ report.push({t:'warn',m:'ID 검사 오류: '+e.message}); warnCount++; }
+
+    // 3) 깨진 이미지 검사
+    try{
+      var imgs=document.querySelectorAll('img'); var broken=0;
+      for(var i=0;i<imgs.length;i++){ if(imgs[i].complete && imgs[i].naturalWidth===0) broken++; }
+      if(broken===0){ report.push({t:'ok',m:'이미지 로딩 — 정상 ('+imgs.length+'개)'}); okCount++; }
+      else { report.push({t:'warn',m:'깨진 이미지 '+broken+'개'}); warnCount++; }
+    }catch(e){ report.push({t:'warn',m:'이미지 검사 오류'}); warnCount++; }
+
+    // 4) Supabase 연결 검사
+    try{
+      var sbOk=(typeof window.supabase!=='undefined');
+      if(sbOk){ report.push({t:'ok',m:'Supabase 라이브러리 — 로드됨'}); okCount++; }
+      else { report.push({t:'warn',m:'Supabase 라이브러리 미로드'}); warnCount++; }
+    }catch(e){}
+
+    // 5) 핵심 함수 존재 검사
+    try{
+      var core=['cgoGoPage','_myPop','setLang','cgoSaveSignup'];
+      var miss=core.filter(function(f){ return typeof window[f]!=='function'; });
+      if(miss.length===0){ report.push({t:'ok',m:'핵심 함수 — 모두 존재'}); okCount++; }
+      else { report.push({t:'warn',m:'없는 핵심 함수: '+miss.join(', ')}); warnCount++; }
+    }catch(e){}
+
+    // 리포트 렌더
+    var html='<div style="display:flex;gap:10px;margin-bottom:14px;">'
+      +'<div style="flex:1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:11px;color:#059669;">정상</div><div style="font-size:22px;font-weight:800;color:#059669;">'+okCount+'</div></div>'
+      +'<div style="flex:1;background:'+(warnCount>0?'#fef2f2':'#f8fafc')+';border:1px solid '+(warnCount>0?'#fecaca':'#e2e8f0')+';border-radius:12px;padding:12px;text-align:center;"><div style="font-size:11px;color:'+(warnCount>0?'#dc2626':'#94a3b8')+';">주의</div><div style="font-size:22px;font-weight:800;color:'+(warnCount>0?'#dc2626':'#94a3b8')+';">'+warnCount+'</div></div>'
+    +'</div>';
+    for(var i=0;i<report.length;i++){
+      var r=report[i];
+      var ic=(r.t==='ok'?'✅':'⚠️');
+      var col=(r.t==='ok'?'#065f46':'#991b1b');
+      var bg=(r.t==='ok'?'#f0fdf4':'#fef2f2');
+      html+='<div style="background:'+bg+';border-radius:10px;padding:11px 13px;margin-bottom:8px;font-size:12.5px;color:'+col+';line-height:1.5;">'+ic+' '+r.m+'</div>';
+    }
+    html+='<div style="font-size:10px;color:#94a3b8;margin-top:12px;line-height:1.5;">※ 이 진단은 현재 화면에 로드된 요소 기준입니다. 각 페이지를 열어둔 상태에서 진단하면 더 정확합니다. 「주의」 항목은 실제 확인 후 수정하세요.</div>';
+    content.innerHTML=html;
+  },600);
+};
+window.cgoShowDiagIfMaster=function(){
+  try{
+    if(window._cgoUnlimited===true){
+      var el=document.getElementById('cgo-diag-cat');
+      if(el) el.style.display='';
+    }
+  }catch(e){}
 };
 
 window.cgoComplaintForm=function(){
@@ -125162,6 +125268,7 @@ function cgoGoPage(page){
     target.classList.add('active');
     if(page === 'chat') target.style.display = 'flex';
     if(page === 'mypage' && typeof cgoFillProfileSummary==='function'){ try{ cgoFillProfileSummary(); }catch(e){} }
+    if(typeof cgoShowDiagIfMaster==='function'){ try{ cgoShowDiagIfMaster(); }catch(e){} }
   }
   // 메신저는 오직 cgoOpenMessenger()로만 열림
   var _chatEl = document.getElementById('page-chat');
