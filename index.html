@@ -6248,6 +6248,14 @@ function cgoGuideFeature(key){
   </div>
 </div>
 
+<!-- ════════════════ C-36 소상공인 회계 ════════════════ -->
+<div id="cgo-acct-cat" class="fdash-cat" style="--fc:#0284c7">
+  <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">소상공인 회계 · 세무비용 절약</span><span class="fdash-num">C-36</span></div>
+  <div class="fdash-grid" style="grid-template-columns:1fr">
+    <div id="cgo-acct-card" class="fdash-card" style="--fc:#0284c7;border-color:rgba(2,132,199,.5)" onclick="event.stopPropagation();event.preventDefault();cgoGoPage('account');return false;"><div class="fdash-ico">💰</div><div class="fdash-ttl">C-36 소상공인 회계</div><div class="fdash-desc">💵 세무사 비용 없이 · 간편 장부 · 폰에만 저장</div></div>
+  </div>
+</div>
+
 <!-- ════════════════ 7. 시스템 진단 (마스터 전용) ════════════════ -->
 <div id="cgo-diag-cat" class="fdash-cat" style="--fc:#34d399">
   <div class="fdash-ch"><span class="fdash-dot"></span><span class="fdash-label">자동 앱 검증 · 오류 판별</span><span class="fdash-num">C-61</span></div>
@@ -19935,6 +19943,102 @@ window.cgoDiagGate=function(){
     else { alert('❌ 비밀번호가 올바르지 않습니다.'); }
   })();
 };
+/* ── C-36 회계 로직 ── */
+// ══ C-36 소상공인 회계 로직 (폰 저장, 서버 0원) ══
+window._cgoAccType = 'sales';
+window.cgoAccSetType = function(t){
+  window._cgoAccType = t;
+  var s=document.getElementById('acc-type-sales'), b=document.getElementById('acc-type-buy');
+  if(t==='sales'){
+    s.style.background='#059669'; s.style.color='#fff'; s.style.border='none';
+    b.style.background='#f1f5f9'; b.style.color='#64748b'; b.style.border='1px solid #e2e8f0';
+  } else {
+    b.style.background='#dc2626'; b.style.color='#fff'; b.style.border='none';
+    s.style.background='#f1f5f9'; s.style.color='#64748b'; s.style.border='1px solid #e2e8f0';
+  }
+};
+window._cgoAccLoad = function(){
+  try{ return JSON.parse(localStorage.getItem('cgo_acc_book')||'[]'); }catch(e){ return []; }
+};
+window._cgoAccSave = function(arr){
+  try{ localStorage.setItem('cgo_acc_book', JSON.stringify(arr)); }catch(e){ alert('저장 공간이 부족합니다.'); }
+};
+window.cgoAccAdd = function(){
+  var item=(document.getElementById('acc-item').value||'').trim();
+  var amount=parseInt(document.getElementById('acc-amount').value||'0', 10);
+  var date=document.getElementById('acc-date').value || new Date().toISOString().slice(0,10);
+  if(!item){ alert('항목을 입력해 주세요.'); return; }
+  if(!amount || amount<=0){ alert('금액을 올바르게 입력해 주세요.'); return; }
+  var book=_cgoAccLoad();
+  book.push({ id:Date.now(), type:window._cgoAccType, item:item, amount:amount, date:date });
+  _cgoAccSave(book);
+  document.getElementById('acc-item').value='';
+  document.getElementById('acc-amount').value='';
+  cgoAccRender();
+};
+window.cgoAccDelete = function(id){
+  if(!confirm('이 내역을 삭제할까요?')) return;
+  var book=_cgoAccLoad().filter(function(x){ return x.id!==id; });
+  _cgoAccSave(book);
+  cgoAccRender();
+};
+window._cgoAccWon = function(n){
+  return (n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+};
+window.cgoAccRender = function(){
+  var book=_cgoAccLoad();
+  // 정렬: 최신 날짜 위로
+  book.sort(function(a,b){ return (b.date>a.date)?1:(b.date<a.date?-1:b.id-a.id); });
+  var totalSales=0, totalBuy=0;
+  book.forEach(function(x){ if(x.type==='sales') totalSales+=x.amount; else totalBuy+=x.amount; });
+  var profit=totalSales-totalBuy;
+  var elS=document.getElementById('acc-total-sales'), elB=document.getElementById('acc-total-buy'), elP=document.getElementById('acc-profit');
+  if(elS) elS.textContent=_cgoAccWon(totalSales);
+  if(elB) elB.textContent=_cgoAccWon(totalBuy);
+  if(elP){ elP.textContent=_cgoAccWon(profit); elP.style.color = profit>=0 ? '#2563eb' : '#dc2626'; }
+  // 목록
+  var list=document.getElementById('acc-list');
+  if(!list) return;
+  if(book.length===0){
+    list.innerHTML='<div style="text-align:center;color:#94a3b8;font-size:13px;padding:30px 0;">아직 기록이 없습니다. 위에서 첫 내역을 입력해 보세요.</div>';
+    return;
+  }
+  var html='';
+  book.forEach(function(x){
+    var isS=(x.type==='sales');
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:12px 14px;margin-bottom:8px;">'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#0f172a;">'+(isS?'💵 ':'💸 ')+x.item+'</div>'
+      +'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">'+x.date+'</div></div>'
+      +'<div style="font-size:14px;font-weight:800;color:'+(isS?'#059669':'#dc2626')+';margin:0 10px;white-space:nowrap;">'+(isS?'+':'-')+_cgoAccWon(x.amount)+'</div>'
+      +'<div onclick="cgoAccDelete('+x.id+')" style="cursor:pointer;color:#cbd5e1;font-size:16px;padding:4px;">🗑</div>'
+    +'</div>';
+  });
+  list.innerHTML=html;
+};
+window.cgoAccExport = function(){
+  var book=_cgoAccLoad();
+  if(book.length===0){ alert('내보낼 내역이 없습니다.'); return; }
+  book.sort(function(a,b){ return (a.date>b.date)?1:(a.date<b.date?-1:a.id-b.id); });
+  // CSV 생성 (엑셀에서 열림)
+  var csv='\uFEFF날짜,구분,항목,금액\n';
+  book.forEach(function(x){
+    var t=(x.type==='sales')?'매출':'매입';
+    var itm=(x.item||'').replace(/"/g,'""');
+    csv+=x.date+','+t+',"'+itm+'",'+x.amount+'\n';
+  });
+  var totalSales=0,totalBuy=0;
+  book.forEach(function(x){ if(x.type==='sales') totalSales+=x.amount; else totalBuy+=x.amount; });
+  csv+='\n합계,매출,'+totalSales+'\n합계,매입,'+totalBuy+'\n합계,손익,'+(totalSales-totalBuy)+'\n';
+  try{
+    var blob=new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='CGO회계_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(e){ alert('내보내기에 실패했습니다: '+e.message); }
+};
+
 window.cgoDiagChecklist=function(){
   var box=document.getElementById('cgo-diag-checklist');
   if(!box) return;
@@ -20932,6 +21036,57 @@ function checkHealth(){
   </div>
 </div>
 <!-- /page-diag -->
+<!-- ══ C-36 소상공인 회계 페이지 ══ -->
+<div class="page cgop" id="page-account" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--acc:#0284c7;--acc2:#0369a1;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(2,132,199,.25),rgba(56,189,248,.15));border:2px solid rgba(2,132,199,.7);border-radius:22px;color:#0284c7;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(2,132,199,.3);">🏠 대시보드</button>
+
+  <div style="max-width:760px;margin:0 auto;padding:22px 16px 110px;">
+    <!-- 헤더 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:26px;">💰</span>
+      <div style="font-size:22px;font-weight:900;color:#0284c7;">C-36 소상공인 회계</div>
+    </div>
+    <div style="font-size:13px;color:#64748b;line-height:1.6;margin-bottom:20px;">세무사 비용 없이 사장님이 직접 관리하는 간편 장부입니다. 매출·매입을 입력하면 자동으로 합계·손익을 계산합니다. <b style="color:#0284c7;">모든 데이터는 이 폰에만 저장</b>되며 외부로 전송되지 않습니다.</div>
+
+    <!-- 자금 현황 대시보드 -->
+    <div style="display:flex;gap:9px;margin-bottom:18px;">
+      <div style="flex:1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:15px;text-align:center;">
+        <div style="font-size:11px;color:#059669;font-weight:800;">💵 총 매출</div>
+        <div id="acc-total-sales" style="font-size:19px;font-weight:900;color:#059669;margin-top:4px;">0원</div>
+      </div>
+      <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:15px;text-align:center;">
+        <div style="font-size:11px;color:#dc2626;font-weight:800;">💸 총 매입</div>
+        <div id="acc-total-buy" style="font-size:19px;font-weight:900;color:#dc2626;margin-top:4px;">0원</div>
+      </div>
+      <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:15px;text-align:center;">
+        <div style="font-size:11px;color:#2563eb;font-weight:800;">📊 손익</div>
+        <div id="acc-profit" style="font-size:19px;font-weight:900;color:#2563eb;margin-top:4px;">0원</div>
+      </div>
+    </div>
+
+    <!-- 입력 카드 -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;">➕ 내역 입력</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button id="acc-type-sales" onclick="cgoAccSetType('sales')" style="flex:1;padding:10px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;">💵 매출(수입)</button>
+        <button id="acc-type-buy" onclick="cgoAccSetType('buy')" style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">💸 매입(지출)</button>
+      </div>
+      <input id="acc-item" type="text" placeholder="항목 (예: 재료비, 배달수수료, 매장매출)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
+      <input id="acc-amount" type="number" inputmode="numeric" placeholder="금액 (원)" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:9px;" />
+      <input id="acc-date" type="date" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:12px;" />
+      <button onclick="cgoAccAdd()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">＋ 장부에 기록</button>
+    </div>
+
+    <!-- 내역 목록 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:15px;font-weight:800;color:#0f172a;">📒 장부 내역</div>
+      <button onclick="cgoAccExport()" style="padding:7px 13px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;font-weight:700;color:#059669;cursor:pointer;">📤 엑셀 내보내기</button>
+    </div>
+    <div id="acc-list"></div>
+  </div>
+</div>
+<!-- /page-account -->
+
 
 
     <div class="page cgop" id="page-naming" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;--cyan:#0284c7;--acc:#b8860b;--acc2:#8a6508;">
@@ -125566,6 +125721,7 @@ function cgoGoPage(page){
     if(page === 'mypage' && typeof cgoFillProfileSummary==='function'){ try{ cgoFillProfileSummary(); }catch(e){} }
     if(typeof cgoShowDiagIfMaster==='function'){ try{ cgoShowDiagIfMaster(); }catch(e){} }
     if(page === 'diag' && typeof cgoDiagChecklist==='function'){ try{ cgoDiagChecklist(); }catch(e){} }
+    if(page === 'account' && typeof cgoAccRender==='function'){ try{ cgoAccRender(); }catch(e){} }
   }
   // 메신저는 오직 cgoOpenMessenger()로만 열림
   var _chatEl = document.getElementById('page-chat');
