@@ -3091,10 +3091,12 @@ function entSplashGo(){
     var _builtinMaster=(_mpwh==='5d45311734ef71c4832571f9b5cbf9f3d4dcb4df5c32f9ec6fcd63cbe37b8e20' && ch.coord===6000006 && _col===6);
     if(_dynMaster || _builtinMaster){
       window._cgoUnlimited=true;
+      try{ localStorage.setItem('cgo_master_on','1'); }catch(e){}   // C-61: 새로고침 후에도 마스터 무제한 유지 (2회 제한 우회)
       msg.style.color='#0d9488'; msg.textContent='✅ 마스터 인증 — 무제한 모드';
       setTimeout(_entPwSuccess, 500); return;
     }
     window._cgoUnlimited=false;
+    try{ localStorage.removeItem('cgo_master_on'); }catch(e){}   // C-61: 비마스터는 마스터 플래그 제거
     var v2=null; try{ v2=JSON.parse(localStorage.getItem('cgo_fuli_pw_v2')||'null'); }catch(e){}
     try{
       if(window.MUFE_WASM && v2){
@@ -17566,11 +17568,6 @@ var Q_POOL = {
       var domainEmoji = { pattern:'🔷 패턴 인식', spatial:'🧊 공간 추론', verbal:'📖 언어 능력', numeric:'🔢 수리 논리', memory:'🧠 작업 기억' };
       var out = [];
       Object.keys(c).forEach(function(d){
-        if(d==='pattern' || d==='spatial'){  // C-61: 깨진 외부 이미지(pattern-images/·spatial-images/) 대신 SVG 매트릭스 생성
-          var _mxq = _iqBuildMatrixQuestions(c[d]);
-          _mxq.forEach(function(_mq){ _mq.domain = domainEmoji[d]; out.push(_mq); });
-          return;
-        }
         var pool = (Q_POOL[d] || []).slice();
         // 셔플
         for(var i=pool.length-1; i>0; i--){
