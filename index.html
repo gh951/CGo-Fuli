@@ -142596,6 +142596,21 @@ C37._autoStart = function(){
   if(typeof window.cgoGoPage === 'function'){
     C37._origGoPage = window.cgoGoPage;
     window.cgoGoPage = function(page){
+      // C-61: 재진입 시 '처음 들어온 것처럼' 초기화 — 첫 진입 원본 저장, 재진입 시 복원 + 카메라 정지 (대시보드·정보입력 제외, 입구 무관)
+      try{
+        if(page !== 'dashboard' && page !== 'profile'){
+          var _rpg = document.getElementById('page-'+page);
+          if(_rpg){
+            if(!window._cgoPageSnap){ window._cgoPageSnap = {}; }
+            if(window._cgoPageSnap[page] === undefined){
+              window._cgoPageSnap[page] = _rpg.innerHTML;
+            } else {
+              try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
+              _rpg.innerHTML = window._cgoPageSnap[page];
+            }
+          }
+        }
+      }catch(e){}
       var r = C37._origGoPage.apply(this, arguments);
       var rppgPages = ['scan','rppg-ar','algo-v2','algo','couple','food','svi','family','report','report-v2'];
       if(rppgPages.indexOf(page) > -1 && !C37.imu.supported){
