@@ -126308,6 +126308,21 @@ function cgoGoPage(page){
     p.classList.remove('active');
     if(p.id === 'page-chat') p.style.display = 'none';
   });
+  // C-61: 재진입 '처음처럼' 초기화 — 첫 진입 원본 저장, 재진입 시 복원 + 카메라 정지 (대시보드·정보입력 제외)
+  try{
+    if(page !== 'dashboard' && page !== 'profile'){
+      var _rpg = document.getElementById('page-'+page);
+      if(_rpg){
+        if(!window._cgoPageSnap){ window._cgoPageSnap = {}; }
+        if(window._cgoPageSnap[page] === undefined){
+          window._cgoPageSnap[page] = _rpg.innerHTML;
+        } else {
+          try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
+          _rpg.innerHTML = window._cgoPageSnap[page];
+        }
+      }
+    }
+  }catch(e){}
   // 대상 페이지 표시
   var target = document.getElementById('page-'+page);
   if(target){
@@ -129572,6 +129587,21 @@ function cgoGoPage(page){
   }
   // 모든 페이지 숨기기
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  // C-61: 재진입 '처음처럼' 초기화 — 첫 진입 원본 저장, 재진입 시 복원 + 카메라 정지 (대시보드·정보입력 제외)
+  try{
+    if(page !== 'dashboard' && page !== 'profile'){
+      var _rpg = document.getElementById('page-'+page);
+      if(_rpg){
+        if(!window._cgoPageSnap){ window._cgoPageSnap = {}; }
+        if(window._cgoPageSnap[page] === undefined){
+          window._cgoPageSnap[page] = _rpg.innerHTML;
+        } else {
+          try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
+          _rpg.innerHTML = window._cgoPageSnap[page];
+        }
+      }
+    }
+  }catch(e){}
   // 대상 페이지 표시
   var target = document.getElementById('page-'+page);
   if(target) target.classList.add('active');
