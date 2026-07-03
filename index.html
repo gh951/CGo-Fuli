@@ -17566,6 +17566,11 @@ var Q_POOL = {
       var domainEmoji = { pattern:'🔷 패턴 인식', spatial:'🧊 공간 추론', verbal:'📖 언어 능력', numeric:'🔢 수리 논리', memory:'🧠 작업 기억' };
       var out = [];
       Object.keys(c).forEach(function(d){
+        if(d==='pattern' || d==='spatial'){  // C-61: 깨진 외부 이미지(pattern-images/·spatial-images/) 대신 SVG 매트릭스 생성
+          var _mxq = _iqBuildMatrixQuestions(c[d]);
+          _mxq.forEach(function(_mq){ _mq.domain = domainEmoji[d]; out.push(_mq); });
+          return;
+        }
         var pool = (Q_POOL[d] || []).slice();
         // 셔플
         for(var i=pool.length-1; i>0; i--){
