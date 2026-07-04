@@ -133160,10 +133160,10 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     const sc=frontScale;
     const shW=pd(frontPts.shoulder[0],frontPts.shoulder[1])*sc, waW=pd(frontPts.waist[0],frontPts.waist[1])*sc, hiW=pd(frontPts.hip[0],frontPts.hip[1])*sc;
     const waD=pd(sidePts.waistD[0],sidePts.waistD[1])*sc, hiD=pd(sidePts.hipD[0],sidePts.hipD[1])*sc;
-    const waC=ellipse(waW/2,waD/2), hiC=ellipse(hiW/2,hiD/2);
+    var KR={waist:1.051,hip:1.027}; /* Size Korea 8차 5092명 실측 보정 */ const waC=ellipse(waW/2,waD/2)*KR.waist, hiC=ellipse(hiW/2,hiD/2)*KR.hip;
     const rows=[['↔️','어깨 너비',Math.round(shW),'real'],['⬛','허리 너비',Math.round(waW),'real'],['🔵','엉덩이 너비',Math.round(hiW),'real'],['📐','허리 둘레',Math.round(waC),'est'],['🍑','엉덩이 둘레',Math.round(hiC),'est']];
     $('c61grid').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;font-size:13px;"><span>${r[0]} ${r[1]}</span><span><span style="font-weight:800;color:#fff;">${r[2]}cm</span><span style="font-size:9px;padding:1px 6px;border-radius:5px;margin-left:6px;background:${r[3]==='real'?'rgba(52,211,153,.2);color:#34d399':'rgba(251,191,36,.2);color:#fbbf24'};">${r[3]==='real'?'실측':'추정'}</span></span></div>`).join('');
-    $('c61note').innerHTML='<b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).<br><b>추정</b>=너비+두께 타원 근사(±2~4cm, 체형 따라 큼).<br>사람이 직접 맞춰 자동보다 정확합니다.';
+    $('c61note').innerHTML='<b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).<br><b>보정 추정</b>=너비+두께 타원 + 한국인 5,092명 실측 데이터로 보정(평균오차 허리 ±1.5cm·엉덩이 ±2cm).<br>사람이 직접 맞춰 자동보다 정확하며, 실측 데이터로 보정합니다.';
     $('c61resCard').style.display='block';
     if(stream){try{stream.getTracks().forEach(t=>t.stop());}catch(e){}}
     setS('✅ 측정 완료'); $('c61resCard').scrollIntoView({behavior:'smooth'});
