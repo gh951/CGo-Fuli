@@ -31250,7 +31250,7 @@ window.tvyShowIntroPopup = function(){
 
       <!-- 신뢰 푸터 -->
       <div style="text-align:center;margin-top:12px;font-size:9px;color:rgba(167,139,250,.5);letter-spacing:.08em;">
-        BUJEOK SERIES · 19 PRODUCTS · WORLD-FIRST AI × ORIENTAL DESIGN<br>
+        BUJEOK SERIES · 19 PRODUCTS · AI × ORIENTAL DESIGN<br>
         CGO-FULI · 특허 10-2026-0060113
       </div>
 
@@ -31259,16 +31259,16 @@ window.tvyShowIntroPopup = function(){
     <div id="bodyMeasureMain" style="background:rgba(16,24,40,.9);border:1px solid rgba(52,211,153,.25);border-radius:18px;padding:20px;margin-bottom:18px;">
       <div style="font-size:13px;font-weight:800;color:#34d399;display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         📐 나만의 오행 의류 — 신체 치수 자동 측정
-        <span style="font-size:9px;background:rgba(52,211,153,.15);padding:2px 8px;border-radius:8px;color:#34d399;font-weight:600;">슈트·트레이닝 맞춤 제작</span>
+        <span style="font-size:12px;background:#34d399;padding:2px 10px;border-radius:8px;color:#04170f;font-weight:900;">🆕 C-61 v1</span>
       </div>
-      <div style="font-size:11px;color:#666;margin-bottom:14px;">정면+측면 2장 촬영으로 8가지 치수를 자동으로 측정합니다</div>
+      <div style="font-size:11px;color:#666;margin-bottom:14px;">정면+측면 촬영 → 라인을 직접 드래그로 보정 → 정직한 실측 (과장 없음)</div>
 
       <!-- 작동 순서 -->
       <div style="background:rgba(0,0,0,.3);border-radius:12px;padding:12px;margin-bottom:16px;">
         <div style="font-size:11px;font-weight:700;color:rgba(52,211,153,.7);margin-bottom:8px;">📋 작동 순서</div>
         <div style="display:flex;flex-direction:column;gap:5px;">
           <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">①</span>키 / 몸무게 입력 (cm / kg)</div>
-          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">②</span>📸 촬영 시작 → 후면 카메라 켜짐 + 인체 가이드 실루엣 표시</div>
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">②</span>📸 촬영 시작 → C-61 측정 카메라 (관절 인식 + 라인 드래그 보정)</div>
           <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">③</span>정면 촬영 → 자동으로 측면 촬영으로 전환</div>
           <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">④</span>측면 촬영 완료</div>
           <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#d4a843;font-weight:800;flex-shrink:0;">⑤</span>⚡ 치수 분석 버튼 → 약 2초 후 결과 표시</div>
@@ -78993,25 +78993,10 @@ var BM2_UNITS  = ['cm','cm','cm','cm','cm','cm','cm',''];
 var BM2_VALS   = {};
 
 function bm2Start(){
-  var h=parseFloat(document.getElementById('bmHeight2').value);
-  var w=parseFloat(document.getElementById('bmWeight2').value);
-  if(!h||!w){alert('키와 몸무게를 먼저 입력해주세요 😊');return;}
-  BM2.height=h; BM2.weight=w;
-  document.getElementById('bm2CamWrap').style.display='block';
-  document.getElementById('bm2StartBtn').style.display='none';
-  document.getElementById('bm2GuideText').textContent=BM2.step===1?'정면을 향해 똑바로 서주세요':'옆으로 돌아서 주세요 (측면)';
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert('카메라를 지원하지 않는 브라우저입니다.');return;}
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
-    .catch(function(){return navigator.mediaDevices.getUserMedia({video:true});})
-    .then(function(s){
-      BM2.stream=s;
-      var v=document.getElementById('bm2Video');
-      if(v){
-        v.srcObject=s;
-        v.onloadedmetadata=function(){ v.play().catch(function(){}); };
-        v.style.display='block';
-      }
-    }).catch(function(){alert('카메라 권한을 허용해주세요');document.getElementById('bm2StartBtn').style.display='block';});
+  // ★ C-61: 옛 위저드 건너뛰고 진짜 측정 카메라 바로 열기
+  var ov=document.getElementById('cgoC61Ov');
+  if(ov){ try{ if(window._c61Reset) window._c61Reset(); }catch(e){} ov.style.display='block'; }
+  else { alert('측정 모듈을 불러오지 못했습니다. 새로고침 해주세요.'); }
 }
 
 function bm2Shoot(){
@@ -133062,6 +133047,7 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
 
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;">
       <div id="c61stage" style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:3/4;touch-action:none;">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:900;color:rgba(52,211,153,.35);pointer-events:none;z-index:2;text-shadow:0 0 20px rgba(0,0,0,.5);">1</div>
         <video id="c61vid" playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
         <canvas id="c61frz" style="position:absolute;inset:0;width:100%;height:100%;display:none;"></canvas>
         <canvas id="c61edt" style="position:absolute;inset:0;width:100%;height:100%;z-index:3;"></canvas>
