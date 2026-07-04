@@ -133030,15 +133030,6 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
       <button onclick="document.getElementById('cgoC61Ov').style.display='none';try{if(window._c61Stop)window._c61Stop();}catch(e){}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#e2e8f0;font-size:16px;cursor:pointer;">✕</button>
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">드래그 보정 · 사람이 라인을 직접 맞추는 정직한 측정</div>
-
-    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:6px;">① 키 입력 (스케일 기준 · 필수)</div>
-      <div style="display:flex;gap:8px;">
-        <input id="c61H" type="number" min="120" max="220" placeholder="키 cm 예:170" inputmode="numeric" style="flex:1;background:#0f172a;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:11px;color:#e2e8f0;font-size:15px;font-weight:700;text-align:center;outline:none;">
-        <select id="c61G" style="flex:0 0 100px;background:#0f172a;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:11px;color:#e2e8f0;font-size:15px;font-weight:700;text-align:center;outline:none;"><option value="M">남성</option><option value="F">여성</option></select>
-      </div>
-    </div>
-
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <div id="c61tab1" style="flex:1;text-align:center;padding:8px;border-radius:8px;font-size:11px;font-weight:700;background:rgba(52,211,153,.2);color:#34d399;">정면 촬영</div>
       <div id="c61tab2" style="flex:1;text-align:center;padding:8px;border-radius:8px;font-size:11px;font-weight:700;background:rgba(255,255,255,.05);color:#64748b;">라인 보정</div>
@@ -133112,7 +133103,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   document.addEventListener('click', async(e)=>{
     const t=e.target; if(!t||!t.id) return;
     if(t.id==='c61cam'){
-      const h=parseFloat($('c61H').value); if(!h||h<120||h>220){ alert('키를 먼저 입력하세요 (120~220)'); return; }
+      const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert('앞 화면에서 키를 먼저 입력하세요 (120~220cm)'); return; }
       $('c61cam').disabled=true;
       try{ if(!pose) await initPose(); }catch(err){ setS('❌ 엔진 실패: '+err.message); $('c61cam').disabled=false; return; }
       try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent='📷 켜짐'; setS(phase==='front'?'전신 정면으로 서서 [촬영]':'전신 측면(90°)으로 서서 [촬영]'); }
@@ -133132,7 +133123,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     const lm=res.landmarks[0].map(p=>({x:map.ox+p.x*map.vw*map.sc,y:map.oy+p.y*map.vh*map.sc}));
     if(phase==='front'){
       const eyeY=(lm[2].y+lm[5].y)/2,noseY=lm[0].y,ankY=(lm[27].y+lm[28].y)/2,topY=noseY-(noseY-eyeY)*4.5,hPx=ankY-topY;
-      frontScale=parseFloat($('c61H').value)/hPx;
+      frontScale=parseFloat((document.getElementById('bmHeight2')||{}).value)/hPx;
       const hipL=lm[23],hipR=lm[24],cx=(hipL.x+hipR.x)/2,hipW=Math.abs(hipR.x-hipL.x),midHipY=(hipL.y+hipR.y)/2,torso=midHipY-(lm[11].y+lm[12].y)/2,waistY=midHipY-torso*0.18;
       frontPts={ shoulder:[{x:lm[11].x,y:lm[11].y},{x:lm[12].x,y:lm[12].y}], waist:[{x:cx-hipW*0.45,y:waistY},{x:cx+hipW*0.45,y:waistY}], hip:[{x:cx-hipW*0.6,y:midHipY},{x:cx+hipW*0.6,y:midHipY}] };
       phase='edit'; $('c61tab2').style.cssText=$('c61tab2').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;');
