@@ -133036,6 +133036,12 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
       <div id="c61tab3" style="flex:1;text-align:center;padding:8px;border-radius:8px;font-size:11px;font-weight:700;background:rgba(255,255,255,.05);color:#64748b;">측면·결과</div>
     </div>
 
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;">
+      <span style="font-size:11px;color:#94a3b8;flex-shrink:0;">체형 기준:</span>
+      <button id="c61rEA" style="flex:1;padding:7px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:rgba(52,211,153,.2);color:#34d399;">동아시아형</button>
+      <button id="c61rWE" style="flex:1;padding:7px;border-radius:8px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:rgba(255,255,255,.05);color:#64748b;">서구형</button>
+    </div>
+
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;">
       <div id="c61stage" style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:3/4;touch-action:none;">
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:900;color:rgba(52,211,153,.35);pointer-events:none;z-index:2;text-shadow:0 0 20px rgba(0,0,0,.5);">1</div>
@@ -133070,7 +133076,8 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
 import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 (function(){
   let pose=null, stream=null, phase='front';
-  let frontPts=null, frontScale=1, sidePts=null;
+  let frontPts=null, frontScale=1, sidePts=null, sideScale=1;
+  var CORR={ea:{waist:1.051,hip:1.027,chest:1.172},we:{waist:1.057,hip:1.092,chest:1.214}}; var c61Region='ea';
   const $=id=>document.getElementById(id);
   let CW=0,CH=0, curPts=null, dragging=null;
   const vid=()=>$('c61vid'), frz=()=>$('c61frz'), edt=()=>$('c61edt');
@@ -133109,6 +133116,9 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent='📷 켜짐'; setS(phase==='front'?'전신 정면으로 서서 [촬영]':'전신 측면(90°)으로 서서 [촬영]'); }
       catch(err){ setS('❌ 카메라 실패: '+err.message); $('c61cam').disabled=false; }
     }
+    else if(t.id==='c61rEA'||t.id==='c61rWE'){ c61Region=t.id==='c61rEA'?'ea':'we';
+      $('c61rEA').style.background=c61Region==='ea'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rEA').style.color=c61Region==='ea'?'#34d399':'#64748b';
+      $('c61rWE').style.background=c61Region==='we'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rWE').style.color=c61Region==='we'?'#34d399':'#64748b'; }
     else if(t.id==='c61shoot'){ doShoot(); }
     else if(t.id==='c61conf'){ doConfirm(); }
     else if(t.id==='c61retry'){ edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; $('c61conf').style.display='none'; $('c61shoot').style.display=''; $('c61hint').style.display='none'; if(phase==='edit')phase='front'; if(phase==='editSide')phase='side'; setS('다시 촬영하세요'); }
@@ -133130,6 +133140,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       $('c61hint').style.display='block'; $('c61shoot').style.display='none'; $('c61conf').style.display='';
       setS('노란 점을 드래그해 어깨·허리·엉덩이 라인을 맞추세요'); drawEdit(frontPts);
     } else if(phase==='side'){
+      const eyeYs=(lm[2].y+lm[5].y)/2,noseYs=lm[0].y,ankYs=(lm[27].y+lm[28].y)/2,topYs=noseYs-(noseYs-eyeYs)*4.5,hPxs=ankYs-topYs; sideScale=parseFloat((document.getElementById('bmHeight2')||{}).value)/hPxs;
       const midHipY=(lm[23].y+lm[24].y)/2,cx=(lm[23].x+lm[24].x)/2,tw=Math.abs(lm[11].x-lm[23].x)+40;
       sidePts={ chestD:[{x:cx-tw*0.38,y:midHipY-100},{x:cx+tw*0.38,y:midHipY-100}], waistD:[{x:cx-tw*0.35,y:midHipY-30},{x:cx+tw*0.35,y:midHipY-30}], hipD:[{x:cx-tw*0.42,y:midHipY+30},{x:cx+tw*0.42,y:midHipY+30}] };
       phase='editSide'; $('c61shoot').style.display='none'; $('c61conf').style.display=''; $('c61hint').style.display='block';
@@ -133157,13 +133168,14 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   }
   function pd(p0,p1){ return Math.hypot(p0.x-p1.x,p0.y-p1.y); }
   function compute(){
-    const sc=frontScale;
+    const sc=frontScale, sd=sideScale;
     const shW=pd(frontPts.shoulder[0],frontPts.shoulder[1])*sc, chW=pd(frontPts.chest[0],frontPts.chest[1])*sc, waW=pd(frontPts.waist[0],frontPts.waist[1])*sc, hiW=pd(frontPts.hip[0],frontPts.hip[1])*sc;
-    const chD=pd(sidePts.chestD[0],sidePts.chestD[1])*sc, waD=pd(sidePts.waistD[0],sidePts.waistD[1])*sc, hiD=pd(sidePts.hipD[0],sidePts.hipD[1])*sc;
-    var KR={waist:1.051,hip:1.027,chest:1.172}; /* Size Korea 8차 5092명 실측 보정 */ const waC=ellipse(waW/2,waD/2)*KR.waist, hiC=ellipse(hiW/2,hiD/2)*KR.hip, chC=ellipse(chW/2,chD/2)*KR.chest;
+    const chD=pd(sidePts.chestD[0],sidePts.chestD[1])*sd, waD=pd(sidePts.waistD[0],sidePts.waistD[1])*sd, hiD=pd(sidePts.hipD[0],sidePts.hipD[1])*sd;
+    var KR=CORR[c61Region]; /* 지역별 실측 보정: 동아시아=Size Korea 5092명 / 서구=ANSUR II 6068명 */ const waC=ellipse(waW/2,waD/2)*KR.waist, hiC=ellipse(hiW/2,hiD/2)*KR.hip, chC=ellipse(chW/2,chD/2)*KR.chest;
     const rows=[['↔️','어깨 너비',Math.round(shW),'real'],['🫀','가슴 너비',Math.round(chW),'real'],['⬛','허리 너비',Math.round(waW),'real'],['🔵','엉덩이 너비',Math.round(hiW),'real'],['👕','가슴 둘레',Math.round(chC),'est'],['📐','허리 둘레',Math.round(waC),'est'],['🍑','엉덩이 둘레',Math.round(hiC),'est']];
     $('c61grid').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;font-size:13px;"><span>${r[0]} ${r[1]}</span><span><span style="font-weight:800;color:#fff;">${r[2]}cm</span><span style="font-size:9px;padding:1px 6px;border-radius:5px;margin-left:6px;background:${r[3]==='real'?'rgba(52,211,153,.2);color:#34d399':'rgba(251,191,36,.2);color:#fbbf24'};">${r[3]==='real'?'실측':'추정'}</span></span></div>`).join('');
-    $('c61note').innerHTML='<b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).<br><b>보정 추정</b>=너비+두께 타원 + 한국인 5,092명 실측 데이터로 보정(평균오차 허리 ±1.5cm·엉덩이 ±2cm).<br>사람이 직접 맞춰 자동보다 정확하며, 실측 데이터로 보정합니다.';
+    var matchPct=Math.max(0,Math.min(100,Math.round(100-Math.abs(sd-sc)/sc*100)));
+    $('c61note').innerHTML='<b>정면·측면 거리 일치율 '+matchPct+'%</b> — 각 사진을 키로 독립 보정하므로 낮아도 계산되나, 높을수록 정확합니다.<br><b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).<br><b>보정 추정</b>=너비+두께 타원 + '+(c61Region==='ea'?'동아시아 5,092명(Size Korea)':'서구 6,068명(ANSUR II)')+' 실측 데이터로 보정.<br>사람이 직접 맞춰 자동보다 정확하며, 실측 데이터로 보정합니다.';
     $('c61resCard').style.display='block';
     if(stream){try{stream.getTracks().forEach(t=>t.stop());}catch(e){}}
     setS('✅ 측정 완료'); $('c61resCard').scrollIntoView({behavior:'smooth'});
