@@ -8357,7 +8357,7 @@ function cgoGuideFeature(key){
 
     <!-- 상단 헤더 -->
     <div class="dfu-top">
-      <div class="dfu-logo"><span class="dfu-moon">🌙</span> FULI<span>꿈해몽</span></div>
+      <div class="dfu-logo"><span class="dfu-moon">🌙</span> 꿈 해몽</div>
       <button class="dfu-top-btn" onclick="cgoGoPage('dashboard')">대시보드</button>
     </div>
 
@@ -129566,7 +129566,7 @@ document.addEventListener('DOMContentLoaded', function(){
 function cgoGoPage(page){
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
   /* C-60 게이트: 정보 미입력 시 기능 페이지 비활성화 (홈/프로필/상점만 허용) */
-  try{ var _wl={dashboard:1,profile:1,shop:1}; if(page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
+  try{ var _wl={dashboard:1,profile:1,shop:1}; if(false && page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
   /* ▼ C-60 사용 제한 게이트: 기능 페이지 하루 2회 (마스터 무제한). 비기능 페이지는 제외 ▼ */
   try{
     var _ng={dashboard:1,profile:1,mypage:1,shop:1,star:1,vip:1,howto:1,membership:1,'algo-v2':1,diag:1,account:1};
@@ -132985,6 +132985,19 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
     document.body.style.paddingTop='';
   }
   window._cgoHideFeatBar=hideBar;
+  // 페이지가 자체 헤더를 이미 갖고 있으면 전역 바 안 띄움 (중복 방지)
+  function hasOwnHeader(){
+    var cands=document.querySelectorAll('[class$="-logo"],[class$="-top"]');
+    for(var i=0;i<cands.length;i++){
+      var el=cands[i];
+      if(el.id==='cgoFeatBar') continue;
+      if(el.closest&&(el.closest('aside')||el.closest('.topbar'))) continue;
+      if(el.offsetParent===null) continue;
+      var r=el.getBoundingClientRect();
+      if(r.top>=-20 && r.top<180 && r.width>120) return true;
+    }
+    return false;
+  }
   // 카드 클릭 감지 — cgoGoPage든 자기 함수든 팝업이든 모두 잡힘
   document.addEventListener('click', function(e){
     var t=e.target; if(!t||!t.closest) return;
@@ -132993,7 +133006,15 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
       var ico=card.querySelector('.fdash-ico'), ttl=card.querySelector('.fdash-ttl');
       if(ttl && ttl.textContent.trim()){
         var i=ico?ico.textContent.trim():'', n=ttl.textContent.trim();
-        setTimeout(function(){ showBar(i,n); }, 30);
+        setTimeout(function(){
+          var tb=document.querySelector('.topbar'); if(tb) tb.style.display='none';
+          if(hasOwnHeader()){
+            var bar=document.getElementById('cgoFeatBar'); if(bar) bar.style.display='none';
+            document.body.style.paddingTop='';
+          } else {
+            showBar(i,n);
+          }
+        }, 45);
       }
     }
   }, true);
