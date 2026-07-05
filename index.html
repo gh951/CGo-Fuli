@@ -133045,6 +133045,12 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:12px;">
       <div id="c61stage" style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:3/4;touch-action:none;">
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:900;color:rgba(52,211,153,.35);pointer-events:none;z-index:2;text-shadow:0 0 20px rgba(0,0,0,.5);">1</div>
+        <div id="c61cross" style="position:absolute;inset:0;pointer-events:none;z-index:2;">
+          <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(52,211,153,.55);transform:translateX(-50%);"></div>
+          <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(52,211,153,.55);transform:translateY(-50%);"></div>
+          <div style="position:absolute;left:50%;top:50%;width:14px;height:14px;border:2px solid rgba(52,211,153,.8);border-radius:50%;transform:translate(-50%,-50%);"></div>
+          <div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:10px;color:rgba(52,211,153,.9);font-weight:700;white-space:nowrap;">몸 중심을 십자선에 맞추세요</div>
+        </div>
         <video id="c61vid" playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
         <canvas id="c61frz" style="position:absolute;inset:0;width:100%;height:100%;display:none;"></canvas>
         <canvas id="c61edt" style="position:absolute;inset:0;width:100%;height:100%;z-index:3;"></canvas>
@@ -133052,7 +133058,7 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
       </div>
       <div id="c61hint" style="display:none;font-size:11px;color:#34d399;text-align:center;margin:6px 0;font-weight:700;">🟡 노란 점을 드래그해 각 라인을 실제 몸에 맞추세요</div>
       <div id="c61st" style="font-size:11px;color:#94a3b8;text-align:center;margin-top:8px;min-height:16px;"></div>
-      <div style="margin-top:10px;"><button id="c61cam" style="width:100%;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:800;background:linear-gradient(135deg,#34d399,#059669);color:#04170f;cursor:pointer;">📷 카메라 켜기</button></div>
+      <div style="margin-top:10px;display:flex;gap:8px;"><button id="c61cam" style="flex:1;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:800;background:linear-gradient(135deg,#34d399,#059669);color:#04170f;cursor:pointer;">📷 카메라 켜기</button><button id="c61flip" style="flex:0 0 auto;padding:12px 16px;border:none;border-radius:11px;font-size:14px;font-weight:800;background:rgba(255,255,255,.1);color:#cbd5e1;cursor:pointer;">🔄 반전</button></div>
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button id="c61shoot" disabled style="flex:1;border-radius:11px;padding:12px;font-size:14px;font-weight:800;background:rgba(255,255,255,.08);color:#cbd5e1;border:1px solid rgba(255,255,255,.14);cursor:pointer;">📸 촬영</button>
         <button id="c61conf" style="display:none;flex:1;border-radius:11px;padding:12px;font-size:14px;font-weight:800;background:rgba(255,255,255,.08);color:#cbd5e1;border:1px solid rgba(255,255,255,.14);cursor:pointer;">✅ 이 라인으로</button>
@@ -133075,7 +133081,7 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
 <script type="module">
 import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 (function(){
-  let pose=null, stream=null, phase='front';
+  let pose=null, stream=null, phase='front', facing='environment';
   let frontPts=null, frontScale=1, sidePts=null, sideScale=1;
   var CORR={ea:{waist:1.051,hip:1.027,chest:1.172},we:{waist:1.057,hip:1.092,chest:1.214}}; var c61Region='ea';
   const $=id=>document.getElementById(id);
@@ -133095,7 +133101,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 
   function resetAll(){ phase='front'; frontPts=null; sidePts=null;
     if(stream){ try{stream.getTracks().forEach(t=>t.stop());}catch(e){} stream=null; }
-    vid().style.display='block'; frz().style.display='none';
+    vid().style.display='block'; if($('c61cross'))$('c61cross').style.display=''; frz().style.display='none';
     edt().getContext('2d').clearRect(0,0,CW,CH);
     $('c61resCard').style.display='none'; $('c61hint').style.display='none';
     $('c61conf').style.display='none'; $('c61shoot').style.display='';
@@ -133113,21 +133119,28 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert('앞 화면에서 키를 먼저 입력하세요 (120~220cm)'); return; }
       $('c61cam').disabled=true;
       try{ if(!pose) await initPose(); }catch(err){ setS('❌ 엔진 실패: '+err.message); $('c61cam').disabled=false; return; }
-      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent='📷 켜짐'; setS(phase==='front'?'전신 정면으로 서서 [촬영]':'전신 측면(90°)으로 서서 [촬영]'); }
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent='📷 켜짐'; setS(phase==='front'?'전신 정면으로 서서 [촬영]':'전신 측면(90°)으로 서서 [촬영]'); }
       catch(err){ setS('❌ 카메라 실패: '+err.message); $('c61cam').disabled=false; }
     }
     else if(t.id==='c61rEA'||t.id==='c61rWE'){ c61Region=t.id==='c61rEA'?'ea':'we';
       $('c61rEA').style.background=c61Region==='ea'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rEA').style.color=c61Region==='ea'?'#34d399':'#64748b';
       $('c61rWE').style.background=c61Region==='we'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rWE').style.color=c61Region==='we'?'#34d399':'#64748b'; }
+    else if(t.id==='c61flip'){
+      facing = facing==='environment'?'user':'environment';
+      if(stream){ try{stream.getTracks().forEach(x=>x.stop());}catch(e){}
+        try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); setS(facing==='user'?'전면(셀피) 카메라 — 거울처럼 보임':'후면 카메라'); }
+        catch(e){ setS('❌ 카메라 전환 실패'); }
+      } else { setS(facing==='user'?'전면 카메라 설정됨 (켜기 누르세요)':'후면 카메라 설정됨'); }
+    }
     else if(t.id==='c61shoot'){ doShoot(); }
     else if(t.id==='c61conf'){ doConfirm(); }
-    else if(t.id==='c61retry'){ edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; $('c61conf').style.display='none'; $('c61shoot').style.display=''; $('c61hint').style.display='none'; if(phase==='edit')phase='front'; if(phase==='editSide')phase='side'; setS('다시 촬영하세요'); }
+    else if(t.id==='c61retry'){ edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; if($('c61cross'))$('c61cross').style.display=''; $('c61conf').style.display='none'; $('c61shoot').style.display=''; $('c61hint').style.display='none'; if(phase==='edit')phase='front'; if(phase==='editSide')phase='side'; setS('다시 촬영하세요'); }
   });
 
   function drawVid(){ const v=vid(), vw=v.videoWidth, vh=v.videoHeight, fc=frz().getContext('2d'); const sc=Math.min(CW/vw,CH/vh),dw=vw*sc,dh=vh*sc,ox=(CW-dw)/2,oy=(CH-dh)/2; fc.fillStyle='#000';fc.fillRect(0,0,CW,CH); fc.drawImage(v,0,0,vw,vh,ox,oy,dw,dh); return {vw,vh,sc,ox,oy}; }
   function doShoot(){
     const v=vid(); if(!v.videoWidth) return;
-    const map=drawVid(); v.style.display='none'; frz().style.display='block';
+    const map=drawVid(); v.style.display='none'; frz().style.display='block'; if($('c61cross'))$('c61cross').style.display='none';
     const res=pose.detect(v);
     if(!res.landmarks||!res.landmarks.length){ setS('⚠️ 사람 못 찾음. 전신 보이게 다시.'); v.style.display='block'; frz().style.display='none'; return; }
     const lm=res.landmarks[0].map(p=>({x:map.ox+p.x*map.vw*map.sc,y:map.oy+p.y*map.vh*map.sc}));
@@ -133163,7 +133176,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   document.addEventListener('mouseup',onUp);
 
   function doConfirm(){
-    if(phase==='edit'){ phase='side'; $('c61tab3').style.cssText=$('c61tab3').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;'); $('c61hint').style.display='none';$('c61conf').style.display='none';$('c61shoot').style.display=''; edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; setS('옆으로 90° 돌아 측면 전신으로 [촬영]'); }
+    if(phase==='edit'){ phase='side'; $('c61tab3').style.cssText=$('c61tab3').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;'); $('c61hint').style.display='none';$('c61conf').style.display='none';$('c61shoot').style.display=''; edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; if($('c61cross'))$('c61cross').style.display=''; setS('옆으로 90° 돌아 측면 전신으로 [촬영]'); }
     else if(phase==='editSide'){ compute(); }
   }
   function pd(p0,p1){ return Math.hypot(p0.x-p1.x,p0.y-p1.y); }
