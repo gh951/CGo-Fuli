@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════════════
-// CGO-FULI Service Worker v2.0
+// CGO-FULI Service Worker v3.0 (캐시 강제 갱신)
 // 특허 10-2026-0060113 · 기획 이주원 × C-14 × C-15
 // ════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'cgo-fuli-v2';
+const CACHE_NAME = 'cgo-fuli-v3';
 const CACHE_URLS = [
   '/',
   '/index.html'
@@ -47,8 +47,10 @@ self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
 
+  // index.html/네비게이션은 항상 최신 (캐시 무시)
+  var isDoc = e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1 || e.request.url.endsWith('/');
   e.respondWith(
-    fetch(e.request)
+    fetch(isDoc ? new Request(e.request.url, {cache:'no-store'}) : e.request)
       .then(function(response) {
         // 성공 시 캐시 업데이트 후 반환
         if (response && response.status === 200 && response.type === 'basic') {
@@ -150,4 +152,4 @@ self.addEventListener('sync', function(e) {
   }
 });
 
-console.log('[CGO-FULI SW] v2.0 로드 완료 · 특허 10-2026-0060113');
+console.log('[CGO-FULI SW] v3.0 로드 완료 · 특허 10-2026-0060113');
