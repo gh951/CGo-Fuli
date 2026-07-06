@@ -141350,6 +141350,37 @@ var _cgmAllUsers = [];
     { code:'th',    name:'ภาษาไทย',      flag:'🇹🇭', greeting:'สวัสดี',          bcp:'th-TH' }
   ];
 
+/* ★ Groq 분석 자동 언어화 — 선택 언어로 답변 (번역 호출 제외) */
+;(function(){
+  if(window.__cgoGroqLangPatch) return; window.__cgoGroqLangPatch=1;
+  var LN={ko:'Korean',en:'English',zh:'Chinese (Simplified)',zh_HK:'Cantonese (Traditional Chinese, written)',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazilian)',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
+  var _of=window.fetch;
+  window.fetch=function(u,o){
+    try{
+      var url=(typeof u==='string')?u:(u&&u.url)||'';
+      if(url.indexOf('/api/groq')>=0 && o && o.body && typeof o.body==='string'){
+        var lang=localStorage.getItem('cgo_lang')||'ko';
+        if(lang!=='ko' && LN[lang]){
+          var b=JSON.parse(o.body);
+          if(b && b.messages && b.messages.length){
+            var sys=null,k;
+            for(k=0;k<b.messages.length;k++){ if(b.messages[k].role==='system'){sys=b.messages[k];break;} }
+            var c=(sys&&sys.content)||'';
+            var isTrans=/번역가|번역하세요|번역해|translate|translation/i.test(c);
+            if(!isTrans){
+              var instr='\n\n[LANGUAGE \u2014 MANDATORY] Write your ENTIRE response in '+LN[lang]+' only. Do NOT use Korean. Translate every part of the answer (including headings and labels) into '+LN[lang]+'.';
+              if(sys){ sys.content=c+instr; }
+              else { b.messages.unshift({role:'system',content:'Respond ONLY in '+LN[lang]+'.'}); }
+              o.body=JSON.stringify(b);
+            }
+          }
+        }
+      }
+    }catch(e){}
+    return _of.apply(this,arguments);
+  };
+})();
+
   // 언어 선택 팝업 HTML 인젝션
   var _c19_langOverlay = document.createElement('div');
   _c19_langOverlay.id = 'c19_langOverlay';
