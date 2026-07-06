@@ -49864,8 +49864,36 @@ function _cgoApplyDictionary(lang) {
   return count;
 }
 
+/* ★ 깃허브 언어팩 로더 — lang/{code}.json 불러와 사전에 병합 */
+window._cgoLangPackLoaded = window._cgoLangPackLoaded || {};
+function _cgoLoadLangPack(lang, cb){
+  cb = cb || function(){};
+  if(!lang || lang==='ko'){ cb(); return; }
+  if(window._cgoLangPackLoaded[lang]){ cb(); return; }
+  var url='https://raw.githubusercontent.com/gh951/CGo-Fuli/main/lang/'+lang+'.json';
+  try{
+    fetch(url).then(function(r){ if(!r.ok) throw new Error('no pack'); return r.json(); })
+    .then(function(json){
+      if(json && typeof json==='object'){
+        try{
+          if(typeof LANG_DICTIONARY!=='undefined'){
+            LANG_DICTIONARY[lang]=Object.assign({}, LANG_DICTIONARY[lang]||{}, json);
+          }
+        }catch(e){}
+        window._cgoLangPackLoaded[lang]=true;
+        console.log('[CGO언어팩] '+lang+' 로드:', Object.keys(json).length+'개');
+      }
+      cb();
+    })
+    .catch(function(e){ console.log('[CGO언어팩] '+lang+' 없음 — 기존 사전 사용'); window._cgoLangPackLoaded[lang]=true; cb(); });
+  }catch(e){ cb(); }
+}
+
 function _cgoAiTranslate(lang, pack) {
   if (!lang || lang === 'ko') return;
+
+  // 깃허브 언어팩 먼저 로드 → 사전 재적용
+  _cgoLoadLangPack(lang, function(){ try{ _cgoApplyDictionary(lang); }catch(e){} });
 
   // ══ 전역 싱글톤: 이미 같은 언어 큐 실행 중이면 사전만 적용 후 리턴 ══
   if (window._cgoTransRunning === lang) {
