@@ -44484,6 +44484,14 @@ function setLang(lang) {
     var _jdPart = _nasaBanner.textContent.match(/JD\s*[\d.]+/);
     if(_jdPart) _nasaBanner.textContent = (_satTxt2[lang]||_satTxt2.ko) + ' · ' + _jdPart[0];
   }
+  // ★ 대시보드는 비밀번호 입력 후 나타나므로, 지연 재적용으로 늦게 뜨는 화면도 번역
+  if(lang && lang !== 'ko'){
+    [500,1200,2500,4000,6000].forEach(function(_ms){
+      setTimeout(function(){
+        try{ if(window._LANG===lang && typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(lang); }catch(e){}
+      }, _ms);
+    });
+  }
   console.log('🌐 언어:', lang);
 }
 
