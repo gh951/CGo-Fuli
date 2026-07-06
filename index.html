@@ -126258,6 +126258,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
+  if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
   // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (깜빡임 0)
   if(arguments[0] === 'scalp'){
@@ -129547,6 +129548,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // ── cgoGoPage: 사이드바 없이 페이지 이동 ──
 function cgoGoPage(page){
+  if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
   /* C-60 게이트: 정보 미입력 시 기능 페이지 비활성화 (홈/프로필/상점만 허용) */
   try{ var _wl={dashboard:1,profile:1,shop:1}; if(false && page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
@@ -137156,6 +137158,25 @@ function _sviSendFrame(){
   var v = document.getElementById('svi-video');
   if(!v || !v.videoWidth) return;
   try { _svi.faceMesh.send({image: v}); } catch(e){}
+}
+
+// ★ SVI 완전 리셋 (재진입 시 잔재·검은카메라 방지)
+function _sviFullReset(){
+  try{
+    if(window._svi){
+      if(_svi.timer){ try{clearInterval(_svi.timer);}catch(e){} _svi.timer=null; }
+      _svi.running=false;
+      if(_svi.stream){ try{_svi.stream.getTracks().forEach(function(t){try{t.stop();}catch(e){}});}catch(e){} _svi.stream=null; }
+      _svi.sec=0; _svi.luster=0; _svi.elastic=0; _svi.texture=0; _svi.vitality=0; _svi._samples=0; _svi.faceLandmarks=null;
+    }
+    if(typeof _sviStopFaceMesh==='function') _sviStopFaceMesh();
+    if(typeof _sviRppgReset==='function'){ try{_sviRppgReset();}catch(e){} }
+    var r=document.getElementById('svi-result'); if(r) r.style.display='none';
+    var b=document.getElementById('svi-btn'); if(b) b.style.display='';
+    var v=document.getElementById('svi-video'); if(v){ v.style.display='none'; try{v.srcObject=null;}catch(e){} }
+    var ph=document.getElementById('svi-placeholder'); if(ph) ph.style.display='';
+    var g=document.getElementById('svi-guide'); if(g) g.style.display='none';
+  }catch(e){}
 }
 
 // FaceMesh 정리
