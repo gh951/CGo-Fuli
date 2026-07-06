@@ -44228,6 +44228,7 @@ function toggleLangMenu() {
 }
 
 // 언어 변경
+window._cgoRT = function(){ try{ var L=window._LANG; if(L && L!=='ko' && typeof _cgoApplyDictionary==='function'){ _cgoApplyDictionary(L); } }catch(e){} };
 function setLang(lang) {
   _LANG = lang;
   window._LANG = lang; // ★ 명시적으로 window._LANG도 설정
@@ -44486,7 +44487,7 @@ function setLang(lang) {
   }
   // ★ 대시보드는 비밀번호 입력 후 나타나므로, 지연 재적용으로 늦게 뜨는 화면도 번역
   if(lang && lang !== 'ko'){
-    [500,1200,2500,4000,6000].forEach(function(_ms){
+    [500,1200,2500,4000,6000,9000,13000].forEach(function(_ms){
       setTimeout(function(){
         try{ if(window._LANG===lang && typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(lang); }catch(e){}
       }, _ms);
@@ -126315,6 +126316,7 @@ document.addEventListener('DOMContentLoaded', function(){
 function cgoGoPage(page){
   if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
+  try{ [60,300,800,1600].forEach(function(_m){ setTimeout(window._cgoRT, _m); }); }catch(e){}
   // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (깜빡임 0)
   if(arguments[0] === 'scalp'){
     try {
@@ -129605,6 +129607,7 @@ document.addEventListener('DOMContentLoaded', function(){
 function cgoGoPage(page){
   if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
+  try{ [60,300,800,1600].forEach(function(_m){ setTimeout(window._cgoRT, _m); }); }catch(e){}
   /* C-60 게이트: 정보 미입력 시 기능 페이지 비활성화 (홈/프로필/상점만 허용) */
   try{ var _wl={dashboard:1,profile:1,shop:1}; if(false && page && !_wl[page] && typeof _cgoInfoOK==='function' && !_cgoInfoOK()){ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 정보를 먼저 입력하세요'); try{ var _ip=document.getElementById('sec-ip'); if(_ip&&_ip.scrollIntoView) _ip.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} return; } }catch(e){}
   /* ▼ C-60 사용 제한 게이트: 기능 페이지 하루 2회 (마스터 무제한). 비기능 페이지는 제외 ▼ */
