@@ -49864,7 +49864,7 @@ function _cgoApplyDictionary(lang) {
       if (t in dict) {
         node.nodeValue = dict[t];
         count++;
-      }
+      } else if (t && window._cgoQueueMiss) { window._cgoQueueMiss(t); }
     } else if (node.nodeType === 1) {
       try {
         var _cgAttrs = ['placeholder','title','aria-label'];
@@ -49891,7 +49891,7 @@ function _cgoApplyDictionary(lang) {
       var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict) return;
       var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
       function w(node){
-        if(node.nodeType===3){ var t=(node.nodeValue||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; }
+        if(node.nodeType===3){ var t=(node.nodeValue||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
         else if(node.nodeType===1){
           if(node.getAttribute){ var A=['placeholder','title','aria-label']; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ var tv=av.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
           if(!skip[node.tagName]){ for(var i=0;i<node.childNodes.length;i++) w(node.childNodes[i]); }
@@ -49912,6 +49912,53 @@ function _cgoApplyDictionary(lang) {
     function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true}); }catch(e){} }
     if(document.body) _st(); else document.addEventListener('DOMContentLoaded',_st);
   }catch(e){}
+})();
+
+/* ★ 안전 자동번역 폴백 — 사전에 없는 것만 순차·소량·캐시 (예전 병렬대량 크래시 회피) */
+(function(){
+  var Q=[], seen=Object.create(null), running=false, MAXQ=4000;
+  var _ric=window.requestIdleCallback||function(f){return setTimeout(f,200);};
+  var langNames={en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
+  window._cgoQueueMiss=function(t){
+    try{
+      if(window._cgoAutoFillOff !== false) return;       // 기본 OFF (하이브리드 나중에 · 켜려면 _cgoAutoFillOff=false)
+      if(!t||seen[t]) return;
+      var L=window._LANG; if(!L||L==='ko') return;
+      if(t.length<1||t.length>120) return;               // 너무 길면 스킵(사용자 입력 등)
+      if(!/[\uac00-\ud7a3]/.test(t)) return;             // 한글 없으면 스킵
+      var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null;
+      if(dict&&(t in dict)) return;                       // 이미 사전에 있으면 스킵
+      if(Q.length>=MAXQ) return;
+      seen[t]=1; Q.push(t);
+      if(!running) _drain();
+    }catch(e){}
+  };
+  function _save(L,obj){ try{ var ck='cgo_lp_'+L,cur=JSON.parse(localStorage.getItem(ck)||'{}'); for(var k in obj) cur[k]=obj[k]; localStorage.setItem(ck,JSON.stringify(cur)); }catch(e){} }
+  function _drain(){
+    if(running){ return; }
+    if(!Q.length){ running=false; return; }
+    var L=window._LANG; if(!L||L==='ko'){ running=false; return; }
+    var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict){ running=false; return; }
+    running=true;
+    var batch=Q.splice(0,10), tgt=langNames[L]||'English';
+    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'llama-3.1-8b-instant',
+      messages:[{role:'system',content:'Translate each Korean UI string to '+tgt+'. Return ONLY a JSON array of strings, same count and order. Keep emojis, numbers, brand names and proper nouns unchanged.'},{role:'user',content:JSON.stringify(batch)}],
+      max_tokens:1024,temperature:0.2
+    })}).then(function(r){return r.json();}).then(function(data){
+      try{
+        var raw=(((data.choices||[])[0]||{}).message||{}).content||'';
+        var m=raw.match(/\[[\s\S]*\]/); if(!m) return;
+        var arr=JSON.parse(m[0]), upd={};
+        for(var i=0;i<batch.length;i++){ if(arr[i]&&typeof arr[i]==='string'){ dict[batch[i]]=arr[i]; upd[batch[i]]=arr[i]; } }
+        _save(L,upd);
+        _ric(function(){ try{ if(window._cgoTranslateNode) _cgoTranslateNode(document.body); }catch(e){} });
+      }catch(e){}
+    }).catch(function(){}).then(function(){
+      running=false;
+      if(Q.length) setTimeout(_drain,1600);              // 배치 사이 1.6초 — 물방울
+    });
+  }
 })();
 
 /* ★ 깃허브 언어팩 로더 — lang/{code}.json 불러와 사전에 병합 */
