@@ -18452,7 +18452,7 @@ function _cgoFDIntro(cfg){
   var _fdList=function(lb,arr){ if(!arr||!arr.length) return ''; var mk=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩']; var s='<div style="background:#ffffff;border:1px solid rgba(2,8,23,.07);border-radius:12px;padding:14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:'+ac+';margin-bottom:11px;">'+lb+'</div><div style="display:flex;flex-direction:column;gap:9px;">'; arr.forEach(function(x,i){ var t=x,d=''; if(x.indexOf('|')>0){var sp=x.split('|');t=sp[0];d=sp[1];} s+='<div style="display:flex;align-items:flex-start;gap:10px;"><span style="font-size:16px;flex-shrink:0;color:'+ac+';font-weight:900;">'+(mk[i]||'•')+'</span><div><div style="font-size:12px;font-weight:700;color:#0f172a;">'+t+'</div>'+(d?'<div style="font-size:10px;color:#64748b;margin-top:2px;line-height:1.5;">'+d+'</div>':'')+'</div></div>'; }); s+='</div></div>'; return s; };
   if(cfg.howto) h+=_fdList(cfg.howtoLabel||'📋 사용법',cfg.howto);
   if(cfg.howto2) h+=_fdList(cfg.howto2Label||'📋 항목',cfg.howto2);
-  if(cfg.tip) h+='<div style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.22);border-radius:12px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#059669;margin-bottom:5px;">������ 핵심 팁</div><div style="font-size:11px;color:#334155;line-height:1.7;">'+cfg.tip+'</div></div>';
+  if(cfg.tip) h+='<div style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.22);border-radius:12px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#059669;margin-bottom:5px;">������ 핵심 팁</div><div style="font-size:11px;color:#334155;line-height:1.7;">'+cfg.tip+'</div></div>';
   if(cfg.note) h+='<div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.18);border-radius:12px;padding:11px 14px;margin-bottom:14px;"><div style="font-size:11px;font-weight:800;color:#dc2626;margin-bottom:5px;">⚖️ 정직 안내</div><div style="font-size:10px;color:#475569;line-height:1.75;">'+cfg.note+'</div></div>';
   var cbId=id+'-skip';
   if(sk) h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:#64748b;"><input type="checkbox" id="'+cbId+'" style="cursor:pointer;width:14px;height:14px;accent-color:'+ac+';"><span>다음부터 보지 않기</span></label>';
@@ -143921,3 +143921,34 @@ console.log('[C-37 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
   trySignIn();
 })();
 </script>
+<script>
+/* C-62 · AI counselor/analysis response language = selected UI language (fetch interceptor) */
+(function(){
+  if(window._cgoGroqLangPatched) return; window._cgoGroqLangPatched=true;
+  var _of=window.fetch; if(typeof _of!=='function') return;
+  var LN={en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Brazilian Portuguese',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
+  window.fetch=function(u,o){
+    try{
+      var url=(typeof u==='string')?u:((u&&u.url)||'');
+      if(url.indexOf('/api/groq')>=0 && o && typeof o.body==='string'){
+        var L=window._LANG||'ko';
+        if(L!=='ko' && LN[L]){
+          var b=JSON.parse(o.body);
+          if(b && b.messages && b.messages.length){
+            var inst='CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response ONLY in '+LN[L]+'. Do NOT reply in Korean. Translate every part of your answer, including any examples, headings and labels, into '+LN[L]+'.';
+            var sys=false, i;
+            for(i=0;i<b.messages.length;i++){ if(b.messages[i] && b.messages[i].role==='system'){ b.messages[i].content=(b.messages[i].content||'')+'  '+inst; sys=true; break; } }
+            if(!sys) b.messages.unshift({role:'system',content:inst});
+            var no={},k; for(k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) no[k]=o[k]; }
+            no.body=JSON.stringify(b);
+            return _of.call(this,u,no);
+          }
+        }
+      }
+    }catch(e){}
+    return _of.call(this,u,o);
+  };
+})();
+
+</script>
+
