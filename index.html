@@ -49920,23 +49920,30 @@ function _cgoLoadLangPack(lang, cb){
   cb = cb || function(){};
   if(!lang || lang==='ko'){ cb(); return; }
   if(window._cgoLangPackLoaded[lang]){ cb(); return; }
-  var url='https://raw.githubusercontent.com/gh951/CGo-Fuli/main/lang/'+lang+'.json?t='+Math.floor(Date.now()/60000);
+  var ckey='cgo_lp_'+lang, applied=false;
+  function _merge(json){
+    try{ if(typeof LANG_DICTIONARY!=='undefined' && json && typeof json==='object'){ LANG_DICTIONARY[lang]=Object.assign({}, LANG_DICTIONARY[lang]||{}, json); } }catch(e){}
+  }
+  // 1) 폰 캐시(localStorage) 즉시 적용 — 몇 분 기다림 없이 바로 영어로
+  try{
+    var cached=localStorage.getItem(ckey);
+    if(cached){ _merge(JSON.parse(cached)); window._cgoLangPackLoaded[lang]=true; applied=true; cb(); }
+  }catch(e){}
+  // 2) 백그라운드로 최신본 갱신 (시간 단위 캐시버스터 — CDN 부담↓)
+  var url='https://raw.githubusercontent.com/gh951/CGo-Fuli/main/lang/'+lang+'.json?t='+Math.floor(Date.now()/3600000);
   try{
     fetch(url).then(function(r){ if(!r.ok) throw new Error('no pack'); return r.json(); })
     .then(function(json){
       if(json && typeof json==='object'){
-        try{
-          if(typeof LANG_DICTIONARY!=='undefined'){
-            LANG_DICTIONARY[lang]=Object.assign({}, LANG_DICTIONARY[lang]||{}, json);
-          }
-        }catch(e){}
+        _merge(json);
         window._cgoLangPackLoaded[lang]=true;
+        try{ localStorage.setItem(ckey, JSON.stringify(json)); }catch(e){}
         console.log('[CGO언어팩] '+lang+' 로드:', Object.keys(json).length+'개');
-      }
-      cb();
+        cb();
+      } else if(!applied){ cb(); }
     })
-    .catch(function(e){ console.warn('[CGO언어팩] '+lang+' 로드실패:', e.message, '(다음에 재시도)'); cb(); });
-  }catch(e){ cb(); }
+    .catch(function(e){ console.warn('[CGO언어팩] '+lang+' 로드실패:', e.message, '(캐시 사용)'); if(!applied) cb(); });
+  }catch(e){ if(!applied) cb(); }
 }
 
 function _cgoAiTranslate(lang, pack) {
