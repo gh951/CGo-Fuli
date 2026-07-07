@@ -49883,6 +49883,37 @@ function _cgoApplyDictionary(lang) {
   return count;
 }
 
+/* ★ 동적 콘텐츠(팝업·문제지 등) 자동 번역 — MutationObserver */
+(function(){
+  function _cgoTNode(root){
+    try{
+      var L=window._LANG; if(!L||L==='ko') return;
+      var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict) return;
+      var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
+      function w(node){
+        if(node.nodeType===3){ var t=(node.nodeValue||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; }
+        else if(node.nodeType===1){
+          if(node.getAttribute){ var A=['placeholder','title','aria-label']; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ var tv=av.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
+          if(!skip[node.tagName]){ for(var i=0;i<node.childNodes.length;i++) w(node.childNodes[i]); }
+        }
+      }
+      w(root);
+    }catch(e){}
+  }
+  window._cgoTranslateNode=_cgoTNode;
+  var _pend=[],_sched=false;
+  function _flush(){ _sched=false; var ns=_pend; _pend=[]; for(var i=0;i<ns.length;i++) _cgoTNode(ns[i]); }
+  try{
+    var mo=new MutationObserver(function(muts){
+      var L=window._LANG; if(!L||L==='ko') return;
+      for(var m=0;m<muts.length;m++){ var ad=muts[m].addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
+      if(_pend.length&&!_sched){ _sched=true; setTimeout(_flush,50); }
+    });
+    function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+    if(document.body) _st(); else document.addEventListener('DOMContentLoaded',_st);
+  }catch(e){}
+})();
+
 /* ★ 깃허브 언어팩 로더 — lang/{code}.json 불러와 사전에 병합 */
 window._cgoLangPackLoaded = window._cgoLangPackLoaded || {};
 function _cgoLoadLangPack(lang, cb){
