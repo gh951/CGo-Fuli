@@ -143922,11 +143922,19 @@ console.log('[C-37 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
 })();
 </script>
 <script>
-/* C-62 · AI counselor/analysis response language = selected UI language (fetch interceptor) */
+/* C-62 · AI counselor/analysis response language = selected UI language (fetch interceptor v2) */
 (function(){
   if(window._cgoGroqLangPatched) return; window._cgoGroqLangPatched=true;
   var _of=window.fetch; if(typeof _of!=='function') return;
   var LN={en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Brazilian Portuguese',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
+  function stripKo(c){
+    if(typeof c!=='string') return c;
+    c=c.replace(/[^.]*한국어로만[^.]*\./g,' ');
+    c=c.replace(/반드시[^.]*100%[^.]*한국어[^.]*\./g,' ');
+    c=c.replace(/furthermore[^.]*?금지\.?/gi,' ');
+    c=c.replace(/영어\s*단어\s*절대\s*사용\s*금지\.?/g,' ');
+    return c;
+  }
   window.fetch=function(u,o){
     try{
       var url=(typeof u==='string')?u:((u&&u.url)||'');
@@ -143935,8 +143943,10 @@ console.log('[C-37 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
         if(L!=='ko' && LN[L]){
           var b=JSON.parse(o.body);
           if(b && b.messages && b.messages.length){
-            var inst='CRITICAL LANGUAGE RULE: You MUST write your ENTIRE response ONLY in '+LN[L]+'. Do NOT reply in Korean. Translate every part of your answer, including any examples, headings and labels, into '+LN[L]+'.';
-            var sys=false, i;
+            var i;
+            for(i=0;i<b.messages.length;i++){ if(b.messages[i] && typeof b.messages[i].content==='string'){ b.messages[i].content=stripKo(b.messages[i].content); } }
+            var inst='CRITICAL LANGUAGE RULE: Ignore any earlier instruction to write in Korean. You MUST write your ENTIRE response ONLY in '+LN[L]+'. Translate every part, including examples, headings, JSON string values and labels, into '+LN[L]+'. Do NOT use Korean.';
+            var sys=false;
             for(i=0;i<b.messages.length;i++){ if(b.messages[i] && b.messages[i].role==='system'){ b.messages[i].content=(b.messages[i].content||'')+'  '+inst; sys=true; break; } }
             if(!sys) b.messages.unshift({role:'system',content:inst});
             var no={},k; for(k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) no[k]=o[k]; }
@@ -143951,4 +143961,28 @@ console.log('[C-37 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
 })();
 
 </script>
+<script>
+/* C-62 · dynamic popup re-translate + date input language (safety net) */
+(function(){
+  if(window._cgoPopDatePatched) return; window._cgoPopDatePatched=true;
+  function langCode(L){ return (L==='zh_HK')?'zh-HK':(L||'ko'); }
+  function apply(){
+    try{
+      var L=window._LANG||'ko';
+      var lc=langCode(L);
+      var ins=document.querySelectorAll('input[type=date]');
+      for(var i=0;i<ins.length;i++){ if(ins[i].getAttribute('lang')!==lc) ins[i].setAttribute('lang', lc); }
+      if(document.documentElement.getAttribute('lang')!==lc) document.documentElement.setAttribute('lang', lc);
+      if(L!=='ko' && typeof window._cgoTranslateNode==='function'){
+        var ids=['mypage-pop-content','mypage-pop','sup-chat-messages'];
+        for(var j=0;j<ids.length;j++){ var el=document.getElementById(ids[j]); if(el) window._cgoTranslateNode(el); }
+      }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', apply); else apply();
+  setInterval(apply, 1200);
+})();
+
+</script>
+
 
