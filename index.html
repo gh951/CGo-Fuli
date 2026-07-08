@@ -133047,13 +133047,49 @@ window._cgoFnLabel = {
   'sports':'스포츠 에너지','lotto':'행운 번호','stock':'주식 에너지','family':'가족 ILI'
 };
 window._cgoUnlimited = window._cgoUnlimited || false;
+/* ★ C-63 등급 게이트 — 마스터/유료=무제한, 무료가입=하루1회(기능별), 미가입=열람O·기능X(가입유도)
+   판정 근거: cgo_master_on(마스터) · cgo_paid 또는 유효한 cgo_trial(유료) · cgo_signup(가입) */
+window.CGO_FREE_LIMIT = 1;   // 무료 회원: 기능마다 하루 1회
+window._cgoTier = function(){
+  try{
+    if(window._cgoUnlimited) return 'master';
+    var mo=false; try{ mo=localStorage.getItem('cgo_master_on')==='1'; }catch(e){}
+    if(mo) return 'master';
+    var paid=false; try{ paid=localStorage.getItem('cgo_paid')==='1'; }catch(e){}
+    if(paid) return 'paid';
+    try{ var tr=JSON.parse(localStorage.getItem('cgo_trial')||'null');
+      if(tr && tr.start){ var days=tr.days||3; if(Date.now()-tr.start < days*86400000) return 'paid'; } }catch(e){}
+    var su=false; try{ su=!!localStorage.getItem('cgo_signup'); }catch(e){}
+    if(su) return 'free';
+    return 'guest';
+  }catch(e){ return 'free'; }  // 오류 시 막지도 열지도 않는 안전 기본값
+};
+window._cgoSignupPrompt = function(label){
+  var old=document.getElementById('cgoSignupPromptBox'); if(old) old.remove();
+  var d=document.createElement('div'); d.id='cgoSignupPromptBox';
+  d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px;font-family:\'Noto Sans KR\',sans-serif;';
+  d.innerHTML='<div style="background:#fff;border-radius:20px;max-width:330px;width:100%;padding:28px 22px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3);">'
+    +'<div style="font-size:40px;">🎫</div>'
+    +'<div style="font-size:17px;font-weight:900;color:#0f766e;margin-top:8px;">가입하고 사용해 보세요</div>'
+    +'<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:11px;">'+(label||'이 기능')+'은(는) 간단한 정보 입력(가입) 후 사용할 수 있어요.<br>모든 페이지는 지금처럼 자유롭게 둘러보실 수 있습니다.</div>'
+    +'<button onclick="var b=document.getElementById(\'cgoSignupPromptBox\');if(b)b.remove(); if(window.cgoGoPage)cgoGoPage(\'dashboard\'); setTimeout(function(){var ip=document.getElementById(\'sec-ip\'); if(ip&&ip.scrollIntoView)ip.scrollIntoView({behavior:\'smooth\',block:\'center\'});},200);" style="margin-top:19px;width:100%;padding:13px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">📋 정보 입력하고 시작하기</button>'
+    +'<button onclick="var b=document.getElementById(\'cgoSignupPromptBox\');if(b)b.remove();" style="margin-top:8px;width:100%;padding:11px;background:#f1f5f9;border:none;border-radius:12px;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">계속 둘러보기</button>'
+    +'</div>';
+  document.body.appendChild(d);
+};
 window.cgoUseGate = function(key, label){
   try{
     if(window._cgoUnlimited) return true;          // 마스터 무제한
+    /* ★ C-63 등급 반영 */
+    var _tier=(typeof _cgoTier==='function')?_cgoTier():'free';
+    if(_tier==='master' || _tier==='paid') return true;                 // 무제한
+    if(_tier==='guest'){ if(typeof _cgoSignupPrompt==='function') _cgoSignupPrompt(label); return false; }  // 미가입 → 가입유도
+    var _LIMIT=(_tier==='free')?(window.CGO_FREE_LIMIT||1):(window.CGO_USE_LIMIT||2);
+    window._cgoLastLimit=_LIMIT;
     var now=Date.now(), DAY=86400000;
     var log={}; try{ log=JSON.parse(localStorage.getItem('cgo_use_v1')||'{}'); }catch(e){}
     var arr=(log[key]||[]).filter(function(t){ return now-t < DAY; });  // 24h 지난 기록 제거
-    if(arr.length >= window.CGO_USE_LIMIT){
+    if(arr.length >= _LIMIT){
       var hrs=Math.max(1, Math.ceil((arr[0]+DAY-now)/3600000));
       log[key]=arr; try{ localStorage.setItem('cgo_use_v1', JSON.stringify(log)); }catch(e){}
       cgoUseLimitPopup(label||'이 기능', hrs);
@@ -133071,7 +133107,7 @@ window.cgoUseLimitPopup = function(label, hrs){
   d.innerHTML='<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;padding:28px 22px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.3);">'
     +'<div style="font-size:40px;">🌿</div>'
     +'<div style="font-size:16px;font-weight:900;color:#0f766e;margin-top:8px;">오늘 사용을 다 하셨어요</div>'
-    +'<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:11px;">'+label+'은(는) 하루 <b style="color:#0d9488;">'+window.CGO_USE_LIMIT+'회</b>까지 쓸 수 있어요.<br>약 <b style="color:#14b8a6;">'+hrs+'시간</b> 후에 다시 만나요.</div>'
+    +'<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:11px;">'+label+'은(는) 하루 <b style="color:#0d9488;">'+(window._cgoLastLimit||window.CGO_USE_LIMIT)+'회</b>까지 쓸 수 있어요.<br>약 <b style="color:#14b8a6;">'+hrs+'시간</b> 후에 다시 만나요.</div>'
     +'<div style="font-size:11px;color:#94a3b8;margin-top:13px;line-height:1.6;">하루 두 번, 천천히 · 소중하게 🌱<br>결과를 곱씹어 읽어보는 시간이에요.</div>'
     +'<button onclick="var b=document.getElementById(\'cgoUseLimitBox\');if(b)b.remove();" style="margin-top:19px;padding:12px 30px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;">확인</button>'
     +'</div>';
