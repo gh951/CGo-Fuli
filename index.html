@@ -3128,6 +3128,16 @@ function entSplashGo(){
     if(_spin){clearInterval(_spin);_spin=null;}
     var box=document.getElementById('entPw');
     if(box){ box.style.transition='opacity .4s'; box.style.opacity='0'; setTimeout(function(){ box.style.display='none'; box.style.opacity='1'; },420); }
+    /* ★ C-63: 대시보드 가입 카드에서 연 경우 — 입구 흐름으로 안 넘어가고 대시보드로 복귀 */
+    if(window._cgoPwFromDash){
+      window._cgoPwFromDash=false;
+      setTimeout(function(){
+        var ent=document.getElementById('cgoEntrance');
+        if(ent){ ent.classList.add('hidden'); ent.style.display='none'; }
+        try{ if(typeof _cgoC63PwDone==='function') _cgoC63PwDone(); }catch(e){}
+      }, 430);
+      return;
+    }
     // 비번 완료 → 커튼 → 대시보드 (결제는 이미 앞 단계에서 진행)
     setTimeout(function(){ if(typeof _entGo==='function'){ _entGo(); } else if(typeof openGate==='function'){ openGate(); } else if(typeof _cgoEntranceDone==='function'){ _cgoEntranceDone(); } }, 430);
   }
@@ -5772,8 +5782,9 @@ function cgoGuideFeature(key){
             <span style="font-size:11.5px;color:rgba(240,230,200,.85);line-height:1.6;">이용약관 및 개인정보 처리방침에 동의합니다. <span onclick="event.preventDefault();event.stopPropagation();if(typeof cgoShowTerms==='function')cgoShowTerms();" style="color:#38bdf8;text-decoration:underline;cursor:pointer;">약관 보기</span></span>
           </label>
           <div style="margin-bottom:10px;">
-            <div style="font-size:11px;font-weight:700;color:#5eead4;margin-bottom:5px;">🔐 비밀번호 설정 <span style="color:rgba(240,230,200,.4);font-weight:500;">(선택 · 재방문 잠금용)</span></div>
-            <input type="password" id="c63Pw" placeholder="비밀번호 4자 이상 (생략 가능)" style="width:100%;padding:11px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(52,211,153,.3);border-radius:10px;color:#e6f6f2;font-size:13px;outline:none;box-sizing:border-box;">
+            <div style="font-size:11px;font-weight:700;color:#5eead4;margin-bottom:5px;">🔐 비밀번호 설정 <span style="color:rgba(240,230,200,.4);font-weight:500;">(선택 · 양자 방어)</span></div>
+            <button type="button" id="c63PwBtn" onclick="_cgoOpenPwSetup()" style="width:100%;padding:12px;background:rgba(0,0,0,.22);border:1px solid rgba(52,211,153,.4);border-radius:10px;color:#5eead4;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">🔐 양자 방어 비밀번호 만들기 <span style="font-weight:500;color:rgba(240,230,200,.5);">(기본·휘발·가상자판·카오스)</span></button>
+            <div id="c63PwStatus" style="font-size:10px;color:rgba(240,230,200,.45);margin-top:5px;text-align:center;">비번을 만들면 재방문 잠금을 쓸 수 있어요 (생략 가능)</div>
           </div>
           <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;margin-bottom:14px;">
             <input type="checkbox" id="c63SkipLock" checked style="width:17px;height:17px;accent-color:#34d399;flex-shrink:0;">
@@ -133099,6 +133110,21 @@ window._cgoSignupPrompt = function(label){
     +'</div>';
   document.body.appendChild(d);
 };
+/* ★ C-63 대시보드에서 입구 양자방어 비번 화면(기본·휘발·가상자판·카오스) 재사용 — 완료 시 대시보드 복귀 */
+window._cgoOpenPwSetup = function(){
+  window._cgoPwFromDash = true;
+  var ent=document.getElementById('cgoEntrance');
+  if(ent){ ent.classList.remove('hidden'); ent.style.display='block'; ent.style.opacity='1'; ent.style.pointerEvents='auto'; }
+  if(typeof cgoShowEntPw==='function') cgoShowEntPw();
+};
+window._cgoC63PwDone = function(){
+  try{
+    var st=document.getElementById('c63PwStatus');
+    if(st){ st.textContent='✅ 양자 방어 비밀번호가 설정되었습니다'; st.style.color='#34d399'; }
+    var btn=document.getElementById('c63PwBtn');
+    if(btn){ btn.innerHTML='✅ 비밀번호 설정 완료 <span style="font-weight:500;color:rgba(240,230,200,.5);">(다시 만들려면 탭)</span>'; btn.style.borderColor='rgba(52,211,153,.7)'; }
+  }catch(e){}
+};
 /* ★ C-63 회원가입 처리 — 정보입력=가입. 성공 시 tier가 guest→free 로 바뀌어 모든 기능 잠금 해제 */
 window._cgoC63Signup = function(){
   var msg=document.getElementById('c63Msg');
@@ -133114,9 +133140,9 @@ window._cgoC63Signup = function(){
     var info={ name:(document.getElementById('ipName')||{}).value||'', by:(document.getElementById('ipBirthY')||{}).value||'', bm:(document.getElementById('ipBirthM')||{}).value||'', bd:(document.getElementById('ipBirthD')||{}).value||'' };
     localStorage.setItem('cgo_saved_info', JSON.stringify(info));
   }catch(e){}
-  var pwEl=document.getElementById('c63Pw'); var pw=pwEl?(pwEl.value||''):'';
   var skipEl=document.getElementById('c63SkipLock'); var skip=skipEl?skipEl.checked:true;
-  if(pw && pw.length>0 && pw.length<4){ say('⚠️ 비밀번호는 4자 이상이어야 해요 (생략도 가능)'); return; }
+  var hasPw=false; try{ hasPw=!!(localStorage.getItem('cgo_fuli_pw_v2')||localStorage.getItem('cgo_fuli_pw')); }catch(e){}
+  if(!hasPw) skip=true;  // 비번 미설정 → 재방문 잠금 불가 → 바로 입장 강제
   function finish(){
     try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'c63', t:Date.now()})); }catch(e){}
     try{ if(typeof cgoSaveSignup==='function') cgoSaveSignup('c63', (document.getElementById('ipName')||{}).value||'', null); }catch(e){}
@@ -133125,20 +133151,7 @@ window._cgoC63Signup = function(){
     say('✅ 가입 완료 — 모든 기능이 열렸어요!', '#34d399');
     try{ var c=document.getElementById('c63-signup-card'); if(c) c.style.borderColor='rgba(52,211,153,.7)'; }catch(e){}
   }
-  if(pw && pw.length>=4){
-    try{
-      var enc=new TextEncoder().encode(pw);
-      crypto.subtle.digest('SHA-256', enc).then(function(buf){
-        var h=Array.from(new Uint8Array(buf)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
-        try{ localStorage.setItem('cgo_fuli_pw', h); localStorage.removeItem('cgo_fuli_pw_v2'); }catch(e){}
-        finish();
-      }).catch(function(){ finish(); });
-    }catch(e){ finish(); }
-  } else {
-    // 비번 생략 → 재방문 잠금 없음 강제
-    skip=true; try{ localStorage.setItem('cgo_skip_lock','1'); }catch(e){}
-    finish();
-  }
+  finish();
 };
 /* ★ C-63 카메라 길목 — 미가입(guest)만 카메라(실시간 측정) 차단 → 가입유도.
    navigator.mediaDevices.getUserMedia를 전역에서 1회 감싸 60곳 호출 전부 커버.
