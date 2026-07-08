@@ -133077,13 +133077,34 @@ window._cgoSignupPrompt = function(label){
     +'</div>';
   document.body.appendChild(d);
 };
+/* ★ C-63 카메라 길목 — 미가입(guest)만 카메라(실시간 측정) 차단 → 가입유도.
+   navigator.mediaDevices.getUserMedia를 전역에서 1회 감싸 60곳 호출 전부 커버.
+   마스터/유료/무료는 원본 그대로 통과. 오류·미지원 시 원본 유지(안전 폴백). */
+(function(){
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    if(navigator.mediaDevices._cgoGumWrapped) return;
+    var _origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = function(c){
+      try{
+        var tier=(typeof _cgoTier==='function')?_cgoTier():'free';
+        if(tier==='guest'){
+          if(typeof _cgoSignupPrompt==='function') _cgoSignupPrompt('실시간 측정');
+          return Promise.reject(new DOMException('가입 후 사용할 수 있어요','NotAllowedError'));
+        }
+      }catch(e){}
+      return _origGUM(c);
+    };
+    navigator.mediaDevices._cgoGumWrapped = true;
+  }catch(e){}
+})();
 window.cgoUseGate = function(key, label){
   try{
     if(window._cgoUnlimited) return true;          // 마스터 무제한
     /* ★ C-63 등급 반영 */
     var _tier=(typeof _cgoTier==='function')?_cgoTier():'free';
     if(_tier==='master' || _tier==='paid') return true;                 // 무제한
-    if(_tier==='guest'){ if(typeof _cgoSignupPrompt==='function') _cgoSignupPrompt(label); return false; }  // 미가입 → 가입유도
+    if(_tier==='guest') return true;  // ★ C-63 B안: 미가입도 페이지 열람 자유. 실제 분석(카메라)은 아래 getUserMedia 길목에서 가입유도
     var _LIMIT=(_tier==='free')?(window.CGO_FREE_LIMIT||1):(window.CGO_USE_LIMIT||2);
     window._cgoLastLimit=_LIMIT;
     var now=Date.now(), DAY=86400000;
