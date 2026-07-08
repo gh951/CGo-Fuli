@@ -2998,6 +2998,7 @@ function entSplashGo(){
     box.style.display='flex';
     if(typeof _entHideScreens==='function')_entHideScreens('entPw');
     var has=false; try{ has=!!(localStorage.getItem('cgo_fuli_pw_v2')||localStorage.getItem('cgo_fuli_pw')); }catch(e){}
+    if(window._cgoForceCreate) has=false;  /* ★ C-63: 가입 카드에서 열면 항상 '만들기' 모드 (실시간 로그인 아님) */
     var c=document.getElementById('entPwCreate'), l=document.getElementById('entPwLogin');
     var t=document.getElementById('entPwTitle'), sub=document.getElementById('entPwSub');
     if(has){
@@ -133113,9 +133114,11 @@ window._cgoSignupPrompt = function(label){
 /* ★ C-63 대시보드에서 입구 양자방어 비번 화면(기본·휘발·가상자판·카오스) 재사용 — 완료 시 대시보드 복귀 */
 window._cgoOpenPwSetup = function(){
   window._cgoPwFromDash = true;
+  window._cgoForceCreate = true;  /* 가입 카드에서는 항상 만들기 모드 */
   var ent=document.getElementById('cgoEntrance');
   if(ent){ ent.classList.remove('hidden'); ent.style.display='block'; ent.style.opacity='1'; ent.style.pointerEvents='auto'; }
   if(typeof cgoShowEntPw==='function') cgoShowEntPw();
+  window._cgoForceCreate = false;  /* cgoShowEntPw는 동기 → 이미 반영됨. 재방문 로그인은 로그인 모드 유지 */
 };
 window._cgoC63PwDone = function(){
   try{
