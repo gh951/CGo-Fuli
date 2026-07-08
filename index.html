@@ -130328,7 +130328,7 @@ if('serviceWorker' in navigator){
 </div>
 
 <!-- 측정 영역 -->
-<div id="eye-metrics-panel" style="display:none;background:#fff;border:1px solid #ccfbf1;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(20,184,166,.05);">
+<div style="background:#fff;border:1px solid #ccfbf1;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(20,184,166,.05);">
 <div style="font-size:12px;font-weight:800;color:#0f766e;margin-bottom:12px;display:flex;align-items:center;gap:6px;">📊 실시간 측정 지표</div>
 <!-- 8개 지표 카드 -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px;background:rgba(20,184,166,.05);border-radius:10px;">
@@ -130755,26 +130755,23 @@ if('serviceWorker' in navigator){
       var totalMs = q.autoTimer;
 
       eyeState.qTimerInterval = setInterval(function(){
-        /* ★ C-62: 얼굴이 안 보이면 타임라인 정지 (다른 카메라 기능처럼 피사체 없으면 멈춤). 얼굴 보이는 시간만 누적. */
-        var s108 = window._eye108State;
-        var faceOk = !s108 || s108.faceDetected !== false;
-        if(!faceOk){ startTime += 100; }
         var elapsed = Date.now() - startTime;
         var remain = Math.max(0, totalMs - elapsed);
         document.getElementById('eye-q-timer').textContent = (elapsed/1000).toFixed(1);
         var cd = document.getElementById('eye-auto-countdown');
         if(cd) cd.textContent = (remain/1000).toFixed(1);
-        if(remain <= 0){
-          clearInterval(eyeState.qTimerInterval);
-          // 자동 통과 (정답 처리)
-          var rt = Date.now() - eyeState.questionStartTime;
-          eyeState.reactionTimes.push(rt);
-          eyeState.answers.push({q:idx, opt:0, correct:true, rt:rt, cat:q.cat, level:q.level||0, auto:true});
-          eyeBeepClick();
-          eyeUpdateLiveStats();
-          setTimeout(function(){ eyeShowQuestion(idx + 1); }, 300);
-        }
       }, 100);
+
+      setTimeout(function(){
+        clearInterval(eyeState.qTimerInterval);
+        // 자동 통과 (정답 처리)
+        var rt = Date.now() - eyeState.questionStartTime;
+        eyeState.reactionTimes.push(rt);
+        eyeState.answers.push({q:idx, opt:0, correct:true, rt:rt, cat:q.cat, level:q.level||0, auto:true});
+        eyeBeepClick();
+        eyeUpdateLiveStats();
+        setTimeout(function(){ eyeShowQuestion(idx + 1); }, 300);
+      }, q.autoTimer);
 
     } else {
       // 일반 객관식 문항
@@ -131066,8 +131063,6 @@ if('serviceWorker' in navigator){
 
   // ── 결과 계산 ────────────────────────────────────────────
   function eyeFinishMeasure(){
-    /* ★ C-62: 검사가 끝나면 실시간 측정 지표(📊) 패널을 표시 (측정 중엔 숨김) */
-    try{ var _mp=document.getElementById('eye-metrics-panel'); if(_mp) _mp.style.display='block'; }catch(_){}
     clearInterval(eyeState.qTimerInterval);
     clearInterval(eyeState.rppgInterval);
 
