@@ -5763,6 +5763,26 @@ function cgoGuideFeature(key){
           </div>
         </div>
 
+        <!-- ═══ 🎫 C-63 회원가입 카드 (무료) — 정보입력=가입 ═══ -->
+        <div id="c63-signup-card" style="margin:16px 0 0;padding:16px;background:linear-gradient(160deg,rgba(13,148,136,.12),rgba(56,189,248,.06));border:1.5px solid rgba(52,211,153,.35);border-radius:16px;">
+          <div style="font-size:14px;font-weight:900;color:#34d399;margin-bottom:4px;">🎫 C-63 회원가입 <span style="font-size:10px;color:#5eead4;font-weight:700;">무료</span></div>
+          <div style="font-size:11px;color:rgba(240,230,200,.6);line-height:1.6;margin-bottom:14px;">위 정보를 입력하고 가입하면 모든 분석 기능이 열립니다. (무료 · 기능별 하루 1회)</div>
+          <label style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;margin-bottom:10px;">
+            <input type="checkbox" id="c63Agree" style="width:17px;height:17px;accent-color:#34d399;flex-shrink:0;margin-top:1px;">
+            <span style="font-size:11.5px;color:rgba(240,230,200,.85);line-height:1.6;">이용약관 및 개인정보 처리방침에 동의합니다. <span onclick="event.preventDefault();event.stopPropagation();if(typeof cgoShowTerms==='function')cgoShowTerms();" style="color:#38bdf8;text-decoration:underline;cursor:pointer;">약관 보기</span></span>
+          </label>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:700;color:#5eead4;margin-bottom:5px;">🔐 비밀번호 설정 <span style="color:rgba(240,230,200,.4);font-weight:500;">(선택 · 재방문 잠금용)</span></div>
+            <input type="password" id="c63Pw" placeholder="비밀번호 4자 이상 (생략 가능)" style="width:100%;padding:11px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(52,211,153,.3);border-radius:10px;color:#e6f6f2;font-size:13px;outline:none;box-sizing:border-box;">
+          </div>
+          <label style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;cursor:pointer;margin-bottom:14px;">
+            <input type="checkbox" id="c63SkipLock" checked style="width:17px;height:17px;accent-color:#34d399;flex-shrink:0;">
+            <span style="font-size:11.5px;color:rgba(240,230,200,.85);line-height:1.5;">다음부터 비밀번호 없이 바로 입장<br><span style="font-size:10px;color:rgba(240,230,200,.45);">체크 해제 시 다음 방문부터 비밀번호를 입력합니다</span></span>
+          </label>
+          <button onclick="_cgoC63Signup()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.03em;box-shadow:0 4px 14px rgba(13,148,136,.35);">✓ 가입하고 모든 기능 열기</button>
+          <div id="c63Msg" style="text-align:center;font-size:11px;margin-top:9px;min-height:15px;"></div>
+        </div>
+
         <!-- 경계선 -->
         <div style="margin:24px 0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);"></div>
       <!-- ═══ 🚀 우주 실시간 신호 실시간 우주 명령 시스템 ═══ -->
@@ -133078,6 +133098,47 @@ window._cgoSignupPrompt = function(label){
     +'<button onclick="var b=document.getElementById(\'cgoSignupPromptBox\');if(b)b.remove();" style="margin-top:8px;width:100%;padding:11px;background:#f1f5f9;border:none;border-radius:12px;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">계속 둘러보기</button>'
     +'</div>';
   document.body.appendChild(d);
+};
+/* ★ C-63 회원가입 처리 — 정보입력=가입. 성공 시 tier가 guest→free 로 바뀌어 모든 기능 잠금 해제 */
+window._cgoC63Signup = function(){
+  var msg=document.getElementById('c63Msg');
+  function say(t,c){ if(msg){ msg.textContent=t; msg.style.color=c||'#f87171'; } }
+  if(typeof _cgoInfoOK==='function' && !_cgoInfoOK()){
+    say('⚠️ 먼저 위에서 이름·생년월일을 입력하세요');
+    try{ var ip=document.getElementById('sec-ip'); if(ip&&ip.scrollIntoView) ip.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+    return;
+  }
+  var ag=document.getElementById('c63Agree');
+  if(!ag || !ag.checked){ say('⚠️ 약관에 동의해 주세요'); return; }
+  try{
+    var info={ name:(document.getElementById('ipName')||{}).value||'', by:(document.getElementById('ipBirthY')||{}).value||'', bm:(document.getElementById('ipBirthM')||{}).value||'', bd:(document.getElementById('ipBirthD')||{}).value||'' };
+    localStorage.setItem('cgo_saved_info', JSON.stringify(info));
+  }catch(e){}
+  var pwEl=document.getElementById('c63Pw'); var pw=pwEl?(pwEl.value||''):'';
+  var skipEl=document.getElementById('c63SkipLock'); var skip=skipEl?skipEl.checked:true;
+  if(pw && pw.length>0 && pw.length<4){ say('⚠️ 비밀번호는 4자 이상이어야 해요 (생략도 가능)'); return; }
+  function finish(){
+    try{ localStorage.setItem('cgo_signup', JSON.stringify({method:'c63', t:Date.now()})); }catch(e){}
+    try{ if(typeof cgoSaveSignup==='function') cgoSaveSignup('c63', (document.getElementById('ipName')||{}).value||'', null); }catch(e){}
+    try{ localStorage.setItem('cgo_skip_lock', skip?'1':'0'); }catch(e){}
+    try{ if(typeof _cgoUpdateInfoGate==='function') _cgoUpdateInfoGate(); }catch(e){}
+    say('✅ 가입 완료 — 모든 기능이 열렸어요!', '#34d399');
+    try{ var c=document.getElementById('c63-signup-card'); if(c) c.style.borderColor='rgba(52,211,153,.7)'; }catch(e){}
+  }
+  if(pw && pw.length>=4){
+    try{
+      var enc=new TextEncoder().encode(pw);
+      crypto.subtle.digest('SHA-256', enc).then(function(buf){
+        var h=Array.from(new Uint8Array(buf)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+        try{ localStorage.setItem('cgo_fuli_pw', h); localStorage.removeItem('cgo_fuli_pw_v2'); }catch(e){}
+        finish();
+      }).catch(function(){ finish(); });
+    }catch(e){ finish(); }
+  } else {
+    // 비번 생략 → 재방문 잠금 없음 강제
+    skip=true; try{ localStorage.setItem('cgo_skip_lock','1'); }catch(e){}
+    finish();
+  }
 };
 /* ★ C-63 카메라 길목 — 미가입(guest)만 카메라(실시간 측정) 차단 → 가입유도.
    navigator.mediaDevices.getUserMedia를 전역에서 1회 감싸 60곳 호출 전부 커버.
