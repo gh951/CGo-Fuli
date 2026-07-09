@@ -32707,8 +32707,76 @@ function _c24Filter(x){
   return y;
 }
 
+/* ★ C-63 ROI v2 — 부위별 정밀 ROI + 조명 정규화 (AR 기술 접목)
+   기존: 모든 부위가 화면 고정 사각형(25%,10%)에서 픽셀 추출 → 얼굴이 움직이면 배경·머리카락이 섞여 BPM 요동
+   개선: FaceMesh 468 랜드마크(이미 _c24._faceLms에 저장 중이나 미사용)로 볼·이마 추적,
+        혀/눈은 가이드 안쪽 작은 원, 손은 사각 가이드 내부.
+   폴백: 랜드마크 없거나 오류 시 기존 고정 사각형 그대로. 원복: window._cgoRoiV2 = false */
+window._cgoRoiV2 = true;
+
+function _c24RoiRect(v){
+  var vw=v.videoWidth, vh=v.videoHeight;
+  var def={sx:Math.floor(vw*0.25), sy:Math.floor(vh*0.1), sw:Math.floor(vw*0.5), sh:Math.floor(vh*0.4), src:'fixed'};
+  if(window._cgoRoiV2===false) return def;
+  try{
+    var mode=_c24.mode;
+    /* ── 얼굴/피부: FaceMesh 볼·이마 랜드마크 (신호가 가장 강한 영역) ── */
+    if((mode==='face'||mode==='skin') && _c24._faceLms &&
+       (performance.now()-(_c24._faceLmsTime||0) < 700)){
+      var L=_c24._faceLms;
+      /* MediaPipe 468: 좌볼 50/101/118, 우볼 280/330/347, 이마 10/67/297 */
+      var idx=[50,101,118,280,330,347,10,67,297];
+      var xs=[], ys=[];
+      for(var i=0;i<idx.length;i++){
+        var pt=L[idx[i]]; if(!pt) continue;
+        xs.push(pt.x*vw); ys.push(pt.y*vh);
+      }
+      if(xs.length>=6){
+        var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+        var y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys);
+        /* 눈·눈썹·머리카락 제외 위해 상단 12% 잘라냄 */
+        var padY=(y1-y0)*0.12; y0+=padY;
+        var w=x1-x0, h=y1-y0;
+        if(w>20 && h>20){
+          return {sx:Math.floor(x0), sy:Math.floor(y0), sw:Math.floor(w), sh:Math.floor(h), src:'facemesh'};
+        }
+      }
+    }
+    /* ── 혀/눈: 가이드 안쪽 작은 원 영역 (DrawGuide의 ex*0.5, ey*0.5와 동일) ── */
+    if(mode==='tongue' || mode==='eye'){
+      var cx=vw*0.5, cy=vh*0.48;
+      var ex=vw*0.38*0.5, ey=vh*0.42*0.5;
+      return {sx:Math.floor(cx-ex), sy:Math.floor(cy-ey), sw:Math.floor(ex*2), sh:Math.floor(ey*2), src:'inner-circle'};
+    }
+    /* ── 손등/손바닥: 사각 가이드 내부 (DrawGuide 0.1/0.15/0.8/0.7) ── */
+    if(mode==='hand'||mode==='hand_back'||mode==='hand_palm'){
+      return {sx:Math.floor(vw*0.18), sy:Math.floor(vh*0.22), sw:Math.floor(vw*0.64), sh:Math.floor(vh*0.56), src:'hand-rect'};
+    }
+    /* ── 얼굴인데 랜드마크 없음: 타원 가이드 내접 사각형 ── */
+    if(mode==='face'||mode==='skin'){
+      var cx2=vw*0.5, cy2=vh*0.48, ex2=vw*0.38*0.62, ey2=vh*0.42*0.62;
+      return {sx:Math.floor(cx2-ex2), sy:Math.floor(cy2-ey2), sw:Math.floor(ex2*2), sh:Math.floor(ey2*2), src:'ellipse'};
+    }
+  }catch(e){}
+  return def;
+}
+
 // CHROM 알고리즘 적용 (C-24 전용)
 function _c24ChromStep(r, g, b){
+  /* ★ C-63 조명 정규화 — 프레임 전체 밝기(luma) 변화를 상쇄해 조명 흔들림에 강인하게.
+     기준 밝기(EMA)를 유지하고 현재 프레임을 그 비율로 스케일. rPPG 맥동 성분은 보존됨.
+     (조명이 밝아지면 R·G·B가 함께 커지므로, 공통 성분을 나눠 제거) */
+  if(window._cgoRoiV2!==false){
+    try{
+      var _lum = 0.299*r + 0.587*g + 0.114*b;
+      if(_lum > 1){
+        if(!_c24._lumaEMA) _c24._lumaEMA = _lum;
+        else _c24._lumaEMA = _c24._lumaEMA*0.97 + _lum*0.03;   /* 느린 EMA = 조명 기준선 */
+        var _k = _c24._lumaEMA / _lum;
+        if(_k > 0.5 && _k < 2.0){ r*=_k; g*=_k; b*=_k; }        /* 급변 시엔 미적용(안전) */
+      }
+    }catch(e){}
+  }
   _c24.rawR.push(r); _c24.rawG.push(g); _c24.rawB.push(b);
   var n=_c24.rawR.length;
   if(n<2) return;
@@ -32778,8 +32846,11 @@ function _c24Loop(){
     var v=document.getElementById('c24-video');
     if(v&&v.videoWidth&&_c24.offCtx){
       var vw=v.videoWidth,vh=v.videoHeight;
-      var sx=Math.floor(vw*0.25),sy=Math.floor(vh*0.1);
-      var sw=Math.floor(vw*0.5),sh=Math.floor(vh*0.4);
+      /* ★ C-63: 부위별 정밀 ROI (FaceMesh 볼·이마 / 혀·눈 안쪽원 / 손 사각) · 실패 시 고정 사각형 폴백 */
+      var _roi=(typeof _c24RoiRect==='function')?_c24RoiRect(v):{sx:Math.floor(vw*0.25),sy:Math.floor(vh*0.1),sw:Math.floor(vw*0.5),sh:Math.floor(vh*0.4),src:'fixed'};
+      var sx=_roi.sx, sy=_roi.sy, sw=_roi.sw, sh=_roi.sh;
+      _c24._roiSrc=_roi.src;
+      if(_c24._roiSrcPrev!==_roi.src){ _c24._roiSrcPrev=_roi.src; try{ console.log('[C-63 ROI]', _c24.mode, '→', _roi.src, _roi.sw+'x'+_roi.sh); }catch(e){} }
       _c24.offCanvas.width=64; _c24.offCanvas.height=48;
       _c24.offCtx.drawImage(v,sx,sy,sw,sh,0,0,64,48);
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
