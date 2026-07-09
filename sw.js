@@ -1,17 +1,30 @@
 // ════════════════════════════════════════════════════════════
-// CGO-FULI Service Worker v3.0 (캐시 강제 갱신)
-// 특허 10-2026-0060113 · 기획 이주원 × C-14 × C-15
+// CGO-FULI Service Worker v3.1 (C-63 로딩 최적화)
+// 특허 10-2026-0060113 · 기획 이주원 × C-14 × C-15 × C-63
+// ════════════════════════════════════════════════════════════
+//
+// ★ C-63 변경 요약 (v3.0 → v3.1)
+//   문제: 앱은 빠르게 뜨는데 브라우저 탭 로딩 스피너가 1분 넘게 계속 돌았다.
+//   원인: ① index.html(약 11MB)을 cache:'no-store'로 매 방문마다 전체 재다운로드
+//         ② 받은 11MB를 response.clone() 해서 Cache Storage에 다시 복사
+//   해결: ① no-store → no-cache (서버에 변경 여부만 확인 → 안 바뀌었으면 304, 0바이트)
+//         ② 문서(11MB)는 캐시에 쓰지 않음. 오프라인 폴백은 install 시 받아둔 것을 사용
+//   결과: '항상 최신 버전' 보장은 그대로. 배포 즉시 반영됨. 스피너·트래픽만 해소.
+//   원복: 아래 USE_NO_STORE 를 true 로 바꾸면 v3.0 동작.
 // ════════════════════════════════════════════════════════════
 
-const CACHE_NAME = 'cgo-fuli-v3';
+const CACHE_NAME = 'cgo-fuli-v3-1';
 const CACHE_URLS = [
   '/',
   '/index.html'
 ];
 
-// ── 설치: 핵심 파일 캐싱 ──
+// v3.0 동작으로 되돌리려면 true
+const USE_NO_STORE = false;
+
+// ── 설치: 핵심 파일 캐싱 (오프라인 폴백용) ──
 self.addEventListener('install', function(e) {
-  console.log('[CGO-FULI SW] 설치 중...');
+  console.log('[CGO-FULI SW] v3.1 설치 중...');
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(CACHE_URLS).catch(function(err) {
@@ -24,7 +37,7 @@ self.addEventListener('install', function(e) {
 
 // ── 활성화: 구 캐시 삭제 ──
 self.addEventListener('activate', function(e) {
-  console.log('[CGO-FULI SW] 활성화');
+  console.log('[CGO-FULI SW] 활성화 v3.1');
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(
@@ -47,13 +60,27 @@ self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
 
-  // index.html/네비게이션은 항상 최신 (캐시 무시)
-  var isDoc = e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1 || e.request.url.endsWith('/');
+  // index.html/네비게이션 판별
+  var isDoc = e.request.mode === 'navigate' ||
+              e.request.url.indexOf('index.html') > -1 ||
+              e.request.url.endsWith('/');
+
+  // ★ C-63: no-store(전체 재다운로드) → no-cache(변경 확인만)
+  //   no-cache 도 서버에 매번 검증 요청을 보내므로 '항상 최신'은 동일하게 보장된다.
+  //   다만 파일이 안 바뀌었으면 304 Not Modified(본문 0바이트)로 끝나므로
+  //   11MB를 매번 다시 받지 않는다 → 탭 스피너가 즉시 멈춘다.
+  var docReq = isDoc
+    ? new Request(e.request.url, { cache: USE_NO_STORE ? 'no-store' : 'no-cache' })
+    : e.request;
+
   e.respondWith(
-    fetch(isDoc ? new Request(e.request.url, {cache:'no-store'}) : e.request)
+    fetch(docReq)
       .then(function(response) {
-        // 성공 시 캐시 업데이트 후 반환
-        if (response && response.status === 200 && response.type === 'basic') {
+        // ★ C-63: 문서(11MB)는 clone()해서 캐시에 다시 쓰지 않는다.
+        //   clone()은 본문 전체를 메모리에 복제하고 Cache Storage 쓰기까지 유발해
+        //   로딩이 끝난 뒤에도 백그라운드 작업이 길게 이어졌다.
+        //   오프라인 폴백은 install 단계에서 받아둔 '/index.html'로 충분하다.
+        if (!isDoc && response && response.status === 200 && response.type === 'basic') {
           var cloned = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
             cache.put(e.request, cloned);
@@ -152,4 +179,4 @@ self.addEventListener('sync', function(e) {
   }
 });
 
-console.log('[CGO-FULI SW] v3.0 로드 완료 · 특허 10-2026-0060113');
+console.log('[CGO-FULI SW] v3.1 로드 완료 · C-63 로딩 최적화 · 특허 10-2026-0060113');
