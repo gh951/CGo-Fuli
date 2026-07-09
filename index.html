@@ -33069,12 +33069,23 @@ function _c24DrawGuide(skinRatio){
     // 얼굴/혀 모드: 타원 가이드
     var cx2=cv.width*0.5, cy2=cv.height*0.48;
     var ex=cv.width*0.38, ey=cv.height*0.42;
+    /* ★ C-63: 원이 곧 FaceMesh 상태 표시기 — 얼굴 인식되면 초록 실선 + 발광 */
+    var _fmOK = (_c24._roiBox && _c24._roiBox.src==='facemesh');
     ctx.beginPath();
     ctx.ellipse(cx2,cy2,ex,ey,0,0,Math.PI*2);
-    ctx.strokeStyle = _fcol;
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash(_fs==='ok'?[]:[6,4]);
-    ctx.stroke();
+    if(_fmOK){
+      ctx.strokeStyle='rgba(52,211,153,.95)';
+      ctx.lineWidth=3;
+      ctx.setLineDash([]);
+      ctx.shadowColor='rgba(52,211,153,.85)'; ctx.shadowBlur=14;   /* 인식 = 발광 */
+      ctx.stroke();
+      ctx.shadowBlur=0;
+    } else {
+      ctx.strokeStyle = _fcol;
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash(_fs==='ok'?[]:[6,4]);
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
     // 원안에원 — 혀·눈은 안쪽 작은 원 (더 가까이 유도)
     if(mode==='tongue'||mode==='eye'){
@@ -33120,17 +33131,20 @@ function _c24DrawGuide(skinRatio){
       ctx.save();
       ctx.strokeStyle=_isFM?'rgba(52,211,153,.95)':'rgba(251,191,36,.85)';
       ctx.lineWidth=2; ctx.setLineDash(_isFM?[]:[5,4]);
-      /* ★ C-63: 실제 측정 패치를 그대로 표시 — 얼굴은 이마·좌볼·우볼 3개 (눈·코·입 제외) */
+      /* ★ C-63: 얼굴 3패치(이마·좌볼·우볼)는 측정에만 사용하고 화면엔 표시하지 않는다.
+         (박스가 얼굴을 따라다니면 사용자가 신경 쓰임 → 대신 타원 가이드가 인식 상태를 표현)
+         패치 표시를 되살리려면: window._cgoShowPatches = true */
       if(_rb.patches && _rb.patches.length>=2){
-        _rb.patches.forEach(function(_p){
-          var _px=_p.x*_sc+_ox, _py=_p.y*_sc+_oy, _pw2=_p.w*_sc, _ph2=_p.h*_sc;
-          _px = cv.width - _px - _pw2;   /* 거울 보정 */
-          ctx.strokeRect(_px,_py,_pw2,_ph2);
-          /* 반투명 채움으로 '여기를 잰다' 명확히 */
-          ctx.fillStyle='rgba(52,211,153,.13)';
-          ctx.fillRect(_px,_py,_pw2,_ph2);
-        });
-      } else {
+        if(window._cgoShowPatches===true){
+          _rb.patches.forEach(function(_p){
+            var _px=_p.x*_sc+_ox, _py=_p.y*_sc+_oy, _pw2=_p.w*_sc, _ph2=_p.h*_sc;
+            _px = cv.width - _px - _pw2;
+            ctx.strokeRect(_px,_py,_pw2,_ph2);
+            ctx.fillStyle='rgba(52,211,153,.13)';
+            ctx.fillRect(_px,_py,_pw2,_ph2);
+          });
+        }
+      } else if(mode==='hand'||mode==='hand_back'||mode==='hand_palm') {  /* 손만 박스 표시 (혀·눈은 안쪽 원이 안내) */
         ctx.strokeRect(_bx,_by,_bw,_bh);
         var _c=10;
         ctx.lineWidth=3;
