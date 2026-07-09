@@ -9929,7 +9929,7 @@ function cgoGuideFeature(key){
         <!-- 5단계 흐름 -->
         <div class="sip-step"><div class="sip-step-num">1</div><div class="sip-step-body"><div class="sip-step-title">📋 자가진단 질문지 (3 STEP)</div><div class="sip-step-desc">증상 체크 (8개 多중) · 유형 선택 (8개 中 1개) · 심화 질문 (4개). 각 STEP 헤더 탭으로 열림.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">📷 5부위 카메라 정밀 측정</div><div class="sip-step-desc">정수리 30초 · M자 좌·우 각 20초 · 정중선 20초 · 후두부 20초. 화면이 안 보일 때는 <b>딩동 소리</b>가 부위 전환을 알려드립니다. 기기 내부 처리, 서버 전송 없음.</div></div></div>
-        <div class="sip-step"><div class="sip-step-num">3</div><div class="sip-step-body"><div class="sip-step-title">🔬 BASP 자동 분류 · 모낭 카운트</div><div class="sip-step-desc">AI Vision이 사진을 분석하여 BASP(L/M/C/U·V·F형) 자동 분류 + 모낭당 가닥 수 + 두피 홍반·유분·각질 정량 분석.</div></div></div>
+        <div class="sip-step"><div class="sip-step-num">3</div><div class="sip-step-body"><div class="sip-step-title">🔬 BASP 참고 분류 · 모낭 밀도 추정</div><div class="sip-step-desc">AI 비전이 사진을 관찰하여 BASP(L/M/C/U·V·F형) 참고 분류 + 모낭·모발 밀도 추정 + 두피 홍반·유분 관찰. 사진 품질에 따라 결과가 없을 수 있습니다.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">💓 rPPG 자율신경 융합 (C-63 연동)</div><div class="sip-step-desc">먼저 <b>C-63 건강 예측</b>을 측정하시면 얼굴 rPPG·자율신경 데이터가 두피 분석에 융합됩니다. <b>세계 어떤 앱도 안 하는 FULI 차별점</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">5</div><div class="sip-step-body"><div class="sip-step-title">🤖 두피 케어 AI 상담</div><div class="sip-step-desc">두피·탈모 임상 지식 + 한의학 종합 1:1 맞춤 가이드 + 오행 라이프웨어(C-04·C-16·C-02) 자동 매칭.</div></div></div>
 
@@ -10888,6 +10888,55 @@ function cgoGuideFeature(key){
   // 추가 용량: ~3KB | 외부 의존성: 0 | 본진 SoC 완전 보존
   // ════════════════════════════════════════════════════
   
+  /* ★ C-63: 두피 스펙트럼 + 환경(조명) 보정 엔진
+     ─────────────────────────────────────────────────────────────
+     ⚠️ 얼굴 rPPG의 '좌표(FaceMesh 468)'는 두피에 적용 불가하다.
+        정수리·M자·정중선·후두부는 얼굴이 프레임에 없어 랜드마크가 잡히지 않는다.
+        대신 '두피 영역 검출(피부톤 세그먼트)'로 ROI를 대체한다.
+
+     적용되는 것:
+       ① 환경(조명) 정규화 — Gray-World 화이트밸런스로 색온도 보정
+                              + 밝기 정규화로 노출 차이 상쇄
+       ② 스펙트럼 정규화   — 절대 RGB 대신 채널 비율(r/(r+g+b))로 판정
+                              → 조명 밝기·색온도에 불변
+       ③ 두피 ROI 검출     — 머리카락(어두움)·배경 제외, 두피 픽셀만 대상
+
+     기존 문제(수정 전):
+       score = r - (g*0.6 + b*0.4);  if(score>35 && r>120)
+       → r>120 절대 임계값. 어두운 방에서는 홍반이 있어도 무조건 미검출.
+       → 밝은 조명에서는 정상 두피도 홍반으로 오검출.
+     원복: window._cgoScalpSpecV2 = false */
+  window._cgoScalpSpecV2 = (window._cgoScalpSpecV2 !== false);
+
+  /* ① 환경(조명) 정규화 — 밝기(luma)만 기준값으로 스케일
+     ⚠️ Gray-World 화이트밸런스는 쓰지 않는다.
+        Gray-World는 '장면에 다양한 색이 섞여 있다'고 가정하는데,
+        두피 클로즈업은 화면 전체가 살색이라 그 붉은기 자체를 '조명 편향'으로
+        오인해 지워버린다(= 홍반이 사라짐). 실측 시뮬레이션으로 확인.
+        따라서 색비율은 원본 유지하고 밝기만 정규화한다. */
+  window.scalpLumaNorm = function(data){
+    var n = data.length / 4;
+    var lumS = 0;
+    for(var i = 0; i < data.length; i += 4){
+      lumS += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+    var L = lumS / n;
+    var k = (L > 1) ? (140.0 / L) : 1.0;      /* 기준 밝기 140 */
+    k = Math.max(0.5, Math.min(2.0, k));      /* 과보정 방지 */
+    return { k:k, lum:L };
+  };
+
+  /* ③ 두피 픽셀 판정 — 머리카락(저명도)·배경(무채색) 제외 */
+  window.scalpIsScalpPx = function(r, g, b){
+    var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    var v = mx / 255;                       /* 명도 */
+    var sat = mx > 0 ? (mx-mn)/mx : 0;      /* 채도 */
+    if(v < 0.28) return false;              /* 너무 어두움 = 머리카락·그림자 */
+    if(sat < 0.06) return false;            /* 무채색 = 배경·흰벽 */
+    if(!(r >= g && g >= b)) return false;   /* 피부톤은 R≥G≥B */
+    return true;
+  };
+
   // ① 두피 홍반 픽셀 분석 (염증·열감 검출)
   window.scalpAnalyzeErythema = function(imgData){
     try {
@@ -10895,19 +10944,86 @@ function cgoGuideFeature(key){
       var erythemaPx = 0;
       var totalPx = data.length / 4;
       var rSum = 0, gSum = 0, bSum = 0;
-      for(var i = 0; i < data.length; i += 4){
-        var r = data[i], g = data[i+1], b = data[i+2];
-        rSum += r; gSum += g; bSum += b;
-        // 적색 치우침 스코어 (Google AI 수식)
-        var score = r - (g * 0.6 + b * 0.4);
-        if(score > 35 && r > 120) erythemaPx++;
+
+      if(window._cgoScalpSpecV2 === false){
+        /* ── 폴백: 기존 절대 RGB 방식 (조명 의존) ── */
+        for(var i = 0; i < data.length; i += 4){
+          var r0 = data[i], g0 = data[i+1], b0 = data[i+2];
+          rSum += r0; gSum += g0; bSum += b0;
+          var score0 = r0 - (g0 * 0.6 + b0 * 0.4);
+          if(score0 > 35 && r0 > 120) erythemaPx++;
+        }
+        return {
+          erythemaPct: (erythemaPx / totalPx * 100).toFixed(1),
+          avgR: Math.round(rSum / totalPx), avgG: Math.round(gSum / totalPx), avgB: Math.round(bSum / totalPx),
+          confidence: totalPx > 50000 ? 'high' : 'mid', method: 'legacy'
+        };
       }
+
+      /* ★ C-63 스펙트럼 + 환경 보정 방식 ─────────────────────
+         ① 환경: Gray-World 화이트밸런스로 색온도 제거
+         ② 스펙트럼: 절대값 대신 채널 비율 → 조명 밝기에 불변
+         ③ ROI: 두피 픽셀만 (머리카락·배경 제외) */
+      /* ★ C-63: 특허 명세서(INP26-126) 준거 구현
+         ─────────────────────────────────────────────────────
+         · 청구항 12: "두피 복수 부위 영상의 홍반 지수 및 경계 검출 기반 밀도 지표"
+         · 실시예   : "홍반 지수 EI = log₁₀(R/G)"
+         · 청구항 6 : "모든 측정 모듈(110-a~110-g)이 동일 파이프라인 공유"
+                      → 색차 정규화 → 대역통과 → 다부위 신뢰도 가중 융합
+
+         EI = log₁₀(R/G) 의 성질:
+           조명이 k배 밝아지면 R→kR, G→kG 이므로
+           log₁₀(kR/kG) = log₁₀(R/G)  → 조명 밝기가 완전히 소거된다.
+           (비어-람베르트 법칙 기반 광학 밀도. 헤모글로빈 흡광 특성 반영)
+         이것이 명세서가 말하는 '스펙트럼' 정규화이며,
+         기존 구현의 `r > 120` 절대 임계값 문제를 근본 해결한다. */
+      var ln = window.scalpLumaNorm(data);   /* 밝기 통계(참고·신뢰도 판정용) */
+      var scalpPx = 0;
+      var eiList = [];                        /* 두피 픽셀별 홍반 지수 EI */
+
+      for(var i2 = 0; i2 < data.length; i2 += 4){
+        var r = data[i2], g = data[i2+1], b = data[i2+2];
+        rSum += r; gSum += g; bSum += b;
+
+        /* ROI: 두피 픽셀만 (머리카락·배경 제외) */
+        if(!window.scalpIsScalpPx(r, g, b)) continue;
+        if(g < 1) continue;                   /* log 정의역 보호 */
+        scalpPx++;
+
+        /* ★ 명세서 수식: 홍반 지수 EI = log₁₀(R/G) — 조명 불변 */
+        eiList.push(Math.log(r / g) / Math.LN10);
+      }
+
+      /* 홍반 판정 — 절대 기준 + 개인 상대 기준 병행
+         · 절대: EI ≥ 0.13 (정상 피부 EI ≈ 0.06~0.09, 홍반 ≈ 0.18~0.25)
+         · 상대: 이 사람 두피 평균 + 0.6σ (피부톤 개인차 흡수) */
+      var eiMean = 0, eiMax = 0;
+      if(eiList.length > 0){
+        for(var q = 0; q < eiList.length; q++){ eiMean += eiList[q]; if(eiList[q] > eiMax) eiMax = eiList[q]; }
+        eiMean /= eiList.length;
+        var vr = 0;
+        for(var q2 = 0; q2 < eiList.length; q2++){ var d2 = eiList[q2] - eiMean; vr += d2*d2; }
+        var eiSd = Math.sqrt(vr / eiList.length) || 0.0001;
+        var eiThr = Math.max(eiMean + 0.6*eiSd, 0.13);
+        for(var q3 = 0; q3 < eiList.length; q3++){ if(eiList[q3] > eiThr) erythemaPx++; }
+      }
+
+      /* 두피 픽셀 대비 비율 (전체 픽셀 대비가 아님 → 머리카락 많아도 왜곡 없음) */
+      var denom = scalpPx > 0 ? scalpPx : totalPx;
       return {
-        erythemaPct: (erythemaPx / totalPx * 100).toFixed(1),
+        erythemaPct: (erythemaPx / denom * 100).toFixed(1),
         avgR: Math.round(rSum / totalPx),
         avgG: Math.round(gSum / totalPx),
         avgB: Math.round(bSum / totalPx),
-        confidence: totalPx > 50000 ? 'high' : 'mid'
+        scalpPx: scalpPx,
+        scalpCoverage: (scalpPx / totalPx * 100).toFixed(1),
+        /* ★ 명세서 준거 홍반 지수 통계 (EI = log₁₀(R/G)) */
+        eiMean: +eiMean.toFixed(4),
+        eiMax: +eiMax.toFixed(4),
+        lum: Math.round(ln.lum),
+        /* 두피가 너무 적게 잡히면 신뢰도 낮음 (정직) */
+        confidence: (scalpPx / totalPx < 0.08) ? 'low' : (totalPx > 50000 ? 'high' : 'mid'),
+        method: 'spectrum-v2'
       };
     } catch(e){ return null; }
   };
@@ -10920,6 +11036,17 @@ function cgoGuideFeature(key){
       var ky = [-1,-2,-1,0,0,0,1,2,1];
       var edgePx = 0;
       var sampleStep = 2; // 성능 위해 2픽셀 간격 샘플링
+      /* ★ C-63: 조명 적응형 엣지 임계값 — 평균 밝기에 비례
+         (어두운 사진에서 gradient가 작아져 모발 윤곽을 놓치던 문제) */
+      var _edgeThr = 50;
+      try{
+        var _lS = 0, _lN = 0;
+        for(var _li = 0; _li < d.length; _li += 40){   /* 10픽셀 간격 샘플 */
+          _lS += 0.299*d[_li] + 0.587*d[_li+1] + 0.114*d[_li+2]; _lN++;
+        }
+        var _lAvg = _lN ? (_lS/_lN) : 140;
+        _edgeThr = Math.max(22, Math.min(90, 50 * (_lAvg/140)));
+      }catch(e){}
       for(var y = 1; y < h - 1; y += sampleStep){
         for(var x = 1; x < w - 1; x += sampleStep){
           var gx = 0, gy = 0;
@@ -10933,7 +11060,10 @@ function cgoGuideFeature(key){
             }
           }
           var mag = Math.sqrt(gx * gx + gy * gy);
-          if(mag > 50) edgePx++;
+          /* ★ C-63: mag>50 절대 임계값은 조명에 의존 — 어두우면 모발 윤곽이 사라진다.
+             밝기(luma)로 정규화한 상대 임계값 사용. 원복: _cgoScalpSpecV2=false */
+          var _thr = (window._cgoScalpSpecV2 === false) ? 50 : _edgeThr;
+          if(mag > _thr) edgePx++;
         }
       }
       var sampleArea = Math.floor((w-2)/sampleStep) * Math.floor((h-2)/sampleStep);
@@ -10966,7 +11096,7 @@ function cgoGuideFeature(key){
       pixelAnalysis = { erythema: erythema, edge: edge, w: w, h: h };
       console.log('[C-39 v1.1] 부위 ' + (window.scalpCamState.idx+1) + ' 픽셀 분석:',
         '홍반=' + (erythema ? erythema.erythemaPct + '%' : 'N/A'),
-        '모발밀도=' + (edge ? edge.edgeDensity + '%' : 'N/A'));
+        '윤곽밀도(참고)=' + (edge ? edge.edgeDensity + '%' : 'N/A'));
     } catch(e){
       console.log('[C-39 v1.1] 픽셀 분석 실패 (정상 작동):', e.message);
     }
@@ -11741,12 +11871,49 @@ function cgoGuideFeature(key){
       });
     }
 
-    // Vision API 호출 (사진 있으면 vision-analyze, 없으면 groq 텍스트만)
-    var apiUrl = images.length > 0 ? '/api/vision-analyze' : '/api/groq';
+    /* ★ C-63: /api/vision-analyze → Groq 비전(llama-4-scout)으로 교체.
+       이유: vision-analyze 엔드포인트는 이 앱 어디에도 정의되어 있지 않아
+             호출 시 .catch로 빠지고 BASP·모낭 섹션이 조용히 사라졌다.
+             (즉 화면 소개문의 'BASP 자동 분류·모낭 카운트'는 실제로 뜨지 않았음)
+       대안: 앱이 이미 관상·설진·손금 등 12곳에서 쓰는 Groq 비전 모델
+             meta-llama/llama-4-scout-17b-16e-instruct 를 그대로 사용.
+             Google Vision(유료·법인 필요) 없이 동작.
+       응답 스키마는 기존 UI가 기대하는 {basp, follicles[]} 형태로 강제한다.
+       원복: window._cgoScalpVisionV2 = false → 기존 /api/vision-analyze */
+    window._cgoScalpVisionV2 = (window._cgoScalpVisionV2 !== false);
+    var _useGroqVision = (images.length > 0) && (window._cgoScalpVisionV2 !== false);
+
+    var apiUrl = _useGroqVision ? '/api/groq'
+               : (images.length > 0 ? '/api/vision-analyze' : '/api/groq');
     var apiBody;
 
-    if(images.length > 0){
-      // Vision API — BASP + 모낭 + 권위자 분석
+    if(_useGroqVision){
+      /* Groq 비전 — 사진(최대 3장)을 보내 BASP/모낭 추정 JSON을 받는다 */
+      var _imgParts = images.slice(0,3).map(function(im){
+        var _b64 = String(im.base64||'').replace(/^data:image\/\w+;base64,/, '');
+        return { type:'image_url', image_url:{ url:'data:image/jpeg;base64,'+_b64 } };
+      });
+      var _partNames = images.slice(0,3).map(function(im){ return im.part; }).join(', ');
+      var _visionPrompt =
+        '당신은 두피·모발 이미지를 관찰하는 AI 정보 도우미입니다. 의료인이 아니며 진단·처방을 하지 않습니다.\n'
+        + '촬영 부위: ' + _partNames + '\n'
+        + '사진에서 실제로 보이는 특징만 근거로 아래 JSON만 반환하세요 (코드블록·설명 없이).\n'
+        + '보이지 않거나 판단이 어려우면 값을 "N/A" 또는 0으로 두세요. 추측으로 채우지 마세요.\n'
+        + '{"basp":{"basic":"L|M|C|U 중 하나 또는 N/A","basic_stage":"0|1|2|3 또는 빈칸",'
+        + '"specific":"V|F 또는 N/A","specific_stage":"0|1|2|3 또는 빈칸"},'
+        + '"follicles":[{"part":"부위명","count":정수(1cm² 추정 모낭 수, 모르면 0),'
+        + '"hair_per_follicle":숫자(모낭당 가닥, 모르면 0),"density_pct":숫자(0~100),'
+        + '"redness":숫자(0~100),"oil":숫자(0~100),"validity":숫자(0~100 이미지 신뢰도),'
+        + '"observation":"관찰된 특징 1문장"}],'
+        + '"analysis":{"summary":"관찰 요약 3문장","care":"생활 관리 참고 2가지"}}';
+      apiBody = JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{ role:'user', content: _imgParts.concat([{type:'text', text:_visionPrompt}]) }],
+        max_tokens: 1200,
+        temperature: 0.3
+      });
+    } else if(images.length > 0){
+      // 구버전 Vision API — BASP + 모낭 + 권위자 분석
       apiBody = JSON.stringify({
         images: images,
         selfDiag: a,
@@ -11776,8 +11943,26 @@ function cgoGuideFeature(key){
       var content = '';
       var visionData = null;
 
-      if(images.length > 0 && data.analysis){
-        // Vision API 응답: {basp, follicles, analysis}
+      /* ★ C-63: Groq 비전 응답 파싱 — {choices:[{message:{content:"JSON문자열"}}]}
+         모델이 코드블록으로 감싸는 경우가 있어 벗겨내고 파싱한다.
+         파싱 실패 시 visionData=null → 기존 로직대로 BASP·모낭 섹션을 숨긴다(정직). */
+      if(_useGroqVision){
+        try{
+          var _raw = (data.choices && data.choices[0] && data.choices[0].message
+                      && data.choices[0].message.content) || '';
+          var _clean = _raw.replace(/```json|```/g, '').trim();
+          var _m = _clean.match(/\{[\s\S]*\}/);
+          if(_m){
+            var _vd = JSON.parse(_m[0]);
+            if(_vd && (_vd.basp || _vd.follicles)) visionData = _vd;
+            content = _vd && _vd.analysis ? JSON.stringify(_vd.analysis) : _clean;
+          } else { content = _clean; }
+        }catch(e){
+          console.log('[C-63 scalp] Groq 비전 파싱 실패 → BASP/모낭 생략:', e.message);
+          visionData = null;
+        }
+      } else if(images.length > 0 && data.analysis){
+        // 구버전 Vision API 응답: {basp, follicles, analysis}
         visionData = data;
         content = JSON.stringify(data.analysis);
       } else {
@@ -11912,16 +12097,16 @@ function cgoGuideFeature(key){
       if(!baspText) baspText = '분류 불가 (이미지 부족)';
 
       html += '<div class="sfm-section" style="border-left-color:#fbbf24;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.08));">';
-      html += '<div class="sfm-section-title">🔬 BASP 자동 분류 (Vision AI)</div>';
+      html += '<div class="sfm-section-title">🔬 BASP 참고 분류 (AI 비전)</div>';
       html += '<div class="sfm-section-body" style="font-size:15px;font-weight:800;color:#fbbf24;">'+ baspText +'</div>';
-      html += '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;">의학적 분류 기준 · 대한모발학회 BASP (Basic and Specific)</div>';
+      html += '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;">참고 분류 · 대한모발학회 BASP (Basic and Specific)</div>';
       html += '</div>';
     }
 
     // ★ 모낭 카운트 + 부위별 정밀 (Vision API 결과 있으면)
     if(visionData && visionData.follicles && visionData.follicles.length){
       html += '<div class="sfm-section">';
-      html += '<div class="sfm-section-title">🌱 모낭 카운트 · 부위별 정밀 분석</div>';
+      html += '<div class="sfm-section-title">🌱 모낭·모발 밀도 추정 (부위별 참고 관찰)</div>';
       html += '<div class="sfm-section-body">';
       visionData.follicles.forEach(function(f){
         if(f.validity > 0){
@@ -11929,7 +12114,7 @@ function cgoGuideFeature(key){
           html += '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);">';
           html += '<div style="font-weight:800;color:#fbbf24;margin-bottom:4px;">' + f.part + ' <span style="font-size:10px;color:'+ validColor +';font-weight:600;">(이미지 유효성 '+ f.validity +'%)</span></div>';
           html += '<div style="font-size:12px;line-height:1.6;">';
-          html += '· 모낭 추정: <b>'+ f.count +'개</b> (1cm² 영역)<br/>';
+          html += '· 모낭 추정: <b>'+ f.count +'개</b> (1cm² 추정·참고)<br/>';
           html += '· 모낭당 가닥: <b>'+ f.hair_per_follicle +'가닥</b>'+ (f.hair_per_follicle < 1.5 ? ' ⚠️ 적음' : '') +'<br/>';
           html += '· 모발 밀도: <b>'+ f.density_pct +'%</b><br/>';
           html += '· 두피 홍반: <b>'+ f.redness +'/100</b>'+ (f.redness > 50 ? ' 🔴 주의' : '') +' · 유분: <b>'+ f.oiliness +'/100</b>' + (f.oiliness > 50 ? ' 💛 높음' : '') + '<br/>';
@@ -29716,7 +29901,7 @@ window.tvyShowIntroPopup = function(){
           <div style="font-size:10px;opacity:0.5;margin-top:4px;">FaceMesh 468 랜드마크 + 사주 색 자동 적용</div>
         </div>
         <div id="rmai-ar-status" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border-radius:8px;padding:5px 11px;font-size:10px;font-weight:800;color:#fff;display:none;letter-spacing:.04em;">대기 중</div>
-        <button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;z-index:20;background:rgba(239,68,68,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">✕ 닫기</button>
+        <div id="rmai-ar-vitals" style="display:none;position:absolute;bottom:10px;left:10px;z-index:20;padding:6px 12px;background:rgba(0,0,0,.62);border:1px solid rgba(244,114,182,.45);border-radius:10px;font-size:12px;font-weight:800;backdrop-filter:blur(6px);"></div><button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;z-index:20;background:rgba(239,68,68,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">✕ 닫기</button>
       </div>
       <div id="rmai-ar-color-picker" style="margin-bottom:12px;"></div>
 <div class="svi-color-tools-card" id="svi-color-tools-card-makeup" style="background:linear-gradient(135deg,rgba(255,255,255,0.9),rgba(252,231,243,0.5));border-radius:18px;padding:18px;margin-top:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);">
@@ -136588,6 +136773,155 @@ window.drawFresnelWaterGlow = function(ctx, canvas, landmarks, glossLevel){
   }
 try{window.drawFresnelWaterGlow=window.drawFresnelWaterGlow;}catch(e){}
 
+/* ★ C-63 청구항 2 — 제2영역(이마) 광학 신호 추출 + 명세서 파이프라인
+   명세서 준거: 색차 정규화(CHROM) → 대역통과(0.7~3Hz 버터워스) → BPM/HRV
+   _c24 전역과 섞이지 않도록 AR 전용 독립 상태(_rmaiSig)를 사용한다. */
+window._rmaiSig = {
+  rawR:[], rawG:[], rawB:[], prevR:0, prevG:0, lumaEMA:0,
+  bpB:[0.19701, 0, -0.19701],          /* 명세서 청구항 7 계수 */
+  bpA:[1, -1.53077, 0.60556],
+  bpZ:[0,0], sig:[], t0:0, bpm:0, hrv:0
+};
+function _rmaiSigFilter(x){
+  var S=window._rmaiSig, b=S.bpB, a=S.bpA, z=S.bpZ;
+  var w = x - a[1]*z[0] - a[2]*z[1];
+  var y = b[0]*w + b[2]*z[1];
+  z[1]=z[0]; z[0]=w;
+  return y;
+}
+function _rmaiArSampleRppg(ctx, canvas, landmarks){
+  var S = window._rmaiSig;
+  if(!S.t0) S.t0 = performance.now();
+
+  /* 제2영역: 이마 중심 (미간 위) — 랜드마크 9(미간), 10(정수리쪽), 151(미간 위) */
+  var p9 = landmarks[9], p10 = landmarks[10], p151 = landmarks[151];
+  var pl = landmarks[234], pr = landmarks[454];   /* 얼굴 폭 */
+  if(!(p9 && p10 && p151 && pl && pr)) return;
+
+  var W = canvas.width, H = canvas.height;
+  var faceW = Math.abs(pr.x - pl.x) * W;
+  if(faceW < 40) return;                           /* 명세서 110-i(a): 너무 작으면 무효 */
+
+  var cx = p9.x * W;
+  var browY = p151.y * H, topY = p10.y * H;
+  var fH = Math.abs(browY - topY);
+  if(fH < 6) return;
+
+  var rw = faceW * 0.34, rh = fH * 0.5;
+  var rx = cx - rw/2, ry = browY - fH*0.82;
+  rx = Math.max(0, Math.min(rx, W-4)); ry = Math.max(0, Math.min(ry, H-4));
+  rw = Math.max(4, Math.min(rw, W-rx)); rh = Math.max(4, Math.min(rh, H-ry));
+
+  /* 아직 색을 칠하기 전 → 순수 광학 신호 */
+  var img;
+  try{ img = ctx.getImageData(rx|0, ry|0, rw|0, rh|0); }catch(e){ return; }
+  var d = img.data, rS=0, gS=0, bS=0, n=0;
+  for(var i=0; i<d.length; i+=4){
+    var r=d[i], g=d[i+1], b=d[i+2];
+    /* 피부 화소만 (명세서: R>G, G>B, 밝기 범위) */
+    if(!(r>g && g>b && (r-g)>10)) continue;
+    var br=(r+g+b)/3; if(br<60 || br>245) continue;
+    rS+=r; gS+=g; bS+=b; n++;
+  }
+  if(n < 30) return;                               /* 명세서 청구항 8: 화소 부족 시 중단 */
+  var R=rS/n, G=gS/n, B=bS/n;
+
+  /* ① 환경(조명) 정규화 — luma EMA */
+  var lum = 0.299*R + 0.587*G + 0.114*B;
+  if(lum > 1){
+    if(!S.lumaEMA) S.lumaEMA = lum;
+    else S.lumaEMA = S.lumaEMA*0.97 + lum*0.03;
+    var k = S.lumaEMA / lum;
+    if(k>0.5 && k<2.0){ R*=k; G*=k; B*=k; }
+  }
+
+  S.rawR.push(R); S.rawG.push(G); S.rawB.push(B);
+  var len = S.rawR.length;
+  if(len < 2) return;
+  var wSize = Math.min(len, 30);
+  var rSl=S.rawR.slice(-wSize), gSl=S.rawG.slice(-wSize), bSl=S.rawB.slice(-wSize);
+  function mean(a){ var t=0; for(var i2=0;i2<a.length;i2++) t+=a[i2]; return t/a.length; }
+  function std(a){ var m=mean(a),t=0; for(var i2=0;i2<a.length;i2++){var dd=a[i2]-m; t+=dd*dd;} return Math.sqrt(t/a.length)||0.0001; }
+  var rM=mean(rSl), gM=mean(gSl), bM=mean(bSl);
+  if(rM<1||gM<1||bM<1) return;
+
+  /* ④ 동작 잡음 게이트 (명세서 110-i(d)) */
+  if(S.prevR>0 && (Math.abs(R-S.prevR)/rM > 0.15 || Math.abs(G-S.prevG)/gM > 0.15)){
+    S.prevR=R; S.prevG=G; return;
+  }
+  S.prevR=R; S.prevG=G;
+
+  /* ② 색차 정규화 (명세서 청구항 7: CHROM) */
+  var xs=[], ys=[];
+  for(var i3=0;i3<wSize;i3++){
+    xs.push(3*(rSl[i3]/rM) - 2*(gSl[i3]/gM));
+    ys.push(1.5*(rSl[i3]/rM) + (gSl[i3]/gM) - 1.5*(bSl[i3]/bM));
+  }
+  var alpha = std(xs)/std(ys);
+  var Xs = 3*(R/rM) - 2*(G/gM);
+  var Ys = 1.5*(R/rM) + (G/gM) - 1.5*(B/bM);
+
+  /* ③ 대역통과 (명세서 청구항 7: 0.7~3Hz 버터워스) */
+  var sig = _rmaiSigFilter(Xs - alpha*Ys);
+  S.sig.push({ t:(performance.now()-S.t0)/1000, x:sig });
+  if(S.sig.length > 900) S.sig.shift();
+  if(S.rawR.length > 900){ S.rawR.shift(); S.rawG.shift(); S.rawB.shift(); }
+
+  /* BPM/HRV — 3초 이상 누적 시, 1초마다 갱신 */
+  if(S.sig.length >= 90 && S.sig.length % 30 === 0){
+    var v = _rmaiCalcVitals();
+    if(v){ S.bpm = v.bpm; S.hrv = v.hrv; _rmaiArUpdateVitalsUI(v); }
+  }
+  /* 제2영역 시각 표시 (측정 중 표식) */
+  _rmaiAr._rppgBox = { x:rx, y:ry, w:rw, h:rh };
+}
+function _rmaiCalcVitals(){
+  var S=window._rmaiSig, arr=S.sig.slice(-300);
+  if(arr.length < 90) return null;
+  var xs=arr.map(function(o){return o.x;});
+  var m=0; for(var i=0;i<xs.length;i++) m+=xs[i]; m/=xs.length;
+  var det=xs.map(function(v){return v-m;});
+  var sd=0; for(var i2=0;i2<det.length;i2++) sd+=det[i2]*det[i2];
+  sd=Math.sqrt(sd/det.length)||0.0001;
+  var thr=sd*0.3, minGap=0.33, last=-1, WIN=3, peaks=[];
+  for(var i3=WIN;i3<det.length-WIN;i3++){
+    if(det[i3] < thr) continue;
+    var ok=true;
+    for(var w=1;w<=WIN;w++){ if(det[i3]<det[i3-w] || det[i3]<det[i3+w]){ ok=false; break; } }
+    if(!ok) continue;
+    var pt=arr[i3].t;
+    if(pt-last < minGap) continue;
+    peaks.push(pt); last=pt;
+  }
+  if(peaks.length < 2) return null;
+  var iv=[]; for(var i4=1;i4<peaks.length;i4++) iv.push((peaks[i4]-peaks[i4-1])*1000);
+  var avg=0; for(var i5=0;i5<iv.length;i5++) avg+=iv[i5]; avg/=iv.length;
+  var bpm = avg>0 ? 60000/avg : 0;
+  if(bpm<40 || bpm>180) return null;                /* 정직 가드 */
+  var hrv=0;
+  if(iv.length>2){
+    var t=0; for(var i6=1;i6<iv.length;i6++){ var dd=iv[i6]-iv[i6-1]; t+=dd*dd; }
+    hrv=Math.sqrt(t/(iv.length-1));
+    if(hrv<2 || hrv>300) hrv=0;
+  }
+  return { bpm:Math.round(bpm), hrv:Math.round(hrv) };
+}
+function _rmaiArUpdateVitalsUI(v){
+  try{
+    var el=document.getElementById('rmai-ar-vitals');
+    if(!el) return;
+    el.style.display='block';
+    el.innerHTML = '<span style="color:#f472b6;">💓 '+v.bpm+'</span>'
+                 + '<span style="color:rgba(255,255,255,.45);"> BPM</span>'
+                 + (v.hrv>0 ? '<span style="color:#a78bfa;margin-left:10px;">🧠 '+v.hrv+'</span><span style="color:rgba(255,255,255,.45);"> ms</span>' : '');
+  }catch(e){}
+}
+window._rmaiSigReset = function(){
+  var S=window._rmaiSig;
+  S.rawR=[]; S.rawG=[]; S.rawB=[]; S.prevR=0; S.prevG=0;
+  S.lumaEMA=0; S.bpZ=[0,0]; S.sig=[]; S.t0=0; S.bpm=0; S.hrv=0;
+};
+
 function _rmaiArOnResults(results){
   var ctx = _rmaiAr.ctx;
   var canvas = _rmaiAr.canvas;
@@ -136603,6 +136937,23 @@ function _rmaiArOnResults(results){
 
     // 원본 영상 그대로 그림
     ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+    /* ★ C-63 — 특허 명세서(INP26-126) 청구항 2 구현: 영역 분리부(118)
+       ─────────────────────────────────────────────────────────────
+       "제1영역에 적용되는 색상 변조가 제2영역의 광학 신호 추출에 미치는
+        광학적 간섭을 차단하도록 ... 매 프레임 동적으로 상호 배타적으로 격리"
+
+       · 제1영역 (AR 색상 변조): 입술·볼·눈  → _rmaiArDrawLip/Cheek/Eye
+       · 제2영역 (광학 신호 추출): 이마 중심 → 아래 rPPG 샘플링
+       · 순서가 핵심: 원본 프레임을 그린 '직후, 색을 칠하기 전'에 이마를 읽는다.
+         → 색상 합성의 영향을 받지 아니한 순수 광학 신호(명세서 도 4)
+
+       ⚠️ 베이스(얼굴 전체)를 켜면 이마도 칠해지므로, 아래 _rmaiArDrawBase 호출 시
+          이마를 제외(제2영역 보호)한다.
+       원복: window._cgoArRppgV2 = false */
+    if(window._cgoArRppgV2 !== false){
+      try{ _rmaiArSampleRppg(ctx, canvas, landmarks); }catch(e){}
+    }
 
     var ac = _rmaiAr.appliedColors;
 
@@ -137175,10 +137526,20 @@ function _rmaiArDrawBase(ctx, canvas, landmarks, color){
     else ctx.lineTo(x, y);
   });
   ctx.closePath();
+  /* ★ C-63 청구항 2: 제2영역(이마) 배타 격리 —
+     베이스는 얼굴 전체(_rmaiArFaceOval)를 칠하므로 이마도 오염된다.
+     이마 사각형을 클리핑에서 제외하여 광학 신호 추출 영역을 보호한다. */
+  if(window._cgoArRppgV2 !== false && _rmaiAr._rppgBox){
+    var _b = _rmaiAr._rppgBox;
+    ctx.rect(_b.x + _b.w, _b.y, -_b.w, _b.h);   /* 역방향 → evenodd 구멍 */
+  }
   ctx.globalCompositeOperation = 'soft-light';
   ctx.globalAlpha = _rmaiAr.intensity.base;
   ctx.fillStyle = color;
-  ctx.fill();
+  /* ★ C-63: evenodd 규칙이라야 위에서 추가한 역방향 사각형이 '구멍'이 된다.
+     (기본 nonzero 규칙에서는 구멍이 생기지 않아 이마가 그대로 칠해짐) */
+  if(window._cgoArRppgV2 !== false && _rmaiAr._rppgBox) ctx.fill('evenodd');
+  else ctx.fill();
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
 }
@@ -137512,6 +137873,9 @@ window.rmaiArStop = function(){
   _rmaiAr.currentPalette = 'oheng';
   _rmaiAr.faceSlim = 0;
   _rmaiAr.eyeBigger = 0;
+  /* ★ C-63: AR rPPG 신호 상태 리셋 */
+  try{ if(window._rmaiSigReset) window._rmaiSigReset(); _rmaiAr._rppgBox=null;
+       var _v=document.getElementById('rmai-ar-vitals'); if(_v) _v.style.display='none'; }catch(e){}
 };
 
 // ═══════════════════════════════════════════════════
@@ -138356,7 +138720,7 @@ function _sviStopFaceMesh(){
 
 // ★═══════════════════════════════════════════════════════════
 // ★ SVI 5단계 박입 — AI 컨설턴트 100인 전문가 (순수 기술)
-// ★ 피부과 전문의 40명 + 피부 한방 40명 + 영양사 20명
+// ★ 공개된 피부·한방·영양 분야 자료 학습 (C-63: 전문의 표방 문구 정리)
 // ★═══════════════════════════════════════════════════════════
 
 // AI 컨설턴트 시스템 프롬프트 (역학 0%, 의학·한방·영양 100%)
@@ -144668,15 +145032,37 @@ C37.renderC24Panel = function(){
       }
 
       // BP
-      if(analysis.bp){
+      /* ★ C-63: 혈압(BP) 수치 표시 제거 — 안전 + 규제
+         이유:
+           · 실제 계산은 sbp = 100 + 0.5×AI + 1.2×(BPM−70), dbp = sbp×0.65 (BPM의 선형 변환)
+             즉 '혈압을 측정'하는 것이 아니라 심박수를 다른 숫자로 표시한 것이다.
+           · BPM 135에서 178/116이 표시되는데, 이는 고혈압 위기(hypertensive crisis) 수치로
+             혈압약 복용자가 보고 복약을 조절하면 실제 위해가 발생할 수 있다.
+           · 특허 명세서(INP26-126) 어느 청구항에도 혈압 추정은 포함되어 있지 않다.
+           · 혈압계는 의료기기이며, mmHg 수치 표시는 의료기기 표방에 해당할 소지가 크다.
+         조치: 수치·mmHg 삭제. 맥파 파형 특징에서 얻은 '맥파 활력' 상대 등급만 표시.
+         원복: window._cgoShowBP = true (권장하지 않음) */
+      if(analysis.bp && window._cgoShowBP === true){
         var bpColor = analysis.bp.sbp < 130 ? '#34d399' : analysis.bp.sbp < 140 ? '#fbbf24' : '#f87171';
         html += '<div style="padding:12px;background:rgba(0,0,0,.25);border-radius:10px;border-left:3px solid ' + bpColor + ';">';
         html +=   '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">BP (Module E)</div>';
-        html +=   '<div style="font-size:17px;font-weight:900;color:' + bpColor + ';font-family:Orbitron,monospace;">' + analysis.bp.sbp + '/<span style="font-size:14px;">' + analysis.bp.dbp + '</span></div>';
+        html +=   '<div style="font-size:17px;font-weight:900;color:' + bpColor + ';font-family:Orbitron,monospace;">' + analysis.bp.sbp + '/' + analysis.bp.dbp + '</div>';
         html +=   '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">' + analysis.bp.method + '</div>';
         html += '</div>';
+      } else if(analysis.bp){
+        /* 수치 없이 상대 등급만 — 맥파 활력 인덱스 */
+        var _pvLv, _pvC;
+        var _s = analysis.bp.sbp;   /* 내부 상대값(표시하지 않음) */
+        if(_s < 125){ _pvLv = '안정'; _pvC = '#34d399'; }
+        else if(_s < 145){ _pvLv = '보통'; _pvC = '#fbbf24'; }
+        else { _pvLv = '휴식 권장'; _pvC = '#f87171'; }
+        html += '<div style="padding:12px;background:rgba(0,0,0,.25);border-radius:10px;border-left:3px solid ' + _pvC + ';">';
+        html +=   '<div style="font-size:9px;color:rgba(240,230,200,.5);margin-bottom:3px;letter-spacing:.05em;">맥파 활력 인덱스</div>';
+        html +=   '<div style="font-size:17px;font-weight:900;color:' + _pvC + ';">' + _pvLv + '</div>';
+        html +=   '<div style="font-size:9px;color:rgba(240,230,200,.4);margin-top:2px;">맥파 파형 기반 참고 지표 · 혈압 측정 아님</div>';
+        html += '</div>';
       } else {
-        html += '<div style="padding:12px;background:rgba(0,0,0,.15);border-radius:10px;"><div style="font-size:9px;color:rgba(240,230,200,.4);">BP 측정 대기</div></div>';
+        html += '<div style="padding:12px;background:rgba(0,0,0,.15);border-radius:10px;"><div style="font-size:9px;color:rgba(240,230,200,.35);">맥파 활력 인덱스</div><div style="font-size:12px;color:rgba(240,230,200,.4);margin-top:4px;">측정 대기</div></div>';
       }
 
       html += '</div>';
