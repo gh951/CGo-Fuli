@@ -44293,6 +44293,9 @@ function toggleLangMenu() {
 // 언어 변경
 window._cgoRT = function(){ try{ var L=window._LANG; if(L && L!=='ko' && typeof _cgoApplyDictionary==='function'){ _cgoApplyDictionary(L); } }catch(e){} };
 function setLang(lang) {
+  /* ★ C-63: 이전 언어를 '덮어쓰기 전' 메모리에서 캡처.
+     (localStorage는 아래 7번 단계에서 lang으로 갱신되므로 그 뒤에 읽으면 항상 같은 값이 나온다) */
+  var _cgoPrevLang = (typeof _LANG !== 'undefined' && _LANG) ? _LANG : (window._LANG || 'ko');
   _LANG = lang;
   window._LANG = lang; // ★ 명시적으로 window._LANG도 설정
   // 한국어가 아닌 경우 localStorage 저장
@@ -44415,10 +44418,10 @@ function setLang(lang) {
        동적 노드(팝업·카메라 상태·600색 라이브러리 등)는 영어로 남는다.
        해결: 한국어는 앱의 원본 언어이므로 새로고침이 100% 정확하고 가장 빠르다.
        가드: 직전 언어가 실제로 외국어였을 때만 리로드(초기 로드·무한루프 방지). */
-    var _prevLang='ko';
-    try{ _prevLang = localStorage.getItem('cgo_lang') || 'ko'; }catch(e){}
+    /* ★ C-63 fix: localStorage는 7번 단계(위)에서 이미 'ko'로 갱신되므로 그걸 읽으면 안 된다.
+       함수 진입 시 캡처한 _cgoPrevLang(메모리)을 써야 '직전 언어'를 정확히 안다. */
     try{ localStorage.setItem('cgo_lang','ko'); localStorage.setItem('cgo_lang_user_set','1'); }catch(e){}
-    if(_prevLang && _prevLang!=='ko' && !window._cgoKoReloading){
+    if(_cgoPrevLang && _cgoPrevLang!=='ko' && !window._cgoKoReloading){
       window._cgoKoReloading = true;
       try{ sessionStorage.setItem('cgo_unlocked','1'); }catch(e){}  /* 대문 재진입 방지 */
       location.reload();
