@@ -32900,6 +32900,7 @@ function _c24Loop(){
         if(pr>70&&pg>40&&pb>20&&pr>pg&&pr>pb&&(pr-pg)>10&&sv>0.15&&sv<0.7) skinCnt++;
       }
       var _skinNeed=(_c24.mode==='face'||_c24.mode==='tongue')?0.18:0.15; /* B-1: 얼굴/혀만 강화 */
+      /* ★ C-63: 정밀 ROI(3패치)는 거의 순수 피부 → 하한만 의미 있음. 상한 판정 없음 */
       if(cnt&&skinCnt/cnt>=_skinNeed){
         _c24.faceOK = true;
         _c24ChromStep(rSum/cnt,gSum/cnt,bSum/cnt);
@@ -32921,12 +32922,20 @@ function _c24Loop(){
       var _band = _c24FitBand(_c24.mode);
       var _skinFit = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
       try{ if((_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'||_c24.mode==='eye')) _c24SendFM(document.getElementById('c24-video')); }catch(e){} /* ★ C-63: skin·eye도 FaceMesh 사용 */
-      var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue');
+      var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'); /* ★ C-63: skin도 FaceMesh 판정 */
       var _lmsFresh = !!(_c24._faceLms && (performance.now()-(_c24._faceLmsTime||0) < 700));
+      /* ★ C-63 fix: ROI가 이마·볼 3패치로 정밀해지면서 그 안은 거의 100% 피부가 된다.
+         옛 상한(face 0.85)은 '고정 사각형에 배경이 섞이던 시절' 기준이라,
+         정밀 ROI에서는 항상 상한을 넘어 'near(멀어지세요)'로 오판정 → 타임바 정지.
+         FaceMesh가 랜드마크로 얼굴을 확인했다면 상한 판정을 적용하지 않는다.
+         (하한은 유지 — 얼굴이 너무 작거나 벗어나면 여전히 'far') */
+      var _roiPrecise = (_c24._roiBox && _c24._roiBox.src==='facemesh');
       if(_fmActive){
         // 진짜 얼굴 랜드마크 있어야 통과 (없으면 정지 = 정확)
-        _c24.fitOK = _skinFit && _lmsFresh;
-        _c24.fitState = !_lmsFresh ? 'far' : (_ratioFit<_band[0] ? 'far' : (_ratioFit>_band[1] ? 'near' : 'ok'));
+        var _lo = _ratioFit < _band[0];
+        var _hi = (!_roiPrecise) && (_ratioFit > _band[1]);   /* 정밀 ROI면 상한 무시 */
+        _c24.fitOK = _lmsFresh && !_lo && !_hi;
+        _c24.fitState = !_lmsFresh ? 'far' : (_lo ? 'far' : (_hi ? 'near' : 'ok'));
       } else {
         // 폴백: 살색 비율 (FaceMesh 미로드/실패 시)
         _c24.fitOK = _skinFit;
