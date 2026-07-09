@@ -44410,6 +44410,20 @@ function setLang(lang) {
 
   // 8. 한국어면 원본 복원, 외국어면 정적 번역 완료
   if (lang === 'ko') {
+    /* ★ C-63: 영어→한글 복원 시 '뒤죽박죽' 근본 해결.
+       원인: _cgoRestoreTexts()는 초기 스냅샷 노드만 되돌리므로, 이후 생성된
+       동적 노드(팝업·카메라 상태·600색 라이브러리 등)는 영어로 남는다.
+       해결: 한국어는 앱의 원본 언어이므로 새로고침이 100% 정확하고 가장 빠르다.
+       가드: 직전 언어가 실제로 외국어였을 때만 리로드(초기 로드·무한루프 방지). */
+    var _prevLang='ko';
+    try{ _prevLang = localStorage.getItem('cgo_lang') || 'ko'; }catch(e){}
+    try{ localStorage.setItem('cgo_lang','ko'); localStorage.setItem('cgo_lang_user_set','1'); }catch(e){}
+    if(_prevLang && _prevLang!=='ko' && !window._cgoKoReloading){
+      window._cgoKoReloading = true;
+      try{ sessionStorage.setItem('cgo_unlocked','1'); }catch(e){}  /* 대문 재진입 방지 */
+      location.reload();
+      return;
+    }
     // ko 복원: 스냅 있으면 복원, 없으면 페이지 리로드
     if(_cgoOrigSnap && _cgoOrigSnap.length > 0) {
       _cgoRestoreTexts();
