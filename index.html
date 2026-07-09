@@ -32851,6 +32851,7 @@ function _c24Loop(){
       var sx=_roi.sx, sy=_roi.sy, sw=_roi.sw, sh=_roi.sh;
       _c24._roiSrc=_roi.src;
       if(_c24._roiSrcPrev!==_roi.src){ _c24._roiSrcPrev=_roi.src; try{ console.log('[C-63 ROI]', _c24.mode, '→', _roi.src, _roi.sw+'x'+_roi.sh); }catch(e){} }
+      _c24._roiBox=_roi; /* ★ C-63: 화면에 ROI 박스 표시용 */
       _c24.offCanvas.width=64; _c24.offCanvas.height=48;
       _c24.offCtx.drawImage(v,sx,sy,sw,sh,0,0,64,48);
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
@@ -32883,7 +32884,7 @@ function _c24Loop(){
       var _ratioFit = cnt ? skinCnt/cnt : 0;
       var _band = _c24FitBand(_c24.mode);
       var _skinFit = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
-      try{ if((_c24.mode==='face'||_c24.mode==='tongue')) _c24SendFM(document.getElementById('c24-video')); }catch(e){}
+      try{ if((_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'||_c24.mode==='eye')) _c24SendFM(document.getElementById('c24-video')); }catch(e){} /* ★ C-63: skin·eye도 FaceMesh 사용 */
       var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue');
       var _lmsFresh = !!(_c24._faceLms && (performance.now()-(_c24._faceLmsTime||0) < 700));
       if(_fmActive){
@@ -33063,6 +33064,62 @@ function _c24DrawGuide(skinRatio){
     ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=4;
     ctx.fillStyle=_fcol; ctx.fillText(_hint, cv.width*0.5, cv.height*0.94);
     ctx.shadowBlur=0;
+  }catch(e){}
+  /* ★ C-63: 실제 측정 ROI를 화면에 표시 — PC/모바일 모두 눈으로 확인 가능
+     · 초록 실선 = 지금 픽셀을 뽑는 진짜 영역
+     · 좌상단 배지 = ROI 소스(facemesh / inner-circle / hand-rect / ellipse / fixed)
+     · 부위별 기호 안내로 정렬을 돕는다 */
+  try{
+    var _rb=_c24._roiBox;
+    if(_rb && v.videoWidth){
+      /* object-fit:cover 보정 — 비디오가 잘려 표시되므로 scale은 큰 쪽 기준 */
+      var _sc=Math.max(cv.width/v.videoWidth, cv.height/v.videoHeight);
+      var _ox=(cv.width - v.videoWidth*_sc)/2, _oy=(cv.height - v.videoHeight*_sc)/2;
+      var _bx=_rb.sx*_sc+_ox, _by=_rb.sy*_sc+_oy, _bw=_rb.sw*_sc, _bh=_rb.sh*_sc;
+      /* transform:scaleX(-1) 거울 보정 — 화면상 x를 반전 */
+      _bx = cv.width - _bx - _bw;
+      var _isFM=(_rb.src==='facemesh');
+      ctx.save();
+      ctx.strokeStyle=_isFM?'rgba(52,211,153,.95)':'rgba(251,191,36,.85)';
+      ctx.lineWidth=2; ctx.setLineDash(_isFM?[]:[5,4]);
+      ctx.strokeRect(_bx,_by,_bw,_bh);
+      ctx.setLineDash([]);
+      /* 모서리 강조 */
+      var _c=10;
+      ctx.lineWidth=3;
+      [[_bx,_by,1,1],[_bx+_bw,_by,-1,1],[_bx,_by+_bh,1,-1],[_bx+_bw,_by+_bh,-1,-1]].forEach(function(p){
+        ctx.beginPath();
+        ctx.moveTo(p[0]+p[2]*_c, p[1]); ctx.lineTo(p[0], p[1]); ctx.lineTo(p[0], p[1]+p[3]*_c);
+        ctx.stroke();
+      });
+      /* 좌상단 상태 배지 */
+      var _lbl={facemesh:'🎯 얼굴 추적 정밀',
+                'inner-circle':'⭕ 안쪽 원 영역',
+                'hand-rect':'✋ 손 영역',
+                ellipse:'🔍 얼굴 탐색 중...',
+                fixed:'⬜ 기본 영역'}[_rb.src]||_rb.src;
+      ctx.font='bold 11px sans-serif'; ctx.textAlign='left';
+      var _tw=ctx.measureText(_lbl).width+12;
+      ctx.fillStyle=_isFM?'rgba(6,78,59,.85)':'rgba(69,26,3,.85)';
+      ctx.fillRect(6,6,_tw,20);
+      ctx.fillStyle=_isFM?'#34d399':'#fbbf24';
+      ctx.fillText(_lbl, 12, 20);
+      /* 부위별 정렬 기호 */
+      var _sym={face:'😐 이마·양볼이 초록 박스 안에',
+                skin:'😐 볼이 초록 박스 안에',
+                tongue:'👅 혀를 작은 원 중앙에',
+                eye:'👁️ 눈을 작은 원 중앙에',
+                hand_back:'🤚 손등을 박스 가득',
+                hand_palm:'🖐️ 손바닥을 박스 가득'}[mode];
+      if(_sym){
+        ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+        ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=4;
+        ctx.fillStyle='rgba(255,255,255,.92)';
+        ctx.fillText(_sym, cv.width*0.5, cv.height*0.075);
+        ctx.shadowBlur=0;
+      }
+      ctx.restore();
+    }
   }catch(e){}
 }
 
