@@ -29415,6 +29415,8 @@ window.tvyShowIntroPopup = function(){
       <div style="margin-bottom:14px;">
         <div style="font-size:11px;font-weight:800;color:#6d28d9;margin-bottom:6px;">🎥 화장 후 (After) — 실시간</div>
         <div id="rmai-cam-wrap" style="position:relative;width:100%;border-radius:14px;overflow:hidden;background:#f8fafc;min-height:200px;border:1px solid #f0f2f7;">
+          <!-- ★ C-63: 스캔 카메라 닫기 (카메라만 접힘 · 페이지 유지) -->
+          <button id="rmai-scan-close-btn" onclick="event.stopPropagation();window.rmaiScanStop&&window.rmaiScanStop();" style="display:none;position:absolute;top:10px;right:10px;z-index:20;background:rgba(239,68,68,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">✕ 닫기</button>
           <video id="rmai-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none;background:#000;"></video>
           <canvas id="rmai-canvas" style="display:none;"></canvas>
           <div id="rmai-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;">
@@ -29483,7 +29485,7 @@ window.tvyShowIntroPopup = function(){
           <div style="font-size:10px;opacity:0.5;margin-top:4px;">FaceMesh 468 랜드마크 + 사주 색 자동 적용</div>
         </div>
         <div id="rmai-ar-status" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border-radius:8px;padding:5px 11px;font-size:10px;font-weight:800;color:#fff;display:none;letter-spacing:.04em;">대기 중</div>
-        <button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;background:rgba(239,68,68,.85);border:none;border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">⏹ 정지</button>
+        <button onclick="rmaiArStop()" id="rmai-ar-stop-btn" style="display:none;position:absolute;top:10px;right:10px;z-index:20;background:rgba(239,68,68,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:5px 12px;color:#fff;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">✕ 닫기</button>
       </div>
       <div id="rmai-ar-color-picker" style="margin-bottom:12px;"></div>
 <div class="svi-color-tools-card" id="svi-color-tools-card-makeup" style="background:linear-gradient(135deg,rgba(255,255,255,0.9),rgba(252,231,243,0.5));border-radius:18px;padding:18px;margin-top:14px;box-shadow:0 4px 16px rgba(0,0,0,.05);">
@@ -135218,7 +135220,9 @@ window.rmaiCaptureBeforePhoto = function(){
 
       var cancelBtn = document.createElement('button');
       cancelBtn.style.cssText = 'flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.6);font-size:14px;font-weight:700;cursor:pointer;';
-      cancelBtn.textContent = '취소';
+      cancelBtn.textContent = '✕ 닫기';
+      /* ★ C-63: 문구 통일 + 즉시 번역 */
+      try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoTranslateNode==='function') _cgoTranslateNode(cancelBtn); }catch(e){}
       cancelBtn.onclick = function(){
         stream.getTracks().forEach(function(t){t.stop();});
         document.body.removeChild(popup);
@@ -135269,6 +135273,8 @@ function _rmaiStartScanCore(){
     if(v){ v.srcObject=stream; v.style.display='block'; }
     if(ph) ph.style.display='none';
     if(guide) guide.style.display='block';
+    /* ★ C-63: 카메라 켜지면 닫기 버튼 노출 */
+    var _scb=document.getElementById('rmai-scan-close-btn'); if(_scb) _scb.style.display='block';
     _rmai.offCanvas=document.createElement('canvas');
     _rmai.offCtx=_rmai.offCanvas.getContext('2d', { willReadFrequently: true });
     _rmai.running=true;
@@ -136958,6 +136964,25 @@ window.rmaiArApplyColor = function(hexColor, btnEl){
     };
 
 // ═══════════════════════════════════════════════════
+// ★ C-63 rmaiScanStop — 화장 후 스캔 카메라 닫기 (페이지 유지 · 카메라만 접힘)
+window.rmaiScanStop = function(){
+  try{
+    if(typeof _rmai !== 'undefined'){
+      _rmai.running = false;
+      if(_rmai.timer){ clearInterval(_rmai.timer); _rmai.timer=null; }
+      if(_rmai.stream){ _rmai.stream.getTracks().forEach(function(t){ t.stop(); }); _rmai.stream=null; }
+    }
+    var v=document.getElementById('rmai-video');
+    if(v){ v.style.display='none'; v.srcObject=null; }
+    var ph=document.getElementById('rmai-placeholder'); if(ph) ph.style.display='flex';
+    var g=document.getElementById('rmai-guide'); if(g) g.style.display='none';
+    var b=document.getElementById('rmai-btn'); if(b) b.style.display='block';
+    var prg=document.getElementById('rmai-progress'); if(prg) prg.style.width='0%';
+    var cb=document.getElementById('rmai-scan-close-btn'); if(cb) cb.style.display='none';
+    var tmr=document.getElementById('rmai-timer'); if(tmr) tmr.textContent='';
+  }catch(e){}
+};
+
 // ★ rmaiArStop — AR 정지
 // ═══════════════════════════════════════════════════
 window.rmaiArStop = function(){
@@ -137335,7 +137360,9 @@ function maiCaptureBeforePhoto(){
 
       var cancelBtn = document.createElement('button');
       cancelBtn.style.cssText = 'flex:1;padding:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.6);font-size:14px;font-weight:700;cursor:pointer;';
-      cancelBtn.textContent = '취소';
+      cancelBtn.textContent = '✕ 닫기';
+      /* ★ C-63: 문구 통일 + 즉시 번역 */
+      try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoTranslateNode==='function') _cgoTranslateNode(cancelBtn); }catch(e){}
       cancelBtn.onclick = function(){
         stream.getTracks().forEach(function(t){t.stop();});
         document.body.removeChild(popup);
