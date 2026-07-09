@@ -130458,6 +130458,8 @@ if('serviceWorker' in navigator){
 <video id="eye-video" autoplay playsinline muted style="width:100%;display:block;"></video>
 <canvas id="eye-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
 <div style="position:absolute;top:8px;left:8px;padding:4px 10px;background:rgba(0,0,0,.6);border-radius:6px;font-size:10px;color:#fff;font-weight:800;">👁️ 측정 중...</div>
+<!-- ★ C-63: 측정 중 언제든 카메라 닫기 (원상복구) -->
+<button onclick="event.stopPropagation();window.eyeCancelMeasure&&window.eyeCancelMeasure();" style="position:absolute;top:8px;right:8px;z-index:20;padding:6px 12px;background:rgba(220,38,38,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;color:#fff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">✕ 닫기</button>
 <!-- ★ 박입 115 — 거리 상태 표지 위치: 화면 중간 오른쪽 (파트너 의향) -->
 <div id="eye-dist-dot" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px;background:rgba(0,0,0,.7);border-radius:14px;min-width:54px;">
 <div id="eye-dist-dot-circle" style="width:18px;height:18px;border-radius:50%;background:#666;box-shadow:0 0 14px rgba(0,0,0,.5);transition:all .2s;"></div>
@@ -130743,6 +130745,35 @@ if('serviceWorker' in navigator){
   };
 
   // ── 시작 ─────────────────────────────────────────────────
+  /* ★ C-63: 측정 중 언제든 카메라 닫기 — 스트림·타이머·루프 정리 후 측정 전 상태로 원상복구
+     (페이지는 그대로 유지. 다시 '측정 시작'을 누르면 처음부터 진행) */
+  window.eyeCancelMeasure = function(){
+    try{
+      // 1) 카메라 스트림 완전 정지
+      var v=document.getElementById('eye-video');
+      if(v && v.srcObject){ try{ v.srcObject.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} v.srcObject=null; }
+      if(eyeState && eyeState.stream){ try{ eyeState.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} eyeState.stream=null; }
+      // 2) 타이머·루프 정지
+      if(eyeState){
+        if(eyeState.qTimerInterval){ clearInterval(eyeState.qTimerInterval); eyeState.qTimerInterval=null; }
+        if(eyeState.rppgInterval){ clearInterval(eyeState.rppgInterval); eyeState.rppgInterval=null; }
+        if(eyeState.countdownInterval){ clearInterval(eyeState.countdownInterval); eyeState.countdownInterval=null; }
+      }
+      if(window._eye108State && window._eye108State.feedInterval){ clearInterval(window._eye108State.feedInterval); window._eye108State.feedInterval=null; }
+      // 3) 측정 상태 초기화
+      if(eyeState){
+        eyeState.started=false; eyeState.currentQ=0; eyeState.answers=[];
+        eyeState.reactionTimes=[]; eyeState.pupilJitter=[]; eyeState.blinkCount=0;
+      }
+      // 4) 캔버스 오버레이 지우기
+      try{ var c=document.getElementById('eye-canvas'); if(c&&c.getContext){ var g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height); } }catch(e){}
+      // 5) UI 원상복구 (eyeStartMeasure가 바꾼 것 역순)
+      var ids={'eye-camera-area':'none','eye-question-area':'none','eye-start-btn':'block','eye-side-select':'block'};
+      for(var id in ids){ var el=document.getElementById(id); if(el) el.style.display=ids[id]; }
+      try{ if(typeof eyeDebug==='function') eyeDebug('⏹️ 측정을 닫았습니다 — 카메라 종료됨. 다시 시작할 수 있어요.'); }catch(e){}
+    }catch(e){}
+  };
+
   window.eyeStartMeasure = function(){
     if(eyeState.started){
       eyeDebug('이미 측정 중...');
