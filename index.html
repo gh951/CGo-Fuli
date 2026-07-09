@@ -29634,10 +29634,10 @@ window.tvyShowIntroPopup = function(){
         html += '<div style="font-size:10px;font-weight:800;color:#fbbf24;margin-bottom:8px;letter-spacing:.06em;">📋 사용 방법</div>';
         html += '<div style="display:flex;flex-direction:column;gap:6px;">';
         var steps = [
-          ['①','<b style="color:#fbbf24;">화장 전 사진</b>을 한 장 촬영하세요. 분석 시작점이 됩니다.'],
-          ['②','<b style="color:#fbbf24;">화장 후 30초 스캔</b>으로 MAI 점수 + 사주 오행 분석.'],
-          ['③','<b style="color:#fbbf24;">AR 카메라 모드</b>로 실시간 색을 얼굴에 미리보기.'],
-          ['④','<b style="color:#fbbf24;">C-29 컨설턴트</b>에게 상황별 색을 물어보세요.']
+          ['①','화장 전 사진을 한 장 촬영하세요. 분석 시작점이 됩니다.'],/*★C-63: b태그 분리 → 번역 매칭*/
+          ['②','화장 후 30초 스캔으로 MAI 점수 + 사주 오행 분석.'],
+          ['③','AR 카메라 모드로 실시간 색을 얼굴에 미리보기.'],
+          ['④','C-29 컨설턴트에게 상황별 색을 물어보세요.']
         ];
         steps.forEach(function(s){
           html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:rgba(0,0,0,.25);border-radius:8px;">';
@@ -29667,7 +29667,7 @@ window.tvyShowIntroPopup = function(){
         // 정직 안내
         html += '<div style="background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;">';
         html += '<div style="font-size:9px;font-weight:800;color:#f87171;margin-bottom:4px;">📌 정직 안내</div>';
-        html += '<div style="font-size:9px;color:rgba(240,230,200,.7);line-height:1.7;">CGO-FULI의 추천은 <b style="color:#fbbf24;">참고 자료</b>이며, 시간·계절·생체 데이터에 따라 변동됩니다.</div>';
+        html += '<div style="font-size:9px;color:rgba(240,230,200,.7);line-height:1.7;">CGO-FULI의 추천은 참고 자료이며, 시간·계절·생체 데이터에 따라 변동됩니다.</div>';
         html += '</div>';
 
         // 다시 보지 않기 + 시작하기
@@ -49962,10 +49962,10 @@ function _cgoApplyDictionary(lang) {
   try{
     var mo=new MutationObserver(function(muts){
       var L=window._LANG; if(!L||L==='ko') return;
-      for(var m=0;m<muts.length;m++){ var ad=muts[m].addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
+      for(var m=0;m<muts.length;m++){ var mu=muts[m]; if(mu.type==='characterData'){ if(mu.target) _pend.push(mu.target); continue; } var ad=mu.addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
       if(_pend.length&&!_sched){ _sched=true; setTimeout(_flush,50); }
     });
-    function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+    function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true,characterData:true});/*★C-63: textContent 변경도 번역 (eyeDebug 등 동적 상태문구)*/ }catch(e){} }
     if(document.body) _st(); else document.addEventListener('DOMContentLoaded',_st);
   }catch(e){}
 })();
@@ -129684,7 +129684,7 @@ function cgoLoadUserInfo() {
 
     // 저장된 정보 표시
     var label = document.querySelector('#chkSaveInfo + div div:first-child');
-    if (label){ /*★C-63: 이름이 중간에 끼어 번역 미매칭 → 고정문구 분리*/ var _lbl='💾 정보 자동 로드됨 ✅'; try{ var _d=(window.LANG_DICTIONARY&&LANG_DICTIONARY[(localStorage.getItem('cgo_lang')||'ko')]); if(_d&&_d[_lbl]) _lbl=_d[_lbl]; }catch(e){} label.textContent = _lbl + ' (' + info.name + ')'; }
+    if (label){ /*★C-63: 고정문구와 이름을 분리 → 고정문구만 사전 매칭. 번역은 엔진(_cgoTranslateNode)에 위임 */ label.innerHTML=''; var _sp1=document.createElement('span'); _sp1.textContent='💾 정보 자동 로드됨 ✅'; var _sp2=document.createElement('span'); _sp2.textContent=' ('+info.name+')'; label.appendChild(_sp1); label.appendChild(_sp2); try{ if(window._LANG&&window._LANG!=='ko'&&typeof _cgoTranslateNode==='function') _cgoTranslateNode(label); }catch(e){} }
 
   } catch(e) {}
   try{ setTimeout(function(){ window._cgoRestoring=false; },120); }catch(e){ window._cgoRestoring=false; }
