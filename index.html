@@ -12175,7 +12175,7 @@ function cgoGuideFeature(key){
 
         <!-- 5단계 흐름 (두피와 동일 디자인 · 치매로 변환) -->
         <div class="sip-step"><div class="sip-step-num">1</div><div class="sip-step-body"><div class="sip-step-title">📋 코스 선택 (3종)</div><div class="sip-step-desc">🟢 약식 10문항 (기초 스크리닝) · 🟡 중식 20문항 (심층 인지) · 🔴 고식 50문항 (초정밀 뇌 신경 역학)</div></div></div>
-        <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">📷 rPPG 얼굴 카메라 측정</div><div class="sip-step-desc">문제를 푸는 동안 얼굴 6부위 혈류 파형(CHROM+POS+1D CNN)을 실시간 추적합니다. <b>기기 내부 처리, 서버 전송 0</b>.</div></div></div>
+        <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">📷 rPPG 얼굴 카메라 측정</div><div class="sip-step-desc">문제를 푸는 동안 얼굴 혈류 파형(rPPG)을 실시간 추적합니다. <b>기기 내부 처리, 서버 전송 0</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">3</div><div class="sip-step-body"><div class="sip-step-title">🔬 인지 자극 + 자율신경 동기</div><div class="sip-step-desc">시간·장소·기억·계산·시공간·작업기억·스트룹·이야기 회상 등 인지 부하 중 <b>BPM·HRV·BPV 누적 분석</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">💓 정상 vs 위험군 가중치 매칭</div><div class="sip-step-desc">반응 속도(ms) + rPPG 교감신경 피크 동기. 인지 예비능(Cognitive Reserve) 보정으로 <b>천장 효과 극복</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">5</div><div class="sip-step-body"><div class="sip-step-title">🤖 종합 컨디션 리포트 (한국어)</div><div class="sip-step-desc">자율신경 조절 능력 + 뇌 신경 활성도 + 미세 혈관 탄력도 + 종합 권장사항. 의료기기가 아닌 참고용 리포트입니다.</div></div></div>
@@ -12984,6 +12984,160 @@ function cgoGuideFeature(key){
             });
           }
           
+          /* ★ C-63: AR 기술(FaceMesh 468 랜드마크) 접목 — 치매 rPPG
+             기존: 128x96 캔버스의 고정 사각형(40,20,48,56)에서 픽셀 추출
+                   → 얼굴이 움직이면 벽·머리카락·옷이 섞여 BPM이 요동
+             개선: FaceMesh로 이마·좌볼·우볼 3패치만 추적(눈·코·입 제외)
+             폴백: 랜드마크 없거나 오류 시 기존 고정 사각형 그대로 → 동작 보장
+             원복: window._cgoDemRoiV2 = false */
+          window._cgoDemRoiV2 = (window._cgoDemRoiV2 !== false);
+
+          function _demInitFM(){
+            try{
+              if(window._dementiaState.fm || typeof FaceMesh === 'undefined') return;
+              var fm = new FaceMesh({locateFile:function(f){
+                return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f;
+              }});
+              fm.setOptions({maxNumFaces:1, refineLandmarks:false,
+                             minDetectionConfidence:0.7, minTrackingConfidence:0.7});
+              fm.onResults(function(r){
+                try{
+                  window._dementiaState._fmRecv = (window._dementiaState._fmRecv||0)+1;
+                  if(r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0){
+                    window._dementiaState._faceLms = r.multiFaceLandmarks[0];
+                    window._dementiaState._faceLmsTime = performance.now();
+                    window._dementiaState._fmHit = (window._dementiaState._fmHit||0)+1;
+                  } else { window._dementiaState._faceLms = null; }
+                }catch(e){}
+              });
+              window._dementiaState.fm = fm;
+            }catch(e){ window._dementiaState.fm = null; }
+          }
+          function _demSendFM(v){
+            try{
+              var D = window._dementiaState;
+              if(!D.fm || !v || !v.videoWidth || D._fmSending) return;
+              D._fmFrame = (D._fmFrame||0)+1;
+              if(D._fmFrame % 4 !== 0) return;              /* 4프레임마다 (CPU 절약) */
+              D._fmSending = true;
+              var p = D.fm.send({image:v});
+              if(p && p.then){ p.then(function(){D._fmSending=false;}).catch(function(){D._fmSending=false;}); }
+              else { D._fmSending = false; }
+            }catch(e){ window._dementiaState._fmSending = false; }
+          }
+          /* 128x96 캔버스 좌표계로 3패치 반환 (이마·좌볼·우볼). 실패 시 null */
+          function _demPatches(){
+            try{
+              if(window._cgoDemRoiV2 === false) return null;
+              var D = window._dementiaState;
+              if(!D._faceLms || (performance.now()-(D._faceLmsTime||0)) > 700) return null;
+              var L = D._faceLms, W = 128, H = 96;
+              function pt(i){ var p=L[i]; return p ? {x:p.x*W, y:p.y*H} : null; }
+              var l=pt(234), r=pt(454), mid=pt(9), chin=pt(152), brow=pt(151), top=pt(10);
+              if(!(l&&r&&mid&&chin&&brow&&top)) return null;
+              var faceW = Math.abs(r.x - l.x);
+              if(faceW < 12) return null;
+              var out = [];
+              var fH = Math.abs(brow.y - top.y);
+              if(fH > 3){ out.push({x:mid.x-faceW*0.21, y:brow.y-fH*0.85, w:faceW*0.42, h:fH*0.55}); }
+              var cW = faceW*0.20, cH = faceW*0.20;
+              var cy = mid.y + Math.abs(chin.y-mid.y)*0.42;
+              out.push({x:l.x+faceW*0.14,      y:cy-cH/2, w:cW, h:cH});
+              out.push({x:r.x-faceW*0.14-cW,   y:cy-cH/2, w:cW, h:cH});
+              var valid = out.filter(function(p){
+                p.x=Math.max(0,Math.min(p.x, W-2)); p.y=Math.max(0,Math.min(p.y, H-2));
+                p.w=Math.max(2,Math.min(p.w, W-p.x)); p.h=Math.max(2,Math.min(p.h, H-p.y));
+                return p.w>=3 && p.h>=3;
+              });
+              return (valid.length>=2) ? valid : null;
+            }catch(e){ return null; }
+          }
+          /* ★ C-63: _c24 수준 신호처리를 치매 전용 인스턴스로 이식.
+             ⚠️ _c24ChromStep을 직접 호출하면 전역 _c24 상태(rawR/chromSig/bpZS)가
+                건강예측 측정과 뒤섞이므로, 동일 알고리즘을 독립 상태로 복제한다.
+
+             ① 조명 정규화 : 프레임 luma의 느린 EMA로 공통 성분(조명) 상쇄
+             ② 채널 정규화 : Xs=3(R/R̄)−2(G/Ḡ), Ys=1.5(R/R̄)+(G/Ḡ)−1.5(B/B̄)
+             ③ 적응 결합   : α=std(Xs)/std(Ys), signal = Xs − α·Ys  (de Haan 2013)
+             ④ 동작 게이트 : 프레임 간 급변(15%↑) 시 해당 프레임 폐기
+             ⑤ 밴드패스    : Butterworth 2차 0.7~3Hz @30fps (심박 42~180 BPM)
+             원복: window._cgoDemChromV2 = false → 기존 rAvg−gAvg 사용 */
+          window._cgoDemChromV2 = (window._cgoDemChromV2 !== false);
+
+          window._demSig = {
+            rawR: [], rawG: [], rawB: [],
+            prevR: 0, prevG: 0,
+            lumaEMA: 0,
+            bpB: [0.19701, 0, -0.19701],      /* Butterworth 2차 0.7~3Hz @30fps */
+            bpA: [1, -1.53077, 0.60556],
+            bpZ: [0, 0]
+          };
+          function _demFilter(x){
+            var S = window._demSig, b = S.bpB, a = S.bpA, z = S.bpZ;
+            var w = x - a[1]*z[0] - a[2]*z[1];
+            var y = b[0]*w + b[2]*z[1];
+            z[1] = z[0]; z[0] = w;
+            return y;
+          }
+          /* r,g,b 평균 → CHROM 신호 1샘플 반환. 폐기 프레임이면 null */
+          function _demChromStep(r, g, b){
+            var S = window._demSig;
+
+            /* ① 조명 정규화 */
+            var lum = 0.299*r + 0.587*g + 0.114*b;
+            if(lum > 1){
+              if(!S.lumaEMA) S.lumaEMA = lum;
+              else S.lumaEMA = S.lumaEMA*0.97 + lum*0.03;
+              var k = S.lumaEMA / lum;
+              if(k > 0.5 && k < 2.0){ r*=k; g*=k; b*=k; }
+            }
+
+            S.rawR.push(r); S.rawG.push(g); S.rawB.push(b);
+            var n = S.rawR.length;
+            if(n < 2) return null;
+
+            var wSize = Math.min(n, 30);
+            var rS = S.rawR.slice(-wSize), gS = S.rawG.slice(-wSize), bS = S.rawB.slice(-wSize);
+            function mean(a2){ return a2.reduce(function(s2,v){return s2+v;},0)/a2.length; }
+            function std(a2){ var m=mean(a2); return Math.sqrt(a2.reduce(function(s2,v){return s2+Math.pow(v-m,2);},0)/a2.length)||0.0001; }
+            var rM = mean(rS), gM = mean(gS), bM = mean(bS);
+            if(rM<1 || gM<1 || bM<1) return null;
+
+            /* ④ 동작 잡음 게이트 */
+            if(S.prevR>0 && (Math.abs(r-S.prevR)/rM > 0.15 || Math.abs(g-S.prevG)/gM > 0.15)){
+              S.prevR=r; S.prevG=g; return null;
+            }
+            S.prevR=r; S.prevG=g;
+
+            /* ②③ 채널 정규화 + 적응 결합 */
+            var xsArr=[], ysArr=[];
+            for(var i2=0;i2<wSize;i2++){
+              xsArr.push(3*(rS[i2]/rM) - 2*(gS[i2]/gM));
+              ysArr.push(1.5*(rS[i2]/rM) + (gS[i2]/gM) - 1.5*(bS[i2]/bM));
+            }
+            var alpha = std(xsArr)/std(ysArr);
+            var Xs = 3*(r/rM) - 2*(g/gM);
+            var Ys = 1.5*(r/rM) + (g/gM) - 1.5*(b/bM);
+
+            /* ⑤ 밴드패스 */
+            var sig = _demFilter(Xs - alpha*Ys);
+
+            if(S.rawR.length > 1800){ S.rawR.shift(); S.rawG.shift(); S.rawB.shift(); }
+            return sig;
+          }
+          /* ★ C-63: window에 노출 — _demCleanupFM은 다른 스코프라 지역함수를 못 본다
+             (오늘 아침 window.eyeState 유령버그와 같은 종류의 함정) */
+          window._demSigReset = function(){
+            try{
+              window._demSig.rawR=[]; window._demSig.rawG=[]; window._demSig.rawB=[];
+              window._demSig.prevR=0; window._demSig.prevG=0;
+              window._demSig.lumaEMA=0; window._demSig.bpZ=[0,0];
+            }catch(e){}
+          };
+          window._demSigReset();
+
+          _demInitFM();
+
           // C-37 검증 함수: BlazeFace + isSkin 활용
           window._dementiaState.startTime = Date.now();
           window._dementiaState.rgbSamples = [];
@@ -12992,13 +13146,38 @@ function cgoGuideFeature(key){
             try {
               if(!vd || !vd.videoWidth) return;
               
-              var canvas = document.createElement('canvas');
-              canvas.width = 128; canvas.height = 96;
-              var ctx = canvas.getContext('2d', { willReadFrequently: true });
-              ctx.drawImage(vd, 0, 0, 128, 96);
-              
-              // ★ 헌법 준수: 피부색 검증 (C-37 isSkin 방식)
-              var imgData = ctx.getImageData(40, 20, 48, 56);
+              /* ★ C-63: 캔버스 재사용 (매 프레임 createElement 제거 — GC 부담 완화) */
+              if(!window._dementiaState._cv){
+                window._dementiaState._cv = document.createElement('canvas');
+                window._dementiaState._cv.width = 128; window._dementiaState._cv.height = 96;
+                window._dementiaState._cx = window._dementiaState._cv.getContext('2d', { willReadFrequently: true });
+              }
+              var canvas = window._dementiaState._cv;
+              var ctx = window._dementiaState._cx;
+
+              /* ★ C-63: FaceMesh에 프레임 전송 (4프레임마다) */
+              try{ _demSendFM(vd); }catch(e){}
+
+              var imgData, _pt = null;
+              try{ _pt = _demPatches(); }catch(e){ _pt = null; }
+              if(_pt){
+                /* FaceMesh 성공 — 이마·좌볼·우볼 3패치만 그려 픽셀 추출 (눈·코·입 제외) */
+                var _pw = Math.floor(48 / _pt.length);
+                var _kx = vd.videoWidth/128, _ky = vd.videoHeight/96;
+                ctx.clearRect(0,0,128,96);
+                for(var _pi=0; _pi<_pt.length; _pi++){
+                  var _p = _pt[_pi];
+                  try{ ctx.drawImage(vd, _p.x*_kx, _p.y*_ky, _p.w*_kx, _p.h*_ky, _pi*_pw, 0, _pw, 56); }catch(e){}
+                }
+                window._dementiaState._roiSrc = 'facemesh';
+                imgData = ctx.getImageData(0, 0, _pw*_pt.length, 56);
+              } else {
+                /* 폴백 — 기존 고정 사각형 (동작 보장) */
+                ctx.drawImage(vd, 0, 0, 128, 96);
+                window._dementiaState._roiSrc = 'fixed';
+                // ★ 헌법 준수: 피부색 검증 (C-37 isSkin 방식)
+                imgData = ctx.getImageData(40, 20, 48, 56);
+              }
               var skinPixels = 0;
               var rSum = 0, gSum = 0, bSum = 0, validCnt = 0;
               
@@ -13015,8 +13194,13 @@ function cgoGuideFeature(key){
               
               var skinRatio = skinPixels / (imgData.data.length/4);
               
-              // ★ 헌법 준수: 피부 30% 미만 = 얼굴 없음 = 측정 중단
-              if(skinRatio < 0.3){
+              /* ★ C-63: FaceMesh가 랜드마크로 얼굴을 확인했으면 하한을 완화(0.3→0.15).
+                 3패치는 이미 얼굴 위 좌표라 피부비율이 높지만, 조명/피부톤에 따라
+                 isSkin 판정이 보수적으로 나올 수 있어 랜드마크 확인 시 완화한다. */
+              var _skinMin = (window._dementiaState._roiSrc === 'facemesh') ? 0.15 : 0.3;
+
+              // ★ 헌법 준수: 피부 부족 = 얼굴 없음 = 측정 중단
+              if(skinRatio < _skinMin){
                 window._dementiaState.faceDetected = false;
                 if(status){ status.textContent = '⚠️ 얼굴 안 보임'; status.style.background = 'rgba(239,68,68,.2)'; status.style.color = '#f87171'; }
                 return;  // 측정 중단 (헌법 준수)
@@ -13033,9 +13217,20 @@ function cgoGuideFeature(key){
               }
               
               if(validCnt === 0) return;
-              var rAvg = rSum/validCnt, gAvg = gSum/validCnt;
-              var chromX = rAvg - gAvg;
+              var rAvg = rSum/validCnt, gAvg = gSum/validCnt, bAvg = bSum/validCnt;
               var t = (Date.now() - window._dementiaState.startTime) / 1000;
+
+              /* ★ C-63: _c24 수준 신호처리 (조명정규화 → CHROM → 동작게이트 → 밴드패스).
+                 폐기 프레임(급격한 움직임)이면 null → 샘플 미추가 (정직 원칙).
+                 원복: window._cgoDemChromV2 = false → 기존 rAvg−gAvg */
+              var chromX;
+              if(window._cgoDemChromV2 !== false){
+                var _sig = _demChromStep(rAvg, gAvg, bAvg);
+                if(_sig === null) return;         /* 움직임 잡음 프레임 → 버림 */
+                chromX = _sig;
+              } else {
+                chromX = rAvg - gAvg;             /* 폴백 (구버전) */
+              }
               window._dementiaState.rgbSamples.push({ t:t, x:chromX, skin:skinRatio });
               
               // 메모리 보호
@@ -13347,11 +13542,28 @@ function cgoGuideFeature(key){
     // ════════════════════════════════════════════════════
     // 측정 중단 (닫기 버튼)
     // ════════════════════════════════════════════════════
+    /* ★ C-63: FaceMesh/캔버스 공통 정리 — 4개 종료 경로에서 호출.
+       안 닫으면 WASM/WebGL 컨텍스트와 오프스크린 캔버스가 남아 누수된다. */
+    window._demCleanupFM = function(){
+      try{
+        var D = window._dementiaState; if(!D) return;
+        if(D.fm && D.fm.close){ try{ D.fm.close(); }catch(e){} }
+        D.fm = null; D._faceLms = null; D._fmSending = false;
+        D._cv = null; D._cx = null;
+        D._fmRecv = 0; D._fmHit = 0; D._fmFrame = 0;
+        D._roiSrc = null;
+        /* ★ C-63: CHROM 신호 상태도 리셋 (필터 z, 이동평균 버퍼) */
+        try{ if(typeof window._demSigReset === 'function') window._demSigReset(); }catch(e){}
+      }catch(e){}
+    };
+
     window.demStopMeasure = function(){
       if(window._dementiaState.stream){
         window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
       }
       if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+      window._dementiaState.rppgInterval = null;
+      try{ window._demCleanupFM(); }catch(e){}   /* ★ C-63 */
       if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
       document.body.classList.remove('dem-fullscreen');
       var vd = document.getElementById('dem-video');
@@ -13377,6 +13589,7 @@ function cgoGuideFeature(key){
         window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
       }
       if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+        try{ window._demCleanupFM(); }catch(e){}   /* ★ C-63: FaceMesh 정리 */
       if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
       if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
       // 풀스크린 모드 해제
@@ -13494,6 +13707,7 @@ function cgoGuideFeature(key){
           window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
         }
         if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+        try{ window._demCleanupFM(); }catch(e){}   /* ★ C-63: FaceMesh 정리 */
         if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
         if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
       }
@@ -13526,6 +13740,7 @@ function cgoGuideFeature(key){
           window._dementiaState.stream.getTracks().forEach(function(t){ t.stop(); });
         }
         if(window._dementiaState.rppgInterval) clearInterval(window._dementiaState.rppgInterval);
+        try{ window._demCleanupFM(); }catch(e){}   /* ★ C-63: FaceMesh 정리 */
         if(window._dementiaState.qTimerInterval) clearInterval(window._dementiaState.qTimerInterval);
         if(window._dementiaState.countdownInterval) clearInterval(window._dementiaState.countdownInterval);
       }
@@ -16696,7 +16911,7 @@ if(document.readyState === 'loading'){
 
         <!-- 5단계 흐름 -->
         <div class="sip-step"><div class="sip-step-num">1</div><div class="sip-step-body"><div class="sip-step-title">📋 단계 선택 (4종)</div><div class="sip-step-desc">⚡ 약식 25 · 🧩 멘사 35 · 📐 표준 35 · 🎯 정식 50 · 👑 정밀 80</div></div></div>
-        <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">📷 rPPG 얼굴 카메라 측정</div><div class="sip-step-desc">문제를 푸는 동안 얼굴 혈류 파형(CHROM+POS+1D CNN)을 실시간 추적합니다. <b>기기 내부 처리, 서버 전송 0</b>.</div></div></div>
+        <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">📷 rPPG 얼굴 카메라 측정</div><div class="sip-step-desc">문제를 푸는 동안 얼굴 혈류 파형(rPPG)을 실시간 추적합니다. <b>기기 내부 처리, 서버 전송 0</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">3</div><div class="sip-step-body"><div class="sip-step-title">🔬 5영역 인지 + 자율신경 동기</div><div class="sip-step-desc">패턴·공간·언어·수리·기억 인지 부하 중 <b>BPM·HRV·SDNN·LF/HF 누적 분석</b>.</div></div></div>
         <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">🌟 Brain Endurance Index (세계 최초)</div><div class="sip-step-desc">정답률 + 반응 시간 + HRV 안정도 → <b>찍기 vs 진짜 IQ 분별</b>. 멘사 천장 효과 극복 (PCT 청구항 2-9).</div></div></div>
         <div class="sip-step"><div class="sip-step-num">5</div><div class="sip-step-body"><div class="sip-step-title">🤖 종합 인지 리포트 (한국어)</div><div class="sip-step-desc">5영역 분포 + 스트레스 환경 뇌 가동 효율성 + 직업 적성 + 인지 컨디션. <b>FULI 자체 척도 (베타)</b>.</div></div></div>
