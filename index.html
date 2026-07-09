@@ -32720,25 +32720,51 @@ function _c24RoiRect(v){
   if(window._cgoRoiV2===false) return def;
   try{
     var mode=_c24.mode;
-    /* ── 얼굴/피부: FaceMesh 볼·이마 랜드마크 (신호가 가장 강한 영역) ── */
+    /* ── 얼굴/피부: FaceMesh 랜드마크로 '이마 + 좌볼 + 우볼' 3개 패치 (눈·코 제외) ──
+       ⚠️ 하나의 bbox로 묶으면 그 사이 눈이 포함됨 → 패치를 분리해 각각 사용.
+       MediaPipe 468 실측 인덱스:
+         이마 중앙 위: 10(정수리쪽), 151(미간 위), 9(미간)
+         좌볼: 234(귀앞), 116, 123, 147   우볼: 454(귀앞), 345, 352, 376
+       rPPG 문헌상 볼(cheek)이 신호가 가장 강하고, 이마가 그다음. */
     if((mode==='face'||mode==='skin') && _c24._faceLms &&
        (performance.now()-(_c24._faceLmsTime||0) < 700)){
       var L=_c24._faceLms;
-      /* MediaPipe 468: 좌볼 50/101/118, 우볼 280/330/347, 이마 10/67/297 */
-      var idx=[50,101,118,280,330,347,10,67,297];
-      var xs=[], ys=[];
-      for(var i=0;i<idx.length;i++){
-        var pt=L[idx[i]]; if(!pt) continue;
-        xs.push(pt.x*vw); ys.push(pt.y*vh);
-      }
-      if(xs.length>=6){
-        var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
-        var y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys);
-        /* 눈·눈썹·머리카락 제외 위해 상단 12% 잘라냄 */
-        var padY=(y1-y0)*0.12; y0+=padY;
-        var w=x1-x0, h=y1-y0;
-        if(w>20 && h>20){
-          return {sx:Math.floor(x0), sy:Math.floor(y0), sw:Math.floor(w), sh:Math.floor(h), src:'facemesh'};
+      function _pt(i){ var p=L[i]; return p?{x:p.x*vw, y:p.y*vh}:null; }
+      /* 안정적인 기준점 */
+      var _l = _pt(234), _r = _pt(454);          /* 좌/우 귀 앞 (얼굴 폭) */
+      var _mid = _pt(9), _chin = _pt(152), _brow = _pt(151);
+      if(_l && _r && _mid && _chin && _brow){
+        var faceW = Math.abs(_r.x - _l.x);
+        var patches = [];
+
+        /* ① 이마: 미간 위쪽 (눈썹보다 확실히 위) */
+        var fH = Math.abs(_brow.y - _pt(10).y);   /* 미간~정수리 거리 */
+        if(fH > 8){
+          var fw = faceW*0.42, fh = fH*0.55;
+          patches.push({ x:_mid.x - fw/2, y:_brow.y - fH*0.85, w:fw, h:fh });
+        }
+        /* ② 좌볼 / ③ 우볼: 눈 아래, 입 옆 (코·입 제외) */
+        var cW = faceW*0.20, cH = faceW*0.20;
+        var cheekY = _mid.y + Math.abs(_chin.y - _mid.y)*0.42;   /* 눈 아래로 충분히 내림 */
+        patches.push({ x:_l.x + faceW*0.14, y:cheekY - cH/2, w:cW, h:cH });   /* 좌볼 */
+        patches.push({ x:_r.x - faceW*0.14 - cW, y:cheekY - cH/2, w:cW, h:cH }); /* 우볼 */
+
+        /* 화면 밖 클램프 + 유효성 */
+        var valid = patches.filter(function(p){
+          p.x=Math.max(0,Math.min(p.x, vw-4)); p.y=Math.max(0,Math.min(p.y, vh-4));
+          p.w=Math.max(4,Math.min(p.w, vw-p.x)); p.h=Math.max(4,Math.min(p.h, vh-p.y));
+          return p.w>=8 && p.h>=8;
+        });
+        if(valid.length>=2){
+          /* 대표 사각형(픽셀 추출용)은 '볼 2개'를 감싸되 눈이 안 들어가게 y를 볼 기준으로 */
+          var bx0=Math.min.apply(null, valid.map(function(p){return p.x;}));
+          var bx1=Math.max.apply(null, valid.map(function(p){return p.x+p.w;}));
+          var cheeks=valid.slice(-2);
+          var by0=Math.min.apply(null, cheeks.map(function(p){return p.y;}));
+          var by1=Math.max.apply(null, cheeks.map(function(p){return p.y+p.h;}));
+          return { sx:Math.floor(bx0), sy:Math.floor(by0),
+                   sw:Math.floor(bx1-bx0), sh:Math.floor(by1-by0),
+                   src:'facemesh', patches:valid };
         }
       }
     }
@@ -32853,7 +32879,17 @@ function _c24Loop(){
       if(_c24._roiSrcPrev!==_roi.src){ _c24._roiSrcPrev=_roi.src; try{ console.log('[C-63 ROI]', _c24.mode, '→', _roi.src, _roi.sw+'x'+_roi.sh); }catch(e){} }
       _c24._roiBox=_roi; /* ★ C-63: 화면에 ROI 박스 표시용 */
       _c24.offCanvas.width=64; _c24.offCanvas.height=48;
-      _c24.offCtx.drawImage(v,sx,sy,sw,sh,0,0,64,48);
+      /* ★ C-63: FaceMesh 성공 시 이마·좌볼·우볼 3패치만 나란히 그림 (눈·코·입 제외).
+         실패 시 기존 단일 사각형 그대로 → 동작 보장 */
+      if(_roi.patches && _roi.patches.length>=2){
+        var _ps=_roi.patches, _pw=Math.floor(64/_ps.length);
+        for(var _pi=0;_pi<_ps.length;_pi++){
+          var _p=_ps[_pi];
+          try{ _c24.offCtx.drawImage(v,_p.x,_p.y,_p.w,_p.h,_pi*_pw,0,_pw,48); }catch(e){}
+        }
+      } else {
+        _c24.offCtx.drawImage(v,sx,sy,sw,sh,0,0,64,48);
+      }
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
       var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
       for(var i=0;i<px.length;i+=4){
@@ -32959,11 +32995,13 @@ function _c24InitFM(){
   try{
     if(_c24.fm) return;
     _c24.fm=new FaceMesh({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f;}});
-    _c24.fm.setOptions({maxNumFaces:1,refineLandmarks:false,minDetectionConfidence:0.7,minTrackingConfidence:0.7});
+    _c24.fm.setOptions({maxNumFaces:1,refineLandmarks:false,minDetectionConfidence:0.7,minTrackingConfidence:0.7});  /* ★ C-63: 0.7 유지 (정확도 우선) */
     _c24.fm.onResults(function(r){
       try{
+        _c24._fmRecv=(_c24._fmRecv||0)+1;   /* ★ C-63: FaceMesh 응답 수신 횟수 */
         if(r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0){
           _c24._faceLms=r.multiFaceLandmarks[0]; _c24._faceLmsTime=performance.now();
+          _c24._fmHit=(_c24._fmHit||0)+1;    /* 얼굴 검출 성공 횟수 */
         } else { _c24._faceLms=null; }
       }catch(e){}
     });
@@ -33082,16 +33120,27 @@ function _c24DrawGuide(skinRatio){
       ctx.save();
       ctx.strokeStyle=_isFM?'rgba(52,211,153,.95)':'rgba(251,191,36,.85)';
       ctx.lineWidth=2; ctx.setLineDash(_isFM?[]:[5,4]);
-      ctx.strokeRect(_bx,_by,_bw,_bh);
+      /* ★ C-63: 실제 측정 패치를 그대로 표시 — 얼굴은 이마·좌볼·우볼 3개 (눈·코·입 제외) */
+      if(_rb.patches && _rb.patches.length>=2){
+        _rb.patches.forEach(function(_p){
+          var _px=_p.x*_sc+_ox, _py=_p.y*_sc+_oy, _pw2=_p.w*_sc, _ph2=_p.h*_sc;
+          _px = cv.width - _px - _pw2;   /* 거울 보정 */
+          ctx.strokeRect(_px,_py,_pw2,_ph2);
+          /* 반투명 채움으로 '여기를 잰다' 명확히 */
+          ctx.fillStyle='rgba(52,211,153,.13)';
+          ctx.fillRect(_px,_py,_pw2,_ph2);
+        });
+      } else {
+        ctx.strokeRect(_bx,_by,_bw,_bh);
+        var _c=10;
+        ctx.lineWidth=3;
+        [[_bx,_by,1,1],[_bx+_bw,_by,-1,1],[_bx,_by+_bh,1,-1],[_bx+_bw,_by+_bh,-1,-1]].forEach(function(p){
+          ctx.beginPath();
+          ctx.moveTo(p[0]+p[2]*_c, p[1]); ctx.lineTo(p[0], p[1]); ctx.lineTo(p[0], p[1]+p[3]*_c);
+          ctx.stroke();
+        });
+      }
       ctx.setLineDash([]);
-      /* 모서리 강조 */
-      var _c=10;
-      ctx.lineWidth=3;
-      [[_bx,_by,1,1],[_bx+_bw,_by,-1,1],[_bx,_by+_bh,1,-1],[_bx+_bw,_by+_bh,-1,-1]].forEach(function(p){
-        ctx.beginPath();
-        ctx.moveTo(p[0]+p[2]*_c, p[1]); ctx.lineTo(p[0], p[1]); ctx.lineTo(p[0], p[1]+p[3]*_c);
-        ctx.stroke();
-      });
       /* 좌상단 상태 배지 */
       var _lbl={facemesh:'🎯 얼굴 추적 정밀',
                 'inner-circle':'⭕ 안쪽 원 영역',
@@ -33104,13 +33153,27 @@ function _c24DrawGuide(skinRatio){
       ctx.fillRect(6,6,_tw,20);
       ctx.fillStyle=_isFM?'#34d399':'#fbbf24';
       ctx.fillText(_lbl, 12, 20);
+      /* ★ C-63: FaceMesh 진단 (콘솔 없이 확인) — 전송/응답/검출 */
+      var _dg='FM '+(_c24.fm?'ON':'OFF')+' · 응답'+(_c24._fmRecv||0)+' · 검출'+(_c24._fmHit||0);
+      ctx.font='10px sans-serif';
+      ctx.fillStyle='rgba(0,0,0,.7)';
+      var _dw=ctx.measureText(_dg).width+10;
+      ctx.fillRect(6,30,_dw,16);
+      ctx.fillStyle=(_c24._fmHit>0)?'#5eead4':'rgba(255,255,255,.75)';
+      ctx.fillText(_dg, 11, 42);
       /* 부위별 정렬 기호 */
-      var _sym={face:'😐 이마·양볼이 초록 박스 안에',
-                skin:'😐 볼이 초록 박스 안에',
-                tongue:'👅 혀를 작은 원 중앙에',
-                eye:'👁️ 눈을 작은 원 중앙에',
-                hand_back:'🤚 손등을 박스 가득',
-                hand_palm:'🖐️ 손바닥을 박스 가득'}[mode];
+      /* ★ C-63: 상황별 안내 — 얼굴 못 잡으면 무엇을 할지 알려준다 */
+      var _sym;
+      if((mode==='face'||mode==='skin')){
+        _sym = _isFM ? '✅ 얼굴 인식됨 — 그대로 유지하세요'
+             : (_c24._fmHit>0 ? '🔍 얼굴을 다시 화면 중앙으로'
+                              : '💡 얼굴이 안 잡혀요 — 조명을 밝게 · 카메라와 40~60cm');
+      } else {
+        _sym={tongue:'👅 혀를 작은 원 중앙에',
+              eye:'👁️ 눈을 작은 원 중앙에',
+              hand_back:'🤚 손등을 박스 가득',
+              hand_palm:'🖐️ 손바닥을 박스 가득'}[mode];
+      }
       if(_sym){
         ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
         ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=4;
