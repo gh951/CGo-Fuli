@@ -29680,6 +29680,8 @@ window.tvyShowIntroPopup = function(){
 
         pop.innerHTML = html;
         document.body.appendChild(pop);
+        /* ★ C-63: 동적 팝업 즉시 번역 (옵저버 타이밍 의존 제거) */
+        try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoTranslateNode==='function') _cgoTranslateNode(pop); }catch(e){}
       };
 
       function tryGreet(){
@@ -131050,7 +131052,9 @@ if('serviceWorker' in navigator){
       document.getElementById('eye-bpm').textContent = bpm.toFixed(0);
       document.getElementById('eye-hrv').textContent = hrv.toFixed(0);
       document.getElementById('eye-pupil').textContent = pupil.toFixed(1) + 'px';
-      document.getElementById('eye-blink').textContent = blinkRate + '/분';
+      /* ★ C-63: '18/분'은 숫자와 붙어 사전 매칭 불가 → 언어별 단위 직접 적용 */
+      var _bu='/분'; try{ if(window._LANG&&window._LANG!=='ko'){ var _d=LANG_DICTIONARY[window._LANG]; if(_d&&_d['/분']) _bu=_d['/분']; } }catch(e){}
+      document.getElementById('eye-blink').textContent = blinkRate + _bu;
       document.getElementById('eye-fatigue').textContent = fatigue.toFixed(0) + '%';
 
       // ★ 박입 110 — rPPG 패턴 그대로 박입 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -131074,6 +131078,8 @@ if('serviceWorker' in navigator){
           var s = document.getElementById('eye-block-sub');
           if(m) m.textContent = msg || '거리를 맞춰주세요';
           if(s) s.textContent = sub || '30~40cm 표준 거리에서만 측정됩니다';
+          /* ★ C-63: textContent 직접 대입은 옵저버가 놓칠 수 있어 즉시 번역 */
+          try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoTranslateNode==='function'){ if(m) _cgoTranslateNode(m); if(s) _cgoTranslateNode(s); } }catch(e){}
         } else {
           ov.style.display = 'none';
         }
@@ -131537,7 +131543,10 @@ if('serviceWorker' in navigator){
   // ── 디버그 ───────────────────────────────────────────────
   function eyeDebug(msg){
     var p = document.getElementById('eye-debug-panel');
-    if(p) p.textContent = msg;
+    if(p){ p.textContent = msg;
+      /* ★ C-63: 상태 로그(카메라 위 카드)도 선택 언어로 즉시 번역 */
+      try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoTranslateNode==='function') _cgoTranslateNode(p); }catch(e){}
+    }
   }
 
   console.log('[박입 77] 눈 헬스 자가 점검 시스템 박힘 — 25문항 + EyeAns 지수');
