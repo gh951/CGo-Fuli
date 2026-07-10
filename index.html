@@ -132184,7 +132184,7 @@ if('serviceWorker' in navigator){
     //  변경 박입:
     //    ① EyeAns 점수 제거 → 시력 추정 (Level 1~5 정답률)
     //    ② 카테고리별 결과 박입 그대로
-    //    ③ AI 분석 박입 (8B 수준 — 충혈 / 다크서클 / 안검부종 / 결막)
+    //    ③ AI 분석 박입 (8B 수준 — 눈 피로 기색 / 눈가 그늘 / 눈두덩 부기 / 흰자 맑음)
     //    ④ 법적 둘레 강화 ("의료기기 아님 · 가까운 병원")
 
     // 점수 계산 (전체)
@@ -132326,20 +132326,20 @@ if('serviceWorker' in navigator){
       }
       resultHtml += '</div>';
 
-      // ② 다크서클 / 안검부종
+      // ② 눈가 그늘 / 눈두덩 부기
       resultHtml += '<div style="padding:10px 0;border-bottom:1px solid #ccfbf1;">';
-      resultHtml += '<b style="color:#0f766e;">🌙 다크서클 / 안검부종</b><br/>';
+      resultHtml += '<b style="color:#0f766e;">🌙 눈가 그늘 / 눈두덩 부기</b><br/>';
       resultHtml += '<span style="color:#666;">사진 분석 — 눈 아래 어두운 영역 / 부기 확인 권장. 어두운 영역이 진하면 <b>수면 부족</b>이나 <b>순환 컨디션</b>과 관련될 수 있어요. 권장: 7~8시간 수면 + 균형 잡힌 식사.</span>';
       resultHtml += '</div>';
 
-      // ③ 결막 / 충혈
+      // ③ 흰자 맑음 / 눈 피로 기색
       var contrastWeak = catStats.contrast.t > 0 && catStats.contrast.c / catStats.contrast.t < 0.6;
       resultHtml += '<div style="padding:10px 0;border-bottom:1px solid #ccfbf1;">';
-      resultHtml += '<b style="color:#0f766e;">🔴 결막 / 충혈 상태</b><br/>';
+      resultHtml += '<b style="color:#0f766e;">🔴 흰자 맑음 / 눈 피로 기색</b><br/>';
       if(contrastWeak){
-        resultHtml += '<span style="color:#666;">명암 대비 인지 약함 (' + (catStats.contrast.c / catStats.contrast.t * 100).toFixed(0) + '%). <b style="color:#f97316;">안구건조 / 충혈 가능성</b> 추정. 권장: 인공 눈물 사용 + 가습기 + 화면 응시 시간 단축.</span>';
+        resultHtml += '<span style="color:#666;">명암 대비 인지 약함 (' + (catStats.contrast.c / catStats.contrast.t * 100).toFixed(0) + '%). <b style="color:#f97316;">눈 건조·피로 기색</b> 보임. 권장: 인공 눈물 사용 + 가습기 + 화면 응시 시간 단축.</span>';
       } else {
-        resultHtml += '<span style="color:#666;">명암 대비 인지 ' + (catStats.contrast.t > 0 ? (catStats.contrast.c / catStats.contrast.t * 100).toFixed(0) + '%' : '양호') + '. 흰자 영역 정상 추정. <b style="color:#10b981;">결막 양호</b> — 충혈 가능성 낮음. 단, 장시간 화면 사용 시 충혈 증가 가능.</span>';
+        resultHtml += '<span style="color:#666;">명암 대비 인지 ' + (catStats.contrast.t > 0 ? (catStats.contrast.c / catStats.contrast.t * 100).toFixed(0) + '%' : '양호') + '. 흰자 영역 정상 추정. <b style="color:#10b981;">흰자 맑은 편</b> — 눈 피로 기색 낮음. 단, 장시간 화면 사용 시 피로 기색 늘 수 있음.</span>';
       }
       resultHtml += '</div>';
 
@@ -132359,17 +132359,17 @@ if('serviceWorker' in navigator){
       resultHtml += '<b style="color:#0f766e;">🧠 시각 인지 속도</b><br/>';
       var perceptScore = avgRt > 0 ? Math.max(0, Math.min(100, 100 - (avgRt - 800) / 30)).toFixed(0) : '--';
       if(avgRt > 0 && avgRt < 1500){
-        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각피질 처리 속도 ' + perceptScore + '/100. <b style="color:#10b981;">빠른 인지 — 시각 처리 우수</b>.</span>';
+        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각 반응 속도 ' + perceptScore + '/100. <b style="color:#10b981;">빠른 인지 — 시각 처리 우수</b>.</span>';
       } else if(avgRt > 0 && avgRt < 2500){
-        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각피질 처리 속도 ' + perceptScore + '/100. <b style="color:#0f766e;">일반 범위</b> — 일상 활동 적합.</span>';
+        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각 반응 속도 ' + perceptScore + '/100. <b style="color:#0f766e;">일반 범위</b> — 일상 활동 적합.</span>';
       } else if(avgRt > 0){
-        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각피질 처리 속도 ' + perceptScore + '/100. <b style="color:#f97316;">반응 지연 추정</b> — 충분한 휴식 권장.</span>';
+        resultHtml += '<span style="color:#666;">평균 반응 ' + avgRt.toFixed(0) + 'ms · 시각 반응 속도 ' + perceptScore + '/100. <b style="color:#f97316;">반응 지연 추정</b> — 충분한 휴식 권장.</span>';
       } else {
         resultHtml += '<span style="color:#666;">측정 부족 — 다시 측정 권장.</span>';
       }
       resultHtml += '</div>';
 
-      // ⑥ 자율신경 균형 (rPPG 기반 · 신규 박입)
+      // ⑥ 내면 탄력성 균형 (rPPG 기반 · 신규 박입)
       resultHtml += '<div style="padding:10px 0;border-bottom:1px solid #ccfbf1;">';
       resultHtml += '<b style="color:#0f766e;">💗 내면 탄력성 균형 (rPPG)</b><br/>';
       resultHtml += '<span style="color:#666;">눈가 모세혈관 rPPG 측정 — 심박변이도 HRV 추정 박힘. HRV 높을수록 부교감 우세 (휴식 모드). HRV 낮으면 교감 우세 (긴장 모드). <b>스트레스 관리 + 명상 + 심호흡</b> 권장.</span>';
@@ -134025,8 +134025,87 @@ if('serviceWorker' in navigator){
     var ctx=cv.getContext('2d'); ctx.drawImage(v,0,0,w,h);
     setMode('shot');
     var res=analyze(cv);
-    renderResult(res);
+    renderResult(res, null);                 /* 색분석 결과 먼저 표시 */
+    // ★ C-63: 얼굴이 있으면 기색 분석을 이어서 보강 (없으면 색분석만 유지)
+    try{
+      _pfAnalyzeFace(cv, function(face){
+        if(face){ renderResult(res, face); }  /* 얼굴 기색 카드 추가 */
+      });
+    }catch(e){}
   };
+
+  // ★★ C-63 신기술 접목 — 사진 속 얼굴 기색(氣色) 분석 (FaceMesh 468 · 정지 이미지용)
+  //    ⚠️ rPPG 심박은 정지 사진 1장으로 물리적으로 불가(시간축 없음) → 넣지 않는다(정직 원칙).
+  //    가능한 것: 얼굴 이마·양볼의 '혈색 톤(FCI)'을 읽어 오행 기색으로 변환. 사진 1장으로 진짜 가능.
+  //    얼굴 없으면(풍경·사물) null 반환 → 기존 색분석만. 원복: window._cgoPhotoFaceV2 = false
+  window._cgoPhotoFaceV2 = (window._cgoPhotoFaceV2 !== false);
+  var _pfFM = null, _pfLms = null;
+  function _pfInitFM(){
+    try{
+      if(_pfFM || typeof FaceMesh === 'undefined') return;
+      _pfFM = new FaceMesh({locateFile:function(f){ return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f; }});
+      _pfFM.setOptions({maxNumFaces:1, refineLandmarks:false, minDetectionConfidence:0.6, minTrackingConfidence:0.6});
+      _pfFM.onResults(function(r){
+        _pfLms = (r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0) ? r.multiFaceLandmarks[0] : null;
+      });
+    }catch(e){ _pfFM = null; }
+  }
+  _pfInitFM();
+  // 캔버스(정지 이미지)에서 얼굴 기색 추출. 얼굴 없으면 null. 비동기(FaceMesh) → 콜백.
+  function _pfAnalyzeFace(cv, cb){
+    if(window._cgoPhotoFaceV2 === false || typeof FaceMesh === 'undefined' || !_pfFM){ cb(null); return; }
+    var done = false;
+    var _to = setTimeout(function(){ if(!done){ done=true; cb(null); } }, 1500); /* 못 찾으면 1.5초 후 통과 */
+    _pfFM.onResults(function(r){
+      if(done) return; done = true; clearTimeout(_to);
+      try{
+        var lms = (r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0) ? r.multiFaceLandmarks[0] : null;
+        if(!lms){ cb(null); return; }
+        var W = cv.width, H = cv.height;
+        var octx = cv.getContext('2d');
+        function pt(i){ var pp=lms[i]; return pp ? {x:pp.x*W, y:pp.y*H} : null; }
+        var l=pt(234), rr=pt(454), mid=pt(9), chin=pt(152), brow=pt(151), top=pt(10);
+        if(!(l&&rr&&mid&&chin&&brow&&top)){ cb(null); return; }
+        var faceW = Math.abs(rr.x - l.x);
+        if(faceW < 20){ cb(null); return; }   /* 얼굴이 너무 작으면 신뢰도 낮음 → 색분석만 */
+        var patches = [];
+        var fH = Math.abs(brow.y - top.y);
+        if(fH > 4) patches.push({x:mid.x-faceW*0.21, y:brow.y-fH*0.85, w:faceW*0.42, h:fH*0.55});
+        var cW=faceW*0.20, cH=faceW*0.20, cy=mid.y+Math.abs(chin.y-mid.y)*0.42;
+        patches.push({x:l.x+faceW*0.14,    y:cy-cH/2, w:cW, h:cH});
+        patches.push({x:rr.x-faceW*0.14-cW, y:cy-cH/2, w:cW, h:cH});
+        var rS=0,gS=0,bS=0,nS=0;
+        for(var pi=0; pi<patches.length; pi++){
+          var pc=patches[pi];
+          var px=Math.max(0,Math.min(pc.x|0,W-2)), py=Math.max(0,Math.min(pc.y|0,H-2));
+          var pw=Math.max(2,Math.min(pc.w|0,W-px)), ph=Math.max(2,Math.min(pc.h|0,H-py));
+          var dd;
+          try{ dd = octx.getImageData(px,py,pw,ph).data; }catch(e){ continue; }
+          for(var i=0;i<dd.length;i+=4){
+            var r0=dd[i],g0=dd[i+1],b0=dd[i+2];
+            var br=(r0+g0+b0)/3;
+            /* 피부 픽셀만 (그림자·머리카락 제외) */
+            if(r0>g0 && g0>=b0 && (r0-g0)>8 && br>60 && br<245){ rS+=r0; gS+=g0; bS+=b0; nS++; }
+          }
+        }
+        if(nS < 30){ cb(null); return; }   /* 피부 표본 부족 → 색분석만 */
+        var R=rS/nS, G=gS/nS, B=bS/nS;
+        /* 기색 지표: 붉은기(rr), 밝기(lum). 조명 편차 완화 위해 채널 비율 사용 */
+        var sum = R+G+B || 1;
+        var rRatio = R/sum, bRatio = B/sum, lum = (0.299*R+0.587*G+0.114*B)/255;
+        /* 오행 기색 매핑 (전통 찰색론 근사):
+           붉고 화색 강함→화, 창백/밝고 혈색옅음→금, 어둡고 칙칙→수, 누런기→토, 맑고 윤기→목 */
+        var gsOh, gsTxt;
+        if(rRatio > 0.375 && lum > 0.35){ gsOh='화'; gsTxt='혈색에 붉은 화(火) 기운이 돌아 생기가 뚜렷해요'; }
+        else if(lum > 0.62 && rRatio < 0.36){ gsOh='금'; gsTxt='맑고 밝은 금(金) 기색 — 담백하고 정갈한 인상이에요'; }
+        else if(lum < 0.34){ gsOh='수'; gsTxt='차분하고 깊은 수(水) 기색 — 안으로 갈무리된 기운이에요'; }
+        else if(rRatio > 0.35 && G/sum > 0.33){ gsOh='토'; gsTxt='따뜻한 토(土) 기색 — 편안하고 안정된 기운이에요'; }
+        else { gsOh='목'; gsTxt='맑은 윤기의 목(木) 기색 — 생동하는 기운이 느껴져요'; }
+        cb({ oh:gsOh, txt:gsTxt, fci:Math.round(lum*100), rr:Math.round(rRatio*100) });
+      }catch(e){ cb(null); }
+    });
+    try{ _pfFM.send({image:cv}); }catch(e){ if(!done){ done=true; clearTimeout(_to); cb(null); } }
+  }
 
   // ── 실제 픽셀 색 분석 → 오행 분포 ──
   function analyze(cv){
@@ -134077,7 +134156,7 @@ if('serviceWorker' in navigator){
   }
   function grade(s){ return s>=88?'천생연분급 — 흐름이 아주 좋아요':(s>=78?'좋은 궁합 — 편안해요':(s>=65?'무난한 궁합':'조심스러운 궁합 — 천천히')); }
 
-  function renderResult(res){
+  function renderResult(res, face){
     var me=myOh(), c=compat(me,res.dom), cf=colorFit(me,res.dist);
     var bar='<div class="cgp-fbar">';
     for(var i=0;i<res.dist.length;i++){ var x=res.dist[i]; bar+='<div class="cgp-fseg" style="width:'+x.p+'%;background:'+OH_COL[x.o]+';"></div>'; }
@@ -134091,6 +134170,10 @@ if('serviceWorker' in navigator){
       '<div class="cgp-sech">📸 이 사진의 오행 기운</div>'+
       bar+
       '<div class="cgp-dir">대표 기운 · '+OH_LABEL[res.dom]+'</div>'+
+      (face ? ('<div class="cgp-sech">🌿 얼굴 기색(氣色)</div>'+
+        '<div class="cgp-dir">'+OH_LABEL[face.oh]+'</div>'+
+        '<div class="cgp-read">'+face.txt+'</div>'+
+        '<div class="cgp-note2">※ 사진 속 얼굴의 혈색 톤을 오행 기색으로 읽은 참고값이에요 (심박·의료 측정 아님)</div>') : '')+
       '<div class="cgp-sech">🎨 색 궁합</div>'+
       '<div class="cgp-dir">'+cf.fit+'<small style="font-size:14px;"> %</small></div>'+
       '<div class="cgp-note2">나를 살리는 색은 <b style="color:'+OH_COL[cf.c1]+'">'+OH_COLNAME[cf.c1]+'</b> · <b style="color:'+OH_COL[cf.c2]+'">'+OH_COLNAME[cf.c2]+'</b> 계열 — 이 사진에 이 색이 많을수록 나와 잘 맞아요.</div>'+
@@ -134098,7 +134181,7 @@ if('serviceWorker' in navigator){
       '<div class="cgp-read">내 오행 '+OH_LABEL[me]+'와(과) 이 사진의 '+OH_LABEL[res.dom]+' 기운이 만났어요. '+(c.s>=78?'함께 있으면 기운이 살아나는 인연이에요.':(c.s>=65?'서로 다른 결이지만 배울 게 있는 만남이에요.':'조금 조심스럽지만, 거리를 두면 편해지는 관계예요.'))+'</div>';
   }
 
-  function stopCam(){ if(ST.stream){ try{ST.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} ST.stream=null; } }
+  function stopCam(){ if(ST.stream){ try{ST.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} ST.stream=null; } try{ if(_pfFM && _pfFM.close){ _pfFM.close(); } }catch(e){} _pfLms=null; }
 })();
 </script>
 <!-- ════════════════ /📸 에너지 사진 분석 v1 ════════════════ -->
