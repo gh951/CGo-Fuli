@@ -18085,6 +18085,7 @@ var Q_POOL = {
         if(st.rppgInterval){ clearInterval(st.rppgInterval); st.rppgInterval = null; }
         if(st.qTimerInterval){ clearInterval(st.qTimerInterval); st.qTimerInterval = null; }
         if(st.stream){ st.stream.getTracks().forEach(function(t){ t.stop(); }); st.stream = null; }
+        try{ if(st.fm && st.fm.close){ st.fm.close(); } st.fm=null; st._faceLms=null; if(window._iqSigReset) window._iqSigReset(); }catch(e){}
       }
       // 측정 영역 UI 초기화
       var resultArea = document.getElementById('iq-result-area');
@@ -18155,19 +18156,150 @@ var Q_POOL = {
           });
       }
       
+      // ★★ C-63 신버전 이식 — IQ 전용 rPPG 엔진 (FaceMesh 468 + CHROM + 밴드패스 + 조명정규화)
+      //    치매(_demSig)와 섞이지 않도록 IQ 독립 상태(_iqSig)로 복제. 원복: window._cgoIqChromV2=false
+      window._cgoIqChromV2 = (window._cgoIqChromV2 !== false);
+      window._cgoIqRoiV2   = (window._cgoIqRoiV2   !== false);
+      function _iqInitFM(){
+        try{
+          if(st.fm || typeof FaceMesh === 'undefined') return;
+          var fm = new FaceMesh({locateFile:function(f){ return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f; }});
+          fm.setOptions({maxNumFaces:1, refineLandmarks:false, minDetectionConfidence:0.7, minTrackingConfidence:0.7});
+          fm.onResults(function(r){
+            try{
+              if(r && r.multiFaceLandmarks && r.multiFaceLandmarks.length>0){
+                st._faceLms = r.multiFaceLandmarks[0]; st._faceLmsTime = performance.now();
+              } else { st._faceLms = null; }
+            }catch(e){}
+          });
+          st.fm = fm;
+        }catch(e){ st.fm = null; }
+      }
+      function _iqSendFM(v){
+        try{
+          if(!st.fm || !v || !v.videoWidth || st._fmSending) return;
+          st._fmFrame = (st._fmFrame||0)+1;
+          if(st._fmFrame % 4 !== 0) return;
+          st._fmSending = true;
+          var pr = st.fm.send({image:v});
+          if(pr && pr.then){ pr.then(function(){st._fmSending=false;}).catch(function(){st._fmSending=false;}); }
+          else { st._fmSending = false; }
+        }catch(e){ st._fmSending = false; }
+      }
+      function _iqPatches(){
+        try{
+          if(window._cgoIqRoiV2 === false) return null;
+          if(!st._faceLms || (performance.now()-(st._faceLmsTime||0)) > 700) return null;
+          var Lm = st._faceLms, W = 128, H = 96;
+          function pt(i){ var p=Lm[i]; return p ? {x:p.x*W, y:p.y*H} : null; }
+          var l=pt(234), r=pt(454), mid=pt(9), chin=pt(152), brow=pt(151), top=pt(10);
+          if(!(l&&r&&mid&&chin&&brow&&top)) return null;
+          var faceW = Math.abs(r.x - l.x);
+          if(faceW < 12) return null;
+          var out = [];
+          var fH = Math.abs(brow.y - top.y);
+          if(fH > 3){ out.push({x:mid.x-faceW*0.21, y:brow.y-fH*0.85, w:faceW*0.42, h:fH*0.55}); }
+          var cW = faceW*0.20, cH = faceW*0.20;
+          var cy = mid.y + Math.abs(chin.y-mid.y)*0.42;
+          out.push({x:l.x+faceW*0.14,    y:cy-cH/2, w:cW, h:cH});
+          out.push({x:r.x-faceW*0.14-cW, y:cy-cH/2, w:cW, h:cH});
+          var valid = out.filter(function(pp){
+            pp.x=Math.max(0,Math.min(pp.x, W-2)); pp.y=Math.max(0,Math.min(pp.y, H-2));
+            pp.w=Math.max(2,Math.min(pp.w, W-pp.x)); pp.h=Math.max(2,Math.min(pp.h, H-pp.y));
+            return pp.w>=3 && pp.h>=3;
+          });
+          return (valid.length>=2) ? valid : null;
+        }catch(e){ return null; }
+      }
+      window._iqSig = {
+        rawR: [], rawG: [], rawB: [], prevR: 0, prevG: 0, lumaEMA: 0,
+        bpB: [0.19701, 0, -0.19701], bpA: [1, -1.53077, 0.60556], bpZ: [0, 0]
+      };
+      function _iqFilter(x){
+        var S = window._iqSig, b = S.bpB, a = S.bpA, z = S.bpZ;
+        var w = x - a[1]*z[0] - a[2]*z[1];
+        var y = b[0]*w + b[2]*z[1];
+        z[1] = z[0]; z[0] = w;
+        return y;
+      }
+      function _iqChromStep(r, g, b){
+        var S = window._iqSig;
+        var lum = 0.299*r + 0.587*g + 0.114*b;
+        if(lum > 1){
+          if(!S.lumaEMA) S.lumaEMA = lum;
+          else S.lumaEMA = S.lumaEMA*0.97 + lum*0.03;
+          var k = S.lumaEMA / lum;
+          if(k > 0.5 && k < 2.0){ r*=k; g*=k; b*=k; }
+        }
+        S.rawR.push(r); S.rawG.push(g); S.rawB.push(b);
+        var n = S.rawR.length;
+        if(n < 2) return null;
+        var wSize = Math.min(n, 30);
+        var rS = S.rawR.slice(-wSize), gS = S.rawG.slice(-wSize), bS = S.rawB.slice(-wSize);
+        function mean(a2){ return a2.reduce(function(s2,v){return s2+v;},0)/a2.length; }
+        function std(a2){ var m=mean(a2); return Math.sqrt(a2.reduce(function(s2,v){return s2+Math.pow(v-m,2);},0)/a2.length)||0.0001; }
+        var rM = mean(rS), gM = mean(gS), bM = mean(bS);
+        if(rM<1 || gM<1 || bM<1) return null;
+        if(S.prevR>0 && (Math.abs(r-S.prevR)/rM > 0.15 || Math.abs(g-S.prevG)/gM > 0.15)){
+          S.prevR=r; S.prevG=g; return null;
+        }
+        S.prevR=r; S.prevG=g;
+        var xsArr=[], ysArr=[];
+        for(var i2=0;i2<wSize;i2++){
+          xsArr.push(3*(rS[i2]/rM) - 2*(gS[i2]/gM));
+          ysArr.push(1.5*(rS[i2]/rM) + (gS[i2]/gM) - 1.5*(bS[i2]/bM));
+        }
+        var alpha = std(xsArr)/std(ysArr);
+        var Xs = 3*(r/rM) - 2*(g/gM);
+        var Ys = 1.5*(r/rM) + (g/gM) - 1.5*(b/bM);
+        var sig = _iqFilter(Xs - alpha*Ys);
+        if(S.rawR.length > 1800){ S.rawR.shift(); S.rawG.shift(); S.rawB.shift(); }
+        return sig;
+      }
+      window._iqSigReset = function(){
+        try{
+          window._iqSig.rawR=[]; window._iqSig.rawG=[]; window._iqSig.rawB=[];
+          window._iqSig.prevR=0; window._iqSig.prevG=0; window._iqSig.lumaEMA=0; window._iqSig.bpZ=[0,0];
+        }catch(e){}
+      };
+      window._iqSigReset();
+      _iqInitFM();
+
       // ★ C-40 박입 ⑧ — 진짜 rPPG 측정 (치매 패턴 그대로, 가짜 측정 X)
       st.rppgInterval = setInterval(function(){
         try {
           if(!vd || !vd.videoWidth) return;
           
-          // Canvas RGB 추출
-          var canvas = document.createElement('canvas');
-          canvas.width = 128; canvas.height = 96;
-          var ctx = canvas.getContext('2d', { willReadFrequently: true });
-          ctx.drawImage(vd, 0, 0, 128, 96);
-          
-          // 피부색 검증 (isSkin 판정)
-          var imgData = ctx.getImageData(40, 20, 48, 56);
+          // Canvas RGB 추출 (캔버스 재사용 — GC 부담 완화)
+          if(!st._cv){
+            st._cv = document.createElement('canvas');
+            st._cv.width = 128; st._cv.height = 96;
+            st._cx = st._cv.getContext('2d', { willReadFrequently: true });
+          }
+          var canvas = st._cv;
+          var ctx = st._cx;
+
+          // ★ C-63: FaceMesh 프레임 전송 (4프레임마다)
+          try{ _iqSendFM(vd); }catch(e){}
+
+          // ★ C-63: 이마·좌볼·우볼 3패치만 추출 (눈·코·입 제외). 실패 시 고정 사각형 폴백
+          var imgData, _pt = null;
+          try{ _pt = _iqPatches(); }catch(e){ _pt = null; }
+          if(_pt){
+            var _pw = Math.floor(48 / _pt.length);
+            var _kx = vd.videoWidth/128, _ky = vd.videoHeight/96;
+            ctx.clearRect(0,0,128,96);
+            for(var _pi=0; _pi<_pt.length; _pi++){
+              var _p = _pt[_pi];
+              try{ ctx.drawImage(vd, _p.x*_kx, _p.y*_ky, _p.w*_kx, _p.h*_ky, _pi*_pw, 0, _pw, 56); }catch(e){}
+            }
+            st._roiSrc = 'facemesh';
+            imgData = ctx.getImageData(0, 0, _pw*_pt.length, 56);
+          } else {
+            ctx.drawImage(vd, 0, 0, 128, 96);
+            st._roiSrc = 'fixed';
+            imgData = ctx.getImageData(40, 20, 48, 56);
+          }
           var skinPixels = 0;
           var rSum = 0, gSum = 0, bSum = 0, validCnt = 0;
           
@@ -18183,9 +18315,11 @@ var Q_POOL = {
           
           var skinRatio = skinPixels / (imgData.data.length/4);
           var statusEl = document.getElementById('iq-cam-status');
-          
-          // ★ 헌법 준수: 피부 30% 미만 = 얼굴 없음 = 측정 중단 (사기 방지!)
-          if(skinRatio < 0.3){
+          // ★ C-63: FaceMesh가 얼굴을 확인했으면 하한 완화(0.3→0.15)
+          var _skinMin = (st._roiSrc === 'facemesh') ? 0.15 : 0.3;
+
+          // ★ 헌법 준수: 피부 부족 = 얼굴 없음 = 측정 중단 (사기 방지!)
+          if(skinRatio < _skinMin){
             st.faceDetected = false;
             if(statusEl){
               statusEl.textContent = '⚠️ 얼굴 안 보임';
@@ -18216,8 +18350,16 @@ var Q_POOL = {
           }
           
           if(validCnt === 0) return;
-          var rAvg = rSum/validCnt, gAvg = gSum/validCnt;
-          var chromX = rAvg - gAvg;
+          var rAvg = rSum/validCnt, gAvg = gSum/validCnt, bAvg = bSum/validCnt;
+          // ★ C-63: 신버전 신호처리 (조명정규화→CHROM→동작게이트→밴드패스). 움직임 프레임이면 버림
+          var chromX;
+          if(window._cgoIqChromV2 !== false){
+            var _sig = _iqChromStep(rAvg, gAvg, bAvg);
+            if(_sig === null) return;
+            chromX = _sig;
+          } else {
+            chromX = rAvg - gAvg;
+          }
           var t = (Date.now() - st.startTime) / 1000;
           st.rgbSamples.push({ t:t, x:chromX, skin:skinRatio });
           if(st.rgbSamples.length > 1800) st.rgbSamples.shift();
@@ -18439,6 +18581,7 @@ var Q_POOL = {
       if(st.rppgInterval){ clearInterval(st.rppgInterval); st.rppgInterval = null; }
       if(st.qTimerInterval){ clearInterval(st.qTimerInterval); st.qTimerInterval = null; }
       if(st.stream){ st.stream.getTracks().forEach(function(t){ t.stop(); }); st.stream = null; }
+      try{ if(st.fm && st.fm.close){ st.fm.close(); } st.fm=null; st._faceLms=null; if(window._iqSigReset) window._iqSigReset(); }catch(e){}
       
       var correctCount = st.answers.filter(function(a){return a;}).length;
       var accuracy = correctCount / IQ_QUESTIONS.length;
@@ -18491,6 +18634,7 @@ var Q_POOL = {
       if(st.rppgInterval){ clearInterval(st.rppgInterval); st.rppgInterval = null; }
       if(st.qTimerInterval){ clearInterval(st.qTimerInterval); st.qTimerInterval = null; }
       if(st.stream){ st.stream.getTracks().forEach(function(t){ t.stop(); }); st.stream = null; }
+      try{ if(st.fm && st.fm.close){ st.fm.close(); } st.fm=null; st._faceLms=null; if(window._iqSigReset) window._iqSigReset(); }catch(e){}
       window.iqGoCover();
       if(typeof cgoGoPage === 'function') cgoGoPage('dashboard');
     };
@@ -131486,6 +131630,7 @@ if('serviceWorker' in navigator){
       if(eyeState){
         if(eyeState.qTimerInterval){ clearInterval(eyeState.qTimerInterval); eyeState.qTimerInterval=null; }
         if(eyeState.rppgInterval){ clearInterval(eyeState.rppgInterval); eyeState.rppgInterval=null; }
+        try{ if(window._eye108State && window._eye108State.feedInterval){ clearInterval(window._eye108State.feedInterval); window._eye108State.feedInterval=null; } if(window._eyeSigReset) window._eyeSigReset(); }catch(e){}
         if(eyeState.countdownInterval){ clearInterval(eyeState.countdownInterval); eyeState.countdownInterval=null; }
       }
       if(window._eye108State && window._eye108State.feedInterval){ clearInterval(window._eye108State.feedInterval); window._eye108State.feedInterval=null; }
@@ -131663,6 +131808,84 @@ if('serviceWorker' in navigator){
 
   // ── 가상 rPPG 루프 (실제 측정은 FaceMesh + 눈가 ROI 박입 후 확장) ──
   function eyeStartRppgLoop(){
+    // ★★ C-63 신버전 이식 — 눈 전용 진짜 rPPG 엔진 (CHROM + 밴드패스 + 조명정규화)
+    //    기존: bpm=Math.random() 가짜값(정직원칙 위반) → Guardian이 뽑는 중앙 픽셀로 진짜 CHROM 측정
+    //    FaceMesh는 눈 클로즈업에서 자주 실패 → Guardian 피부영역 픽셀을 rPPG 소스로 재활용
+    //    원복: window._cgoEyeChromV2 = false → 기존 랜덤값
+    window._cgoEyeChromV2 = (window._cgoEyeChromV2 !== false);
+    window._eyeSig = {
+      rawR: [], rawG: [], rawB: [], prevR: 0, prevG: 0, lumaEMA: 0,
+      bpB: [0.19701, 0, -0.19701], bpA: [1, -1.53077, 0.60556], bpZ: [0, 0],
+      sig: [], t0: 0, lastBpm: 0, lastHrv: 0
+    };
+    function _eyeFilter(x){
+      var S = window._eyeSig, b = S.bpB, a = S.bpA, z = S.bpZ;
+      var w = x - a[1]*z[0] - a[2]*z[1];
+      var y = b[0]*w + b[2]*z[1];
+      z[1] = z[0]; z[0] = w;
+      return y;
+    }
+    window._eyeChromStep = function(r, g, b){
+      var S = window._eyeSig;
+      var lum = 0.299*r + 0.587*g + 0.114*b;
+      if(lum > 1){
+        if(!S.lumaEMA) S.lumaEMA = lum;
+        else S.lumaEMA = S.lumaEMA*0.97 + lum*0.03;
+        var k = S.lumaEMA / lum;
+        if(k > 0.5 && k < 2.0){ r*=k; g*=k; b*=k; }
+      }
+      S.rawR.push(r); S.rawG.push(g); S.rawB.push(b);
+      var n = S.rawR.length;
+      if(n < 2) return;
+      var wSize = Math.min(n, 30);
+      var rS = S.rawR.slice(-wSize), gS = S.rawG.slice(-wSize), bS = S.rawB.slice(-wSize);
+      function mean(a2){ return a2.reduce(function(s2,v){return s2+v;},0)/a2.length; }
+      function std(a2){ var m=mean(a2); return Math.sqrt(a2.reduce(function(s2,v){return s2+Math.pow(v-m,2);},0)/a2.length)||0.0001; }
+      var rM = mean(rS), gM = mean(gS), bM = mean(bS);
+      if(rM<1 || gM<1 || bM<1) return;
+      if(S.prevR>0 && (Math.abs(r-S.prevR)/rM > 0.15 || Math.abs(g-S.prevG)/gM > 0.15)){
+        S.prevR=r; S.prevG=g; return;
+      }
+      S.prevR=r; S.prevG=g;
+      var xsArr=[], ysArr=[];
+      for(var i2=0;i2<wSize;i2++){
+        xsArr.push(3*(rS[i2]/rM) - 2*(gS[i2]/gM));
+        ysArr.push(1.5*(rS[i2]/rM) + (gS[i2]/gM) - 1.5*(bS[i2]/bM));
+      }
+      var alpha = std(xsArr)/std(ysArr);
+      var Xs = 3*(r/rM) - 2*(g/gM);
+      var Ys = 1.5*(r/rM) + (g/gM) - 1.5*(b/bM);
+      var _sg = _eyeFilter(Xs - alpha*Ys);
+      if(!S.t0) S.t0 = Date.now();
+      S.sig.push({ t:(Date.now()-S.t0)/1000, x:_sg });
+      if(S.sig.length > 600) S.sig.shift();
+      if(S.rawR.length > 1800){ S.rawR.shift(); S.rawG.shift(); S.rawB.shift(); }
+    };
+    window._eyeCalcVitals = function(){
+      var S = window._eyeSig;
+      if(S.sig.length < 90) return null;                  /* 최소 신호 */
+      var samples = S.sig.slice(-300);
+      var xs = samples.map(function(s){return s.x;});
+      var mean = xs.reduce(function(a,b){return a+b;},0)/xs.length;
+      var sd = Math.sqrt(xs.reduce(function(a,b){return a+(b-mean)*(b-mean);},0)/xs.length);
+      if(sd < 0.3) return null;                            /* 신호 약함 */
+      var peaks=0, lastPeak=-10, thr=mean+sd*0.3;
+      for(var j=2;j<xs.length-2;j++){
+        if(xs[j]>thr && xs[j]>xs[j-1] && xs[j]>xs[j+1] && (samples[j].t-lastPeak)>0.4){ peaks++; lastPeak=samples[j].t; }
+      }
+      var dur = samples[samples.length-1].t - samples[0].t;
+      var bpm = dur>0 ? (peaks/dur)*60 : 0;
+      if(bpm < 50 || bpm > 130) return null;               /* 범위 검증 */
+      var hrv = sd*10;
+      S.lastBpm = bpm; S.lastHrv = hrv;
+      return { bpm:bpm, hrv:hrv };
+    };
+    window._eyeSigReset = function(){
+      try{ var S=window._eyeSig; if(!S) return;
+        S.rawR=[];S.rawG=[];S.rawB=[];S.prevR=0;S.prevG=0;S.lumaEMA=0;S.bpZ=[0,0];S.sig=[];S.t0=0;S.lastBpm=0;S.lastHrv=0;
+      }catch(e){}
+    };
+
     // ★ 박입 108 — 진짜 거리 측정 시스템 박입 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     //  파트너 박입: 30~40cm 표준 / 50cm 최대 / 안 맞으면 삐 / 맞으면 딩동댕
     //  메커니즘:
@@ -131726,17 +131949,25 @@ if('serviceWorker' in navigator){
         s108.detCtx.drawImage(v, sx, sy, sw, sh, 0, 0, 64, 64);
         var d = s108.detCtx.getImageData(0, 0, 64, 64).data;
 
-        // 피부색 픽셀 카운트 (FULI 공식 그대로)
+        // 피부색 픽셀 카운트 (FULI 공식 그대로) + ★ C-63: rPPG 소스 RGB 누적
         var skinCount = 0, totalPx = 0;
+        var _rS = 0, _gS = 0, _bS = 0, _skN = 0;
         for(var y = 8; y < 56; y++){
           for(var x = 8; x < 56; x++){
             var idx = (y * 64 + x) * 4;
             var r = d[idx], g = d[idx+1], b = d[idx+2];
-            if(r > 80 && g > 40 && b > 20 && r > g && r > b && (r - g) > 10) skinCount++;
+            if(r > 80 && g > 40 && b > 20 && r > g && r > b && (r - g) > 10){
+              skinCount++;
+              _rS += r; _gS += g; _bS += b; _skN++;
+            }
             totalPx++;
           }
         }
         var skinRatio = skinCount / totalPx;
+        // ★ C-63: 피부 픽셀 평균 → 진짜 CHROM 신호 누적 (가짜 랜덤 대체)
+        if(window._cgoEyeChromV2 !== false && _skN > 40 && skinRatio > 0.12 && window._eyeChromStep){
+          try{ window._eyeChromStep(_rS/_skN, _gS/_skN, _bS/_skN); }catch(e){}
+        }
         var hasFace = skinRatio > 0.12;
 
         // ★ 거리 추정 — 눈 건강용 박입 (Guardian 공식 + 30~50cm 정밀)
@@ -131759,9 +131990,11 @@ if('serviceWorker' in navigator){
     eyeState.rppgInterval = setInterval(function(){
       if(!eyeState.started) return;
 
-      // BPM / HRV / 눈동자 (현재 시뮬레이션 그대로)
-      var bpm = 68 + Math.random() * 12;
-      var hrv = 38 + Math.random() * 18;
+      // ★ C-63: 진짜 rPPG 측정 (기존 Math.random 가짜값 제거 · 정직원칙)
+      var _vit = (window._cgoEyeChromV2 !== false && window._eyeCalcVitals) ? window._eyeCalcVitals() : null;
+      var _eS = window._eyeSig || {};
+      var bpm = _vit ? _vit.bpm : (_eS.lastBpm || 0);       /* 실측 없으면 직전 실측값, 없으면 0 */
+      var hrv = _vit ? _vit.hrv : (_eS.lastHrv || 0);
       var pupil = 35 + Math.random() * 6;
       var blinkRate = 12 + Math.floor(Math.random() * 8);
       var fatigue = Math.min(100, eyeState.reactionTimes.length > 3 ?
@@ -131771,8 +132004,8 @@ if('serviceWorker' in navigator){
       var dist = s108.eyeDist || 0;
       var now = Date.now();
 
-      document.getElementById('eye-bpm').textContent = bpm.toFixed(0);
-      document.getElementById('eye-hrv').textContent = hrv.toFixed(0);
+      document.getElementById('eye-bpm').textContent = bpm > 0 ? bpm.toFixed(0) : '--';
+      document.getElementById('eye-hrv').textContent = hrv > 0 ? hrv.toFixed(0) : '--';
       document.getElementById('eye-pupil').textContent = pupil.toFixed(1) + 'px';
       /* ★ C-63: '18/분'은 숫자와 붙어 사전 매칭 불가 → 언어별 단위 직접 적용 */
       var _bu='/분'; try{ if(window._LANG&&window._LANG!=='ko'){ var _d=LANG_DICTIONARY[window._LANG]; if(_d&&_d['/분']) _bu=_d['/분']; } }catch(e){}
@@ -131907,6 +132140,7 @@ if('serviceWorker' in navigator){
   function eyeFinishMeasure(){
     clearInterval(eyeState.qTimerInterval);
     clearInterval(eyeState.rppgInterval);
+    try{ if(window._eye108State && window._eye108State.feedInterval){ clearInterval(window._eye108State.feedInterval); window._eye108State.feedInterval=null; } if(window._eyeSigReset) window._eyeSigReset(); }catch(e){}
 
     // ★ 박입 108 — FaceMesh feed 인터벌 정리
     if(window._eye108State){
