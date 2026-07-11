@@ -132179,10 +132179,10 @@ if('serviceWorker' in navigator){
     document.getElementById('eye-camera-area').style.display = 'none';
     document.getElementById('eye-question-area').style.display = 'none';
 
-    // ★ 박입 117 — 시력 추정 + AI 분석 박입 (파트너 박입 의향 그대로)
+    // ★ 박입 117 — 눈 활성도 추정 + AI 분석 박입 (파트너 박입 의향 그대로)
     //  파트너 박입: "점수 → 시력 · AI 분석 · 법적 둘레"
     //  변경 박입:
-    //    ① EyeAns 점수 제거 → 시력 추정 (Level 1~5 정답률)
+    //    ① EyeAns 점수 제거 → 눈 활성도 추정 (Level 1~5 정답률)
     //    ② 카테고리별 결과 박입 그대로
     //    ③ AI 분석 박입 (8B 수준 — 눈 피로 기색 / 눈가 그늘 / 눈두덩 부기 / 흰자 맑음)
     //    ④ 법적 둘레 강화 ("의료기기 아님 · 가까운 병원")
@@ -132205,22 +132205,22 @@ if('serviceWorker' in navigator){
         if(a.correct) s.c++;
         s.rt.push(a.rt);
       }
-      // 시력 레벨 통계 (level 1~5만)
+      // 활성도 레벨 통계 (level 1~5만)
       if(a.level && a.level >= 1 && a.level <= 5){
         levelStats[a.level].t++;
         if(a.correct) levelStats[a.level].c++;
       }
     });
 
-    // 시력 추정 — 가장 높은 통과 레벨
+    // 눈 활성도 추정 — 가장 높은 통과 레벨
     var visionLevels = [
-      {lv:1, vision:'0.1', label:'매우 낮음', desc:'낮은 단계 추정 — 안과 또는 안경원 상담 권장'},
-      {lv:2, vision:'0.2', label:'낮음', desc:'낮은 단계 추정 — 안과 또는 안경원 상담 권장'},
-      {lv:3, vision:'0.3', label:'보통', desc:'중간 단계 추정'},
-      {lv:4, vision:'0.5', label:'양호', desc:'양호한 단계 추정'},
-      {lv:5, vision:'0.8', label:'우수', desc:'좋은 단계 추정'}
+      {lv:1, vision:'1.0', label:'매우 낮음', desc:'낮은 단계 — 안과 또는 안경원 상담 권장'},
+      {lv:2, vision:'2.0', label:'낮음', desc:'낮은 단계 — 안과 또는 안경원 상담 권장'},
+      {lv:3, vision:'3.0', label:'보통', desc:'중간 단계'},
+      {lv:4, vision:'5.0', label:'양호', desc:'양호한 단계'},
+      {lv:5, vision:'8.0', label:'최적', desc:'가장 맑은 단계'}
     ];
-    var estVision = '0.1';
+    var estVision = '1.0';
     var estLabel = '측정 부족';
     var estDesc = '';
     var estColor = '#888';
@@ -132255,22 +132255,22 @@ if('serviceWorker' in navigator){
     resultHtml += '<div style="font-size:10px;color:#666;margin-top:4px;">반대쪽 눈을 가린 상태에서 측정됨</div>';
     resultHtml += '</div>';
 
-    // ① 시력 추정 (점수 박입 X · 분위기 좋게 박입)
+    // ① 눈 활성도 추정 (점수 박입 X · 분위기 좋게 박입)
     resultHtml += '<div style="text-align:center;padding:28px 20px;background:linear-gradient(135deg,#f0fdfb 0%,#ccfbf1 50%,#a7f3d0 100%);border-radius:18px;margin-bottom:14px;box-shadow:0 4px 16px rgba(20,184,166,.18);position:relative;overflow:hidden;">';
     resultHtml += '<div style="position:absolute;top:8px;right:12px;font-size:8px;color:#0f766e;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,.7);padding:3px 8px;border-radius:6px;">C-44 × Patent #47</div>';
-    resultHtml += '<div style="font-size:11px;color:#0f766e;font-weight:800;margin-bottom:10px;letter-spacing:.06em;">👁️ 눈 선명도 지수 (참고용)</div>';
+    resultHtml += '<div style="font-size:11px;color:#0f766e;font-weight:800;margin-bottom:10px;letter-spacing:.06em;">👁️ 눈 활성도 지수 (참고용)</div>';
     resultHtml += '<div style="font-size:68px;font-weight:900;color:' + estColor + ';line-height:1;letter-spacing:-.02em;text-shadow:0 2px 4px rgba(0,0,0,.05);">' + estVision + '</div>';
     resultHtml += '<div style="font-size:16px;font-weight:900;color:' + estColor + ';margin-top:10px;">' + estLabel + '</div>';
     if(estDesc) resultHtml += '<div style="font-size:11px;color:#666;margin-top:4px;">' + estDesc + '</div>';
     resultHtml += '<div style="font-size:9px;color:#666;margin-top:14px;line-height:1.6;padding-top:10px;border-top:1px solid rgba(20,184,166,.2);">';
-    resultHtml += '🌟 <b>다단계 선명도 참고 기준</b> (5단계)<br/>';
+    resultHtml += '🌟 <b>다단계 활성도 참고 기준</b> (5단계)<br/>';
     resultHtml += '거리 30~40cm 자동 측정 · 글로벌 어디에도 없는 융합 박입';
     resultHtml += '</div>';
     resultHtml += '</div>';
 
-    // ② 시력 단계별 결과
+    // ② 활성도 단계별 결과
     resultHtml += '<div style="background:#fff;border:1px solid #ccfbf1;border-radius:12px;padding:14px;margin-bottom:14px;">';
-    resultHtml += '<div style="font-size:12px;font-weight:800;color:#134e4a;margin-bottom:10px;">📊 선명도 단계별 결과</div>';
+    resultHtml += '<div style="font-size:12px;font-weight:800;color:#134e4a;margin-bottom:10px;">📊 활성도 단계별 결과</div>';
     for(var lv2 = 1; lv2 <= 5; lv2++){
       var ls2 = levelStats[lv2];
       if(ls2.t === 0) continue;
@@ -132279,7 +132279,7 @@ if('serviceWorker' in navigator){
       var passColor = (ls2.c / ls2.t) >= 0.7 ? '#10b981' : '#ef4444';
       var lvVi = visionLevels[lv2-1];
       resultHtml += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0fdfb;font-size:12px;">';
-      resultHtml += '<span style="color:#444;font-weight:700;">Level ' + lv2 + ' · 선명도 ' + lvVi.vision + '</span>';
+      resultHtml += '<span style="color:#444;font-weight:700;">Level ' + lvVi.vision + ' · 활성도 ' + lvVi.vision + '</span>';
       resultHtml += '<span style="color:' + passColor + ';font-weight:800;">' + passIcon + ' ' + rate2 + '% (' + ls2.c + '/' + ls2.t + ')</span>';
       resultHtml += '</div>';
     }
@@ -132406,7 +132406,7 @@ if('serviceWorker' in navigator){
 
     // ⑥ C-44 정체성 박입 (분위기 — 깔끔 박입)
     resultHtml += '<div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">';
-    resultHtml += '<div style="font-size:11px;font-weight:900;color:#065f46;margin-bottom:4px;">🌟 거리 체크 + 선명도 추정 + AI 분석 융합</div>';
+    resultHtml += '<div style="font-size:11px;font-weight:900;color:#065f46;margin-bottom:4px;">🌟 거리 체크 + 활성도 추정 + AI 분석 융합</div>';
     resultHtml += '<div style="font-size:10px;color:#047857;line-height:1.6;">눈동자 추적 · 깜빡임 · 눈가 rPPG · 시각 인지 속도 동시 박입</div>';
     resultHtml += '</div>';
 
@@ -132414,7 +132414,7 @@ if('serviceWorker' in navigator){
     resultHtml += '<div style="padding:14px;background:rgba(239,68,68,.06);border-left:4px solid #ef4444;border-radius:8px;font-size:11px;color:#991b1b;line-height:1.7;">';
     resultHtml += '<b>⚠️ 의료기기 아님 · 가까운 병원 가보세요</b><br/>';
     resultHtml += '• 본 시스템은 <b>라이프스타일 자가 점검 도구</b>이며, 의료 진단·치료를 대체하지 않습니다.<br/>';
-    resultHtml += '• 눈 선명도 지수 / AI 분석 결과는 <b>참고용</b>이며, 정확한 시력 검사 및 안질환 진단은 <b>안과 전문의</b>에게 받으세요.<br/>';
+    resultHtml += '• 눈 활성도 지수 / AI 분석 결과는 <b>참고용</b>이며, 정확한 시력 검사 및 안질환 진단은 <b>안과 전문의</b>에게 받으세요.<br/>';
     resultHtml += '• 눈에 이상 증상 (시야 변화 / 통증 / 충혈 / 분비물 등) 이 있으면 즉시 안과 진료 권장.';
     resultHtml += '</div>';
 
