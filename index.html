@@ -58321,11 +58321,14 @@ function mspShowResult() {
         '<span style="font-size:11px;color:rgba(168,85,247,.75);font-weight:700;letter-spacing:.06em;">CGO-NBTI 결과 · 5섹션 정통 분석</span>'+
       '</div>'+
       // 유형
-      '<div style="font-size:24px;font-weight:900;letter-spacing:.04em;margin-bottom:6px;color:'+ohColor+';">'+m.type+' · '+(info.name||'')+'</div>'+
-      '<div style="font-size:12px;color:rgba(240,220,160,.78);line-height:1.6;">'+
-        (info.trait||m.trait||'')+' · '+m.oh+'('+ohChi+') 오행'+
-        (m.source ? ' · '+m.source : '')+
-      '</div>'+
+      // 유형 헤더 — ★ CGO 8기류 우선 (MBTI 알파벳 제거)
+      ((window._cgoType8 !== false && m.kiryuName) ?
+        '<div style="font-size:24px;font-weight:900;letter-spacing:.02em;margin-bottom:6px;color:'+ohColor+';">'+(m.kiryuIco||'')+' '+m.kiryuName+'</div>'+
+        '<div style="font-size:12px;color:rgba(240,220,160,.78);line-height:1.6;">'+m.kiryu+' 기류 · '+(m.kiryuTheme||'')+(m.source?' · '+m.source:'')+'</div>'
+      :
+        '<div style="font-size:24px;font-weight:900;letter-spacing:.04em;margin-bottom:6px;color:'+ohColor+';">'+(info.name||m.trait||'')+'</div>'+
+        '<div style="font-size:12px;color:rgba(240,220,160,.78);line-height:1.6;">'+(info.trait||m.trait||'')+(m.source?' · '+m.source:'')+'</div>'
+      )+
 
       // ── ★ CGO 8기류 메인 카드 ──
       ((window._cgoType8 !== false && m.kiryu && CGO_KIRYU[m.kiryu]) ? (function(){
@@ -58365,7 +58368,7 @@ function mspShowResult() {
         ) : '')+
       (detail.career ? _section('💼','③ 직업·일 적성',detail.career) : '')+
       (detail.love ? _section('❤️','④ 관계·연애 패턴',detail.love) : '')+
-      (detail.ohFusion ? _section('🌿','⑤ '+m.oh+'('+ohChi+') 오행 × '+m.type+' 동서 융합',detail.ohFusion) : '')+
+      (detail.ohFusion ? _section('🌿','⑤ '+m.oh+'('+ohChi+') 오행 융합',detail.ohFusion) : '')+
 
       // ── 응답 패턴 (신뢰도 경고 포함) ──
       (m.avgTime ?
@@ -77712,20 +77715,20 @@ function algoPopup(key){
       mspAdj = Math.min(4,Math.max(-4,mspAdj));
       // 4축 분석
       var axisData = m.scores ? [
-        {axis:'E/I',left:'E 외향',right:'I 내향',lv:m.scores.E,rv:m.scores.I,lc:'#f87171',rc:'#38bdf8'},
-        {axis:'S/N',left:'S 감각',right:'N 직관',lv:m.scores.S,rv:m.scores.N,lc:'#fbbf24',rc:'#a855f7'},
-        {axis:'T/F',left:'T 사고',right:'F 감정',lv:m.scores.T,rv:m.scores.F,lc:'#38bdf8',rc:'#f9a8d4'},
-        {axis:'J/P',left:'J 판단',right:'P 인식',lv:m.scores.J,rv:m.scores.P,lc:'#34d399',rc:'#fbbf24'}
+        {axis:'기',left:'나아감',right:'머무름',lv:m.scores.E,rv:m.scores.I,lc:'#f87171',rc:'#38bdf8'},
+        {axis:'눈',left:'실(實)',right:'통(通)',lv:m.scores.S,rv:m.scores.N,lc:'#fbbf24',rc:'#a855f7'},
+        {axis:'결정',left:'이치',right:'정(情)',lv:m.scores.T,rv:m.scores.F,lc:'#38bdf8',rc:'#f9a8d4'},
+        {axis:'결',left:'다스림',right:'흐름',lv:m.scores.J,rv:m.scores.P,lc:'#34d399',rc:'#fbbf24'}
       ] : null;
       // 역학 시너지 (boost 상위 3개)
       var boostKeys = m.boost ? Object.keys(m.boost).sort(function(a,b){return m.boost[b]-m.boost[a];}).slice(0,3) : [];
       var boostNames = {saju:'사주명리',jami:'자미두수',ast:'서양 점성술',chart:'전체차트',gimon:'기문둔갑',transit:'행성 트랜짓',yukim:'육임신살',num:'수비학',feng:'풍수지리',kabala:'카발라',taeul:'태을신수',synastry:'합성 차트',solar:'태양궁점성',tarot:'타로',nasa:'NASA 행성',kusei:'구성학',moon:'달자리'};
 
       detail += '<div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:16px;margin-bottom:12px">'
-        +'<div style="font-size:11px;color:rgba(168,85,247,.6);margin-bottom:10px;letter-spacing:.06em">🧠 '+m.type+' 성격 유형 × 역학 융합 분석</div>'
+        +'<div style="font-size:11px;color:rgba(168,85,247,.6);margin-bottom:10px;letter-spacing:.06em">🧠 CGO 인간유형 × 역학 융합 분석</div>'
         // 유형 헤더
         +'<div style="background:rgba(168,85,247,.1);border-radius:10px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:14px">'
-        +'<div style="font-size:36px;font-weight:900;color:'+ohColor2+'">'+m.type+'</div>'
+        +'<div style="font-size:22px;font-weight:900;color:'+ohColor2+'">'+((window._cgoType8!==false&&m.kiryuName)?((m.kiryuIco||'')+' '+m.kiryuName):(mInfo.name||m.type))+'</div>'
         +'<div><div style="font-size:16px;font-weight:700;color:#c4b5fd">'+mInfo.name+'</div>'
         +'<div style="font-size:11px;color:rgba(240,230,200,.6);margin-top:3px">'+m.trait+'</div>'
         +'<div style="font-size:11px;color:'+ohColor2+';margin-top:4px">오행 친화: '+m.oh+'('+ohChi2+')</div>'
@@ -134130,6 +134133,7 @@ if('serviceWorker' in navigator){
   }
 
   window.cgoPhotoStart=function(){
+    try{ if(window._cgoPhotoFaceV2 !== false) _pfInitFM(); }catch(e){}  /* ★ 지연 로드: 카메라 켤 때만 FaceMesh 준비 */
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
       navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})
         .then(function(s){ ST.stream=s; var v=$('cgp-video'); if(v){ v.srcObject=s; v.play(); } setMode('live'); })
@@ -134174,7 +134178,7 @@ if('serviceWorker' in navigator){
       });
     }catch(e){ _pfFM = null; }
   }
-  _pfInitFM();
+  // ★ 로딩 최적화: 앱 시작 시 자동 초기화 안 함 → 카메라 시작(cgoPhotoStart) 시 지연 로드
   // 캔버스(정지 이미지)에서 얼굴 기색 추출. 얼굴 없으면 null. 비동기(FaceMesh) → 콜백.
   function _pfAnalyzeFace(cv, cb){
     if(window._cgoPhotoFaceV2 === false || typeof FaceMesh === 'undefined' || !_pfFM){ cb(null); return; }
