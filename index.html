@@ -5003,10 +5003,6 @@ function updateTransitSectionWithNASA(planets) {
         }
 
         function initSections(){
-
-          if(window._cgoSectionsInit) return;
-
-          window._cgoSectionsInit = true;
           var ip   = document.getElementById('sec-ip');
           var cheon= document.getElementById('sec-cheon');
           var bio  = document.getElementById('sec-bio');
@@ -5176,19 +5172,9 @@ function updateTransitSectionWithNASA(planets) {
         };
 
         if(document.readyState==='loading'){
-          document.addEventListener('DOMContentLoaded',_initSectionsWhenReady);
+          document.addEventListener('DOMContentLoaded',initSections);
         } else {
-          _initSectionsWhenReady();
-        }
-        function _initSectionsWhenReady(){
-          if(window._cgoSectionsInit) return;
-          var _tr=0;
-          var _iv=setInterval(function(){
-            _tr++;
-            if(document.getElementById('sec-ip') && document.getElementById('sec-all')){
-              clearInterval(_iv); initSections();
-            } else if(_tr>60){ clearInterval(_iv); }
-          }, 50);
+          setTimeout(initSections,500);
         }
       })();
       </script>
@@ -51052,19 +51038,6 @@ function _cgoApplyDictionary(lang) {
       if (t in dict) {
         node.nodeValue = dict[t];
         count++;
-      } else if (t && /[가-힣]/.test(t)) {
-        if(!window._cgoDictKeys || window._cgoDictKeysLang!==lang){
-          var _ks=[]; for(var _k in dict){ if(/[가-힣]/.test(_k)) _ks.push(_k); }
-          _ks.sort(function(a,b){ return b.length-a.length; });
-          window._cgoDictKeys=_ks; window._cgoDictKeysLang=lang;
-        }
-        var _K=window._cgoDictKeys, _out=node.nodeValue, _hit=false;
-        for(var _i=0;_i<_K.length;_i++){
-          if(_out.indexOf(_K[_i])>=0){ _out=_out.split(_K[_i]).join(dict[_K[_i]]); _hit=true; }
-          if(!/[가-힣]/.test(_out)) break;
-        }
-        if(_hit){ node.nodeValue=_out; count++; }
-        else if(window._cgoQueueMiss){ window._cgoQueueMiss(t); }
       } else if (t && window._cgoQueueMiss) { window._cgoQueueMiss(t); }
     } else if (node.nodeType === 1) {
       try {
