@@ -19110,8 +19110,8 @@ function _cgoTnbtiIntroPopup(){
   _cgoFDIntro({
     id:'cgo-tnbti-pop', skipKey:'cgo_tnbti_intro_skip_v2', accent:'#9333ea', accent2:'#7c3aed', ico:'🔮',
     title:'타로 × 성격 유형 소울카드', subtitle:'성격 유형 × 타로 융합 리딩',
-    summary:'내 <b>16가지 성격 유형</b>과 <b>아르카나 카드</b>를 융합해, 나만의 <b>소울카드</b>와 성격×운세 융합 리딩을 제공합니다.',
-    howto:['성격 유형 확인|내 16유형 (없으면 간편 검사 연동)','소울카드 매칭|성격 유형 → 어울리는 타로 소울카드 도출','타로 스프레드|현재 상황 카드 뽑기','융합 리딩|성격 유형 성향 + 타로 의미 → AI 통합 해석'],
+    summary:'내 <b>CGO 기류</b>와 <b>아르카나 카드</b>를 융합해, 나만의 <b>소울카드</b>와 기류×운세 융합 리딩을 제공합니다.',
+    howto:['내 기류 확인|CGO 인간유형 8기류 (없으면 간편 검사 연동)','소울카드 매칭|내 기류 → 어울리는 타로 소울카드 도출','타로 스프레드|현재 상황 카드 뽑기','융합 리딩|기류 성향 + 타로 의미 → AI 통합 해석'],
     note:'자기 이해·성찰을 돕는 참고용입니다. 미래 확정이 아닙니다.',
     btnLabel:'🔮 소울카드 융합 시작'
   });
@@ -19121,7 +19121,7 @@ function _cgoFusion3IntroPopup(){
     id:'cgo-fusion3-pop', skipKey:'cgo_fusion3_intro_skip_v2', accent:'#4f46e5', accent2:'#4338ca', ico:'🌌',
     title:'타로 · 성격 · 역학 3중 융합', subtitle:'성격 × 타로 × 사주 통합 리딩',
     summary:'<b>성격 유형</b>, <b>아르카나 카드</b>, <b>동양 역학(사주·오행)</b>을 3중으로 융합해 가장 입체적인 통합 리딩을 제공합니다.',
-    howto:['성격 유형 유형|내 성격 16유형','아르카나 카드|현재 상황 스프레드','역학 분석|사주·오행 기반 타고난 기질','3중 융합 리딩|세 관점을 AI가 교차 → 통합 해석'],
+    howto:['내 기류|CGO 인간유형 8기류','아르카나 카드|현재 상황 스프레드','역학 분석|사주·오행 기반 타고난 기질','3중 융합 리딩|세 관점을 AI가 교차 → 통합 해석'],
     note:'참고용 자기 성찰 도구입니다. 미래를 확정하지 않습니다.',
     btnLabel:'🌌 아키타입 3중 융합 연성 시작'
   });
@@ -30890,8 +30890,13 @@ window.tvyShowIntroPopup = function(){
     var strLbl=STR_LABEL[strKey]||'균형';
     var ohC={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
     var c=ohC[K.oh]||'#a78bfa';
-    try{localStorage.setItem('cgo_msp52_type', kiryu);
-        localStorage.setItem('cgo_kiryu_strength', strKey);}catch(e){}
+    try{
+        // ★ 융합 페이지 호환: 기류명 + 대표 알파벳 + 강도 저장
+        var _kAlpha={하늘:'ENFP',바람:'ENTP',불꽃:'ESFP',태산:'ISFJ',대지:'ISTJ',무쇠:'ESTJ',샘물:'INFP',심해:'INFJ'};
+        localStorage.setItem('cgo_msp52_type', kiryu);        /* 기류명 (8기류 화면용) */
+        localStorage.setItem('cgo_kiryu_alpha', _kAlpha[kiryu]||'INFJ');  /* 알파벳 (내부 연동용) */
+        localStorage.setItem('cgo_kiryu_strength', strKey);
+    }catch(e){}
     // 제목: 하늘 기류 · 신중
     $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류 · '+strLbl+'</span>';
     $('mb52-res-nick').textContent=nm;
@@ -31107,16 +31112,38 @@ window.tvyShowIntroPopup = function(){
   };
   window.tnEnter=function(){
     var t=''; try{ t=localStorage.getItem('cgo_msp52_type')||''; }catch(e){}
+    // ★ 기류명이면 알파벳으로 변환 (SOUL/NICK 내부조회 호환)
+    var K8={하늘:1,바람:1,불꽃:1,태산:1,대지:1,무쇠:1,샘물:1,심해:1};
+    if(K8[t]){ try{ t=localStorage.getItem('cgo_kiryu_alpha')||'INFJ'; }catch(e){ t='INFJ'; } }
     if(t && SOUL[t]){ tnSetType(t); } else { tnRenderGrid(); tnShow('need'); }
+  };
+  function _tnKiryuDisplay(){try{
+    var v=localStorage.getItem('cgo_msp52_type')||'';
+    var K8={하늘:'🌌',바람:'💨',불꽃:'🔥',태산:'⛰️',대지:'🌾',무쇠:'⚔️',샘물:'💧',심해:'🌊'};
+    var st=localStorage.getItem('cgo_kiryu_strength')||'';
+    var stL={active:'역동',normal:'균형',calm:'신중'}[st]||'';
+    if(K8[v]) return K8[v]+' '+v+' 기류'+(stL?' · '+stL:'');
+    return '';
+  }catch(e){return '';}}
+  window.tnPickKiryu=function(kiryu){
+    var K8={하늘:'ENFP',바람:'ENTP',불꽃:'ESFP',태산:'ISFJ',대지:'ISTJ',무쇠:'ESTJ',샘물:'INFP',심해:'INFJ'};
+    try{ localStorage.setItem('cgo_msp52_type', kiryu); localStorage.setItem('cgo_kiryu_alpha', K8[kiryu]||'INFJ'); }catch(e){}
+    tnSetType(K8[kiryu]||'INFJ');
   };
   window.tnSetType=function(t){
     curType=t;
-    $('tn-mytype').textContent='내 유형: '+t+' · '+(NICK[t]||'');
+    var kd=_tnKiryuDisplay();
+    $('tn-mytype').textContent = kd ? ('내 기류: '+kd) : ('내 유형: '+t+' · '+(NICK[t]||''));
     tnShow('soul'); try{ tnDraw(); }catch(e){}
   };
   function tnRenderGrid(){
-    var keys=Object.keys(SOUL), h='';
-    keys.forEach(function(k){ h+='<div class="tn-tcard" onclick="tnSetType(\''+k+'\')"><div class="k">'+k+'</div><div class="n">'+(NICK[k]||'')+'</div></div>'; });
+    // ★ 8기류 카드
+    var K8={하늘:'ENFP',바람:'ENTP',불꽃:'ESFP',태산:'ISFJ',대지:'ISTJ',무쇠:'ESTJ',샘물:'INFP',심해:'INFJ'};
+    var K8ico={하늘:'🌌',바람:'💨',불꽃:'🔥',태산:'⛰️',대지:'🌾',무쇠:'⚔️',샘물:'💧',심해:'🌊'};
+    var h='';
+    Object.keys(K8).forEach(function(kk){
+      h+='<div class="tn-tcard" onclick="tnPickKiryu(\''+kk+'\')"><div class="k">'+K8ico[kk]+' '+kk+'</div><div class="n">기류</div></div>';
+    });
     $('tn-grid16').innerHTML=h;
   }
   function seedToday(){ var d=new Date(); var base=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); var add=curType?curType.charCodeAt(0)+curType.charCodeAt(3):0; return base+add; }
@@ -31427,14 +31454,29 @@ window.tvyShowIntroPopup = function(){
   var curCard=null, f3sel=[], chatHist=[], spread=[], curMode='pure', lastAnalysis='', lastMode='';
   function $(id){return document.getElementById(id);}
   function imgUrl(id){return (window.tarotImgFile?window.tarotImgFile(id):TBASE+id+'.jpeg');}
-  function msp(){try{return localStorage.getItem('cgo_msp52_type')||'';}catch(e){return '';}}
+  function msp(){try{
+    var v=localStorage.getItem('cgo_msp52_type')||'';
+    var K8={하늘:1,바람:1,불꽃:1,태산:1,대지:1,무쇠:1,샘물:1,심해:1};
+    if(K8[v]){ return localStorage.getItem('cgo_kiryu_alpha')||'INFJ'; }  /* 기류명이면 알파벳으로 */
+    return v;
+  }catch(e){return '';}}
+  // 화면 표시용 기류명 (있으면 기류, 없으면 알파벳)
+  function mspDisplay(){try{
+    var v=localStorage.getItem('cgo_msp52_type')||'';
+    var K8={하늘:'🌌',바람:'💨',불꽃:'🔥',태산:'⛰️',대지:'🌾',무쇠:'⚔️',샘물:'💧',심해:'🌊'};
+    var st=localStorage.getItem('cgo_kiryu_strength')||'';
+    var stL={active:'역동',normal:'균형',calm:'신중'}[st]||'';
+    if(K8[v]){ return K8[v]+' '+v+' 기류'+(stL?' · '+stL:''); }
+    return v;
+  }catch(e){return '';}}
   window.f3Enter=function(){ f3SyncMsp(); f3RenderPicker(); f3UpdateSel(); f3SpreadTarot(); f3Baseline(); if(!$('f3-msgs').childElementCount) f3Greet(); };
   window.f3Acc=function(k){var b=$('f3-body-'+k),a=$('f3-arr-'+k);if(!b)return;var o=b.classList.toggle('on');if(a)a.textContent=o?'▲':'▼';};
-  function f3Baseline(){ var t=msp(); $('f3-bl-msp').textContent=(t&&NICK[t])?('MSP '+t):'성격 유형 미설정'; $('f3-bl-card').textContent=curCard?('타로 '+curCard[1]):'카드 미선택'; }
+  function f3Baseline(){ var t=msp(); var disp=mspDisplay(); $('f3-bl-msp').textContent=disp?disp:'기류 미설정'; $('f3-bl-card').textContent=curCard?('타로 '+curCard[1]):'카드 미선택'; }
   // ① MSP
   function f3SyncMsp(){var t=msp();if(t&&NICK[t]){$('f3-msp-have').style.display='block';$('f3-msp-none').style.display='none';$('f3-msp-show').textContent=t+' · '+NICK[t];$('f3-st-msp').textContent=t;}else{$('f3-msp-have').style.display='none';$('f3-msp-none').style.display='block';$('f3-st-msp').textContent='';f3RenderGrid();}f3Baseline();}
   window.f3MspPick=function(){$('f3-msp-have').style.display='none';$('f3-msp-none').style.display='block';f3RenderGrid();};
-  function f3RenderGrid(){var h='';Object.keys(NICK).forEach(function(k){h+='<div class="f3-tc" onclick="f3SetType(\''+k+'\')"><div class="k">'+k+'</div><div class="n">'+NICK[k]+'</div></div>';});$('f3-grid16').innerHTML=h;}
+  function f3RenderGrid(){var K8ico={하늘:"🌌",바람:"💨",불꽃:"🔥",태산:"⛰️",대지:"🌾",무쇠:"⚔️",샘물:"💧",심해:"🌊"};var K8={하늘:"ENFP",바람:"ENTP",불꽃:"ESFP",태산:"ISFJ",대지:"ISTJ",무쇠:"ESTJ",샘물:"INFP",심해:"INFJ"};var h="";Object.keys(K8ico).forEach(function(k){h+='<div class="f3-tc" onclick="f3PickKiryu(\''+k+'\')"><div class="k">'+K8ico[k]+" "+k+'</div><div class="n">기류</div></div>';});$("f3-grid16").innerHTML=h;}
+  window.f3PickKiryu=function(kiryu){var K8={하늘:"ENFP",바람:"ENTP",불꽃:"ESFP",태산:"ISFJ",대지:"ISTJ",무쇠:"ESTJ",샘물:"INFP",심해:"INFJ"};try{localStorage.setItem("cgo_msp52_type",kiryu);localStorage.setItem("cgo_kiryu_alpha",K8[kiryu]||"INFJ");}catch(e){}f3SetType(K8[kiryu]||"INFJ");};
   window.f3SetType=function(t){try{localStorage.setItem('cgo_msp52_type',t);}catch(e){}f3SyncMsp();};
   // ② 타로 카드 — 뒷면 펼침, 사용자가 탭해서 직접 선택
   window.f3SpreadTarot=function(){
