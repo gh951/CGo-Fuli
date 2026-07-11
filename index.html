@@ -5176,9 +5176,19 @@ function updateTransitSectionWithNASA(planets) {
         };
 
         if(document.readyState==='loading'){
-          document.addEventListener('DOMContentLoaded',initSections);
+          document.addEventListener('DOMContentLoaded',_initSectionsWhenReady);
         } else {
-          initSections();
+          _initSectionsWhenReady();
+        }
+        function _initSectionsWhenReady(){
+          if(window._cgoSectionsInit) return;
+          var _tr=0;
+          var _iv=setInterval(function(){
+            _tr++;
+            if(document.getElementById('sec-ip') && document.getElementById('sec-all')){
+              clearInterval(_iv); initSections();
+            } else if(_tr>60){ clearInterval(_iv); }
+          }, 50);
         }
       })();
       </script>
@@ -30908,6 +30918,7 @@ window.tvyShowIntroPopup = function(){
   window.mb52Prev=function(){ if(idx>0){ idx--; mb52RenderQ(); } else { mb52Show('level'); } };
   function mb52Finish(){
     $('mb52-fill').style.width='100%';
+    console.log('[CGO v2] 채점 시작 — 최신 버전 확인됨');
     var sc={EI:0,SN:0,TF:0,JP:0};
     for(var i=0;i<qlist.length;i++){
       var Q=qlist[i], v=(typeof ans[i]==='number'?ans[i]:2), d=(v-2);
@@ -30917,11 +30928,12 @@ window.tvyShowIntroPopup = function(){
     type+= sc.EI>=0?'E':'I'; type+= sc.SN>=0?'S':'N'; type+= sc.TF>=0?'T':'F'; type+= sc.JP>=0?'J':'P';
     // ★ 4축 강도(-1/0/+1) → 8기류
     var per=(qlist.length?qlist.length/4:1);
-    function _sv(v){ var r=v/(2*per||1); return r>0.33?1:r<-0.33?-1:0; }
+    function _sv(v){ var r=v/(2*per||1); return r>0.05?1:r<-0.05?-1:0; }  /* 미세 차이도 방향 반영, 완전 0만 중용 */
     var dir=_sv(sc.EI), eyeTong=-_sv(sc.SN), dec=_sv(sc.TF), flowDa=-_sv(sc.JP);
     // eye는 통기준, flow는 흐름기준으로 cgoMapKiryu 호출부와 동일하게: dir, -eyeStd, dec, -flowStd
     // 여기 eyeTong/flowDa 이미 통/흐름 좌표 → cgoMapKiryu(dir, eyeTong, dec, flowDa)
     var kiryu=(typeof window.cgoMapKiryu==='function')?window.cgoMapKiryu(dir, eyeTong, dec, flowDa):'태산';
+    console.log('[CGO v2] 점수 sc=', JSON.stringify(sc), ' 좌표=', dir, eyeTong, dec, flowDa, ' → 기류=', kiryu);
     mb52ShowKiryuResult(kiryu, {dir:dir, eye:-eyeTong, dec:dec, flow:-flowDa}, sc);
   }
   // ★ 8기류 결과 렌더
@@ -58508,7 +58520,7 @@ function mspCalcResult() {
   var _cnt = {EI:0,SN:0,TF:0,JP:0};
   (_mspState.questions||[]).forEach(function(q){ if(_cnt[q.axis]!==undefined) _cnt[q.axis]++; });
   ['EI','SN','TF','JP'].forEach(function(a){ if(!_cnt[a]) _cnt[a]=1; });
-  function _axV(pos, neg, tot){ var sc=((s[pos]||0)-(s[neg]||0))/(tot||1); return sc>0.33?1:sc<-0.33?-1:0; }
+  function _axV(pos, neg, tot){ var sc=((s[pos]||0)-(s[neg]||0))/(tot||1); return sc>0.12?1:sc<-0.12?-1:0; }
   var _dir  = _axV('E','I',_cnt.EI);   // 기: 나아감(+)/머무름(-)
   var _eye  = _axV('N','S',_cnt.SN);   // 마음의눈: 통(+)/실(-) → 통을 +로
   var _dec  = _axV('T','F',_cnt.TF);   // 결정: 이치(+)/정(-)
