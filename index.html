@@ -30884,29 +30884,60 @@ window.tvyShowIntroPopup = function(){
     var K=(window.CGO_KIRYU||{})[kiryu]; if(!K){ return; }
     var strKey = strength.dir>0?'active':strength.dir<0?'calm':'normal';
     var nm=(K.names&&K.names[strKey])||'';
+    // ★ 3강도 고유 명칭 (소심/평범/적극 → 신중/균형/역동)
+    var STR_LABEL={active:'역동',normal:'균형',calm:'신중'};
+    var STR_DESC={active:'에너지를 밖으로 강하게 펼치는 유형',normal:'상황에 따라 유연하게 조절하는 유형',calm:'안으로 신중하게 살피고 다지는 유형'};
+    var strLbl=STR_LABEL[strKey]||'균형';
     var ohC={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
     var c=ohC[K.oh]||'#a78bfa';
-    try{localStorage.setItem('cgo_msp52_type', kiryu);}catch(e){}
-    $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류</span>';
+    try{localStorage.setItem('cgo_msp52_type', kiryu);
+        localStorage.setItem('cgo_kiryu_strength', strKey);}catch(e){}
+    // 제목: 하늘 기류 · 신중
+    $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류 · '+strLbl+'</span>';
     $('mb52-res-nick').textContent=nm;
     $('mb52-res-desc').textContent=K.theme;
+    // ★ 강도 바 카드 (신중 ─ 균형 ─ 역동)
+    var sIdx = strKey==='calm'?0 : strKey==='normal'?1 : 2;
+    var strBar='<div style="margin-top:16px;padding:14px 16px;background:'+c+'14;border:1px solid '+c+'44;border-radius:14px;">'
+      +'<div style="font-size:11px;font-weight:800;color:'+c+';text-align:center;margin-bottom:10px;">나의 기질 강도 — <b>'+strLbl+'</b></div>'
+      +'<div style="display:flex;gap:6px;">';
+    ['신중','균형','역동'].forEach(function(lb,i){
+      var on=(i===sIdx);
+      strBar+='<div style="flex:1;text-align:center;padding:9px 4px;border-radius:9px;font-size:12px;font-weight:'+(on?'900':'600')+';'
+        +(on?('background:'+c+';color:#fff;box-shadow:0 2px 8px '+c+'66;'):'background:#fff;color:#94a3b8;border:1px solid #e2e8f0;')+'">'+lb+'</div>';
+    });
+    strBar+='</div><div style="font-size:10.5px;color:#64748b;text-align:center;margin-top:9px;line-height:1.6;">'+(STR_DESC[strKey]||'')+'</div></div>';
     // 4축 강도 막대
     var axes=[['dir','나아감','머무름'],['eye','실(實)','통(通)'],['dec','이치','정(情)'],['flow','다스림','흐름']];
-    var h='';
+    var h=strBar;
     axes.forEach(function(a){
-      var v=strength[a[0]]||0;              // -1/0/+1
+      var v=strength[a[0]]||0;
       var p= v>0?18:v<0?82:50;
-      h+='<div class="mb52-arow"><div class="mb52-alab"><span>'+a[1]+'</span><span>'+a[2]+'</span></div>'
+      h+='<div class="mb52-arow" style="margin-top:12px;"><div class="mb52-alab"><span>'+a[1]+'</span><span>'+a[2]+'</span></div>'
         +'<div class="mb52-atrack"><div class="mb52-aleft" style="width:'+p+'%"></div></div></div>';
     });
     $('mb52-axis').innerHTML=h;
-    // 빛·그늘·공명·조율
-    var secW=function(emo,lb,tx){ return '<div style="margin-top:10px;padding:11px 13px;background:rgba(0,0,0,.04);border-left:3px solid '+c+';border-radius:0 8px 8px 0;"><div style="font-size:10px;font-weight:800;color:'+c+';margin-bottom:4px;">'+emo+' '+lb+'</div><div style="font-size:11.5px;color:#475569;line-height:1.7;">'+tx+'</div></div>'; };
+    var secW=function(emo,lb,tx){ return '<div style="margin-top:10px;padding:11px 13px;background:rgba(0,0,0,.04);border-left:3px solid '+c+';border-radius:0 8px 8px 0;"><div style="font-size:10px;font-weight:800;color:'+c+';margin-bottom:4px;">'+emo+' '+lb+'</div><div style="font-size:11.5px;color:#1e293b;line-height:1.7;">'+tx+'</div></div>'; };
     var extra=secW('🌟','빛 · 강점',K.light)+secW('🌑','그늘 · 약점',K.shadow)+secW('🤝','공명 · 관계',K.resonance)+secW('🌱','조율 · 성장',K.growth);
+    // ★ 전 페이지 적용 카드
+    extra+='<div style="margin-top:16px;padding:14px 16px;background:linear-gradient(135deg,'+c+'18,'+c+'08);border:1.5px solid '+c+'55;border-radius:14px;text-align:center;">'
+      +'<div style="font-size:12px;font-weight:800;color:#1e293b;margin-bottom:4px;">📌 이 유형을 앱 전체에 적용할까요?</div>'
+      +'<div style="font-size:10.5px;color:#64748b;line-height:1.6;margin-bottom:10px;">적용하면 역학·타로·건강 등 모든 페이지에서 '+K.ico+' '+kiryu+' 기류 · '+strLbl+' 기준으로 분석돼요</div>'
+      +'<button onclick="mb52ApplyAll(\''+kiryu+'\',\''+strKey+'\')" style="width:100%;padding:11px;background:'+c+';color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;">✓ 전 페이지에 적용하기</button></div>';
     var box=$('mb52-aibox'); if(box){ box.style.display='block'; box.innerHTML=extra; }
     var abtn=$('mb52-ai-btn'); if(abtn){ abtn.style.display='block'; abtn.dataset.type=kiryu; }
     mb52Show('result');
   }
+  // ★ 전 페이지 적용
+  window.mb52ApplyAll=function(kiryu,strKey){
+    try{
+      localStorage.setItem('cgo_msp52_type', kiryu);
+      localStorage.setItem('cgo_kiryu_strength', strKey);
+      if(typeof f3SetType==='function'){ var oh={하늘:'ENFP',바람:'ENTP',불꽃:'ENFP',태산:'ISFJ',대지:'ISFJ',무쇠:'ISTJ',샘물:'INFJ',심해:'INFJ'}; }
+      if(window.calcAstro){ setTimeout(function(){ try{calcAstro();}catch(e){} },200); }
+    }catch(e){}
+    alert('✓ '+kiryu+' 기류 · '+({active:'역동',normal:'균형',calm:'신중'}[strKey]||'')+' 유형이 앱 전체에 적용되었어요!');
+  };
   window.mb52PickType=function(t){ mb52ShowResult(t, null); };
   function pct(score, perCount){ // -2*per .. +2*per → 0..100 toward POS
     var max=2*perCount; if(max===0) return 50;
