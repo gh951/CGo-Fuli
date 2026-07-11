@@ -30890,8 +30890,6 @@ window.tvyShowIntroPopup = function(){
     var abtn=$('mb52-ai-btn'); if(abtn){ abtn.style.display='block'; abtn.dataset.type=kiryu; }
     mb52Show('result');
   }
-  function mb52ShowResult(type, sc){
-    var T=TYPES[type]||["",""];
   window.mb52PickType=function(t){ mb52ShowResult(t, null); };
   function pct(score, perCount){ // -2*per .. +2*per → 0..100 toward POS
     var max=2*perCount; if(max===0) return 50;
@@ -30933,8 +30931,11 @@ window.tvyShowIntroPopup = function(){
   }
   // 8기류 직접 선택 → 평범형 결과
   window.mb52PickKiryu=function(kiryu){
-    var K=(window.CGO_KIRYU||{})[kiryu]; if(!K) return;
-    mb52ShowKiryuResult(kiryu, {dir:0,eye:0,dec:0,flow:0}, null);
+    try{
+      var K=(window.CGO_KIRYU||{})[kiryu];
+      if(!K){ console.warn('[CGO] 기류 데이터 없음:', kiryu); return; }
+      mb52ShowKiryuResult(kiryu, {dir:0,eye:0,dec:0,flow:0}, null);
+    }catch(e){ console.error('[CGO] mb52PickKiryu 오류:', e); }
   };
   window.mb52AI=function(){
     var btn=$('mb52-ai-btn'), box=$('mb52-aibox');
