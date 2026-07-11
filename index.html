@@ -5003,6 +5003,10 @@ function updateTransitSectionWithNASA(planets) {
         }
 
         function initSections(){
+
+          if(window._cgoSectionsInit) return;
+
+          window._cgoSectionsInit = true;
           var ip   = document.getElementById('sec-ip');
           var cheon= document.getElementById('sec-cheon');
           var bio  = document.getElementById('sec-bio');
@@ -5174,7 +5178,7 @@ function updateTransitSectionWithNASA(planets) {
         if(document.readyState==='loading'){
           document.addEventListener('DOMContentLoaded',initSections);
         } else {
-          setTimeout(initSections,500);
+          initSections();
         }
       })();
       </script>
@@ -30694,7 +30698,7 @@ window.tvyShowIntroPopup = function(){
     #page-msp52 .mb52-tcard:active{transform:scale(.97);}
     #page-msp52 .mb52-tcard:hover{border-color:rgba(109,40,217,.5);}
     #page-msp52 .mb52-tcard .tc-k{font-size:16px;font-weight:900;color:#6d28d9;letter-spacing:.05em;}
-    #page-msp52 .mb52-tcard .tc-n{font-size:11px;color:rgba(230,228,245,.7);margin-top:3px;}
+    #page-msp52 .mb52-tcard .tc-n{font-size:11px;color:#64748b;margin-top:3px;}
     #page-msp52 .mb52-res-type{font-size:46px;font-weight:900;color:#6d28d9;letter-spacing:.08em;text-align:center;text-shadow:0 0 24px rgba(167,139,250,.5);}
     #page-msp52 .mb52-res-nick{text-align:center;font-size:16px;font-weight:800;color:#334155;margin-top:2px;}
     #page-msp52 .mb52-res-desc{text-align:center;font-size:12px;color:rgba(51,65,85,.6);margin-top:8px;line-height:1.7;padding:0 10px;}
@@ -30703,7 +30707,7 @@ window.tvyShowIntroPopup = function(){
     #page-msp52 .mb52-alab{display:flex;justify-content:space-between;font-size:11px;color:rgba(51,65,85,.6);margin-bottom:5px;font-weight:700;}
     #page-msp52 .mb52-atrack{height:9px;background:#ffffff;border-radius:99px;position:relative;overflow:hidden;}
     #page-msp52 .mb52-aleft{height:100%;background:linear-gradient(90deg,#7dd3fc,#a78bfa);border-radius:99px;}
-    #page-msp52 .mb52-aibox{margin-top:20px;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(255,255,255,.02));border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:16px;font-size:13px;line-height:1.85;color:rgba(235,232,248,.9);white-space:pre-wrap;display:none;}
+    #page-msp52 .mb52-aibox{margin-top:20px;background:#faf9ff;border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:16px;color:#334155;font-size:13px;line-height:1.85;color:rgba(235,232,248,.9);white-space:pre-wrap;display:none;}
     #page-msp52 .mb52-btn{margin-top:16px;width:100%;padding:15px;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;}
     #page-msp52 .mb52-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c5cff);color:#fff;}
     #page-msp52 .mb52-btn.ghost{background:#ffffff;color:#334155;border:1px solid rgba(16,185,129,.18);}
@@ -30771,7 +30775,7 @@ window.tvyShowIntroPopup = function(){
     </div>
   </div>
 
-  <button class="mb52-exit" onclick="cgoGoPage('dashboard');var b=document.getElementById('menuListBody');if(b)b.style.display='block';var a=document.getElementById('menuArrow');if(a)a.textContent='▲';">🏠 나가기</button>
+  <button class="mb52-exit" id="mb52-exit-btn" onclick="mb52ExitSmart()">🏠 나가기</button>
 </div>
 <script id="mb52-js">
 (function(){
@@ -30809,7 +30813,20 @@ window.tvyShowIntroPopup = function(){
     ['home','level','test','know','result'].forEach(function(s){
       var el=$('mb52-'+s); if(el) el.classList.toggle('on', s===name);
     });
+    // ★ 나가기/뒤로 버튼 라벨 전환 — home이면 나가기, 하위면 뒤로
+    try{ var xb=$('mb52-exit-btn'); if(xb){ xb.textContent = (name==='home') ? '🏠 나가기' : '← 뒤로'; } }catch(e){}
     try{var w=document.querySelector('#page-msp52 .mb52-wrap'); if(w) w.scrollTop=0; window.scrollTo(0,0);}catch(e){}
+  };
+  // ★ 스마트 나가기: home이면 대시보드, 하위 섹션이면 home으로 뒤로
+  window.mb52ExitSmart=function(){
+    var onHome = $('mb52-home') && $('mb52-home').classList.contains('on');
+    if(onHome){
+      cgoGoPage('dashboard');
+      var b=document.getElementById('menuListBody'); if(b)b.style.display='block';
+      var a=document.getElementById('menuArrow'); if(a)a.textContent='▲';
+    } else {
+      mb52Show('home');
+    }
   };
   window.mb52Go=function(mode){
     if(mode==='know'){ mb52RenderGrid(); mb52Show('know'); }
