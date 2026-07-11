@@ -58155,10 +58155,103 @@ function mspAnswer(val) {
   mspShowQ();
 }
 
+// ═══════════════════════════════════════════════════════════
+// ★ CGO 인간유형 — 8대 기류 시스템 (C·G·O 삼각편대 공동설계)
+//   기존 16유형 엔진은 유지 · 8기류 레이어를 병렬로 얹음
+//   원복: window._cgoType8 = false → 8기류 카드 숨김, 기존 그대로
+// ═══════════════════════════════════════════════════════════
+window._cgoType8 = (window._cgoType8 !== false);
+var CGO_KIRYU = {
+  '하늘':{ico:'🌌',oh:'화',theme:'우주·이상·비전',
+    names:{active:'새벽을 여는 하늘',normal:'노을빛 깃든 하늘',calm:'별을 품은 밤하늘'},
+    light:'넓은 시야와 높은 통찰력으로 나아갈 방향을 제시합니다. 이상을 현실의 목표로 바꾸고, 사람들에게 긍정적인 영감을 줍니다.',
+    shadow:'큰 그림에 집중하다 눈앞의 실무나 작은 목소리를 놓치기 쉽습니다. 높은 기준을 남에게 대입해 거리감을 만들기도 합니다.',
+    resonance:'중심을 잡아주는 태산 기류와 만나면 안정감을 얻습니다. 수치와 매뉴얼을 따지는 무쇠 기류와는 방식 조율이 필요합니다.',
+    growth:'눈높이를 낮춰 일상의 사실과 실무 피드백을 경청해 보세요. 작은 시작의 가치를 인정할 때 비전이 단단해집니다.'},
+  '바람':{ico:'💨',oh:'목',theme:'유연·확산·소통',
+    names:{active:'폭풍을 모으는 바람',normal:'숲을 깨우는 바람',calm:'달빛을 실어오는 미풍'},
+    light:'유연함과 소통 능력으로 사람과 정보를 연결합니다. 어떤 환경이든 빠르게 적응하고, 경직된 분위기를 부드럽게 풉니다.',
+    shadow:'한곳에 오래 머무는 것을 지루해해 끈기가 부족해 보일 수 있습니다. 생각이 쉽게 변해 주변에 불확실성을 주기도 합니다.',
+    resonance:'열정을 뿜는 불꽃 기류와 만나면 확산의 시너지가 큽니다. 안정을 중시하는 대지 기류에겐 불안정해 보일 수 있습니다.',
+    growth:'흐름을 타기보다 나만의 중심 축을 하나 세워보세요. 시작한 일을 끝까지 매듭지을 때 신용이 두터워집니다.'},
+  '불꽃':{ico:'🔥',oh:'화',theme:'열정·표현·에너지',
+    names:{active:'용암을 뿜는 화산',normal:'모닥불 가의 온기',calm:'재 속에 타오르는 숯불'},
+    light:'순발력과 몰입도가 뛰어나고 열정을 화려하게 표현합니다. 침체된 분위기를 단숨에 반전시키는 활력이 있습니다.',
+    shadow:'감정의 진폭이 커서 컨디션에 따라 기복이 나타납니다. 초반 기세에 비해 마무리가 흐려지기 쉽습니다.',
+    resonance:'길을 열어주는 바람 기류와 지치지 않고 나아갑니다. 차분한 샘물 기류의 냉철한 피드백엔 위축되기 쉽습니다.',
+    growth:'감정 리듬에만 기대지 말고 지킬 수 있는 최소한의 루틴을 세워보세요. 과열될 땐 혼자만의 시간으로 속을 다스리면 좋습니다.'},
+  '태산':{ico:'⛰️',oh:'토',theme:'조율·중재·신용',
+    names:{active:'벼랑을 버텨내는 바위산',normal:'들판을 굽어보는 태산',calm:'안개에 싸인 영산'},
+    light:'풍파 속에서도 흔들리지 않는 안정감과 신용을 보여줍니다. 치우치지 않는 중용으로 이견을 조율하는 버팀목입니다.',
+    shadow:'안정을 지키려는 경향이 강해 급격한 변화 앞에서 보수적이 됩니다. 갈등을 덮어두려다 속을 모르겠단 오해를 사기도 합니다.',
+    resonance:'불꽃 기류의 뜨거움을 차분히 품어줍니다. 자유롭게 움직이는 심해 기류는 예측이 어려워 불안할 수 있습니다.',
+    growth:'가끔은 안전지대 밖으로 나와 과감히 결단해 보세요. 명확한 기준으로 옳고 그름을 밝힐 때 중재의 힘이 커집니다.'},
+  '대지':{ico:'🌾',oh:'토',theme:'정착·성실·포용',
+    names:{active:'대륙을 가르는 벌판',normal:'풍요를 기르는 기름진 땅',calm:'이끼를 품은 깊은 흙'},
+    light:'끈기 있고 성실하며 맡은 책임을 묵묵히 해냅니다. 따뜻한 포용력이 뛰어나고, 내실 있는 성과를 차곡차곡 쌓습니다.',
+    shadow:'익숙한 방식을 고수해 변화 수용이 다소 느립니다. 남을 배려하다 자기 목소리를 못 챙겨 끙끙 앓기도 합니다.',
+    resonance:'조용히 헌신하는 심해 기류와 깊은 유대를 쌓습니다. 계속 변하는 바람 기류와는 방식 차이로 거리감을 느낍니다.',
+    growth:'변화의 흐름을 열린 마음으로 받아들이고 가끔 즉흥적 시도도 즐겨보세요. 내 필요와 목소리를 당당히 표현하는 훈련이 필요합니다.'},
+  '무쇠':{ico:'⚔️',oh:'금',theme:'결단·원칙·정밀',
+    names:{active:'날을 세운 무쇠칼',normal:'균형을 재는 저울추',calm:'보석을 품은 원석'},
+    light:'공과 사를 명확히 하는 결단력과 오차 없는 정밀함을 지녔습니다. 원칙을 정확히 지키고 빈틈을 짚어내는 기준점입니다.',
+    shadow:'지나치게 완고하고 엄격해 딱딱한 압박감을 줄 수 있습니다. 정(情)을 고려하지 않고 옳고 그름만 따지다 관계가 경직되기도 합니다.',
+    resonance:'신용을 중시하는 태산 기류 안에서 최고 효율을 냅니다. 비전으로 움직이는 하늘 기류와는 날카롭게 대립할 수 있습니다.',
+    growth:'세상일이 규칙만으로 정의되지 않음을 받아들여 보세요. 예외와 감정을 품는 여유를 넓히면 부러지지 않습니다.'},
+  '샘물':{ico:'💧',oh:'수',theme:'유연·지혜·순응',
+    names:{active:'강줄기를 트는 강물',normal:'바위를 뚫는 낙숫물',calm:'가뭄을 적시는 단비'},
+    light:'환경 변화에 유연하게 순응하는 지혜가 있습니다. 대립보다 우회로 부드럽게 풀고, 멈추지 않는 지속성이 있습니다.',
+    shadow:'흐름에 몸을 맡기다 남 의견에 쉽게 휩쓸릴 수 있습니다. 갈등을 피하다 맺고 끊음이 흐릿하단 평을 받기도 합니다.',
+    resonance:'날을 벼려주는 무쇠 기류와 지혜를 정교하게 구조화합니다. 사방으로 튀는 불꽃 기류엔 소모적이라 느껴 방어합니다.',
+    growth:'맞추는 것을 넘어 중요한 순간엔 단호히 선을 긋는 개척 에너지가 필요합니다. 갈등을 정면 돌파할 때 중심이 섭니다.'},
+  '심해':{ico:'🌊',oh:'수',theme:'통찰·무의식·영성',
+    names:{active:'파도를 일으키는 바다',normal:'모든 물을 담는 호수',calm:'빙산의 잠긴 뿌리'},
+    light:'현상 이면의 본질과 깊은 마음을 읽는 통찰력이 있습니다. 조용하지만 전체 흐름을 정확히 읽는 깊은 사람입니다.',
+    shadow:'생각이 너무 깊이 침잠해 실행 타이밍이 늦어질 수 있습니다. 혼자 고립되거나 지나친 생각으로 스스로 지치기 쉽습니다.',
+    resonance:'정직하게 삶을 지탱하는 대지 기류와 말없이 통합니다. 실증 없이 확장하는 하늘 기류와는 거리를 두기 쉽습니다.',
+    growth:'설계한 생각을 가볍게 밖으로 꺼내 표현하는 연습을 해보세요. 생각의 깊이만큼 발걸음을 움직일 때 뜻이 펼쳐집니다.'}
+};
+// 4축 강도(-1/0/+1) → 8기류 배정. dir=기, eye=마음의눈, dec=결정, flow=삶의결
+function cgoMapKiryu(dir, eye, dec, flow){
+  var zeros = (dir===0)+(eye===0)+(dec===0)+(flow===0);
+  // 태산은 '중용'이 뚜렷할 때만 (0이 3개 이상). 그 외엔 방향성 기질끼리 경합.
+  if(zeros >= 3) return '태산';
+  var sc = {
+    '하늘': (dir>0?2:0) + (eye<0?2:0) + (dec>0?1:0) + (flow>0?1:0),
+    '바람': (dir>0?2:0) + (eye<0?1:0) + (flow<0?2:0) + (dec<0?1:0),
+    '불꽃': (dir>0?2:0) + (dec<0?2:0) + (eye<0?1:0) + (flow<0?1:0),
+    '대지': (dir<0?2:0) + (eye>0?2:0) + (flow>0?1:0),
+    '무쇠': (dec>0?2:0) + (flow>0?2:0) + (eye>0?1:0),
+    '샘물': (dir<0?1:0) + (flow<0?2:0) + (dec<0?1:0) + (eye>0?1:0),
+    '심해': (dir<0?2:0) + (eye<0?2:0) + (dec>0?1:0)
+  };
+  var order = ['하늘','불꽃','무쇠','심해','바람','대지','샘물'];
+  var best = order[0], bestSc = -1;
+  for(var i=0;i<order.length;i++){ if(sc[order[i]] > bestSc){ bestSc = sc[order[i]]; best = order[i]; } }
+  if(bestSc <= 0) best = '태산';   /* 전부 애매하면 중용 */
+  return best;
+}
+// 강도 라벨 (dir 기준 3단계)
+function cgoStrengthKey(dir){ return dir>0 ? 'active' : dir<0 ? 'calm' : 'normal'; }
+
 function mspCalcResult() {
   var s = _mspState.scores;
   var type = (s.E>=s.I?'E':'I') + (s.S>=s.N?'S':'N') + (s.T>=s.F?'T':'F') + (s.J>=s.P?'J':'P');
   var info = MSP_TYPES[type] || MSP_TYPES['INFJ'];
+  // ★ CGO 8기류 — 4축 강도(-1/0/+1) 산출 후 기류 배정
+  var _cnt = {EI:0,SN:0,TF:0,JP:0};
+  (_mspState.questions||[]).forEach(function(q){ if(_cnt[q.axis]!==undefined) _cnt[q.axis]++; });
+  ['EI','SN','TF','JP'].forEach(function(a){ if(!_cnt[a]) _cnt[a]=1; });
+  function _axV(pos, neg, tot){ var sc=((s[pos]||0)-(s[neg]||0))/(tot||1); return sc>0.33?1:sc<-0.33?-1:0; }
+  var _dir  = _axV('E','I',_cnt.EI);   // 기: 나아감(+)/머무름(-)
+  var _eye  = _axV('N','S',_cnt.SN);   // 마음의눈: 통(+)/실(-) → 통을 +로
+  var _dec  = _axV('T','F',_cnt.TF);   // 결정: 이치(+)/정(-)
+  var _flow = _axV('J','P',_cnt.JP);   // 삶의결: 다스림(+)/흐름(-)
+  // cgoMapKiryu는 eye를 '통=-1' 기준으로 설계 → 부호 맞춤(_eye 통이 +이므로 반전 전달)
+  var _kiryu = cgoMapKiryu(_dir, -_eye, _dec, -_flow);
+  var _strKey = cgoStrengthKey(_dir);
+  var _kInfo = CGO_KIRYU[_kiryu] || CGO_KIRYU['태산'];
+  var _kiryuName = (_kInfo.names && _kInfo.names[_strKey]) || '';
   var cfg = MSP_Q_SETS[_mspState.testType];
   // ✅ 응답 시간 분석
   var times = _mspState._times || [];
@@ -58170,7 +58263,9 @@ function mspCalcResult() {
   var reflectPct = Math.round((slowCount/total)*100);
   window._mspResult = {type:type, oh:info.oh, boost:info.boost, trait:info.trait,
     scores:s, source:cfg.label+'검사('+cfg.total+'문항)',
-    avgTime:avgTime, intuitPct:intuitPct, reflectPct:reflectPct, totalQ:total};
+    avgTime:avgTime, intuitPct:intuitPct, reflectPct:reflectPct, totalQ:total,
+    kiryu:_kiryu, kiryuName:_kiryuName, kiryuIco:(_kInfo.ico||''), kiryuTheme:(_kInfo.theme||''),
+    axisStrength:{dir:_dir, eye:_eye, dec:_dec, flow:_flow}};
   document.getElementById('mspTestPanel').style.display = 'none';
   // ✦ NBTI 검사 완료 → ILI 즉시 재계산 → 모든 페이지 자동 반영 ✦
   try {
@@ -58232,7 +58327,36 @@ function mspShowResult() {
         (m.source ? ' · '+m.source : '')+
       '</div>'+
 
-      // ── 5섹션 ──
+      // ── ★ CGO 8기류 메인 카드 ──
+      ((window._cgoType8 !== false && m.kiryu && CGO_KIRYU[m.kiryu]) ? (function(){
+        var K = CGO_KIRYU[m.kiryu];
+        var strKor = {dir:'기(氣)의 방향',eye:'마음의 눈',dec:'결정의 자리',flow:'삶의 결'};
+        var axPair = {dir:['나아감','머무름'],eye:['통(通)','실(實)'],dec:['이치','정(情)'],flow:['다스림','흐름']};
+        function bar(key){
+          var v = (m.axisStrength&&m.axisStrength[key])||0;   // -1/0/+1
+          var pos = v>0?'12%':v<0?'88%':'50%';
+          var pair = axPair[key];
+          return '<div style="margin-top:9px;">'+
+            '<div style="display:flex;justify-content:space-between;font-size:9.5px;color:rgba(240,220,160,.55);margin-bottom:3px;">'+
+              '<span>'+pair[0]+'</span><span style="color:'+ohColor+';font-weight:700;">'+strKor[key]+'</span><span>'+pair[1]+'</span></div>'+
+            '<div style="position:relative;height:7px;background:rgba(255,255,255,.10);border-radius:99px;">'+
+              '<div style="position:absolute;left:'+pos+';top:50%;width:12px;height:12px;background:'+ohColor+';border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 8px '+ohColor+';"></div>'+
+            '</div></div>';
+        }
+        return '<div style="margin-top:16px;padding:18px 18px 16px;background:linear-gradient(135deg,rgba(0,0,0,.28),rgba(0,0,0,.12));border:1px solid '+ohColor+'44;border-radius:16px;">'+
+          '<div style="text-align:center;">'+
+            '<div style="font-size:40px;line-height:1;margin-bottom:6px;">'+K.ico+'</div>'+
+            '<div style="font-size:12px;color:rgba(240,220,160,.6);letter-spacing:.05em;">'+m.kiryu+' 기류 · '+K.theme+'</div>'+
+            '<div style="font-size:22px;font-weight:900;color:'+ohColor+';margin-top:4px;letter-spacing:.02em;">'+m.kiryuName+'</div>'+
+          '</div>'+
+          '<div style="margin-top:14px;">'+bar('dir')+bar('eye')+bar('dec')+bar('flow')+'</div>'+
+          _section('🌟','빛 · 강점',K.light)+
+          _section('🌑','그늘 · 약점',K.shadow)+
+          _section('🤝','공명 · 관계',K.resonance)+
+          _section('🌱','조율 · 성장',K.growth)+
+        '</div>';
+      })() : '')+
+      // ── 5섹션 (16유형 정통 분석 — 병행 유지) ──
       (detail.essence ? _section('📜','① 핵심 본성',detail.essence) : '')+
       (detail.strengths && detail.shadow ?
         _sectionDual('🌟','② 강점 & 그림자',
