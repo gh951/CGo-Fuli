@@ -30726,7 +30726,7 @@ window.tvyShowIntroPopup = function(){
     #page-msp52 .mb52-exit{position:fixed;bottom:22px;right:18px;padding:12px 18px;border:none;border-radius:999px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:800;font-size:13px;cursor:pointer;z-index:50;}
   </style>
 
-  <div class="cgop-top"><div class="cgop-logo">🧠 CGO 인간유형</div></div><div class="cgop-hero" style="background:radial-gradient(ellipse at 30% 18%,rgba(124,58,237,.32),transparent 62%),linear-gradient(160deg,#2e1065,#1e1b4b);"><div class="cgop-badge">CGO 인간유형 · 8기류</div><div class="cgop-hero-ico">🧠</div><div class="cgop-hero-title">성격 유형</div><div class="cgop-hero-sub">48·92·144문항 · 8가지 기류로 읽는 나의 결 · 참고용</div></div><div class="cgop-body mb52-wrap">
+  <div class="cgop-top"><div class="cgop-logo">🧠 C-63 CGO 인간유형</div></div><div class="cgop-hero" style="background:radial-gradient(ellipse at 30% 18%,rgba(124,58,237,.32),transparent 62%),linear-gradient(160deg,#2e1065,#1e1b4b);"><div class="cgop-badge">CGO 인간유형 · 8기류</div><div class="cgop-hero-ico">🧠</div><div class="cgop-hero-title">성격 유형</div><div class="cgop-hero-sub">48·92·144문항 · 8가지 기류로 읽는 나의 결 · 참고용</div></div><div class="cgop-body mb52-wrap">
     <div class="mb52-head">
       <div class="t">🧠 CGO 인간유형</div>
       <div class="s">8가지 기류로 읽는 나의 결</div>
@@ -30995,6 +30995,7 @@ window.tvyShowIntroPopup = function(){
     $('mb52-axis').innerHTML=_mb52RenderStrengthAxes(kiryu, strKey, st.strength, c);
     // 저장 갱신
     try{ localStorage.setItem('cgo_kiryu_strength', strKey); }catch(e){}
+    var _ab=$('mb52-ai-btn'); if(_ab){ _ab.dataset.str=strKey; }
   };
   function mb52ShowKiryuResult(kiryu, strength, sc){
     var K=(window.CGO_KIRYU||{})[kiryu]; if(!K){ return; }
@@ -31028,7 +31029,7 @@ window.tvyShowIntroPopup = function(){
       +'<div style="font-size:10.5px;color:#64748b;line-height:1.6;margin-bottom:10px;">적용하면 역학·타로·건강 등 모든 페이지에서 '+K.ico+' '+kiryu+' 기류 · '+strLbl+' 기준으로 분석돼요</div>'
       +'<button onclick="mb52ApplyAll(\''+kiryu+'\',\''+strKey+'\')" style="width:100%;padding:11px;background:'+c+';color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;">✓ 전 페이지에 적용하기</button></div>';
     var box=$('mb52-aibox'); if(box){ box.style.display='block'; box.innerHTML=extra; }
-    var abtn=$('mb52-ai-btn'); if(abtn){ abtn.style.display='block'; abtn.dataset.type=kiryu; }
+    var abtn=$('mb52-ai-btn'); if(abtn){ abtn.style.display='block'; abtn.dataset.type=kiryu; abtn.dataset.str=strKey; }
     mb52Show('result');
   }
   // ★ 전 페이지 적용
@@ -31090,12 +31091,30 @@ window.tvyShowIntroPopup = function(){
   };
   window.mb52AI=function(){
     var btn=$('mb52-ai-btn'), box=$('mb52-aibox');
-    var type=btn.dataset.type||''; if(!type) return;
-    var T=TYPES[type]||["",""];
-    box.style.display='block'; box.innerHTML='<span class="mb52-spin"></span>AI가 '+type+' 유형을 해석하는 중…';
+    var kiryu=btn.dataset.type||''; if(!kiryu) return;
+    var strKey=btn.dataset.str||'normal';
+    var STR_LABEL={active:'역동',normal:'균형',calm:'신중'};
+    var strLbl=STR_LABEL[strKey]||'균형';
+    var K=(window.CGO_KIRYU||{})[kiryu]||{};
+    var SD=(window.CGO_KIRYU_STR&&window.CGO_KIRYU_STR[kiryu])?window.CGO_KIRYU_STR[kiryu][strKey]:null;
+    var nm=(K.names&&K.names[strKey])||'';
+    var title = kiryu+' 기류 · '+strLbl+(nm?' ('+nm+')':'');
+    box.style.display='block'; box.innerHTML='<span class="mb52-spin"></span>AI가 '+title+' 유형을 해석하는 중…';
     btn.style.display='none';
     box.scrollIntoView({behavior:'smooth',block:'center'});
-    var prompt='당신은 따뜻하고 통찰력 있는 성격 분석가입니다.\n\n[의료 안전 규칙 — 반드시 준수]\n사용자가 질병 진단, 약물 복용·중단, 치료법, 증상 판단 등 의학적 사안을 물으면 절대 답변하거나 추측하지 말고 아래 문장만 그대로 출력하세요:\n\"CGO-FULI는 심리 성찰과 역학적 흐름을 짚어주는 가이드입니다. 질환의 진단 및 의약품 복용 관련 사안은 반드시 전문 의료기관의 의사 또는 전문가와 상의하시기 바랍니다.\"\n그 밖의 어떤 상황에서도 질병명·진단·처방 표현을 쓰지 마세요. 사용자의 성격 유형은 '+type+'('+T[0]+')입니다. 이 유형에 대해 한국어로 4~6문장으로 적어주세요: (1) 핵심 강점 (2) 성장 포인트 (3) 관계나 일에서의 특징 (4) 오늘 도움이 될 따뜻한 한마디. 사람을 단정하거나 규정하지 말고, 자기 이해를 돕는 참고로서 긍정적으로 적어주세요.';
+    // ★ 8기류 + 강도 + 24상세 기반 프롬프트 (한자·외국어 금지)
+    var STR_MEAN={active:'기(氣)를 밖으로 강하게 뿜는 역동형 — 추진·표현·속도가 특징',normal:'상황에 따라 유연하게 조절하는 균형형 — 적응·조화가 특징',calm:'안으로 신중하게 다지는 신중형 — 깊이·관찰·조심이 특징'};
+    var ctx = '[유형 정보]\n기류: '+kiryu+' ('+(K.theme||'')+')\n강도: '+strLbl+' — '+(STR_MEAN[strKey]||'')+'\n별칭: '+nm+'\n';
+    if(SD){ ctx += '이 강도의 정의: '+SD.def+'\n이 강도의 대표 모습: '+SD.scene+'\n이 강도의 강점: '+(SD.pow||[]).join(', ')+'\n이 강도의 성장점: '+SD.grow+'\n'; }
+    ctx += '기류 공통 빛(강점): '+(K.light||'')+'\n기류 공통 그늘(약점): '+(K.shadow||'')+'\n';
+    // 다른 두 강도 정보도 넣어 대비시킴
+    if(window.CGO_KIRYU_STR&&window.CGO_KIRYU_STR[kiryu]){
+      var others=['calm','normal','active'].filter(function(x){return x!==strKey;});
+      var oMap={active:'역동',normal:'균형',calm:'신중'};
+      ctx += '\n[대비 — 같은 '+kiryu+' 기류의 다른 강도들 (이 사람은 이게 아님)]\n';
+      others.forEach(function(o){ var od=window.CGO_KIRYU_STR[kiryu][o]; if(od){ ctx += '· '+oMap[o]+'형은 "'+od.def+'"\n'; } });
+    }
+    var prompt='당신은 따뜻하고 통찰력 있는 성격 분석가입니다. 반드시 자연스러운 한국어로만 답하세요. 한자나 외국어 단어를 절대 섞지 마세요.\n\n[의료 안전 규칙]\n질병 진단·약물·치료·증상 판단 등 의학적 사안은 답하지 말고 "전문 의료기관과 상의하세요"라고만 안내하세요. 질병명·진단·처방 표현 금지.\n\n아래는 사용자의 CGO 인간유형입니다.\n'+ctx+'\n★ 가장 중요: 같은 '+kiryu+' 기류라도 강도('+strLbl+')에 따라 완전히 다른 사람입니다. 반드시 이 사람의 강도('+strLbl+')를 핵심으로 삼아, 다른 강도(대비 항목)와 뚜렷이 구별되게 분석하세요. 강도 특성을 매 문장에 녹여주세요.\n\n이 사람에 대해 자연스러운 한국어로 5~7문장 적어주세요: (1) '+strLbl+' 강도가 드러나는 핵심 강점 (2) 이 강도가 조심할 성장 포인트 (3) 관계와 일에서 이 강도가 어떻게 나타나는지 (4) 오늘 도움이 될 따뜻한 한마디. 사람을 단정하지 말고 자기 이해를 돕는 참고로서 긍정적으로 적되, 완벽·100%·보장 같은 과장은 쓰지 마세요.';
     var body={ model:'llama-3.1-8b-instant', max_tokens:700, temperature:0.7, messages:[{role:'user',content:prompt}] };
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();})
