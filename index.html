@@ -30707,7 +30707,7 @@ window.tvyShowIntroPopup = function(){
     #page-msp52 .mb52-alab{display:flex;justify-content:space-between;font-size:11px;color:rgba(51,65,85,.6);margin-bottom:5px;font-weight:700;}
     #page-msp52 .mb52-atrack{height:9px;background:#ffffff;border-radius:99px;position:relative;overflow:hidden;}
     #page-msp52 .mb52-aleft{height:100%;background:linear-gradient(90deg,#7dd3fc,#a78bfa);border-radius:99px;}
-    #page-msp52 .mb52-aibox{margin-top:20px;background:#faf9ff;border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:16px;color:#334155;font-size:13px;line-height:1.85;color:rgba(235,232,248,.9);white-space:pre-wrap;display:none;}
+    #page-msp52 .mb52-aibox{margin-top:20px;background:#faf9ff;border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:16px;color:#1e293b;font-size:13px;line-height:1.85;white-space:pre-wrap;display:none;}
     #page-msp52 .mb52-btn{margin-top:16px;width:100%;padding:15px;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;}
     #page-msp52 .mb52-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c5cff);color:#fff;}
     #page-msp52 .mb52-btn.ghost{background:#ffffff;color:#334155;border:1px solid rgba(16,185,129,.18);}
@@ -30880,6 +30880,52 @@ window.tvyShowIntroPopup = function(){
     mb52ShowKiryuResult(kiryu, {dir:dir, eye:-eyeTong, dec:dec, flow:-flowDa}, sc);
   }
   // ★ 8기류 결과 렌더
+  // ★ 강도 바 + 4축 렌더 (강도 클릭 시 재호출로 4축 연동)
+  function _mb52RenderStrengthAxes(kiryu, strKey, strength, c){
+    var STR_LABEL={active:'역동',normal:'균형',calm:'신중'};
+    var STR_DESC={active:'에너지를 밖으로 강하게 펼치는 유형',normal:'상황에 따라 유연하게 조절하는 유형',calm:'안으로 신중하게 살피고 다지는 유형'};
+    var strLbl=STR_LABEL[strKey]||'균형';
+    var sIdx = strKey==='calm'?0 : strKey==='normal'?1 : 2;
+    var keys=['calm','normal','active'], labs=['신중','균형','역동'];
+    var strBar='<div style="margin-top:16px;padding:14px 16px;background:'+c+'14;border:1px solid '+c+'44;border-radius:14px;">'
+      +'<div style="font-size:11px;font-weight:800;color:'+c+';text-align:center;margin-bottom:4px;">나의 기질 강도 — <b>'+strLbl+'</b></div>'
+      +'<div style="font-size:9px;color:#94a3b8;text-align:center;margin-bottom:10px;">눌러서 조정해 보세요</div>'
+      +'<div style="display:flex;gap:6px;">';
+    labs.forEach(function(lb,i){
+      var on=(i===sIdx);
+      strBar+='<div onclick="mb52SetStrength(\''+keys[i]+'\')" style="flex:1;text-align:center;padding:9px 4px;border-radius:9px;font-size:12px;cursor:pointer;transition:.15s;font-weight:'+(on?'900':'600')+';'
+        +(on?('background:'+c+';color:#fff;box-shadow:0 2px 8px '+c+'66;'):'background:#fff;color:#94a3b8;border:1px solid #e2e8f0;')+'">'+lb+'</div>';
+    });
+    strBar+='</div><div style="font-size:10.5px;color:#64748b;text-align:center;margin-top:9px;line-height:1.6;">'+(STR_DESC[strKey]||'')+'</div></div>';
+    // 4축 막대 — dir 강도는 선택된 강도로 반영
+    var dirV = strKey==='active'?1 : strKey==='calm'?-1 : 0;
+    var eff = {dir:dirV, eye:strength.eye||0, dec:strength.dec||0, flow:strength.flow||0};
+    var axes=[['dir','나아감','머무름'],['eye','실(實)','통(通)'],['dec','이치','정(情)'],['flow','다스림','흐름']];
+    var h=strBar;
+    axes.forEach(function(a){
+      var v=eff[a[0]]||0;
+      var p= v>0?18:v<0?82:50;
+      h+='<div class="mb52-arow" style="margin-top:12px;"><div class="mb52-alab"><span>'+a[1]+'</span><span>'+a[2]+'</span></div>'
+        +'<div class="mb52-atrack"><div class="mb52-aleft" style="width:'+p+'%;transition:width .35s;"></div></div></div>';
+    });
+    return h;
+  }
+  // 강도 클릭 → 재렌더 (제목·설명·4축·저장 갱신)
+  window.mb52SetStrength=function(strKey){
+    var st=window._mb52Cur; if(!st) return;
+    var STR_LABEL={active:'역동',normal:'균형',calm:'신중'};
+    var kiryu=st.kiryu, c=st.c, K=st.K;
+    var dirV = strKey==='active'?1 : strKey==='calm'?-1 : 0;
+    st.strength.dir = dirV;   /* 선택 강도로 dir 갱신 */
+    // 제목·닉네임 갱신
+    var nm=(K.names&&K.names[strKey])||'';
+    $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류 · '+(STR_LABEL[strKey]||'')+'</span>';
+    $('mb52-res-nick').textContent=nm;
+    // 4축+강도바 재렌더
+    $('mb52-axis').innerHTML=_mb52RenderStrengthAxes(kiryu, strKey, st.strength, c);
+    // 저장 갱신
+    try{ localStorage.setItem('cgo_kiryu_strength', strKey); }catch(e){}
+  };
   function mb52ShowKiryuResult(kiryu, strength, sc){
     var K=(window.CGO_KIRYU||{})[kiryu]; if(!K){ return; }
     var strKey = strength.dir>0?'active':strength.dir<0?'calm':'normal';
@@ -30901,27 +30947,9 @@ window.tvyShowIntroPopup = function(){
     $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류 · '+strLbl+'</span>';
     $('mb52-res-nick').textContent=nm;
     $('mb52-res-desc').textContent=K.theme;
-    // ★ 강도 바 카드 (신중 ─ 균형 ─ 역동)
-    var sIdx = strKey==='calm'?0 : strKey==='normal'?1 : 2;
-    var strBar='<div style="margin-top:16px;padding:14px 16px;background:'+c+'14;border:1px solid '+c+'44;border-radius:14px;">'
-      +'<div style="font-size:11px;font-weight:800;color:'+c+';text-align:center;margin-bottom:10px;">나의 기질 강도 — <b>'+strLbl+'</b></div>'
-      +'<div style="display:flex;gap:6px;">';
-    ['신중','균형','역동'].forEach(function(lb,i){
-      var on=(i===sIdx);
-      strBar+='<div style="flex:1;text-align:center;padding:9px 4px;border-radius:9px;font-size:12px;font-weight:'+(on?'900':'600')+';'
-        +(on?('background:'+c+';color:#fff;box-shadow:0 2px 8px '+c+'66;'):'background:#fff;color:#94a3b8;border:1px solid #e2e8f0;')+'">'+lb+'</div>';
-    });
-    strBar+='</div><div style="font-size:10.5px;color:#64748b;text-align:center;margin-top:9px;line-height:1.6;">'+(STR_DESC[strKey]||'')+'</div></div>';
-    // 4축 강도 막대
-    var axes=[['dir','나아감','머무름'],['eye','실(實)','통(通)'],['dec','이치','정(情)'],['flow','다스림','흐름']];
-    var h=strBar;
-    axes.forEach(function(a){
-      var v=strength[a[0]]||0;
-      var p= v>0?18:v<0?82:50;
-      h+='<div class="mb52-arow" style="margin-top:12px;"><div class="mb52-alab"><span>'+a[1]+'</span><span>'+a[2]+'</span></div>'
-        +'<div class="mb52-atrack"><div class="mb52-aleft" style="width:'+p+'%"></div></div></div>';
-    });
-    $('mb52-axis').innerHTML=h;
+    // ★ 강도 바 카드 (신중/균형/역동) — 클릭 가능, 누르면 4축 연동
+    window._mb52Cur={kiryu:kiryu, strength:strength, c:c, K:K};   /* 재렌더용 상태 */
+    $('mb52-axis').innerHTML = _mb52RenderStrengthAxes(kiryu, strKey, strength, c);
     var secW=function(emo,lb,tx){ return '<div style="margin-top:10px;padding:11px 13px;background:rgba(0,0,0,.04);border-left:3px solid '+c+';border-radius:0 8px 8px 0;"><div style="font-size:10px;font-weight:800;color:'+c+';margin-bottom:4px;">'+emo+' '+lb+'</div><div style="font-size:11.5px;color:#1e293b;line-height:1.7;">'+tx+'</div></div>'; };
     var extra=secW('🌟','빛 · 강점',K.light)+secW('🌑','그늘 · 약점',K.shadow)+secW('🤝','공명 · 관계',K.resonance)+secW('🌱','조율 · 성장',K.growth);
     // ★ 전 페이지 적용 카드
