@@ -30827,8 +30827,45 @@ window.tvyShowIntroPopup = function(){
     }
     var type='';
     type+= sc.EI>=0?'E':'I'; type+= sc.SN>=0?'S':'N'; type+= sc.TF>=0?'T':'F'; type+= sc.JP>=0?'J':'P';
-    mb52ShowResult(type, sc);
+    // ★ 4축 강도(-1/0/+1) → 8기류
+    var per=(qlist.length?qlist.length/4:1);
+    function _sv(v){ var r=v/(2*per||1); return r>0.33?1:r<-0.33?-1:0; }
+    var dir=_sv(sc.EI), eyeTong=-_sv(sc.SN), dec=_sv(sc.TF), flowDa=-_sv(sc.JP);
+    // eye는 통기준, flow는 흐름기준으로 cgoMapKiryu 호출부와 동일하게: dir, -eyeStd, dec, -flowStd
+    // 여기 eyeTong/flowDa 이미 통/흐름 좌표 → cgoMapKiryu(dir, eyeTong, dec, flowDa)
+    var kiryu=(typeof window.cgoMapKiryu==='function')?window.cgoMapKiryu(dir, eyeTong, dec, flowDa):'태산';
+    mb52ShowKiryuResult(kiryu, {dir:dir, eye:-eyeTong, dec:dec, flow:-flowDa}, sc);
   }
+  // ★ 8기류 결과 렌더
+  function mb52ShowKiryuResult(kiryu, strength, sc){
+    var K=(window.CGO_KIRYU||{})[kiryu]; if(!K){ return; }
+    var strKey = strength.dir>0?'active':strength.dir<0?'calm':'normal';
+    var nm=(K.names&&K.names[strKey])||'';
+    var ohC={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
+    var c=ohC[K.oh]||'#a78bfa';
+    try{localStorage.setItem('cgo_msp52_type', kiryu);}catch(e){}
+    $('mb52-res-type').innerHTML='<span style="color:'+c+'">'+K.ico+' '+kiryu+' 기류</span>';
+    $('mb52-res-nick').textContent=nm;
+    $('mb52-res-desc').textContent=K.theme;
+    // 4축 강도 막대
+    var axes=[['dir','나아감','머무름'],['eye','실(實)','통(通)'],['dec','이치','정(情)'],['flow','다스림','흐름']];
+    var h='';
+    axes.forEach(function(a){
+      var v=strength[a[0]]||0;              // -1/0/+1
+      var p= v>0?18:v<0?82:50;
+      h+='<div class="mb52-arow"><div class="mb52-alab"><span>'+a[1]+'</span><span>'+a[2]+'</span></div>'
+        +'<div class="mb52-atrack"><div class="mb52-aleft" style="width:'+p+'%"></div></div></div>';
+    });
+    $('mb52-axis').innerHTML=h;
+    // 빛·그늘·공명·조율
+    var secW=function(emo,lb,tx){ return '<div style="margin-top:10px;padding:11px 13px;background:rgba(0,0,0,.04);border-left:3px solid '+c+';border-radius:0 8px 8px 0;"><div style="font-size:10px;font-weight:800;color:'+c+';margin-bottom:4px;">'+emo+' '+lb+'</div><div style="font-size:11.5px;color:#475569;line-height:1.7;">'+tx+'</div></div>'; };
+    var extra=secW('🌟','빛 · 강점',K.light)+secW('🌑','그늘 · 약점',K.shadow)+secW('🤝','공명 · 관계',K.resonance)+secW('🌱','조율 · 성장',K.growth);
+    var box=$('mb52-aibox'); if(box){ box.style.display='block'; box.innerHTML=extra; }
+    var abtn=$('mb52-ai-btn'); if(abtn){ abtn.style.display='block'; abtn.dataset.type=kiryu; }
+    mb52Show('result');
+  }
+  function mb52ShowResult(type, sc){
+    var T=TYPES[type]||["",""];
   window.mb52PickType=function(t){ mb52ShowResult(t, null); };
   function pct(score, perCount){ // -2*per .. +2*per → 0..100 toward POS
     var max=2*perCount; if(max===0) return 50;
@@ -30855,12 +30892,24 @@ window.tvyShowIntroPopup = function(){
     mb52Show('result');
   }
   function mb52RenderGrid(){
-    var keys=Object.keys(TYPES), h='';
-    keys.forEach(function(k){
-      h+='<div class="mb52-tcard" onclick="mb52PickType(\''+k+'\')"><div class="tc-k">'+k+'</div><div class="tc-n">'+TYPES[k][0]+'</div></div>';
+    // ★ CGO 8기류 카드 (알파벳 16유형 폐기)
+    var kk=['하늘','바람','불꽃','태산','대지','무쇠','샘물','심해'], h='';
+    var ohC={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
+    kk.forEach(function(k){
+      var K=(window.CGO_KIRYU||{})[k]; if(!K) return;
+      var c=ohC[K.oh]||'#a78bfa';
+      h+='<div class="mb52-tcard" onclick="mb52PickKiryu(\''+k+'\')" style="text-align:center;">'
+        +'<div style="font-size:24px;line-height:1;margin-bottom:4px;">'+K.ico+'</div>'
+        +'<div class="tc-k" style="color:'+c+';">'+k+' 기류</div>'
+        +'<div class="tc-n">'+K.theme+'</div></div>';
     });
     $('mb52-grid16').innerHTML=h;
   }
+  // 8기류 직접 선택 → 평범형 결과
+  window.mb52PickKiryu=function(kiryu){
+    var K=(window.CGO_KIRYU||{})[kiryu]; if(!K) return;
+    mb52ShowKiryuResult(kiryu, {dir:0,eye:0,dec:0,flow:0}, null);
+  };
   window.mb52AI=function(){
     var btn=$('mb52-ai-btn'), box=$('mb52-aibox');
     var type=btn.dataset.type||''; if(!type) return;
@@ -58175,7 +58224,7 @@ function mspAnswer(val) {
 //   원복: window._cgoType8 = false → 8기류 카드 숨김, 기존 그대로
 // ═══════════════════════════════════════════════════════════
 window._cgoType8 = (window._cgoType8 !== false);
-var CGO_KIRYU = {
+window.CGO_KIRYU = window.CGO_KIRYU || {
   '하늘':{ico:'🌌',oh:'화',theme:'우주·이상·비전',
     names:{active:'새벽을 여는 하늘',normal:'노을빛 깃든 하늘',calm:'별을 품은 밤하늘'},
     light:'넓은 시야와 높은 통찰력으로 나아갈 방향을 제시합니다. 이상을 현실의 목표로 바꾸고, 사람들에게 긍정적인 영감을 줍니다.',
@@ -58226,7 +58275,7 @@ var CGO_KIRYU = {
     growth:'설계한 생각을 가볍게 밖으로 꺼내 표현하는 연습을 해보세요. 생각의 깊이만큼 발걸음을 움직일 때 뜻이 펼쳐집니다.'}
 };
 // 4축 강도(-1/0/+1) → 8기류 배정. dir=기, eye=마음의눈, dec=결정, flow=삶의결
-function cgoMapKiryu(dir, eye, dec, flow){
+window.cgoMapKiryu = function(dir, eye, dec, flow){
   var zeros = (dir===0)+(eye===0)+(dec===0)+(flow===0);
   // 태산은 '중용'이 뚜렷할 때만 (0이 3개 이상). 그 외엔 방향성 기질끼리 경합.
   if(zeros >= 3) return '태산';
@@ -58246,7 +58295,7 @@ function cgoMapKiryu(dir, eye, dec, flow){
   return best;
 }
 // 강도 라벨 (dir 기준 3단계)
-function cgoStrengthKey(dir){ return dir>0 ? 'active' : dir<0 ? 'calm' : 'normal'; }
+window.cgoStrengthKey = function(dir){ return dir>0 ? 'active' : dir<0 ? 'calm' : 'normal'; };
 
 function mspCalcResult() {
   var s = _mspState.scores;
@@ -58262,8 +58311,8 @@ function mspCalcResult() {
   var _dec  = _axV('T','F',_cnt.TF);   // 결정: 이치(+)/정(-)
   var _flow = _axV('J','P',_cnt.JP);   // 삶의결: 다스림(+)/흐름(-)
   // cgoMapKiryu는 eye를 '통=-1' 기준으로 설계 → 부호 맞춤(_eye 통이 +이므로 반전 전달)
-  var _kiryu = cgoMapKiryu(_dir, -_eye, _dec, -_flow);
-  var _strKey = cgoStrengthKey(_dir);
+  var _kiryu = window.cgoMapKiryu(_dir, -_eye, _dec, -_flow);
+  var _strKey = window.cgoStrengthKey(_dir);
   var _kInfo = CGO_KIRYU[_kiryu] || CGO_KIRYU['태산'];
   var _kiryuName = (_kInfo.names && _kInfo.names[_strKey]) || '';
   var cfg = MSP_Q_SETS[_mspState.testType];
