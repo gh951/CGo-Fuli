@@ -8900,7 +8900,7 @@ function cgoGuideFeature(key){
       </div>
 
       <!-- 카메라 영상 -->
-      <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;aspect-ratio:3/4;">
+      <div id="c24-cam-container" style="position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;aspect-ratio:3/4;">
         <video id="c24-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1);"></video>
         <canvas id="c24-canvas" style="display:none;"></canvas>
         <!-- ★ 얼굴 가이드 캔버스 -->
@@ -8916,6 +8916,11 @@ function cgoGuideFeature(key){
         <div id="c24-idle-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);">
           <div style="font-size:36px;margin-bottom:8px;">📷</div>
           <div style="font-size:12px;color:rgba(240,230,200,.7);">아래 버튼을 눌러 측정 시작</div>
+        </div>
+        <!-- ★ C-63: 전체화면 하단 안내 (전체화면일 때만 표시) -->
+        <div id="c24-cam-fs-hint">
+          <div id="c24-cam-fs-stage" style="font-size:15px;font-weight:900;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);"></div>
+          <div id="c24-cam-fs-sub" style="font-size:12px;color:rgba(255,255,255,.8);text-shadow:0 1px 3px rgba(0,0,0,.6);"></div>
         </div>
         <!-- 진행바 -->
         <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.1);">
@@ -32950,8 +32955,13 @@ function _c24DiseaseNextStep(){
 
 // ★ 종합 스캔 — 팝업 안내 후 시작
 function _c24CompStart(){
-  // ★ C-63: 옛날 page-algo(어두운) 모달 열기 제거 — 최신 흰색 page-algo-v2 유지
-  // (측정 가이드 팝업만 띄우고, 옛날 어두운 페이지는 열지 않음)
+  // ★ FIX: page-algo가 모달 모드 — 자동으로 모달 열기 (어느 페이지에서든 호출 가능)
+  var algoModal = document.getElementById('page-algo');
+  if(algoModal && algoModal.getAttribute('data-modal-mode')==='1'){
+    algoModal.style.display = 'block';
+    algoModal.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
   // 이미 팝업 있으면 제거
   var old = document.getElementById('c24-scan-guide-pop');
   if(old) old.remove();
@@ -33069,6 +33079,8 @@ function _c24CompStart(){
 
 // ★ 모달 닫기 — 카메라·타이머·스트림 안전 정지 + 모달 hide
 window._c24CloseModal = function(){
+  // ★ C-63: 카메라 전체화면 OFF (모달 닫기)
+  try{ var _cc=document.getElementById('c24-cam-container'); if(_cc) _cc.classList.remove('c24-fullscreen'); document.body.style.overflow=''; }catch(e){}
   try{
     // 카메라 스트림 정지
     if(typeof _c24 !== 'undefined' && _c24.stream){
@@ -33103,6 +33115,8 @@ window._c24CloseModal = function(){
 function _c24CompStartReal(){
   var pop = document.getElementById('c24-scan-guide-pop');
   if(pop) pop.remove();
+  // ★ C-63: 카메라 전체화면 ON
+  try{ var _cc=document.getElementById('c24-cam-container'); if(_cc) _cc.classList.add('c24-fullscreen'); document.body.style.overflow='hidden'; }catch(e){}
   _c24CompState.active = true;
   _c24CompState.step = 0;
   _c24CompState.images = {face:null,tongue:null,eye:null,skin:null,hand_back:null,hand_palm:null};
@@ -34204,6 +34218,8 @@ function _c24Stop(){
 }
 
 function _c24Finish(){
+  // ★ C-63: 카메라 전체화면 OFF (측정 종료)
+  try{ var _cc=document.getElementById('c24-cam-container'); if(_cc) _cc.classList.remove('c24-fullscreen'); document.body.style.overflow=''; }catch(e){}
   if(!_c24.isRunning&&_c24.sec===0) return;
   _c24.isRunning=false;
   clearInterval(_c24.timerInt);
@@ -146125,6 +146141,26 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
 })();
 </script>
 
+<!-- ★ C-63: 카메라 전체화면 모드 (측정 시 카메라를 전체화면으로, 글씨는 하단) -->
+<style>
+#c24-cam-container.c24-fullscreen{
+  position:fixed !important; inset:0 !important;
+  width:100vw !important; height:100vh !important; height:100dvh !important;
+  margin:0 !important; border-radius:0 !important; aspect-ratio:auto !important;
+  z-index:30000 !important; background:#000 !important;
+}
+#c24-cam-container.c24-fullscreen video#c24-video{
+  width:100% !important; height:100% !important; object-fit:cover !important;
+}
+/* 전체화면일 때 하단 안내 바 */
+#c24-cam-fs-hint{ display:none; }
+#c24-cam-container.c24-fullscreen #c24-cam-fs-hint{
+  display:flex; position:absolute; left:0; right:0; bottom:0;
+  padding:16px 18px calc(16px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,0));
+  flex-direction:column; gap:4px; align-items:center; z-index:5; pointer-events:none;
+}
+</style>
 <!-- ★ C-63: 날짜 입력칸 다국어 플레이스홀더 (브라우저가 lang 무시하는 문제 해결) -->
 <style>
 .cgo-date-wrap{ position:relative; }
