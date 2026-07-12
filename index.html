@@ -45503,13 +45503,11 @@ function setLang(lang) {
     shop:(function(){var _lc={'ko':'🛍️ 쇼핑','en':'🛍️ Shopping','zh':'🛍️ 购物','zh_HK':'🛍️ 購物','ja':'🛍️ ショッピング','ru':'🛍️ Покупки','hi':'🛍️ खरीदारी','es':'🛍️ Compras','de':'🛍️ Einkaufen','fr':'🛍️ Shopping','pt':'🛍️ Compras','vi':'🛍️ Mua sắm','th':'🛍️ ช็อปปิ้ง','id':'🛍️ Belanja','ar':'🛍️ تسوق','tr':'🛍️ Alışveriş','it':'🛍️ Shopping','tl':'🛍️ Shopping','ms':'🛍️ Membeli-belah','uk':'🛍️ Покупки','nl':'🛍️ Winkelen'};return _lc[window._LANG||'ko']||'🛍️ 쇼핑';})()
   };
   _applyLangLocalization(lang);
-      // ★ C-63: 날짜 입력칸(type=date) 표시 언어를 앱 언어에 맞춤
-      try{
-        var _dloc = (lang==='ko') ? 'ko' : (lang==='ja') ? 'ja' : (lang==='zh'||lang==='zh_HK') ? lang.replace('_','-') : 'en';
-        document.querySelectorAll('input[type="date"],input[type="datetime-local"],input[type="month"],input[type="time"]').forEach(function(el){ el.setAttribute('lang', _dloc); });
-      }catch(e){}
+      try{ if(typeof window._cgoRefreshDatePH==='function') window._cgoRefreshDatePH(); }catch(e){}
 
-  // 7. localStorage 저장 + 사용자 선택 플래그
+  try{ if(typeof window._cgoRefreshDatePH==='function') window._cgoRefreshDatePH(); }catch(e){}
+      
+      // 7. localStorage 저장 + 사용자 선택 플래그
   try {
     localStorage.setItem('cgo_lang', lang);
     localStorage.setItem('cgo_lang_user_set', '1');
@@ -146129,6 +146127,77 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
   }
   var t=setInterval(function(){ tries++; trySignIn(); if(done||tries>150) clearInterval(t); }, 400);
   trySignIn();
+})();
+</script>
+
+<!-- ★ C-63: 날짜 입력칸 다국어 플레이스홀더 (브라우저가 lang 무시하는 문제 해결) -->
+<style>
+.cgo-date-wrap{ position:relative; }
+.cgo-date-ph{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px; pointer-events:none; z-index:2; background:transparent; }
+/* 값이 있으면(사용자가 날짜 선택) 플레이스홀더 숨김 */
+.cgo-date-wrap.has-val .cgo-date-ph{ display:none; }
+/* 브라우저 기본 날짜 텍스트를 값 없을 때 투명 처리 (우리 플레이스홀더로 대체) */
+.cgo-date-wrap:not(.has-val) input[type="date"]::-webkit-datetime-edit{ color:transparent; }
+</style>
+<script>
+(function(){
+  // 언어별 날짜 형식 플레이스홀더
+  var CGO_DATE_PH = {
+    ko:'\uc5f0\ub3c4-\uc6d4-\uc77c', en:'yyyy-mm-dd', ja:'\u5e74-\u6708-\u65e5',
+    zh:'\u5e74-\u6708-\u65e5', zh_HK:'\u5e74-\u6708-\u65e5',
+    es:'aaaa-mm-dd', de:'jjjj-mm-tt', fr:'aaaa-mm-jj', pt:'aaaa-mm-dd',
+    ru:'\u0433\u0433\u0433\u0433-\u043c\u043c-\u0434\u0434', vi:'nnnn-tt-nn',
+    th:'\u0e1b\u0e1b\u0e1b\u0e1b-\u0e14\u0e14-\u0e27\u0e14', id:'tttt-bb-hh',
+    ar:'\u0633\u0646\u0629-\u0634\u0647\u0631-\u064a\u0648\u0645', tr:'yyyy-aa-gg',
+    it:'aaaa-mm-gg', hi:'vvvv-mm-dd', nl:'jjjj-mm-dd', uk:'\u0440\u0440\u0440\u0440-\u043c\u043c-\u0434\u0434',
+    tl:'yyyy-mm-dd', ms:'tttt-bb-hh'
+  };
+  function _phText(){
+    var L=(window._LANG||'ko');
+    return CGO_DATE_PH[L] || CGO_DATE_PH['en'];
+  }
+  // date input을 래핑하고 플레이스홀더 붙이기
+  function _wrapDate(el){
+    if(el.dataset.cgoDateWrapped) return;
+    if(el.type!=='date') return;
+    el.dataset.cgoDateWrapped='1';
+    var wrap=document.createElement('span');
+    wrap.className='cgo-date-wrap';
+    wrap.style.display='block';
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    var ph=document.createElement('span');
+    ph.className='cgo-date-ph';
+    ph.textContent=_phText();
+    wrap.appendChild(ph);
+    function sync(){
+      if(el.value){ wrap.classList.add('has-val'); }
+      else{ wrap.classList.remove('has-val'); ph.textContent=_phText(); }
+    }
+    el.addEventListener('input', sync);
+    el.addEventListener('change', sync);
+    sync();
+  }
+  function _scanDates(){
+    try{
+      document.querySelectorAll('input[type="date"]').forEach(_wrapDate);
+    }catch(e){}
+  }
+  // 언어 바뀔 때 플레이스홀더 갱신
+  window._cgoRefreshDatePH=function(){
+    try{
+      document.querySelectorAll('.cgo-date-ph').forEach(function(ph){
+        var wrap=ph.closest('.cgo-date-wrap');
+        if(wrap && !wrap.classList.contains('has-val')) ph.textContent=_phText();
+      });
+      _scanDates(); // 새로 생긴 것도 래핑
+    }catch(e){}
+  };
+  // 초기 실행 + 주기적 스캔(동적 생성 대비)
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _scanDates); }
+  else { _scanDates(); }
+  setTimeout(_scanDates, 1000);
+  setTimeout(_scanDates, 3000);
 })();
 </script>
 
