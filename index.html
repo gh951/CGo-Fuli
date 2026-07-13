@@ -10733,10 +10733,10 @@ function cgoGuideFeature(key){
     var recommend = (p.key === 'tongue') ? 'user' : 'environment';
     var recommendText = (recommend === 'user') ? '📱 전면(셀카) 추천' : '📷 후면 추천';
     
-    if(label) label.innerHTML = p.emoji + ' ' + p.name + ' · 카메라 선택';
+    if(label) label.innerHTML = p.emoji + ' ' + _cgoT(p.name) + _cgoT(' · 카메라 선택');
     if(timer) timer.textContent = p.sec;
     if(prog) prog.textContent = 'PART ' + (idx+1) + ' / ' + parts.length + ' · 카메라 선택';
-    if(inst) inst.innerHTML = '📍 <b>' + p.emoji + ' ' + p.name + '</b><br><span style="font-size:11px;opacity:.8;">' + p.guide + '</span><br><br>' +
+    if(inst) inst.innerHTML = '📍 <b>' + p.emoji + ' ' + _cgoT(p.name) + '</b><br><span style="font-size:11px;opacity:.8;">' + p.guide + '</span><br><br>' +
       '<div style="margin-top:12px;padding:10px;background:rgba(16,185,129,.15);border-radius:10px;font-size:12px;color:#10b981;">' + recommendText + '</div>' +
       '<br><b style="color:#10b981;">사용하실 카메라를 선택해주세요 ↓</b>';
     
@@ -10854,7 +10854,7 @@ function cgoGuideFeature(key){
     window.scalpCamState.idx = idx;
     var p = parts[idx];
     document.getElementById('scc-progress').textContent = 'PART '+ (idx+1) +' / '+ parts.length;
-    document.getElementById('scc-guide-label').innerHTML = p.emoji +' '+ p.name;
+    document.getElementById('scc-guide-label').innerHTML = p.emoji +' '+ _cgoT(p.name);
     document.getElementById('scc-instruction').textContent = p.guide;
     // 카운트다운 시작
     window.scalpCamState.sec = p.sec;
@@ -11123,8 +11123,8 @@ function cgoGuideFeature(key){
       var _t = document.getElementById('scc-timer');
       var _pg = document.getElementById('scc-progress');
       var _btn = document.getElementById('scc-capture-btn');
-      if(_inst) _inst.innerHTML = '✓ 부위 ' + (window.scalpCamState.idx+1) + ' 촬영 완료!<br><br>📍 다음 부위: <b>' + _nextP.emoji + ' ' + _nextP.name + '</b><br><span style="font-size:11px;opacity:.8;">' + _nextP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
-      if(_lbl) _lbl.innerHTML = _nextP.emoji + ' ' + _nextP.name + ' (대기 중)';
+      if(_inst) _inst.innerHTML = '✓ 부위 ' + (window.scalpCamState.idx+1) + ' 촬영 완료!<br><br>📍 다음 부위: <b>' + _nextP.emoji + ' ' + _cgoT(_nextP.name) + '</b><br><span style="font-size:11px;opacity:.8;">' + _nextP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
+      if(_lbl) _lbl.innerHTML = _nextP.emoji + ' ' + _cgoT(_nextP.name) + _cgoT(' (대기 중)');
       if(_t) _t.textContent = _nextP.sec;
       if(_pg) _pg.textContent = 'PART ' + (_nextIdx+1) + ' / ' + _parts.length + ' · 준비';
       // C-39 v1.7 — 다음 부위 진입 시 카메라 선택 UI 표시
@@ -11148,7 +11148,7 @@ function cgoGuideFeature(key){
     window.scalpCamState.captures.forEach(function(cap){
       var wrap = document.createElement('div');
       var imgHtml = cap.img ? '<img src="'+ cap.img +'">' : '<div style="width:100%;aspect-ratio:1;background:#222;border:2px solid rgba(255,255,255,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px;">건너뜀</div>';
-      wrap.innerHTML = imgHtml + '<div class="scc-result-label">'+ cap.emoji +' '+ cap.name +'</div>';
+      wrap.innerHTML = imgHtml + '<div class="scc-result-label">'+ cap.emoji +' '+ _cgoT(cap.name) +'</div>';
       imgs.appendChild(wrap);
     });
     document.getElementById('scc-result-grid').style.display = 'block';
@@ -11172,7 +11172,7 @@ function cgoGuideFeature(key){
           var analysis = scalpAnalyzeImage(cap.img);
           html += '<div style="background:#fff;border:1px solid #f0e6d4;border-radius:12px;overflow:hidden;">';
           html += '<div style="aspect-ratio:1;background:#000;position:relative;"><img src="'+ cap.img +'" style="width:100%;height:100%;object-fit:cover;">';
-          html += '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);color:#fbbf24;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;font-family:Courier New,monospace;">'+ cap.emoji +' '+ cap.name +'</div></div>';
+          html += '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);color:#fbbf24;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;font-family:Courier New,monospace;">'+ cap.emoji +' '+ _cgoT(cap.name) +'</div></div>';
           html += '<div style="padding:10px;">';
           html += '<div style="font-size:11px;font-weight:800;color:#1a1408;margin-bottom:6px;">분석 결과</div>';
           html += '<div style="font-size:10px;color:#666;line-height:1.5;">';
@@ -11181,7 +11181,7 @@ function cgoGuideFeature(key){
           html += '· 모발 밀도 추정: <b style="color:#1a1408">'+ analysis.density +'%</b>';
           html += '</div></div></div>';
         } else {
-          html += '<div style="background:#f5f6fa;border:1px dashed #ccc;border-radius:12px;padding:30px 14px;text-align:center;color:#64748b;font-size:11px;">'+ cap.emoji +' '+ cap.name +'<br/><span style="font-size:10px;">측정 건너뜀</span></div>';
+          html += '<div style="background:#f5f6fa;border:1px dashed #ccc;border-radius:12px;padding:30px 14px;text-align:center;color:#64748b;font-size:11px;">'+ cap.emoji +' '+ _cgoT(cap.name) +'<br/><span style="font-size:10px;">측정 건너뜀</span></div>';
         }
       });
       html += '</div></div>';
@@ -12144,7 +12144,7 @@ function cgoGuideFeature(key){
       var emojiMap = {crown:'👤', mleft:'↖️', mright:'↗️', midline:'📏', occiput:'🌫️'};
       camAnalysis.forEach(function(c){
         if(c.img){
-          html += '<div class="sfm-img-cell"><img src="'+ c.img +'"><div class="sfm-img-label">'+ c.emoji +' '+ c.name +'</div></div>';
+          html += '<div class="sfm-img-cell"><img src="'+ c.img +'"><div class="sfm-img-label">'+ c.emoji +' '+ _cgoT(c.name) +'</div></div>';
         } else {
           html += '<div class="sfm-img-cell sfm-img-cell-empty">'+ c.name +'<br/>(건너뜀)</div>';
         }
