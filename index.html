@@ -133608,7 +133608,7 @@ if('serviceWorker' in navigator){
     var t=$('slp-cyc-total'); if(t) t.textContent=bCycles;
     var bb=$('slp-breath-bpm'); if(bb) bb.textContent=_slpR.running?'측정 계속 중 💓':'';
     if(_slpR.running && !vitalsInt){
-      vitalsInt=setInterval(function(){ _slpVitals(); var bb2=$('slp-breath-bpm'); if(bb2&&_slpR.rppg.bpm) bb2.textContent='실시간 심박 '+_slpR.rppg.bpm+' bpm 💓'; },1500);
+      vitalsInt=setInterval(function(){ _slpVitals(); var bb2=$('slp-breath-bpm'); if(bb2&&_slpR.rppg.bpm) bb2.textContent=_cgoT('실시간 심박 ')+_slpR.rppg.bpm+' bpm 💓'; },1500);
     }
     runPhase();
   };
@@ -135514,6 +135514,26 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       wasActive=now;
     }).observe(pg,{attributes:true,attributeFilter:['class']});
   }
+  function _c64SleepCleanup(){
+    try{
+      if(window._slpR){
+        if(_slpR.stream){ _slpR.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); _slpR.stream=null; }
+        if(_slpR.rafId){ try{ cancelAnimationFrame(_slpR.rafId); }catch(e){} _slpR.rafId=null; }
+        _slpR.running=false;
+      }
+      var vd=document.getElementById('slp-video'); if(vd){ try{ vd.srcObject=null; }catch(e){} }
+    }catch(e){}
+  }
+  function _c64SleepSetup(){
+    var pg=document.getElementById('page-cgo-sleep');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive=pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now=pg.classList.contains('active');
+      if(wasActive && !now){ _c64SleepCleanup(); }
+      wasActive=now;
+    }).observe(pg,{attributes:true,attributeFilter:['class']});
+  }
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -135530,6 +135550,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   else { setTimeout(_c64ScalpSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64IqSetup); }
   else { setTimeout(_c64IqSetup, 60); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64SleepSetup); }
+  else { setTimeout(_c64SleepSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64EyeSetup); }
   else { setTimeout(_c64EyeSetup, 60); }
 })();
