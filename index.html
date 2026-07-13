@@ -18607,8 +18607,8 @@ var Q_POOL = {
         detail += '<div style="background:#fef2f2;border:2px solid #f87171;padding:14px;border-radius:10px;margin-bottom:12px;color:#b91c1c;font-size:13px;line-height:1.7;">';
         detail += '<b>⚠️ 검사가 제대로 완료되지 않았어요</b><br>';
         var _rs=[];
-        if(avgRT < 1.5) _rs.push('• 반응 속도가 너무 빨라요 (' + avgRT.toFixed(1) + '초 — 문제를 읽을 시간이 부족)');
-        if(accuracy < 0.15) _rs.push('• 정답률이 찍기보다 낮아요 (' + (accuracy*100).toFixed(0) + '%)');
+        if(avgRT < 1.5) _rs.push(_cgoT('• 반응 속도가 너무 빨라요 (') + avgRT.toFixed(1) + _cgoT('초 — 문제를 읽을 시간이 부족)'));
+        if(accuracy < 0.15) _rs.push(_cgoT('• 정답률이 찍기보다 낮아요 (') + (accuracy*100).toFixed(0) + '%)');
         detail += _rs.join('<br>') + '<br><br>';
         detail += '문제를 <b>천천히 읽고 다시 검사</b>해주세요. 신뢰할 수 없어 IQ 점수는 표시하지 않았습니다.';
         detail += '</div>';
@@ -135411,6 +135411,28 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       wasActive=now;
     }).observe(pg,{attributes:true,attributeFilter:['class']});
   }
+  function _c64IqCleanup(){
+    try{
+      var st=window._iqState;
+      if(st){
+        if(st.stream){ st.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); st.stream=null; }
+        if(st.rppgInterval){ clearInterval(st.rppgInterval); st.rppgInterval=null; }
+        if(st.qTimerInterval){ clearInterval(st.qTimerInterval); st.qTimerInterval=null; }
+      }
+      var vd=document.getElementById('iq-video'); if(vd){ vd.style.display='none'; try{ vd.srcObject=null; }catch(e){} }
+      var ph=document.getElementById('iq-cam-placeholder'); if(ph) ph.style.display='flex';
+    }catch(e){}
+  }
+  function _c64IqSetup(){
+    var pg=document.getElementById('page-iq');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive=pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now=pg.classList.contains('active');
+      if(wasActive && !now){ _c64IqCleanup(); }
+      wasActive=now;
+    }).observe(pg,{attributes:true,attributeFilter:['class']});
+  }
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -135425,6 +135447,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   else { setTimeout(_c64Setup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64ScalpSetup); }
   else { setTimeout(_c64ScalpSetup, 60); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64IqSetup); }
+  else { setTimeout(_c64IqSetup, 60); }
 })();
 </script>
 
