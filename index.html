@@ -57585,7 +57585,7 @@ function cplStartAnalysis(){
         +'생년월일의 모든 숫자를 더해서 한 자리 수가 될 때까지 더하면 "생명수"가 나와요!<br><br>'
         +'<b style="color:#d4a843;">'+aName+'님 생명수: '+aLife+'</b><br>'
         +'<b style="color:#f472b6;">'+bName+'님 생명수: '+bLife+'</b><br><br>'
-        +'생명수 차이: '+Math.abs(aLife-bLife)+'<br><br>'
+        +_cgoT('생명수 차이: ')+Math.abs(aLife-bLife)+'<br><br>'
         +(numComp>=85?'✨ <b style="color:#34d399;">완벽한 공명!</b><br>두 분의 생명수가 아주 잘 맞아요! 삶의 속도와 리듬이 비슷해서 함께하면 편안함을 느껴요. 마치 같은 박자의 노래를 같이 부르는 것 같아요!'
         :numComp>=70?'🎵 <b style="color:#38bdf8;">좋은 공명!</b><br>두 분의 삶의 리듬이 대체로 잘 맞아요. 가끔 속도 차이가 있을 수 있지만, 서로 맞춰가면 아름다운 하모니를 만들 수 있어요!'
         :'🎶 <b style="color:#fbbf24;">다른 리듬!</b><br>두 분의 삶의 속도가 많이 달라요. 빠른 사람과 느린 사람이 만난 것처럼요. 서로의 페이스를 존중하면 오히려 보완이 돼요!')
@@ -135661,6 +135661,28 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     }
     return { lfhf: HF>0 ? Math.round(LF/HF*100)/100 : 0 };
   };
+  function _c64SviCleanup(){
+    try{
+      if(window._svi){
+        if(_svi.stream){ _svi.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); _svi.stream=null; }
+        if(_svi.timer){ try{ clearInterval(_svi.timer); }catch(e){} _svi.timer=null; }
+        if(_svi.rppg && _svi.rppg.rafId){ try{ cancelAnimationFrame(_svi.rppg.rafId); }catch(e){} _svi.rppg.rafId=null; }
+        _svi.running=false;
+      }
+      try{ if(typeof _sviStopFaceMesh==='function') _sviStopFaceMesh(); }catch(e){}
+      var vd=document.getElementById('svi-video'); if(vd){ try{ vd.srcObject=null; }catch(e){} }
+    }catch(e){}
+  }
+  function _c64SviSetup(){
+    var pg=document.getElementById('page-svi');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive=pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now=pg.classList.contains('active');
+      if(wasActive && !now){ _c64SviCleanup(); }
+      wasActive=now;
+    }).observe(pg,{attributes:true,attributeFilter:['class']});
+  }
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -135681,6 +135703,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   else { setTimeout(_c64SleepSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64ArSetup); }
   else { setTimeout(_c64ArSetup, 60); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64SviSetup); }
+  else { setTimeout(_c64SviSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64EyeSetup); }
   else { setTimeout(_c64EyeSetup, 60); }
 })();
@@ -139911,7 +139935,7 @@ function sviChatSend(){
   
   // Gemini API 호출 (본진 cgoCallGemini 재활용)
   if(typeof cgoCallGemini === 'function'){
-    var fullPrompt = _sviGetSystemPrompt() + '\n\n사용자 질문: ' + msg;
+    var fullPrompt = _sviGetSystemPrompt() + (window._demLangDirective?window._demLangDirective():'') + '\n\n사용자 질문: ' + msg;
     cgoCallGemini(fullPrompt, function(reply){
       _svi.chatHistory.push({role:'ai', text:reply || '죄송합니다, 응답을 받지 못했습니다.'});
       _svi.chatBusy = false;
