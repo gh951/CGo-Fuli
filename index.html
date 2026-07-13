@@ -2493,6 +2493,20 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 </head>
 <body>
 <script>
+/* C-64: 대문 팝업 "오늘 하루 보지 않기" — 날짜 바뀌면 인트로 스킵 플래그 초기화 */
+(function(){
+  try{
+    var _today = new Date().toDateString();
+    if(localStorage.getItem('cgo_intro_day') !== _today){
+      var _ik=['dementia_intro_seen','scalp_intro_seen','iq_intro_seen','eye_intro_seen','sleep_intro_seen_v7','cgo_tarot_intro_skip_v2','cgo_pure_intro_skip_v2','cgo_realtime_intro_skip_v2','cgo_rppg_intro_skip_v2','cgo_yeogi_intro_skip_v2','cgo_rmai_intro_skip','cgo_vip_intro_skip'];
+      for(var _i=0;_i<_ik.length;_i++){ try{ localStorage.removeItem(_ik[_i]); }catch(e){} }
+      try{ localStorage.setItem('cgo_intro_day', _today); }catch(e){}
+    }
+  }catch(e){}
+})();
+</script>
+
+<script>
 // ✅ CGO-FULI TTS 설정
 window._ttsEnabled = true;
 // iOS Safari 감지
@@ -17104,7 +17118,7 @@ if(document.readyState === 'loading'){
 
         <label style="display:flex;align-items:center;gap:8px;padding:12px 14px;margin-bottom:10px;background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-size:12px;color:#475569;user-select:none;">
           <input type="checkbox" id="iqIntroDontShow" style="width:16px;height:16px;cursor:pointer;accent-color:#d4a843;">
-          <span>다음부터 이 안내 보지 않기</span>
+          <span>오늘 하루 보지 않기</span>
         </label>
         <button class="sip-cta" onclick="var dontShow=document.getElementById('iqIntroDontShow');if(dontShow && dontShow.checked){try{localStorage.setItem('iq_intro_seen','1');}catch(e){}}document.getElementById('iq-intro-pop').style.display='none';">✓ 이해했어요, 시작하기</button>
         <div class="sip-disc">⚠️ 본 도구는 의료 진단·예측·취업 판정 기기가 아닙니다. 인지 능력 셀프 트래킹 참고용입니다. 정식 지능 평가는 전문기관 상담을 권장드립니다.</div>
@@ -19116,7 +19130,7 @@ function _cgoFDIntro(cfg){
   if(cfg.tip) h+='<div style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.22);border-radius:12px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#059669;margin-bottom:5px;">������ 핵심 팁</div><div style="font-size:11px;color:#334155;line-height:1.7;">'+cfg.tip+'</div></div>';
   if(cfg.note) h+='<div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.18);border-radius:12px;padding:11px 14px;margin-bottom:14px;"><div style="font-size:11px;font-weight:800;color:#dc2626;margin-bottom:5px;">⚖️ 정직 안내</div><div style="font-size:10px;color:#475569;line-height:1.75;">'+cfg.note+'</div></div>';
   var cbId=id+'-skip';
-  if(sk) h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:#64748b;"><input type="checkbox" id="'+cbId+'" style="cursor:pointer;width:14px;height:14px;accent-color:'+ac+';"><span>다음부터 보지 않기</span></label>';
+  if(sk) h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:#64748b;"><input type="checkbox" id="'+cbId+'" style="cursor:pointer;width:14px;height:14px;accent-color:'+ac+';"><span>오늘 하루 보지 않기</span></label>';
   h+='<button onclick="(function(){var cb=document.getElementById(\''+cbId+'\');if(cb&&cb.checked){try{localStorage.setItem(\''+(sk||'')+'\',\'1\');}catch(e){}}var p=document.getElementById(\''+id+'\');if(p)p.remove();'+(cfg.launch||'')+'})();" style="width:100%;padding:16px;background:linear-gradient(135deg,'+ac+','+ac2+');border:none;border-radius:14px;color:#334155;font-size:15px;font-weight:900;cursor:pointer;">'+(cfg.btnLabel||'시작하기')+'</button>';
   h+='</div>';
   pop.innerHTML=h;
@@ -29823,7 +29837,7 @@ window.tvyRunMatch = function(){
     function init(){
       window.tvyFillCountries();
       window.tvyRenderSys();
-      // ★ 입구 팝업 (다시 보지 않기 체크 시 skip)
+      // ★ 입구 팝업 (오늘 하루 보지 않기 체크 시 skip)
       // 즉시 호출 — setTimeout 제거 (본 페이지 깜빡임 방지)
       try{
         if(localStorage.getItem('cgo_yeogi_intro_skip_v2') !== '1'){
@@ -30232,7 +30246,7 @@ window.tvyShowIntroPopup = function(){
 
       // 진입 팝업 박제
       window.rmaiShowIntroPopup = function(){
-        // localStorage 체크 (다시 보지 않기)
+        // localStorage 체크 (오늘 하루 보지 않기)
         try {
           if(localStorage.getItem('cgo_rmai_intro_skip') === '1') return;
         } catch(e){}
@@ -30302,10 +30316,10 @@ window.tvyShowIntroPopup = function(){
         html += '<div style="font-size:9px;color:rgba(240,230,200,.7);line-height:1.7;">CGO-FULI의 추천은 참고 자료이며, 시간·계절·생체 데이터에 따라 변동됩니다.</div>';
         html += '</div>';
 
-        // 다시 보지 않기 + 시작하기
+        // 오늘 하루 보지 않기 + 시작하기
         html += '<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:rgba(240,230,200,.6);">';
         html += '<input type="checkbox" id="rmai-intro-skip" style="cursor:pointer;width:14px;height:14px;accent-color:#fbbf24;">';
-        html += '<span>다음부터 보지 않기</span></label>';
+        html += '<span>오늘 하루 보지 않기</span></label>';
         html += '<button onclick="(function(){var cb=document.getElementById(\'rmai-intro-skip\');if(cb&&cb.checked){try{localStorage.setItem(\'cgo_rmai_intro_skip\',\'1\');}catch(e){}}var p=document.getElementById(\'rmai-intro-pop\');if(p)p.remove();})()" style="width:100%;padding:14px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:12px;color:#1a1408;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 20px rgba(251,191,36,.4);font-family:inherit;">🎨 시작하기</button>';
 
         html += '</div>';
@@ -57206,7 +57220,7 @@ function runNamingAi(){
 
 // ★ VIP 프리미엄 대문 가이드 팝업 (46건째 핀셋) - 골드 럭셔리 무드
 function _cgoVipIntroPopup(){
-  // "다시 보지 않기" 체크되었으면 즉시 종료
+  // "오늘 하루 보지 않기" 체크되었으면 즉시 종료
   try{ if(localStorage.getItem('cgo_vip_intro_skip') === '1') return; }catch(e){}
   var old=document.getElementById('cgo-vip-pop'); if(old) old.remove();
   var pop=document.createElement('div');
@@ -57253,8 +57267,8 @@ function _cgoVipIntroPopup(){
   h+='<div style="font-size:11px;font-weight:800;color:#f87171;margin-bottom:6px;">📌 정직 안내</div>';
   h+='<div style="font-size:10px;color:rgba(240,230,200,.75);line-height:1.8;">• 모든 분석은 <b style="color:#fff;">프리미엄 큐레이션</b>입니다 (점술적 단정 X)<br>• 주식·로또는 <b style="color:#fff;">투자 권유 X</b> · 본인 판단·책임<br>• 운명은 가이드일 뿐, 실제 선택은 <b style="color:#d4a843;">파트너님의 몫</b>입니다</div>';
   h+='</div>';
-  // 다시 보지 않기 + 시작 버튼
-  h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:rgba(240,230,200,.65);"><input type="checkbox" id="cgo-vip-skip-cb" style="cursor:pointer;width:14px;height:14px;accent-color:#d4a843;"><span>다음부터 보지 않기</span></label>';
+  // 오늘 하루 보지 않기 + 시작 버튼
+  h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:rgba(240,230,200,.65);"><input type="checkbox" id="cgo-vip-skip-cb" style="cursor:pointer;width:14px;height:14px;accent-color:#d4a843;"><span>오늘 하루 보지 않기</span></label>';
   h+='<button onclick="(function(){var cb=document.getElementById(\'cgo-vip-skip-cb\');if(cb&&cb.checked){try{localStorage.setItem(\'cgo_vip_intro_skip\',\'1\');}catch(e){}}document.getElementById(\'cgo-vip-pop\').remove();})();" style="width:100%;padding:16px;background:linear-gradient(135deg,#d4a843,#f0c060,#a07830);border:none;border-radius:14px;color:#020817;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.05em;box-shadow:0 4px 24px rgba(212,168,67,.4);">💎 VIP 프리미엄 입장하기</button>';
   h+='</div>';
   pop.innerHTML=h;
@@ -133179,7 +133193,7 @@ if('serviceWorker' in navigator){
       <div class="sip-step"><div class="sip-step-num">2</div><div class="sip-step-body"><div class="sip-step-title">🫁 4-7-8 호흡</div><div class="sip-step-desc">측정된 긴장도에 맞춰 호흡 횟수가 자동 조절됩니다.</div></div></div>
       <div class="sip-step"><div class="sip-step-num">3</div><div class="sip-step-body"><div class="sip-step-title">📊 전후 변화 리포트</div><div class="sip-step-desc">활력 박자·내면 탄력이 실제로 안정됐는지 정직하게 보여줍니다.</div></div></div>
       <div class="sip-step"><div class="sip-step-num">4</div><div class="sip-step-body"><div class="sip-step-title">🎵 수면 사운드 · 나의 주파수 음악</div><div class="sip-step-desc">솔페지오 톤과 엄선된 4,000곡으로 깊은 이완을 돕습니다.</div></div></div>
-      <label class="slp-chk"><input type="checkbox" id="slp-intro-chk"> 다시 보지 않기</label>
+      <label class="slp-chk"><input type="checkbox" id="slp-intro-chk"> 오늘 하루 보지 않기</label>
       <button class="sip-cta" onclick="cgoSlpIntroClose()">시작하기</button>
       <div class="sip-disc" style="margin-top:16px;padding:12px;background:#f5f6fa;border-left:3px solid #d4a843;border-radius:8px;font-size:10px;color:#999;line-height:1.6;">생체신호는 기기 안에서만 처리되며 저장·전송되지 않습니다. 본 기능은 이완을 돕는 웰니스 도구로, 의료 진단·치료가 아닙니다.</div>
     </div>
