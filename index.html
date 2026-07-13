@@ -139438,6 +139438,7 @@ function _maiStartScanCore(){
     // ★ 4단계 박입 — 스킨 에이지 리듬 패널 표시
     var agePanel = document.getElementById('svi-age-panel');
     if(agePanel) agePanel.style.display='block';
+ try{ if(window._sviAutoFillAge) _sviAutoFillAge(); }catch(e){}
     // ★ 5+6+7단계 박입 — 패널 표시
     var asymPanel = document.getElementById('svi-asym-panel');
     if(asymPanel) asymPanel.style.display='block';
@@ -140337,21 +140338,36 @@ function _sviCalcSkinAge(realAge){
 }
 
 // 스킨 에이지 리듬 측정 버튼 핸들러
-function sviCalcSkinAge(){
+// ★ C-64 — 프로필 생년월일에서 만 나이 자동 채움
+function _sviAutoFillAge(){
+  try{
+    var input = document.getElementById('svi-real-age-input');
+    if(!input || (input.value && parseInt(input.value)>=15)) return;
+    var by = 0;
+    if(window.calcResult && window.calcResult.y) by = parseInt(window.calcResult.y);
+    if(!by){ var ls = localStorage.getItem('cgo_prof_birth_y'); if(ls) by = parseInt(ls); }
+    if(by && by > 1900 && by < 2100){
+      var age = new Date().getFullYear() - by;
+      if(age >= 15 && age <= 100) input.value = age;
+    }
+  }catch(e){}
+}
+function sviCalcSkinAge(silent){
+  _sviAutoFillAge();
   var input = document.getElementById('svi-real-age-input');
-  if(!input){ alert('나이 입력 필드를 찾을 수 없습니다'); return; }
+  if(!input){ if(!silent) alert('나이 입력 필드를 찾을 수 없습니다'); return; }
   var realAge = parseInt(input.value);
   if(!realAge || realAge < 15 || realAge > 100){
-    alert('15세~100세 사이로 입력해 주세요');
+    if(!silent) alert('15세~100세 사이로 입력해 주세요');
     return;
   }
   if(_svi._samples < 5){
-    alert('먼저 30초간 측정을 완료해 주세요 (현재 ' + _svi._samples + _cgoT('/5 샘플)'));
+    if(!silent) alert('먼저 30초간 측정을 완료해 주세요 (현재 ' + _svi._samples + _cgoT('/5 샘플)'));
     return;
   }
   
   var result = _sviCalcSkinAge(realAge);
-  if(!result){ alert('측정 데이터가 부족합니다'); return; }
+  if(!result){ if(!silent) alert('측정 데이터가 부족합니다'); return; }
   
   // UI 렌더
   document.getElementById('svi-real-age-val').textContent = result.realAge + '세';
@@ -140928,7 +140944,7 @@ function _sviStartScanCore(){
           var isSkin=(r2>60&&g2>40&&b2>20&&r2>g2&&r2>b2&&s>0.1&&s<0.75);
           if(isSkin){
             _svi.lostCount=0;
-            _svi._samples++;
+            _svi._samples++; if(_svi._samples>=5 && (_svi._samples%3===0 || _svi._samples===5)){ try{ sviCalcSkinAge(true); }catch(e){} }
             // 윤기: 밝기 + 하이라이트 픽셀 비율
             var hlCount=vals.filter(function(v){return v>200;}).length;
             var luster=Math.round(Math.max(30,Math.min(98,l*100+hlCount/vals.length*30)));
