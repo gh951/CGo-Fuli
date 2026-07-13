@@ -81439,7 +81439,7 @@ function receiveCosmicOrder() {
 
   // ── 근거 내역 (투명성) ──────────────────────────────────────
   var _scoreBreakdown = [
-    {label: r18valid.length>=5 ? '생체스캔 보정 (r18avg '+r18avg+'→±'+_bioAdj+'점)':'생체스캔 없음 · 역학 평균 = 운빨 지수', val: _bioAdj, color:'#a78bfa'},
+    {label: r18valid.length>=5 ? '생체스캔 보정 (r18avg '+r18avg+'→±'+_bioAdj+_cgoT('점)'):'생체스캔 없음 · 역학 평균 = 운빨 지수', val: _bioAdj, color:'#a78bfa'},
     {label: '일진('+todayGan+todayJi+') '+todayOhRel, val: _ilJinBonus, color: _ilJinBonus>=0?'#34d399':'#f87171'},
     {label: '달 위상 ('+_mpd.name+')', val: _moonBonus, color: _moonBonus>=0?'#34d399':'#f87171'},
     {label: '수비학 '+_tdn+'번 진동수', val: _numBonus, color: _numBonus>=0?'#34d399':'#f87171'},
@@ -81479,7 +81479,7 @@ function receiveCosmicOrder() {
     r18top.map(function(x){ return '<span style="color:#b45309">' + x.nm.replace('호흡리듬(생체)','숨 에너지').replace('표정에너지','표정 에너지').replace('사주팔자','사주').replace('서양점성술','별자리').replace('NASA행성','NASA 행성') + ' ' + x.sc + '점</span>'; }).join(' · ') :
     '50대 역학 중 (스캔 후 정밀 분석 가능)';
   var weakR18Str = r18weak.length ?
-    r18weak.map(function(x){ return x.nm + '(' + x.sc + '점)'; }).join(' · ') :
+    r18weak.map(function(x){ return x.nm + '(' + x.sc + _cgoT('점)'); }).join(' · ') :
     '';
 
   // 18대 역학 상위 항목별 메시지 생성
@@ -82967,7 +82967,7 @@ function cgCallClaude(userText, sendBtn) {
   var phIdx  = Math.floor((Math.floor((nowD-(new Date(nowD.getFullYear(),0,0)))/86400000)%30)/3.75)%8;
   var moonPh = ['신월','초승','상현','상현보름','보름','하현보름','하현','그믐'][phIdx];
   var weakOrgList = [];
-  if (window._orgList) window._orgList.slice(0,3).forEach(function(o){ weakOrgList.push(o.n+'('+o.sc+'점)'); });
+  if (window._orgList) window._orgList.slice(0,3).forEach(function(o){ weakOrgList.push(o.n+'('+o.sc+_cgoT('점)')); });
 
   // 답변 모드: 'simple'(일반) 또는 'expert'(전문가)
   var cgMode = CG.answerMode || 'simple';
@@ -139149,7 +139149,7 @@ window.rmaiChatSend = function(){
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       model: 'llama-3.1-8b-instant',
-      messages: [{role:'system', content:systemPrompt}].concat(historyMsgs).concat([{role:'user', content:input}]),
+      messages: [{role:'system', content:systemPrompt + (window._demLangDirective?window._demLangDirective():'')}].concat(historyMsgs).concat([{role:'user', content:input}]),
       max_tokens: 600,
       temperature: 0.7
     })
@@ -139805,7 +139805,7 @@ function sviChatSend(){
         text:'AI 컨설턴트는 본진 Gemini API 연동이 필요합니다. ' +
              '현재 측정 데이터를 보면 ' +
              (_svi.collagenScore && _svi.collagenScore >= 70 ? '복원 탄력 양호 ' : '복원 탄력 관리 권장 ') +
-             '상태입니다.'
+             _cgoT('상태입니다.')
       });
       _svi.chatBusy = false;
       _sviRenderChat();
@@ -140071,7 +140071,7 @@ function _sviAnalyzeAsymmetry(){
 // 좌우 비대칭 측정 (수동 트리거)
 function sviAnalyzeAsymmetry(){
   if(_svi._samples < 5){
-    alert('먼저 측정을 진행해 주세요 (현재 ' + _svi._samples + '/5 샘플)');
+    alert('먼저 측정을 진행해 주세요 (현재 ' + _svi._samples + _cgoT('/5 샘플)'));
     return;
   }
   var result = _sviAnalyzeAsymmetry();
@@ -140227,7 +140227,7 @@ function sviCalcSkinAge(){
     return;
   }
   if(_svi._samples < 5){
-    alert('먼저 30초간 측정을 완료해 주세요 (현재 ' + _svi._samples + '/5 샘플)');
+    alert('먼저 30초간 측정을 완료해 주세요 (현재 ' + _svi._samples + _cgoT('/5 샘플)'));
     return;
   }
   
@@ -140255,12 +140255,12 @@ function sviCalcSkinAge(){
   var detailEl = document.getElementById('svi-age-detail');
   if(detailEl){
     var msg = '';
-    if(result.opticalDelta > 0.5) msg += '• 광학 지표 양호 (' + (-result.opticalDelta).toFixed(1) + '세 젊어 보임)<br/>';
-    else if(result.opticalDelta < -0.5) msg += '• 광학 지표 노화 (' + (-result.opticalDelta).toFixed(1) + '세 가속)<br/>';
-    if(result.collagenDelta < -0.5) msg += '• 복원 탄력 우수 (' + (-result.collagenDelta).toFixed(1) + '세 보정)<br/>';
-    else if(result.collagenDelta > 0.5) msg += '• 복원 탄력 낮은 편 (' + (result.collagenDelta).toFixed(1) + '세 가속)<br/>';
+    if(result.opticalDelta > 0.5) msg += _cgoT('• 광학 지표 양호 (') + (-result.opticalDelta).toFixed(1) + '세 젊어 보임)<br/>';
+    else if(result.opticalDelta < -0.5) msg += _cgoT('• 광학 지표 노화 (') + (-result.opticalDelta).toFixed(1) + '세 가속)<br/>';
+    if(result.collagenDelta < -0.5) msg += _cgoT('• 복원 탄력 우수 (') + (-result.collagenDelta).toFixed(1) + '세 보정)<br/>';
+    else if(result.collagenDelta > 0.5) msg += _cgoT('• 복원 탄력 낮은 편 (') + (result.collagenDelta).toFixed(1) + '세 가속)<br/>';
     if(result.stressDelta > 0.5) msg += '• 스트레스로 ' + result.stressDelta.toFixed(1) + '세 노화 가속<br/>';
-    else if(result.stressDelta < -0.5) msg += '• 내면 탄력 안정 (' + (-result.stressDelta).toFixed(1) + '세 보정)<br/>';
+    else if(result.stressDelta < -0.5) msg += _cgoT('• 내면 탄력 안정 (') + (-result.stressDelta).toFixed(1) + '세 보정)<br/>';
     detailEl.innerHTML = msg || '• 종합적으로 일반 참고 범위입니다';
   }
   
@@ -140624,13 +140624,13 @@ function _sviAnalyzeRecovery(){
   var collagenEl = document.getElementById('svi-collagen');
   if(hint){
     if(recoveryRate >= 0.9){
-      hint.innerHTML = '✨ 빠른 회복! 복원 탄력 우수 (' + collagen + '점)';
+      hint.innerHTML = _cgoT('✨ 빠른 회복! 복원 탄력 우수 (') + collagen + _cgoT('점)');
       hint.style.color = 'rgba(52,211,153,1)';
     } else if(recoveryRate >= 0.7){
-      hint.innerHTML = '👍 보통 회복 — 복원 탄력 양호 (' + collagen + '점)';
+      hint.innerHTML = _cgoT('👍 보통 회복 — 복원 탄력 양호 (') + collagen + _cgoT('점)');
       hint.style.color = 'rgba(56,189,248,1)';
     } else {
-      hint.innerHTML = '💧 회복 느림 — 보습·재생 케어 필요 (' + collagen + '점)';
+      hint.innerHTML = _cgoT('💧 회복 느림 — 보습·재생 케어 필요 (') + collagen + _cgoT('점)');
       hint.style.color = 'rgba(251,191,36,1)';
     }
   }
