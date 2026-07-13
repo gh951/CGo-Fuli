@@ -10418,7 +10418,7 @@ function cgoGuideFeature(key){
   function scalpShowResult(){
     var a = window.scalpAnswers;
     if(a.s1.length === 0 || !a.s2 || Object.keys(a.s3).length < 4){
-      alert('STEP 1~3을 모두 완료해주세요.\n\n· STEP 1: 1개 이상 컨디션 선택\n· STEP 2: 유형 1개 선택\n· STEP 3: 4개 모두 선택');
+      alert(_cgoT('STEP 1~3을 모두 완료해주세요.\n\n· STEP 1: 1개 이상 컨디션 선택\n· STEP 2: 유형 1개 선택\n· STEP 3: 4개 모두 선택'));
       return;
     }
 
@@ -10482,7 +10482,7 @@ function cgoGuideFeature(key){
 
   // 초기화
   function scalpResetAll(){
-    if(!confirm('자가 점검을 초기화하시겠습니까?')) return;
+    if(!confirm(_cgoT('자가 점검을 초기화하시겠습니까?'))) return;
     window.scalpAnswers = { s1:[], s2:null, s3:{} };
     document.querySelectorAll('#page-scalp .scalp-opt.checked, #page-scalp .scalp-type-card.checked').forEach(function(el){
       el.classList.remove('checked');
@@ -10521,7 +10521,7 @@ function cgoGuideFeature(key){
     var sysPrompt = '당신은 FULI 두피 케어 AI 정보 도우미입니다. 공개된 두피·모발·동양 철학 자료를 학습했으며, 의료인이 아니고 진단·처방을 하지 않습니다. 친절하고 정확하게, 그러나 "의료 진단·예측·치료"가 아닌 "라이프스타일 케어 가이드" 관점으로 답변하세요. 의학적 판단은 전문의 상담을 권장하는 안내를 마무리에 항상 포함하세요.';
 
     // ★ C-40 박입 ⑥ — GROQ 직접 호출 (본진 표준 패턴 · 두피 AI 실 연동 · 130명 전문가)
-    var scalpFullPrompt = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text;
+    var scalpFullPrompt = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text + (window._demLangDirective?window._demLangDirective():'');
     var scalpGroqBody = {
       model: 'llama-3.1-8b-instant',
       max_tokens: 1800,
@@ -11237,7 +11237,7 @@ function cgoGuideFeature(key){
   // 모달 닫기
   window.scalpCamClose = function(){
     if(window.scalpCamState.captures.length > 0){
-      if(!confirm('측정을 중단하시겠습니까? 캡처된 이미지는 사라집니다.')) return;
+      if(!confirm(_cgoT('측정을 중단하시겠습니까? 캡처된 이미지는 사라집니다.'))) return;
     }
     scalpCamStopStream();
     document.getElementById('scalp-cam-modal').style.display = 'none';
@@ -11585,7 +11585,7 @@ function cgoGuideFeature(key){
 
       // K-오행 기운 리듬 실행
       var khanbang = window.scalpKHanbangVarient(lastStp, tongueData, c37);
-      if(!khanbang){ alert('K-한방 분석 데이터가 부족합니다.'); return; }
+      if(!khanbang){ alert(_cgoT('K-한방 분석 데이터가 부족합니다.')); return; }
 
       // 모달 표시
       var html = '<div style="padding:20px;max-height:80vh;overflow-y:auto;">';
@@ -11630,7 +11630,7 @@ function cgoGuideFeature(key){
       }
     } catch(e){
       console.log('[C-39 v1.3] K-한방 표시 실패:', e.message);
-      alert('K-한방 분석 표시 실패: ' + e.message);
+      alert(_cgoT('K-한방 분석 표시 실패: ') + e.message);
     }
   };
 
@@ -11769,13 +11769,13 @@ function cgoGuideFeature(key){
 
     // 데이터 0개면 경고
     if(!status.hasQuest && !status.hasCam && !status.hasC37){
-      alert('분석할 데이터가 없습니다.\n\n다음 중 하나 이상 완료해주세요:\n· 자가 점검 (STEP 1~3)\n· 카메라 측정 (5부위)\n· C-63 웰니스 리포트 측정');
+      alert(_cgoT('분석할 데이터가 없습니다.\n\n다음 중 하나 이상 완료해주세요:\n· 자가 점검 (STEP 1~3)\n· 카메라 측정 (5부위)\n· C-63 웰니스 리포트 측정'));
       return;
     }
 
     // C-37 미측정 시 권장 (선택)
     if(!status.hasC37 && status.hasQuest){
-      var confirmGo = confirm('C-63 웰니스 리포트 데이터가 없습니다.\n\nC-63의 얼굴 rPPG·내면 탄력성 데이터를 함께 사용하면 분석 정확도가 크게 향상됩니다.\n\n· [확인] C-63 측정하러 가기 (분석 데이터 보강)\n· [취소] 현재 데이터로 분석 진행');
+      var confirmGo = confirm(_cgoT('C-63 웰니스 리포트 데이터가 없습니다.\n\nC-63의 얼굴 rPPG·내면 탄력성 데이터를 함께 사용하면 분석 정확도가 크게 향상됩니다.\n\n· [확인] C-63 측정하러 가기 (분석 데이터 보강)\n· [취소] 현재 데이터로 분석 진행'));
       if(confirmGo){ cgoGoPage('algo-v2'); return; }
     }
 
@@ -132072,7 +132072,7 @@ if('serviceWorker' in navigator){
     }
     // ★ 박입 119 — 눈 선택 검증
     if(!eyeState.selectedSide){
-      alert('먼저 측정할 눈 (왼쪽/오른쪽) 을 선택해 주세요.');
+      alert(_cgoT('먼저 측정할 눈 (왼쪽/오른쪽) 을 선택해 주세요.'));
       eyeDebug('⚠️ 눈 선택 X — 왼쪽 또는 오른쪽 눈 선택 후 시작 가능');
       return;
     }
@@ -132102,7 +132102,7 @@ if('serviceWorker' in navigator){
       }, 500);
     }).catch(function(err){
       eyeDebug('⚠️ 카메라 접근 실패: ' + err.message);
-      alert('카메라 권한이 필요합니다. 다시 시도해 주세요.');
+      alert(_cgoT('카메라 권한이 필요합니다. 다시 시도해 주세요.'));
       eyeState.started = false;
       document.getElementById('eye-start-btn').style.display = 'block';
       document.getElementById('eye-camera-area').style.display = 'none';
@@ -135390,6 +135390,27 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       return '\n\n[CRITICAL LANGUAGE OVERRIDE] The user\'s app language is ' + nm + '. Respond ONLY in ' + nm + ', ignoring any earlier instruction to answer in Korean. Keep the same warm, helpful tone.';
     }catch(e){ return ''; }
   };
+  function _c64ScalpCleanup(){
+    try{
+      if(typeof scalpCamStopStream==='function'){ scalpCamStopStream(); }
+      else if(window.scalpCamState && window.scalpCamState.stream){
+        window.scalpCamState.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} });
+        window.scalpCamState.stream=null;
+      }
+      var mo=document.getElementById('scalp-cam-modal'); if(mo) mo.style.display='none';
+      var vd=document.getElementById('scalp-cam-video'); if(vd){ try{ vd.srcObject=null; }catch(e){} }
+    }catch(e){}
+  }
+  function _c64ScalpSetup(){
+    var pg=document.getElementById('page-scalp');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive=pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now=pg.classList.contains('active');
+      if(wasActive && !now){ _c64ScalpCleanup(); }
+      wasActive=now;
+    }).observe(pg,{attributes:true,attributeFilter:['class']});
+  }
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -135402,6 +135423,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64Setup); }
   else { setTimeout(_c64Setup, 60); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64ScalpSetup); }
+  else { setTimeout(_c64ScalpSetup, 60); }
 })();
 </script>
 
