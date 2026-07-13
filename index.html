@@ -13703,6 +13703,13 @@ function cgoGuideFeature(key){
       
       // 정상 범위 보정
       if(bpm < 40 || bpm > 180) bpm = 0;
+      // ★ 특허 스펙트럼 BPM 융합 (주파수영역 최고점)
+      if(bpm > 0 && window._cgoSpectrumBPM){
+        var _spec = _cgoSpectrumBPM(detrended, 30);
+        if(_spec && _spec.snr > 1.5 && _spec.bpm >= 40 && _spec.bpm <= 180){
+          bpm = Math.round(_spec.bpm*0.6 + bpm*0.4);
+        }
+      }
       
       // 내면 탄력
       var hrv = 0;
@@ -13715,6 +13722,11 @@ function cgoGuideFeature(key){
       }
       
       // ★ C-40 — 헌법 v2.0 정직 가드 (측정 안 됐으면 0 · ⑤-1 가드 완화)
+      // ★ 특허 스펙트럼 LF/HF (자율신경 균형)
+      if(hrv > 0 && window._cgoSpectrumLFHF){
+        var _hs = _cgoSpectrumLFHF(intervals);
+        if(_hs && window._dementiaState) window._dementiaState.lfhf = _hs.lfhf;
+      }
       if(bpm === 0) hrv = 0;            // BPM 무효면 HRV도 무효
       if(hrv < 2 || hrv > 300) hrv = 0; // HRV 정상 범위 완화 (RMSSD 2~300ms · 박입 ④ 피크 검출과 호환)
       
@@ -18440,6 +18452,14 @@ var Q_POOL = {
             
             var duration = samples[samples.length-1].t - samples[0].t;
             var bpm = duration > 0 ? (peaks / duration) * 60 : 0;
+   // ★ 특허 스펙트럼 BPM 융합 (실측 샘플레이트)
+   if(bpm > 0 && duration > 0 && window._cgoSpectrumBPM){
+     var _iqFs = xs.length / duration;
+     var _iqSpec = _cgoSpectrumBPM(xs, _iqFs);
+     if(_iqSpec && _iqSpec.snr > 1.5 && _iqSpec.bpm >= 50 && _iqSpec.bpm <= 130){
+       bpm = Math.round(_iqSpec.bpm*0.6 + bpm*0.4);
+     }
+   }
             // BPM 범위 검증
             if(bpm < 50 || bpm > 130){
               return;  // 비정상 = 측정 안 함
@@ -73598,6 +73618,41 @@ function _rPPGDetectPeaks(sig){
 }
 
 /* ── RRI → BPM + HRV(RMSSD) 계산 ── */
+// ★ C-64 특허 스펙트럼 모듈 — 핵심 rPPG (관상·손금·전 바이오 융합 공유)
+function _rPPGSpectrum(sig){
+  if(!sig || sig.length < 64) return null;
+  var N = sig.length, fs = _rPPG.sampleRate || 30;
+  var m = 0, i; for(i=0;i<N;i++) m += sig[i]; m /= N;
+  var w = new Array(N);
+  for(i=0;i<N;i++){ var hann = 0.5 - 0.5*Math.cos(2*Math.PI*i/(N-1)); w[i] = (sig[i]-m)*hann; }
+  var fMin=0.7, fMax=3.0, df=0.02;
+  var bestF=0, bestP=0, totalP=0, cnt=0;
+  for(var f=fMin; f<=fMax+1e-9; f+=df){
+    var re=0, im=0, wn=2*Math.PI*f/fs;
+    for(var n=0;n<N;n++){ re += w[n]*Math.cos(wn*n); im -= w[n]*Math.sin(wn*n); }
+    var p = re*re + im*im; totalP += p; cnt++;
+    if(p > bestP){ bestP = p; bestF = f; }
+  }
+  var meanP = cnt>0 ? totalP/cnt : 1;
+  return { bpm: Math.round(bestF*60), snr: meanP>0 ? bestP/meanP : 0, peakFreq: bestF };
+}
+function _rPPGHrvSpectrum(rri){
+  if(!rri || rri.length < 8) return null;
+  var t=[0], i; for(i=0;i<rri.length;i++) t.push(t[i]+rri[i]);
+  var totalT = t[t.length-1]/1000;
+  if(totalT < 20) return null;
+  var fs=4, M=Math.floor(totalT*fs), rs=new Array(M);
+  for(var k=0;k<M;k++){ var tk=k/fs*1000, idx=0; while(idx<rri.length-1 && t[idx+1]<tk) idx++; rs[k]=rri[idx]; }
+  var mm=0; for(i=0;i<M;i++) mm+=rs[i]; mm/=M;
+  var LF=0, HF=0;
+  for(var f=0.04; f<=0.4+1e-9; f+=0.01){
+    var re=0, im=0, wn=2*Math.PI*f/fs;
+    for(var n=0;n<M;n++){ var v=rs[n]-mm; re += v*Math.cos(wn*n); im -= v*Math.sin(wn*n); }
+    var p = re*re + im*im;
+    if(f < 0.15) LF += p; else HF += p;
+  }
+  return { lf:LF, hf:HF, lfhf: HF>0 ? Math.round(LF/HF*100)/100 : 0 };
+}
 function _rPPGCalcVitals(){
   // ★ CHROM 업그레이드: chromSignal 우선, 부족 시 filteredSignal 폴백
   var _sig = (_rPPG.chromSignal&&_rPPG.chromSignal.length>=30)
@@ -73619,6 +73674,12 @@ function _rPPGCalcVitals(){
   var meanRRI=rri.reduce(function(a,b){return a+b;},0)/rri.length;
   var bpm=Math.round(60000/meanRRI);
   bpm=Math.max(45,Math.min(130,bpm));
+  // ★ 특허 스펙트럼 BPM 융합 — 주파수영역 최고점 (노이즈 강건)
+  var _spec = _rPPGSpectrum(_sig);
+  if(_spec && _spec.snr > 1.5 && _spec.bpm >= 45 && _spec.bpm <= 130){
+    _rPPG.specBpm = _spec.bpm; _rPPG.snr = Math.round(_spec.snr*10)/10;
+    bpm = Math.round(_spec.bpm*0.6 + bpm*0.4);
+  }
 
   // HRV RMSSD — 실제 범위 반영 (10~80ms, 100은 초인간 수준)
   // 일반인 안정 시: 20~60ms, 운동선수: 60~80ms
@@ -73627,7 +73688,11 @@ function _rPPGCalcVitals(){
   var rmssd=Math.round(Math.sqrt(sumSqDiff/(rri.length-1)));
   rmssd=Math.max(10,Math.min(80,rmssd)); // 최대 80ms (100은 비현실적)
 
-  return {bpm:bpm, hrv:rmssd};
+  // ★ 특허 스펙트럼 LF/HF — 주파수영역 HRV (자율신경 균형)
+  var _hs = _rPPGHrvSpectrum(rri);
+  if(_hs){ _rPPG.lfhf = _hs.lfhf; }
+
+  return {bpm:bpm, hrv:rmssd, lfhf:(_rPPG.lfhf||null), snr:(_rPPG.snr||null)};
 }
 
 /* ── 카메라 픽셀에서 Green 채널 평균 추출 (이마 ROI) ── */
@@ -132357,6 +132422,14 @@ if('serviceWorker' in navigator){
       }
       var dur = samples[samples.length-1].t - samples[0].t;
       var bpm = dur>0 ? (peaks/dur)*60 : 0;
+   // ★ 특허 스펙트럼 BPM 융합 (실측 샘플레이트 기반)
+   if(bpm > 0 && dur > 0 && window._cgoSpectrumBPM){
+     var _eyeFs = xs.length / dur;
+     var _spec = _cgoSpectrumBPM(xs, _eyeFs);
+     if(_spec && _spec.snr > 1.5 && _spec.bpm >= 50 && _spec.bpm <= 130){
+       bpm = Math.round(_spec.bpm*0.6 + bpm*0.4);
+     }
+   }
       if(bpm < 50 || bpm > 130) return null;               /* 범위 검증 */
       var hrv = sd*10;
       S.lastBpm = bpm; S.lastHrv = hrv;
@@ -135554,6 +135627,40 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       wasActive=now;
     }).observe(pg,{attributes:true,attributeFilter:['class']});
   }
+  // ★ C-64 공용 특허 스펙트럼 헬퍼 (눈·치매·AR·IQ 재사용)
+  window._cgoSpectrumBPM = function(sig, fs){
+    if(!sig || sig.length < 64) return null;
+    var N = sig.length; fs = fs || 30;
+    var m = 0, i; for(i=0;i<N;i++) m += sig[i]; m /= N;
+    var w = new Array(N);
+    for(i=0;i<N;i++){ var hann = 0.5 - 0.5*Math.cos(2*Math.PI*i/(N-1)); w[i] = (sig[i]-m)*hann; }
+    var fMin=0.7, fMax=3.0, df=0.02, bestF=0, bestP=0, totalP=0, cnt=0;
+    for(var f=fMin; f<=fMax+1e-9; f+=df){
+      var re=0, im=0, wn=2*Math.PI*f/fs;
+      for(var n=0;n<N;n++){ re += w[n]*Math.cos(wn*n); im -= w[n]*Math.sin(wn*n); }
+      var p = re*re + im*im; totalP += p; cnt++;
+      if(p > bestP){ bestP = p; bestF = f; }
+    }
+    var meanP = cnt>0 ? totalP/cnt : 1;
+    return { bpm: Math.round(bestF*60), snr: meanP>0 ? bestP/meanP : 0 };
+  };
+  window._cgoSpectrumLFHF = function(rri){
+    if(!rri || rri.length < 8) return null;
+    var t=[0], i; for(i=0;i<rri.length;i++) t.push(t[i]+rri[i]);
+    var totalT = t[t.length-1]/1000;
+    if(totalT < 20) return null;
+    var fs=4, M=Math.floor(totalT*fs), rs=new Array(M);
+    for(var k=0;k<M;k++){ var tk=k/fs*1000, idx=0; while(idx<rri.length-1 && t[idx+1]<tk) idx++; rs[k]=rri[idx]; }
+    var mm=0; for(i=0;i<M;i++) mm+=rs[i]; mm/=M;
+    var LF=0, HF=0;
+    for(var f=0.04; f<=0.4+1e-9; f+=0.01){
+      var re=0, im=0, wn=2*Math.PI*f/fs;
+      for(var n=0;n<M;n++){ var v=rs[n]-mm; re += v*Math.cos(wn*n); im -= v*Math.sin(wn*n); }
+      var p = re*re + im*im;
+      if(f < 0.15) LF += p; else HF += p;
+    }
+    return { lfhf: HF>0 ? Math.round(LF/HF*100)/100 : 0 };
+  };
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -137927,12 +138034,24 @@ function _rmaiCalcVitals(){
   var iv=[]; for(var i4=1;i4<peaks.length;i4++) iv.push((peaks[i4]-peaks[i4-1])*1000);
   var avg=0; for(var i5=0;i5<iv.length;i5++) avg+=iv[i5]; avg/=iv.length;
   var bpm = avg>0 ? 60000/avg : 0;
+  // ★ 특허 스펙트럼 BPM 융합
+  if(bpm > 0 && window._cgoSpectrumBPM){
+    var _spec = _cgoSpectrumBPM(det, 30);
+    if(_spec && _spec.snr > 1.5 && _spec.bpm >= 40 && _spec.bpm <= 180){
+      bpm = Math.round(_spec.bpm*0.6 + bpm*0.4);
+    }
+  }
   if(bpm<40 || bpm>180) return null;                /* 정직 가드 */
   var hrv=0;
   if(iv.length>2){
     var t=0; for(var i6=1;i6<iv.length;i6++){ var dd=iv[i6]-iv[i6-1]; t+=dd*dd; }
     hrv=Math.sqrt(t/(iv.length-1));
     if(hrv<2 || hrv>300) hrv=0;
+  }
+  // ★ 특허 스펙트럼 LF/HF (자율신경 균형)
+  if(hrv > 0 && window._cgoSpectrumLFHF){
+    var _hs = _cgoSpectrumLFHF(iv);
+    if(_hs && window._rmai) window._rmai.lfhf = _hs.lfhf;
   }
   return { bpm:Math.round(bpm), hrv:Math.round(hrv) };
 }
@@ -140401,6 +140520,52 @@ function _sviRppgDetectPeaks(){
 }
 
 // BPM + HRV 산출
+// ★ C-64 특허 스펙트럼 모듈 — rPPG 신호 FFT (스펙트럼 BPM + SNR)
+function _sviRppgSpectrum(){
+  var sig = _svi.rppg.filteredSignal;
+  if(!sig || sig.length < 64) return null;
+  var N = sig.length, fs = _svi.rppg.sampleRate || 30;
+  // 평균 제거 + Hann 윈도우
+  var m = 0, i; for(i=0;i<N;i++) m += sig[i]; m /= N;
+  var w = new Array(N);
+  for(i=0;i<N;i++){ var hann = 0.5 - 0.5*Math.cos(2*Math.PI*i/(N-1)); w[i] = (sig[i]-m)*hann; }
+  // 0.7~3Hz 대역 직접 DFT (Goertzel식 · 미세 bin)
+  var fMin=0.7, fMax=3.0, df=0.02;
+  var bestF=0, bestP=0, totalP=0, cnt=0;
+  for(var f=fMin; f<=fMax+1e-9; f+=df){
+    var re=0, im=0, wn=2*Math.PI*f/fs;
+    for(var n=0;n<N;n++){ re += w[n]*Math.cos(wn*n); im -= w[n]*Math.sin(wn*n); }
+    var p = re*re + im*im;
+    totalP += p; cnt++;
+    if(p > bestP){ bestP = p; bestF = f; }
+  }
+  var meanP = cnt>0 ? totalP/cnt : 1;
+  var snr = meanP>0 ? bestP/meanP : 0;
+  return { bpm: Math.round(bestF*60), snr: snr, peakFreq: bestF };
+}
+// ★ C-64 특허 스펙트럼 모듈 — RR 타코그램 FFT (LF/HF 자율신경)
+function _sviHrvSpectrum(rri){
+  if(!rri || rri.length < 8) return null;
+  var t=[0], i; for(i=0;i<rri.length;i++) t.push(t[i]+rri[i]);
+  var totalT = t[t.length-1]/1000;
+  if(totalT < 20) return null; // LF 대역엔 ~20초 필요
+  var fs=4, M=Math.floor(totalT*fs), rs=new Array(M);
+  for(var k=0;k<M;k++){
+    var tk = k/fs*1000, idx=0;
+    while(idx<rri.length-1 && t[idx+1]<tk) idx++;
+    rs[k]=rri[idx];
+  }
+  var mm=0; for(i=0;i<M;i++) mm+=rs[i]; mm/=M;
+  var LF=0, HF=0;
+  for(var f=0.04; f<=0.4+1e-9; f+=0.01){
+    var re=0, im=0, wn=2*Math.PI*f/fs;
+    for(var n=0;n<M;n++){ var v=rs[n]-mm; re += v*Math.cos(wn*n); im -= v*Math.sin(wn*n); }
+    var p = re*re + im*im;
+    if(f < 0.15) LF += p; else HF += p;
+  }
+  var lfhf = HF>0 ? LF/HF : 0;
+  return { lf:LF, hf:HF, lfhf: Math.round(lfhf*100)/100 };
+}
 function _sviRppgCalcVitals(){
   var peaks = _sviRppgDetectPeaks();
   if(peaks.length < 4) return;
@@ -140418,6 +140583,13 @@ function _sviRppgCalcVitals(){
   // 평균 BPM
   var avgRRI = rri.reduce(function(a,b){return a+b;}, 0) / rri.length;
   _svi.rppg.bpm = Math.round(60000 / avgRRI);
+  // ★ 특허 스펙트럼 BPM 융합 — 주파수영역 최고점 (노이즈 강건)
+  var _spec = _sviRppgSpectrum();
+  if(_spec && _spec.snr > 1.5 && _spec.bpm >= 40 && _spec.bpm <= 180){
+    _svi.rppg.specBpm = _spec.bpm;
+    _svi.rppg.snr = Math.round(_spec.snr*10)/10;
+    _svi.rppg.bpm = Math.round(_spec.bpm*0.6 + _svi.rppg.bpm*0.4);
+  }
   
   // RMSSD (시간영역 HRV)
   if(rri.length >= 2){
@@ -140444,6 +140616,13 @@ function _sviRppgCalcVitals(){
     // 일반적 RMSSD: 20~80ms (20이하 스트레스, 50이상 좋음)
     var hrvNorm = Math.max(0, Math.min(1, (_svi.rppg.hrv - 10) / 70));
     _svi.rppg.stressScore = Math.round((1 - hrvNorm) * 100);
+  }
+  // ★ 특허 스펙트럼 LF/HF 융합 — 주파수영역 HRV (자율신경 균형)
+  var _hs = _sviHrvSpectrum(rri);
+  if(_hs && _svi.rppg.stressScore !== null){
+    _svi.rppg.lfhf = _hs.lfhf;
+    var _lfhfStress = Math.max(0, Math.min(100, Math.round((_hs.lfhf - 0.5)/2.5*100)));
+    _svi.rppg.stressScore = Math.round(_svi.rppg.stressScore*0.6 + _lfhfStress*0.4);
   }
   
   // ★ 피부 노화 지수 (스트레스 × BPM 가중):
