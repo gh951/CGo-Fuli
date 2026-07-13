@@ -30342,7 +30342,7 @@ window.tvyShowIntroPopup = function(){
           // ★ 정보 입력 검증 — 미입력 시 차단 + 대시보드로 이동
           var r = window.calcResult || {};
           if(!r.y || !r.name){
-            alert('먼저 정보를 입력하고 ⚡ 자동 계산을 눌러주세요!\n\nC-29 AR 메이크업은 사주 오행 + 생년월일 기반으로 작동합니다.');
+            alert(_cgoT('먼저 정보를 입력하고 ⚡ 자동 계산을 눌러주세요!\n\nC-29 AR 메이크업은 사주 오행 + 생년월일 기반으로 작동합니다.'));
             if(typeof cgoGoPage === 'function') cgoGoPage('dashboard');
             return true;
           }
@@ -135534,6 +135534,26 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       wasActive=now;
     }).observe(pg,{attributes:true,attributeFilter:['class']});
   }
+  function _c64ArCleanup(){
+    try{
+      if(window._rmai){
+        if(_rmai.stream){ _rmai.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); _rmai.stream=null; }
+        if(_rmai.timer){ try{ clearInterval(_rmai.timer); }catch(e){} _rmai.timer=null; }
+        _rmai.running=false;
+      }
+      ['rmai-video','rmai-ar-video'].forEach(function(id){ var v=document.getElementById(id); if(v){ try{ v.srcObject=null; }catch(e){} } });
+    }catch(e){}
+  }
+  function _c64ArSetup(){
+    var pg=document.getElementById('page-rppg-ar');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive=pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now=pg.classList.contains('active');
+      if(wasActive && !now){ _c64ArCleanup(); }
+      wasActive=now;
+    }).observe(pg,{attributes:true,attributeFilter:['class']});
+  }
   function _c64Setup(){
     var pg = document.getElementById('page-c39-dementia');
     if(!pg || !window.MutationObserver) return;
@@ -135552,6 +135572,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   else { setTimeout(_c64IqSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64SleepSetup); }
   else { setTimeout(_c64SleepSetup, 60); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64ArSetup); }
+  else { setTimeout(_c64ArSetup, 60); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64EyeSetup); }
   else { setTimeout(_c64EyeSetup, 60); }
 })();
