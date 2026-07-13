@@ -13539,11 +13539,11 @@ function cgoGuideFeature(key){
       var qOpts = document.getElementById('dem-options-grid');
       
       if(qNum) qNum.textContent = (idx+1);
-      if(qText) qText.innerHTML = q.q;
+      if(qText) qText.innerHTML = _cgoT(q.q);
       
       if(qOpts){
         qOpts.innerHTML = q.opts.map(function(opt, i){
-          return '<button onclick="window.demAnswer(' + i + ')" style="padding:14px 8px;background:#fff;border:2px solid #f0e6d4;border-radius:10px;font-size:14px;font-weight:700;color:#1a1408;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor=\'#d4a843\';this.style.background=\'#fef9f3\'" onmouseout="this.style.borderColor=\'#f0e6d4\';this.style.background=\'#fff\'">' + opt + '</button>';
+          return '<button onclick="window.demAnswer(' + i + ')" style="padding:14px 8px;background:#fff;border:2px solid #f0e6d4;border-radius:10px;font-size:14px;font-weight:700;color:#1a1408;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor=\'#d4a843\';this.style.background=\'#fef9f3\'" onmouseout="this.style.borderColor=\'#f0e6d4\';this.style.background=\'#fff\'">' + _cgoT(opt) + '</button>';
         }).join('');
       }
       
@@ -135357,6 +135357,44 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 </script>
 
 
+
+<script>
+/* ★ C-64 박입 — C-39 치매 페이지 이탈 시 카메라/전체화면 자동 정리
+   (나가기 버튼이 아닌 다른 경로로 대시보드 이동 시, 복귀하면 카메라 검은 박스가
+    상단에 남던 버그 수정. active 클래스 제거를 감시해 모든 이탈 경로를 잡음.
+    네비게이션은 하지 않고 정리만 수행 — 무한루프 방지) */
+(function(){
+  function _c64DemCleanup(){
+    try{
+      var st = window._dementiaState;
+      if(st){
+        if(st.stream){ try{ st.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} st.stream = null; }
+        if(st.rppgInterval){ clearInterval(st.rppgInterval); st.rppgInterval = null; }
+        if(st.qTimerInterval){ clearInterval(st.qTimerInterval); st.qTimerInterval = null; }
+        if(st.countdownInterval){ clearInterval(st.countdownInterval); st.countdownInterval = null; }
+      }
+      try{ if(typeof window._demCleanupFM==='function') window._demCleanupFM(); }catch(e){}
+      document.body.classList.remove('dem-fullscreen');
+      var vd = document.getElementById('dem-video');
+      if(vd){ vd.style.display='none'; try{ vd.srcObject=null; }catch(e){} }
+      var ph = document.getElementById('dem-cam-placeholder');
+      if(ph) ph.style.display='flex';
+    }catch(e){}
+  }
+  function _c64Setup(){
+    var pg = document.getElementById('page-c39-dementia');
+    if(!pg || !window.MutationObserver) return;
+    var wasActive = pg.classList.contains('active');
+    new MutationObserver(function(){
+      var now = pg.classList.contains('active');
+      if(wasActive && !now){ _c64DemCleanup(); }
+      wasActive = now;
+    }).observe(pg, {attributes:true, attributeFilter:['class']});
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _c64Setup); }
+  else { setTimeout(_c64Setup, 60); }
+})();
+</script>
 
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
