@@ -34002,7 +34002,7 @@ function _cgoT(str){
     /* 통짜 매칭 실패 시: 한글 조각 치환 (긴 것부터) */
     if(!/[가-힣]/.test(str)) return str;
     if(!window._cgoTKeys){
-      var ks=[]; for(var k in d){ if(/[가-힣]/.test(k)) ks.push(k); }
+      var ks=[]; for(var k in d){ if(k.length>=2 && /[가-힣]/.test(k)) ks.push(k); }
       ks.sort(function(a,b){ return b.length-a.length; });
       window._cgoTKeys=ks;
     }
@@ -34014,6 +34014,21 @@ function _cgoT(str){
     return out;
   }catch(e){ return str; }
 }
+
+/* C-64: alert/confirm 중앙 번역 래퍼 (통짜 매칭 + 조각 치환) */
+(function(){
+  if(window.__cgoAlertPatch) return;
+  window.__cgoAlertPatch = true;
+  var _oa = window.alert, _oc = window.confirm;
+  window.alert = function(m){
+    try{ if(window._cgoT && typeof m==='string') m = _cgoT(m); }catch(e){}
+    return _oa.call(window, m);
+  };
+  window.confirm = function(m){
+    try{ if(window._cgoT && typeof m==='string') m = _cgoT(m); }catch(e){}
+    return _oc.call(window, m);
+  };
+})();
 
 function _c24DrawGuide(skinRatio){
   var cv = document.getElementById('c24-guide-canvas');
@@ -133064,7 +133079,7 @@ if('serviceWorker' in navigator){
         if(d[msg]){ msg=d[msg]; }
         else{
           if(!window._eyeDbgKeys){
-            var ks=[]; for(var k in d){ if(/[가-힣]/.test(k)) ks.push(k); }
+            var ks=[]; for(var k in d){ if(k.length>=2 && /[가-힣]/.test(k)) ks.push(k); }
             ks.sort(function(a,b){ return b.length-a.length; });
             window._eyeDbgKeys=ks;
           }
@@ -135528,6 +135543,35 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       return '\n\n[CRITICAL LANGUAGE OVERRIDE] The user\'s app language is ' + nm + '. Respond ONLY in ' + nm + ', ignoring any earlier instruction to answer in Korean. Keep the same warm, helpful tone.';
     }catch(e){ return ''; }
   };
+  /* C-64: 모든 /api/groq LLM 호출에 언어 지시 자동 주입 (중앙 초크포인트) */
+  (function(){
+    if(window.__cgoGroqLangPatch) return;
+    window.__cgoGroqLangPatch = true;
+    var _of = window.fetch;
+    if(!_of) return;
+    window.fetch = function(u, o){
+      try{
+        var url = (typeof u==='string') ? u : (u && u.url) || '';
+        if(url.indexOf('/api/groq')>=0 && o && typeof o.body==='string' && window._LANG && window._LANG!=='ko'){
+          var dir = window._demLangDirective ? window._demLangDirective() : '';
+          if(dir){
+            var b = JSON.parse(o.body);
+            if(b && b.messages && b.messages.length){
+              for(var k=b.messages.length-1; k>=0; k--){
+                if(b.messages[k] && typeof b.messages[k].content==='string'){
+                  if(b.messages[k].content.indexOf('[CRITICAL LANGUAGE')<0){ b.messages[k].content += dir; }
+                  break;
+                }
+              }
+              var o2 = {}; for(var p in o){ o2[p]=o[p]; } o2.body = JSON.stringify(b);
+              return _of.call(this, u, o2);
+            }
+          }
+        }
+      }catch(e){}
+      return _of.apply(this, arguments);
+    };
+  })();
   function _c64ScalpCleanup(){
     try{
       if(typeof scalpCamStopStream==='function'){ scalpCamStopStream(); }
