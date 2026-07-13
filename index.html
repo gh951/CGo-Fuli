@@ -18602,10 +18602,14 @@ var Q_POOL = {
    var _optCount = IQ_QUESTIONS.reduce(function(s,qq){ return s + ((qq.opts&&qq.opts.length)?qq.opts.length:4); }, 0) / (IQ_QUESTIONS.length||1);
    var _chance = 1 / Math.max(2, _optCount);
    var _adj = Math.max(0, (accuracy - _chance) / (1 - _chance));
-   var iqScore = Math.round(70 + _adj * 75 + (avgHRV > 40 ? 3 : 0) - (avgRT > 20 ? 3 : 0));
-   iqScore = Math.max(55, Math.min(150, iqScore));
-   // C-64: 성실도 검증 — 반응 1.5초 미만(문제 못 읽음) 또는 정답률이 찍기 기대치보다 크게 낮음 = 무효
+   // C-64: 멘사 SD24 스케일 — 추측 보정 후 만점 156(상위 1%) 천장, 커트라인 148(상위 2%)
+   var iqScore = Math.round(70 + _adj * 86 + (avgHRV > 40 ? 3 : 0) - (avgRT > 20 ? 3 : 0));
+   iqScore = Math.max(55, Math.min(156, iqScore));
    var _iqInvalid = (avgRT < 1.5) || (accuracy < _chance * 0.6);
+   var _z = (iqScore - 100) / 24;
+   var _tt = 1/(1+0.2316419*Math.abs(_z)), _dn = 0.3989423*Math.exp(-_z*_z/2);
+   var _tail = _dn*_tt*(0.3193815+_tt*(-0.3565638+_tt*(1.781478+_tt*(-1.821256+_tt*1.330274))));
+   var _topPct = (_z>0 ? _tail : 1-_tail) * 100;
       
       document.getElementById('iq-question-area').style.display = 'none';
       document.getElementById('iq-result-area').style.display = 'block';
@@ -18631,13 +18635,41 @@ var Q_POOL = {
       detail += '<b>🛡️ 평균 내면 탄력:</b> ' + avgHRV.toFixed(0) + '<br>';
       detail += '<b>🌟 Brain Endurance:</b> ' + document.getElementById('iq-bei').textContent + ' / 100';
       detail += '</div>';
+      // C-64: 5영역 인지 프로필 + 직업 적성 (문항 domain 기반 · 인지심리 연구)
+      var _domStats={}, _domOrder=[];
+      for(var _di=0;_di<IQ_QUESTIONS.length;_di++){
+        var _dd=IQ_QUESTIONS[_di].domain||'🔷 패턴 인식';
+        if(!_domStats[_dd]){ _domStats[_dd]={c:0,t:0}; _domOrder.push(_dd); }
+        _domStats[_dd].t++; if(st.answers[_di]) _domStats[_dd].c++;
+      }
+      if(!_iqInvalid && _domOrder.length>=2){
+        var _APT={'🔷 패턴 인식':'전략기획 · R&D · 문제해결 · 알고리즘','🧊 공간 추론':'엔지니어링 · 건축 · 디자인 · 외과','📖 언어 능력':'법률 · 저술 · 교육 · 언론','🔢 수리 논리':'금융 · 데이터 분석 · 회계 · 연구','🧠 작업 기억':'관제 · 응급의료 · 통번역 · PM'};
+        var _best=_domOrder[0], _worst=_domOrder[0];
+        for(var _k=0;_k<_domOrder.length;_k++){ var _p=_domStats[_domOrder[_k]].c/_domStats[_domOrder[_k]].t; if(_p>_domStats[_best].c/_domStats[_best].t)_best=_domOrder[_k]; if(_p<_domStats[_worst].c/_domStats[_worst].t)_worst=_domOrder[_k]; }
+        detail += '<div style="background:#f7f9fc;padding:12px;border-radius:8px;margin-bottom:10px;">';
+        detail += '<b>' + _cgoT('🧩 영역별 인지 프로필') + '</b><br>';
+        for(var _k2=0;_k2<_domOrder.length;_k2++){ var _dm=_domOrder[_k2],_ds=_domStats[_dm],_pc=Math.round(_ds.c/_ds.t*100); detail += '<div style="margin:6px 0;font-size:11px;">' + _cgoT(_dm) + ' <span style="color:#888;">('+_ds.c+'/'+_ds.t+' · '+_pc+'%)</span><div style="height:7px;background:#e5e9f0;border-radius:4px;margin-top:3px;"><div style="height:7px;width:'+_pc+'%;background:linear-gradient(90deg,#d4a843,#fbbf24);border-radius:4px;"></div></div></div>'; }
+        detail += '<div style="margin-top:8px;font-size:11px;line-height:1.8;">';
+        detail += '💪 <b>' + _cgoT('강점') + '</b>: ' + _cgoT(_best) + '<br>';
+        detail += '📈 <b>' + _cgoT('보완') + '</b>: ' + _cgoT(_worst) + '<br>';
+        detail += '🧭 <b>' + _cgoT('적성 참고') + '</b>: ' + _cgoT(_APT[_best]||'');
+        detail += '</div>';
+        detail += '<div style="font-size:9px;color:#aaa;margin-top:6px;">' + _cgoT('※ 인지심리·직업적성 연구 기반 참고 매핑입니다.') + '</div>';
+        detail += '</div>';
+      }
+      if(!_iqInvalid){
+        detail += '<div style="font-size:11px;color:#888;margin-bottom:8px;">' + _cgoT('📈 추정 백분위: 상위 ') + (_topPct<1?_topPct.toFixed(1):Math.round(_topPct)) + _cgoT('% (SD24 기준)') + '</div>';
+      }
       detail += '<div style="font-size:12px;color:#666;line-height:1.6;padding:10px;background:#fffbeb;border-radius:8px;">';
       detail += '<b>💡 종합 평가:</b><br>';
-      if(_iqInvalid) detail += '측정 무효 — 성실하게 다시 검사하면 정확한 결과를 볼 수 있어요';
-      else if(iqScore >= 130) detail += '매우 우수한 인지 능력 + 안정된 내면 탄력성 = 진짜 IQ ⭐';
-      else if(iqScore >= 110) detail += '평균 이상 인지 능력 + 양호한 내면 탄력성';
-      else if(iqScore >= 90) detail += '평균적 인지 능력 + 일반 내면 탄력성';
-      else detail += '인지 능력 향상 가능성 ↑ + 내면 탄력성 관리 권장';
+      if(_iqInvalid) detail += _cgoT('측정 무효 — 성실하게 다시 검사하면 정확한 결과를 볼 수 있어요');
+      else if(iqScore >= 156) detail += _cgoT('🏆 최상위 — 상위 1% 수준 (멘사 SD24 만점 156)');
+      else if(iqScore >= 148) detail += _cgoT('🏅 멘사 커트라인 — 상위 2% 수준 (SD24 148+)');
+      else if(iqScore >= 130) detail += _cgoT('⭐ 우수 — 상위 5% 이내 수준');
+      else if(iqScore >= 115) detail += _cgoT('평균 이상 — 양호한 인지 능력');
+      else if(iqScore >= 90) detail += _cgoT('평균 — 일반적인 인지 능력');
+      else detail += _cgoT('향상 가능성 ↑ — 꾸준한 두뇌 자극 권장');
+      detail += '<br><span style="font-size:10px;color:#aaa;">' + _cgoT('※ 자체 추정치이며 공식 멘사·임상 검사가 아닙니다.') + '</span>';
       detail += '</div>';
       document.getElementById('iq-result-detail').innerHTML = detail;
     };
