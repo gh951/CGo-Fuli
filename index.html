@@ -65068,6 +65068,7 @@ function refreshData(){
 // 대시보드로 자동 복귀 (스캔 완료 후)
 function _returnToDashboard(delayMs) {
   setTimeout(function(){
+    try{ var _tfo=document.getElementById('todayFortuneOverlay'); if(_tfo) _tfo.style.display='none'; var _pmi=document.getElementById('pm-intro-pop'); if(_pmi) _pmi.style.display='none'; document.body.style.overflow=''; }catch(e){}  /* ★ C-64: 순수역학 오버레이 확실히 닫기 */
     if(typeof bsCloseFullscreen==='function') bsCloseFullscreen();
     document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
     var dashBtn = document.querySelector('[data-page="dashboard"]');
@@ -76530,6 +76531,9 @@ function _cgRecordPage(pageId) {
   origNavClick.forEach(function(btn){
     btn.addEventListener('click', function(){
       var _pg = this.getAttribute('data-page');
+      /* ★ C-64: 순수역학/실시간/rPPG 오버레이가 열려있으면 닫기 (대시보드 상단 언어바 가림 방지) */
+      try{ var _tfo=document.getElementById('todayFortuneOverlay'); if(_tfo && _tfo.style.display!=='none'){ _tfo.style.display='none'; document.body.style.overflow=''; } }catch(e){}
+      try{ var _pmi=document.getElementById('pm-intro-pop'); if(_pmi && _pmi.style.display!=='none') _pmi.style.display='none'; }catch(e){}
       _cgRecordPage(_pg);
       // 언어가 한국어가 아니면 해당 페이지 번역
       if (window._LANG && window._LANG !== 'ko') {
