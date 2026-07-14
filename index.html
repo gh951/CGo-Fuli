@@ -31313,7 +31313,7 @@ window.tvyShowIntroPopup = function(){
     var K8={하늘:'🌌',바람:'💨',불꽃:'🔥',태산:'⛰️',대지:'🌾',무쇠:'⚔️',샘물:'💧',심해:'🌊'};
     var st=localStorage.getItem('cgo_kiryu_strength')||'';
     var stL={active:'역동',normal:'균형',calm:'신중'}[st]||'';
-    if(K8[v]) return K8[v]+' '+v+' 기류'+(stL?' · '+stL:'');
+    if(K8[v]) return K8[v]+' '+_cgoT(v+' 기류')+(stL?' · '+_cgoT(stL):'');
     return '';
   }catch(e){return '';}}
   window.tnPickKiryu=function(kiryu){
@@ -31324,7 +31324,7 @@ window.tvyShowIntroPopup = function(){
   window.tnSetType=function(t){
     curType=t;
     var kd=_tnKiryuDisplay();
-    $('tn-mytype').textContent = kd ? ('내 기류: '+kd) : ('내 유형: '+t+' · '+(NICK[t]||''));
+    $('tn-mytype').textContent = kd ? (_cgoT('내 기류')+': '+kd) : (_cgoT('내 유형')+': '+t+' · '+(NICK[t]||''));
     tnShow('soul'); try{ tnDraw(); }catch(e){}
   };
   function tnRenderGrid(){
@@ -31657,12 +31657,12 @@ window.tvyShowIntroPopup = function(){
     var K8={하늘:'🌌',바람:'💨',불꽃:'🔥',태산:'⛰️',대지:'🌾',무쇠:'⚔️',샘물:'💧',심해:'🌊'};
     var st=localStorage.getItem('cgo_kiryu_strength')||'';
     var stL={active:'역동',normal:'균형',calm:'신중'}[st]||'';
-    if(K8[v]){ return K8[v]+' '+v+' 기류'+(stL?' · '+stL:''); }
+    if(K8[v]){ return K8[v]+' '+_cgoT(v+' 기류')+(stL?' · '+_cgoT(stL):''); }
     return v;
   }catch(e){return '';}}
   window.f3Enter=function(){ f3SyncMsp(); f3RenderPicker(); f3UpdateSel(); f3SpreadTarot(); f3Baseline(); if(!$('f3-msgs').childElementCount) f3Greet(); };
   window.f3Acc=function(k){var b=$('f3-body-'+k),a=$('f3-arr-'+k);if(!b)return;var o=b.classList.toggle('on');if(a)a.textContent=o?'▲':'▼';};
-  function f3Baseline(){ var t=msp(); var disp=mspDisplay(); $('f3-bl-msp').textContent=disp?disp:'기류 미설정'; $('f3-bl-card').textContent=curCard?('타로 '+curCard[1]):'카드 미선택'; }
+  function f3Baseline(){ var t=msp(); var disp=mspDisplay(); $('f3-bl-msp').textContent=disp?disp:'기류 미설정'; $('f3-bl-card').textContent=curCard?(_cgoT('타로 ')+_qtC(curCard[1])):'카드 미선택'; }
   // ① MSP
   function f3SyncMsp(){var t=msp();if(t&&NICK[t]){$('f3-msp-have').style.display='block';$('f3-msp-none').style.display='none';$('f3-msp-show').textContent=t+' · '+NICK[t];$('f3-st-msp').textContent=t;}else{$('f3-msp-have').style.display='none';$('f3-msp-none').style.display='block';$('f3-st-msp').textContent='';f3RenderGrid();}f3Baseline();}
   window.f3MspPick=function(){$('f3-msp-have').style.display='none';$('f3-msp-none').style.display='block';f3RenderGrid();};
@@ -31680,12 +31680,12 @@ window.tvyShowIntroPopup = function(){
   window.f3PickCard=function(i){
     curCard=spread[i];
     var h='<div class="f3-card"><img class="f3-cimg" src="'+imgUrl(curCard[0])+'" alt="" onerror="this.style.display=\'none\';this.parentNode.querySelector(\'.f3-cfb\').style.display=\'flex\';">'
-      +'<div class="f3-cfb"><div class="ico">🃏</div><div class="kr">'+curCard[1]+'</div></div>'
-      +'<div class="f3-cname">'+curCard[1]+'</div></div>'
-      +'<div class="f3-mean">“'+curCard[2]+'”</div>'
+      +'<div class="f3-cfb"><div class="ico">🃏</div><div class="kr">'+_qtC(curCard[1])+'</div></div>'
+      +'<div class="f3-cname">'+_qtC(curCard[1])+'</div></div>'
+      +'<div class="f3-mean">“'+_qtK(curCard[2])+'”</div>'
       +'<button class="f3-btn ghost" onclick="f3SpreadTarot()">🔄 다시 펼쳐 고르기</button>';
     $('f3-tarot-area').innerHTML=h;
-    $('f3-st-tarot').textContent=curCard[1]; f3Baseline();
+    $('f3-st-tarot').textContent=_qtC(curCard[1]); f3Baseline();
   };
   window.f3SetMode=function(m){ curMode=m; var cs=document.querySelectorAll('#page-fusion3 .f3-mode'); for(var i=0;i<cs.length;i++){var s=cs[i].getAttribute('data-m')===m;cs[i].classList.toggle('sel',s);var ck=cs[i].querySelector('.f3-mode-ck');if(ck)ck.textContent=s?'✓':'';} var lbl={pure:'순수',rt:'실시간',rppg:'rPPG'}[m]; var st=$('f3-st-mode'); if(st)st.textContent=lbl; };
   // ③ 50역학 선택 (공유)
@@ -135788,6 +135788,9 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   'use strict';
   if(window.__CGO_CULTURE_LOADED) return;
   window.__CGO_CULTURE_LOADED = true;
+
+  /* Tarot keyword-string translator (splits on ·, translates each sub-keyword locally) */
+  window._qtK=(function(){var D={"가르침":"Teaching","가족":"Family","각성":"Awakening","갈등":"Conflict","감성적 행동":"Emotional action","감수성":"Sensitivity","감정의 균형":"Emotional balance","감정의 시작":"Emotional beginning","감정의 풍요":"Emotional abundance","걱정":"Worry","건전한 도전":"Healthy challenge","결단":"Decision","결정 보류":"Decision on hold","결핍":"Lack","경계":"Borderline","경쟁":"Competition","계획":"Planning","고독":"Solitude","공감":"Empathy","공정":"Fairness","공정한 교환":"Fair exchange","과거의 선물":"A gift from the past","과한 집착의 경계":"Beware of obsession","관계":"Relationship","관대한 부":"Generous wealth","관대함":"Generosity","관점의 전환":"Shift in perspective","관찰":"Observation","구조":"Structure","권태":"Boredom","균형":"Balanced","극복":"Overcoming","급변":"Sudden change","기쁨":"Joy","꾸준함":"Consistency","끝과 새 시작":"Ending and new beginning","끝과 시작":"Ending and beginning","나눔":"Sharing","남은 가능성":"Remaining possibility","내면":"Inner self","내면의 부름":"Inner calling","노력":"Effort","단호함":"Resolve","대립":"Opposition","독립":"Independence","독립적 풍요":"Independent abundance","돌파":"Breakthrough","드러나는 비밀":"A secret revealed","따뜻한 카리스마":"Warm charisma","떠남":"Departure","로맨스":"Romance","리더십":"Leadership","마무리":"Wrapping up","만족":"Satisfied","매력":"Charm","메시지":"Message","명료한 진실":"Clear truth","명료함":"Clarity","명상":"Meditation","모험":"Adventure","무의식":"The unconscious","물질적 성공":"Material success","미래 비전":"Future vision","민첩한 사고":"Quick thinking","바닥":"Floor","방어":"Defense","배움의 시작":"Start of learning","변화":"Change","보이지 않는 도움":"Unseen help","보존":"Preservation","부담":"Burden","부활":"Resurrection","분별의 필요":"Need for discernment","불안":"Anxiety","비전":"Vision","빛":"Light","빠른 진행":"Swift progress","상상력":"Imagination","상실":"Loss","상처":"Wound","새로운 기회":"New opportunity","새로운 사랑":"New love","새로운 시작":"New beginning","새로운 의미 찾기":"Finding new meaning","새로운 통찰":"New insight","새벽의 희망":"Hope at dawn","새출발":"New start","선택":"Select","선택의 문턱":"Threshold of choice","성공":"Success","성숙한 사랑":"Mature love","성실":"Sincerity","성장":"Growth","성장통":"Growing pains","성찰":"Reflection","성취":"Achievement","소식":"News","소원 성취":"Wish fulfilled","속도":"Speed","속박":"Restriction","수용":"Acceptance","수호":"Protection","수확을 기다림":"Awaiting the harvest","숙달의 길":"Path to mastery","숙련":"Skill","순수":"Pure","승리":"Victory","승부의 대가":"Master of the contest","시련":"Trial","신뢰":"Trust","실용적 지혜":"Practical wisdom","실행":"Execution","안정":"Stable","연결":"Connection","열정의 시작":"Start of passion","영감":"Inspiration","영감의 통치자":"Ruler of inspiration","완성":"Completion","욕망":"Desire","용기":"Courage","우선순위 조절":"Adjusting priorities","우아함":"Grace","우정":"Friendship","유산":"Legacy","의지":"Will","이동":"Movement","이성의 통치자":"Ruler of reason","인내":"Patience","인도":"India","인정":"Recognition","입장 고수":"Standing your ground","자기 제한":"Self-limitation","자비":"Compassion","자신감":"Confidence","자유":"Freedom","자족":"Contentment","자존심":"Pride","장인 정신":"Craftsmanship","재충전":"Recharge","재탄생":"Rebirth","재평가":"Reassessment","적응":"Adaptation","전략":"Strategy","전망":"Outlook","전진":"Advance","전통":"Tradition","전환":"Transition","정서적 완성":"Emotional fulfillment","정서적 지혜":"Emotional wisdom","정성의 결과":"Fruit of devotion","제안":"Proposal","조심":"Caution","조화":"Harmony","조화로운 기반":"Harmonious foundation","준비된 기다림":"Prepared waiting","지속되는 풍요":"Lasting abundance","지적 도전":"Intellectual challenge","지적 통찰":"Intellectual insight","지혜":"Wisdom","직관":"Intuition","직관의 메시지":"Message of intuition","진실":"Truth","진실의 아픔":"The pain of truth","진중함":"Composure","집착":"Attachment","창조":"Creation","창조의 불꽃":"Spark of creation","책임감":"Responsibility","책임의 무게":"The weight of responsibility","추억":"Memory","추진":"Momentum","추진력":"Driving force","축하":"Celebration","치유":"Healing","탐구":"Exploration","탐구심":"Inquisitiveness","통합":"Integrated","파트너십":"Partnership","평가":"Evaluation","평온을 향한 항해":"Voyage toward peace","풍요":"Abundance","풍요로운 양육":"Abundant nurturing","함께하는 기쁨":"Shared joy","해방":"Liberation","행동":"Action","행복한 가정":"Happy home","현실의 시작":"Start of reality","협력":"Cooperation","호기심":"Curiosity","확장":"Expansion","환상":"Illusion","활력":"Vitality","회복력":"Resilience","후회":"Regret","휴식":"Rest","흐름":"Flow","희망":"Hope","희생":"Sacrifice"};return function(s){var L=window._LANG;if(!L||L==='ko'||!s)return s;return String(s).split('·').map(function(p){p=p.trim();return D[p]!=null?D[p]:p;}).join(' · ');};})();
 
   /* Tarot 79-card name translator (local — avoids global observer side-effects for short names like 달/힘) */
   window._qtC=(function(){var D={"바보":"The Fool","마법사":"The Magician","여사제":"The High Priestess","여황제":"The Empress","황제":"The Emperor","교황":"The Hierophant","연인":"The Lovers","전차":"The Chariot","힘":"Strength","은둔자":"The Hermit","운명의 수레바퀴":"Wheel of Fortune","정의":"Justice","매달린 사람":"The Hanged Man","죽음":"Death","절제":"Temperance","악마":"The Devil","탑":"The Tower","별":"The Star","달":"The Moon","태양":"The Sun","심판":"Judgement","세계":"The World","별빛 수호자":"Starlight Guardian","완드 1":"Ace of Wands","완드 2":"Two of Wands","완드 3":"Three of Wands","완드 4":"Four of Wands","완드 5":"Five of Wands","완드 6":"Six of Wands","완드 7":"Seven of Wands","완드 8":"Eight of Wands","완드 9":"Nine of Wands","완드 10":"Ten of Wands","완드 시종":"Page of Wands","완드 기사":"Knight of Wands","완드 여왕":"Queen of Wands","완드 왕":"King of Wands","컵 1":"Ace of Cups","컵 2":"Two of Cups","컵 3":"Three of Cups","컵 4":"Four of Cups","컵 5":"Five of Cups","컵 6":"Six of Cups","컵 7":"Seven of Cups","컵 8":"Eight of Cups","컵 9":"Nine of Cups","컵 10":"Ten of Cups","컵 시종":"Page of Cups","컵 기사":"Knight of Cups","컵 여왕":"Queen of Cups","컵 왕":"King of Cups","소드 1":"Ace of Swords","소드 2":"Two of Swords","소드 3":"Three of Swords","소드 4":"Four of Swords","소드 5":"Five of Swords","소드 6":"Six of Swords","소드 7":"Seven of Swords","소드 8":"Eight of Swords","소드 9":"Nine of Swords","소드 10":"Ten of Swords","소드 시종":"Page of Swords","소드 기사":"Knight of Swords","소드 여왕":"Queen of Swords","소드 왕":"King of Swords","펜타클 1":"Ace of Pentacles","펜타클 2":"Two of Pentacles","펜타클 3":"Three of Pentacles","펜타클 4":"Four of Pentacles","펜타클 5":"Five of Pentacles","펜타클 6":"Six of Pentacles","펜타클 7":"Seven of Pentacles","펜타클 8":"Eight of Pentacles","펜타클 9":"Nine of Pentacles","펜타클 10":"Ten of Pentacles","펜타클 시종":"Page of Pentacles","펜타클 기사":"Knight of Pentacles","펜타클 여왕":"Queen of Pentacles","펜타클 왕":"King of Pentacles"};return function(n){var L=window._LANG;if(!L||L==='ko'||!n)return n;return (D[n]!=null)?D[n]:n;};})();
