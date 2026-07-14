@@ -45630,7 +45630,10 @@ function setLang(lang) {
       window._cgoKoReloading = true;
       try{ _cgExitArmed = false; window._cgExitArmed = false; window.onbeforeunload = null; }catch(e){}  /* ★ C-64: '나가기' 경고 해제 */
       try{ sessionStorage.setItem('cgo_unlocked','1'); }catch(e){}  /* ★ C-64: 대문 건너뛰고 조용히 한글 적용 */
-      location.reload();
+      /* ★ C-64: 대시보드 즉시 한글 복원(체감 0.2초) → 900ms 뒤 백그라운드 새로고침으로 나머지 정리 */
+      try{ if(typeof _cgoRestoreTexts==='function') _cgoRestoreTexts(); }catch(e){}
+      try{ if(typeof updateDashboard==='function' && window.calcResult) updateDashboard(window.calcResult); }catch(e){}
+      setTimeout(function(){ try{ location.reload(); }catch(e){} }, 900);
       return;
     }
     // ko 복원: 스냅 있으면 복원, 없으면 페이지 리로드
