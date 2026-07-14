@@ -7510,9 +7510,9 @@ function cgoGuideFeature(key){
       // 메타 정보 갱신
       var meta = document.getElementById('mfu-ai-meta');
       if(meta){
-        meta.innerHTML = '<b style="color:#b8860b">'+oh+'(오행)</b> × <b style="color:#0284c7">'+
-          ['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'][sjIdx%12]+
-          '(시진)</b> × <b style="color:#34d399">'+season+'(계절)</b> 융합';
+        meta.innerHTML = '<b style="color:#b8860b">'+window._mfuTx(oh)+window._mfuTx('(오행)')+'</b> × <b style="color:#0284c7">'+
+          window._mfuTx(['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'][sjIdx%12])+
+          window._mfuTx('(시진)')+'</b> × <b style="color:#34d399">'+window._mfuTx(season)+window._mfuTx('(계절)')+'</b> '+window._mfuTx('융합');
       }
       
       // ── ① YouTube 실시간 AI 추천 ──
@@ -7546,7 +7546,7 @@ function cgoGuideFeature(key){
       var ohEmoji = {목:'🌳',화:'🔥',토:'⛰️',금:'⚔️',수:'💧'}[_mfuUserOh] || '🎵';
       var sj = (_mfuSiJin >= 0 && MFU_SIJIN[_mfuSiJin]) ? MFU_SIJIN[_mfuSiJin].name : '자동 감지';
       var ss = _mfuSeason || mfuAutoSeason();
-      nv.textContent = sj + ' · ' + ss + ' · 내 오행 ' + _mfuUserOh + '(' + ({'목':'木','화':'火','토':'土','금':'金','수':'水'}[_mfuUserOh] || '土') + ')';
+      nv.textContent = window._mfuTx(sj) + ' · ' + window._mfuTx(ss) + ' · ' + window._mfuTx('내 오행') + ' ' + window._mfuTx(_mfuUserOh) + '(' + ({'목':'木','화':'火','토':'土','금':'金','수':'水'}[_mfuUserOh] || '土') + ')';
       if(no) no.textContent = ohEmoji;
       if(tt){ var n = new Date(); tt.textContent = (n.getHours()<10?'0':'')+n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes(); }
     }
@@ -135787,6 +135787,12 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   'use strict';
   if(window.__CGO_CULTURE_LOADED) return;
   window.__CGO_CULTURE_LOADED = true;
+
+  /* ===== Music(My Frequency) NOW PLAYING·Fusion 라벨 번역 (값병합 조각용) ===== */
+  window._mfuTx = window._mfuTx || (function(){
+    var D={'자시':'Rat hour','축시':'Ox hour','인시':'Tiger hour','묘시':'Rabbit hour','진시':'Dragon hour','사시':'Snake hour','오시':'Horse hour','미시':'Goat hour','신시':'Monkey hour','유시':'Rooster hour','술시':'Dog hour','해시':'Pig hour','봄':'Spring','여름':'Summer','가을':'Autumn','겨울':'Winter','목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water','내 오행':'My element','자동 감지':'Auto-detect','(오행)':'(element)','(시진)':'(hour)','(계절)':'(season)','융합':'Fusion'};
+    return function(ko){ var L=window._LANG; if(!L||L==='ko') return ko; return (D[ko]!=null)?D[ko]:ko; };
+  })();
 
   /* ===== 1) C-65 엔진 ===== */
   var HAN={mok:'木',hwa:'火',to:'土',geum:'金',su:'水'};
