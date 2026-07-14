@@ -135775,12 +135775,12 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 })();
 </script>
 
-<!-- ===== CGO 문화권 모듈 (이름·시간·장소) by C-65 · SLIM · additive ===== -->
+<!-- ===== CGO 문화권 모듈 (이름·시간·장소) by C-65 · v2 · additive ===== -->
 <script>
 /* ============================================================
-   CGO-FULI · 문화권 모듈 (이름·시간·장소)  by C-65 · SLIM
-   글자는 한국어 텍스트노드 → 앱 옵저버(_cgoTranslateNode)가 번역.
-   번역은 en.json 등 lang 파일이 담당(index.html 안 키움). additive.
+   CGO-FULI · 문화권 모듈 (이름·시간·장소)  by C-65 · v2 (2단계)
+   글자=한국어 텍스트노드 → 앱 옵저버 번역(en.json). additive.
+   시간=문화권 선택 → 2단계 입력(12지신/시각/시간대). 장소=선택 후 입력칸 포커스.
    전역: window.CGO_CULTURE / window.CGO_NAME_ANALYZE
    ============================================================ */
 (function(){
@@ -135788,7 +135788,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   if(window.__CGO_CULTURE_LOADED) return;
   window.__CGO_CULTURE_LOADED = true;
 
-  /* ===== 1) C-65 발음오행 엔진 ===== */
+  /* ===== 1) C-65 엔진 ===== */
   var HAN={mok:'木',hwa:'火',to:'土',geum:'金',su:'水'};
   var ORDER=['mok','hwa','to','geum','su'];
   var CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
@@ -135826,11 +135826,11 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   /* ===== 2) 언어 → 기본값 ===== */
   function lang(){return String(window._LANG||'ko').slice(0,2);}
   var NAME_DEF={ko:'hanja',zh:'hanja',ja:'hanja',en:'pythagorean',es:'pythagorean',de:'pythagorean',fr:'pythagorean',pt:'pythagorean',it:'pythagorean',nl:'pythagorean',ar:'abjad',hi:'vedic',ru:'cyrillic',uk:'cyrillic'};
-  var TIME_DEF={ko:'east',zh:'east',ja:'east',hi:'vedic'};
+  var TIMEMODE_DEF={ko:'east',zh:'east',ja:'east',hi:'vedic'};
   var PLACE_DEF={ko:'east',zh:'east',ja:'east',hi:'vastu'};
   function defName(nm){if(hasHanja(nm)||hasHangul(nm))return 'hanja';return NAME_DEF[lang()]||'phonetic';}
 
-  /* ===== 3) 팝업 데이터 (한국어 원문 = 번역 키) ===== */
+  /* ===== 3) 1단계 팝업 데이터 ===== */
   var AUTO=['자동 추천','선택 언어·국가','앱이 문화권에 맞는 방식을 골라줍니다.'];
   var POPS={
     name:{eye:'성명학',title:'이름을 어떤 렌즈로 볼까요?',sub:'문화마다 이름을 읽는 전통이 다릅니다.',
@@ -135863,70 +135863,142 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
         ['none','❔','장소 무관','생략','이름·수비학 축은 장소 없이도 작동합니다.','always']]}
   };
   var TAG_NAME='세계 최초', TAG_DEF='기본';
+  var STEP2={ // 시간 2단계 안내 문구
+    east:'12지신 중 태어난 시(時)를 골라주세요',
+    west:'시:분을 입력해주세요 (24시간)', vedic:'시:분을 입력해주세요 (분 단위 · 24시간)',
+    rough:'대략 언제쯤이었나요?'
+  };
+  var ROUGH=[['새벽','04:30','🌅'],['아침','08:30','🌄'],['오후','14:30','☀️'],['저녁','18:30','🌇'],['밤','22:30','🌙']];
 
   /* ===== 4) 상태 ===== */
-  window.CGO_CULTURE = window.CGO_CULTURE || {name:'auto',time:'east',place:'east',nameResult:null,nameResolved:null};
+  window.CGO_CULTURE = window.CGO_CULTURE || {name:'auto',time:'east',timeMode:'east',timeValue:'',timeExact:null,place:'east',placeBirth:'east',placeCur:'east',nameResult:null,nameResolved:null};
 
-  /* ===== 5) 앱 번역기 호출 ===== */
-  function translate(root){
-    try{ if(window._LANG && window._LANG!=='ko' && typeof window._cgoTranslateNode==='function') window._cgoTranslateNode(root); }catch(e){}
-  }
+  /* ===== 5) 번역기 ===== */
+  function translate(root){try{if(window._LANG&&window._LANG!=='ko'&&typeof window._cgoTranslateNode==='function')window._cgoTranslateNode(root);}catch(e){}}
 
   /* ===== 6) CSS ===== */
   function injectCSS(){
     if(document.getElementById('cgoc-style')) return;
-    var c=".cgoc-btn{flex:0 0 auto;width:42px;border:1px solid rgba(212,168,67,.5);border-radius:8px;background:#111f35;color:#d4a843;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;font-family:inherit}.cgoc-btn:hover{background:rgba(212,168,67,.14);border-color:#d4a843}.cgoc-wrap{display:flex;gap:6px;align-items:stretch;width:100%}.cgoc-wrap>*:first-child{flex:1 1 auto;min-width:0}.cgoc-ov{position:fixed;inset:0;background:rgba(4,8,16,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:18px;z-index:100000}.cgoc-ov.on{display:flex}.cgoc-pop{width:100%;max-width:470px;background:#0d1526;border:1px solid rgba(212,168,67,.3);border-radius:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8);overflow:hidden;max-height:90vh;display:flex;flex-direction:column;font-family:'Noto Sans KR',-apple-system,sans-serif}.cgoc-h{position:relative;padding:20px 22px 14px;flex:none;background:radial-gradient(120% 120% at 85% -10%,rgba(212,168,67,.16),transparent 55%)}.cgoc-eye{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#d4a843;font-weight:700}.cgoc-h h3{font-size:18px;font-weight:800;margin:6px 0 0;color:#f8f0e0}.cgoc-h p{font-size:12.5px;color:#e8f0f8;opacity:.8;margin:4px 0 0}.cgoc-x{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:8px;border:1px solid rgba(99,130,201,.3);background:#111f35;color:#e8f0f8;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}.cgoc-x:hover{border-color:#d4a843;color:#d4a843}.cgoc-how{margin:0 14px 6px;border:1px solid rgba(52,211,153,.25);border-radius:12px;background:rgba(52,211,153,.05);padding:11px 15px}.cgoc-how .hh{font-size:11px;font-weight:800;color:#34d399;letter-spacing:.04em;margin-bottom:5px}.cgoc-how p{font-size:12px;color:#e8f0f8;line-height:1.5;margin:0}.cgoc-list{padding:8px 14px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}.cgoc-opt{display:flex;align-items:flex-start;gap:13px;padding:12px 14px;border:1px solid rgba(99,130,201,.15);border-radius:12px;background:#111f35;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;color:#f8f0e0;width:100%}.cgoc-opt:hover{border-color:rgba(212,168,67,.45);background:rgba(212,168,67,.06)}.cgoc-opt.sel{border-color:#d4a843;background:rgba(212,168,67,.1)}.cgoc-g{flex:0 0 40px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.25);color:#d4a843;margin-top:1px}.cgoc-t{flex:1;min-width:0}.cgoc-nm{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cgoc-rg{font-size:11px;color:#d4a843;opacity:.75;font-weight:600;margin-top:1px}.cgoc-ds{font-size:12px;color:#e8f0f8;opacity:.72;line-height:1.5;margin-top:5px}.cgoc-ck{flex:0 0 auto;color:#d4a843;font-size:16px;opacity:0;margin-top:10px}.cgoc-opt.sel .cgoc-ck{opacity:1}.cgoc-opt.alw{border-color:rgba(52,211,153,.3)}.cgoc-opt.alw .cgoc-g{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.3);color:#34d399}.cgoc-opt.alw .cgoc-rg{color:#34d399}.cgoc-tag{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;background:rgba(52,211,153,.18);color:#34d399}.cgoc-foot{padding:11px 20px 15px;font-size:11px;color:#5f7595;text-align:center;border-top:1px solid rgba(99,130,201,.15);flex:none}@media (prefers-reduced-motion:reduce){.cgoc-btn,.cgoc-opt{transition:none}}";
+    var c=".cgoc-btn{flex:0 0 auto;width:42px;border:1px solid rgba(212,168,67,.5);border-radius:8px;background:#111f35;color:#d4a843;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;font-family:inherit}.cgoc-btn:hover{background:rgba(212,168,67,.14);border-color:#d4a843}.cgoc-wrap{display:flex;gap:6px;align-items:stretch;width:100%}.cgoc-wrap>*:first-child{flex:1 1 auto;min-width:0}.cgoc-ov{position:fixed;inset:0;background:rgba(4,8,16,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:18px;z-index:100000}.cgoc-ov.on{display:flex}.cgoc-pop{width:100%;max-width:470px;background:#0d1526;border:1px solid rgba(212,168,67,.3);border-radius:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8);overflow:hidden;max-height:90vh;display:flex;flex-direction:column;font-family:'Noto Sans KR',-apple-system,sans-serif}.cgoc-h{position:relative;padding:20px 22px 14px;flex:none;background:radial-gradient(120% 120% at 85% -10%,rgba(212,168,67,.16),transparent 55%)}.cgoc-eye{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:#d4a843;font-weight:700}.cgoc-h h3{font-size:18px;font-weight:800;margin:6px 0 0;color:#f8f0e0}.cgoc-h p{font-size:12.5px;color:#e8f0f8;opacity:.8;margin:4px 0 0}.cgoc-x{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:8px;border:1px solid rgba(99,130,201,.3);background:#111f35;color:#e8f0f8;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}.cgoc-x:hover{border-color:#d4a843;color:#d4a843}.cgoc-back{position:absolute;top:16px;left:16px;height:28px;padding:0 10px;border-radius:8px;border:1px solid rgba(99,130,201,.3);background:#111f35;color:#e8f0f8;font-size:12px;cursor:pointer;display:none;align-items:center;gap:4px}.cgoc-back.on{display:flex}.cgoc-back:hover{border-color:#d4a843;color:#d4a843}.cgoc-how{margin:0 14px 6px;border:1px solid rgba(52,211,153,.25);border-radius:12px;background:rgba(52,211,153,.05);padding:11px 15px}.cgoc-how .hh{font-size:11px;font-weight:800;color:#34d399;letter-spacing:.04em;margin-bottom:5px}.cgoc-how p{font-size:12px;color:#e8f0f8;line-height:1.5;margin:0}.cgoc-list{padding:8px 14px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}.cgoc-opt{display:flex;align-items:flex-start;gap:13px;padding:12px 14px;border:1px solid rgba(99,130,201,.15);border-radius:12px;background:#111f35;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;color:#f8f0e0;width:100%}.cgoc-opt:hover{border-color:rgba(212,168,67,.45);background:rgba(212,168,67,.06)}.cgoc-opt.sel{border-color:#d4a843;background:rgba(212,168,67,.1)}.cgoc-g{flex:0 0 40px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.25);color:#d4a843;margin-top:1px}.cgoc-t{flex:1;min-width:0}.cgoc-nm{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cgoc-rg{font-size:11px;color:#d4a843;opacity:.75;font-weight:600;margin-top:1px}.cgoc-ds{font-size:12px;color:#e8f0f8;opacity:.72;line-height:1.5;margin-top:5px}.cgoc-ck{flex:0 0 auto;color:#d4a843;font-size:16px;opacity:0;margin-top:10px}.cgoc-opt.sel .cgoc-ck{opacity:1}.cgoc-opt.alw{border-color:rgba(52,211,153,.3)}.cgoc-opt.alw .cgoc-g{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.3);color:#34d399}.cgoc-opt.alw .cgoc-rg{color:#34d399}.cgoc-tag{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;background:rgba(52,211,153,.18);color:#34d399}.cgoc-foot{padding:11px 20px 15px;font-size:11px;color:#5f7595;text-align:center;border-top:1px solid rgba(99,130,201,.15);flex:none}.cgoc-sgrid{padding:10px 14px 14px;display:grid;grid-template-columns:1fr 1fr;gap:7px;overflow-y:auto}.cgoc-si{padding:12px 10px;border:1px solid rgba(99,130,201,.15);border-radius:11px;background:#111f35;color:#f8f0e0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;text-align:left;transition:all .15s}.cgoc-si:hover{border-color:rgba(212,168,67,.45);background:rgba(212,168,67,.06)}.cgoc-hm{padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px}.cgoc-hmrow{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:800;color:#f8f0e0}.cgoc-num{width:78px;height:60px;text-align:center;font-size:26px;font-weight:800;background:#111f35;border:1px solid rgba(212,168,67,.4);border-radius:12px;color:#f8f0e0;font-family:inherit;outline:none}.cgoc-num:focus{border-color:#d4a843}.cgoc-confirm{width:100%;max-width:260px;padding:13px;border:none;border-radius:12px;background:#d4a843;color:#060d1a;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}.cgoc-confirm:hover{background:#e0b855}.cgoc-rough{padding:14px;display:flex;flex-direction:column;gap:8px}.cgoc-rgh{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid rgba(99,130,201,.15);border-radius:12px;background:#111f35;color:#f8f0e0;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;transition:all .15s}.cgoc-rgh:hover{border-color:rgba(212,168,67,.45);background:rgba(212,168,67,.06)}.cgoc-rgh span{font-size:20px}@media (prefers-reduced-motion:reduce){.cgoc-btn,.cgoc-opt,.cgoc-si,.cgoc-rgh{transition:none}}";
     var st=document.createElement('style');st.id='cgoc-style';st.textContent=c;document.head.appendChild(st);
   }
 
-  /* ===== 7) 팝업 ===== */
-  var ov,listEl,curKind='name';
+  /* ===== 7) 팝업 (2단계 지원) ===== */
+  var ov,bodyEl,headEl,backBtn,curKind='name',step=1,curMode='',curPlaceField='ipBirthPlace';
   function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function buildOverlay(){
     if(document.getElementById('cgocOverlay')) return;
     ov=document.createElement('div');ov.className='cgoc-ov';ov.id='cgocOverlay';
-    ov.innerHTML='<div class="cgoc-pop" role="dialog" aria-modal="true"><div class="cgoc-h"><button class="cgoc-x" id="cgocX" title="닫기" aria-label="닫기">✕</button><div class="cgoc-eye" id="cgocEye"></div><h3 id="cgocTitle"></h3><p id="cgocSub"></p></div><div class="cgoc-how"><div class="hh" id="cgocHowH"></div><p id="cgocHow"></p></div><div class="cgoc-list" id="cgocList"></div><div class="cgoc-foot" id="cgocFoot"></div></div>';
+    ov.innerHTML='<div class="cgoc-pop" role="dialog" aria-modal="true"><div class="cgoc-h" id="cgocHead"><button class="cgoc-back" id="cgocBack">‹ <span>뒤로</span></button><button class="cgoc-x" id="cgocX" title="닫기" aria-label="닫기">✕</button><div class="cgoc-eye" id="cgocEye"></div><h3 id="cgocTitle"></h3><p id="cgocSub"></p></div><div id="cgocBody"></div></div>';
     document.body.appendChild(ov);
-    listEl=ov.querySelector('#cgocList');
+    bodyEl=ov.querySelector('#cgocBody');headEl=ov.querySelector('#cgocHead');backBtn=ov.querySelector('#cgocBack');
     ov.querySelector('#cgocX').onclick=closePop;
+    backBtn.onclick=function(){step=1;render();};
     ov.onclick=function(e){if(e.target===ov)closePop();};
     document.addEventListener('keydown',function(e){if(e.key==='Escape')closePop();});
   }
+  function setHead(eye,title,sub,showBack){
+    ov.querySelector('#cgocEye').textContent=eye;
+    ov.querySelector('#cgocTitle').textContent=title;
+    ov.querySelector('#cgocSub').textContent=sub||'';
+    backBtn.className='cgoc-back'+(showBack?' on':'');
+  }
   function render(){
+    if(step===2 && curKind==='time'){ renderTimeStep2(); translate(ov); return; }
+    // 1단계
     var P=POPS[curKind],selId=window.CGO_CULTURE[curKind];
-    ov.querySelector('#cgocEye').textContent=P.eye;
-    ov.querySelector('#cgocTitle').textContent=P.title;
-    ov.querySelector('#cgocSub').textContent=P.sub;
-    ov.querySelector('#cgocHowH').textContent=P.howH;
-    ov.querySelector('#cgocHow').textContent=P.how;
-    ov.querySelector('#cgocFoot').textContent=P.foot;
-    listEl.innerHTML=P.opts.map(function(o){
+    setHead(P.eye,P.title,P.sub,false);
+    var html='<div class="cgoc-how"><div class="hh">'+P.howH+'</div><p>'+esc(P.how)+'</p></div><div class="cgoc-list">';
+    html+=P.opts.map(function(o){
       var id=o[0],gl=o[1],nm=o[2],rg=o[3],ds=o[4],alw=o[5]==='always';
       var sel=(id===selId)?' sel':'',al=alw?' alw':'';
       var tag=alw?'<span class="cgoc-tag">'+(curKind==='name'?TAG_NAME:TAG_DEF)+'</span>':'';
       return '<button class="cgoc-opt'+sel+al+'" data-v="'+id+'"><span class="cgoc-g">'+gl+'</span><span class="cgoc-t"><span class="cgoc-nm">'+esc(nm)+' '+tag+'</span><span class="cgoc-rg">'+esc(rg)+'</span><span class="cgoc-ds">'+esc(ds)+'</span></span><span class="cgoc-ck">✔</span></button>';
     }).join('');
-    Array.prototype.forEach.call(listEl.querySelectorAll('.cgoc-opt'),function(b){
-      b.onclick=function(){window.CGO_CULTURE[curKind]=b.getAttribute('data-v');recompute();render();setTimeout(closePop,180);};
+    html+='</div><div class="cgoc-foot">'+esc(P.foot)+'</div>';
+    bodyEl.innerHTML=html;
+    Array.prototype.forEach.call(bodyEl.querySelectorAll('.cgoc-opt'),function(b){
+      b.onclick=function(){ pick1(b.getAttribute('data-v')); };
     });
     translate(ov);
   }
-  function openPop(kind){curKind=kind;render();ov.classList.add('on');}
-  function closePop(){ov.classList.remove('on');}
+  function pick1(id){
+    if(curKind==='name'){ window.CGO_CULTURE.name=id; recompute(); setTimeout(closePop,160); render(); return; }
+    if(curKind==='place'){
+      window.CGO_CULTURE.place=id;
+      if(curPlaceField==='ipBirthPlace') window.CGO_CULTURE.placeBirth=id; else window.CGO_CULTURE.placeCur=id;
+      closePop();
+      var f=document.getElementById(curPlaceField); if(f){ try{f.focus();f.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){} }
+      return;
+    }
+    if(curKind==='time'){
+      window.CGO_CULTURE.timeMode=id; window.CGO_CULTURE.time=id;
+      if(id==='none'){ setTime('',null,'none'); closePop(); return; }
+      if(id==='auto'){ // 언어 기본값으로
+        var d=TIMEMODE_DEF[lang()]||'west'; window.CGO_CULTURE.timeMode=d; curMode=d; step=2; render(); return;
+      }
+      curMode=id; step=2; render();
+    }
+  }
+  function renderTimeStep2(){
+    setHead('태어난 시간', ({east:STEP2.east,west:STEP2.west,vedic:STEP2.vedic,rough:STEP2.rough}[curMode]||''), '', true);
+    if(curMode==='east'){
+      // 앱 ipTime 셀렉트의 (이미 번역된) 12시진 옵션 재활용
+      var sel=document.getElementById('ipTime'); var items=[];
+      if(sel){ Array.prototype.forEach.call(sel.options,function(op){ if(op.value) items.push([op.value, op.textContent.trim()]); }); }
+      var html='<div class="cgoc-sgrid">'+items.map(function(it){
+        return '<button class="cgoc-si" data-v="'+it[0]+'">'+esc(it[1])+'</button>';
+      }).join('')+'</div>';
+      bodyEl.innerHTML=html;
+      Array.prototype.forEach.call(bodyEl.querySelectorAll('.cgoc-si'),function(b){
+        b.onclick=function(){ setTime(b.getAttribute('data-v'),null,'east'); closePop(); };
+      });
+    } else if(curMode==='west'||curMode==='vedic'){
+      var html='<div class="cgoc-hm"><div class="cgoc-hmrow"><input class="cgoc-num" id="cgocHH" type="number" min="0" max="23" placeholder="00" inputmode="numeric">:<input class="cgoc-num" id="cgocMM" type="number" min="0" max="59" placeholder="00" inputmode="numeric"></div><button class="cgoc-confirm" id="cgocConfirm">확인</button></div>';
+      bodyEl.innerHTML=html;
+      bodyEl.querySelector('#cgocConfirm').onclick=function(){
+        var hh=parseInt(bodyEl.querySelector('#cgocHH').value,10), mm=parseInt(bodyEl.querySelector('#cgocMM').value,10);
+        if(isNaN(hh)||hh<0||hh>23)hh=0; if(isNaN(mm)||mm<0||mm>59)mm=0;
+        var exact=('0'+hh).slice(-2)+':'+('0'+mm).slice(-2);
+        setTime(nearestSijin(hh,mm),exact,curMode); closePop();
+      };
+    } else if(curMode==='rough'){
+      var html='<div class="cgoc-rough">'+ROUGH.map(function(r){
+        return '<button class="cgoc-rgh" data-v="'+r[1]+'"><span>'+r[2]+'</span>'+esc(r[0])+'</button>';
+      }).join('')+'</div>';
+      bodyEl.innerHTML=html;
+      Array.prototype.forEach.call(bodyEl.querySelectorAll('.cgoc-rgh'),function(b){
+        b.onclick=function(){ setTime(b.getAttribute('data-v'),null,'rough'); closePop(); };
+      });
+    }
+  }
+  function nearestSijin(hh,mm){var t=hh*60+mm;var idx=Math.floor(((t+30)%1440)/120);var rep=idx*2;return ('0'+rep).slice(-2)+':30';}
+  function setTime(v,exact,mode){
+    window.CGO_CULTURE.timeValue=v; window.CGO_CULTURE.timeExact=exact; window.CGO_CULTURE.timeMode=mode;
+    var sel=document.getElementById('ipTime');
+    if(sel){ sel.value=v;
+      try{ if(typeof sel.onchange==='function') sel.onchange(); }catch(e){}
+      try{ if(typeof window.syncBirthField==='function') window.syncBirthField(); }catch(e){}
+      try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+    }
+  }
+  function openPop(kind,placeField){curKind=kind;step=1;if(placeField)curPlaceField=placeField;render();ov.classList.add('on');}
+  function closePop(){ov.classList.remove('on');step=1;}
 
   /* ===== 8) 버튼 주입 ===== */
-  function wrapField(el,glyph,kind){
+  function wrapField(el,glyph,kind,placeField){
     if(!el||el.getAttribute('data-cgoc'))return;
     el.setAttribute('data-cgoc','1');
     var wrap=document.createElement('div');wrap.className='cgoc-wrap';
     el.parentNode.insertBefore(wrap,el);wrap.appendChild(el);
     var btn=document.createElement('button');btn.type='button';btn.className='cgoc-btn';btn.textContent=glyph;
-    btn.onclick=function(){openPop(kind);};wrap.appendChild(btn);
+    btn.onclick=function(){openPop(kind,placeField);};wrap.appendChild(btn);
   }
   function injectButtons(){
     wrapField(document.getElementById('ipName'),'五','name');
     wrapField(document.getElementById('ipTime'),'🕐','time');
-    ['ipBirthPlace','ipCurPlace'].forEach(function(id){wrapField(document.getElementById(id),'📍','place');});
+    wrapField(document.getElementById('ipBirthPlace'),'📍','place','ipBirthPlace');
+    wrapField(document.getElementById('ipCurPlace'),'📍','place','ipCurPlace');
   }
 
   /* ===== 9) 이름 계산 + 기본값 ===== */
@@ -135937,7 +136009,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   }
   function applyDefaults(){
     window.CGO_CULTURE.name='auto';
-    window.CGO_CULTURE.time=TIME_DEF[lang()]||'west';
+    window.CGO_CULTURE.timeMode=TIMEMODE_DEF[lang()]||'west';
     window.CGO_CULTURE.place=PLACE_DEF[lang()]||'west';
     recompute();
     var el=document.getElementById('ipName');
