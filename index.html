@@ -134574,6 +134574,8 @@ if('serviceWorker' in navigator){
   var OH_COL={목:'#34d399',화:'#f0584e',토:'#e3b341',금:'#cfd6e0',수:'#4f86d6'};
   var OH_LABEL={목:'목(木)·나무',화:'화(火)·불',토:'토(土)·흙',금:'금(金)·쇠',수:'수(水)·물'};
   var OH_COLNAME={목:'초록·청록',화:'빨강·주황',토:'노랑·황토',금:'흰색·은색',수:'파랑·검정'};
+  window._ohEl=function(o){var E={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'};return (window._LANG&&window._LANG!=='ko')?(E[o]||o):o;};
+  window._ohColEN=function(o){var E={'목':'Green/Teal','화':'Red/Orange','토':'Yellow/Ochre','금':'White/Silver','수':'Blue/Black'};return (window._LANG&&window._LANG!=='ko')?(E[o]||OH_COLNAME[o]):OH_COLNAME[o];};
   function myOh(){ try{ return (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목'; }catch(e){ return '목'; } }
 
   // 상생(生): 목→화→토→금→수→목 / 상극(克): 목→토→수→화→금→목
@@ -134602,7 +134604,7 @@ if('serviceWorker' in navigator){
 
   function renderIdle(){
     var el=$('cgp-score'); if(!el) return;
-    el.innerHTML='<div class="cgp-lab">📸 사진 오행 궁합</div><div class="cgp-big" style="opacity:.3;">—</div><div class="cgp-hint"><b>「📷 카메라 켜기」</b> 후 <b>「📸 촬영」</b>하면 사진의 오행과 나와의 궁합이 나와요</div>';
+    el.innerHTML='<div class="cgp-lab">📸 사진 오행 궁합</div><div class="cgp-big" style="opacity:.3;">—</div><div class="cgp-hint"><b>「📷 카메라 켜기」</b>'+((window._LANG&&window._LANG!=='ko')?' then ':' 후 ')+'<b>「📸 촬영」</b>하면 사진의 오행과 나와의 궁합이 나와요</div>';
   }
 
   window.cgoPhotoStart=function(){
@@ -134742,12 +134744,12 @@ if('serviceWorker' in navigator){
   }
 
   function compat(me, photo){
-    if(me===photo) return { s:78, rel:'비화(比和) — 같은 기운, 편안한 인연' };
-    if(SHENG[photo]===me) return { s:92, rel:'상생 — 상대가 나를 채워주는 인연 ✨' }; // photo生me
-    if(SHENG[me]===photo) return { s:86, rel:'상생 — 내가 북돋아주는 인연' };            // me生photo
-    if(KE[photo]===me) return { s:56, rel:'상극 — 기가 눌릴 수 있는 관계' };             // photo克me
-    if(KE[me]===photo) return { s:63, rel:'상극 — 내가 끌고 가는 관계' };                // me克photo
-    return { s:70, rel:'무난한 흐름' };
+    if(me===photo) return { s:78, rel:((window._LANG&&window._LANG!=='ko')?'Same element — familiar, easy bond':'비화(比和) — 같은 기운, 편안한 인연') };
+    if(SHENG[photo]===me) return { s:92, rel:((window._LANG&&window._LANG!=='ko')?'Generating — they replenish you ✨':'상생 — 상대가 나를 채워주는 인연 ✨') }; // photo生me
+    if(SHENG[me]===photo) return { s:86, rel:((window._LANG&&window._LANG!=='ko')?'Generating — you uplift them':'상생 — 내가 북돋아주는 인연') };            // me生photo
+    if(KE[photo]===me) return { s:56, rel:((window._LANG&&window._LANG!=='ko')?'Controlling — your energy may be suppressed':'상극 — 기가 눌릴 수 있는 관계') };             // photo克me
+    if(KE[me]===photo) return { s:63, rel:((window._LANG&&window._LANG!=='ko')?'Controlling — you lead the way':'상극 — 내가 끌고 가는 관계') };                // me克photo
+    return { s:70, rel:((window._LANG&&window._LANG!=='ko')?'Neutral flow':'무난한 흐름') };
   }
   function colorFit(me, dist){
     // 나를 살리는 색 = 나를 生하는 오행색 + 내 오행색
@@ -134755,14 +134757,14 @@ if('serviceWorker' in navigator){
     var fit=Math.min(100,(m[good1]||0)+(m[good2]||0));
     return { fit:fit, c1:good1, c2:good2 };
   }
-  function grade(s){ return s>=88?'천생연분급 — 흐름이 아주 좋아요':(s>=78?'좋은 궁합 — 편안해요':(s>=65?'무난한 궁합':'조심스러운 궁합 — 천천히')); }
+  function grade(s){ var L=(window._LANG&&window._LANG!=='ko'); return s>=88?(L?'Soulmate-level — excellent flow':'천생연분급 — 흐름이 아주 좋아요'):(s>=78?(L?'Good match — comfortable':'좋은 궁합 — 편안해요'):(s>=65?(L?'Decent match':'무난한 궁합'):(L?'Careful — take it slow':'조심스러운 궁합 — 천천히'))); }
 
   function renderResult(res, face){
-    var me=myOh(), c=compat(me,res.dom), cf=colorFit(me,res.dist);
+    var me=myOh(), c=compat(me,res.dom), cf=colorFit(me,res.dist); try{ c.s=Math.max(40,Math.min(96,Math.round(c.s*0.72 + (res.dist[0]?res.dist[0].p:50)*0.3))); }catch(e){}
     var bar='<div class="cgp-fbar">';
     for(var i=0;i<res.dist.length;i++){ var x=res.dist[i]; bar+='<div class="cgp-fseg" style="width:'+x.p+'%;background:'+OH_COL[x.o]+';"></div>'; }
     bar+='</div><div class="cgp-flegend">';
-    for(var k=0;k<res.dist.length;k++){ var y=res.dist[k]; bar+='<span><i style="background:'+OH_COL[y.o]+'"></i>'+y.o+' <b>'+y.p+'%</b></span>'; }
+    for(var k=0;k<res.dist.length;k++){ var y=res.dist[k]; bar+='<span><i style="background:'+OH_COL[y.o]+'"></i>'+window._ohEl(y.o)+' <b>'+y.p+'%</b></span>'; }
     bar+='</div>';
     $('cgp-score').innerHTML=
       '<div class="cgp-lab">🔮 나와의 인연 궁합</div>'+
@@ -134770,16 +134772,16 @@ if('serviceWorker' in navigator){
       '<div class="cgp-grade">'+grade(c.s)+' · '+c.rel+'</div>'+
       '<div class="cgp-sech">📸 이 사진의 오행 기운</div>'+
       bar+
-      '<div class="cgp-dir">대표 기운 · '+OH_LABEL[res.dom]+'</div>'+
+      '<div class="cgp-dir">'+((window._LANG&&window._LANG!=='ko')?'Main energy · ':'대표 기운 · ')+window._ohLbl(res.dom)+'</div>'+
       (face ? ('<div class="cgp-sech">🌿 얼굴 기색(氣色)</div>'+
-        '<div class="cgp-dir">'+OH_LABEL[face.oh]+'</div>'+
+        '<div class="cgp-dir">'+window._ohLbl(face.oh)+'</div>'+
         '<div class="cgp-read">'+face.txt+'</div>'+
         '<div class="cgp-note2">※ 사진 속 얼굴의 혈색 톤을 오행 기색으로 읽은 참고값이에요 (심박·의료 측정 아님)</div>') : '')+
       '<div class="cgp-sech">🎨 색 궁합</div>'+
       '<div class="cgp-dir">'+cf.fit+'<small style="font-size:14px;"> %</small></div>'+
-      '<div class="cgp-note2">나를 살리는 색은 <b style="color:'+OH_COL[cf.c1]+'">'+OH_COLNAME[cf.c1]+'</b> · <b style="color:'+OH_COL[cf.c2]+'">'+OH_COLNAME[cf.c2]+'</b> 계열 — 이 사진에 이 색이 많을수록 나와 잘 맞아요.</div>'+
+      '<div class="cgp-note2">나를 살리는 색은 <b style="color:'+OH_COL[cf.c1]+'">'+window._ohColEN(cf.c1)+'</b> · <b style="color:'+OH_COL[cf.c2]+'">'+window._ohColEN(cf.c2)+'</b> 계열 — 이 사진에 이 색이 많을수록 나와 잘 맞아요.</div>'+
       '<div class="cgp-sech">한마디</div>'+
-      '<div class="cgp-read">내 오행 '+OH_LABEL[me]+'와(과) 이 사진의 '+OH_LABEL[res.dom]+' 기운이 만났어요. '+(c.s>=78?'함께 있으면 기운이 살아나는 인연이에요.':(c.s>=65?'서로 다른 결이지만 배울 게 있는 만남이에요.':'조금 조심스럽지만, 거리를 두면 편해지는 관계예요.'))+'</div>';
+      '<div class="cgp-read">'+((window._LANG&&window._LANG!=='ko')?('Your element '+window._ohLbl(me)+' met the '+window._ohLbl(res.dom)+' energy of this photo. '+(c.s>=78?'Together it revives your energy.':(c.s>=65?'Different textures, but a meeting to learn from.':'A bit cautious — it eases with some distance.'))):('내 오행 '+OH_LABEL[me]+'와(과) 이 사진의 '+OH_LABEL[res.dom]+' 기운이 만났어요. '+(c.s>=78?'함께 있으면 기운이 살아나는 인연이에요.':(c.s>=65?'서로 다른 결이지만 배울 게 있는 만남이에요.':'조금 조심스럽지만, 거리를 두면 편해지는 관계예요.'))))+'</div>';
   }
 
   function stopCam(){ if(ST.stream){ try{ST.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} ST.stream=null; } try{ if(_pfFM && _pfFM.close){ _pfFM.close(); } }catch(e){} _pfLms=null; }
