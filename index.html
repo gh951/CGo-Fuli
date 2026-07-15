@@ -66923,10 +66923,24 @@ function _cgoYeokModalOpen(nm, ico, sc, fullDesc, easy, color){
     +'</div>';
   document.body.appendChild(ov);
 }
+window.chargeStars=window.chargeStars||function(n){ return true; }; /* 회사 서버 별 차감 연결 자리 — 실제 잔액확인·차감은 서버에서. 기본:허용 */
 window.cgoDeepYeok=function(){
+  var box=document.getElementById('cgo-deep-result'); var btn=document.getElementById('cgo-deep-btn');
+  if(!box) return; var L=(window._LANG&&window._LANG!=='ko');
+  if(btn) btn.style.display='none';
+  box.innerHTML='<div style="padding:14px;background:rgba(124,58,237,.1);border:1px solid rgba(167,139,250,.35);border-radius:12px;">'
+    +'<div style="font-size:12.5px;color:rgba(240,230,200,.9);line-height:1.7;margin-bottom:12px;text-align:center;">'+(L?'Run a 70B deep analysis of this item? <b style="color:#a78bfa;">100 Stars</b> will be deducted.':'이 항목을 70B로 심층 분석합니다. <b style="color:#a78bfa;">100별</b>이 차감됩니다. 진행할까요?')+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="cgoDeepYeokRun()" style="flex:1;padding:11px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;">'+(L?'Yes':'예')+'</button>'
+    +'<button onclick="cgoDeepYeokCancel()" style="flex:1;padding:11px;background:rgba(255,255,255,.08);color:rgba(240,230,200,.8);border:1px solid rgba(255,255,255,.14);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;">'+(L?'No':'아니오')+'</button>'
+    +'</div></div>';
+};
+window.cgoDeepYeokCancel=function(){ var box=document.getElementById('cgo-deep-result'); var btn=document.getElementById('cgo-deep-btn'); if(box) box.innerHTML=''; if(btn) btn.style.display='block'; };
+window.cgoDeepYeokRun=function(){
   var ctx=window._cgoDeepCtx||{}; var box=document.getElementById('cgo-deep-result'); var btn=document.getElementById('cgo-deep-btn');
   if(!box) return; var L=(window._LANG&&window._LANG!=='ko');
-  if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.textContent=L?'Analyzing…':'분석 중…'; }
+  var _ok=true; try{ _ok=window.chargeStars(100); }catch(e){ _ok=true; }
+  if(_ok===false){ box.innerHTML='<div style="color:#f87171;font-size:12px;text-align:center;padding:12px;">'+(L?'Not enough Stars. Please top up. ⭐':'별이 부족합니다. 충전해 주세요. ⭐')+'</div>'; if(btn) btn.style.display='block'; return; }
   box.innerHTML='<div style="text-align:center;color:rgba(240,230,200,.5);font-size:12px;padding:12px;">'+(L?'Deep analysis in progress…':'심층 분석 중…')+'</div>';
   var _lang=(window._LANG||'ko');
   var prompt='당신은 관상·손금 전문 상담가입니다. 아래 항목을 훨씬 더 깊고 구체적으로 심층 분석하세요. '
@@ -66937,9 +66951,9 @@ window.cgoDeepYeok=function(){
   .then(function(x){return x.json();}).then(function(d){
     var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
     if(a){ box.innerHTML='<div style="font-size:12.5px;color:rgba(240,230,200,.92);line-height:1.85;padding:14px;background:rgba(124,58,237,.12);border-radius:12px;border-left:3px solid #a78bfa;white-space:pre-wrap;">🔬 '+a.replace(/</g,'&lt;')+'</div>'; }
-    else { box.innerHTML=''; if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='🔬 '+(L?'Deep Analysis · 100 Stars':'심층 분석 · 100별');} }
-  }).catch(function(){ box.innerHTML='<div style="color:#f87171;font-size:12px;text-align:center;">'+(L?'Network error.':'네트워크 오류.')+'</div>'; if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='🔬 '+(L?'Deep Analysis · 100 Stars':'심층 분석 · 100별');} });
-};
+    else { box.innerHTML='<div style="color:#f87171;font-size:12px;text-align:center;">'+(L?'Analysis failed. Please try again.':'분석 실패. 다시 시도해 주세요.')+'</div>'; if(btn) btn.style.display='block'; }
+  }).catch(function(){ box.innerHTML='<div style="color:#f87171;font-size:12px;text-align:center;">'+(L?'Network error.':'네트워크 오류.')+'</div>'; if(btn) btn.style.display='block'; });
+}
 function _cgoYeokModalClose(){
   var m = document.getElementById('cgo-yeok-modal');
   if(m) m.remove();
