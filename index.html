@@ -66908,6 +66908,7 @@ function _cgoYeokModalOpen(nm, ico, sc, fullDesc, easy, color){
   ov.id = 'cgo-yeok-modal';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;animation:cgoFadeIn .2s ease;';
   ov.onclick = function(e){ if(e.target===ov) _cgoYeokModalClose(); };
+  window._cgoDeepCtx={nm:nm,desc:fullDesc||'',sc:sc};
   ov.innerHTML =
     '<div style="background:linear-gradient(180deg,#1a1530,#0f0e1f);border:1px solid '+(color||'#fcd34d')+'66;border-radius:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;padding:22px;box-shadow:0 8px 40px rgba(0,0,0,.6);">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);">'
@@ -66918,10 +66919,27 @@ function _cgoYeokModalOpen(nm, ico, sc, fullDesc, easy, color){
     +'</div>'
     +(fullDesc?'<div style="font-size:12.5px;color:rgba(240,230,200,.88);line-height:1.85;padding:14px;background:rgba(255,255,255,.025);border-radius:12px;border-left:3px solid '+(color||'#fcd34d')+';margin-bottom:'+(easy?'12px':'0')+';white-space:pre-wrap;">'+fullDesc+'</div>':'')
     +(easy?'<div style="font-size:11.5px;color:rgba(240,230,200,.75);line-height:1.75;padding:12px;background:rgba(52,211,153,.06);border-radius:10px;border-left:3px solid #34d399;">😊 <b style="color:#34d399;">쉽게 풀이</b><br>'+easy+'</div>':'')
-    +'<div style="text-align:center;margin-top:16px;"><button onclick="_cgoYeokModalClose()" style="padding:8px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(240,230,200,.85);font-size:12px;font-weight:600;cursor:pointer;">닫기</button></div>'
+    +'<div id="cgo-deep-box" style="margin-top:14px;"><button id="cgo-deep-btn" onclick="cgoDeepYeok()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);">🔬 '+((window._LANG&&window._LANG!=='ko')?'Deep Analysis · 100 Stars':'심층 분석 · 100별')+'</button><div id="cgo-deep-result" style="margin-top:12px;"></div></div>'+'<div style="text-align:center;margin-top:16px;"><button onclick="_cgoYeokModalClose()" style="padding:8px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(240,230,200,.85);font-size:12px;font-weight:600;cursor:pointer;">닫기</button></div>'
     +'</div>';
   document.body.appendChild(ov);
 }
+window.cgoDeepYeok=function(){
+  var ctx=window._cgoDeepCtx||{}; var box=document.getElementById('cgo-deep-result'); var btn=document.getElementById('cgo-deep-btn');
+  if(!box) return; var L=(window._LANG&&window._LANG!=='ko');
+  if(btn){ btn.disabled=true; btn.style.opacity='.5'; btn.textContent=L?'Analyzing…':'분석 중…'; }
+  box.innerHTML='<div style="text-align:center;color:rgba(240,230,200,.5);font-size:12px;padding:12px;">'+(L?'Deep analysis in progress…':'심층 분석 중…')+'</div>';
+  var _lang=(window._LANG||'ko');
+  var prompt='당신은 관상·손금 전문 상담가입니다. 아래 항목을 훨씬 더 깊고 구체적으로 심층 분석하세요. '
+    +'[항목: '+(ctx.nm||'')+'] [기본 분석: '+(ctx.desc||'')+'] [점수: '+(ctx.sc||'')+'점]. '
+    +'재미·참고임을 전제로, 이 항목만 집중해서 근거·의미·구체적 조언을 7~9문장으로 기본 분석보다 훨씬 상세하고 통찰 있게 풀어주세요. 운명을 단정하지 말고 긍정적으로. '
+    +'[LANGUAGE] Respond ONLY in the language with IETF code "'+_lang+'". Do not use any other language.';
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1400,temperature:0.75,messages:[{role:'user',content:prompt}]})})
+  .then(function(x){return x.json();}).then(function(d){
+    var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
+    if(a){ box.innerHTML='<div style="font-size:12.5px;color:rgba(240,230,200,.92);line-height:1.85;padding:14px;background:rgba(124,58,237,.12);border-radius:12px;border-left:3px solid #a78bfa;white-space:pre-wrap;">🔬 '+a.replace(/</g,'&lt;')+'</div>'; }
+    else { box.innerHTML=''; if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='🔬 '+(L?'Deep Analysis · 100 Stars':'심층 분석 · 100별');} }
+  }).catch(function(){ box.innerHTML='<div style="color:#f87171;font-size:12px;text-align:center;">'+(L?'Network error.':'네트워크 오류.')+'</div>'; if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='🔬 '+(L?'Deep Analysis · 100 Stars':'심층 분석 · 100별');} });
+};
 function _cgoYeokModalClose(){
   var m = document.getElementById('cgo-yeok-modal');
   if(m) m.remove();
@@ -134910,6 +134928,86 @@ window._cgoSignupPrompt = function(label){
       '⚠️ 먼저 위에서 이름·생년월일을 입력하세요':'⚠️ Please enter your name and date of birth above first',
       '⚠️ 약관에 동의해 주세요':'⚠️ Please agree to the terms',
       '⚠️ 올바른 이메일 또는 전화번호를 입력하세요':'⚠️ Please enter a valid email or phone number',
+      "이마":"Forehead",
+      "눈썹":"Brows",
+      "눈":"Eyes",
+      "코":"Nose",
+      "입":"Mouth",
+      "턱":"Chin",
+      "인중":"Philtrum",
+      "귀":"Ears",
+      "감정선(感情線)":"Heart line (感情線)",
+      "두뇌선(頭腦線)":"Head line (頭腦線)",
+      "생명선(生命線)":"Life line (生命線)",
+      "운명선(運命線)":"Fate line (運命線)",
+      "재물선(財物線)":"Wealth line (財物線)",
+      "태양선(太陽線)":"Sun line (太陽線)",
+      "결혼선(結婚線)":"Marriage line (結婚線)",
+      "결혼선":"Marriage line",
+      "7대선":"7 major lines",
+      "명궁":"Life palace",
+      "재백궁":"Wealth palace",
+      "관록궁":"Career palace",
+      "복덕궁":"Fortune palace",
+      "처첩궁":"Spouse palace",
+      "십이궁":"Twelve palaces",
+      "십이궁법(十二宮)":"Twelve Palaces (十二宮)",
+      "삼정":"Three courts",
+      "삼정법(三停法)":"Three Courts (三停法)",
+      "상정":"Upper court",
+      "중정":"Middle court",
+      "하정":"Lower court",
+      "상정(이마)":"Upper court (forehead)",
+      "중정(코)":"Middle court (nose)",
+      "하정(턱)":"Lower court (chin)",
+      "마의상법":"Maui physiognomy",
+      "마의상법(고전)":"Maui physiognomy (classic)",
+      "오관":"Five features",
+      "오관법(五官法)":"Five Features (五官法)",
+      "오형":"Five forms",
+      "오형론":"Five Forms theory",
+      "오형론(五形論)":"Five Forms (五形論)",
+      "오형론(손형)":"Five Forms (hand)",
+      "부위별":"By area",
+      "부위별상법(部位相法)":"Area Physiognomy (部位相法)",
+      "기색 분석":"Complexion analysis",
+      "기색론":"Complexion theory",
+      "기색론(氣色論)":"Complexion (氣色論)",
+      "손가락론(指論)":"Finger theory (指論)",
+      "수상학":"Palmistry",
+      "수상학(手相學)":"Palmistry (手相學)",
+      "관상학(觀相學)":"Physiognomy (觀相學)",
+      "형상학":"Morphology",
+      "형상학/장부론":"Morphology / Organ theory",
+      "음양론(陰陽論)":"Yin-Yang (陰陽論)",
+      "만세력":"Perpetual calendar",
+      "만세력/사주명리":"Perpetual calendar / Saju",
+      "성격 분석":"Personality analysis",
+      "간담":"Liver·Gallbladder",
+      "폐":"Lungs",
+      "신장":"Kidneys",
+      "심장":"Heart",
+      "비위":"Spleen·Stomach",
+      "장부":"Organs",
+      "건강운":"Health fortune",
+      "직업운":"Career fortune",
+      "대인운":"Social fortune",
+      "수명운":"Longevity fortune",
+      "활력운":"Vitality fortune",
+      "지혜운":"Wisdom fortune",
+      "직업·재물운":"Career·Wealth fortune",
+      "엄지":"Thumb",
+      "검지":"Index",
+      "중지":"Middle",
+      "약지":"Ring",
+      "새끼":"Pinky",
+      "손가락":"Fingers",
+      "rPPG 생체신호":"rPPG biosignal",
+      "💓 BPM 심박":"💓 BPM Heart rate",
+      "💗 FCI 안면혈색":"💗 FCI Facial complexion",
+      "🙂 FMA 표정활성":"🙂 FMA Expression activity",
+      "🧖 얼굴 측정 결과":"🧖 Face reading result",
+      "✋ 손바닥 측정 결과":"✋ Palm reading result",
       "눈·코·입·귀·눈썹 다섯 부위(오관)의 균형으로 보는 관상이에요. 전통적으로 각 부위를 오행(목·화·토·금·수)의 기운과 짝지어 해석해 왔어요. 균형이 좋을수록 인상의 조화가 좋다고 봅니다.":"A reading based on the balance of the five features (eyes, nose, mouth, ears, brows). Traditionally each feature is paired with the energy of the five elements (Wood, Fire, Earth, Metal, Water). The better the balance, the more harmonious the impression.",
       "글로벌 최고 빅테크를 넘어":"Beyond the world's leading Big Tech",
       "최초로 완성된":"The first ever completed",
