@@ -134548,6 +134548,7 @@ if('serviceWorker' in navigator){
         <div style="background:rgba(180,134,11,.07);border:1px solid rgba(180,134,11,.18);border-radius:12px;padding:11px 13px;font-size:10.5px;color:#8a7a55;line-height:1.65;text-align:center;">🔮 사진의 <b style="color:#1a1408;">색과 기운</b>으로 보는 <b style="color:#1a1408;">재미 오행 궁합</b>이에요. 과학적 분석이 아닌 참고용이에요.</div>
       </div>
       <div class="cgp-score" id="cgp-score"></div>
+      <div class="cgp-score" id="cgp-ai" style="display:none;margin-top:12px;"></div>
     </div>
   </div>
 </div>
@@ -134782,6 +134783,28 @@ if('serviceWorker' in navigator){
       '<div class="cgp-note2">나를 살리는 색은 <b style="color:'+OH_COL[cf.c1]+'">'+window._ohColEN(cf.c1)+'</b> · <b style="color:'+OH_COL[cf.c2]+'">'+window._ohColEN(cf.c2)+'</b> 계열 — 이 사진에 이 색이 많을수록 나와 잘 맞아요.</div>'+
       '<div class="cgp-sech">한마디</div>'+
       '<div class="cgp-read">'+((window._LANG&&window._LANG!=='ko')?('Your element '+window._ohLbl(me)+' met the '+window._ohLbl(res.dom)+' energy of this photo. '+(c.s>=78?'Together it revives your energy.':(c.s>=65?'Different textures, but a meeting to learn from.':'A bit cautious — it eases with some distance.'))):('내 오행 '+OH_LABEL[me]+'와(과) 이 사진의 '+OH_LABEL[res.dom]+' 기운이 만났어요. '+(c.s>=78?'함께 있으면 기운이 살아나는 인연이에요.':(c.s>=65?'서로 다른 결이지만 배울 게 있는 만남이에요.':'조금 조심스럽지만, 거리를 두면 편해지는 관계예요.'))))+'</div>';
+    try{ cgpAIRead(me, res, c); }catch(e){}
+  }
+
+  function cgpAIRead(me,res,c){
+    var box=document.getElementById('cgp-ai'); if(!box) return;
+    var L=(window._LANG&&window._LANG!=='ko');
+    box.style.display='block';
+    box.innerHTML='<div class="cgp-sech">🔮 '+(L?'AI compatibility reading':'AI 궁합 리딩')+'</div><div class="cgp-read" style="opacity:.55;">'+(L?'Reading…':'해석 중…')+'</div>';
+    try{
+      var _lang=(window._LANG||'ko');
+      var _dist=res.dist.map(function(x){return x.o+' '+x.p+'%';}).join(', ');
+      var prompt='당신은 오행 궁합 상담가입니다. 처음 만난 사람의 사진을 오행으로 분석한 결과입니다. 이 사람과 나의 첫 만남 궁합을 따뜻하고 재미있게 풀이하세요. '
+        +'[내 오행: '+me+'] [상대 대표 오행: '+res.dom+'] [궁합 점수: '+c.s+'점, '+c.rel+'] [사진 오행 분포: '+_dist+']. '
+        +'과학·예언이 아닌 재미·참고임을 전제로, 이 사람과 첫 만남에서 어떻게 어울리면 좋을지(대화 주제·태도·주의점)를 구체적으로 4~6문장으로 따뜻하게 조언하세요. 점수를 새로 지어내지 말고, 운명을 단정하지 말고 긍정적으로. '
+        +'[LANGUAGE] Respond ONLY in the language with IETF code "'+_lang+'". Do not use any other language.';
+      fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:700,temperature:0.8,messages:[{role:'user',content:prompt}]})})
+      .then(function(x){return x.json();}).then(function(d){
+        var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
+        if(a){ box.innerHTML='<div class="cgp-sech">🔮 '+(L?'AI compatibility reading':'AI 궁합 리딩')+'</div><div class="cgp-read">'+a.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>'; }
+        else{ box.style.display='none'; }
+      }).catch(function(){ box.style.display='none'; });
+    }catch(e){ box.style.display='none'; }
   }
 
   function stopCam(){ if(ST.stream){ try{ST.stream.getTracks().forEach(function(t){t.stop();});}catch(e){} ST.stream=null; } try{ if(_pfFM && _pfFM.close){ _pfFM.close(); } }catch(e){} _pfLms=null; }
