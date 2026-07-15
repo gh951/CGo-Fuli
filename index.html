@@ -134369,7 +134369,7 @@ if('serviceWorker' in navigator){
       '<div class="grade">'+grade(d.fusion)+'</div>'+
       bar+
       '<div class="cgn-sech">내 오행 · 현재의 길방</div>'+
-      '<div class="cgn-dir">'+OH_LABEL[OH]+' → '+OH_DIRNAME[OH]+' ('+Math.round(LK.deg)+'°)</div>'+
+      '<div class="cgn-dir">'+window._ohLbl(OH)+' → '+window._ohDir(OH)+' ('+Math.round(LK.deg)+'°)</div>'+
       (LK.note?'<div class="cgn-note2">'+LK.note+' · 실시간 NASA 행성 반영</div>':'')+
       '<div class="cgn-sech">오늘의 한마디</div>'+
       '<div class="cgn-read">'+reading(OH,d.fusion)+'</div>'+
@@ -134380,6 +134380,8 @@ if('serviceWorker' in navigator){
     var bn=$('cgn-bignum'); if(bn){ var d=computeLenses(heading); bn.textContent=d.fusion; }
   }
 
+  window._ohDir=function(o){var K={'목':'동(東)','화':'남(南)','토':'북동(艮)','금':'서(西)','수':'북(北)'};var E={'목':'East','화':'South','토':'Northeast','금':'West','수':'North'};return ((window._LANG&&window._LANG!=='ko')?E:K)[o]||o;};
+  window._ohLbl=function(o){var K={'목':'목(木)·나무','화':'화(火)·불','토':'토(土)·흙','금':'금(金)·쇠','수':'수(水)·물'};var E={'목':'Wood (木)','화':'Fire (火)','토':'Earth (土)','금':'Metal (金)','수':'Water (水)'};return ((window._LANG&&window._LANG!=='ko')?E:K)[o]||o;};
   window.cgoNaviOpen=function(){
     stopAll();
     refreshBase(); renderPanel('idle', null);
@@ -134433,8 +134435,8 @@ if('serviceWorker' in navigator){
     ctx.beginPath(); ctx.moveTo(0,-R-7); ctx.lineTo(-12,-R+13); ctx.lineTo(12,-R+13); ctx.closePath(); ctx.fill();
     ctx.restore();
     ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='bold 13px sans-serif';
-    ctx.fillText(OH_DIRNAME[OH], cx, cy-3); ctx.font='10px sans-serif'; ctx.fillStyle='rgba(255,255,255,.8)'; ctx.fillText('길방', cx, cy+12);
-    var turn=$('cgn-turn'); if(turn) turn.textContent = diff<15?'정면 — 이 방향이 길방이에요 ✨':(rel>0?'오른쪽으로 '+Math.round(diff)+'° ↻':'왼쪽으로 '+Math.round(diff)+'° ↺');
+    ctx.fillText(window._ohDir(OH), cx, cy-3); ctx.font='10px sans-serif'; ctx.fillStyle='rgba(255,255,255,.8)'; ctx.fillText((window._LANG&&window._LANG!=='ko')?'Lucky dir':'길방', cx, cy+12);
+    var turn=$('cgn-turn'); if(turn) turn.textContent = diff<15?((window._LANG&&window._LANG!=='ko')?'Front — this is your lucky direction ✨':'정면 — 이 방향이 길방이에요 ✨'):(rel>0?((window._LANG&&window._LANG!=='ko')?('Turn right '+Math.round(diff)+'° ↻'):('오른쪽으로 '+Math.round(diff)+'° ↻')):((window._LANG&&window._LANG!=='ko')?('Turn left '+Math.round(diff)+'° ↺'):('왼쪽으로 '+Math.round(diff)+'° ↺')));
     if(CURMODE==='run') updateLive(heading);
   }
   function startCompass(){
