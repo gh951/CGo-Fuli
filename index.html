@@ -131308,9 +131308,11 @@ function cgoYtClose() {
 function _cgoInfoOK(){ try{ var g=function(id){return ((document.getElementById(id)||{}).value||'').trim();}; if(g('ipName')&&g('ipBirthY')&&g('ipBirthM')&&g('ipBirthD')) return true; if(localStorage.getItem('cgo_saved_info')) return true; }catch(e){} return false; }
 function _cgoSaveInfoRobust(){
   var g=function(id){return (document.getElementById(id)||{}).value||'';};
-  var nm=g('ipName').trim(), by=g('ipBirthY');
+  var _si={}; try{ _si=JSON.parse(localStorage.getItem('cgo_saved_info')||'{}'); }catch(_e){}
+  var nm=(g('ipName')||(document.getElementById('prof-name')||{}).value||_si.name||'').trim();
+  var by=(g('ipBirthY')||(document.getElementById('prof-birth-y')||{}).value||_si.birthY||'');
   if(!nm||!by) return {ok:false, reason:'noinfo'};
-  var info={name:nm,birthY:by,birthM:g('ipBirthM'),birthD:g('ipBirthD'),gender:g('ipGender')||'M',time:g('ipTime'),birthPlace:g('ipBirthPlace'),curPlace:g('ipCurPlace'),calType:g('ipCalType')||'solar'};
+  var info={name:nm,birthY:by,birthM:g('ipBirthM')||_si.birthM||'',birthD:g('ipBirthD')||_si.birthD||'',gender:g('ipGender')||_si.gender||'M',time:g('ipTime')||_si.time||'',birthPlace:g('ipBirthPlace')||_si.birthPlace||'',curPlace:g('ipCurPlace')||_si.curPlace||'',calType:g('ipCalType')||_si.calType||'solar'};
   var raw=JSON.stringify(info);
   function trySave(){ try{ localStorage.setItem('cgo_saved_info', raw); var v=localStorage.getItem('cgo_saved_info'); return v? true : new Error('readback-null'); }catch(e){ return e||new Error('unknown'); } }
   var r=trySave();
