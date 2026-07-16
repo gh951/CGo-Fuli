@@ -19691,7 +19691,7 @@ function fc360Analyze(){
 
   // 오행 정보
   var oh = (window._CGO_MASTER && window._CGO_MASTER.oh) || (window.calcResult && window.calcResult.domOh) || '목';
-  var name = (document.getElementById('ipName')||{}).value || '사용자';
+  var name = (window._cgoName()||'사용자');
   var deg = _fc360.currentDeg;
 
   // 첫 번째 이미지(북쪽)로 Vision 분석
@@ -20201,7 +20201,7 @@ function fc360RunAnalysis(){
   if(statusEl) statusEl.textContent = _cgoT('🔍 AI가 분석 중입니다...');
 
   var oh = (window._CGO_MASTER&&window._CGO_MASTER.oh)||(window.calcResult&&window.calcResult.domOh)||'목';
-  var name = (document.getElementById('ipName')||{}).value || '사용자';
+  var name = (window._cgoName()||'사용자');
   var nasaEl = document.querySelector('#nasaMiniBar');
   var nasaData = nasaEl ? (nasaEl.textContent||'').slice(0,80) : '';
   var deg = _fc360scan.currentDeg;
@@ -33998,8 +33998,9 @@ function _c24SendFM(v){
    _cgoTranslateNode도 잡지 못한다. 그리기 직전에 사전에서 직접 치환한다. */
 window._ENG_EN={'사주명리':'Saju','자미두수':'Zi Wei Dou Shu','기문둔갑':'Qi Men Dun Jia','태을신수':'Tai Yi','육임신살':'Liu Ren','주역':'I Ching','구성학':'Nine Star Ki','구성기학':'Nine Star Ki','풍수':'Feng Shui','오행':'Five Elements','타로':'Tarot','수비학':'Numerology','성명학':'Name Science','점성술':'Astrology'};
 window._OH_EN={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'};
-window._engEN=function(n){return (window._LANG&&window._LANG!=='ko'&&window._ENG_EN[n])?window._ENG_EN[n]:n;};
+window._engEN=function(n){if(!(window._LANG&&window._LANG!=='ko'))return n;if(window._ENG_EN&&window._ENG_EN[n])return window._ENG_EN[n];try{if(window._TF_ENGINES){for(var _i=0;_i<window._TF_ENGINES.length;_i++){if(window._TF_ENGINES[_i].name===n)return window._TF_ENGINES[_i].en||n;}}}catch(_e){}return n;};
 window._ohEN=function(k){return (window._LANG&&window._LANG!=='ko'&&window._OH_EN[k])?window._OH_EN[k]:k;};
+window._cgoName=function(){var g=function(id){return (document.getElementById(id)||{}).value||'';};var n=g('ipName')||g('prof-name');if(!n){try{n=(JSON.parse(localStorage.getItem('cgo_saved_info')||'{}').name)||'';}catch(e){}}if(!n){try{n=localStorage.getItem('cgo_prof_name')||'';}catch(e){}}return (n||'').trim();};
 function _cgoT(str){
   try{
     var L=window._LANG;
@@ -56080,7 +56081,7 @@ function generateFortune(r){
   // ══ 실시간 과학 기반 연동 — 순수 역학 결과 미참조 ══
   // r 기본값 보강 (자동계산 없이 정보만 입력한 경우)
   r = r || {};
-  if(!r.name){ r.name = (document.getElementById('ipName')||{}).value || '사용자'; }
+  if(!r.name){ r.name = (window._cgoName()||'사용자'); }
   if(!r.y){ r.y = parseInt((document.getElementById('ipBirthY')||{}).value||'1990'); }
   if(!r.m){ r.m = parseInt((document.getElementById('ipBirthM')||{}).value||'1'); }
   if(!r.d){ r.d = parseInt((document.getElementById('ipBirthD')||{}).value||'1'); }
@@ -68896,6 +68897,7 @@ var _TF_ENGINES = [
   {id:'numerology',   name:'수비학 (피타고라스)',en:'Pythagorean Numerology',icon:'🌐', group:'🌐 글로벌 특수', w:3, domain:'astro'},
 ];
 try{if(window._ENG_EN){_TF_ENGINES.forEach(function(e){if(e.name&&e.en)window._ENG_EN[e.name]=e.en;});}}catch(_e){}
+try{window._TF_ENGINES=_TF_ENGINES;}catch(_e){}
 
 // 선택 상태 (기본 20개 선택)
 var _tfSelectedPure     = {};
@@ -69562,17 +69564,17 @@ function _cgoTfRenderFallback(r, selectedEngines, engCount){
   var result = {
     totalScore: base,
     grade: base>=80?'🔥 대길일 — 무엇을 해도 이롭습니다':base>=70?'💫 길일 — 적극적으로 나아갈 때':'✨ 보통 — 안정적으로 유지하세요',
-    summary: r.name+'님('+oh+')의 오늘 에너지는 '+base+'점입니다. '+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+' 기반 분석입니다.',
-    money:  {score:Math.max(40,base-5+rng(s1+1)%15), msg:'재물 흐름을 주의 깊게 살피세요'},
-    love:   {score:Math.max(40,base+rng(s1+2)%10),   msg:'관계에 진심을 담아보세요'},
-    work:   {score:Math.max(40,base+2+rng(s1+3)%12), msg:'집중력을 발휘할 때입니다'},
-    health: {score:Math.max(40,base-2+rng(s1+4)%10), msg:'충분한 휴식을 취하세요'},
-    legal:  {score:Math.max(40,base-3+rng(s1+5)%8),  msg:'계약서는 꼼꼼히 확인하세요'},
-    social: {score:Math.max(40,base+rng(s1+6)%10),   msg:'배려와 양보로 관계를 돈독히 하세요'},
-    factBomb: r.name+'님, 오늘 '+oh+' 오행의 기운이 하루를 이끌고 있어요. 선택하신 역학('+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+')이 오늘의 흐름을 분석했습니다.',
-    whyMoney: oh+' 오행 기준 오늘 재물궁 분석 결과입니다.',
-    whyDate: '오늘 일진과 선택 역학의 교차 분석 결과입니다.',
-    calcExplain: selectedEngines.length+'개 역학 종합 분석입니다.',
+    summary: (window._LANG&&window._LANG!=='ko')?(r.name+'\u2019s ('+window._ohEN(oh)+') energy today is '+base+'pt. Based on '+selectedEngines.slice(0,2).map(function(e){return window._engEN(e.name);}).join('·')+'.'):(r.name+'님('+oh+')의 오늘 에너지는 '+base+'점입니다. '+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+' 기반 분석입니다.'),
+    money:  {score:Math.max(40,base-5+rng(s1+1)%15), msg:((window._LANG&&window._LANG!=='ko')?'Watch your cash flow carefully':'재물 흐름을 주의 깊게 살피세요')},
+    love:   {score:Math.max(40,base+rng(s1+2)%10),   msg:((window._LANG&&window._LANG!=='ko')?'Put sincerity into your relationships':'관계에 진심을 담아보세요')},
+    work:   {score:Math.max(40,base+2+rng(s1+3)%12), msg:((window._LANG&&window._LANG!=='ko')?'A time to focus your energy':'집중력을 발휘할 때입니다')},
+    health: {score:Math.max(40,base-2+rng(s1+4)%10), msg:((window._LANG&&window._LANG!=='ko')?'Get plenty of rest':'충분한 휴식을 취하세요')},
+    legal:  {score:Math.max(40,base-3+rng(s1+5)%8),  msg:((window._LANG&&window._LANG!=='ko')?'Check contracts carefully':'계약서는 꼼꼼히 확인하세요')},
+    social: {score:Math.max(40,base+rng(s1+6)%10),   msg:((window._LANG&&window._LANG!=='ko')?'Strengthen ties with care and give-and-take':'배려와 양보로 관계를 돈독히 하세요')},
+    factBomb: (window._LANG&&window._LANG!=='ko')?(r.name+', today the '+window._ohEN(oh)+' element energy leads your day. Your selected systems ('+selectedEngines.slice(0,2).map(function(e){return window._engEN(e.name);}).join('·')+') analyzed today\u2019s flow.'):(r.name+'님, 오늘 '+oh+' 오행의 기운이 하루를 이끌고 있어요. 선택하신 역학('+selectedEngines.slice(0,2).map(function(e){return e.name;}).join('·')+')이 오늘의 흐름을 분석했습니다.'),
+    whyMoney: (window._LANG&&window._LANG!=='ko')?(window._ohEN(oh)+'-element based analysis of today\u2019s wealth palace.'):(oh+' 오행 기준 오늘 재물궁 분석 결과입니다.'),
+    whyDate: ((window._LANG&&window._LANG!=='ko')?'A cross-analysis of today\u2019s day-pillar and the selected systems.':'오늘 일진과 선택 역학의 교차 분석 결과입니다.'),
+    calcExplain: (window._LANG&&window._LANG!=='ko')?(selectedEngines.length+' systems combined.'):(selectedEngines.length+'개 역학 종합 분석입니다.'),
     food: ohFoodMap[oh]||'균형 잡힌 식사를 하세요.',
     luckyDir: ohDirMap[oh]||'북쪽',
     luckyColor: {목:'초록',화:'빨강',토:'노랑',금:'흰색',수:'검정'}[oh]||'금색',
@@ -69764,8 +69766,8 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   var lifeNum=r.lifeNum||1;
   var _ENG_EN={'사주명리':'Saju','자미두수':'Zi Wei Dou Shu','기문둔갑':'Qi Men Dun Jia','태을신수':'Tai Yi','육임신살':'Liu Ren','주역':'I Ching','구성학':'Nine Star Ki','구성기학':'Nine Star Ki','풍수':'Feng Shui','오행':'Five Elements','타로':'Tarot','수비학':'Numerology','성명학':'Name Science','점성술':'Astrology','베다점성':'Vedic Astro'};
   var _ohW={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'};
-  var _engEN=function(n){return ((window._LANG&&window._LANG!=='ko')&&_ENG_EN[n])?_ENG_EN[n]:n;};
-  var _ohEN=function(k){return ((window._LANG&&window._LANG!=='ko')&&_ohW[k])?_ohW[k]:k;};
+  var _engEN=function(n){return (window._engEN?window._engEN(n):n);};
+  var _ohEN=function(k){return (window._ohEN?window._ohEN(k):k);};
   var engNames=selectedEngines.slice(0,3).map(function(e){return _engEN(e.name);}).join('·');
   // ★ 계열 파악
   var _cultCheck={동양:['bazi','tojeong','onomancy','maehwa','yangtaek','ziwei','qimen','taiyi','liuren','iching','sixlines','xuankong','kyusei','onmyodo','rokuyo','kanso','tuvi','ongtao','primbon','wayang'],인도:['jyotish','nakshatra','lalkitab','kp','vastu'],서양:['hellenistic','horary','sabian','humandesign','genekeys','biorhythm','sacredgeo','runes','terroir','radiesthesia','lenormand','ru_numerology','slav_totem','siberian','tzolkin','enneagram','brazil_energy','gematria','arabparts','geomancy','decans','luopan','numerology','thai_royal','san_phra']};
@@ -69984,7 +69986,7 @@ function _cgoTfRenderAiResult(result, r, selectedEngines, engCount){
   var flowSection='<div class="fp-section" style="background:rgba(212,168,67,.04);border:1px solid rgba(212,168,67,.15)">'
     +'<div class="fp-section-title">💡 FULI가 읽은 오늘의 에너지 흐름</div>'
     +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.95">'+(result.factBomb||('오늘 일간 <strong style="color:'+ohC+'">'+(oh+'('+ohK[oh]+')')+'</strong>의 기운이 하루를 감싸고 있어요. '+(result.summary||'')))+'</div>'
-    +'<div style="margin-top:10px">'+selectedEngines.slice(0,5).map(function(e){return _sciTag(e.name+' '+e.w+'pt','#d4a843');}).join('')+'</div></div>';
+    +'<div style="margin-top:10px">'+selectedEngines.slice(0,5).map(function(e){return _sciTag(_engEN(e.name)+' '+e.w+'pt','#d4a843');}).join('')+'</div></div>';
 
   // ⑥ 영역 카드 2열
   var allCards=[
@@ -70518,7 +70520,7 @@ function _cgoTfCompute(r,w){
     social:{score:_socialScore,msg:'대인관계에 주의하세요'},
     factBomb: '오늘 일간 '+oh+'('+({목:'木',화:'火',토:'土',금:'金',수:'水'}[oh]||'土')+')의 기운이 하루를 감싸고 있어요. '+(_FORT_MSG&&_FORT_MSG[oh]&&_FORT_MSG[oh].ov?_FORT_MSG[oh].ov:'오늘 하루도 최선을 다해보세요!'),
     whyMoney: '오행 '+oh+' 기준 오늘 재물궁 분석 결과입니다.',
-    whyDate: '오늘 일진과 선택 역학의 교차 분석 결과입니다.',
+    whyDate: ((window._LANG&&window._LANG!=='ko')?'A cross-analysis of today\u2019s day-pillar and the selected systems.':'오늘 일진과 선택 역학의 교차 분석 결과입니다.'),
     calcExplain: precisionNote+' 기반 분석입니다.',
     food: _ohFoodMap[oh]||'오행에 공명하는 음식을 드세요.',
     luckyDir: _ohDirMap[oh]||'북',
@@ -77509,7 +77511,7 @@ function apClose(){
 
 function algoPopup(key){
   var r=window.calcResult;
-  if(!r){ r = {name:(document.getElementById('ipName')||{}).value||'사용자', y:parseInt((document.getElementById('ipBirthY')||{}).value)||1990, m:parseInt((document.getElementById('ipBirthM')||{}).value)||1, d:parseInt((document.getElementById('ipBirthD')||{}).value)||1, domOh:'토', lifeNum:5, gender:'M', birthPlace:(document.getElementById('ipBirthPlace')||{}).value||'서울', curPlace:(document.getElementById('ipCurPlace')||{}).value||'서울'}; }
+  if(!r){ r = {name:(window._cgoName()||'사용자'), y:parseInt((document.getElementById('ipBirthY')||{}).value)||1990, m:parseInt((document.getElementById('ipBirthM')||{}).value)||1, d:parseInt((document.getElementById('ipBirthD')||{}).value)||1, domOh:'토', lifeNum:5, gender:'M', birthPlace:(document.getElementById('ipBirthPlace')||{}).value||'서울', curPlace:(document.getElementById('ipCurPlace')||{}).value||'서울'}; }
   window._apCurrentKey = key;  // 팝업 재렌더용 key 저장
 
   // 현재 날짜 (fcDate로 변경된 경우 반영)
@@ -127272,8 +127274,7 @@ function cgoTfBarPopup(key){
         {role:'user',content:prompt}
       ],
       max_tokens:3000,
-      temperature:0.65,
-      response_format:{type:'json_object'}
+      temperature:0.65
     })
   })
   .then(function(res){return res.json();})
@@ -127308,7 +127309,7 @@ function _cgoRenderDetailPopupFallback(m,d,_rgb){
   if(!body) return;
   var oh=(d&&d.oh)||"토", name=(d&&d.name)||"사용자";
   var score=m?m.score:70, color=m?m.color:"#d4a843", title=m?m.title:"에너지 분석";
-  body.innerHTML="<div style=\"text-align:center;padding:20px 0\"><div style=\"font-size:15px;font-weight:800;color:"+color+"\">"+title+"<\/div><div style=\"font-size:32px;font-weight:900;color:"+color+";margin:12px 0 4px\">"+score+"<\/div><div style=\"font-size:10px;color:rgba(240,230,200,.4)\">에너지 점수<\/div><\/div><div style=\"background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:16px;margin-bottom:14px\"><div style=\"font-size:12px;color:rgba(240,230,200,.8);line-height:1.9\">"+name+"님의 <b style=\"color:"+color+"\">"+oh+"(오행)<\/b> 에너지 분석 결과입니다.<br><br><b style=\"color:"+color+"\">💡 오늘의 조언<\/b><br>"+(score>=80?"오늘은 에너지가 높은 날입니다. 중요한 결정이나 새로운 시작에 좋은 타이밍입니다.":score>=65?"안정적인 에너지 흐름입니다. 꾸준히 진행 중인 일에 집중하세요.":"에너지를 아끼는 것이 좋습니다. 내실을 다지는 날로 활용하세요.")+"<\/div><\/div><div style=\"text-align:center;font-size:10px;color:rgba(255,255,255,.2)\">CGO-FULI<\/div>";
+  body.innerHTML="<div style=\"text-align:center;padding:20px 0\"><div style=\"font-size:15px;font-weight:800;color:"+color+"\">"+title+"<\/div><div style=\"font-size:32px;font-weight:900;color:"+color+";margin:12px 0 4px\">"+score+"<\/div><div style=\"font-size:10px;color:rgba(240,230,200,.4)\">에너지 점수<\/div><\/div><div style=\"background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:16px;margin-bottom:14px\"><div style=\"font-size:12px;color:rgba(240,230,200,.8);line-height:1.9\">"+name+((window._LANG&&window._LANG!=="ko")?"\u2019s ":"님의 ")+"<b style=\"color:"+color+"\">"+((window._LANG&&window._LANG!=="ko")?(window._ohEN(oh)+" element<\/b> \u2014 energy analysis result."):(oh+"(오행)<\/b> 에너지 분석 결과입니다."))+"<br><br><b style=\"color:"+color+"\">💡 오늘의 조언<\/b><br>"+((window._LANG&&window._LANG!=="ko")?(score>=80?"A high-energy day \u2014 great for important decisions or fresh starts.":score>=65?"A stable energy flow \u2014 stay focused on what you\u2019re steadily doing.":"A good day to conserve energy and strengthen your foundation."):(score>=80?"오늘은 에너지가 높은 날입니다. 중요한 결정이나 새로운 시작에 좋은 타이밍입니다.":score>=65?"안정적인 에너지 흐름입니다. 꾸준히 진행 중인 일에 집중하세요.":"에너지를 아끼는 것이 좋습니다. 내실을 다지는 날로 활용하세요."))+"<\/div><\/div><div style=\"text-align:center;font-size:10px;color:rgba(255,255,255,.2)\">CGO-FULI<\/div>";
 }
 
 function cgoTfBarPopupClose(){
@@ -127388,7 +127389,7 @@ function cgoRunRppgAnalysis(){
     var _m=parseInt((document.getElementById('ipBirthM')||{}).value)||0;
     var _d=parseInt((document.getElementById('ipBirthD')||{}).value)||0;
     if(!_y||!_m||!_d){alert('생년월일을 입력해주세요!');return;}
-    r={name:(document.getElementById('ipName')||{}).value||'사용자',y:_y,m:_m,d:_d,
+    r={name:(window._cgoName()||'사용자'),y:_y,m:_m,d:_d,
        domOh:'토',lifeNum:((_y%9)+(_m%9)+(_d%9))%9+1,
        birthPlace:(document.getElementById('ipBirthPlace')||{}).value||'',
        curPlace:(document.getElementById('ipCurPlace')||{}).value||''};
@@ -127680,7 +127681,7 @@ function cgoRunRppgAnalysis(){
       work:{score:sWk,msg:_bmR('work')},health:{score:sHl,msg:_bmR('health')},
       legal:{score:sLg,msg:_bmR('legal')},social:{score:sSc,msg:_bmR('social')},
       factBomb:top.msg||r.name+'님, 생체+역학+NASA 3중 분석 결과입니다.',
-      whyMoney:results.slice(0,2).map(function(e){return e.name+' 재물:'+e.money+'점';}).join(' / '),
+      whyMoney:results.slice(0,2).map(function(e){return window._engEN(e.name)+((window._LANG&&window._LANG!=='ko')?' wealth:':' 재물:')+e.money+((window._LANG&&window._LANG!=='ko')?'pt':'점');}).join(' / '),
       whyDate:((window._LANG&&window._LANG!=='ko')?'Day-pillar('+_iiljinR+') + bio(HRV='+hrvVal+') + NASA | '+results.length+' systems':'일진('+_iiljinR+') + 생체(HRV='+hrvVal+') + NASA | '+results.length+'개 역학'),
       calcExplain:((window._LANG&&window._LANG!=='ko')?'Bio '+bioTotal+'pt + systems '+metaTotal+'pt + resonance '+resTotal+'pt = CEI '+total+'pt':'생체'+bioTotal+'점+역학'+metaTotal+'점+공명'+resTotal+'점 = CEI'+total+'점'),
       food:top.food||((window._LANG&&window._LANG!=='ko')?'Balanced diet':'균형식'),
@@ -127710,7 +127711,7 @@ function cgoRunRealtimeAnalysis(){
     var _m=parseInt((document.getElementById('ipBirthM')||{}).value)||0;
     var _d=parseInt((document.getElementById('ipBirthD')||{}).value)||0;
     if(!_y||!_m||!_d){alert('생년월일을 입력해주세요!');return;}
-    r={name:(document.getElementById('ipName')||{}).value||'사용자',y:_y,m:_m,d:_d,
+    r={name:(window._cgoName()||'사용자'),y:_y,m:_m,d:_d,
        domOh:'토',lifeNum:((_y%9)+(_m%9)+(_d%9))%9+1,
        birthPlace:(document.getElementById('ipBirthPlace')||{}).value||'',
        curPlace:(document.getElementById('ipCurPlace')||{}).value||''};
@@ -128027,9 +128028,9 @@ function cgoRunRealtimeAnalysis(){
       work:{score:sWk,msg:_bm2('work')},health:{score:sHl,msg:_bm2('health')},
       legal:{score:sLg,msg:_bm2('legal')},social:{score:sSc,msg:_bm2('social')},
       factBomb:top.msg||r.name+'님, 오늘 '+oh+' 에너지를 활용하세요.',
-      whyMoney:results.slice(0,2).map(function(e){return e.name+' 재물:'+e.money+'점';}).join(' / '),
+      whyMoney:results.slice(0,2).map(function(e){return window._engEN(e.name)+((window._LANG&&window._LANG!=='ko')?' wealth:':' 재물:')+e.money+((window._LANG&&window._LANG!=='ko')?'pt':'점');}).join(' / '),
       whyDate:((window._LANG&&window._LANG!=='ko')?'Day-pillar('+_iiljin2+') + NASA real-time | '+results.length+' systems':'일진('+_iiljin2+') + NASA 실시간 | '+results.length+'개 역학'),
-      calcExplain:results.map(function(e){return e.name+'='+e.score+'점';}).join(', '),
+      calcExplain:results.map(function(e){return window._engEN(e.name)+'='+e.score+((window._LANG&&window._LANG!=='ko')?'pt':'점');}).join(', '),
       food:top.food||((window._LANG&&window._LANG!=='ko')?'Balanced diet':'균형식'),luckyDir:top.luckyDir,luckyColor:top.luckyColor,luckyNum:top.luckyNum,
       energyGuide:top.why||'오늘 에너지를 활용하세요.',
       csiNote:results.map(function(e){return window._engEN(e.name)+' '+e.score+((window._LANG&&window._LANG!=='ko')?'pt':'점');}).join(' | ')
