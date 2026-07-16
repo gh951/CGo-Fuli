@@ -34001,6 +34001,7 @@ window._OH_EN={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Wate
 window._engEN=function(n){if(!(window._LANG&&window._LANG!=='ko'))return n;if(window._ENG_EN&&window._ENG_EN[n])return window._ENG_EN[n];try{if(window._TF_ENGINES){for(var _i=0;_i<window._TF_ENGINES.length;_i++){if(window._TF_ENGINES[_i].name===n)return window._TF_ENGINES[_i].en||n;}}}catch(_e){}return n;};
 window._ohEN=function(k){return (window._LANG&&window._LANG!=='ko'&&window._OH_EN[k])?window._OH_EN[k]:k;};
 window._cgoDateStr=function(dt){dt=dt||new Date();var eD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],eM=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(window._LANG&&window._LANG!=='ko'){return eM[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+' ('+eD[dt.getDay()]+')';}return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+['일','월','화','수','목','금','토'][dt.getDay()]+'요일)';};
+window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false),nodes=[],txts=[];while(w.nextNode()){var n=w.currentNode,v=n.nodeValue;if(v&&/[\uac00-\ud7a3]/.test(v)&&v.trim().length>1){nodes.push(n);txts.push(v);}}if(!nodes.length)return;var B=40;var doBatch=function(s){var sl=txts.slice(s,s+B);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:3500,temperature:0.1,messages:[{role:'system',content:'Translate each Korean string in the given JSON array to natural English. Keep Chinese characters, numbers, emojis, punctuation and existing English EXACTLY as-is. Return ONLY a JSON array of the same length and order, nothing else.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(nodes[s+i]&&typeof arr[i]==='string'&&arr[i])nodes[s+i].nodeValue=arr[i];}}}).catch(function(){});};for(var s=0;s<txts.length;s+=B){doBatch(s);}}catch(e){}};
 window._cgoLangRule=function(){return (window._LANG&&window._LANG!=='ko')?'★LANGUAGE RULE: Respond ONLY in natural, fluent English. Never use Korean or Chinese characters. All field values must be in English.':'⚠️ 언어 규칙: 순수 한국어만 사용. 외국어·한자 금지(이모지 제외).';};
 window._cgoName=function(){var g=function(id){return (document.getElementById(id)||{}).value||'';};var n=g('ipName')||g('prof-name');if(!n){try{n=(JSON.parse(localStorage.getItem('cgo_saved_info')||'{}').name)||'';}catch(e){}}if(!n){try{n=localStorage.getItem('cgo_prof_name')||'';}catch(e){}}return (n||'').trim();};
 function _cgoT(str){
@@ -36186,7 +36187,7 @@ function _cgoReportIntroPopup(){
   h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">'
    +'<span style="font-size:32px;">📜</span>'
    +'<div><div style="font-size:17px;font-weight:900;color:#d4a843;letter-spacing:.03em;">정밀 분석 리포트</div>'
-   +'<div style="font-size:11px;color:#b8860b;margin-top:2px;">CGO-FULI 독보적 기능 · 50대 역학 × NASA 실시간</div></div></div>';
+   +'<div style="font-size:11px;color:#b8860b;margin-top:2px;">'+((window._LANG&&window._LANG!=='ko')?'CGO-FULI exclusive · 50+ systems × NASA real-time':'CGO-FULI 독보적 기능 · 50대 역학 × NASA 실시간')+'</div></div></div>';
 
   // 소개
   h+='<div style="font-size:12px;color:#334155;line-height:1.9;margin-bottom:14px;padding:12px 14px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;">'
@@ -36221,9 +36222,9 @@ function _cgoReportIntroPopup(){
   h+='<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:12px 14px;margin-bottom:10px;">'
    +'<div style="font-size:11px;font-weight:800;color:#d97706;margin-bottom:6px;">⚡ 알아두세요</div>'
    +'<div style="font-size:11px;color:#334155;line-height:1.9;">'
-   +'• <b style="color:#b8860b;">매일 업데이트</b> — 사주(고정) × 오늘 날짜 × 시진으로 매일 새로운 분석<br>'
-   +'• <b style="color:#b8860b;">관상·손금 (17·18번)</b> — AI 통합 웰니스 리포트 카메라 스캔 후 정밀 분석<br>'
-   +'• <b style="color:#b8860b;">타로 (16번)</b> — 생년월일 사주 기반 역학 타로 · 매일 카드 변경'
+   +''+((window._LANG&&window._LANG!=='ko')?'• <b style="color:#b8860b;">Updated daily</b> — Saju (fixed) × today’s date × time pillar for a fresh daily analysis<br>':'• <b style="color:#b8860b;">매일 업데이트</b> — 사주(고정) × 오늘 날짜 × 시진으로 매일 새로운 분석<br>')+''
+   +''+((window._LANG&&window._LANG!=='ko')?'• <b style="color:#b8860b;">Face·palm (No.17·18)</b> — precise analysis after the AI wellness camera scan<br>':'• <b style="color:#b8860b;">관상·손금 (17·18번)</b> — AI 통합 웰니스 리포트 카메라 스캔 후 정밀 분석<br>')+''
+   +'• <b style="color:#b8860b;">타로 (16번)</b> — '+((window._LANG&&window._LANG!=='ko')?"metaphysics tarot from birth Saju · daily card change":"생년월일 사주 기반 역학 타로 · 매일 카드 변경")+''
    +'</div></div>';
 
   // NASA 연동 배지
@@ -63737,6 +63738,7 @@ function generateReport(r){
   var c=document.getElementById('reportContainer');
   if(c){
     c.innerHTML=html;
+    if(window._LANG&&window._LANG!=='ko'){setTimeout(function(){window._cgoAiTranslateDom(c);},60);}
     setTimeout(function(){
       c.querySelectorAll('.ac-bar[data-t]').forEach(function(b){
         b.style.width=b.getAttribute('data-t')+'%';
@@ -142158,7 +142160,7 @@ window._cgoSignupPrompt = function(label){
       "🩸 rPPG 융합 분석 시작":"🩸 Start rPPG Fusion Analysis",
       "🛰️ 실시간 rPPG 데이터 연동 분석":"🛰️ Live rPPG-Data-Linked Analysis",
       "2026년 0월 0일 (0요일)":"2026 · Month 0 · Day 0 (Weekday)",
-      "CGO-FULI 독보적 기능 · 50대 역학 × NASA 실시간":"CGO-FULI's standout feature · 50-plus systems × NASA live",
+      "'+((window._LANG&&window._LANG!=='ko')?'CGO-FULI exclusive · 50+ systems × NASA real-time':'CGO-FULI 독보적 기능 · 50대 역학 × NASA 실시간')+'":"CGO-FULI's standout feature · 50-plus systems × NASA live",
       "사주팔자·자미두수·베딕점성술 등 18가지 역학 시스템을 NASA 실시간 행성 데이터와 융합한 세계 유일의 정밀 분석입니다.":"The world's only precision analysis fusing 18 metaphysics systems—such as the Four Pillars, Zi Wei Dou Shu, and Vedic astrology—with NASA live planetary data.",
       "📋 18가지 역학 분석 구성":"📋 The 18 Metaphysics Systems",
       "01 🌳 사주명리":"01 🌳 Four Pillars (Saju)",
