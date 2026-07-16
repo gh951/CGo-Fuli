@@ -121145,13 +121145,23 @@ function stkOpenModal(name, score, trend, trendColor) {
     '전환': coName+'의 '+name.replace(/[^\w가-힣\s]/g,'')+' 에너지가 <b style="color:#b8860b;">전환점</b>에 있습니다. '+coEl.emoji+' '+coEl.label+' 오행 에너지의 방향이 바뀌는 시점으로, 새로운 사이클의 시작 또는 기존 추세의 마무리 구간입니다. 방향 확인 후 결정을 권장합니다.',
   };
 
+  if(window._LANG&&window._LANG!=='ko'){
+    var _nnm=name.replace(/[^\w가-힣\s]/g,'').trim();
+    var _elL=({'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'})[coEl.label]||coEl.label;
+    nowTexts={
+      '상승': coName+'\u2019s '+_nnm+' energy is in a <b style="color:#34d399;">rising phase</b>. The '+coEl.emoji+' '+_elL+' element energy is strongly active, amplified by its fit with your element ('+compat.score+' pts).',
+      '중립': coName+'\u2019s '+_nnm+' energy is in a <b style="color:#94a3b8;">neutral flow</b>. The '+coEl.emoji+' '+_elL+' energy is balanced, so expect a steady flow. Watch for the next direction.',
+      '조정': coName+'\u2019s '+_nnm+' energy has entered a <b style="color:#f87171;">correction phase</b>. The '+coEl.emoji+' '+_elL+' energy is temporarily converging; the next rise prepares once it completes.',
+      '전환': coName+'\u2019s '+_nnm+' energy is at a <b style="color:#b8860b;">turning point</b>. The '+coEl.emoji+' '+_elL+' energy is changing direction. Confirm direction before deciding.'
+    };
+  }
   // DOM 업데이트
   document.getElementById('m-icon').textContent = d.icon;
-  document.getElementById('m-name').textContent = name.replace(/[☯️🌟♈🔢☁️🌙🏔️🔵🧿📿☽🌊⭕🎴🌀💫🕉️🔯]/gu,'').trim();
+  document.getElementById('m-name').textContent = (window._LANG&&window._LANG!=='ko'&&STK_ALGO_NAME_EN[name])?STK_ALGO_NAME_EN[name]:name.replace(/[☯️🌟♈🔢☁️🌙🏔️🔵🧿📿☽🌊⭕🎴🌀💫🕉️🔯]/gu,'').trim();
   document.getElementById('m-origin').textContent = d.origin;
   document.getElementById('m-score').textContent = score;
   document.getElementById('m-score').style.color = trendColor;
-  document.getElementById('m-trend').textContent = trend;
+  document.getElementById('m-trend').textContent = (window._LANG&&window._LANG!=='ko')?({'📈 상승':'📈 Rising','➡️ 중립':'➡️ Neutral','📉 조정':'📉 Correction','🔄 전환':'🔄 Turning'}[trend]||trend):trend;
   document.getElementById('m-trend').style.color = trendColor;
   document.getElementById('m-bar').style.width = score+'%';
   document.getElementById('m-bar').style.background = 'linear-gradient(90deg,'+trendColor+','+trendColor+'88)';
@@ -121227,22 +121237,85 @@ var STK_PLANET_DATA = {
     tip:'해왕성 에너지가 강할 때는 기대와 실체를 구분하는 분별의 참고 자료로 쓰세요.',
     retroNote:['해왕성이 순행하여 상상과 기대의 에너지가 퍼지는 국면입니다.','해왕성이 역행 중이라 환상이 걷히고 실체를 점검하는 에너지로 읽힙니다.'] }
 };
+var STK_PLANET_DATA_EN = {
+  '\ud0dc\uc591': { icon:'\u2600\ufe0f', origin:'Astronomy · central star of the solar system (diameter ~1.39 million km)',
+    summary:'Symbolizes the market\u2019s overall vitality and big trend, and the leading energy of the largest stocks.',
+    desc:'The Sun holds about 99.8 percent of the solar system\u2019s mass; in astrology it means the self, life force and core direction. Read as market energy, it stands for the vitality of the whole index, the leadership of the top mega-cap stocks and the market\u2019s fundamental trend. When the Sun\u2019s ecliptic position enters an active window, it is read as vitality spreading across the market.',
+    stock:'Related sectors: index ETFs \u00b7 large-cap blue chips \u00b7 market leaders',
+    tip:'When Sun energy is strong, use it as a reference to watch the big flow (index, leaders) rather than individual stocks.',
+    retroNote:['The Sun always moves direct, supplying steady vitality energy to the whole market.','The Sun does not go retrograde.'] },
+  '\ub2ec': { icon:'\ud83c\udf19', origin:'Astronomy · Earth\u2019s satellite (average distance ~384,000 km)',
+    summary:'Symbolizes short-term sentiment and volatility \u2014 the ebb and flow of investor psychology.',
+    desc:'The Moon waxes and wanes on a ~29.5-day cycle; in astrology it means emotion, the unconscious and short-term rhythm. As market energy it stands for day-to-day investor sentiment, the mood of retail investors and short-term volatility. Around phase changes like the full and dark moon, it is read as emotional trading rising.',
+    stock:'Related sectors: short-term theme stocks \u00b7 high-volatility names \u00b7 sentiment-sensitive stocks',
+    tip:'On days of strong Moon energy short-term swings can widen \u2014 use as a reference to guard against emotional trading.',
+    retroNote:['The Moon moves direct and short-term sentiment flows relatively steadily.','The Moon does not go retrograde.'] },
+  '\uc218\uc131': { icon:'\u263f', origin:'Astronomy · innermost planet, closest to the Sun',
+    summary:'Symbolizes communication, trade and information flow \u2014 the energy of IT and telecom sectors.',
+    desc:'Mercury is the closest planet to the Sun, orbiting in about 88 days; in astrology it means communication, contracts, movement and information. As market energy it stands for the speed of trading, the transmission of information and the vitality of the IT, telecom and semiconductor sectors. Mercury-retrograde windows, famous in astrology for miscommunication and delays, are read as a reference to watch for trade confusion or distorted information.',
+    stock:'Related sectors: IT \u00b7 telecom \u00b7 semiconductors \u00b7 volume-sensitive stocks',
+    tip:'During Mercury retrograde, use it as a cue to double-check contracts and trades for errors.',
+    retroNote:['Mercury is direct and the flow of information and trading is smooth.','Mercury is retrograde, so trade confusion and information delays may be at work \u2014 caution is advised.'] },
+  '\uae08\uc131': { icon:'\u2640', origin:'Astronomy · second planet inward from Earth (the brightest planet)',
+    summary:'Symbolizes consumption, money and aesthetic value \u2014 the energy of luxury and finance.',
+    desc:'Venus shines brightest in the night sky; in astrology it means love, aesthetics, money and value. As market energy it stands for the vitality of consumer, luxury, beauty and financial sectors and the flow of capital. When Venus energy is active, warmth is read as spreading through consumer sentiment and valuations.',
+    stock:'Related sectors: consumer \u00b7 luxury \u00b7 beauty \u00b7 finance \u00b7 entertainment',
+    tip:'When Venus energy is strong, use it as a reference to watch consumer and value stocks.',
+    retroNote:['Venus is direct and the energy of consumption and value flows smoothly.','Venus is retrograde, so value-reassessment and softer consumption energy may appear \u2014 watchfulness is advised.'] },
+  '\ud654\uc131': { icon:'\u2642', origin:'Astronomy · the red planet outside Earth\u2019s orbit',
+    summary:'Symbolizes action, energy and aggression \u2014 the drive of the energy and defense sectors.',
+    desc:'Mars glows red; in astrology it means action, courage, conflict and drive. As market energy it stands for aggressive trading sentiment, the vitality of energy, defense and raw-material sectors, and the impetus behind short, sharp swings. When Mars energy is strong, swings are read as turning fierce.',
+    stock:'Related sectors: energy \u00b7 defense \u00b7 raw materials \u00b7 heavy industry',
+    tip:'When Mars energy is strong volatility can widen \u2014 use it as a reference to guard against overheating.',
+    retroNote:['Mars is direct and drive energy flows in one direction.','Mars is retrograde, so drive turns inward and conflict or stagnation energy may be at work.'] },
+  '\ubaa9\uc131': { icon:'\u2643', origin:'Astronomy · the largest planet (about 1,300 times Earth\u2019s volume)',
+    summary:'Symbolizes expansion, luck and growth \u2014 the optimistic energy of finance and growth stocks.',
+    desc:'Jupiter is the largest planet, orbiting in about 12 years; in astrology it means expansion, luck, growth and generosity. As market energy it stands for optimistic, expansionary phases, the vitality of finance and growth stocks, and bull-market energy. When Jupiter energy is active, growth expectations are read as rising.',
+    stock:'Related sectors: finance \u00b7 growth stocks \u00b7 global large-caps',
+    tip:'When Jupiter energy is strong, watch expansion/growth themes but use it as a reference to guard against over-optimism.',
+    retroNote:['Jupiter is direct and the energy of expansion and growth flows freely.','Jupiter is retrograde, read as expansion briefly consolidating inward.'] },
+  '\ud1a0\uc131': { icon:'\u2644', origin:'Astronomy · the ringed, second-largest planet',
+    summary:'Symbolizes patience, restriction, structure and discipline \u2014 the energy of stability and correction.',
+    desc:'Saturn, with its beautiful rings, orbits in about 29 years; in astrology it means patience, responsibility, restriction and structure. As market energy it stands for discipline and stability, the flow of bonds, blue chips and dividend stocks, and correction/consolidation phases. When Saturn energy is strong, the market is read as carefully building structure.',
+    stock:'Related sectors: bonds \u00b7 blue chips \u00b7 dividend stocks \u00b7 infrastructure',
+    tip:'When Saturn energy is strong, use it as a reference to watch stable, defensive assets.',
+    retroNote:['Saturn is direct and the energy of structure and discipline works calmly.','Saturn is retrograde, so restriction and review energy strengthen and a conservative stance is advised.'] },
+  '\ucc9c\uc655\uc131': { icon:'\u2645', origin:'Astronomy · an ice giant that spins on its side',
+    summary:'Symbolizes innovation, sudden change and disruptive shifts \u2014 the energy of new tech and abrupt moves.',
+    desc:'Uranus spins with its axis nearly on its side and orbits in about 84 years; in astrology it means innovation, change, freedom and the sudden. As market energy it stands for technological innovation, disruptive change and hard-to-predict sharp swings. When Uranus energy is active, it is read as an abrupt turn.',
+    stock:'Related sectors: new tech \u00b7 innovative tech \u00b7 volatility themes',
+    tip:'When Uranus energy is strong, use it as a reference to stay mindful of sudden moves.',
+    retroNote:['Uranus is direct and innovation energy is expressed outward.','Uranus is retrograde, read as a dormant phase where change energy accumulates inward.'] },
+  '\ud574\uc655\uc131': { icon:'\u2646', origin:'Astronomy · the outermost blue ice planet of the solar system',
+    summary:'Symbolizes dreams, illusion, spirituality and bubbles \u2014 the energy of speculation and imagination.',
+    desc:'Neptune is the solar system\u2019s outermost blue planet, orbiting in about 165 years; in astrology it means dreams, spirituality, illusion and vagueness. As market energy it stands for expectation and imagination, the vitality of bio, entertainment and speculative themes, and the energy of bubbles and overheating. When Neptune energy is strong, expectation is read as running ahead of substance, so discernment is advised.',
+    stock:'Related sectors: bio \u00b7 entertainment \u00b7 speculative themes \u00b7 new-drug hopefuls',
+    tip:'When Neptune energy is strong, use it as a reference to tell expectation apart from substance.',
+    retroNote:['Neptune is direct and the energy of imagination and expectation spreads.','Neptune is retrograde, read as illusion lifting and substance being re-examined.'] }
+};
+
+var STK_ALGO_NAME_EN = {'사주명리':'Saju (Four Pillars)','자미두수':'Zi Wei Dou Shu','점성술':'Astrology','수비학':'Numerology','기문둔갑':'Qi Men Dun Jia','육효':'Liu Yao','풍수지리':'Feng Shui','오행론':'Five Elements','타로':'Tarot','루노로지':'Runology','월력':'Lunar Calendar','흐름역학':'Flow Dynamics','음양학':'Yin-Yang','사상의학':'Sasang Medicine','기운론':'Qi Theory','카발라':'Kabbalah','베다점성':'Vedic Astrology','수메르역법':'Sumerian Astrology'};
+var STK_PLANET_NAME_EN = {'태양':'Sun','달':'Moon','수성':'Mercury','금성':'Venus','화성':'Mars','목성':'Jupiter','토성':'Saturn','천왕성':'Uranus','해왕성':'Neptune'};
+
 function stkOpenPlanetModal(idx){
   var planets = stkCalcPlanets();
   var p = planets[idx]; if(!p) return;
   var cleanName = (p.name||'').replace(/[^가-힣]/g,'').trim();
   var d = STK_PLANET_DATA[cleanName]; if(!d) return;
-  var energyLvl=['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
+  var _pL=(window._LANG&&window._LANG!=='ko');
+  if(_pL&&typeof STK_PLANET_DATA_EN!=='undefined'&&STK_PLANET_DATA_EN[cleanName]) d=STK_PLANET_DATA_EN[cleanName];
+  var energyLvl=(window._LANG&&window._LANG!=='ko')?['Strong direct ↑','Direct ↗','Neutral →','Approaching retro ↘','Retrograde ↓']:['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
   var energyClr=['#34d399','#60a5fa','#94a3b8','#fbbf24','#f87171'];
   var lvIdx = p.retro?4:Math.floor((p.lon%180)/36);
   var score = Math.round(95 - lvIdx*13);
-  var trend = ['📈 강한 순행','📈 순행','➡️ 중립','📉 역행 접근','📉 역행 중'][lvIdx];
+  var trend = (_pL?['📈 Strong direct','📈 Direct','➡️ Neutral','📉 Approaching retro','📉 Retrograde']:['📈 강한 순행','📈 순행','➡️ 중립','📉 역행 접근','📉 역행 중'])[lvIdx];
   var trendColor = energyClr[lvIdx];
   var coName = (typeof stkSelected!=='undefined' && stkSelected) ? stkSelected.n : '종목';
   var coEl = (typeof stkSelected!=='undefined' && stkSelected) ? STK_ELEM[stkSelected.ei||3] : STK_ELEM[3];
   var nowText = '<b>'+coName+'</b>의 흐름에 '+p.name+' 에너지가 현재 <b style="color:'+trendColor+';">'+energyLvl[lvIdx]+'</b> 상태로 작용하고 있습니다 ('+Math.round(p.lon)+'° · '+p.sector+'). '+d.retroNote[p.retro?1:0]+' '+coEl.emoji+' '+coEl.label+' 오행 종목과의 흐름을 참고용으로만 살피세요.';
+  if(_pL){ var _pNm=STK_PLANET_NAME_EN[cleanName]||p.name; var _pE=({'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'})[coEl.label]||coEl.label; nowText='In <b>'+coName+'</b>\u2019s flow, '+_pNm+' energy is currently in a <b style="color:'+trendColor+';">'+energyLvl[lvIdx]+'</b> state ('+Math.round(p.lon)+'° · '+p.sector+'). '+d.retroNote[p.retro?1:0]+' Watch its flow with '+coEl.emoji+' '+_pE+' element stocks for reference only.'; }
   document.getElementById('m-icon').textContent = d.icon;
-  document.getElementById('m-name').textContent = cleanName;
+  document.getElementById('m-name').textContent = (_pL&&STK_PLANET_NAME_EN[cleanName])?STK_PLANET_NAME_EN[cleanName]:cleanName;
   document.getElementById('m-origin').textContent = d.origin;
   document.getElementById('m-score').textContent = score;
   document.getElementById('m-score').style.color = trendColor;
@@ -121419,7 +121492,7 @@ function _runAnalysisCore() {
   var planets = stkCalcPlanets();
   var planetList = document.getElementById('stk-planet-list');
   planetList.innerHTML = '';
-  var energyLvl=['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
+  var energyLvl=(window._LANG&&window._LANG!=='ko')?['Strong direct ↑','Direct ↗','Neutral →','Approaching retro ↘','Retrograde ↓']:['강한 순행 ↑','순행 ↗','중립 →','역행 접근 ↘','역행 중 ↓'];
   var energyClr=['#34d399','#60a5fa','#94a3b8','#fbbf24','#f87171'];
   planets.forEach(function(p,_pi){
     var idx = p.retro?4:Math.floor((p.lon%180)/36);
