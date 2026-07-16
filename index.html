@@ -10536,7 +10536,7 @@ function cgoGuideFeature(key){
     // ★ C-40 박입 ⑥ — GROQ 직접 호출 (본진 표준 패턴 · 두피 AI 실 연동 · 130명 전문가)
     var scalpFullPrompt = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text + (window._demLangDirective?window._demLangDirective():'');
     var scalpGroqBody = {
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       max_tokens: 1800,
       temperature: 0.6,
       messages: [{ role: 'user', content: scalpFullPrompt }]
@@ -11936,7 +11936,7 @@ function cgoGuideFeature(key){
     } else {
       // 텍스트만 — Groq fallback
       apiBody = JSON.stringify({
-        model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+        model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages: [
           { role: 'system', content: sysPrompt },
           { role: 'user', content: '다음 데이터를 종합 분석하여 JSON 형식으로 보고서를 작성해주세요:\n' + ctx }
@@ -14052,7 +14052,7 @@ function cgoGuideFeature(key){
                    '사용자 질문: ' + userMsg + (window._demLangDirective?window._demLangDirective():'');
       
       var demGroqBody = {
-        model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+        model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         max_tokens: 1800,
         temperature: 0.6,
         messages: [{ role: 'user', content: demPrompt }]
@@ -21938,11 +21938,11 @@ window.cgoSupportSend=function(){
   msgs.scrollTop=msgs.scrollHeight;
   var sysPrompt='당신은 CGO-FULI 앱의 고객지원(민원) AI 상담사입니다. 역할은 결제·구독·환불 문의, 오류·버그 신고 접수, 로그인·계정·회원탈퇴·보안(양자 방어/MUFE) 관련 불편사항 처리입니다. 친절하고 공감하는 말투로, 사용자의 불편을 먼저 인정하고 해결 절차를 단계로 안내하세요. 사주·관상·손금·풍수·rPPG·주파수음악 등 개별 기능의 사용법이나 해석을 물으면, 직접 답하지 말고 "해당 기능 화면 안의 전용 AI 상담사에게 문의해 주세요"라고 안내하세요. 결제·환불은 App Store/Google Play 또는 가입한 결제 경로의 구독관리에서 진행해야 함을 안내하세요. 해결이 어려운 사안은 이메일 1:1 문의 접수를 권하세요. 답변은 간결하게, 한국어로 하세요.';
   var fullPrompt=sysPrompt+'\n\n[사용자 민원]: '+text;
-  var body={model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:1200,temperature:0.5,messages:[{role:'user',content:fullPrompt}]};
+  var body={model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:1200,temperature:0.5,messages:[{role:'user',content:fullPrompt}]};
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   .then(function(r){return r.json();})
   .then(function(data){
-    var answer=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var answer=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     if(answer){
       aiBubble.innerHTML=answer.replace(/\n/g,'<br/>');
     }else{
@@ -27546,7 +27546,7 @@ window.tvyLoadAiGuide = function(box){
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: [
         {role:'system', content:sysPrompt},
         {role:'user', content:userPrompt}
@@ -28112,7 +28112,7 @@ window.trv2ChatSend = function(){
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: messages,
       max_tokens: 400,
       temperature: 0.75
@@ -29064,7 +29064,7 @@ window.tvyCamRunFullAnalysis = function(){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[{role:'user', content: fullPrompt}],
       max_tokens: 900,
       temperature: 0.7
@@ -29425,7 +29425,7 @@ window.tvyLoadPopupAi = function(box){
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: [
         {role:'system', content:sysPrompt},
         {role:'user', content:userPrompt}
@@ -31193,7 +31193,7 @@ window.tvyShowIntroPopup = function(){
       others.forEach(function(o){ var od=window.CGO_KIRYU_STR[kiryu][o]; if(od){ ctx += '· '+oMap[o]+'형은 "'+od.def+'"\n'; } });
     }
     var prompt='당신은 따뜻하고 통찰력 있는 성격 분석가입니다. 반드시 자연스러운 한국어로만 답하세요. 한자나 외국어 단어를 절대 섞지 마세요.\n\n[의료 안전 규칙]\n질병 진단·약물·치료·증상 판단 등 의학적 사안은 답하지 말고 "전문 의료기관과 상의하세요"라고만 안내하세요. 질병명·진단·처방 표현 금지.\n\n아래는 사용자의 CGO 인간유형입니다.\n'+ctx+'\n★ 가장 중요: 같은 '+kiryu+' 기류라도 강도('+strLbl+')에 따라 완전히 다른 사람입니다. 반드시 이 사람의 강도('+strLbl+')를 핵심으로 삼아, 다른 강도(대비 항목)와 뚜렷이 구별되게 분석하세요. 강도 특성을 매 문장에 녹여주세요.\n\n이 사람에 대해 자연스러운 한국어로 5~7문장 적어주세요: (1) '+strLbl+' 강도가 드러나는 핵심 강점 (2) 이 강도가 조심할 성장 포인트 (3) 관계와 일에서 이 강도가 어떻게 나타나는지 (4) 오늘 도움이 될 따뜻한 한마디. 사람을 단정하지 말고 자기 이해를 돕는 참고로서 긍정적으로 적되, 완벽·100%·보장 같은 과장은 쓰지 마세요.';
-    var body={ model:'openai/gpt-oss-20b',reasoning_effort:'low', max_tokens:700, temperature:0.7, messages:[{role:'user',content:prompt}] };
+    var body={ model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, max_tokens:700, temperature:0.7, messages:[{role:'user',content:prompt}] };
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();})
       .then(function(d){
@@ -31378,7 +31378,7 @@ window.tvyShowIntroPopup = function(){
       +'사용자의 성격(소울 카드)을 렌즈로 삼아 오늘의 카드를 해석해 주세요. '
       +'한국어로만 4~6문장: (1) 본성과 오늘 기운이 어떻게 만나는지 (2) 오늘 어떤 마음가짐이 길한지 (3) 따뜻한 한마디. 외국어 표기를 섞지 마세요. '
       +'운명이나 결과를 단정하지 말고, 영감과 참고로서 긍정적으로 적어주세요.';
-    var body={ model:'openai/gpt-oss-20b',reasoning_effort:'low', max_tokens:750, temperature:0.75, messages:[{role:'user',content:prompt}] };
+    var body={ model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, max_tokens:750, temperature:0.75, messages:[{role:'user',content:prompt}] };
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();})
       .then(function(d){ var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; box.textContent=a?a:'잠시 응답이 지연되고 있어요. 다시 시도해 주세요.'; })
@@ -31724,7 +31724,7 @@ window.tvyShowIntroPopup = function(){
       +'■ 바탕 데이터(실측·계산값): '+data+'\n'
       +'성격(성격 유형)을 렌즈로, "이 순간 고른 아르카나 카드"와 "사용자가 고른 역학 전통"을 '+modeTxt+' 관점으로 연결해 오늘 길한 마음가짐과 행동을 구체적으로 조언하세요. '
       +'중요: 역학은 측정이 아닌 해석임을 분명히 하고, 정확한 점수를 지어내지 말며, 운명을 단정하지 말고 영감·참고로 긍정적으로.';
-    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:850,temperature:0.78,messages:[{role:'user',content:prompt}]})})
+    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:850,temperature:0.78,messages:[{role:'user',content:prompt}]})})
       .then(function(x){return x.json();}).then(function(d){var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';box.textContent=a||'잠시 후 다시 시도해 주세요.';if(a){lastAnalysis=a;lastMode=mode;}btn.disabled=false;})
       .catch(function(e){box.textContent=_cgoT('⚠️ 네트워크 오류예요. 잠시 후 다시 시도해 주세요.');btn.disabled=false;console.warn('[분석]',mode,e);});
   };
@@ -31734,7 +31734,7 @@ window.tvyShowIntroPopup = function(){
   function ctx(){var r=window.calcResult||{},t=msp(),s=[];if(t&&NICK[t])s.push('성향유형:'+t+'('+NICK[t]+')');if(curCard)s.push('타로:'+curCard[1]+'('+curCard[2]+')');var es=selEng();if(es.length)s.push('선택역학:'+es.map(function(e){return e.name;}).join(','));if(r.domOh)s.push('오행:'+r.domOh);if(typeof r.ili==='number')s.push('ILI:'+r.ili);var ml={pure:'순수',rt:'실시간(NASA·기상)',rppg:'rPPG 생체신호'}[curMode];if(ml)s.push('선택모드:'+ml);if(lastAnalysis){var lm={pure:'순수',rt:'실시간',rppg:'rPPG 생체'}[lastMode]||'';s.push('직전 '+lm+' 분석결과: '+lastAnalysis.slice(0,500));}return s.length?s.join(' · '):'(아직 정보 없음)';}
   window.f3Send=function(){var inp=$('f3-input'),q=(inp.value||'').trim();if(!q)return;inp.value='';addMsg('user',q);chatHist.push({role:'user',content:q});var w=addMsg('a','');w.innerHTML='<span class="f3-spin"></span>';
     var sys='당신은 따뜻하고 통찰력 있는 융합 상담가입니다.\n\n[의료 안전 규칙 — 반드시 준수]\n사용자가 질병 진단, 약물 복용·중단, 치료법, 증상 판단 등 의학적 사안을 물으면 절대 답변하거나 추측하지 말고 아래 문장만 그대로 출력하세요:\n\"CGO-FULI는 심리 성찰과 역학적 흐름을 짚어주는 가이드입니다. 질환의 진단 및 의약품 복용 관련 사안은 반드시 전문 의료기관의 의사 또는 전문가와 상의하시기 바랍니다.\"\n그 밖의 어떤 상황에서도 질병명·진단·처방 표현을 쓰지 마세요. 반드시 순수한 한국어로만 답하고 외국어 단어를 섞지 마세요. 사용자 기준·정보: '+ctx()+'. 성향 유형은 성격 렌즈, 타로는 이 순간의 카드, 역학은 참고 전통으로 다루세요. 선택한 분석 모드(순수·실시간·rPPG 생체)와 직전 분석결과가 있으면, 그 내용(특히 생체·역학)을 이어받아 연결해서 상담하세요. 역학·타로는 측정이 아닌 해석임을 전제로, 운명을 단정 말고 한국어로 따뜻하고 구체적으로 3~5문장.';
-    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:700,temperature:0.8,messages:[{role:'system',content:sys}].concat(chatHist.slice(-8))})})
+    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:700,temperature:0.8,messages:[{role:'system',content:sys}].concat(chatHist.slice(-8))})})
       .then(function(x){return x.json();}).then(function(d){var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';w.textContent=a||'잠시 후 다시 시도해 주세요.';if(a)chatHist.push({role:'assistant',content:a});$('f3-msgs').scrollTop=$('f3-msgs').scrollHeight;})
       .catch(function(e){w.textContent=_cgoT('⚠️ 네트워크 오류예요. 잠시 후 다시 시도해 주세요.');console.warn('[AI상담]',e);});
   };
@@ -34542,7 +34542,7 @@ function _c24CompFinalAnalyze(){
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
         max_tokens:2500,temperature:0.6})});
   })
@@ -34685,7 +34685,7 @@ function _c24AutoAnalyze(){
     };
   } else {
     body={
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       max_tokens:1800, temperature:0.6,
       messages:msgs
     };
@@ -34772,7 +34772,7 @@ function _c24SendChat(){
   );
 
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:1500,temperature:0.65,messages:msgs})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:1500,temperature:0.65,messages:msgs})
   }).then(function(r){return r.json();})
   .then(function(data){
     var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'답변을 가져오지 못했습니다.';
@@ -37090,7 +37090,7 @@ function _hvShowResult(seed,oh,sd){
 
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',
+        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         max_tokens:2500,
         temperature:0.65,
         messages:[
@@ -51240,7 +51240,7 @@ function _cgoApplyDictionary(lang) {
     running=true;
     var batch=Q.splice(0,10), tgt=langNames[L]||'English';
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[{role:'system',content:'Translate each Korean UI string to '+tgt+'. Return ONLY a JSON array of strings, same count and order. Keep emojis, numbers, brand names and proper nouns unchanged.'},{role:'user',content:JSON.stringify(batch)}],
       max_tokens:1024,temperature:0.2
     })}).then(function(r){return r.json();}).then(function(data){
@@ -51394,7 +51394,7 @@ function _cgoAiTranslate(lang, pack) {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+        model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages: [
           {role:'system', content:'Translate Korean to '+tgtLang+'. Return ONLY a JSON array. Same count. Keep emojis/numbers/brands/proper nouns unchanged.'},
           {role:'user', content:JSON.stringify(texts)}
@@ -51470,7 +51470,7 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
     fetch('/api/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:[{role:'system',content:sysMsg},{role:'user',content:JSON.stringify(texts)}],max_tokens:2048,temperature:0.1,stream:false})
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:[{role:'system',content:sysMsg},{role:'user',content:JSON.stringify(texts)}],max_tokens:2048,temperature:0.1,stream:false})
     })
     .then(function(r){return r.json();})
     .then(function(data){
@@ -53110,12 +53110,12 @@ function runCouple(){
 
   // ★ AI 호출
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:3000,temperature:0.78,
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:3000,temperature:0.78,
       messages:[{role:'system',content:_sysP},{role:'user',content:_userP}]})
   })
   .then(function(r){return r.json();})
   .then(function(data){
-    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     var res;
     try{ res=JSON.parse(raw.replace(/```json|```/g,'').trim()); } catch(e){ res=null; }
     var sections=[
@@ -57261,7 +57261,7 @@ function runNamingAi(){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       max_tokens:1000,
       messages:[{role:'user',content:window._lastNamingPrompt}]
     })
@@ -61420,7 +61420,7 @@ function tarotChatSend(){
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: messages,
       max_tokens: 300,
       temperature: 0.7
@@ -62457,7 +62457,7 @@ function qtCallAI(userMsg,callback){
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:messages,max_tokens:700,temperature:0.3})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:messages,max_tokens:700,temperature:0.3})
   }).then(function(res){return res.json();}).then(function(data){
     if(loading) loading.remove();
     var reply=data.choices&&data.choices[0]?data.choices[0].message.content:'잠시 후 다시 시도해 주세요.';
@@ -66697,12 +66697,12 @@ function c13Analyze(textOverride){
   var userPrompt='꿈: "'+text+'" | '+nm+' | 오행:'+oh+' | 일간:'+gan+' | 별자리:'+wz+' | 생명수:'+ln+' | ILI:'+ili+'점 | 시진:'+siJin+' | 목성:'+(jupOk?'순행★':'역행')+(marsRetro?' 화성역행⚠️':'')+' | Kp:'+(kp>=0?kp.toFixed(1):'?')+' | 순수 한국어만 사용. 외국어 금지. 의학적 진단·질병 표현 금지. JSON만 반환하세요.';
 
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:3500,temperature:0.78,
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:3500,temperature:0.78,
       messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}]})
   })
   .then(function(r){return r.json();})
   .then(function(data){
-    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var raw=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     var res;
     try{ var cl=raw.replace(/```json|```/g,'').trim(); res=JSON.parse(cl); }
     catch(e){
@@ -67353,14 +67353,14 @@ function _cgoVisionShoot(){
         +'"today":"오늘 '+name+'님 손금+만세력 기반 구체적 행동 지침. 오늘 해야 할 것과 하면 안 되는 것. 행운을 부르는 색상·방향·음식. 3문장"}';
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
         max_tokens:3500,temperature:0.85,
         response_format:{type:'json_object'}})});
   })
   .then(function(res){ return res.json(); })
   .then(function(data){
-    var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     if(!txt){ console.error('[CGO관상] 2단계 응답 없음:', JSON.stringify(data).slice(0,200)); throw new Error('no_content'); }
     var clean=txt.replace(/```json|```/g,'').trim();
     // ── 강화된 JSON 파싱: 잘린 JSON도 복구 시도 ──
@@ -67642,7 +67642,7 @@ function _palmRenderCombined(){
       +'}';
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'user',content:prompt}],
         max_tokens:2500,temperature:0.7})});
   })
@@ -69461,14 +69461,14 @@ function _cgoTfAiAnalysis(r, selectedEngines){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',
+        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sys},{role:'user',content:usr}],
         max_tokens:400,temperature:0.72
       })
     })
     .then(function(res){return res.json();})
     .then(function(data){
-      var txt=(data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
       var cl=txt.replace(/```json|```/g,'').trim();
       var jm=cl.match(/\{[\s\S]*\}/);
       var o=jm?JSON.parse(jm[0]):{};
@@ -71334,7 +71334,7 @@ function cgoTfAiChat(){
       window._tfH.push({role:'user',content:txt});
       if(window._tfH.length>16) window._tfH=window._tfH.slice(-16);
       var m=[{role:'system',content:sys}].concat(window._tfH);
-      return JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:m,max_tokens:800,temperature:0.7});
+      return JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:m,max_tokens:800,temperature:0.7});
     })()
     }).then(function(res){return res.json();}).then(function(d){
       var box=document.getElementById(msgsId);
@@ -75395,7 +75395,7 @@ function _vgAnalyze(){
               (ohSaeng[myOhKey]&&ohSaeng[myOhKey].상극===ptOhKey)?'상극':'중립';
 
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'user',content:
           '당신은 관상학×오행 궁합 해설자. JSON만 반환(코드블록없이).\n'
           +'[웰니스 준수] 질병·증상·진단·치료·장기 상태 언급 금지. 감정·정신건강을 판정하지 마라. 절대·100%·완벽·보장 금지. 경향·참고로만 서술.\n'
@@ -77391,7 +77391,7 @@ function _showBizResult(scores, saju, cat, keyword){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',
+        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         max_tokens:800,
         messages:[{role:'user',content:prompt}]
       })
@@ -83278,7 +83278,7 @@ function cgCallClaude(userText, sendBtn) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: messages,
       max_tokens: 2000,
       temperature: 0.75,
@@ -120155,7 +120155,7 @@ function stkAISearch(companyName) {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: [{role:'user', content: prompt}],
       max_tokens: 200,
       temperature: 0.1
@@ -121404,13 +121404,13 @@ function runStockAnalysis() {
       fetch('/api/groq',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:[{role:'user',content:prompt}],max_tokens:150,temperature:0.1})
+        body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:[{role:'user',content:prompt}],max_tokens:150,temperature:0.1})
       })
       .then(function(r){return r.json();})
       .then(function(data){
         if (btn){btn.disabled=false;btn.textContent=_cgoT('⚡ 분석');}
         if (statusEl) statusEl.style.display='none';
-        var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+        var text=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
         var jm=text.match(/\{[\s\S]*?\}/);
         if(!jm) throw new Error('파싱실패');
         var info=JSON.parse(jm[0]);
@@ -122674,10 +122674,10 @@ async function foodAnalyzeWithAI(name, imageSrc) {
       + (diseaseCtx ? '\n사용자 건강정보(참고): '+diseaseCtx : '');
     var resp = await fetch('/api/groq', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low', messages:[{role:'user',content:prompt}], max_tokens:200, temperature:0.1})
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:[{role:'user',content:prompt}], max_tokens:200, temperature:0.1})
     });
     var data = await resp.json();
-    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     var jMatch = txt.match(/\{[^{}]+\}/);
     if (jMatch) {
       var info = JSON.parse(jMatch[0]);
@@ -123254,7 +123254,7 @@ function foodAskAI(userText) {
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:[{role:'system',content:sys}].concat(_foodChatHistory),max_tokens:400,temperature:0.7})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:[{role:'system',content:sys}].concat(_foodChatHistory),max_tokens:400,temperature:0.7})
   }).then(function(r){return r.json();}).then(function(data){
     var t=document.getElementById('food-typing'); if(t) t.remove();
     var reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'답변을 받지 못했습니다.';
@@ -124591,14 +124591,14 @@ function sptFetchWinRate(teamA, teamB, callback) {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[{role:'user',content:prompt}],
       max_tokens:100, temperature:0.1
     })
   })
   .then(function(r){return r.json();})
   .then(function(data){
-    var txt = (data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
     var m = txt.match(/[{][\s\S]*?[}]/);
     if (!m) return;
     var obj = JSON.parse(m[0]);
@@ -125186,7 +125186,7 @@ function sptAskAI(userText, isAuto) {
         fetch('/api/groq', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low', messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
+          body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
         })
         .then(function(r3){ return r3.json(); })
         .then(function(d3){
@@ -125342,7 +125342,7 @@ function sptAskAI(userText, isAuto) {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
-          model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+          model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
           messages: augMessages,
           max_tokens: 1800,
           temperature: 0.3,
@@ -125373,7 +125373,7 @@ function _sptFallbackAnswer(messages, apiKey, sendBtn) {
   fetch('/api/groq', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low', messages:messages, max_tokens:1200, temperature:0.75, stream:false})
+    body: JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:messages, max_tokens:1200, temperature:0.75, stream:false})
   })
   .then(function(r){ return r.json(); })
   .then(function(data) {
@@ -125834,7 +125834,7 @@ function stkAiCallApi(userText) {
   fetch('/api/groq', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low', messages:messages, max_tokens:500, temperature:0.75, stream:false})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:messages, max_tokens:500, temperature:0.75, stream:false})
   })
   .then(function(r){ return r.json(); })
   .then(function(data) {
@@ -126759,7 +126759,7 @@ function vipAskAI(userText) {
   fetch('/api/groq', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:messages,max_tokens:1500,temperature:0.7})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:messages,max_tokens:1500,temperature:0.7})
   }).then(function(r){ return r.json(); }).then(function(data) {
     if (typing) typing.remove();
     var reply = (data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content : '분석 중 오류가 발생했습니다.';
@@ -127024,7 +127024,7 @@ function cgoTfBarPopup(key){
   var legal=d.legal||Math.round(total*.7);
   var career=d.career||Math.round((ws+ms)*.5);
   var dirScore=d.dirScore||Math.round((hs+ws)*.5);
-  var oh=d.oh,ohK=d.ohK,name=d.name||'사용자',engNames=d.engNames,engCount=d.engCount;
+  var oh=d.oh,ohK=d.ohK,name=d.name||(window._cgoName&&window._cgoName())||'사용자',engNames=d.engNames,engCount=d.engCount;
   var result=d.result||{},selectedEngines=d.selectedEngines||[];
   var lifeNum=d.lifeNum||1;
   var bp=(d.r&&d.r.birthPlace)||d.birthPlace||'';
@@ -127268,19 +127268,19 @@ function cgoTfBarPopup(key){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[
         {role:'system',content:sysRole+' 반드시 유효한 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.'},
         {role:'user',content:prompt}
       ],
-      max_tokens:3000,
+      max_tokens:3500,
       temperature:0.65
     })
   })
   .then(function(res){return res.json();})
   .then(function(data){
     try{
-      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
       var clean=txt.replace(/```json|```/g,'').trim();
       var jm=clean.match(/\{[\s\S]*\}/);
       var parsed=null;
@@ -127626,13 +127626,13 @@ function cgoRunRppgAnalysis(){
     var usr=def.d+'\n\n위 생체+NASA+역학 데이터로 '+eng.name+' 이론 기반 분석하세요.\nJSON만 출력:\n'+_jFmtR;
     return fetch('/api/groq',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sys},{role:'user',content:usr}],
         max_tokens:400,temperature:0.7})
     })
     .then(function(res){return res.json();})
     .then(function(data){
-      var txt=(data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
       var cl=txt.replace(/```json|```/g,'').trim();
       var jm=cl.match(/\{[\s\S]*\}/);
       var o=jm?JSON.parse(jm[0]):{};
@@ -127786,7 +127786,7 @@ function cgoRunRealtimeAnalysis(){
   ];
   var prompt = promptLines.join('\n');
   fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[{role:'system',content:sysRole+' JSON만 출력.'},
                 {role:'user',content:prompt}],
       max_tokens:1200,temperature:0.65})})
@@ -127974,13 +127974,13 @@ function cgoRunRealtimeAnalysis(){
     var usr=def.d+'\n\n위 정보를 '+eng.name+' 이론+실시간 데이터로 분석하세요.\nJSON만 출력:\n'+_jFmt2;
     return fetch('/api/groq',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sys},{role:'user',content:usr}],
         max_tokens:400,temperature:0.72})
     })
     .then(function(res){return res.json();})
     .then(function(data){
-      var txt=(data.choices&&data.choices[0]&&data.choices[0].message.content)||'';
+      var txt=(data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
       var cl=txt.replace(/```json|```/g,'').trim();
       var jm=cl.match(/\{[\s\S]*\}/);
       var o=jm?JSON.parse(jm[0]):{};
@@ -135060,7 +135060,7 @@ if('serviceWorker' in navigator){
         +'[내 오행: '+me+'] [상대 대표 오행: '+res.dom+'] [궁합 점수: '+c.s+'점, '+c.rel+'] [사진 오행 분포: '+_dist+']. '
         +'과학·예언이 아닌 재미·참고임을 전제로, 이 사람과 첫 만남에서 어떻게 어울리면 좋을지(대화 주제·태도·주의점)를 구체적으로 4~6문장으로 따뜻하게 조언하세요. 점수를 새로 지어내지 말고, 운명을 단정하지 말고 긍정적으로. '
         +'[LANGUAGE] Respond ONLY in the language with IETF code "'+_lang+'". Do not use any other language.';
-      fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',max_tokens:700,temperature:0.8,messages:[{role:'user',content:prompt}]})})
+      fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,max_tokens:700,temperature:0.8,messages:[{role:'user',content:prompt}]})})
       .then(function(x){return x.json();}).then(function(d){
         var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
         if(a){ box.innerHTML='<div class="cgp-sech">🔮 '+(L?'AI compatibility reading':'AI 궁합 리딩')+'</div><div class="cgp-read">'+a.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div>'; }
@@ -154101,7 +154101,7 @@ window.rmaiChatSend = function(){
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b',reasoning_effort:'low',
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages: [{role:'system', content:systemPrompt + (window._demLangDirective?window._demLangDirective():'')}].concat(historyMsgs).concat([{role:'user', content:input}]),
       max_tokens: 600,
       temperature: 0.7
@@ -157532,7 +157532,7 @@ function cgmAskAI(){
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',messages:[{role:'user',content:q}],max_tokens:150,temperature:0.8})
+    body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:[{role:'user',content:q}],max_tokens:150,temperature:0.8})
   }).then(function(r){
     return r.json();
   }).then(function(data){
@@ -157893,7 +157893,7 @@ function cgmSejongReply(userText){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       messages:[
         {role:'system', content:'너는 CGO 메신저의 AI 파트너 세종이야. 한국어로 짧고 명확하게 답해. 고풍스러운 말투 필요없고 그냥 친근하게 답해줘. 오행/역학 질문엔 전문적으로, 일상 질문엔 편하게. 3문장 이내로 핵심만. 이모지 1-2개 사용.'},
         {role:'user', content:q}
@@ -158685,7 +158685,7 @@ var _cgmAllUsers = [];
       headers:{'Content-Type':'application/json'},
       signal: _c19_xyAbortCtrl.signal, // 🎯 중단 가능
       body: JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',
+        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[
           {role:'system', content:_c19_buildXyPrompt()},
           {role:'user',   content:userText}
@@ -159144,7 +159144,7 @@ var _cgmAllUsers = [];
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',
+        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[
           {role:'system', content: sysPrompt},
           {role:'user',   content: text}
