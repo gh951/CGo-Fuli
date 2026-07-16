@@ -69282,17 +69282,23 @@ function cgoRunTodayFortune(){
 function _cgoTfLoadingAnim(){
   var ld = document.getElementById('tf-loading');
   if(!ld) return;
-  var msgs = [
-    '✨ C-23이 50개 역학 전문가를 소환 중...',
-    '천간(天干)과 지지(地支)의 합을 읽는 중...',
-    '선택 역학의 기운을 융합하는 중...',
-    '오행 상생·상극 관계를 분석 중...',
-    'AI 역학 해석을 완성하는 중...'
+  var msgs = (window._LANG&&window._LANG!=='ko') ? [
+    '🔮 Analyzing your energy...',
+    '🔮 Reading the elements...',
+    '🔮 Cross-checking the systems...',
+    '🔮 Almost there...',
+    '🔮 Finalizing your reading...'
+  ] : [
+    '🔮 기운을 분석하는 중...',
+    '🔮 오행을 읽는 중...',
+    '🔮 역학을 교차 확인 중...',
+    '🔮 거의 다 됐어요...',
+    '🔮 결과를 마무리하는 중...'
   ];
   var icons = ['✨','☯️','🔮','⭐','🌙'];
   var i = 0;
   ld.innerHTML = '<div id="tf-load-icon" style="font-size:48px;animation:pulse 1.5s infinite;margin-bottom:16px;">☯️</div>'
-    + '<div id="tf-load-msg" style="color:#b45309;font-size:13px;font-weight:700;margin-bottom:8px;min-height:20px;">역학 분석 준비 중...</div>'
+    + '<div id="tf-load-msg" style="color:#b45309;font-size:13px;font-weight:700;margin-bottom:8px;min-height:20px;">'+((window._LANG&&window._LANG!=='ko')?'Preparing your analysis...':'분석 준비 중...')+'</div>'
     + '<div style="width:200px;height:3px;background:#e2e8f0;border-radius:3px;margin:0 auto;overflow:hidden;">'
     + '<div id="tf-load-bar" style="height:100%;background:linear-gradient(90deg,#d4a843,#fbbf24);width:0%;transition:width 0.5s;border-radius:3px;"></div></div>';
   var bar = document.getElementById('tf-load-bar');
@@ -69437,7 +69443,7 @@ function _cgoTfAiAnalysis(r, selectedEngines){
     +'"luckyDir":"길방 방위","luckyColor":"행운 색상","luckyNum":7}';
 
   // 로딩 메시지
-  var _lm=['✨ C-23이 50개 역학 전문가를 소환 중...','사주팔자 분석 중...','역학 교차 분석 중...','종합 판단 중...'];
+  var _lm=[((window._LANG&&window._LANG!=='ko')?'✨ Summoning 50 metaphysics experts...':'✨ C-23이 50개 역학 전문가를 소환 중...'),((window._LANG&&window._LANG!=='ko')?'Analyzing the Four Pillars...':'사주팔자 분석 중...'),((window._LANG&&window._LANG!=='ko')?'Cross-analyzing systems...':'역학 교차 분석 중...'),((window._LANG&&window._LANG!=='ko')?'Reaching a verdict...':'종합 판단 중...')];
   var _li=0;
   if(window._tfLoadTimer) clearInterval(window._tfLoadTimer);
   window._tfLoadTimer=setInterval(function(){
@@ -69461,7 +69467,7 @@ function _cgoTfAiAnalysis(r, selectedEngines){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+        model:'llama-3.1-8b-instant',
         messages:[{role:'system',content:sys},{role:'user',content:usr}],
         max_tokens:400,temperature:0.72
       })
@@ -71944,7 +71950,7 @@ window.addEventListener('load', function(){
     <!-- 로딩 (제미나이 감성 연출) -->
     <div id="tf-loading" style="display:none;text-align:center;padding:40px;">
       <div id="tf-load-icon" style="font-size:48px;animation:pulse 1.5s infinite;margin-bottom:16px;">☯️</div>
-      <div id="tf-load-msg" style="color:#b45309;font-size:13px;font-weight:700;margin-bottom:12px;">역학 분석 준비 중...</div>
+      <div id="tf-load-msg" style="color:#b45309;font-size:13px;font-weight:700;margin-bottom:12px;">'+((window._LANG&&window._LANG!=='ko')?'Preparing your analysis...':'분석 준비 중...')+'</div>
       <div style="width:200px;height:3px;background:#e2e8f0;border-radius:3px;margin:0 auto;overflow:hidden;">
         <div id="tf-load-bar" style="height:100%;background:linear-gradient(90deg,#b45309,#fbbf24);width:0%;transition:width 0.5s;border-radius:3px;"></div>
       </div>
@@ -127268,7 +127274,7 @@ function cgoTfBarPopup(key){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+      model:'llama-3.1-8b-instant',
       messages:[
         {role:'system',content:sysRole+' 반드시 유효한 JSON만 출력하세요. 다른 텍스트는 절대 출력하지 마세요.'},
         {role:'user',content:prompt}
