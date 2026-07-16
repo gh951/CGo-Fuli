@@ -9740,7 +9740,6 @@ function cgoGuideFeature(key){
           <div id="gws-info-title" style="font-size:17px;font-weight:900;color:#0f172a;"></div>
         </div>
         <div id="gws-info-body" style="font-size:13px;color:#334155;line-height:1.75;margin-bottom:16px;"></div>
-        <button onclick="document.getElementById('gws-info-ov').style.display='none';cgoFaceVisionAnalysis();" style="width:100%;padding:13px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;">📷 측정하고 내 결과 보기</button>
         <button onclick="document.getElementById('gws-info-ov').style.display='none';" style="width:100%;padding:11px;background:#f1f5f9;border:none;border-radius:12px;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">닫기</button>
       </div>
     </div>
@@ -9807,7 +9806,6 @@ function cgoGuideFeature(key){
           <div id="snk-info-title" style="font-size:17px;font-weight:900;color:#0f172a;"></div>
         </div>
         <div id="snk-info-body" style="font-size:13px;color:#334155;line-height:1.75;margin-bottom:16px;"></div>
-        <button onclick="document.getElementById('snk-info-ov').style.display='none';cgoIntroOpen('palm', function(){ cgoPalmVisionAnalysis(); });" style="width:100%;padding:13px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;">📷 측정하고 내 결과 보기</button>
         <button onclick="document.getElementById('snk-info-ov').style.display='none';" style="width:100%;padding:11px;background:#f1f5f9;border:none;border-radius:12px;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">닫기</button>
       </div>
     </div>
@@ -66917,7 +66915,6 @@ function _cgoYeokModalOpen(nm, ico, sc, fullDesc, easy, color){
     +'<div style="font-size:10px;color:rgba(240,230,200,.4);margin-top:2px;letter-spacing:.1em;">C-35 풀버전 분석</div></div></div>'
     +'<div style="font-size:28px;font-weight:900;color:'+bc+';font-family:Orbitron,sans-serif;">'+sc+'</div>'
     +'</div>'
-    +'<div id="cgo-deep-box" style="margin-top:14px;"><button id="cgo-deep-btn" onclick="cgoDeepYeok()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);">🔬 '+((window._LANG&&window._LANG!=='ko')?'Deep Analysis · 100 Stars':'심층 분석 · 100별')+'</button><div id="cgo-deep-result" style="margin-top:12px;"></div></div>'
     +(fullDesc?'<div style="font-size:12.5px;color:rgba(240,230,200,.88);line-height:1.85;padding:14px;background:rgba(255,255,255,.025);border-radius:12px;border-left:3px solid '+(color||'#fcd34d')+';margin-bottom:'+(easy?'12px':'0')+';white-space:pre-wrap;">'+fullDesc+'</div>':'')
     +(easy?'<div style="font-size:11.5px;color:rgba(240,230,200,.75);line-height:1.75;padding:12px;background:rgba(52,211,153,.06);border-radius:10px;border-left:3px solid #34d399;">😊 <b style="color:#34d399;">쉽게 풀이</b><br>'+easy+'</div>':'')
     +'<div style="text-align:center;margin-top:16px;"><button onclick="_cgoYeokModalClose()" style="padding:8px 24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:20px;color:rgba(240,230,200,.85);font-size:12px;font-weight:600;cursor:pointer;">닫기</button></div>'
@@ -66974,6 +66971,36 @@ function _cgoVisionClose(){
 
 window._cgoVisionMode = '';
 
+window.cgoCardDeepStart=function(){
+  var t=document.getElementById('gws-info-title'); var b=document.getElementById('gws-info-body');
+  var name=t?(t.textContent||'').trim():''; var ex=b?(b.textContent||'').trim():'';
+  var L=(window._LANG&&window._LANG!=='ko');
+  if(!confirm(L?('Run a 70B deep analysis specialized for "'+name+'"? 100 Stars will be deducted.'):('"'+name+'"에 특화된 70B 심층 분석을 진행합니다. 100별이 차감됩니다. 진행할까요?'))) return;
+  var ok=true; try{ ok=window.chargeStars(100); }catch(e){ ok=true; }
+  if(ok===false){ alert(L?'Not enough Stars. Please top up.':'별이 부족합니다. 충전해 주세요.'); return; }
+  window._cgoDeepCard={name:name,ex:ex};
+  var ovp=document.getElementById('gws-info-ov'); if(ovp) ovp.style.display='none';
+  if(typeof cgoFaceVisionAnalysis==='function') cgoFaceVisionAnalysis();
+};
+window.cgoCardDeepRun=function(){
+  var card=window._cgoDeepCard; if(!card) return; window._cgoDeepCard=null;
+  var L=(window._LANG&&window._LANG!=='ko'); var ov=document.getElementById('cgo-carddeep-ov'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='cgo-carddeep-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100002;display:flex;align-items:center;justify-content:center;padding:18px;';
+  ov.innerHTML='<div style="background:linear-gradient(180deg,#1a1530,#0f0e1f);border:1px solid #a78bfa66;border-radius:18px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:22px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div style="font-size:16px;font-weight:900;color:#a78bfa;">🔬 '+card.name+'</div>'
+    +'<button onclick="var o=document.getElementById(&#39;cgo-carddeep-ov&#39;);if(o)o.remove();" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:15px;cursor:pointer;">✕</button></div>'
+    +'<div id="cgo-carddeep-body" style="font-size:13px;color:rgba(240,230,200,.9);line-height:1.9;white-space:pre-wrap;">'+(L?'Deep analysis in progress…':'심층 분석 중…')+'</div></div>';
+  document.body.appendChild(ov);
+  var vp=window._cgoLastVisionP||{}; var p=vp.p||{}; var _lang=(window._LANG||'ko'); var dataStr=''; try{ dataStr=JSON.stringify(p).slice(0,1200); }catch(e){}
+  var prompt='당신은 관상·손금 전문 상담가입니다. 아래 측정 결과를 바탕으로 "'+card.name+'" 주제에 특화해서 아주 깊고 길게 심층 분석하세요. '
+    +'[측정 데이터: '+dataStr+'] [항목 설명: '+(card.ex||'')+']. '
+    +'이 항목("'+card.name+'")에만 집중해서 근거·의미·구체적 조언·주의점을 10문장 이상으로 아주 상세하고 통찰 있게. 재미·참고임을 전제로, 운명을 단정하지 말고 긍정적으로. '
+    +'[LANGUAGE] Respond ONLY in the language with IETF code "'+_lang+'". Do not use any other language.';
+  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2500,temperature:0.75,messages:[{role:'user',content:prompt}]})})
+  .then(function(x){return x.json();}).then(function(d){ var a=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; var bd=document.getElementById('cgo-carddeep-body'); if(bd){ bd.innerHTML=a?('🔬 '+a.replace(/</g,'&lt;')):(L?'Analysis failed. Please try again.':'분석 실패. 다시 시도해 주세요.'); } })
+  .catch(function(){ var bd=document.getElementById('cgo-carddeep-body'); if(bd) bd.innerHTML=(L?'Network error.':'네트워크 오류.'); });
+};
 function cgoFaceVisionAnalysis(){
   window._cgoVisionMode = 'face';
   _cgoVisionPopup((window._LANG&&window._LANG!=='ko')?'Face measurement':'얼굴 측정', '#93c5fd', '🧖');
@@ -67266,8 +67293,8 @@ function _cgoVisionShoot(){
     }
 
     var step2Sys = mode==='face'
-      ? '당신은 전통 관상학·만세력에 밝은 해설자입니다. JSON만 반환. 코드블록 금지.\n[작성] ① 관찰된 실제 특징만 언급 ② 각 필드 3문장 ③ 만세력 오행 연결\n[웰니스 준수 · 반드시] ④ 질병명·증상·진단·치료·처방·예방을 언급하지 마라 ⑤ 장기(간·담·폐·신장·심장·비위 등)의 기능이나 이상을 말하지 마라 ⑥ 건강 판정(건강하다/나쁘다)을 하지 말고 컨디션·기운·인상으로 표현하라 ⑦ 절대·100%·완벽·완전무결·보장·확실 같은 단정 표현 금지 ⑧ 미래를 확정하지 말고 경향·참고로 서술하라 ⑨ 몸이 걱정되는 대목은 의료기관 상담 권장으로만 언급하라' + (_hasRppg?'\n⑩ rPPG FCI·FMA는 혈색의 밝기·표정 활성도라는 관찰값으로만 해석하고 건강 상태로 환원하지 마라.':'')
-      : '당신은 전통 수상학(手相學)·만세력에 밝은 해설자입니다. JSON만 반환. 코드블록 금지. 지금 분석하는 손: '+_curHandKr+'('+_curHandDesc+').\n[작성] ① 관찰된 실제 선의 특징 언급 ② 각 필드 3문장 이상 ③ 구체적 예시와 조언 ④ 흥미롭게 ⑤ 만세력 오행 연결 ⑥ '+_curHandKr+' 손의 의미를 언급\n[웰니스 준수 · 반드시] ⑦ 질병명·증상·진단·치료·처방·예방을 언급하지 마라 ⑧ 수명·여명을 예측하지 마라 ⑨ 장기(심장·간·폐·신장·비위)의 상태나 순환계 이상을 말하지 마라 ⑩ 건강 판정 대신 활력·생기·컨디션·기운으로 표현하라 ⑪ 절대·100%·완벽·완전무결·보장·확실 금지 ⑫ 미래를 확정하지 말고 경향·참고로 서술하라 ⑬ 몸이 걱정되는 대목은 의료기관 상담 권장으로만 언급하라.';
+      ? '당신은 전통 관상학·만세력에 밝은 해설자입니다. JSON만 반환. 코드블록 금지.\n[작성] ① 관찰된 실제 특징만 언급 ② 각 필드 5~6문장으로 아주 자세하고 구체적으로 (근거·예시·조언 풍부하게) ③ 만세력 오행 연결\n[웰니스 준수 · 반드시] ④ 질병명·증상·진단·치료·처방·예방을 언급하지 마라 ⑤ 장기(간·담·폐·신장·심장·비위 등)의 기능이나 이상을 말하지 마라 ⑥ 건강 판정(건강하다/나쁘다)을 하지 말고 컨디션·기운·인상으로 표현하라 ⑦ 절대·100%·완벽·완전무결·보장·확실 같은 단정 표현 금지 ⑧ 미래를 확정하지 말고 경향·참고로 서술하라 ⑨ 몸이 걱정되는 대목은 의료기관 상담 권장으로만 언급하라' + (_hasRppg?'\n⑩ rPPG FCI·FMA는 혈색의 밝기·표정 활성도라는 관찰값으로만 해석하고 건강 상태로 환원하지 마라.':'')
+      : '당신은 전통 수상학(手相學)·만세력에 밝은 해설자입니다. JSON만 반환. 코드블록 금지. 지금 분석하는 손: '+_curHandKr+'('+_curHandDesc+').\n[작성] ① 관찰된 실제 선의 특징 언급 ② 각 필드 5~6문장 이상으로 아주 자세하고 구체적으로 ③ 구체적 예시와 조언 ④ 흥미롭게 ⑤ 만세력 오행 연결 ⑥ '+_curHandKr+' 손의 의미를 언급\n[웰니스 준수 · 반드시] ⑦ 질병명·증상·진단·치료·처방·예방을 언급하지 마라 ⑧ 수명·여명을 예측하지 마라 ⑨ 장기(심장·간·폐·신장·비위)의 상태나 순환계 이상을 말하지 마라 ⑩ 건강 판정 대신 활력·생기·컨디션·기운으로 표현하라 ⑪ 절대·100%·완벽·완전무결·보장·확실 금지 ⑫ 미래를 확정하지 말고 경향·참고로 서술하라 ⑬ 몸이 걱정되는 대목은 의료기관 상담 권장으로만 언급하라.';
 
     var mans = _hasMansae
       ? '만세력: 이름('+name+') | 일주('+dGan+dJi+') | 일간('+dGan+') | 오행('+oh+'·'+ohK[oh]+') | 생명수('+lifeNum+'번) | 띠('+tti+')'
@@ -67323,7 +67350,7 @@ function _cgoVisionShoot(){
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'llama-3.1-8b-instant',
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
-        max_tokens:3500,temperature:0.85,
+        max_tokens:5000,temperature:0.85,
         response_format:{type:'json_object'}})});
   })
   .then(function(res){ return res.json(); })
@@ -67835,6 +67862,7 @@ window._cgoFaceDeepV2 = function(p){
 };
 
 function _cgoVisionRenderDeep(p, mode){
+  try{ window._cgoLastVisionP={p:p,mode:mode}; }catch(e){}
   var resDiv = document.getElementById('cgo-vision-result');
   var inlineRes = document.getElementById('cgo-inline-vision-result');
   var inlineWait = document.getElementById('cgo-inline-vision-wait');
@@ -68513,6 +68541,7 @@ function _cgoVisionRenderDeep(p, mode){
       +h+'</div>';
   }
   if(inlineWait) inlineWait.style.display='none';
+  try{ if(window._cgoDeepCard && window.cgoCardDeepRun) cgoCardDeepRun(); }catch(e){}
 }
 
 
@@ -134943,6 +134972,7 @@ window._cgoSignupPrompt = function(label){
       '⚠️ 먼저 위에서 이름·생년월일을 입력하세요':'⚠️ Please enter your name and date of birth above first',
       '⚠️ 약관에 동의해 주세요':'⚠️ Please agree to the terms',
       '⚠️ 올바른 이메일 또는 전화번호를 입력하세요':'⚠️ Please enter a valid email or phone number',
+      "🔬 측정하고 내 결과 보기 (100별)":"🔬 Measure & see my result (100 Stars)",
       "이마":"Forehead",
       "눈썹":"Brows",
       "눈":"Eyes",
