@@ -60222,7 +60222,7 @@ function calcAstro() {
   var lifeNum   = calcLifeNum(y,m,d);
   var kujusei   = calcKujusei(y,gender);
   var isM       = (lifeNum===11||lifeNum===22||lifeNum===33||lifeNum===44);
-  var lifeMark  = isM?('★ 마스터 '+lifeNum):('No.'+lifeNum);
+  var lifeMark  = isM?(((window._LANG&&window._LANG!=='ko')?'★ Master ':'★ 마스터 ')+lifeNum):('No.'+lifeNum);
 
   // --- 오행 분포 ---
   var ohCount={목:0,화:0,토:0,금:0,수:0};
@@ -62850,7 +62850,7 @@ function generateReport(r){
   var _td = window._fcBase||new Date();
   var _ty=_td.getFullYear(),_tm=_td.getMonth()+1,_tday=_td.getDate();
   var _dw=['일','월','화','수','목','금','토'][_td.getDay()];
-  var _dateStr = _ty+'년 '+_tm+'월 '+_tday+'일 ('+_dw+'요일) 기준';
+  var _dateStr = (window._LANG&&window._LANG!=='ko')?('As of '+_ty+'.'+_tm+'.'+_tday+' ('+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][_td.getDay()]+')'):(_ty+'년 '+_tm+'월 '+_tday+'일 ('+_dw+'요일) 기준');
   // ──────────────────────────────────────────────────────────
   var ili=r.ili;
   // ILI 엔진 v2.0 — 4분면 cat & 18점수 맵 수신
@@ -62860,7 +62860,7 @@ function generateReport(r){
   var g=gradeInfo(ili);
   var oe={목:'🌳木',화:'🔥火',토:'⛰土',금:'⚔金',수:'水💧'};
   var oStr=oe[r.domOh]||r.domOh;
-  var kj=KJ_KR[r.kujusei]||'';
+  var kj=((typeof KJ_I18N!=='undefined'&&window._LANG&&KJ_I18N[window._LANG])?(KJ_I18N[window._LANG][r.kujusei]||KJ_KR[r.kujusei]):KJ_KR[r.kujusei])||'';
 
   // 팔자 컬럼
   var pCols=[{h:'時柱',g:r.sGan,j:r.sJi,hl:false},{h:'日柱 ★',g:r.dGJ.gan,j:r.dGJ.ji,hl:true},{h:'月柱',g:r.mGJ.gan,j:r.mGJ.ji,hl:false},{h:'年柱',g:r.yGan,j:r.yJi,hl:false}];
@@ -63012,19 +63012,19 @@ function generateReport(r){
   // 헤더
   '<div class="report-hero"><div class="rh-top">'+
   '<div class="rh-name-block"><div class="rh-name">'+r.name+'</div>'+
-  '<div class="rh-saju">'+r.yGan+r.yJi+'年 · '+r.mGJ.gan+r.mGJ.ji+'月 · '+r.dGJ.gan+r.dGJ.ji+'日 · '+r.sGan+r.sJi+'時  |  '+r.y+'년 '+r.m+'월 '+r.d+'일 '+r.h+'시</div>'+
+  '<div class="rh-saju">'+r.yGan+r.yJi+'年 · '+r.mGJ.gan+r.mGJ.ji+'月 · '+r.dGJ.gan+r.dGJ.ji+'日 · '+r.sGan+r.sJi+'時  |  '+((window._LANG&&window._LANG!=='ko')?(r.y+'.'+r.m+'.'+r.d+' · '+r.h+'h'):(r.y+'년 '+r.m+'월 '+r.d+'일 '+r.h+'시'))+'</div>'+
   // 막둥이 미션9: 일주 한줄 요약
   (function(){
     var _iljuKey = r.dGJ.gan + r.dGJ.ji;
     var _iljuDesc = (_ILJU_DESC && _ILJU_DESC[_iljuKey]) ? _ILJU_DESC[_iljuKey] : '';
-    return _iljuDesc ? '<div style="font-size:11px;color:#b8860b;margin:4px 0 6px;font-style:italic">✨ '+_iljuKey+' — '+_iljuDesc+'</div>' : '';
+    return _iljuDesc ? '<div style="font-size:11px;color:#b8860b;margin:4px 0 6px;font-style:italic">✨ '+_iljuKey+' — '+_cgoT(_iljuDesc)+'</div>' : '';
   })()+
   '<div class="rh-tags">'+
-  '<span class="rh-tag">☯ 일간 '+r.dGJ.gan+'('+ganToOhaeng(r.dGJ.gan)+')</span>'+
+  '<span class="rh-tag">☯ '+_cgoT('일간')+' '+r.dGJ.gan+'('+ganToOhaeng(r.dGJ.gan)+')</span>'+
   '<span class="rh-tag">'+r.wz.sym+' '+r.wz.name+'</span>'+
   '<span class="rh-tag">🔢 '+r.lifeMark+'</span>'+
   '<span class="rh-tag">'+oStr+'</span>'+
-  '<span class="rh-tag">'+r.zodiacName+' 띠</span>'+
+  '<span class="rh-tag">'+_cgoT(r.zodiacName+' 띠')+'</span>'+
   '<span class="rh-tag">'+kj+'</span>'+
   '</div></div>'+
   '<div class="rh-ili-box"><div class="rh-ili-num">'+ili+'</div><div class="rh-ili-label">통합 라이프 인덱스</div><div class="rh-ili-grade">'+g.grade+'</div>'+
@@ -63034,7 +63034,7 @@ function generateReport(r){
 
   // ILI 4분면
   '<div class="ili-cats">'+
-  '<div class="ili-cat" style="border-top:3px solid var(--gold)"><div class="ic-label">기반 (Foundation)</div><div class="ic-score" style="color:var(--gold)">'+cat[0]+'</div><div class="ic-desc">'+r.dGJ.gan+r.dGJ.ji+' 일주<br>사주·수리 기반</div></div>'+
+  '<div class="ili-cat" style="border-top:3px solid var(--gold)"><div class="ic-label">기반 (Foundation)</div><div class="ic-score" style="color:var(--gold)">'+cat[0]+'</div><div class="ic-desc">'+r.dGJ.gan+r.dGJ.ji+((window._LANG&&window._LANG!=='ko')?' Day Pillar':' 일주')+'<br>사주·수리 기반</div></div>'+
   '<div class="ili-cat" style="border-top:3px solid var(--cyan)"><div class="ic-label">운용 (Operation)</div><div class="ic-score" style="color:var(--cyan)">'+cat[1]+'</div><div class="ic-desc">'+r.lifeMark+'<br>수비학·구성학</div></div>'+
   '<div class="ili-cat" style="border-top:3px solid var(--green)"><div class="ic-label">조화 (Harmony)</div><div class="ic-score" style="color:var(--green)">'+cat[2]+'</div><div class="ic-desc">'+r.wz.sym+' '+r.wz.name+'<br>점성술 기반</div></div>'+
   '<div class="ili-cat" style="border-top:3px solid var(--indigo)"><div class="ic-label">비전 (Vision)</div><div class="ic-score" style="color:var(--indigo)">'+cat[3]+'</div><div class="ic-desc">'+oStr+'<br>주역·파자</div></div>'+
@@ -63067,7 +63067,7 @@ function generateReport(r){
   '<div class="ac-tip">💡 용신 색상·방위·음식을 생활에 적용하면 사주 에너지가 균형잡힙니다. 용신 방위에 책상·침대를 배치하는 것만으로도 일상 에너지가 달라집니다.</div>'+
   '<div class="ac-factors">'+
   '<div class="ac-factor"><div class="ac-factor-dot" style="background:var(--gold)"></div>일간: '+r.dGJ.gan+' ('+ganToOhaeng(r.dGJ.gan)+') / 월지: '+r.mGJ.ji+' / 지배오행: '+oStr+' / 용신: '+(oStr.includes('목')?'수(水)':oStr.includes('화')?'목(木)':oStr.includes('토')?'화(火)':oStr.includes('금')?'토(土)':'금(金)')+'</div>'+
-  '<div class="ac-factor"><div class="ac-factor-dot" style="background:var(--amber)"></div>'+r.zodiacName+' 띠 · '+r.y+'년생 · 출생지: '+(r.birthPlace||'서울')+'</div>'+
+  '<div class="ac-factor"><div class="ac-factor-dot" style="background:var(--amber)"></div>'+_cgoT(r.zodiacName+' 띠')+' · '+((window._LANG&&window._LANG!=='ko')?('born '+r.y+' · birthplace: '):(r.y+'년생 · 출생지: '))+(r.birthPlace||'서울')+'</div>'+
   '</div></div>'+
 
   // ② 태양궁 점성술
@@ -150719,6 +150719,25 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     visibleFirst(); /* 이미 사전이 있으면(내장+캐시) 즉시 1차 적용 */
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
+  /* 페이지 이동 직후 즉시 번역 — 리포트 등 innerHTML 대량 렌더가 한글로 보였다가 뒤늦게 바뀌는 잔상 제거 */
+  function hookNav(){
+    try{
+      if(window._cgoNavTxHooked || typeof window.cgoGoPage!=='function') return;
+      window._cgoNavTxHooked=true;
+      var _o=window.cgoGoPage;
+      window.cgoGoPage=function(){
+        var r=_o.apply(this,arguments);
+        try{
+          if(window._LANG && window._LANG!=='ko'){
+            var ap=document.querySelector('.page.active');
+            if(ap){ T(ap); setTimeout(function(){ T(ap); },350); setTimeout(function(){ T(ap); },1200); }
+          }
+        }catch(e){}
+        return r;
+      };
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', hookNav); else hookNav();
   /* 언어 전환 감지 (기존 setLang 무수정): _LANG 변화 시에만 동작 */
   var lastL=window._LANG;
   setInterval(function(){
