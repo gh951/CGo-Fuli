@@ -2737,6 +2737,35 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 <div id="cgoEntrance">
 <script>try{if(sessionStorage.getItem('cgo_unlocked')==='1'){var _ce=document.getElementById('cgoEntrance');if(_ce)_ce.style.display='none';}}catch(e){}</script>
+<script>
+/* ★ C-66 대문 조기 번역 — 폰 캐시 사전을 파싱 시점에 즉시 적용해 한글 잔상 제거 (캐시 없는 최초 1회 제외) */
+(function(){
+  try{
+    var L=null; try{ L=localStorage.getItem('cgo_lang'); }catch(e){}
+    if(!L||L==='ko') return;
+    var raw=null; try{ raw=localStorage.getItem('cgo_lp_'+L); }catch(e){}
+    if(!raw) return;
+    var d; try{ d=JSON.parse(raw); }catch(e){ return; }
+    if(!d) return;
+    var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
+    function tx(n){
+      if(!n) return;
+      if(n.nodeType===3){ var t=(n.nodeValue||'').trim(); if(t&&d[t]) n.nodeValue=d[t]; }
+      else if(n.nodeType===1&&!skip[n.tagName]){
+        try{ var A=['placeholder','title','aria-label']; for(var a=0;a<A.length;a++){ var v=n.getAttribute&&n.getAttribute(A[a]); if(v&&d[v.trim()]) n.setAttribute(A[a],d[v.trim()]); } }catch(e){}
+        for(var i=0;i<n.childNodes.length;i++) tx(n.childNodes[i]);
+      }
+    }
+    var ent=document.getElementById('cgoEntrance');
+    if(ent) tx(ent);
+    try{
+      var mo=new MutationObserver(function(ms){ for(var i=0;i<ms.length;i++){ var ad=ms[i].addedNodes; for(var j=0;j<ad.length;j++) tx(ad[j]); } });
+      if(ent) mo.observe(ent,{childList:true,subtree:true});
+      document.addEventListener('DOMContentLoaded',function(){ try{ mo.disconnect(); }catch(e){} });
+    }catch(e){}
+  }catch(e){}
+})();
+</script>
 <div id="cgoEntBackdrop" style="position:fixed;inset:0;z-index:1;background:#f0fdfa;pointer-events:none;"></div>
 <!-- ══ 입구 스플래시 (민트) · C-60 ══ -->
 <div id="entSplash" onclick="entSplashGo()" style="position:fixed;inset:0;z-index:600;background:radial-gradient(circle at 50% 42%,#ecfdf5 0%,#d1fae5 46%,#a7f3d0 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;font-family:'Noto Sans KR',sans-serif;">
@@ -34021,7 +34050,7 @@ window._OH_EN={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Wate
 window._engEN=function(n){if(!(window._LANG&&window._LANG!=='ko'))return n;if(window._ENG_EN&&window._ENG_EN[n])return window._ENG_EN[n];try{if(window._TF_ENGINES){for(var _i=0;_i<window._TF_ENGINES.length;_i++){if(window._TF_ENGINES[_i].name===n)return window._TF_ENGINES[_i].en||n;}}}catch(_e){}return n;};
 window._ohEN=function(k){return (window._LANG&&window._LANG!=='ko'&&window._OH_EN[k])?window._OH_EN[k]:k;};
 window._cgoDateStr=function(dt){dt=dt||new Date();var eD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],eM=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(window._LANG&&window._LANG!=='ko'){return eM[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+' ('+eD[dt.getDay()]+')';}return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+['일','월','화','수','목','금','토'][dt.getDay()]+'요일)';};
-window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var sel='div,p,h1,h2,h3,h4,h5,h6,li,td,th';var all=root.querySelectorAll(sel),els=[],htmls=[];for(var i=0;i<all.length;i++){var el=all[i];if(el.querySelector(sel))continue;if(/[\uac00-\ud7a3]/.test(el.textContent)&&el.textContent.trim().length>1){els.push(el);htmls.push(el.innerHTML);}}if(!els.length)return;var B=20;var doBatch=function(s){var sl=htmls.slice(s,s+B);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:4000,temperature:0.1,messages:[{role:'system',content:'You translate HTML snippets. For each string in the given JSON array, translate ALL Korean text to natural fluent English. Keep every HTML tag, attribute, class, style, number, coordinate, emoji and Chinese character EXACTLY as-is. Keep English that is already present. Return ONLY a JSON array of the same length and order, nothing else.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(els[s+i]&&typeof arr[i]==='string'&&arr[i]&&/[a-zA-Z]/.test(arr[i]))els[s+i].innerHTML=arr[i];}}}).catch(function(){});};for(var s=0;s<htmls.length;s+=B){doBatch(s);}}catch(e){}};
+window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var sel='div,p,h1,h2,h3,h4,h5,h6,li,td,th';var all=root.querySelectorAll(sel),els=[],htmls=[];for(var i=0;i<all.length;i++){var el=all[i];if(el.querySelector(sel))continue;if(/[\uac00-\ud7a3]/.test(el.textContent)&&el.textContent.trim().length>1){els.push(el);htmls.push(el.innerHTML);}}if(!els.length)return;var _rg=[];(function(){var st=0,ln=0;for(var i=0;i<htmls.length;i++){var L2=htmls[i].length;if(i>st&&(ln+L2>2600||i-st>=8)){_rg.push([st,i]);st=i;ln=0;}ln+=L2;}_rg.push([st,htmls.length]);})();var doBatch=function(s,e){var sl=htmls.slice(s,e);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:4000,temperature:0.1,messages:[{role:'system',content:'You translate HTML snippets. For each string in the given JSON array, translate ALL Korean text to natural fluent English. Keep every HTML tag, attribute, class, style, number, coordinate, emoji and Chinese character EXACTLY as-is. Keep English that is already present. Return ONLY a JSON array of the same length and order, nothing else.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(els[s+i]&&typeof arr[i]==='string'&&arr[i]&&/[a-zA-Z]/.test(arr[i]))els[s+i].innerHTML=arr[i];}}}).catch(function(){});};for(var s=0;s<_rg.length;s++){doBatch(_rg[s][0],_rg[s][1]);}}catch(e){}};
 window._cgoLangRule=function(){return (window._LANG&&window._LANG!=='ko')?'★LANGUAGE RULE: Respond ONLY in natural, fluent English. Never use Korean or Chinese characters. All field values must be in English.':'⚠️ 언어 규칙: 순수 한국어만 사용. 외국어·한자 금지(이모지 제외).';};
 window._cgoName=function(){var g=function(id){return (document.getElementById(id)||{}).value||'';};var n=g('ipName')||g('prof-name');if(!n){try{n=(JSON.parse(localStorage.getItem('cgo_saved_info')||'{}').name)||'';}catch(e){}}if(!n){try{n=localStorage.getItem('cgo_prof_name')||'';}catch(e){}}return (n||'').trim();};
 function _cgoT(str){
@@ -63758,7 +63787,7 @@ function generateReport(r){
   var c=document.getElementById('reportContainer');
   if(c){
     c.innerHTML=html;
-    if(window._LANG&&window._LANG!=='ko'){setTimeout(function(){window._cgoAiTranslateDom(c);},60);}
+    if(window._LANG&&window._LANG!=='ko'){setTimeout(function(){window._cgoAiTranslateDom(c);},60);setTimeout(function(){window._cgoAiTranslateDom(c);},2600);}
     setTimeout(function(){
       c.querySelectorAll('.ac-bar[data-t]').forEach(function(b){
         b.style.width=b.getAttribute('data-t')+'%';
@@ -64165,7 +64194,7 @@ function runAiAnalysis(){
     }
 
     /* C-66: 결과 렌더 직후 — 자체 사전 즉시 적용 + 남은 한글(병합 문장)은 AI 실시간 번역 */
-    try{ if(window._LANG && window._LANG!=='ko'){ (function(){ var _tp=document.getElementById('_raiMainPop')||body; if(typeof _cgoTranslateNode==='function') _cgoTranslateNode(_tp); if(typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG,(typeof CGO_I18N!=='undefined'&&CGO_I18N[window._LANG])||{}, _tp); })(); } }catch(e){}
+    try{ if(window._LANG && window._LANG!=='ko'){ (function(){ var _tp=document.getElementById('_raiMainPop')||body; if(typeof _cgoTranslateNode==='function') _cgoTranslateNode(_tp); if(typeof _cgoAiTranslateDom==='function') _cgoAiTranslateDom(_tp); else if(typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG,(typeof CGO_I18N!=='undefined'&&CGO_I18N[window._LANG])||{}, _tp); })(); } }catch(e){}
 
     var _detailDB = {
       s01:{icon:'📊',title:'사주명리 (四柱八字)',sub:'일간·오행·용신·대운',color:'#34d399',
@@ -64861,7 +64890,7 @@ function runAiAnalysis(){
       pop.scrollTop=0;
       document.body.style.overflow='hidden';
       /* C-66: 상세 팝업 렌더 직후 — 자체 사전 즉시 적용 + 본문 문단은 AI 실시간 번역 */
-      try{ if(window._LANG && window._LANG!=='ko'){ if(typeof _cgoTranslateNode==='function') _cgoTranslateNode(pop); if(typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG,(typeof CGO_I18N!=='undefined'&&CGO_I18N[window._LANG])||{}, pop); } }catch(e){}
+      try{ if(window._LANG && window._LANG!=='ko'){ if(typeof _cgoTranslateNode==='function') _cgoTranslateNode(pop); if(typeof _cgoAiTranslateDom==='function') _cgoAiTranslateDom(pop); else if(typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG,(typeof CGO_I18N!=='undefined'&&CGO_I18N[window._LANG])||{}, pop); } }catch(e){}
     };
     window._raiClose = function(){
       // 상세 팝업 닫기
@@ -150668,6 +150697,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     T(document.querySelector('.page.active'));
     T(document.querySelector('.bottom-nav'));
     T(document.querySelector('aside'));
+    T(document.getElementById('cgoEntrance'));
     if(doneRest[L]) return;
     doneRest[L]=true;
     var ap=document.querySelector('.page.active');
