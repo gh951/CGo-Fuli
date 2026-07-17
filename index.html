@@ -34050,7 +34050,7 @@ window._OH_EN={'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Wate
 window._engEN=function(n){if(!(window._LANG&&window._LANG!=='ko'))return n;if(window._ENG_EN&&window._ENG_EN[n])return window._ENG_EN[n];try{if(window._TF_ENGINES){for(var _i=0;_i<window._TF_ENGINES.length;_i++){if(window._TF_ENGINES[_i].name===n)return window._TF_ENGINES[_i].en||n;}}}catch(_e){}return n;};
 window._ohEN=function(k){return (window._LANG&&window._LANG!=='ko'&&window._OH_EN[k])?window._OH_EN[k]:k;};
 window._cgoDateStr=function(dt){dt=dt||new Date();var eD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],eM=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(window._LANG&&window._LANG!=='ko'){return eM[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+' ('+eD[dt.getDay()]+')';}return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+['일','월','화','수','목','금','토'][dt.getDay()]+'요일)';};
-window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var sel='div,p,h1,h2,h3,h4,h5,h6,li,td,th';var all=root.querySelectorAll(sel),els=[],htmls=[];for(var i=0;i<all.length;i++){var el=all[i];if(el.querySelector(sel))continue;if(/[\uac00-\ud7a3]/.test(el.textContent)&&el.textContent.trim().length>1){els.push(el);htmls.push(el.innerHTML);}}if(!els.length)return;var _rg=[];(function(){var st=0,ln=0;for(var i=0;i<htmls.length;i++){var L2=htmls[i].length;if(i>st&&(ln+L2>2600||i-st>=8)){_rg.push([st,i]);st=i;ln=0;}ln+=L2;}_rg.push([st,htmls.length]);})();var doBatch=function(s,e){var sl=htmls.slice(s,e);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:4000,temperature:0.1,messages:[{role:'system',content:'You translate HTML snippets. For each string in the given JSON array, translate ALL Korean text to natural fluent English. Keep every HTML tag, attribute, class, style, number, coordinate, emoji and Chinese character EXACTLY as-is. Keep English that is already present. Return ONLY a JSON array of the same length and order, nothing else.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(els[s+i]&&typeof arr[i]==='string'&&arr[i]&&/[a-zA-Z]/.test(arr[i]))els[s+i].innerHTML=arr[i];}}}).catch(function(){});};for(var s=0;s<_rg.length;s++){doBatch(_rg[s][0],_rg[s][1]);}}catch(e){}};
+window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var sel='div,p,h1,h2,h3,h4,h5,h6,li,td,th';var all=root.querySelectorAll(sel),els=[],htmls=[];for(var i=0;i<all.length;i++){var el=all[i];if(el.querySelector(sel))continue;if(/[\uac00-\ud7a3]/.test(el.textContent)&&el.textContent.trim().length>1){els.push(el);htmls.push(el.innerHTML);}}if(!els.length)return;var _rg=[];(function(){var st=0,ln=0;for(var i=0;i<htmls.length;i++){var L2=htmls[i].length;if(i>st&&(ln+L2>2600||i-st>=8)){_rg.push([st,i]);st=i;ln=0;}ln+=L2;}_rg.push([st,htmls.length]);})();var doBatch=function(s,e){var sl=htmls.slice(s,e);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:4000,temperature:0.1,messages:[{role:'system',content:'You are a precise Korean-to-English HTML translator. Input is a JSON array of HTML snippets. Translate every Korean word in each snippet into natural, fluent English. STRICT RULES: (1) Keep every HTML tag, attribute, class, style, number, coordinate, emoji, and Chinese character exactly as-is. (2) Keep any English already present unchanged. (3) SPACING IS CRITICAL: separate every English word with a single normal space. Korean has no spaces between words, so you MUST add spaces so words never stick together (for example, zone analysis must be two words, never zoneanalysis). Never delete a space that sits right before or after an HTML tag, and always keep a space between a translated word and any adjacent tag. (4) Translate the whole snippet and leave no Korean untranslated. (5) Output ONLY a valid JSON array of the same length and same order as the input, each element a string, with no markdown, code fences, or commentary.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(els[s+i]&&typeof arr[i]==='string'&&arr[i]&&/[a-zA-Z]/.test(arr[i]))els[s+i].innerHTML=arr[i];}}}).catch(function(){});};for(var s=0;s<_rg.length;s++){doBatch(_rg[s][0],_rg[s][1]);}}catch(e){}};
 window._cgoLangRule=function(){return (window._LANG&&window._LANG!=='ko')?'★LANGUAGE RULE: Respond ONLY in natural, fluent English. Never use Korean or Chinese characters. All field values must be in English.':'⚠️ 언어 규칙: 순수 한국어만 사용. 외국어·한자 금지(이모지 제외).';};
 window._cgoName=function(){var g=function(id){return (document.getElementById(id)||{}).value||'';};var n=g('ipName')||g('prof-name');if(!n){try{n=(JSON.parse(localStorage.getItem('cgo_saved_info')||'{}').name)||'';}catch(e){}}if(!n){try{n=localStorage.getItem('cgo_prof_name')||'';}catch(e){}}return (n||'').trim();};
 function _cgoT(str){
@@ -56670,18 +56670,18 @@ var OHAENG_KR    = {목:'🌳木',화:'🔥火',토:'⛰土',금:'⚔金',수:'�
 var KJ_KR = ['','1백수성','2흑토성','3벽목성','4녹목성','5황토성','6백금성','7적금성','8백토성','9자화성'];
 
 var WEST_ZODIAC = [
-  {name:'염소자리',en:'Capricorn',sym:'♑',m1:12,d1:22,m2:1, d2:19},
-  {name:'물병자리',en:'Aquarius', sym:'♒',m1:1, d1:20,m2:2, d2:18},
-  {name:'물고기자리',en:'Pisces', sym:'♓',m1:2, d1:19,m2:3, d2:20},
-  {name:'양자리',   en:'Aries',   sym:'♈',m1:3, d1:21,m2:4, d2:19},
-  {name:'황소자리', en:'Taurus',  sym:'♉',m1:4, d1:20,m2:5, d2:20},
-  {name:'쌍둥이자리',en:'Gemini', sym:'♊',m1:5, d1:21,m2:6, d2:21},
-  {name:'게자리',   en:'Cancer',  sym:'♋',m1:6, d1:22,m2:7, d2:22},
-  {name:'사자자리', en:'Leo',     sym:'♌',m1:7, d1:23,m2:8, d2:22},
-  {name:'처녀자리', en:'Virgo',   sym:'♍',m1:8, d1:23,m2:9, d2:22},
-  {name:'천칭자리', en:'Libra',   sym:'♎',m1:9, d1:23,m2:10,d2:23},
-  {name:'전갈자리', en:'Scorpio', sym:'♏',m1:10,d1:24,m2:11,d2:21},
-  {name:'사수자리', en:'Sagittarius',sym:'♐',m1:11,d1:22,m2:12,d2:21}
+  {name:'염소자리',en:'Capricorn',sym:'♑',m1:12,d1:22,m2:1, d2:19,planet:'토성'},
+  {name:'물병자리',en:'Aquarius', sym:'♒',m1:1, d1:20,m2:2, d2:18,planet:'토성'},
+  {name:'물고기자리',en:'Pisces', sym:'♓',m1:2, d1:19,m2:3, d2:20,planet:'목성'},
+  {name:'양자리',   en:'Aries',   sym:'♈',m1:3, d1:21,m2:4, d2:19,planet:'화성'},
+  {name:'황소자리', en:'Taurus',  sym:'♉',m1:4, d1:20,m2:5, d2:20,planet:'금성'},
+  {name:'쌍둥이자리',en:'Gemini', sym:'♊',m1:5, d1:21,m2:6, d2:21,planet:'수성'},
+  {name:'게자리',   en:'Cancer',  sym:'♋',m1:6, d1:22,m2:7, d2:22,planet:'달'},
+  {name:'사자자리', en:'Leo',     sym:'♌',m1:7, d1:23,m2:8, d2:22,planet:'태양'},
+  {name:'처녀자리', en:'Virgo',   sym:'♍',m1:8, d1:23,m2:9, d2:22,planet:'수성'},
+  {name:'천칭자리', en:'Libra',   sym:'♎',m1:9, d1:23,m2:10,d2:23,planet:'금성'},
+  {name:'전갈자리', en:'Scorpio', sym:'♏',m1:10,d1:24,m2:11,d2:21,planet:'화성'},
+  {name:'사수자리', en:'Sagittarius',sym:'♐',m1:11,d1:22,m2:12,d2:21,planet:'목성'}
 ];
 
 var SHIGAN = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
