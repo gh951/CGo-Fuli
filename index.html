@@ -149769,6 +149769,8 @@ try{ if(localStorage.getItem('cgo_master_on')==='1') window._cgoUnlimited=true; 
       if(ttl && ttl.textContent.trim()){
         var i=ico?ico.textContent.trim():'', n=ttl.textContent.trim();
         setTimeout(function(){
+          /* C-66: 카드 클릭 후에도 아직 대시보드가 활성이면(인트로 팝업만 열림·진입 취소) 상단바를 숨기지 않음 — topbar 사라짐/잘림 근본 fix */
+          try{ var _dp=document.getElementById('page-dashboard'); if(_dp&&_dp.classList&&_dp.classList.contains('active')) return; }catch(e){}
           var tb=document.querySelector('.topbar'); if(tb) tb.style.display='none';
           if(hasOwnHeader()){
             var bar=document.getElementById('cgoFeatBar'); if(bar) bar.style.display='none';
@@ -150624,6 +150626,86 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 
 </script>
 
+<script>
+/* ★ C-66 빠른 체감 번역 부스터 (추가 전용 · 기존 코드 0 수정)
+   목적: 새로고침·언어전환 시 "보이는 영역(상단바+현재 페이지) 먼저 즉시 번역 →
+   안 보이는 나머지 페이지는 백그라운드 순차" — 지휘자 설계.
+   + 캐시 강건화: en.json이 커져 localStorage 저장 실패 시(용량) 다른 언어팩 정리 후 재시도.
+   + 동일 오리진(/lang/*.json, Vercel CDN) 우선 로드 — raw.githubusercontent보다 빠름. */
+(function(){
+  if(window._cgoFastVis) return; window._cgoFastVis=true;
+  var doneRest={};
+  function T(el){ try{ if(el && typeof window._cgoTranslateNode==='function') window._cgoTranslateNode(el); }catch(e){} }
+  function visibleFirst(){
+    var L=window._LANG; if(!L||L==='ko') return;
+    T(document.querySelector('.topbar'));
+    T(document.getElementById('cgoFeatBar'));
+    T(document.querySelector('.page.active'));
+    T(document.querySelector('.bottom-nav'));
+    T(document.querySelector('aside'));
+    if(doneRest[L]) return;
+    doneRest[L]=true;
+    var ap=document.querySelector('.page.active');
+    var rest=[].slice.call(document.querySelectorAll('.page')).filter(function(p){ return p!==ap; });
+    var i=0;
+    function step(){
+      if(window._LANG!==L) return;
+      if(i>=rest.length){ T(document.body); return; }
+      T(rest[i++]);
+      if(window.requestIdleCallback) requestIdleCallback(step,{timeout:900}); else setTimeout(step,150);
+    }
+    if(window.requestIdleCallback) requestIdleCallback(step,{timeout:900}); else setTimeout(step,150);
+  }
+  function saveCacheResilient(L){
+    try{
+      var ckey='cgo_lp_'+L;
+      if(localStorage.getItem(ckey)) return;
+      var d=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null;
+      if(!d || Object.keys(d).length<1000) return;
+      var s=JSON.stringify(d);
+      try{ localStorage.setItem(ckey,s); }
+      catch(e1){
+        try{
+          var rm=[]; for(var k in localStorage){ if(k && k.indexOf('cgo_lp_')===0 && k!==ckey) rm.push(k); }
+          for(var r=0;r<rm.length;r++) localStorage.removeItem(rm[r]);
+          localStorage.setItem(ckey,s);
+        }catch(e2){}
+      }
+    }catch(e){}
+  }
+  function sameOriginPack(L, cb){
+    cb=cb||function(){};
+    try{
+      fetch('/lang/'+L+'.json').then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(json){
+        if(json && typeof json==='object' && typeof LANG_DICTIONARY!=='undefined'){
+          LANG_DICTIONARY[L]=Object.assign({}, LANG_DICTIONARY[L]||{}, json);
+          window._cgoTKeys=null; /* _cgoT 조각폴백 키 캐시 갱신 */
+          if(window._cgoLangPackLoaded) window._cgoLangPackLoaded[L]=true;
+          saveCacheResilient(L);
+        }
+        cb();
+      }).catch(function(){ cb(); });
+    }catch(e){ cb(); }
+  }
+  function go(){
+    var L=window._LANG; if(!L||L==='ko') return;
+    if(typeof _cgoLoadLangPack==='function'){
+      _cgoLoadLangPack(L, function(){ window._cgoTKeys=null; visibleFirst(); saveCacheResilient(L); });
+    }
+    /* 캐시가 없어 위 콜백이 네트워크 대기 중일 수 있으므로, 동일 오리진 CDN 경로를 병행 시도 */
+    var has=false; try{ has=!!localStorage.getItem('cgo_lp_'+L); }catch(e){}
+    if(!has) sameOriginPack(L, visibleFirst);
+    visibleFirst(); /* 이미 사전이 있으면(내장+캐시) 즉시 1차 적용 */
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
+  /* 언어 전환 감지 (기존 setLang 무수정): _LANG 변화 시에만 동작 */
+  var lastL=window._LANG;
+  setInterval(function(){
+    if(window._LANG!==lastL){ lastL=window._LANG; if(lastL && lastL!=='ko') go(); }
+  }, 400);
+})();
+</script>
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:flex-start;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;">
