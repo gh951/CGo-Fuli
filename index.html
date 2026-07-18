@@ -63871,7 +63871,7 @@ function generateReport(r){
   var c=document.getElementById('reportContainer');
   if(c){
     c.innerHTML=html;
-    if(window._LANG&&window._LANG!=='ko'){ /* 지침서 방법A: 리포트 본문=정적템플릿=자체번역(조각치환). API 미사용 */ try{ if(typeof _cgoT==='function'){ var _w=document.createTreeWalker(c,NodeFilter.SHOW_TEXT,null,false),_n,_a=[]; while(_n=_w.nextNode()){ var _t=(_n.nodeValue||'').trim(); if(_t&&/[\uac00-\ud7a3]/.test(_t))_a.push(_n); } for(var _i=0;_i<_a.length;_i++){ var _tt=(_a[_i].nodeValue||'').trim(),_tr=_cgoT(_tt); if(_tr&&_tr!==_tt)_a[_i].nodeValue=_a[_i].nodeValue.replace(_tt,_tr); } } if(typeof _cgoTranslateNode==='function') _cgoTranslateNode(c); }catch(_e){} }
+    if(window._LANG&&window._LANG!=='ko'){ /* 지침서 방법A: 리포트 본문=정적템플릿=자체번역. en.json 로드전 조각치환은 노드를 오염시키므로, 완전히 영어가 될 때만 적용(한글 남으면 스킵→다음 재실행 때 온전히 번역) */ var _cgoRepXlate=function(){ try{ if(typeof _cgoT!=='function') return; var _w=document.createTreeWalker(c,NodeFilter.SHOW_TEXT,null,false),_n,_a=[]; while(_n=_w.nextNode()){ var _t=(_n.nodeValue||'').trim(); if(_t&&/[\uac00-\ud7a3]/.test(_t))_a.push(_n); } for(var _i=0;_i<_a.length;_i++){ var _tt=(_a[_i].nodeValue||'').trim(),_tr=_cgoT(_tt); if(_tr&&_tr!==_tt&&!/[\uac00-\ud7a3]/.test(_tr))_a[_i].nodeValue=_a[_i].nodeValue.replace(_tt,_tr); } }catch(_e){} }; _cgoRepXlate(); setTimeout(_cgoRepXlate,600); setTimeout(_cgoRepXlate,1600); setTimeout(_cgoRepXlate,3200); setTimeout(_cgoRepXlate,6000); if(window._cgoLoadLangPack){ try{ _cgoLoadLangPack(window._LANG, _cgoRepXlate); }catch(_e){} } }
     setTimeout(function(){
       c.querySelectorAll('.ac-bar[data-t]').forEach(function(b){
         b.style.width=b.getAttribute('data-t')+'%';
