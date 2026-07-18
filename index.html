@@ -81326,7 +81326,7 @@ function updateCosmicPlanetGrid(planets) {
     document.getElementById('cosmicZodiacSym').textContent = r.wz ? r.wz.sym : '☯';
     var _ctrTxt={ko:'운명의 중심',en:'Destiny',zh:'命运中心',ja:'運命の中心'}; document.getElementById('cosmicZodiacName').textContent = r.wz ? r.wz.name : (_ctrTxt[window._LANG||'ko']||'운명의 중심');
     var _gearTxt={ko:'님의 사주와<br>행성이 맞물립니다',en:"'s destiny<br>aligned with planets",zh:'的命盘与<br>行星共鸣',ja:'さんの命式と<br>惑星が共鳴'};
-    document.getElementById('cosmicGearDesc').innerHTML = (r.name||'') + (_gearTxt[window._LANG||'ko']||_gearTxt['ko']);
+    document.getElementById('cosmicGearDesc').innerHTML = ((r.name&&r.name!=='사용자')?r.name:((window._LANG&&window._LANG!=='ko')?'User':'사용자')) + (_gearTxt[window._LANG||'ko']||_gearTxt['ko']);
   }
 }
 
@@ -81404,6 +81404,7 @@ function receiveCosmicOrder() {
   var sajeMode = r.domOh || '목';
   var ohK   = {목:'木',화:'火',토:'土',금:'金',수:'水'};
   var ohEng = {목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'};
+  var _cL=(window._LANG&&window._LANG!=='ko'); var _ohD=function(k){return _cL?(ohEng[k]||k):k;}; var _dirEn={'동':'East','남':'South','서':'West','북':'North','동남':'Southeast','동북':'Northeast','서남':'Southwest','서북':'Northwest'}; var _dirW=function(x){return _cL?(_dirEn[x]||x):(x+'쪽');}; var _dirW2=function(x){return _cL?(_dirEn[x]||x):x;};
   var ohColor = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
   // 일진 — 실제 60갑자 역법 (기준: 2020-01-07 = 甲子일, 검증된 역법 기준점)
   // 모든 사용자 동일 날짜 = 동일 일진 (생일 무관)
@@ -81534,7 +81535,7 @@ function receiveCosmicOrder() {
     +     '</div>'
     +     '<div style="padding:7px 9px;background:#ffffff;border-radius:8px">'
     +       '<div style="font-size:9px;color:#475569;margin-bottom:3px">📅 오늘의 일진(日辰)</div>'
-    +       '<div style="font-size:13px;font-weight:700;color:#059669">' + todayGan + todayJi + ' · ' + todayOhGan + '기</div>'
+    +       '<div style="font-size:13px;font-weight:700;color:#059669">' + todayGan + todayJi + ' · ' + _ohD(todayOhGan) + (_cL?'-qi':'기') + '</div>'
     +     '</div>'
     +     '<div style="padding:7px 9px;background:#ffffff;border-radius:8px">'
     +       '<div style="font-size:9px;color:#475569;margin-bottom:3px">⚡ 나의 에너지 흐름</div>'
@@ -81583,7 +81584,7 @@ function receiveCosmicOrder() {
       }).join('')
     + '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(167,139,250,0.05);border-radius:7px;border-left:2px solid rgba(167,139,250,0.4);line-height:1.7">🌙 달 위상 <strong style="color:#6d28d9">' + _mpd.name + '</strong> — ' + _mpd.pro + '</div>'
     + '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(251,191,36,0.04);border-radius:7px;border-left:2px solid rgba(251,191,36,0.35);line-height:1.7">🔢 수비학 <strong style="color:#b45309">' + _tdn + '번</strong> — ' + _dnd.pro + '</div>'
-    + '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(52,211,153,0.04);border-radius:7px;border-left:2px solid rgba(52,211,153,0.3);line-height:1.7">📅 일진 <strong style="color:#059669">' + todayGan + todayJi + '</strong> — 오늘 일진 오행은 <strong>' + todayOhGan + '</strong>, 당신 오행 <strong>' + oh + '</strong>과 <strong>' + todayOhRel + '</strong> 관계. ' + (isGoodDay ? '두 에너지가 상생(相生)·비화(比和)하여 오늘 취하는 행동은 에너지 손실 없이 100% 발현됩니다. 중요한 계약·만남·새 시작 모두 최적일입니다.' : '두 에너지가 충돌하거나 소모하는 관계로 에너지 손실이 예상됩니다. 무리한 확장보다 수비와 내실을 다지는 전략이 유효하며, 방어적 행동에서는 오히려 강점이 드러납니다.') + '</div>'
+    + '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(52,211,153,0.04);border-radius:7px;border-left:2px solid rgba(52,211,153,0.3);line-height:1.7">📅 일진 <strong style="color:#059669">' + todayGan + todayJi + '</strong> — 오늘 일진 오행은 <strong>' + _ohD(todayOhGan) + '</strong>, 당신 오행 <strong>' + _ohD(oh) + '</strong>과 <strong>' + todayOhRel + '</strong> 관계. ' + (isGoodDay ? '두 에너지가 상생(相生)·비화(比和)하여 오늘 취하는 행동은 에너지 손실 없이 100% 발현됩니다. 중요한 계약·만남·새 시작 모두 최적일입니다.' : '두 에너지가 충돌하거나 소모하는 관계로 에너지 손실이 예상됩니다. 무리한 확장보다 수비와 내실을 다지는 전략이 유효하며, 방어적 행동에서는 오히려 강점이 드러납니다.') + '</div>'
     + (moonSign ? '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(96,165,250,0.04);border-radius:7px;border-left:2px solid rgba(96,165,250,0.3);line-height:1.7">🌙 달자리 <strong style="color:#60a5fa">' + moonSign + '</strong> — 달이 현재 ' + moonSign + '를 통과하며 집단 감성 에너지장을 형성합니다. ' + (r.wz ? r.wz.name+'자리와 공명하여 직관적 판단력이 평소보다 강하게 활성화됩니다. 첫 번째 직감을 신뢰하세요.' : '감성 에너지가 활성화되어 타인의 감정을 더 예민하게 감지합니다.') + '</div>' : '')
     + (sunSign ? '<div style="font-size:11px;color:var(--text-2);padding:7px 10px;background:rgba(251,191,36,0.03);border-radius:7px;border-left:2px solid rgba(251,191,36,0.25);line-height:1.7">☀️ 태양궁 <strong style="color:#b45309">' + sunSign + '</strong> — 태양이 ' + sunSign + '를 통과하며 오늘 모든 사람에게 공통으로 작용하는 집단 의식 배경 에너지를 형성합니다. 이 에너지 방향을 활용하면 사회적 흐름과 공명하여 시너지가 극대화됩니다.</div>' : '')
     + '</div>'
@@ -81638,10 +81639,10 @@ function receiveCosmicOrder() {
     '혀 관찰':         function(sc,oh){ return '혀 관찰 지수 ' + sc + '점 — ' + (sc>=80?'소화기 기운 양호, 오행 흡수 최적':'비위(脾胃) 보강, 따뜻한 음식 권장'); },
     '피부빛':       function(sc,oh){ return '피부 광채 지수 ' + sc + '점 — ' + (sc>=80?'천격(天格) 혈류 활성, 기운 외향':'간 기운 보강 필요, 수분 보충 권장'); },
     '눈에너지':     function(sc,oh){ return '안구 에너지 ' + sc + '점 — ' + (sc>=80?'간담(肝膽) 기운 충만, 통찰력 UP':'안신(眼神) 보강, 눈 운동·휴식 권장'); },
-    '사주팔자':     function(sc,oh){ return '사주 ILI ' + sc + '점 — ' + (sc>=80?'일간 오행 ' + oh + ' 에너지 강력 발현, 귀인 만남 길':'일간 에너지 보강 필요, 오행 음식 섭취'); },
+    '사주팔자':     function(sc,oh){ return '사주 ILI ' + sc + '점 — ' + (sc>=80?'일간 오행 ' + _ohD(oh) + ' 에너지 강력 발현, 귀인 만남 길':'일간 에너지 보강 필요, 오행 음식 섭취'); },
     '자미두수':     function(sc,oh){ return '자미 명궁 ' + sc + '점 — ' + (sc>=80?'재백궁(財帛宮) 활성, 재물 기운 상승':'관록궁 보강 필요, 북쪽 방위 보완'); },
-    '기문둔갑':     function(sc,oh){ return '기문 에너지장 ' + sc + '점 — ' + (sc>=80?goodGate + ' 개문, 최길 방위 ' + goodDir + '쪽':'흉문 주의, ' + badDir + '쪽 이동 자제'); },
-    '구성학':       function(sc,oh){ return '구성 본명성 ' + sc + '점 — ' + (sc>=80?'길성(吉星) 활성, 8방위 중 ' + goodDir + '쪽 황금 방위':'중궁 보강, 명상·정중앙 방위 활용'); },
+    '기문둔갑':     function(sc,oh){ return '기문 에너지장 ' + sc + '점 — ' + (sc>=80?goodGate + ' 개문, 최길 방위 ' + _dirW(goodDir) + '':'흉문 주의, ' + _dirW(badDir) + ' 이동 자제'); },
+    '구성학':       function(sc,oh){ return '구성 본명성 ' + sc + '점 — ' + (sc>=80?'길성(吉星) 활성, 8방위 중 ' + _dirW(goodDir) + ' 황금 방위':'중궁 보강, 명상·정중앙 방위 활용'); },
     '주역64괘':     function(sc,oh){ return '주역 괘상 ' + sc + '점 — ' + (sc>=80?'길괘(吉卦) 발현, 시의적절한 움직임':'중평괘, 636Hz 자연 공명 음악 청취 권장'); },
     '수비학':       function(sc,oh){ var ln = r.lifeNum||5; return '생명수 ' + ln + '번 에너지 ' + sc + '점 — ' + (sc>=80?ln+'수 공명 최고조, 528Hz 청취':'수 진동 보강, 21분 힐링 음악 추천'); },
     '성명학':       function(sc,oh){ return '성명 획수 에너지 ' + sc + '점 — ' + (sc>=80?'이름 파동과 사주 오행 완전 공명':'획수 보완 필요, 사인 스타일 조정 고려'); },
@@ -81735,9 +81736,9 @@ function receiveCosmicOrder() {
     // 온도 오행 공명
     var _tempOh = _env.weather.temp > 30?'화':_env.weather.temp < 5?'수':_env.weather.temp > 20?'화':'토';
     if(_tempOh === oh) {
-      _envBonus += 4; _envLog.push({label:'🌡 기온 '+Math.round(_env.weather.temp)+'°C → '+_tempOh+'기 공명', val:+4, color:'#34d399'});
+      _envBonus += 4; _envLog.push({label:'🌡 기온 '+Math.round(_env.weather.temp)+'°C → '+_ohD(_tempOh)+_cgoT('기 공명'), val:+4, color:'#34d399'});
     } else {
-      _envLog.push({label:'🌡 기온 '+Math.round(_env.weather.temp)+'°C ('+_tempOh+'기)', val:0, color:'#94a3b8'});
+      _envLog.push({label:'🌡 기온 '+Math.round(_env.weather.temp)+'°C ('+_ohD(_tempOh)+_cgoT('기)'), val:0, color:'#94a3b8'});
     }
     // 습도 → 수기(水氣)
     if(_env.weather.humidity > 80) {
@@ -81756,7 +81757,7 @@ function receiveCosmicOrder() {
     {nm:'수비학('+_tdn+'번)',         sc: Math.min(95,Math.max(20, 60+_numBonus*4))},
     {nm:'NASA행성',                   sc: Math.min(95,Math.max(20, 65+_planetBonus*1.5))},
     {nm:'기문('+goodGate+')',         sc: [88,72,85,78,60,65,55,45][goodGateIdx]||70},
-    {nm:'계절오행('+_seasonOh+'기)',   sc: Math.min(95,Math.max(20, 65+_seasonBonus*5))}
+    {nm:'계절오행('+_ohD(_seasonOh)+_cgoT('기)'),   sc: Math.min(95,Math.max(20, 65+_seasonBonus*5))}
   ];
   if(_env && _env.loaded) _cosItems.push({nm:'실시간환경', sc: Math.min(95,Math.max(20,65+_envBonus*1.2))});
   var _cosmicAvg = Math.round(_cosItems.reduce(function(a,b){return a+b.sc;},0) / _cosItems.length);
@@ -81775,7 +81776,7 @@ function receiveCosmicOrder() {
     {label: '달 위상 ('+_mpd.name+')', val: _moonBonus, color: _moonBonus>=0?'#34d399':'#f87171'},
     {label: '수비학 '+_tdn+'번 진동수', val: _numBonus, color: _numBonus>=0?'#34d399':'#f87171'},
     {label: '행성 에너지 (NASA)', val: _planetBonus, color: _planetBonus>=0?'#34d399':'#f87171'},
-    {label: '오행 계절 공명 ('+_seasonOh+'월)', val: _seasonBonus, color: _seasonBonus>=0?'#34d399':'#f87171'},
+    {label: '오행 계절 공명 ('+_ohD(_seasonOh)+_cgoT('월)'), val: _seasonBonus, color: _seasonBonus>=0?'#34d399':'#f87171'},
     {label: '실시간 환경 (태양풍·Kp·기상)', val: (_env&&_env.loaded)?_envBonus:0, color: (_env&&_envBonus>=0)?'#34d399':'#f87171', sub: (_env&&_env.loaded)?'':'데이터 수집 중...'}
   ];
 
@@ -81791,18 +81792,18 @@ function receiveCosmicOrder() {
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">'
     + '<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:8px;padding:8px">'
     +   '<div style="font-size:9px;color:#059669;margin-bottom:3px">✅ 오늘의 행운 방향</div>'
-    +   '<div style="font-size:16px;font-weight:700;color:#334155">' + goodEmoji + ' ' + goodDir + '쪽 <span style="font-size:11px;color:#6d28d9">(' + goodChi + ')</span></div>'
+    +   '<div style="font-size:16px;font-weight:700;color:#334155">' + goodEmoji + ' ' + _dirW(goodDir) + ' <span style="font-size:11px;color:#6d28d9">(' + goodChi + ')</span></div>'
     +   '<div style="font-size:10px;color:#059669;margin-top:2px">' + goodGate + '</div>'
     +   '<div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.5">' + goodGateDesc + '</div>'
     + '</div>'
     + '<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:8px">'
     +   '<div style="font-size:9px;color:#dc2626;margin-bottom:3px">⛔ 주의 방위</div>'
-    +   '<div style="font-size:16px;font-weight:700;color:#dc2626">' + badDir + '쪽</div>'
+    +   '<div style="font-size:16px;font-weight:700;color:#dc2626">' + _dirW(badDir) + '</div>'
     +   '<div style="font-size:10px;color:var(--text-3);margin-top:4px;line-height:1.5">이쪽 방향은 오늘 에너지가 반대예요<br>중요한 만남이나 결정은 피하세요</div>'
     + '</div>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--text-2);line-height:1.7;padding:8px;background:#ffffff;border-radius:6px">'
-    + '지금 이 시간대와 당신의 에너지(오행: <strong style="color:var(--gold)">' + oh + '</strong>)가 맞물려서 <strong style="color:#059669">' + goodDir + '쪽 방향에 대박 찬스가 열렸어요!</strong> 이쪽으로 이동하거나 이쪽을 향해 앉아보세요 😊'
+    + '지금 이 시간대와 당신의 에너지(오행: <strong style="color:var(--gold)">' + _ohD(oh) + '</strong>)가 맞물려서 <strong style="color:#059669">' + _dirW(goodDir) + ' 방향에 대박 찬스가 열렸어요!</strong> 이쪽으로 이동하거나 이쪽을 향해 앉아보세요 😊'
     + '</div>';
 
   // ── Step 3: 18대 역학 통합 행동 가이드 ────────────────────────
@@ -81834,7 +81835,7 @@ function receiveCosmicOrder() {
     + '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">'
     + '<div style="padding:10px 12px;background:rgba(212,168,67,0.07);border-radius:10px;border-left:3px solid #fbbf24">'
     +   '<div style="font-size:13px;font-weight:700;color:#b45309;margin-bottom:3px">🧭 지금 당장 움직이세요!</div>'
-    +   '<div style="font-size:12px;color:#334155;line-height:1.7"><strong style="color:#059669">' + goodDir + '쪽 방향</strong>으로 이동하거나, 그쪽을 향해 앉아서 오늘 가장 중요한 결정을 내리세요!</div>'
+    +   '<div style="font-size:12px;color:#334155;line-height:1.7"><strong style="color:#059669">' + _dirW(goodDir) + ' 방향</strong>으로 이동하거나, 그쪽을 향해 앉아서 오늘 가장 중요한 결정을 내리세요!</div>'
     + '</div>'
     + '<div style="padding:10px 12px;background:rgba(52,211,153,0.07);border-radius:10px;border-left:3px solid #34d399">'
     +   '<div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:3px">💡 지금 떠오르는 아이디어를 실행하세요!</div>'
@@ -81853,7 +81854,7 @@ function receiveCosmicOrder() {
           ? '<div style="font-size:11px;color:#dc2626;padding:6px 10px;background:rgba(248,113,113,0.06);border-radius:7px;border-left:2px solid #f87171;line-height:1.7">🌍 Kp'+_env.kp.value.toFixed(1)+' 지자기 강교란 — 기문 방위 신뢰도 일시 저하. 오늘은 방향보다 <strong>내면 집중과 수비 전략</strong>을 우선하세요.</div>'
           : _env.kp.value >= 3
           ? '<div style="font-size:11px;color:#b45309;padding:6px 10px;background:rgba(251,191,36,0.06);border-radius:7px;border-left:2px solid #fbbf24;line-height:1.7">🌍 Kp'+_env.kp.value.toFixed(1)+' 지자기 약교란 — 방위 신호 약간 흔들림. 행운 방위에서 행동할 때 더 신중하게 판단하세요.</div>'
-          : '<div style="font-size:11px;color:#059669;padding:6px 10px;background:rgba(52,211,153,0.06);border-radius:7px;border-left:2px solid #34d399;line-height:1.7">🌍 Kp'+_env.kp.value.toFixed(1)+' 지자기 안정 — <strong>'+goodDir+'쪽 방위 신뢰도 최적.</strong> 오늘 방위 에너지를 100% 신뢰하고 움직이세요.</div>')
+          : '<div style="font-size:11px;color:#059669;padding:6px 10px;background:rgba(52,211,153,0.06);border-radius:7px;border-left:2px solid #34d399;line-height:1.7">🌍 Kp'+_env.kp.value.toFixed(1)+' 지자기 안정 — <strong>'+_dirW(goodDir)+' 방위 신뢰도 최적.</strong> 오늘 방위 에너지를 100% 신뢰하고 움직이세요.</div>')
       + (_env.solarWind.speed > 600
           ? '<div style="font-size:11px;color:#dc2626;padding:6px 10px;background:rgba(248,113,113,0.06);border-radius:7px;border-left:2px solid #f87171;line-height:1.7">☀️ 태양풍 강함 '+Math.round(_env.solarWind.speed)+'km/s — 행동 에너지 폭발 타이밍! <strong>지금 이 순간이 오늘 중 가장 강한 실행 에너지입니다.</strong> 망설이지 마세요.</div>'
           : _env.solarWind.speed < 300
@@ -81898,7 +81899,7 @@ function receiveCosmicOrder() {
     +'<div style="width:'+energyScore+'%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24,#fde68a);border-radius:4px;transition:width 1s ease"></div>'
     +'</div>'
     +'<div style="font-size:12px;color:#334155;font-weight:600">'+levelTxt+'</div>'
-    +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,0.15);">'    +'<div style="font-size:10px;color:rgba(251,191,36,0.6);margin-bottom:7px;font-weight:700;letter-spacing:.04em">📊 점수 산출 근거 (투명 공개)</div>'    +_scoreBreakdown.map(function(b){        return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'          +'<span style="font-size:10px;color:#475569;">'+b.label+'</span>'          +'<span style="font-size:11px;font-weight:700;color:'+b.color+';">'+((b.val>=0&&b.label.indexOf('기준')>=0)?'':b.val>=0?'+':'')+b.val+'점</span>'          +'</div>';      }).join('')    +'<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(16,185,129,.18);display:flex;justify-content:space-between;">'    +'<span style="font-size:10px;color:#475569;">최종 합산</span>'    +'<span style="font-size:12px;font-weight:900;color:#b45309;">'+energyScore+'점 / 100점</span>'    +'</div>'    +'<div style="margin-top:5px;font-size:9px;color:#475569;text-align:center">범위 25~99점 · 인위적 조작 없음 · 매일 실시간 재계산</div>'    +'</div>'    +'</div>'
+    +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,0.15);">'    +'<div style="font-size:10px;color:rgba(251,191,36,0.6);margin-bottom:7px;font-weight:700;letter-spacing:.04em">📊 점수 산출 근거 (투명 공개)</div>'    +_scoreBreakdown.map(function(b){        return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'          +'<span style="font-size:10px;color:#475569;">'+b.label+'</span>'          +'<span style="font-size:11px;font-weight:700;color:'+b.color+';">'+((b.val>=0&&b.label.indexOf('기준')>=0)?'':b.val>=0?'+':'')+b.val+(_cL?' pts':'점')+'</span>'          +'</div>';      }).join('')    +'<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(16,185,129,.18);display:flex;justify-content:space-between;">'    +'<span style="font-size:10px;color:#475569;">최종 합산</span>'    +'<span style="font-size:12px;font-weight:900;color:#b45309;">'+energyScore+'점 / 100점</span>'    +'</div>'    +'<div style="margin-top:5px;font-size:9px;color:#475569;text-align:center">범위 25~99점 · 인위적 조작 없음 · 매일 실시간 재계산</div>'    +'</div>'    +'</div>'
 
     // ══ 전문가 분석 섹션 ══
     +'<div style="margin-bottom:6px;padding:10px 14px;background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(139,92,246,.06));border:1px solid rgba(56,189,248,.3);border-radius:12px;display:flex;align-items:center;gap:8px;">'
@@ -81916,7 +81917,7 @@ function receiveCosmicOrder() {
     +'<div style="background:rgba(212,168,67,.07);border:1px solid rgba(212,168,67,.2);border-radius:8px;padding:8px;text-align:center;">'
     +'<div style="font-size:9px;color:rgba(212,168,67,.6);margin-bottom:3px;">일주(日柱)</div>'
     +'<div style="font-size:18px;font-weight:900;color:#b8860b;">'+dGan+dJi+'</div>'
-    +'<div style="font-size:10px;color:rgba(51,65,85,.5);margin-top:2px;">일간 '+dGan+' — '+oh+'('+ohK[oh]+') 오행</div>'
+    +'<div style="font-size:10px;color:rgba(51,65,85,.5);margin-top:2px;">일간 '+dGan+' — '+_ohD(oh)+'('+ohK[oh]+') 오행</div>'
     +'</div>'
     // 오늘 일진 카드
     +'<div style="background:rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.07);border:1px solid rgba('+(isGoodDay?'52,211,153':'248,113,113')+',.2);border-radius:8px;padding:8px;text-align:center;">'
@@ -81930,7 +81931,7 @@ function receiveCosmicOrder() {
     +'<div style="font-size:11px;color:'+(isGoodDay?'#34d399':'#f87171')+';font-weight:700;margin-bottom:3px;">'
     +(isGoodDay?'🌟 오늘은 당신에게 좋은 날이에요!':'⚠️ 오늘은 신중하게 행동하세요')+'</div>'
     +'<div style="font-size:11px;color:rgba(51,65,85,.8);line-height:1.8;">'
-    +'당신의 일간 <strong style="color:#b8860b;">'+dGan+'('+oh+'·'+ohK[oh]+')</strong>과 오늘 일진 <strong style="color:'+(isGoodDay?'#34d399':'#f87171')+';">'+todayGan+todayJi+'('+todayOhGan+'·'+ohK[todayOhGan]+')</strong>의 관계: <strong>'+todayOhRel+'</strong><br>'
+    +'당신의 일간 <strong style="color:#b8860b;">'+dGan+'('+_ohD(oh)+'·'+ohK[oh]+')</strong>과 오늘 일진 <strong style="color:'+(isGoodDay?'#34d399':'#f87171')+';">'+todayGan+todayJi+'('+_ohD(todayOhGan)+'·'+ohK[todayOhGan]+')</strong>의 관계: <strong>'+todayOhRel+'</strong><br>'
     +(isGoodDay
       ?'오행이 상생·비화 관계입니다. 오늘은 새로운 시작, 중요한 결정, 핵심 미팅에 적합한 날이에요.'
       :'오행이 상극·피극 관계입니다. 오늘은 신중하고 방어적으로 행동하며, 중요한 결정은 내일로 미루세요.')
@@ -81988,17 +81989,17 @@ function receiveCosmicOrder() {
     +'<div style="flex:1;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:10px;text-align:center;">'
     +'<div style="font-size:11px;color:rgba(5,150,105,.6);margin-bottom:4px;">✅ 행운 방위</div>'
     +'<div style="font-size:20px;margin-bottom:2px;">'+goodEmoji+'</div>'
-    +'<div style="font-size:14px;font-weight:800;color:#059669;">'+goodDir+'쪽</div>'
+    +'<div style="font-size:14px;font-weight:800;color:#059669;">'+_dirW(goodDir)+'</div>'
     +'<div style="font-size:10px;color:rgba(51,65,85,.5);margin-top:3px;">'+goodGate+'</div>'
     +'</div>'
     +'<div style="flex:1;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:10px;text-align:center;">'
     +'<div style="font-size:11px;color:rgba(248,113,113,.6);margin-bottom:4px;">⛔ 주의 방위</div>'
-    +'<div style="font-size:14px;font-weight:800;color:rgba(248,113,113,.8);margin-top:8px;">'+badDir+'쪽</div>'
+    +'<div style="font-size:14px;font-weight:800;color:rgba(248,113,113,.8);margin-top:8px;">'+_dirW(badDir)+'</div>'
     +'<div style="font-size:10px;color:rgba(51,65,85,.5);margin-top:3px;">오늘은 피하세요</div>'
     +'</div>'
     +'</div>'
     +'<div style="font-size:12px;color:rgba(51,65,85,.7);line-height:1.7;padding:8px 10px;background:rgba(52,211,153,.04);border-radius:8px;">'
-    +'지금 이 시간대와 당신의 에너지(오행: <strong style="color:#059669;">'+oh+'</strong>)가 맞물려서 <strong style="color:#059669;">'+goodDir+'쪽</strong>에 찬스가 열렸어요! 이쪽으로 이동하거나 이쪽을 향해 앉아보세요 😊'
+    +'지금 이 시간대와 당신의 에너지(오행: <strong style="color:#059669;">'+_ohD(oh)+'</strong>)가 맞물려서 <strong style="color:#059669;">'+_dirW(goodDir)+'</strong>에 찬스가 열렸어요! 이쪽으로 이동하거나 이쪽을 향해 앉아보세요 😊'
     +'</div>'
     +'</div>'
 
@@ -82008,7 +82009,7 @@ function receiveCosmicOrder() {
     +'<div style="display:flex;flex-direction:column;gap:6px;">'
     +'<div style="padding:8px 12px;background:rgba(251,191,36,.07);border-radius:8px;border-left:2px solid #fbbf24;">'
     +'<div style="font-size:12px;color:#b45309;font-weight:700;margin-bottom:3px;">🧭 지금 당장 움직이세요!</div>'
-    +'<div style="font-size:12px;color:#334155;line-height:1.7"><strong style="color:#059669;">'+goodDir+'쪽 방향</strong>으로 이동하거나, 그쪽을 향해 앉아서 오늘 가장 중요한 결정을 내리세요!</div>'
+    +'<div style="font-size:12px;color:#334155;line-height:1.7"><strong style="color:#059669;">'+_dirW(goodDir)+' 방향</strong>으로 이동하거나, 그쪽을 향해 앉아서 오늘 가장 중요한 결정을 내리세요!</div>'
     +'</div>'
     +'<div style="padding:8px 12px;background:rgba(52,211,153,.07);border-radius:8px;border-left:2px solid #34d399;">'
     +'<div style="font-size:12px;color:#059669;font-weight:700;margin-bottom:3px;">💡 아이디어를 바로 실행하세요!</div>'
@@ -82033,9 +82034,9 @@ function receiveCosmicOrder() {
 
   // 미션①: 일진 기반 (3종)
   var _mAct1 = [
-    goodDir+'쪽으로 이동하여 오늘의 가장 중요한 결정을 내리세요. 일진('+todayGan+todayJi+')이 당신의 오행('+oh+')을 상생합니다 — 실행력이 최대인 날입니다. 지금 하는 행동은 에너지 손실 없이 100% 발현됩니다.',
-    goodDir+'쪽을 향해 앉아 오늘의 핵심 목표 하나를 마음속으로 선언하세요. 에너지 중립일('+todayGan+todayJi+')은 방향 설정이 결과를 좌우합니다. 선언하는 순간 의도가 우주 에너지와 동기화됩니다.',
-    '오늘은 일진('+todayGan+todayJi+')이 역방향입니다. 새 시작보다 기존 진행 중인 일 하나를 완성하세요. '+goodDir+'쪽에서 수비 전략을 세우면 손실이 최소화되고, 완성한 것에서 다음 에너지가 나옵니다.'
+    _dirW(goodDir)+'으로 이동하여 오늘의 가장 중요한 결정을 내리세요. 일진('+todayGan+todayJi+')이 당신의 오행('+_ohD(oh)+')을 상생합니다 — 실행력이 최대인 날입니다. 지금 하는 행동은 에너지 손실 없이 100% 발현됩니다.',
+    _dirW(goodDir)+'을 향해 앉아 오늘의 핵심 목표 하나를 마음속으로 선언하세요. 에너지 중립일('+todayGan+todayJi+')은 방향 설정이 결과를 좌우합니다. 선언하는 순간 의도가 우주 에너지와 동기화됩니다.',
+    '오늘은 일진('+todayGan+todayJi+')이 역방향입니다. 새 시작보다 기존 진행 중인 일 하나를 완성하세요. '+_dirW(goodDir)+'에서 수비 전략을 세우면 손실이 최소화되고, 완성한 것에서 다음 에너지가 나옵니다.'
   ][_mGrpIlJin];
 
   // 미션②: 달 위상 기반 (3종)
@@ -82082,7 +82083,7 @@ function receiveCosmicOrder() {
     +'</div>'
     +'<div style="flex:1;min-width:100px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:8px;text-align:center">'
     +  '<div style="font-size:10px;color:#0284c7">🧭 최길 방위</div>'
-    +  '<div style="font-size:16px;font-weight:700;color:#334155;margin-top:2px">' + goodEmoji + ' ' + goodDir + '</div>'
+    +  '<div style="font-size:16px;font-weight:700;color:#334155;margin-top:2px">' + goodEmoji + ' ' + _dirW2(goodDir) + '</div>'
     +'</div>'
     +'</div>';
 
@@ -82095,7 +82096,7 @@ function receiveCosmicOrder() {
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">'
     +'<div style="background:#ffffff;border-radius:7px;padding:6px;text-align:center">'
     +  '<div style="font-size:9px;color:#475569">내 오행</div>'
-    +  '<div style="font-size:14px;font-weight:800;color:'+ohColor[oh]+'">'+oh+'('+ohK[oh]+')</div>'
+    +  '<div style="font-size:14px;font-weight:800;color:'+ohColor[oh]+'">'+_ohD(oh)+'('+ohK[oh]+')</div>'
     +'</div>'
     +'<div style="background:#ffffff;border-radius:7px;padding:6px;text-align:center">'
     +  '<div style="font-size:9px;color:#475569">계절 공명</div>'
@@ -82119,7 +82120,7 @@ function receiveCosmicOrder() {
   wrap.style.display = 'block';
   wrap.style.animation = 'decreeFadeIn .6s ease';
   /* 천지인 럭키시그널 자체번역 훅(5대 철칙: 내_cgoT먼저·raw·완전영어만·재실행·앱사전 맨뒤) */
-  if(window._LANG && window._LANG!=='ko'){ var _coX=function(){ try{ if(typeof _cgoT!=='function') return; var _w=document.createTreeWalker(wrap,NodeFilter.SHOW_TEXT,null,false),_n,_a=[]; while(_n=_w.nextNode()){ var _t=(_n.nodeValue||'').trim(); if(_t&&/[\uac00-\ud7a3]/.test(_t))_a.push(_n); } for(var _i=0;_i<_a.length;_i++){ var _raw=_a[_i].nodeValue||'', _tr=_cgoT(_raw); if(_tr&&_tr!==_raw&&!/[\uac00-\ud7a3]/.test(_tr))_a[_i].nodeValue=_tr; } }catch(_e){} }; _coX(); setTimeout(_coX,600); setTimeout(_coX,1600); setTimeout(_coX,3200); if(window._cgoLoadLangPack){ try{ _cgoLoadLangPack(window._LANG,_coX); }catch(_e){} } if(typeof _cgoTranslateNode==='function') setTimeout(function(){ try{ _cgoTranslateNode(wrap); }catch(_e){} },3400); }
+  if(window._LANG && window._LANG!=='ko'){ var _coX=function(){ try{ if(typeof _cgoT!=='function') return; var _roots=[wrap, document.getElementById('cosmicRetention')]; for(var _r=0;_r<_roots.length;_r++){ if(!_roots[_r]) continue; var _w=document.createTreeWalker(_roots[_r],NodeFilter.SHOW_TEXT,null,false),_n,_a=[]; while(_n=_w.nextNode()){ var _t=(_n.nodeValue||'').trim(); if(_t&&/[\uac00-\ud7a3]/.test(_t))_a.push(_n); } for(var _i=0;_i<_a.length;_i++){ var _raw=_a[_i].nodeValue||'', _tr=_cgoT(_raw); if(_tr&&_tr!==_raw&&!/[\uac00-\ud7a3]/.test(_tr))_a[_i].nodeValue=_tr; } } }catch(_e){} }; _coX(); setTimeout(_coX,600); setTimeout(_coX,1600); setTimeout(_coX,3200); if(window._cgoLoadLangPack){ try{ _cgoLoadLangPack(window._LANG,_coX); }catch(_e){} } if(typeof _cgoTranslateNode==='function') setTimeout(function(){ try{ _cgoTranslateNode(wrap); var _rt=document.getElementById('cosmicRetention'); if(_rt) _cgoTranslateNode(_rt); }catch(_e){} },3400); }
   document.getElementById('cosmicRetention').style.display = 'block';
 
   var seal = document.querySelector('#cosmicDecree > div:first-child > div');
