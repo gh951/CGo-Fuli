@@ -55761,19 +55761,18 @@ function runNaming() {
   // 18개 역학 카드 — 1위 이름 기준
   var top1 = top4[0];
 
-  // ★ 앱=계산 · GROQ=해설: 앱이 계산한 정확한 역학 사실을 저장 (해설은 버튼 클릭시 생성)
-  try{
-    window._namingFacts = {
-      domOh: domOh, lifeNum: lifeNum, gender: gender, surname: surname,
-      names: top4.map(function(c){
-        return {
-          nm: (c.c1?c.c1.kr:'')+(c.c2?c.c2.kr:''),
-          hj: (c.c1?c.c1.hj:'')+(c.c2?c.c2.hj:''),
-          detail: [c.c1,c.c2].filter(Boolean).map(function(x){ return x.hj+'='+(x.mean||'')+'('+x.oh+'오행·'+x.stroke+'획)'; }).join(', ')
-        };
-      })
-    };
-  }catch(e){ window._namingFacts=null; }
+  // ★ 앱=계산 · GROQ=해설: 계산된 정확한 사실 저장 (절대 null 안됨)
+  window._namingFacts = { domOh: domOh, lifeNum: lifeNum, gender: gender, surname: surname, names: [] };
+  try {
+    for(var _nfi=0; _nfi<top4.length; _nfi++){
+      var _nfc=top4[_nfi]; if(!_nfc) continue;
+      var _c1=_nfc.c1||{}, _c2=_nfc.c2||{};
+      var _det=[];
+      if(_nfc.c1) _det.push((_c1.hj||'')+'='+(_c1.mean||'')+'('+(_c1.oh||'')+'오행·'+(_c1.stroke||'')+'획)');
+      if(_nfc.c2) _det.push((_c2.hj||'')+'='+(_c2.mean||'')+'('+(_c2.oh||'')+'오행·'+(_c2.stroke||'')+'획)');
+      window._namingFacts.names.push({ nm:(_c1.kr||'')+(_c2.kr||''), hj:(_c1.hj||'')+(_c2.hj||''), detail:_det.join(', ') });
+    }
+  } catch(e){}
   if(top1) {
     var nmStrokes = calcTotalStroke({stroke:getHanjaStroke(SURNAME_HANJA[surname]||'金')}, top1.c1, top1.c2);
     var scores18n = calc18ForNaming(surname, domOh, lifeNumVal, gender, top1.c1, top1.c2, want3?top1.c3:null, nmStrokes);
@@ -57498,6 +57497,18 @@ function runNamingAi(){
   if(!aiText) return;
   var T=(typeof _cgoT==='function')?_cgoT:function(x){return x;};
   var f = window._namingFacts;
+  // DOM 폴백: _namingFacts 비면 화면에 렌더된 이름 카드에서 직접 추출 (100% 확실)
+  if(!f || !f.names || !f.names.length){
+    try{
+      var _krs=document.querySelectorAll('#namingResult .nrc-name-kr');
+      var _hjs=document.querySelectorAll('#namingResult .nrc-name-hj');
+      if(_krs.length){
+        f={ domOh:(f&&f.domOh)||'', lifeNum:(f&&f.lifeNum)||'', gender:(f&&f.gender)||'', surname:'', names:[] };
+        for(var _fi=0;_fi<_krs.length;_fi++){ f.names.push({ nm:_krs[_fi].textContent||'', hj:(_hjs[_fi]?_hjs[_fi].textContent:'')||'', detail:'' }); }
+        window._namingFacts=f;
+      }
+    }catch(e){}
+  }
   if(!f || !f.names || !f.names.length){ aiText.textContent = T('먼저 작명을 실행해주세요.'); return; }
   var _rule=(typeof window._cgoLangRule==='function')?window._cgoLangRule():'';
   var factStr = f.names.map(function(n,i){ return (i+1)+'위 '+f.surname+n.nm+' ('+n.hj+'): '+n.detail; }).join('\n');
