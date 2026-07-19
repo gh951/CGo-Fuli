@@ -22959,10 +22959,10 @@ function checkHealth(){
 
           <div class="naming-form-grid">
             <!-- 성씨 + 년도 한 행 -->
-            <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:end">
+            <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;align-items:end">
               <div class="naming-group">
                 <div class="naming-label">성씨 (姓)</div>
-                <input class="naming-field" id="nmSurname" type="text" placeholder="이,김,박" maxlength="2">
+                <input class="naming-field" id="nmSurname" type="text" placeholder="이, 남궁, Smith, García" maxlength="20">
               </div>
               <div class="naming-group">
                 <div class="naming-label">출생년도</div>
@@ -23085,6 +23085,13 @@ function checkHealth(){
               <div class="naming-label" style="margin-bottom:5px">원하는 키워드 (선택)</div>
               <input class="naming-field" id="bizKeyword"
                 placeholder="예: 신뢰, 글로벌, 자연, 혁신 등" style="font-size:13px">
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="naming-label" style="margin-bottom:5px">🛡️ 브랜드 이름 직접 확인 (선택)</div>
+              <div style="display:flex;gap:6px">
+                <input class="naming-field" id="bizBrandName" placeholder="예: Nexon, 카카오, 라온" style="font-size:13px;flex:1">
+                <button onclick="_c66CheckForbidden('bizBrandName')" style="flex:0 0 auto;padding:0 14px;border-radius:10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.35);color:#22c55e;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">불용문자 확인</button>
+              </div>
             </div>
             <div style="margin-bottom:14px">
               <div class="naming-label" style="margin-bottom:6px">선호 이름 스타일</div>
@@ -55494,6 +55501,29 @@ window._c66SelC66 = function(el){
   window._c66Country='c66';
   _c66ClearSel('c66-cc');
   try{ el.style.background='rgba(168,85,247,.18)'; el.style.borderColor='#a855f7'; }catch(e){}
+};
+window._c66CheckForbidden = function(id){
+  var el=document.getElementById(id); if(!el) return;
+  var T=(typeof _cgoT==='function')?_cgoT:function(x){return x;};
+  var val=(el.value||'').trim();
+  if(!val){ alert(T('이름을 먼저 입력해주세요.')); return; }
+  var found=[];
+  var hj=window._C66_FORBID_KO||'';
+  var danger='<>;\'"(){}[]\\=`|&';
+  for(var i=0;i<val.length;i++){ var ch=val.charAt(i); if((hj.indexOf(ch)>=0||danger.indexOf(ch)>=0)&&found.indexOf(ch)<0) found.push(ch); }
+  var old=document.getElementById('c66FbPop'); if(old) old.remove();
+  var safe=(found.length===0);
+  var pop=document.createElement('div');
+  pop.id='c66FbPop';
+  pop.style.cssText='position:fixed;inset:0;z-index:20000;background:rgba(2,8,23,.85);display:flex;align-items:center;justify-content:center;padding:24px';
+  pop.innerHTML='<div style="background:#0f2942;border:1px solid '+(safe?'rgba(34,197,94,.4)':'rgba(248,113,113,.4)')+';border-radius:16px;padding:24px;max-width:340px;text-align:center">'
+    +'<div style="font-size:40px;margin-bottom:10px">'+(safe?'🛡️':'⚠️')+'</div>'
+    +'<div style="font-size:16px;font-weight:700;color:'+(safe?'#22c55e':'#f87171')+';margin-bottom:8px">'+(safe?T('안전한 이름입니다'):T('불용문자 발견'))+'</div>'
+    +'<div style="font-size:12px;color:#cbd5e1;line-height:1.5;margin-bottom:16px">'+(safe?T('C-66 기준 흉한 글자·SQL 오류·특수문자가 없습니다.'):(T('다음 문자가 포함되어 있습니다: ')+'<b style=\'color:#f87171\'>'+found.join(' ')+'</b>'))+'</div>'
+    +'<button onclick="var p=document.getElementById(\'c66FbPop\'); if(p) p.remove();" style="padding:10px 24px;background:'+(safe?'rgba(34,197,94,.2)':'rgba(248,113,113,.2)')+';border:1px solid '+(safe?'rgba(34,197,94,.4)':'rgba(248,113,113,.4)')+';border-radius:10px;color:'+(safe?'#22c55e':'#f87171')+';font-size:13px;font-weight:600;cursor:pointer">'+T('확인')+'</button>'
+    +'</div>';
+  pop.onclick=function(e){ if(e.target===pop) pop.remove(); };
+  document.body.appendChild(pop);
 };
 function runNaming() {
   var surname = (document.getElementById('nmSurname').value||'').trim();
