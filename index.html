@@ -55760,10 +55760,34 @@ function runNaming() {
 
   // 18개 역학 카드 — 1위 이름 기준
   var top1 = top4[0];
+
+  // ★ 실험: 앱=계산 · GROQ=해설 — 앱이 계산한 정확한 역학 사실로 프롬프트 생성
+  try{
+    var _aiFacts = top4.map(function(c,i){
+      var nm=(c.c1?c.c1.kr:'')+(c.c2?c.c2.kr:'');
+      var hj=(c.c1?c.c1.hj:'')+(c.c2?c.c2.hj:'');
+      var m1=c.c1?(c.c1.hj+'='+(c.c1.mean||'')+'('+c.c1.oh+'오행'+c.c1.stroke+'획)'):'';
+      var m2=c.c2?(c.c2.hj+'='+(c.c2.mean||'')+'('+c.c2.oh+'오행'+c.c2.stroke+'획)'):'';
+      return (i+1)+'위 '+surname+nm+' ('+hj+'): '+m1+', '+m2;
+    }).join('\n');
+    var _rule=(typeof window._cgoLangRule==='function')?window._cgoLangRule():'';
+    window._lastNamingPrompt = _rule+'\n\n'
+      +'너는 정직한 작명 해설가다. 아래는 앱이 정확히 계산한 역학 데이터다. 이 사실만 근거로 각 이름을 2문장씩 자연스럽고 따뜻하게 해설하라. 없는 사실을 지어내지 말고, 흉하거나 부정적인 표현은 쓰지 마라. 각 이름의 한자 뜻을 살려 이름마다 다르게 설명하라.\n\n'
+      +'[사주] 일간 오행: '+domOh+' · 생명수: '+lifeNum+' · 성별: '+(gender==='M'?'남자':'여자')+'\n'
+      +'[추천 이름 — 사주 오행 '+domOh+'과의 조화 기준]\n'+_aiFacts;
+  }catch(e){}
   if(top1) {
     var nmStrokes = calcTotalStroke({stroke:getHanjaStroke(SURNAME_HANJA[surname]||'金')}, top1.c1, top1.c2);
     var scores18n = calc18ForNaming(surname, domOh, lifeNumVal, gender, top1.c1, top1.c2, want3?top1.c3:null, nmStrokes);
     html += build18Cards(scores18n, 'naming');
+  html += '<div style="margin-top:14px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03));border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:14px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--gold)">🤖 '+(typeof _cgoT==="function"?_cgoT('AI 정밀 해설'):'AI 정밀 해설')+' <span style="font-size:9px;color:var(--text-3)">('+(typeof _cgoT==="function"?_cgoT('실험'):'실험')+')</span></div>'
+    +'<span id="namingAiStatus" style="font-size:9px;color:var(--text-3)"></span>'
+    +'</div>'
+    +'<button onclick="runNamingAi()" style="width:100%;padding:10px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.35);border-radius:9px;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px">✨ '+(typeof _cgoT==="function"?_cgoT('AI 해설 생성'):'AI 해설 생성')+'</button>'
+    +'<div id="namingAiText" style="font-size:11px;color:var(--text-2);line-height:1.6"></div>'
+    +'</div>';
   }
 
   var rc = document.getElementById('namingResult');
@@ -57475,7 +57499,8 @@ function runNamingAi(){
   var aiStatus = document.getElementById('namingAiStatus');
   if(!aiText || !window._lastNamingPrompt) return;
   if(aiStatus) aiStatus.textContent = _cgoT('AI 재분석 중...');
-  aiText.innerHTML = '<span style="color:rgba(212,168,67,.4);">🤖 AI 재분석 중...</span>';
+  aiText.innerHTML = '<span style="color:rgba(212,168,67,.4);">🤖 '+_cgoT('AI 해설 생성 중...')+'</span>';
+  window._namingAiT0=Date.now();
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -57489,7 +57514,7 @@ function runNamingAi(){
     var txt=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
     if(aiText&&txt){
       aiText.innerHTML=txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b style="color:#d4a843;">$1</b>');
-      if(aiStatus) aiStatus.textContent=_cgoT('✅ 재분석 완료');
+      if(aiStatus) aiStatus.textContent=_cgoT('✅ 완료')+' ('+((Date.now()-(window._namingAiT0||Date.now()))/1000).toFixed(1)+'s)';
     }
   }).catch(function(){
     if(aiText) aiText.textContent=_cgoT('AI 분석을 불러올 수 없습니다.');
