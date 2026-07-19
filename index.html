@@ -23019,7 +23019,7 @@ function checkHealth(){
           <div style="padding:16px 20px">
             <div style="margin-bottom:12px">
               <div class="naming-label" style="margin-bottom:5px">이름 전체 입력</div>
-              <input class="naming-field" id="myNameFull" type="text" placeholder="예: 이주원" maxlength="6" style="text-align:left;font-size:16px;font-weight:700" oninput="myNameSplitPreview(this.value)">
+              <input class="naming-field" id="myNameFull" type="text" placeholder="예: 이주원, Smith, García" maxlength="20" style="text-align:left;font-size:16px;font-weight:700" oninput="myNameSplitPreview(this.value)">
               <div id="myNameSplitHint" style="font-size:10px;color:#b8860b;margin-top:4px;min-height:14px;"></div>
               <!-- 숨긴 필드 — analyzeMyName() 호환 유지 -->
               <input type="hidden" id="myNameSurname">
@@ -51908,6 +51908,17 @@ function analyzeMyName() {
       bullyFound.push({ char: ch, info: BULLY_CHARS[ch] });
     }
   }
+  // ★ C-66 나라별 불용 추가 검사 (선택 나라 흉한글자 + SQL/특수문자)
+  try{
+    var _cf=(typeof window._c66ForbidFor==='function'?window._c66ForbidFor(window._c66Country||'ko'):'')+(window._C66_DANGER||'');
+    for(var _ci=0;_ci<checkStr.length;_ci++){
+      var _cc=checkStr.charAt(_ci); var _dup=false;
+      for(var _bi=0;_bi<bullyFound.length;_bi++){ if(bullyFound[_bi].char===_cc){_dup=true;break;} }
+      if(_cf.indexOf(_cc)>=0 && !_dup){
+        bullyFound.push({ char:_cc, info:{ reason:(typeof _cgoT==='function'?_cgoT('C-66 나라별 불용문자 — 흉한 글자·SQL 오류·특수문자 제외 대상'):'C-66 나라별 불용문자'), danger:70 } });
+      }
+    }
+  }catch(e){}
 
   // ── 사주-이름 충돌 검사
   var conflict  = SAJU_NAME_CONFLICT[domOh] || {};
@@ -55454,6 +55465,16 @@ function selectSurname(sn) {
 }
 
 window._C66_FORBID_KO = "亡死哀孤終滅敗傷痛恨哭葬枯凋零落破碎裂禍災厄凶惡毒害賊殺刑囚獄辱恥醜賤貧窮困乏飢餓患疾病疫邪魔鬼妖怪妄荒僻狂暴逆叛怨怒愁憂懼怖驚慌亂混迷惑欺詐瞞盜姦淫嫉妬傲慢惰怠驕奢浪費損虧耗竭絶斷罷廢棄遺逝歿殯棺塚墓幽冥暗癡聾盲啞跛瘡疽瘤癖";
+// ★ 나라별 불용문자 (SQL/시스템/특수문자는 만국공통 danger, 나라별 흉한글자 추가)
+window._C66_DANGER = '<>;\'"(){}[]\\=`|&';
+window._C66_FORBID = {
+  ko: window._C66_FORBID_KO,   // 한국: 흉한 한자
+  zh: window._C66_FORBID_KO,   // 중국: 한자권 공통
+  ja: window._C66_FORBID_KO,   // 일본: 한자권 공통
+  hk: window._C66_FORBID_KO,   // 홍콩: 한자권 공통
+  vi: window._C66_FORBID_KO    // 베트남: 한자권 공통
+};
+window._c66ForbidFor = function(country){ return (window._C66_FORBID && window._C66_FORBID[country]) || ''; };
 // ★ C-66 정직: 한국 불용한자(흉·죽음·질병·범죄) — 추천이름에서 제외
 // ★ C-66 글로벌 작명: 국가·종류 선택 + 히어로 반영 (인라인 스타일 토글)
 window._c66Country = window._c66Country || 'ko';
@@ -55508,8 +55529,8 @@ window._c66CheckForbidden = function(id){
   var val=(el.value||'').trim();
   if(!val){ alert(T('이름을 먼저 입력해주세요.')); return; }
   var found=[];
-  var hj=window._C66_FORBID_KO||'';
-  var danger='<>;\'"(){}[]\\=`|&';
+  var hj=(typeof window._c66ForbidFor==='function'?window._c66ForbidFor(window._c66Country||'ko'):(window._C66_FORBID_KO||''));
+  var danger=window._C66_DANGER||'<>;\'"(){}[]\\=`|&';
   for(var i=0;i<val.length;i++){ var ch=val.charAt(i); if((hj.indexOf(ch)>=0||danger.indexOf(ch)>=0)&&found.indexOf(ch)<0) found.push(ch); }
   var old=document.getElementById('c66FbPop'); if(old) old.remove();
   var safe=(found.length===0);
@@ -55582,7 +55603,7 @@ function runNaming() {
   var pp1=_prefPool(pool1), pp2=_prefPool(pool2), pp3=_prefPool(pool3);
   function _pick(pref, full, s){ var use=(s%10<9)&&pref.length; var src=use?pref:full; return src.length?src[s%src.length]:null; }
   var candidates = [];
-  for(var i=0; i<40; i++){
+  for(var i=0; i<1200; i++){
     seed=nmRng(seed);
     var c1 = _pick(pp1, pool1, seed);
     seed=nmRng(seed);
@@ -55614,8 +55635,11 @@ function runNaming() {
     return true;
   });
 
-  // 상위 3개 렌더링 (현대적 이름 우선)
-  var top4 = candidates.slice(0,3);
+  // ★ 다양성: 상위권 풀에서 랜덤 3개 (매번 다른 좋은 이름)
+  var _pool = candidates.slice(0, Math.min(18, candidates.length));
+  for(var _sf=_pool.length-1; _sf>0; _sf--){ var _rr=Math.floor(Math.random()*(_sf+1)); var _tt=_pool[_sf]; _pool[_sf]=_pool[_rr]; _pool[_rr]=_tt; }
+  var top4 = _pool.slice(0,3);
+  top4.sort(function(a,b){return b.score-a.score;});
   var surnameHj = SURNAME_HANJA[surname] || surname;
 
   // 오행 균형 계산 (이름 전체)
