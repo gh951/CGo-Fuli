@@ -55486,27 +55486,31 @@ function runNaming() {
 
   // 성별 선호 글자
   // ★ 트렌디한 성별 선호 글자 (C-24 2026.05)
-  var femaleKr=['서','아','린','채','윤','율','지','은','하','빈','수','현','예','나','솔','이','다','온','미','결','민','유','희','연','진'];
-  var maleKr  =['준','우','서','도','시','주','재','윤','지','하','민','건','호','현','규','찬','혁','진','태','성','원','강','세','은','율'];
+  var femaleKr=['서','아','린','채','윤','율','지','은','하','빈','수','현','예','나','솔','이','다','온','미','결','민','유','희','연','진','담','봄','안','라','슬','설','람','아름','별'];
+  var maleKr  =['준','우','서','도','시','주','재','윤','지','하','민','건','호','현','규','찬','혁','진','태','성','원','강','세','은','율','유','결','담','승','겸','온','설','로','람'];
 
+  var _prefList = (gender==='M') ? maleKr : femaleKr;
+  function _prefPool(pool){ var f=pool.filter(function(h){return h&&_prefList.indexOf(h.kr)>=0;}); return f.length>=2 ? f : pool; }
+  var pp1=_prefPool(pool1), pp2=_prefPool(pool2), pp3=_prefPool(pool3);
+  function _pick(pref, full, s){ var use=(s%10<9)&&pref.length; var src=use?pref:full; return src.length?src[s%src.length]:null; }
   var candidates = [];
-  for(var i=0; i<16; i++){
+  for(var i=0; i<40; i++){
     seed=nmRng(seed);
-    var c1 = pool1[seed%pool1.length];
+    var c1 = _pick(pp1, pool1, seed);
     seed=nmRng(seed);
-    var c2Pool = (seed%3!==0) ? pool2 : pool3;
+    var pickGen = (seed%3!==0);
     seed=nmRng(seed);
-    var c2 = c2Pool[seed%c2Pool.length];
+    var c2 = _pick(pickGen?pp2:pp3, pickGen?pool2:pool3, seed);
     seed=nmRng(seed);
-    var c3 = want3 ? (pool2[seed%pool2.length]) : null;
+    var c3 = want3 ? _pick(pp2, pool2, seed) : null;
     if(c1 && c2 && c1.kr !== c2.kr) {
       var sc = scoreHanja(surname, ohTarget, ohSupp, c1, c2);
       if(gender==='M'){
-        if(maleKr.indexOf(c1.kr)>=0) sc+=12; if(maleKr.indexOf(c2.kr)>=0) sc+=12;
-        if(femaleKr.indexOf(c1.kr)>=0) sc-=15; if(femaleKr.indexOf(c2.kr)>=0) sc-=15;
+        if(maleKr.indexOf(c1.kr)>=0) sc+=40; if(maleKr.indexOf(c2.kr)>=0) sc+=40;
+        if(femaleKr.indexOf(c1.kr)>=0) sc-=28; if(femaleKr.indexOf(c2.kr)>=0) sc-=28;
       } else {
-        if(femaleKr.indexOf(c1.kr)>=0) sc+=12; if(femaleKr.indexOf(c2.kr)>=0) sc+=12;
-        if(maleKr.indexOf(c1.kr)>=0) sc-=15; if(maleKr.indexOf(c2.kr)>=0) sc-=15;
+        if(femaleKr.indexOf(c1.kr)>=0) sc+=40; if(femaleKr.indexOf(c2.kr)>=0) sc+=40;
+        if(maleKr.indexOf(c1.kr)>=0) sc-=28; if(maleKr.indexOf(c2.kr)>=0) sc-=28;
       }
       candidates.push({c1:c1, c2:c2, c3:c3, score:sc});
     }
@@ -55522,8 +55526,8 @@ function runNaming() {
     return true;
   });
 
-  // 상위 4개 렌더링
-  var top4 = candidates.slice(0,4);
+  // 상위 3개 렌더링 (현대적 이름 우선)
+  var top4 = candidates.slice(0,3);
   var surnameHj = SURNAME_HANJA[surname] || surname;
 
   // 오행 균형 계산 (이름 전체)
