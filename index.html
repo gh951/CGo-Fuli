@@ -55761,21 +55761,19 @@ function runNaming() {
   // 18개 역학 카드 — 1위 이름 기준
   var top1 = top4[0];
 
-  // ★ 실험: 앱=계산 · GROQ=해설 — 앱이 계산한 정확한 역학 사실로 프롬프트 생성
+  // ★ 앱=계산 · GROQ=해설: 앱이 계산한 정확한 역학 사실을 저장 (해설은 버튼 클릭시 생성)
   try{
-    var _aiFacts = top4.map(function(c,i){
-      var nm=(c.c1?c.c1.kr:'')+(c.c2?c.c2.kr:'');
-      var hj=(c.c1?c.c1.hj:'')+(c.c2?c.c2.hj:'');
-      var m1=c.c1?(c.c1.hj+'='+(c.c1.mean||'')+'('+c.c1.oh+'오행'+c.c1.stroke+'획)'):'';
-      var m2=c.c2?(c.c2.hj+'='+(c.c2.mean||'')+'('+c.c2.oh+'오행'+c.c2.stroke+'획)'):'';
-      return (i+1)+'위 '+surname+nm+' ('+hj+'): '+m1+', '+m2;
-    }).join('\n');
-    var _rule=(typeof window._cgoLangRule==='function')?window._cgoLangRule():'';
-    window._lastNamingPrompt = _rule+'\n\n'
-      +'너는 정직한 작명 해설가다. 아래는 앱이 정확히 계산한 역학 데이터다. 이 사실만 근거로 각 이름을 2문장씩 자연스럽고 따뜻하게 해설하라. 없는 사실을 지어내지 말고, 흉하거나 부정적인 표현은 쓰지 마라. 각 이름의 한자 뜻을 살려 이름마다 다르게 설명하라.\n\n'
-      +'[사주] 일간 오행: '+domOh+' · 생명수: '+lifeNum+' · 성별: '+(gender==='M'?'남자':'여자')+'\n'
-      +'[추천 이름 — 사주 오행 '+domOh+'과의 조화 기준]\n'+_aiFacts;
-  }catch(e){}
+    window._namingFacts = {
+      domOh: domOh, lifeNum: lifeNum, gender: gender, surname: surname,
+      names: top4.map(function(c){
+        return {
+          nm: (c.c1?c.c1.kr:'')+(c.c2?c.c2.kr:''),
+          hj: (c.c1?c.c1.hj:'')+(c.c2?c.c2.hj:''),
+          detail: [c.c1,c.c2].filter(Boolean).map(function(x){ return x.hj+'='+(x.mean||'')+'('+x.oh+'오행·'+x.stroke+'획)'; }).join(', ')
+        };
+      })
+    };
+  }catch(e){ window._namingFacts=null; }
   if(top1) {
     var nmStrokes = calcTotalStroke({stroke:getHanjaStroke(SURNAME_HANJA[surname]||'金')}, top1.c1, top1.c2);
     var scores18n = calc18ForNaming(surname, domOh, lifeNumVal, gender, top1.c1, top1.c2, want3?top1.c3:null, nmStrokes);
@@ -57497,30 +57495,40 @@ function cplToggleCam(who){
 function runNamingAi(){
   var aiText = document.getElementById('namingAiText');
   var aiStatus = document.getElementById('namingAiStatus');
-  if(!aiText || !window._lastNamingPrompt) return;
-  if(aiStatus) aiStatus.textContent = _cgoT('AI 재분석 중...');
-  aiText.innerHTML = '<span style="color:rgba(212,168,67,.4);">🤖 '+_cgoT('AI 해설 생성 중...')+'</span>';
-  window._namingAiT0=Date.now();
+  if(!aiText) return;
+  var T=(typeof _cgoT==='function')?_cgoT:function(x){return x;};
+  var f = window._namingFacts;
+  if(!f || !f.names || !f.names.length){ aiText.textContent = T('먼저 작명을 실행해주세요.'); return; }
+  var _rule=(typeof window._cgoLangRule==='function')?window._cgoLangRule():'';
+  var factStr = f.names.map(function(n,i){ return (i+1)+'위 '+f.surname+n.nm+' ('+n.hj+'): '+n.detail; }).join('\n');
+  var prompt = _rule+'\n\n너는 정직한 작명 해설가다. 아래는 앱이 정확히 계산한 역학 데이터다. 이 사실만 근거로 각 이름을 2~3문장씩 자연스럽고 따뜻하게, 이름마다 다르게 해설하라. 없는 사실을 지어내지 말고 흉하거나 부정적인 표현은 쓰지 마라. 각 이름의 한자 뜻과 오행을 살려 설명하라.\n\n[사주] 일간 오행: '+f.domOh+' · 생명수: '+f.lifeNum+' · 성별: '+(f.gender==='M'?'남자':'여자')+'\n[추천 이름]\n'+factStr;
+  window._lastNamingPrompt = prompt;
+  if(aiStatus) aiStatus.textContent = T('AI 해설 생성 중...');
+  aiText.innerHTML = '<span style="color:rgba(212,168,67,.5)">🤖 '+T('AI 해설 생성 중...')+'</span>';
+  window._namingAiT0 = Date.now();
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       max_tokens:1000,
-      messages:[{role:'user',content:window._lastNamingPrompt}]
+      messages:[{role:'user',content:prompt}]
     })
   }).then(function(r){return r.json();})
   .then(function(d){
     var txt=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
     if(aiText&&txt){
       aiText.innerHTML=txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b style="color:#d4a843;">$1</b>');
-      if(aiStatus) aiStatus.textContent=_cgoT('✅ 완료')+' ('+((Date.now()-(window._namingAiT0||Date.now()))/1000).toFixed(1)+'s)';
+      if(aiStatus) aiStatus.textContent=T('✅ 완료')+' ('+((Date.now()-(window._namingAiT0||Date.now()))/1000).toFixed(1)+'s)';
+    } else if(aiText){
+      aiText.textContent=T('AI 분석을 불러올 수 없습니다.');
+      if(aiStatus) aiStatus.textContent='';
     }
   }).catch(function(){
-    if(aiText) aiText.textContent=_cgoT('AI 분석을 불러올 수 없습니다.');
+    if(aiText) aiText.textContent=T('AI 분석을 불러올 수 없습니다.');
+    if(aiStatus) aiStatus.textContent='';
   });
 }
-
 // ★ VIP 프리미엄 대문 가이드 팝업 (46건째 핀셋) - 골드 럭셔리 무드
 function _cgoVipIntroPopup(){
   // "오늘 하루 보지 않기" 체크되었으면 즉시 종료
