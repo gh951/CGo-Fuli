@@ -19633,11 +19633,11 @@ function fc360Start(){
       var close = diff < 20 || diff > 340;
       if(guide){
         if(close){
-          guide.textContent = '✅ ' + targetName + ' 방향입니다! 📸 촬영하세요';
+          guide.textContent = _cgoT('✅ ' + _fcDirEn(targetName) + ' 방향입니다! 📸 촬영하세요');
           guide.style.background = 'rgba(52,211,153,.15)';
           guide.style.color = '#34d399';
         } else {
-          guide.textContent = '🧭 ' + targetName + ' 방향으로 돌아서세요 (' + targetName + '쪽을 향해주세요)';
+          guide.textContent = _cgoT('🧭 ' + _fcDirEn(targetName) + ' 방향으로 돌아서세요 (' + _fcDirEn(targetName) + '쪽을 향해주세요)');
           guide.style.background = 'rgba(212,168,67,.08)';
           guide.style.color = 'rgba(240,230,200,.7)';
         }
@@ -19715,10 +19715,10 @@ function fc360Capture(){
   } else {
     fc360UpdateTarget();
     var next = _fc360.dirNames[_fc360.currentTarget]||_fc360.currentTarget;
-    if(btn) btn.textContent = '📸 ' + next + ' 방향 촬영 ('+(count+1)+'/10)';
+    if(btn) btn.textContent = _cgoT('📸 ' + _fcDirEn(next) + ' 방향 촬영 (')+(count+1)+'/10)';
     var guide = document.getElementById('fc360Guide');
     if(guide){
-      guide.textContent = '✅ '+(count)+'/10 완료! 이제 '+next+' 방향으로 돌아서세요';
+      guide.textContent = _cgoT('✅ ')+(count)+_cgoT('/10 완료! 이제 ')+_fcDirEn(next)+_cgoT(' 방향으로 돌아서세요');
       guide.style.background = 'rgba(56,189,248,.08)';
       guide.style.color = '#38bdf8';
     }
@@ -19731,6 +19731,7 @@ function fc360Analyze(){
   if(resultEl){
     resultEl.style.display = 'block';
     resultEl.innerHTML = '<div style="text-align:center;padding:24px;"><div style="font-size:32px;animation:spin 1s linear infinite;display:inline-block;">🧭</div><div style="font-size:13px;color:#b8860b;margin-top:10px;font-weight:700;">NASA 위성 + AI 풍수 분석 중...</div><div style="font-size:11px;color:#64748b;margin-top:6px;">10방향 × 7대 풍수 시스템 종합 계산</div></div>';
+    if(window._fc360TransResult) setTimeout(window._fc360TransResult,60);
   }
 
   // NASA 데이터 수집
@@ -19919,7 +19920,7 @@ function fcGetGPS(){
       if(coord) coord.textContent = _cgoT('위도 ')+fcGpsLat+(window._LANG&&window._LANG!=='ko'?' / Lng ':' / 경도 ')+fcGpsLng;
     },
     function(){
-      if(coord) coord.textContent = '위치 권한 필요';
+      if(coord) coord.textContent = _cgoT('위치 권한 필요');
     },
     {enableHighAccuracy:true, timeout:8000}
   );
@@ -19945,8 +19946,8 @@ function _cgoUpdateCompassWidget(deg, dirText) {
   var fengEl = document.getElementById('cgoCompassFengBar');
   if(needle) needle.style.transform = 'rotate('+deg+'deg)';
   if(degEl)  degEl.textContent = deg+'°';
-  if(dirEl)  dirEl.textContent = (dirText||deg+'°')+(function(){var _d={ko:' 방위',en:' Dir',zh:'方向',zh_HK:'方向',ja:'方位',ru:' Напр',hi:' दिशा',es:' Dir',de:' Rich',fr:' Dir',pt:' Dir',vi:' Hướng',th:' ทิศ',id:' Arah',ar:' اتج',tr:' Yön',it:' Dir',tl:' Dir',ms:' Arah',uk:' Напр',nl:' Rich'};return _d[window._LANG||'ko']||' Dir';})();
-  if(fengEl) fengEl.textContent = _fengMapWidget[dirText]||{ko:'방위 연동중',en:'Syncing...',zh:'同步中',zh_HK:'同步中',ja:'同期中',ru:'Синхронизация',hi:'सिंक हो रहा है',es:'Sincronizando',de:'Synchronisiert',fr:'Synchronisation',pt:'Sincronizando',vi:'Đồng bộ',th:'กำลังซิงค์',id:'Sinkronisasi',ar:'مزامنة',tr:'Senkronize',it:'Sincronizzazione',tl:'Nag-sync',ms:'Sinkronisasi',uk:'Синхронізація',nl:'Synchronisatie'}[window._LANG||'ko']||'Syncing...';
+  if(dirEl)  dirEl.textContent = (_fcDirEn(dirText)||deg+'°')+(function(){var _d={ko:' 방위',en:' Dir',zh:'方向',zh_HK:'方向',ja:'方位',ru:' Напр',hi:' दिशा',es:' Dir',de:' Rich',fr:' Dir',pt:' Dir',vi:' Hướng',th:' ทิศ',id:' Arah',ar:' اتج',tr:' Yön',it:' Dir',tl:' Dir',ms:' Arah',uk:' Напр',nl:' Rich'};return _d[window._LANG||'ko']||' Dir';})();
+  if(fengEl) fengEl.textContent = _cgoT(_fengMapWidget[dirText]||'')||{ko:'방위 연동중',en:'Syncing...',zh:'同步中',zh_HK:'同步中',ja:'同期中',ru:'Синхронизация',hi:'सिंक हो रहा है',es:'Sincronizando',de:'Synchronisiert',fr:'Synchronisation',pt:'Sincronizando',vi:'Đồng bộ',th:'กำลังซิงค์',id:'Sinkronisasi',ar:'مزامنة',tr:'Senkronize',it:'Sincronizzazione',tl:'Nag-sync',ms:'Sinkronisasi',uk:'Синхронізація',nl:'Synchronisatie'}[window._LANG||'ko']||'Syncing...';
   _cgoBarCompassActive = true;
   // ✅ 공명 알고리즘용 전역 저장
   window._cgoCompassDeg = deg;
@@ -20064,7 +20065,7 @@ function fc360SelectSystem(sysKey){
   var sub  = document.getElementById('fc360StatusSub');
   var box  = document.getElementById('fc360StatusBox');
   if(icon) icon.textContent = info.emoji;
-  if(text) text.textContent = info.name + ' 분석 시작! 북쪽(N)을 향하세요';
+  if(text) text.textContent = _cgoT(info.name) + _cgoT(' 분석 시작! 북쪽(N)을 향하세요');
   if(sub)  sub.textContent  = info.stars + ' ' + info.badge;
   if(box){
     box.style.borderColor = 'rgba(212,168,67,.4)';
@@ -20125,8 +20126,8 @@ function fc360UpdateGuide(deg){
     if(tiltAligned){
       // ✅ 올바른 방향 - 초록
       if(arrowEl){ arrowEl.textContent = isUP ? '⬆' : '⬇'; arrowEl.style.filter='drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation='fc360Green .5s ease-in-out infinite'; arrowEl.style.color='#34d399'; }
-      if(labelEl){ labelEl.textContent='✅ '+(isUP?'천장':'바닥')+' 방향! 자동 촬영 중...'; labelEl.style.color='#34d399'; labelEl.style.background='rgba(52,211,153,.2)'; }
-      if(statusEl) statusEl.textContent='✅ '+(isUP?'천장(위)':'바닥(아래)')+' 감지됨! (기울기 '+tiltDeg+'°)';
+      if(labelEl){ labelEl.textContent=_cgoT('✅ '+(isUP?'천장':'바닥')+' 방향! 자동 촬영 중...'); labelEl.style.color='#34d399'; labelEl.style.background='rgba(52,211,153,.2)'; }
+      if(statusEl) statusEl.textContent=_cgoT('✅ '+(isUP?'천장(위)':'바닥(아래)')+' 감지됨! (기울기 ')+tiltDeg+'°)';
       if(statusSub) statusSub.textContent=_cgoT('잠시 후 자동 촬영됩니다...');
       if(statusBox){ statusBox.style.background='rgba(52,211,153,.08)'; statusBox.style.borderColor='rgba(52,211,153,.4)'; }
       if(statusIcon) statusIcon.textContent= isUP ? '⬆' : '⬇';
@@ -20173,7 +20174,7 @@ function fc360UpdateGuide(deg){
   if(aligned){
     // ✅ 정렬됨 - 초록 + 자동촬영
     if(arrowEl){ arrowEl.textContent = _fc360scan.arrows[target]; arrowEl.style.filter = 'drop-shadow(0 0 20px #34d399)'; arrowEl.style.animation = 'fc360Green .5s ease-in-out infinite'; arrowEl.style.color = '#34d399'; }
-    if(labelEl){ labelEl.textContent = '✅ ' + _fc360scan.names[target] + '! 자동 촬영 중...'; labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
+    if(labelEl){ labelEl.textContent = _cgoT('✅ ' + _fcDirEn(_fc360scan.names[target]) + '! 자동 촬영 중...'); labelEl.style.color = '#34d399'; labelEl.style.background = 'rgba(52,211,153,.2)'; }
     if(statusEl) statusEl.textContent = _cgoT('✅ 정확히 ') + _fc360scan.names[target] + ' 방향입니다!';
     if(statusSub) statusSub.textContent = _cgoT('잠시 후 자동 촬영됩니다...');
     if(statusBox){ statusBox.style.background = 'rgba(52,211,153,.08)'; statusBox.style.borderColor = 'rgba(52,211,153,.4)'; }
@@ -20190,9 +20191,9 @@ function fc360UpdateGuide(deg){
     clearTimeout(_fc360scan.autoTimer);
     var turnMsg = absDiff > 90 ? '크게 ' : '';
     if(arrowEl){ arrowEl.textContent = rotateArrow; arrowEl.style.filter = 'drop-shadow(0 0 16px #f87171)'; arrowEl.style.animation = 'fc360Blink .7s ease-in-out infinite'; arrowEl.style.color = '#f87171'; }
-    if(labelEl){ labelEl.textContent = turnMsg + rotateDir + '으로 돌아서 ' + _fc360scan.names[target] + '쪽을 향하세요'; labelEl.style.color = '#fca5a5'; labelEl.style.background = 'rgba(248,113,113,.15)'; }
+    if(labelEl){ labelEl.textContent = _cgoT(turnMsg + rotateDir + '으로 돌아서 ' + _fcDirEn(_fc360scan.names[target]) + '쪽을 향하세요'); labelEl.style.color = '#fca5a5'; labelEl.style.background = 'rgba(248,113,113,.15)'; }
     if(statusEl) statusEl.textContent = _cgoT('🧭 목표: ') + _fc360scan.names[target] + ' (' + targetDeg + '°) · 현재: ' + Math.round(deg) + '°';
-    if(statusSub) statusSub.textContent = rotateDir + '으로 ' + Math.round(absDiff) + '° 더 돌아주세요';
+    if(statusSub) statusSub.textContent = _cgoT(rotateDir + '으로 ')+ Math.round(absDiff) + _cgoT('° 더 돌아주세요');
     if(statusBox){ statusBox.style.background = 'rgba(248,113,113,.06)'; statusBox.style.borderColor = 'rgba(248,113,113,.3)'; }
     if(statusIcon) statusIcon.textContent = '🧭';
   }
@@ -20261,7 +20262,7 @@ function fc360RunAnalysis(){
   var sysPrompt = sysInfo.prompt;
   var contextInfo = name+'님 공간. 오행:'+oh+', 나침반:'+deg+'도, NASA:'+nasaData+', 촬영방향:'+dirs+'. ';
 
-  var lines = [contextInfo + sysPrompt];
+  var lines = [window._cgoLangRule() + '\n\n' + contextInfo + sysPrompt];
 
   var firstImg = _fc360scan.shots['N'] || _fc360scan.shots[_fc360scan.order[0]];
   var msgContent = firstImg
@@ -20323,6 +20324,7 @@ function fc360ShowResult(text, deg, oh){
     +'<button onclick="fc360ResetScan()" style="flex:1;padding:12px;background:transparent;border:1.5px solid rgba(212,168,67,.35);border-radius:12px;color:#b8860b;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 스캔</button>'
     +'<button onclick="(function(){document.getElementById(\'fc360SystemSelect\').style.display=\'block\';document.getElementById(\'fc360ScanGuide\').style.display=\'none\';document.getElementById(\'fc360ScanResult\').style.display=\'none\';fc360ResetScan();})()" style="flex:1;padding:12px;background:rgba(56,189,248,.1);border:1.5px solid rgba(56,189,248,.3);border-radius:12px;color:#0284c7;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🏛️ 다른 시스템</button>'
     +'</div>';
+  if(window._fc360TransResult){ _fc360TransResult(); setTimeout(_fc360TransResult,80); setTimeout(_fc360TransResult,400); }
 }
 
 
@@ -34052,6 +34054,8 @@ window._ohEN=function(k){return (window._LANG&&window._LANG!=='ko'&&window._OH_E
 window._cgoDateStr=function(dt){dt=dt||new Date();var eD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],eM=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(window._LANG&&window._LANG!=='ko'){return eM[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+' ('+eD[dt.getDay()]+')';}return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+['일','월','화','수','목','금','토'][dt.getDay()]+'요일)';};
 window._cgoAiTranslateDom=function(root){try{if(!root||!(window._LANG&&window._LANG!=='ko'))return;var sel='div,p,h1,h2,h3,h4,h5,h6,li,td,th';var all=root.querySelectorAll(sel),els=[],htmls=[];for(var i=0;i<all.length;i++){var el=all[i];if(el.querySelector(sel))continue;if(/[\uac00-\ud7a3]/.test(el.textContent)&&el.textContent.trim().length>1){els.push(el);htmls.push(el.innerHTML);}}if(!els.length)return;var _rg=[];(function(){var st=0,ln=0;for(var i=0;i<htmls.length;i++){var L2=htmls[i].length;if(i>st&&(ln+L2>2600||i-st>=8)){_rg.push([st,i]);st=i;ln=0;}ln+=L2;}_rg.push([st,htmls.length]);})();var doBatch=function(s,e){var sl=htmls.slice(s,e);if(!sl.length)return;fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.1-8b-instant',max_tokens:4000,temperature:0.1,messages:[{role:'system',content:'You are a precise Korean-to-English HTML translator. Input is a JSON array of HTML snippets. Translate every Korean word in each snippet into natural, fluent English. STRICT RULES: (1) Keep every HTML tag, attribute, class, style, number, coordinate, emoji, and Chinese character exactly as-is. (2) Keep any English already present unchanged. (3) SPACING IS CRITICAL: separate every English word with a single normal space. Korean has no spaces between words, so you MUST add spaces so words never stick together (for example, zone analysis must be two words, never zoneanalysis). Never delete a space that sits right before or after an HTML tag, and always keep a space between a translated word and any adjacent tag. (4) Translate the whole snippet and leave no Korean untranslated. (5) Output ONLY a valid JSON array of the same length and same order as the input, each element a string, with no markdown, code fences, or commentary.'},{role:'user',content:JSON.stringify(sl)}]})}).then(function(r){return r.json();}).then(function(d){var t=(d&&d.choices&&d.choices[0]&&d.choices[0].message&&(d.choices[0].message.content||d.choices[0].message.reasoning))||'';t=t.replace(/```json|```/g,'').trim();var m=t.match(/\[[\s\S]*\]/);if(!m)return;var arr=JSON.parse(m[0]);if(arr&&arr.length===sl.length){for(var i=0;i<arr.length;i++){if(els[s+i]&&typeof arr[i]==='string'&&arr[i]&&/[a-zA-Z]/.test(arr[i]))els[s+i].innerHTML=arr[i];}}}).catch(function(){});};for(var s=0;s<_rg.length;s++){doBatch(_rg[s][0],_rg[s][1]);}}catch(e){}};
 window._cgoLangRule=function(){return (window._LANG&&window._LANG!=='ko')?'★LANGUAGE RULE: Respond ONLY in natural, fluent English. Never use Korean or Chinese characters. All field values must be in English.':'⚠️ 언어 규칙: 순수 한국어만 사용. 외국어·한자 금지(이모지 제외).';};
+window._fcDirEn=function(k){ if(!(window._LANG&&window._LANG!=='ko')) return k; var m={'북':'North','동':'East','남':'South','서':'West','북동':'Northeast','남동':'Southeast','남서':'Southwest','북서':'Northwest','천장(위)':'Ceiling (up)','바닥(아래)':'Floor (down)','천장 위':'Ceiling (up)','바닥 아래':'Floor (down)','천장':'Ceiling','바닥':'Floor'}; return m[k]||k; };
+window._fc360TransResult=function(){ try{ if(!(window._LANG&&window._LANG!=='ko')||typeof _cgoT!=='function') return; var el=document.getElementById('fc360ScanResult'); if(!el) return; var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),n,a=[]; while(n=w.nextNode()){ var t=(n.nodeValue||'').trim(); if(t&&/[\uac00-\ud7a3]/.test(t))a.push(n);} for(var i=0;i<a.length;i++){ var raw=a[i].nodeValue||'',tr=_cgoT(raw); if(tr&&tr!==raw&&!/[\uac00-\ud7a3]/.test(tr))a[i].nodeValue=tr; } }catch(e){} };
 window._cgoName=function(){var g=function(id){return (document.getElementById(id)||{}).value||'';};var n=g('ipName')||g('prof-name');if(!n){try{n=(JSON.parse(localStorage.getItem('cgo_saved_info')||'{}').name)||'';}catch(e){}}if(!n){try{n=localStorage.getItem('cgo_prof_name')||'';}catch(e){}}return (n||'').trim();};
 function _cgoT(str){
   try{
