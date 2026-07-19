@@ -19196,8 +19196,8 @@ function _cgoFDIntro(cfg){
   pop.id=id;
   pop.style.cssText='position:fixed;inset:0;z-index:30600;background:rgba(2,8,23,.92);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:18px;';
   var h='<div style="width:100%;max-width:560px;max-height:90vh;overflow-y:auto;background:#f0fdf9;border-radius:20px;border-top:3px solid '+ac+';padding:22px 18px 28px;box-shadow:0 18px 60px rgba(0,0,0,.5);">';
-  h+='<div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:16px;"><span style="font-size:30px;flex-shrink:0;line-height:1.1;">'+(cfg.ico||'✨')+'</span><div style="min-width:0;flex:1;"><div style="font-size:17px;font-weight:900;color:#0f172a;line-height:1.3;">'+(cfg.title||'')+'</div>'+(cfg.subtitle?'<div style="font-size:11px;color:#64748b;margin-top:3px;line-height:1.5;">'+cfg.subtitle+'</div>':'')+'</div><button onclick="var p=document.getElementById(\''+id+'\');if(p)p.remove();" style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#f1f5f9;border:1px solid rgba(2,8,23,.08);color:#64748b;font-size:15px;cursor:pointer;line-height:1;font-family:inherit;">✕</button></div>';
-  if(cfg.badge) h+='<div style="display:inline-block;padding:5px 12px;border-radius:100px;background:linear-gradient(135deg,'+ac+','+ac2+');color:#334155;font-size:10.5px;font-weight:800;margin-bottom:12px;letter-spacing:.01em;">'+cfg.badge+'</div>';
+  h+='<div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:16px;"><span style="font-size:30px;flex-shrink:0;line-height:1.1;">'+(cfg.ico||'✨')+'</span><div style="min-width:0;flex:1;"><div style="font-size:17px;font-weight:900;color:#0f172a;line-height:1.3;">'+(cfg.title||'')+'</div>'+(cfg.subtitle?'<div style="font-size:11px;color:#64748b;margin-top:3px;line-height:1.5;">'+_cgoT(cfg.subtitle)+'</div>':'')+'</div><button onclick="var p=document.getElementById(\''+id+'\');if(p)p.remove();" style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#f1f5f9;border:1px solid rgba(2,8,23,.08);color:#64748b;font-size:15px;cursor:pointer;line-height:1;font-family:inherit;">✕</button></div>';
+  if(cfg.badge) h+='<div style="display:inline-block;padding:5px 12px;border-radius:100px;background:linear-gradient(135deg,'+ac+','+ac2+');color:#334155;font-size:10.5px;font-weight:800;margin-bottom:12px;letter-spacing:.01em;">'+_cgoT(cfg.badge)+'</div>';
   if(cfg.summary) h+='<div style="font-size:12px;color:#334155;line-height:1.85;margin-bottom:13px;padding:13px 14px;background:#ffffff;border:1px solid rgba(2,8,23,.07);border-radius:12px;">'+cfg.summary+'</div>';
   var _fdList=function(lb,arr){ if(!arr||!arr.length) return ''; var mk=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩']; var s='<div style="background:#ffffff;border:1px solid rgba(2,8,23,.07);border-radius:12px;padding:14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:'+ac+';margin-bottom:11px;">'+lb+'</div><div style="display:flex;flex-direction:column;gap:9px;">'; arr.forEach(function(x,i){ var t=x,d=''; if(x.indexOf('|')>0){var sp=x.split('|');t=sp[0];d=sp[1];} s+='<div style="display:flex;align-items:flex-start;gap:10px;"><span style="font-size:16px;flex-shrink:0;color:'+ac+';font-weight:900;">'+(mk[i]||'•')+'</span><div><div style="font-size:12px;font-weight:700;color:#0f172a;">'+t+'</div>'+(d?'<div style="font-size:10px;color:#64748b;margin-top:2px;line-height:1.5;">'+d+'</div>':'')+'</div></div>'; }); s+='</div></div>'; return s; };
   if(cfg.howto) h+=_fdList(cfg.howtoLabel||'📋 사용법',cfg.howto);
@@ -19515,6 +19515,8 @@ function gmdPopConfirm(){
   // 팝업 닫기
   var pop=document.getElementById('cgo-gmd-pop');
   if(pop) pop.remove();
+  // ★ 카메라는 여기서(=철학 선택 확인 후, 실제 스캔 시작)만 켠다. 페이지 나가면 _cgoGmdStopCam이 해제.
+  if(typeof fcSwitchMode==='function') setTimeout(function(){ try{ fcSwitchMode('camera'); }catch(e){} }, 150);
 }
 
 // ★ 10방향 진행 바 업데이트
@@ -20066,7 +20068,7 @@ function fc360SelectSystem(sysKey){
   var box  = document.getElementById('fc360StatusBox');
   if(icon) icon.textContent = info.emoji;
   if(text) text.textContent = _cgoT(info.name) + _cgoT(' 분석 시작! 북쪽(N)을 향하세요');
-  if(sub)  sub.textContent  = info.stars + ' ' + info.badge;
+  if(sub)  sub.textContent  = info.stars + ' ' + _cgoT(info.badge);
   if(box){
     box.style.borderColor = 'rgba(212,168,67,.4)';
     box.style.background  = 'rgba(212,168,67,.08)';
@@ -20302,12 +20304,12 @@ function fc360ShowResult(text, deg, oh){
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);">'
     +'<span style="font-size:28px;">'+sysInfo.emoji+'</span>'
     +'<div style="flex:1;">'
-    +'<div style="font-size:14px;font-weight:900;color:'+sysInfo.color+';">'+sysInfo.name+'</div>'
-    +'<div style="font-size:10px;color:#0284c7;margin-top:2px;">'+sysInfo.origin+'</div>'
+    +'<div style="font-size:14px;font-weight:900;color:'+sysInfo.color+';">'+_cgoT(sysInfo.name)+'</div>'
+    +'<div style="font-size:10px;color:#0284c7;margin-top:2px;">'+_cgoT(sysInfo.origin)+'</div>'
     +'</div>'
     +'<div style="text-align:right;">'
     +'<div style="font-size:11px;color:#d97706;">'+sysInfo.stars+'</div>'
-    +'<span style="font-size:9px;padding:2px 7px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:#b8860b;display:inline-block;margin-top:3px;">'+sysInfo.badge+'</span>'
+    +'<span style="font-size:9px;padding:2px 7px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:#b8860b;display:inline-block;margin-top:3px;">'+_cgoT(sysInfo.badge)+'</span>'
     +'</div>'
     +'</div>'
     +'<div style="text-align:center;margin-bottom:14px;">'
@@ -77053,7 +77055,7 @@ function _cgNavigateTo(pageId) {
     }
   }
   if (pageId === 'shop')   { if(typeof shopInit==='function')  shopInit(); }
-  if (pageId === 'gmd')    { _cgoGmdIntroPopup(); setTimeout(function(){ if(typeof fcSwitchMode==='function') fcSwitchMode('camera'); },300); }
+  if (pageId === 'gmd')    { _cgoGmdIntroPopup(); /* ★ 카메라는 페이지 진입만으로 켜지 않음 — 철학 선택 확인(gmdPopConfirm) 후에만 시작(프라이버시: 사용자 의심 방지) */ }
   // ── CGO-MASTER → 각 페이지 즉시 동기화 ──
   if (pageId === 'sports') { if(typeof sptUpdateMyEnergy==='function') sptUpdateMyEnergy(); }
   if (pageId === 'lotto')  {
