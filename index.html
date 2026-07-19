@@ -55761,30 +55761,10 @@ function runNaming() {
   // 18개 역학 카드 — 1위 이름 기준
   var top1 = top4[0];
 
-  // ★ 앱=계산 · GROQ=해설: 계산된 정확한 사실 저장 (절대 null 안됨)
-  window._namingFacts = { domOh: domOh, lifeNum: lifeNum, gender: gender, surname: surname, names: [] };
-  try {
-    for(var _nfi=0; _nfi<top4.length; _nfi++){
-      var _nfc=top4[_nfi]; if(!_nfc) continue;
-      var _c1=_nfc.c1||{}, _c2=_nfc.c2||{};
-      var _det=[];
-      if(_nfc.c1) _det.push((_c1.hj||'')+'='+(_c1.mean||'')+'('+(_c1.oh||'')+'오행·'+(_c1.stroke||'')+'획)');
-      if(_nfc.c2) _det.push((_c2.hj||'')+'='+(_c2.mean||'')+'('+(_c2.oh||'')+'오행·'+(_c2.stroke||'')+'획)');
-      window._namingFacts.names.push({ nm:(_c1.kr||'')+(_c2.kr||''), hj:(_c1.hj||'')+(_c2.hj||''), detail:_det.join(', ') });
-    }
-  } catch(e){}
   if(top1) {
     var nmStrokes = calcTotalStroke({stroke:getHanjaStroke(SURNAME_HANJA[surname]||'金')}, top1.c1, top1.c2);
     var scores18n = calc18ForNaming(surname, domOh, lifeNumVal, gender, top1.c1, top1.c2, want3?top1.c3:null, nmStrokes);
     html += build18Cards(scores18n, 'naming');
-  html += '<div style="margin-top:14px;background:linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03));border:1px solid rgba(212,168,67,.3);border-radius:14px;padding:14px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--gold)">🤖 '+(typeof _cgoT==="function"?_cgoT('AI 정밀 해설'):'AI 정밀 해설')+' <span style="font-size:9px;color:var(--text-3)">('+(typeof _cgoT==="function"?_cgoT('실험'):'실험')+')</span></div>'
-    +'<span id="namingAiStatus" style="font-size:9px;color:var(--text-3)"></span>'
-    +'</div>'
-    +'<button onclick="runNamingAi()" style="width:100%;padding:10px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.35);border-radius:9px;color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px">✨ '+(typeof _cgoT==="function"?_cgoT('AI 해설 생성'):'AI 해설 생성')+'</button>'
-    +'<div id="namingAiText" style="font-size:11px;color:var(--text-2);line-height:1.6"></div>'
-    +'</div>';
   }
 
   var rc = document.getElementById('namingResult');
@@ -57494,52 +57474,30 @@ function cplToggleCam(who){
 function runNamingAi(){
   var aiText = document.getElementById('namingAiText');
   var aiStatus = document.getElementById('namingAiStatus');
-  if(!aiText) return;
-  var T=(typeof _cgoT==='function')?_cgoT:function(x){return x;};
-  var f = window._namingFacts;
-  // DOM 폴백: _namingFacts 비면 화면에 렌더된 이름 카드에서 직접 추출 (100% 확실)
-  if(!f || !f.names || !f.names.length){
-    try{
-      var _krs=document.querySelectorAll('#namingResult .nrc-name-kr');
-      var _hjs=document.querySelectorAll('#namingResult .nrc-name-hj');
-      if(_krs.length){
-        f={ domOh:(f&&f.domOh)||'', lifeNum:(f&&f.lifeNum)||'', gender:(f&&f.gender)||'', surname:'', names:[] };
-        for(var _fi=0;_fi<_krs.length;_fi++){ f.names.push({ nm:_krs[_fi].textContent||'', hj:(_hjs[_fi]?_hjs[_fi].textContent:'')||'', detail:'' }); }
-        window._namingFacts=f;
-      }
-    }catch(e){}
-  }
-  if(!f || !f.names || !f.names.length){ aiText.textContent = T('먼저 작명을 실행해주세요.'); return; }
-  var _rule=(typeof window._cgoLangRule==='function')?window._cgoLangRule():'';
-  var factStr = f.names.map(function(n,i){ return (i+1)+'위 '+f.surname+n.nm+' ('+n.hj+'): '+n.detail; }).join('\n');
-  var prompt = _rule+'\n\n너는 정직한 작명 해설가다. 아래는 앱이 정확히 계산한 역학 데이터다. 이 사실만 근거로 각 이름을 2~3문장씩 자연스럽고 따뜻하게, 이름마다 다르게 해설하라. 없는 사실을 지어내지 말고 흉하거나 부정적인 표현은 쓰지 마라. 각 이름의 한자 뜻과 오행을 살려 설명하라.\n\n[사주] 일간 오행: '+f.domOh+' · 생명수: '+f.lifeNum+' · 성별: '+(f.gender==='M'?'남자':'여자')+'\n[추천 이름]\n'+factStr;
-  window._lastNamingPrompt = prompt;
-  if(aiStatus) aiStatus.textContent = T('AI 해설 생성 중...');
-  aiText.innerHTML = '<span style="color:rgba(212,168,67,.5)">🤖 '+T('AI 해설 생성 중...')+'</span>';
-  window._namingAiT0 = Date.now();
+  if(!aiText || !window._lastNamingPrompt) return;
+  if(aiStatus) aiStatus.textContent = _cgoT('AI 재분석 중...');
+  aiText.innerHTML = '<span style="color:rgba(212,168,67,.4);">🤖 '+_cgoT('AI 해설 생성 중...')+'</span>';
+  window._namingAiT0=Date.now();
   fetch('/api/groq',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
       max_tokens:1000,
-      messages:[{role:'user',content:prompt}]
+      messages:[{role:'user',content:window._lastNamingPrompt}]
     })
   }).then(function(r){return r.json();})
   .then(function(d){
     var txt=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
     if(aiText&&txt){
       aiText.innerHTML=txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<b style="color:#d4a843;">$1</b>');
-      if(aiStatus) aiStatus.textContent=T('✅ 완료')+' ('+((Date.now()-(window._namingAiT0||Date.now()))/1000).toFixed(1)+'s)';
-    } else if(aiText){
-      aiText.textContent=T('AI 분석을 불러올 수 없습니다.');
-      if(aiStatus) aiStatus.textContent='';
+      if(aiStatus) aiStatus.textContent=_cgoT('✅ 완료')+' ('+((Date.now()-(window._namingAiT0||Date.now()))/1000).toFixed(1)+'s)';
     }
   }).catch(function(){
-    if(aiText) aiText.textContent=T('AI 분석을 불러올 수 없습니다.');
-    if(aiStatus) aiStatus.textContent='';
+    if(aiText) aiText.textContent=_cgoT('AI 분석을 불러올 수 없습니다.');
   });
 }
+
 // ★ VIP 프리미엄 대문 가이드 팝업 (46건째 핀셋) - 골드 럭셔리 무드
 function _cgoVipIntroPopup(){
   // "오늘 하루 보지 않기" 체크되었으면 즉시 종료
