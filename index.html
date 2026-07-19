@@ -54126,7 +54126,9 @@ function toggle18Expert(cid) {
 }
 
 // 18개 카드 그리드 HTML 생성 — easy/expert 토글 포함
+window._nmToggleMore=function(btn){ try{ var e=document.getElementById('nmMoreEng'); if(!e)return; var sh=(e.style.display==='none'); e.style.display=sh?'block':'none'; btn.textContent=sh?(typeof _cgoT==='function'?_cgoT('접기 ▲'):'접기 ▲'):(typeof _cgoT==='function'?_cgoT('🔍 더보기 — 나머지 역학 분석'):'🔍 더보기 — 나머지 역학 분석'); }catch(err){} };
 function build18Cards(scores, context) {
+  var _nmCore={saju:1,seong:1,jami:1,juyeok:1};
   var p = window._nasaPlanets;
   var nasaTag = p
     ? '<span style="font-size:9px;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);border-radius:4px;padding:1px 6px;margin-left:4px">🛰 NASA 실시간</span>'
@@ -54211,7 +54213,14 @@ function build18Cards(scores, context) {
       +'</div>'
       +'<div style="font-size:10px;color:var(--text-3)">각 카드 우측 <span style="color:var(--gold)">전문가▾</span> 클릭 시 전문 분석 열람</div>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + (context==='naming'
+      ? ('<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:8px;padding:4px 10px;background:rgba(212,168,67,.08);border-radius:6px;letter-spacing:.05em">✍️ '+(typeof _cgoT==="function"?_cgoT('이름 핵심 역학'):'이름 핵심 역학')+'</div>'
+        +_18SYSTEMS.filter(function(s){return _nmCore[s.id];}).map(function(sys){ return makeCard(sys, sys.group==='서'); }).join('')
+        +'<button onclick="_nmToggleMore(this)" style="width:100%;margin-top:6px;padding:9px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+(typeof _cgoT==="function"?_cgoT('🔍 더보기 — 나머지 역학 분석'):'🔍 더보기 — 나머지 역학 분석')+'</button>'
+        +'<div id="nmMoreEng" style="display:none;margin-top:6px">'
+        +_18SYSTEMS.filter(function(s){return !_nmCore[s.id];}).map(function(sys){ return makeCard(sys, sys.group==='서'); }).join('')
+        +'</div>')
+      : ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
       // 핵심 8선 (동양)
       +'<div>'
         +'<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:8px;'
@@ -54226,7 +54235,7 @@ function build18Cards(scores, context) {
           +'⭐ 서양5·동양6·심리2</div>'
         +_18SYSTEMS.filter(function(s){return s.group==='서';}).map(function(sys){ return makeCard(sys,true); }).join('')
       +'</div>'
-    +'</div>'
+    +'</div>'))
   +'</div>';
   return html;
 }
