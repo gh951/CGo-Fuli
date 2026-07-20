@@ -81026,10 +81026,10 @@ function _shopPrompt(pk,oh,ili,nm){
   var sp    = spec[pk]||'product mockup, editorial quality';
 
   var prompt =
-    '╔══ CGO-FULI · 오행 추상 패션 아트워크 프롬프트 ══╗\n'
-    +'[오행] '+oh+'('+o.name+') · ILI '+ili+'/100\n'
-    +'[제품] '+pk+' — '+sp+'\n\n'
-    +'━━━ ENGLISH PROMPT (Copilot용) ━━━━━━━━━━━━━\n\n'
+    '╔══ CGO-FULI · Five-Element Fashion Artwork Prompt ══╗\n'
+    +'[Element] '+oh+'('+o.name+') · ILI '+ili+'/100\n'
+    +'[Product] '+pk+' — '+sp+'\n\n'
+    +'━━━ ENGLISH PROMPT (for Copilot) ━━━━━━━━━━━━━\n\n'
     +'SCENE:\n'
     +scene+'\n\n'
     +'GARMENT / PRODUCT DESIGN:\n'
@@ -81405,7 +81405,7 @@ function _bujukOrientalPrompt(pk, r, oh, ili, nm){
     +'[오행] '+od.mainChar+' ('+oh+') · '+od.symbol+' · ILI '+ili+'/100\n'
     +'[제품] '+(BUJUK_PRODUCTS.find(function(p){return p.k===pk;})||{n:pk}).n+'\n'
     +(r ? '[사주] '+yg+'일간 · '+zodiac+'띠 · 생명수 '+life+'\n' : '')
-    +'\n━━━ ENGLISH PROMPT (Copilot용) ━━━━━━━━━━━\n\n'
+    +'\n━━━ ENGLISH PROMPT (for Copilot) ━━━━━━━━━━━\n\n'
     +'SCENE:\n'
     +scene2+'\n\n'
     +'DESIGN CONCEPT — NOT A TALISMAN, BUT AN ENERGY PATTERN:\n'
@@ -150843,8 +150843,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert('앞 화면에서 키를 먼저 입력하세요 (120~220cm)'); return; }
       $('c61cam').disabled=true;
       try{ if(!pose) await initPose(); }catch(err){ setS('❌ 엔진 실패: '+err.message); $('c61cam').disabled=false; return; }
-      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent=_cgoT('📷 켜짐'); setS(phase==='front'?'전신 정면으로 서서 [촬영]':'전신 측면(90°)으로 서서 [촬영]'); }
-      catch(err){ setS('❌ 카메라 실패: '+err.message); $('c61cam').disabled=false; }
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent=_cgoT('📷 켜짐'); setS(phase==='front'?_cgoT('전신 정면으로 서서 [촬영]'):_cgoT('전신 측면(90°)으로 서서 [촬영]')); }
+      catch(err){ setS('❌ '+_cgoT('카메라 실패')+': '+err.message); $('c61cam').disabled=false; }
     }
     else if(t.id==='c61rEA'||t.id==='c61rWE'){ c61Region=t.id==='c61rEA'?'ea':'we';
       $('c61rEA').style.background=c61Region==='ea'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rEA').style.color=c61Region==='ea'?'#34d399':'#64748b';
@@ -150875,7 +150875,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       frontPts={ shoulder:[{x:lm[11].x,y:lm[11].y},{x:lm[12].x,y:lm[12].y}], chest:[{x:cx-shWc*0.42,y:chestY},{x:cx+shWc*0.42,y:chestY}], waist:[{x:cx-hipW*0.45,y:waistY},{x:cx+hipW*0.45,y:waistY}], hip:[{x:cx-hipW*0.6,y:midHipY},{x:cx+hipW*0.6,y:midHipY}] };
       phase='edit'; $('c61tab2').style.cssText=$('c61tab2').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;');
       $('c61hint').style.display='block'; $('c61shoot').style.display='none'; $('c61conf').style.display='';
-      setS('노란 점을 드래그해 어깨·허리·엉덩이 라인을 맞추세요'); drawEdit(frontPts);
+      setS(_cgoT('노란 점을 드래그해 어깨·허리·엉덩이 라인을 맞추세요')); drawEdit(frontPts);
     } else if(phase==='side'){
       const eyeYs=(lm[2].y+lm[5].y)/2,noseYs=lm[0].y,ankYs=(lm[27].y+lm[28].y)/2,topYs=noseYs-(noseYs-eyeYs)*4.5,hPxs=ankYs-topYs; sideScale=parseFloat((document.getElementById('bmHeight2')||{}).value)/hPxs;
       const midHipY=(lm[23].y+lm[24].y)/2,cx=(lm[23].x+lm[24].x)/2,tw=Math.abs(lm[11].x-lm[23].x)+40;
