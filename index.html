@@ -81666,7 +81666,7 @@ function shopCopyId(id){var el=document.getElementById(id);if(!el)return;var t=(
 // ══ 신체 치수 측정 엔진 ═════════════════════════════════════
 var BM2 = {stream:null, step:1, photo1:null, photo2:null, height:0, weight:0, editing:false};
 var BM2_KEYS = ['shoulder','chest','waist','hip','armLen','inseam','thigh','bmi'];
-var BM2_LABELS = (typeof _cgoT==='function')?['어깨 너비','가슴 둘레','허리 둘레','엉덩이 둘레','팔 길이','인심 (밑위)','허벅지 둘레','BMI'].map(function(x){return _cgoT(x);}):['Shoulder Width','Chest Circumference','Waist Circumference','Hip Circumference','Arm Length','Inseam','Thigh Circumference','BMI'];
+var BM2_LABELS = (typeof _cgoT==='function')?['어깨 너비',_T2('가슴 둘레'),_T2('허리 둘레'),_T2('엉덩이 둘레'),_T2('팔 길이'),_T2('인심 (밑위)'),_T2('허벅지 둘레'),'BMI'].map(function(x){return _cgoT(x);}):['Shoulder Width','Chest Circumference','Waist Circumference','Hip Circumference','Arm Length','Inseam','Thigh Circumference','BMI'];
 var BM2_ICONS  = ['↔️','🫀','⬛','🔵','💪','📏','🦵','⚖️'];
 var BM2_UNITS  = ['cm','cm','cm','cm','cm','cm','cm',''];
 var BM2_VALS   = {};
@@ -149140,7 +149140,7 @@ window._cgoSignupPrompt = function(label){
       "과식·과음·수면 부족을 피하세요. 몸이 보내는 작은 신호에 귀 기울이세요.":"Avoid overeating, overdrinking, and lack of sleep. Heed your body's small signals.",
       "— 당신의 에너지 근원이에요. 꾸준한 관심이 평생의 건강을 만들어줍니다 🌿":"— your source of energy. Steady care builds lifelong health 🌿",
       "© CGO-FULI | 위 역학 데이터를 실시간 융합하여 도출한 분석입니다":"© CGO-FULI | An analysis derived by real-time fusion of the above data",
-      "— 각 사진을 키로 독립 보정하므로 낮아도 계산되나, 높을수록 정확합니다.":"— each photo is corrected independently, so it computes even when low, but higher is more accurate.",
+      "— '+_cgoT('각 사진을 키로 독립 보정하므로 낮아도 계산되나, 높을수록 정확합니다.')+'":"— each photo is corrected independently, so it computes even when low, but higher is more accurate.",
       "6부위 자기보정 × 오행 기운 5종 패턴 × 측정 1회 15가지 컨디션 지표":"6-zone self-correction × 5 element patterns × 15 condition metrics per measurement",
       "\"부족함을 옆의 넘침이 채운다 · 세계 유일 6부위 오행-rPPG 융합\"":"\"Excess beside fills the lack · world's only 6-zone element-rPPG fusion\"",
       "본 분석은 건강 참고 정보 제공 목적이며, 의학적 진단을 대체하지 않습니다.":"This analysis is for health reference and does not replace medical diagnosis.",
@@ -150840,9 +150840,9 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   document.addEventListener('click', async(e)=>{
     const t=e.target; if(!t||!t.id) return;
     if(t.id==='c61cam'){
-      const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert('앞 화면에서 키를 먼저 입력하세요 (120~220cm)'); return; }
+      const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert(_cgoT('앞 화면에서 키를 먼저 입력하세요 (120~220cm)')); return; }
       $('c61cam').disabled=true;
-      try{ if(!pose) await initPose(); }catch(err){ setS('❌ 엔진 실패: '+err.message); $('c61cam').disabled=false; return; }
+      try{ if(!pose) await initPose(); }catch(err){ setS('❌ '+_cgoT('엔진 실패')+': '+err.message); $('c61cam').disabled=false; return; }
       try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent=_cgoT('📷 켜짐'); setS(phase==='front'?_cgoT('전신 정면으로 서서 [촬영]'):_cgoT('전신 측면(90°)으로 서서 [촬영]')); }
       catch(err){ setS('❌ '+_cgoT('카메라 실패')+': '+err.message); $('c61cam').disabled=false; }
     }
@@ -150854,7 +150854,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       if(stream){ try{stream.getTracks().forEach(x=>x.stop());}catch(e){}
         try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); setS(facing==='user'?'전면(셀피) 카메라 — 거울처럼 보임':'후면 카메라'); }
         catch(e){ setS(_cgoT('❌ 카메라 전환 실패')); }
-      } else { setS(facing==='user'?'전면 카메라 설정됨 (켜기 누르세요)':'후면 카메라 설정됨'); }
+      } else { setS(facing==='user'?_cgoT('전면 카메라 설정됨 (켜기 누르세요)'):_cgoT('후면 카메라 설정됨')); }
     }
     else if(t.id==='c61shoot'){ doShoot(); }
     else if(t.id==='c61conf'){ doConfirm(); }
@@ -150881,11 +150881,11 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
       const midHipY=(lm[23].y+lm[24].y)/2,cx=(lm[23].x+lm[24].x)/2,tw=Math.abs(lm[11].x-lm[23].x)+40;
       sidePts={ chestD:[{x:cx-tw*0.38,y:midHipY-100},{x:cx+tw*0.38,y:midHipY-100}], waistD:[{x:cx-tw*0.35,y:midHipY-30},{x:cx+tw*0.35,y:midHipY-30}], hipD:[{x:cx-tw*0.42,y:midHipY+30},{x:cx+tw*0.42,y:midHipY+30}] };
       phase='editSide'; $('c61shoot').style.display='none'; $('c61conf').style.display=''; $('c61hint').style.display='block';
-      setS('측면 두께 라인을 앞뒤 몸 끝에 맞추세요'); drawEdit(sidePts);
+      setS(_cgoT('측면 두께 라인을 앞뒤 몸 끝에 맞추세요')); drawEdit(sidePts);
     }
   }
   function drawEdit(pts){ curPts=pts; const c=edt().getContext('2d'); c.clearRect(0,0,CW,CH);
-    const col={shoulder:'#60a5fa',chest:'#a78bfa',waist:'#f87171',hip:'#fbbf24',chestD:'#a78bfa',waistD:'#f87171',hipD:'#fbbf24'},lab={shoulder:'어깨',chest:'가슴',waist:'허리',hip:'엉덩이',chestD:'가슴두께',waistD:'허리두께',hipD:'엉덩이두께'};
+    const col={shoulder:'#60a5fa',chest:'#a78bfa',waist:'#f87171',hip:'#fbbf24',chestD:'#a78bfa',waistD:'#f87171',hipD:'#fbbf24'},lab={shoulder:_cgoT('어깨'),chest:_cgoT('가슴'),waist:_cgoT('허리'),hip:_cgoT('엉덩이'),chestD:_cgoT('가슴두께'),waistD:_cgoT('허리두께'),hipD:_cgoT('엉덩이두께')};
     for(const k in pts){ const[p0,p1]=pts[k]; c.strokeStyle=col[k];c.lineWidth=3;c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);c.stroke(); c.fillStyle=col[k];c.font='bold 12px sans-serif';c.fillText(lab[k],Math.min(p0.x,p1.x),Math.min(p0.y,p1.y)-8); [p0,p1].forEach(p=>{c.fillStyle='#fde047';c.strokeStyle='#000';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y,9,0,7);c.fill();c.stroke();}); } }
   function evtPos(e){ const r=edt().getBoundingClientRect(),t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left)*CW/r.width,y:(t.clientY-r.top)*CH/r.height}; }
   function handles(pts){ let a=[]; for(const k in pts)pts[k].forEach((p,i)=>a.push({p})); return a; }
@@ -150900,7 +150900,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   document.addEventListener('mouseup',onUp);
 
   function doConfirm(){
-    if(phase==='edit'){ phase='side'; $('c61tab3').style.cssText=$('c61tab3').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;'); $('c61hint').style.display='none';$('c61conf').style.display='none';$('c61shoot').style.display=''; edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; if($('c61cross'))$('c61cross').style.display=''; setS('옆으로 90° 돌아 측면 전신으로 [촬영]'); }
+    if(phase==='edit'){ phase='side'; $('c61tab3').style.cssText=$('c61tab3').style.cssText.replace(/background:[^;]+;color:[^;]+;/,'background:rgba(52,211,153,.2);color:#34d399;'); $('c61hint').style.display='none';$('c61conf').style.display='none';$('c61shoot').style.display=''; edt().getContext('2d').clearRect(0,0,CW,CH); frz().style.display='none'; vid().style.display='block'; if($('c61cross'))$('c61cross').style.display=''; setS(_cgoT('옆으로 90° 돌아 측면 전신으로 [촬영]')); }
     else if(phase==='editSide'){ compute(); }
   }
   function pd(p0,p1){ return Math.hypot(p0.x-p1.x,p0.y-p1.y); }
@@ -150909,13 +150909,13 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     const shW=pd(frontPts.shoulder[0],frontPts.shoulder[1])*sc, chW=pd(frontPts.chest[0],frontPts.chest[1])*sc, waW=pd(frontPts.waist[0],frontPts.waist[1])*sc, hiW=pd(frontPts.hip[0],frontPts.hip[1])*sc;
     const chD=pd(sidePts.chestD[0],sidePts.chestD[1])*sd, waD=pd(sidePts.waistD[0],sidePts.waistD[1])*sd, hiD=pd(sidePts.hipD[0],sidePts.hipD[1])*sd;
     var KR=CORR[c61Region]; /* 지역별 실측 보정: 동아시아=Size Korea 5092명 / 서구=ANSUR II 6068명 */ const waC=ellipse(waW/2,waD/2)*KR.waist, hiC=ellipse(hiW/2,hiD/2)*KR.hip, chC=ellipse(chW/2,chD/2)*KR.chest;
-    const rows=[['↔️','어깨 너비',Math.round(shW),'real'],['🫀','가슴 너비',Math.round(chW),'real'],['⬛','허리 너비',Math.round(waW),'real'],['🔵','엉덩이 너비',Math.round(hiW),'real'],['👕','가슴 둘레',Math.round(chC),'est'],['📐','허리 둘레',Math.round(waC),'est'],['🍑','엉덩이 둘레',Math.round(hiC),'est']];
+    var _T2=(typeof _cgoT==='function')?_cgoT:function(x){return x;}; const rows=[['↔️',_T2('어깨 너비'),Math.round(shW),'real'],['🫀',_T2('가슴 너비'),Math.round(chW),'real'],['⬛',_T2('허리 너비'),Math.round(waW),'real'],['🔵',_T2('엉덩이 너비'),Math.round(hiW),'real'],['👕','가슴 둘레',Math.round(chC),'est'],['📐','허리 둘레',Math.round(waC),'est'],['🍑','엉덩이 둘레',Math.round(hiC),'est']];
     $('c61grid').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:6px;font-size:13px;"><span>${r[0]} ${r[1]}</span><span><span style="font-weight:800;color:#fff;">${r[2]}cm</span><span style="font-size:9px;padding:1px 6px;border-radius:5px;margin-left:6px;background:${r[3]==='real'?'rgba(52,211,153,.2);color:#34d399':'rgba(251,191,36,.2);color:#fbbf24'};">${r[3]==='real'?'실측':'추정'}</span></span></div>`).join('');
     var matchPct=Math.max(0,Math.min(100,Math.round(100-Math.abs(sd-sc)/sc*100)));
-    $('c61note').innerHTML='<b>정면·측면 거리 일치율 '+matchPct+'%</b> — 각 사진을 키로 독립 보정하므로 낮아도 계산되나, 높을수록 정확합니다.<br><b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).<br><b>보정 추정</b>=너비+두께 타원 + '+(c61Region==='ea'?'동아시아 5,092명(Size Korea)':'서구 6,068명(ANSUR II)')+' 실측 데이터로 보정.<br>사람이 직접 맞춰 자동보다 정확하며, 실측 데이터로 보정합니다.';
+    $('c61note').innerHTML='<b>'+_cgoT('정면·측면 거리 일치율')+' '+matchPct+'%</b> — '+_cgoT('각 사진을 키로 독립 보정하므로 낮아도 계산되나, 높을수록 정확합니다.')+'<br>'+_cgoT('<b>실측</b>=사람이 맞춘 라인 픽셀 실측(±1~2cm).')+'<br><b>보정 추정</b>=너비+두께 타원 + '+(c61Region==='ea'?'동아시아 5,092명(Size Korea)':'서구 6,068명(ANSUR II)')+' 실측 데이터로 보정.<br>사람이 직접 맞춰 자동보다 정확하며, 실측 데이터로 보정합니다.';
     $('c61resCard').style.display='block';
     if(stream){try{stream.getTracks().forEach(t=>t.stop());}catch(e){}}
-    setS('✅ 측정 완료'); $('c61resCard').scrollIntoView({behavior:'smooth'});
+    setS(_cgoT('✅ 측정 완료')); $('c61resCard').scrollIntoView({behavior:'smooth'});
   }
   window.addEventListener('resize',()=>{ if(vid()&&vid().style.display!=='none')sizeC(); });
 })();
