@@ -25768,8 +25768,8 @@ function checkHealth(){
               <span style="font-size:14px;">🗺️</span>
               <span style="font-size:11px;font-weight:800;color:#3730a3;">구글 지도에서 좌표 직접 가져오기 <span style="font-size:9px;color:#10b981;background:#dcfce7;padding:1px 5px;border-radius:5px;">간편</span></span>
             </div>
-            <button onclick="window.open('https://www.google.com/maps','_blank')" style="width:100%;padding:10px;background:linear-gradient(135deg,#4285f4,#1a73e8);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;box-shadow:0 2px 8px rgba(66,133,244,.3);">
-              <span style="font-size:15px;">🗺️</span><span>구글 지도 열기 (새 탭)</span><span style="font-size:14px;">→</span>
+            <button onclick="tvyOpenGoogleMaps()" style="width:100%;padding:10px;background:linear-gradient(135deg,#4285f4,#1a73e8);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;box-shadow:0 2px 8px rgba(66,133,244,.3);">
+              <span style="font-size:15px;">🗺️</span><span id="tvyMapsLabel">구글 지도 열기 (새 탭)</span><span style="font-size:14px;">→</span>
             </button>
             
             <div id="tvyMapManual" style="font-size:10px;color:#475569;line-height:1.7;padding:8px 10px;background:#f8fafc;border-radius:6px;margin-bottom:8px;">
@@ -27139,6 +27139,34 @@ window.tvyFillCountries = function(){
     html += '<option value="'+c.code+'">'+(c.flag?' '+c.flag+' ':'')+c.name+'</option>';
   });
   sel.innerHTML = html;
+};
+window.tvyOpenGoogleMaps = function(){
+  var state = window.TVY_STATE || {};
+  var parts = [];
+  // 관광지 → 도시 → 국가 순으로 검색어 조합
+  var spotSel = document.getElementById('tvySpot');
+  var citySel = document.getElementById('tvyCity');
+  var countrySel = document.getElementById('tvyCountry');
+  var spot = spotSel && spotSel.value ? spotSel.options[spotSel.selectedIndex].text : '';
+  var city = citySel && citySel.value ? citySel.options[citySel.selectedIndex].text : '';
+  var countryCode = countrySel ? countrySel.value : '';
+  // 국가명 (TVY_COUNTRIES에서)
+  var countryName = '';
+  if(window.TVY_COUNTRIES && countryCode){
+    var found = window.TVY_COUNTRIES.filter(function(c){return c.code===countryCode;})[0];
+    if(found) countryName = (found.flag?found.flag+' ':'')+found.name;
+  }
+  if(spot) parts.push(spot);
+  if(city) parts.push(city);
+  if(countryName) parts.push(countryName);
+  var query = parts.length ? parts.join(', ') : '';
+  var url = query
+    ? 'https://www.google.com/maps/search/'+encodeURIComponent(query)
+    : 'https://www.google.com/maps';
+  // 버튼 라벨 업데이트
+  var lbl = document.getElementById('tvyMapsLabel');
+  if(lbl && query) lbl.textContent = '🗺️ '+query+' 열기';
+  window.open(url, '_blank');
 };
 window.tvyOnCountryChange = function(){
   var sel=document.getElementById('tvyCountry');
