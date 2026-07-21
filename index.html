@@ -124514,6 +124514,14 @@ function sptKoName(name) {
   return name; // 매핑 없으면 원본 유지
 }
 
+// 팀 영문 역매핑 (한글 인기팀 → 영문) — 영어모드 표시용
+var SPT_TEAM_EN_EXTRA = {
+  '맨체스터 시티':'Manchester City','리버풀':'Liverpool','아스널':'Arsenal','첼시':'Chelsea',
+  '레알마드리드':'Real Madrid','레알 마드리드':'Real Madrid','바르셀로나':'Barcelona','바이에른 뮌헨':'Bayern Munich','파리 생제르맹':'Paris Saint-Germain',
+  '두산 베어스':'Doosan Bears','LG 트윈스':'LG Twins','SSG 랜더스':'SSG Landers','삼성 라이온즈':'Samsung Lions','KIA 타이거즈':'KIA Tigers','롯데 자이언츠':'Lotte Giants','한화 이글스':'Hanwha Eagles','NC 다이노스':'NC Dinos',
+  '현대캐피탈':'Hyundai Capital','대한항공':'Korean Air','삼성화재':'Samsung Fire','우리카드':'Woori Card','OK금융그룹':'OK Financial','KB손해보험':'KB Insurance','한국전력':'KEPCO',
+  '서울 SK':'Seoul SK','안양 정관장':'Anyang KGC'
+};
 // 팀명 표시 — 언어 인지: 한국어 환경이면 한글 단독, 영어/기타는 영문 단독
 function sptTeamDisplay(name) {
   if (!name) return name;
@@ -124525,7 +124533,15 @@ function sptTeamDisplay(name) {
   if (lang.indexOf('ko') === 0 || lang === 'kr') {
     return (ko && ko !== name) ? ko : name;
   }
-  // 그 외 환경: 원본(영문) 그대로
+  // 그 외 환경: 한글이면 영문으로 역변환, 이미 영문이면 원본
+  if (/[\uac00-\ud7a3]/.test(name)) {
+    if (typeof SPT_TEAM_EN_EXTRA === 'object' && SPT_TEAM_EN_EXTRA[name]) return SPT_TEAM_EN_EXTRA[name];
+    if (typeof SPT_TEAM_KO === 'object') {
+      for (var k in SPT_TEAM_KO) { if (SPT_TEAM_KO[k] === name) return k; }
+      for (var k2 in SPT_TEAM_KO) { if (SPT_TEAM_KO[k2] && name.indexOf(SPT_TEAM_KO[k2]) !== -1) return k2; }
+    }
+    return name; // 매핑 없으면 원본 유지
+  }
   return name;
 }
 
