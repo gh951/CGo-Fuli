@@ -53873,7 +53873,7 @@ function runLotto() {
 
   // 18개 역학 카드
   var scores18 = calc18ForLotto(domOh, lifeNumVal, kujusei, bYear, bMonth, bDay, sets[0].nums);
-  html += build18Cards(scores18, 'lotto');
+  html += build18Cards(scores18, 'lotto', method);
 
   // ✦ 정당성 막대 그래프 (D 혼합: 기여도+적합도) ✦
   if (typeof _lottoBuildSysFitness === 'function') {
@@ -54667,7 +54667,31 @@ function toggle18Expert(cid) {
 
 // 18개 카드 그리드 HTML 생성 — easy/expert 토글 포함
 window._nmToggleMore=function(btn){ try{ var e=document.getElementById('nmMoreEng'); if(!e)return; var sh=(e.style.display==='none'); e.style.display=sh?'block':'none'; btn.textContent=sh?(typeof _cgoT==='function'?_cgoT('접기 ▲'):'접기 ▲'):(typeof _cgoT==='function'?_cgoT('🔍 더보기 — 나머지 역학 분석'):'🔍 더보기 — 나머지 역학 분석'); }catch(err){} };
-function build18Cards(scores, context) {
+function build18Cards(scores, context, _lottoMethod) {
+  // ─ lotto 모드: method 기반 카드 필터 ─
+  var _lottoIds = null;
+  if(context === 'lotto' && _lottoMethod) {
+    var _M2ID = {
+      saju:['saju'], jami:['jami'], astro:['solar','natal'], num:['wesnum'],
+      gmd:['gimu'], kusei:['jami','juyeok'], tarot:['tarot'], kabala:['kabala'],
+      taeul:['taeul'], juyeok:['juyeok'], yukrim:['yukrim'], seong:['seong'],
+      pungsu:['pungsu']
+    };
+    var _base = _lottoMethod.replace('+nasa','').replace('+bio','');
+    var _hasN = _lottoMethod.indexOf('+nasa')>=0 || _lottoMethod==='nasa18';
+    var _hasB = _lottoMethod.indexOf('+bio')>=0;
+    var _isAll = (_base==='all18'||_base==='nasa18'||_base.indexOf('all')>=0);
+    if(!_isAll) {
+      _lottoIds = _M2ID[_base] || null;
+      if(_lottoIds && _hasN) ['solar','natal','transit','house'].forEach(function(id){
+        if(_lottoIds.indexOf(id)<0) _lottoIds.push(id);
+      });
+      if(_lottoIds && _hasB) ['songeum','gwansang'].forEach(function(id){
+        if(_lottoIds.indexOf(id)<0) _lottoIds.push(id);
+      });
+    }
+  }
+  function _lottoFilter(s){ return !_lottoIds || _lottoIds.indexOf(s.id)>=0; }
   var _nmCore={saju:1,seong:1,jami:1,juyeok:1};
   var p = window._nasaPlanets;
   var nasaTag = p
@@ -54766,14 +54790,14 @@ function build18Cards(scores, context) {
         +'<div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:8px;'
           +'padding:4px 10px;background:rgba(212,168,67,.08);border-radius:6px;letter-spacing:.05em">'
           +(window._LANG&&window._LANG!=='ko'?'Core 8 Lines — Space Direct':'핵심 8선 — 우주·천문 직결')+'</div>'
-        +_18SYSTEMS.filter(function(s){return s.group==='동';}).map(function(sys){ return makeCard(sys,false); }).join('')
+        +_18SYSTEMS.filter(function(s){return s.group==='동' && _lottoFilter(s);}).map(function(sys){ return makeCard(sys,false); }).join('')
       +'</div>'
       // West 5 · East 6 · Psych 2
       +'<div>'
         +'<div style="font-size:10px;color:#a78bfa;font-weight:700;margin-bottom:8px;'
           +'padding:4px 10px;background:rgba(167,139,250,.08);border-radius:6px;letter-spacing:.05em">'
           +(window._LANG&&window._LANG!=='ko'?'⭐ West 5 · East 6 · Psych 2':'⭐ 서양5 · 동양6 · 심리2')+'</div>'
-        +_18SYSTEMS.filter(function(s){return s.group==='서';}).map(function(sys){ return makeCard(sys,true); }).join('')
+        +_18SYSTEMS.filter(function(s){return s.group==='서' && _lottoFilter(s);}).map(function(sys){ return makeCard(sys,true); }).join('')
       +'</div>'
     +'</div>'))
   +'</div>';
