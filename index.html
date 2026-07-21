@@ -53868,6 +53868,36 @@ function runLotto() {
     }
   }
 
+  // ── 🛰️ 지금의 우주 (NASA 실시간) — 3단계 융합의 [2] 우주 축 (C-67) ──
+  if (hasNasa && window._nasaPlanets) {
+    var _uEN = (window._LANG && window._LANG !== 'ko');
+    var _up = window._nasaPlanets;
+    var _uKp = (window._cgoEnvData && window._cgoEnvData.kp && window._cgoEnvData.kp.value);
+    var _uWx = (window._cgoEnvData && typeof window._cgoEnvData.weather === 'string') ? window._cgoEnvData.weather : '';
+    var _plN = {mercury:'☿ '+(_uEN?'Mercury':'수성'), venus:'♀ '+(_uEN?'Venus':'금성'), mars:'♂ '+(_uEN?'Mars':'화성'), jupiter:'♃ '+(_uEN?'Jupiter':'목성'), saturn:'♄ '+(_uEN?'Saturn':'토성')};
+    var _uChips = '';
+    ['jupiter','mars','venus','mercury','saturn'].forEach(function(pk){
+      if (_up[pk]) {
+        var _r = _up[pk].retro;
+        _uChips += '<span style="font-size:9.5px;padding:2px 7px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:5px;color:rgba(51,65,85,.8)">'+_plN[pk]+' '+(_r?'<b style="color:#ef4444">'+(_uEN?'Rx':'역행')+'</b>':'<b style="color:#10b981">'+(_uEN?'direct':'순행')+'</b>')+'</span>';
+      }
+    });
+    var _uMeta = [];
+    if (_uKp || _uKp === 0) _uMeta.push('🌍 '+(_uEN?'Geomag Kp ':'지자기 Kp ')+_uKp);
+    if (_uWx) _uMeta.push('🌤️ '+_uWx);
+    _uMeta.push('🧭 '+(_uEN?'direction of the day reflected':'오늘의 길방·흉방 반영'));
+    html += '<div style="background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(59,130,246,.03));border:1px solid rgba(56,189,248,.25);border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap">'
+        + '<span style="font-size:14px">🛰️</span>'
+        + '<span style="font-size:12px;font-weight:800;color:#0284c7;letter-spacing:.05em">'+(_uEN?'The universe now — NASA live':'지금의 우주 — NASA 실시간')+'</span>'
+        + '<span style="font-size:8px;padding:1px 6px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);border-radius:4px;color:#0284c7;font-weight:700">'+(hasBio?(_uEN?'Tier 3 · axis 2':'3단계 · 우주 축'):(_uEN?'Tier 2':'2단계'))+'</span>'
+      + '</div>'
+      + (_uChips?'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'+_uChips+'</div>':'')
+      + '<div style="font-size:10px;color:rgba(51,65,85,.6);line-height:1.7">'+_uMeta.join('  ·  ')+'</div>'
+      + '<div style="font-size:9px;color:rgba(2,132,199,.7);margin-top:7px;padding-top:7px;border-top:1px solid rgba(56,189,248,.12)">→ '+(_uEN?'Fusion axis 2 — your metaphysics (1) × the universe now (2) × your condition (3)':'융합의 2번째 축 — 타고난 역학(1) × 지금의 우주(2) × 지금의 컨디션(3)')+'</div>'
+    + '</div>';
+  }
+
   // 18개 역학 카드
   var scores18 = calc18ForLotto(domOh, lifeNumVal, kujusei, bYear, bMonth, bDay, sets[0].nums);
   html += build18Cards(scores18, 'lotto', method);
@@ -55097,11 +55127,8 @@ function lottoGotoCheck(kind) {
       if (typeof _cgoTarotIntroPopup === 'function') _cgoTarotIntroPopup();
       else if (window.qtOpenMainPopup) window.qtOpenMainPopup();
     } else if (kind === 'msp') {
-      // NBTI는 운명의 서(Book 4) 안에 있음
-      if (typeof cgoGoPage === 'function') cgoGoPage('dashboard');
-      setTimeout(function(){
-        if (typeof _cgoBookOpen === 'function') _cgoBookOpen(4);
-      }, 300);
+      // CGO 인간유형(NBTI) — msp52 페이지로 이동 (라우터가 인트로 자동 표시). 결과는 window._mspResult에 저장됨
+      if (typeof cgoGoPage === 'function') cgoGoPage('msp52');
     } else if (kind === 'face') {
       // 관상 — 전체 기능 관상 스캔 (인트로 → 분석), C-60
       if (typeof cgoIntroOpen === 'function') cgoIntroOpen('face', function(){ if(typeof cgoFaceVisionAnalysis==='function') cgoFaceVisionAnalysis(); });
@@ -55113,7 +55140,7 @@ function lottoGotoCheck(kind) {
     }
   } catch(e) {
     // 이동 실패 시 alert로 안내
-    var labels = {tarot:'아르카나 카드 (운명의 서)', msp:'CGO 인간유형 검사 (운명의 서)', face:'관상 스캔 (전체 기능)', palm:'손금 스캔 (전체 기능)'};
+    var labels = {tarot:'아르카나 카드 (운명의 서)', msp:'CGO 인간유형 검사', face:'관상 스캔 (전체 기능)', palm:'손금 스캔 (전체 기능)'};
     alert('이동에 실패했습니다.\n\n→ ' + (labels[kind] || '해당 페이지') + '로 직접 이동해 주세요.');
   }
 }
