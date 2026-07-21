@@ -54624,6 +54624,7 @@ var _18SYSTEMS = [
   {id:'saju',    name:'사주명리',   emoji:'☯',  color:'#d4a843', group:'동',  desc:'타고난 오행과 에너지 균형'},
   {id:'jami',    name:'자미두수',   emoji:'⭐', color:'#a78bfa', group:'동',  desc:'세부적 운명 지도와 질환 예측'},
   {id:'gimu',    name:'기문둔갑',   emoji:'🧭', color:'#34d399', group:'동',  desc:'시공간적 유리함과 전략 수립'},
+  {id:'kusei',   name:'구성기학',   emoji:'🌟', color:'#fb923c', group:'동',  desc:'본명성 구궁 방위 에너지 분석'},
   {id:'yukrim',  name:'육임신살',   emoji:'⚡', color:'#fbbf24', group:'동',  desc:'실시간 사건의 길흉 분석'},
   {id:'pungsu',  name:'풍수지리',   emoji:'🌍', color:'#6ee7b7', group:'동',  desc:'공간 에너지와 환경 최적화'},
   {id:'seong',   name:'성명학',     emoji:'✍', color:'#f9a8d4', group:'동',  desc:'이름의 파동과 수리적 조화'},
@@ -54662,7 +54663,7 @@ function build18Cards(scores, context, _lottoMethod) {
   if(context === 'lotto' && _lottoMethod) {
     var _M2ID = {
       saju:['saju'], jami:['jami'], astro:['solar','natal'], num:['wesnum'],
-      gmd:['gimu'], kusei:['jami','juyeok'], tarot:['tarot'], kabala:['kabala'],
+      gmd:['gimu'], kusei:['kusei'], tarot:['tarot'], kabala:['kabala'],
       taeul:['taeul'], juyeok:['juyeok'], yukrim:['yukrim'], seong:['seong'], pungsu:['pungsu']
     };
     var _base = _lottoMethod.replace('+nasa','').replace('+bio','');
@@ -54679,7 +54680,7 @@ function build18Cards(scores, context, _lottoMethod) {
       });
     }
   }
-  function _lottoFilter(s){ return !_lottoIds || _lottoIds.indexOf(s.id)>=0; }
+  function _lottoFilter(s){ if(s.id==='kusei') return (context==='lotto') && (!_lottoIds || _lottoIds.indexOf('kusei')>=0); return !_lottoIds || _lottoIds.indexOf(s.id)>=0; }
   var _nmCore={saju:1,seong:1,jami:1,juyeok:1};
   var p = window._nasaPlanets;
   var nasaTag = p
@@ -54770,7 +54771,7 @@ function build18Cards(scores, context, _lottoMethod) {
         +_18SYSTEMS.filter(function(s){return _nmCore[s.id];}).map(function(sys){ return makeCard(sys, sys.group==='서'); }).join('')
         +'<button onclick="_nmToggleMore(this)" style="width:100%;margin-top:6px;padding:9px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.3);border-radius:8px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+(typeof _cgoT==="function"?_cgoT('🔍 더보기 — 나머지 역학 분석'):'🔍 더보기 — 나머지 역학 분석')+'</button>'
         +'<div id="nmMoreEng" style="display:none;margin-top:6px">'
-        +_18SYSTEMS.filter(function(s){return !_nmCore[s.id];}).map(function(sys){ return makeCard(sys, sys.group==='서'); }).join('')
+        +_18SYSTEMS.filter(function(s){return !_nmCore[s.id] && s.id!=='kusei';}).map(function(sys){ return makeCard(sys, sys.group==='서'); }).join('')
         +'</div>')
       : ('<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
       // 핵심 8선 (동양) — 카드 있을 때만
@@ -55096,8 +55097,12 @@ function _lottoBuildAIChat(nums, bonus, method, domOh, lifeNumVal) {
 // ══════════════════════════════════════════
 function lottoGotoCheck(kind) {
   try {
-    if (kind === 'tarot' || kind === 'msp') {
-      // 타로·NBTI는 운명의 서(Book 4) 안에 있음
+    if (kind === 'tarot') {
+      // 현재 타로(QT): 인트로 → 메인 팝업. 카드 선택 시 _qt.selectedCard 설정 → 점수 자동 생성
+      if (typeof _cgoTarotIntroPopup === 'function') _cgoTarotIntroPopup();
+      else if (window.qtOpenMainPopup) window.qtOpenMainPopup();
+    } else if (kind === 'msp') {
+      // NBTI는 운명의 서(Book 4) 안에 있음
       if (typeof cgoGoPage === 'function') cgoGoPage('dashboard');
       setTimeout(function(){
         if (typeof _cgoBookOpen === 'function') _cgoBookOpen(4);
@@ -55544,6 +55549,10 @@ function calc18ForLotto(domOh, lifeNum, kujusei, bYear, bMonth, bDay, nums) {
       easy:(window._LANG&&window._LANG!=='ko')?'Qi Men Dun Jia (奇門遁甲) reveals which direction brings the greatest advantage at this exact moment. Ancient military strategists used it to choose optimal timing and direction. The most powerful favorable direction energy of this moment has been encoded into your numbers — supporting them from behind.'   :'기문둔갑(奇門遁甲)은 지금 이 순간 어느 방향이 가장 유리한지를 알려주는 고대 역학이에요. 고대 군사 전략가들이 최적의 시기와 방향을 선택할 때 활용했어요. 지금 이 시각의 가장 강력한 길방(吉方) 에너지가 이 번호들 안에 담겨, 뒤에서 이 번호들을 지지하고 있어요.',
       expert:'기문둔갑(奇門遁甲) 현재 시반(時盤) 포국(布局) 기준 길방(吉方) 에너지 번호 반영. 생문(生門)·개문(開門)·경문(景門) 방위 에너지를 1~45 수로 변환하여 번호 풀 우선 배치. 현재 시진 포국에서 9궁(九宮) 에너지 강도 수치화: 상생 방위 +3. 흉방(凶方) 에너지 제거 후 최종 행운수 도출.',
       advice:(window._LANG&&window._LANG!=='ko')?'Favorable direction energy reflected':'현재 길방 에너지 번호 반영'},
+    kusei: {score:_db('s19', Math.min(99,66+lnBonus+numEnergy)),
+      easy:(window._LANG&&window._LANG!=='ko')?'Nine Star Ki (九星氣學) reads fortune through the nine star energies and directions of your birth year. Your Original Star (本命星) is Star '+kujusei+'. It analyzes which directional·spatial energy each number carries and how well it resonates with your star.':'구성기학(九星氣學)은 태어난 해의 아홉 별(九星) 에너지와 방위의 흐름으로 운을 읽는 역학이에요. 당신의 본명성(本命星)은 '+kujusei+'번 별이에요. 이 번호들이 어떤 방위·공간 에너지를 담고 있는지, 당신의 별과 얼마나 잘 공명하는지를 분석해요.',
+      expert:'구성기학(九星氣學) 본명성(本命星) '+kujusei+'성 기준 구궁(九宮) 방위 에너지 정밀 분석. 연반(年盤) 구성 배치에서 길방(吉方) 에너지를 1~45 수(數)로 변환. 본명성 '+kujusei+' → 정위(定位) 궁 및 상생 방위 파생. 번호 합산수 '+numSum+' → 구궁 에너지 공명도 산출. 생명수 '+lifeNum+' 보정.',
+      advice:(window._LANG&&window._LANG!=='ko')?'Original Star '+kujusei+' direction energy':'본명성 '+kujusei+'성 방위 에너지'},
     yukrim: {score:base.yukrim,
       easy:(window._LANG&&window._LANG!=='ko')?'Six Ren (六壬) divides the day into 12 time periods and reads the energy flow of each. It analyzes whether now is a "fortunate time" or a "time for caution" and reflects that energy in your numbers. Today\'s fortune flow is cheering on these numbers.':'육임(六壬)은 하루를 12시진으로 나눠 각 시간의 에너지 흐름을 읽는 역학이에요. 지금이 \'길한 시간\'인지 \'조심할 시간\'인지를 분석해 그 에너지를 번호에 반영해요. 오늘의 운기 흐름이 이 번호들을 응원하고 있어요.',
       expert:'육임신살(六壬神殺) 현재 시진(時辰) 기준 길흉 포국 분석. 천반(天盤)·지반(地盤) 12신살(十二神殺) 중 길신(吉神) — 천을귀인(天乙貴人)·태극귀인(太極貴人)·월덕귀인(月德貴人) 수 추출. 현재 시진 에너지 보정 +2. 흉살(凶煞) 충돌 번호 제거 후 최종 행운수 확정.',
