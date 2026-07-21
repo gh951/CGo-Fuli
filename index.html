@@ -65877,20 +65877,38 @@ var _FAMILY_ILI_MSG = {
   }
 };
 
+// ── 가족 영문 표시 맵 (영어모드) ──
+var ZODIAC_NAMES_EN=['Rat','Ox','Tiger','Rabbit','Dragon','Snake','Horse','Goat','Monkey','Rooster','Dog','Pig'];
+var _FAM_ROLE_EN={'\ubcf8\uc778':'Self','\ubc30\uc6b0\uc790':'Spouse','\uc790\ub140':'Child','\ubd80\ubaa8':'Parent','\ud615\uc81c\u00b7\uc790\ub9e4':'Sibling','\uae30\ud0c0':'Other','\ubd80':'Father','\ubaa8':'Mother','\uc870\ubd80':'Grandfather','\uc870\ubaa8':'Grandmother'};
+var _FAM_GRADE_EN={'\ub9e4\uc6b0 \uc88b\uc74c':'Excellent','\uc88b\uc74c':'Good','\ubcf4\ud1b5':'Fair','\uc8fc\uc758':'Caution','\uc7ac\ucda9\uc804':'Recharge'};
+function _famRoleEn(r){ if(!r)return r; var w=r.replace(/\s*\(\d+\uc138\)/,''); var mAge=r.match(/\((\d+)\uc138\)/); var en=_FAM_ROLE_EN[w]||w; return en+(mAge?' ('+mAge[1]+'y)':''); }
+function _famZodEn(ko){ if(typeof ZODIAC_NAMES==='undefined')return ko; var i=ZODIAC_NAMES.indexOf(ko); return i>=0?ZODIAC_NAMES_EN[i]:ko; }
+var _FAMILY_ILI_MSG_EN={
+  '\uae08':{high:'\u2728 Radiant, blade-like energy! This member\u2019s decisiveness shines today \u2014 share something important together.',mid:'\u2696\ufe0f Balanced calm. A perfect time for a warm cup of tea and a meaningful talk.',low:'\ud83d\udc9b Reach out to this family member first today. Your warm words are a stronger remedy than any medicine.'},
+  '\ud654':{high:'\ud83d\udd25 Blazing energy like the sun! With this member you can start anything today \u2014 outdoor activity highly recommended!',mid:'\ud83c\udf24 A gentle, warm glow. Lift your energy a notch with a hobby or creative activity.',low:'\ud83c\udf19 The spark of passion is resting. Sharing a good meal and some laughter is the best remedy.'},
+  '\ubaa9':{high:'\ud83c\udf31 The vitality of a growing sprout! Learning and creativity peak today \u2014 tough challenges feel easy.',mid:'\ud83c\udf3f A calm, river-like condition. Reading or light creative work will refill your energy.',low:'\ud83d\udc99 Time for the roots to rest. Gentle stretching and plenty of water aid this member\u2019s recovery.'},
+  '\ud1a0':{high:'\u26f0\ufe0f Steady, mountain-like energy! You can trust this member\u2019s decisions and judgment today.',mid:'\ud83c\udfe1 A warm, sheltering vibe. A home-cooked dinner tonight restores the whole family\u2019s energy.',low:'\ud83e\udef6 Digestive energy is a little tired. Rest with warm, comforting food.'},
+  '\uc218':{high:'\ud83d\udca7 Overflowing deep wisdom! Trust this member\u2019s intuition for important talks or decisions.',mid:'\ud83c\udf0a Quiet inner recharge. Solitary calm time is a powerful reset.',low:'\ud83d\udec1 Kidney and lower-body energy is resting. A warm half-bath will get your energy circulating.'},
+  self:{high:'\ud83c\udf1f Fully aligned energy! Your positive vibe is spreading like light to the whole family right now.',mid:'\ud83c\udf19 Your flow is holding steady. Shall we lift your ILI a bit more with 4\u00b77\u00b78 breathing?',low:'\ud83d\udc9b Today is a day to conserve energy. It\u2019s okay to lean on your family \u2014 your rest makes tomorrow shine.'}
+};
+
 function getFamilyIliMsg(member) {
   var oh = member.oh || member.domOh || '토';
   var ili = member.ili || 70;
   var level = ili >= 80 ? 'high' : ili >= 60 ? 'mid' : 'low';
-  var db = member.isSelf ? _FAMILY_ILI_MSG.self : (_FAMILY_ILI_MSG[oh] || _FAMILY_ILI_MSG['토']);
-  return db[level] || '에너지 흐름을 모니터링 중입니다.';
+  var _en=(window._LANG&&window._LANG!=='ko');
+  var _src=_en?_FAMILY_ILI_MSG_EN:_FAMILY_ILI_MSG;
+  var db = member.isSelf ? _src.self : (_src[oh] || _src['토']);
+  return db[level] || (_en?'Monitoring energy flow.':'에너지 흐름을 모니터링 중입니다.');
 }
 
 function renderFamily(){
   famSave();
+  var _famEN=(window._LANG&&window._LANG!=='ko');
   var grid=document.getElementById('familyGrid');
   if(!grid)return;
   if(familyData.length===0){
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;color:var(--text-3)"><div style="font-size:36px;margin-bottom:12px">👨‍👩‍👧</div><div style="font-size:14px;color:var(--text-2);margin-bottom:6px">등록된 가족 구성원이 없습니다</div><div style="font-size:12px">대시보드에서 대상자 정보를 입력하면 자동으로 추가됩니다</div></div>';
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;color:var(--text-3)"><div style="font-size:36px;margin-bottom:12px">👨‍👩‍👧</div><div style="font-size:14px;color:var(--text-2);margin-bottom:6px">'+((window._LANG&&window._LANG!=='ko')?'No family members registered yet':'등록된 가족 구성원이 없습니다')+'</div><div style="font-size:12px">'+((window._LANG&&window._LANG!=='ko')?'Enter a subject on the dashboard to add them automatically':'대시보드에서 대상자 정보를 입력하면 자동으로 추가됩니다')+'</div></div>';
     return;
   }
   grid.innerHTML=familyData.map(function(f){
@@ -65898,13 +65916,13 @@ function renderFamily(){
     var isSel=(f.id===selectedFamilyId);
     return '<div class="fc'+(isSel?' selected':'')+'" onclick="selectFamily('+f.id+')">'+
     '<div class="fc-top"><div class="fc-avatar" style="background:'+f.color.replace('var(--','').replace(')','')+'22">'+(f.emoji||'👤')+'</div>'+
-    '<div style="flex:1;min-width:0"><div class="fc-name">'+f.name+'</div><div class="fc-role">'+f.role+(f.isSelf?' 👑':'')+'</div></div>'+
-    (f.isSelf?'<span class="tag tag-gold" style="flex-shrink:0">본인</span>':'')+
+    '<div style="flex:1;min-width:0"><div class="fc-name">'+f.name+'</div><div class="fc-role">'+(_famEN?_famRoleEn(f.role):f.role)+(f.isSelf?' 👑':'')+'</div></div>'+
+    (f.isSelf?'<span class="tag tag-gold" style="flex-shrink:0">'+(_famEN?'Self':'본인')+'</span>':'')+
     '</div>'+
-    (f.zodiacName?'<div style="font-size:10px;color:var(--text-3);margin-bottom:8px">'+(f.wz?f.wz.sym+' '+f.wz.name+' · ':'')+f.zodiacName+' 띠'+(f.lifeNum?' · No.'+f.lifeNum:'')+'</div>':'')+
-    '<div class="fc-ili-row"><div class="fc-ili-num" style="color:'+f.color+'">'+f.ili+'</div><div class="fc-ili-grade" style="background:'+f.color.replace(')',',0.1)').replace('var(--','rgba(').replace('gold','212,168,67').replace('green','52,211,153').replace('cyan','56,189,248').replace('indigo','99,130,201').replace('red','248,113,113').replace('amber','251,191,36')+'">'+g.grade+' '+f.trend+'</div></div>'+
+    (f.zodiacName?'<div style="font-size:10px;color:var(--text-3);margin-bottom:8px">'+(f.wz?f.wz.sym+' '+(_famEN?(f.wz.en||f.wz.name):f.wz.name)+' · ':'')+(_famEN?_famZodEn(f.zodiacName):(f.zodiacName+' 띠'))+(f.lifeNum?' · No.'+f.lifeNum:'')+'</div>':'')+
+    '<div class="fc-ili-row"><div class="fc-ili-num" style="color:'+f.color+'">'+f.ili+'</div><div class="fc-ili-grade" style="background:'+f.color.replace(')',',0.1)').replace('var(--','rgba(').replace('gold','212,168,67').replace('green','52,211,153').replace('cyan','56,189,248').replace('indigo','99,130,201').replace('red','248,113,113').replace('amber','251,191,36')+'">'+(_famEN?(_FAM_GRADE_EN[g.grade]||g.grade):g.grade)+' '+f.trend+'</div></div>'+
     '<div class="fc-bar-wrap"><div class="fc-bar" style="width:'+f.ili+'%;background:'+f.color+'"></div></div>'+
-    '<div class="fc-last">최근: '+f.last+'</div>'+
+    '<div class="fc-last">'+(_famEN?'Recent: ':'최근: ')+(_famEN&&f.last==='방금'?'just now':f.last)+'</div>'+
     '</div>';
   }).join('');
 
@@ -65915,7 +65933,7 @@ function renderFamily(){
       var ic=f.ili>=80?'✅':f.ili<60?'🚨':'📊';
       var bg=f.ili>=80?'var(--green-dim)':f.ili<60?'var(--red-dim)':'var(--cyan-dim)';
       var _familyMsg = typeof getFamilyIliMsg==='function' ? getFamilyIliMsg(f) : '';
-      return '<div class="af-item"><div class="af-badge" style="background:'+bg+'">'+ic+'</div><div><div class="af-text">'+f.name+' ILI '+f.ili+' — '+gradeInfo(f.ili).grade+'</div>'+(_familyMsg?'<div style="font-size:11px;color:rgba(240,230,200,.6);margin-top:3px">'+_familyMsg+'</div>':'')+'<div class="af-time">방금</div></div></div>';
+      return '<div class="af-item"><div class="af-badge" style="background:'+bg+'">'+ic+'</div><div><div class="af-text">'+f.name+' ILI '+f.ili+' — '+(_famEN?(_FAM_GRADE_EN[gradeInfo(f.ili).grade]||gradeInfo(f.ili).grade):gradeInfo(f.ili).grade)+'</div>'+(_familyMsg?'<div style="font-size:11px;color:rgba(240,230,200,.6);margin-top:3px">'+_familyMsg+'</div>':'')+'<div class="af-time">'+(_famEN?'just now':'방금')+'</div></div></div>';
     }).join('');
   }
   drawGrowth();
@@ -65928,7 +65946,7 @@ function selectFamily(id){
   var m=familyData.find(function(f){return f.id===id;});
   if(m){
     var gn=document.getElementById('growthName');
-    if(gn)gn.textContent=m.name+' — 12개월 ILI 추이';
+    if(gn)gn.textContent=m.name+((window._LANG&&window._LANG!=='ko')?' — 12-month ILI trend':' — 12개월 ILI 추이');
     renderFamily();
   }
 }
@@ -65948,7 +65966,7 @@ function confirmAdd(){
   var role=document.getElementById('m-role').value;
   var gender=document.getElementById('m-gender').value;
   var phone=(document.getElementById('m-phone').value||'').replace(/[^0-9]/g,'');
-  if(!name||!birth){alert('이름과 생년월일을 입력해주세요');return;}
+  if(!name||!birth){alert((window._LANG&&window._LANG!=='ko')?'Please enter name and date of birth':'이름과 생년월일을 입력해주세요');return;}
   var parts=birth.split('-').map(Number);
   var y=parts[0],m=parts[1],d=parts[2];
   var zi=((y-4)%12+12)%12;
@@ -150564,16 +150582,20 @@ window._cgoWellnessGate = function(){
     d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(8,12,20,.82);display:flex;align-items:center;justify-content:center;padding:20px;font-family:\'Noto Sans KR\',sans-serif;backdrop-filter:blur(4px);';
     d.innerHTML='<div style="background:#0f172a;border:1.5px solid rgba(52,211,153,.4);border-radius:20px;max-width:400px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
       +'<div style="text-align:center;font-size:34px;">🌿</div>'
-      +'<div style="text-align:center;font-size:16px;font-weight:900;color:#34d399;margin-top:8px;">웰니스 서비스 안내</div>'
+      +'<div style="text-align:center;font-size:16px;font-weight:900;color:#34d399;margin-top:8px;">'+((window._LANG&&window._LANG!=='ko')?'Wellness Service Notice':'웰니스 서비스 안내')+'</div>'
       +'<div style="font-size:12px;color:rgba(240,230,200,.82);line-height:1.85;margin-top:14px;">'
-      +'CGO-FULI는 <b style="color:#5eead4;">의학적 진단·치료·예방을 목적으로 하지 않는 라이프스타일·웰니스 서비스</b>입니다.<br><br>'
-      +'앱의 모든 생체 리듬 분석과 라이프 인덱스는 천문 데이터와 동양 역학 알고리즘에 기반한 <b style="color:#5eead4;">참고용 지표</b>이며, 의료기기가 아닙니다.<br><br>'
-      +'건강에 관한 판단은 반드시 의료 전문가와 상의하세요.'
+      +((window._LANG&&window._LANG!=='ko')
+        ? ('CGO-FULI is a <b style="color:#5eead4;">lifestyle &amp; wellness service, not intended to diagnose, treat, or prevent any medical condition</b>.<br><br>'
+           +'All bio-rhythm analyses and life indices in this app are <b style="color:#5eead4;">reference indicators</b> based on astronomical data and Eastern metaphysics algorithms — not a medical device.<br><br>'
+           +'Always consult a healthcare professional for any medical decisions.')
+        : ('CGO-FULI는 <b style="color:#5eead4;">의학적 진단·치료·예방을 목적으로 하지 않는 라이프스타일·웰니스 서비스</b>입니다.<br><br>'
+           +'앱의 모든 생체 리듬 분석과 라이프 인덱스는 천문 데이터와 동양 역학 알고리즘에 기반한 <b style="color:#5eead4;">참고용 지표</b>이며, 의료기기가 아닙니다.<br><br>'
+           +'건강에 관한 판단은 반드시 의료 전문가와 상의하세요.'))
       +'</div>'
       +'<div style="font-size:10px;color:rgba(240,230,200,.45);line-height:1.7;margin-top:12px;padding:10px;background:rgba(255,255,255,.03);border-radius:10px;">'
-      +'This service is for general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any disease.'
+      +((window._LANG&&window._LANG!=='ko')?'This service is for general wellness purposes only. It is not intended to diagnose, treat, cure, or prevent any disease.':'본 서비스는 일반적인 웰니스 목적으로만 제공되며, 질병의 진단·치료·완치·예방을 목적으로 하지 않습니다.')
       +'</div>'
-      +'<button id="cgoWellnessOk" style="margin-top:18px;width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">확인했습니다</button>'
+      +'<button id="cgoWellnessOk" style="margin-top:18px;width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">'+((window._LANG&&window._LANG!=='ko')?'I understand':'확인했습니다')+'</button>'
       +'</div>';
     document.body.appendChild(d);
     var btn=document.getElementById('cgoWellnessOk');
