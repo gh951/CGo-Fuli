@@ -124291,11 +124291,11 @@ function foodAskAI(userText) {
 
 // ── 오행 속성 정의 ──────────────────────────────────────
 var SPT_OH = {
-  목: {color:'#4ade80', bg:'rgba(74,222,128,0.12)', sport:'축구·테니스', planet:'목성', en:'Wood'},
-  화: {color:'#f87171', bg:'rgba(248,113,113,0.12)', sport:'농구·배구', planet:'화성', en:'Fire'},
-  토: {color:'#fbbf24', bg:'rgba(251,191,36,0.12)', sport:'야구·골프', planet:'토성', en:'Earth'},
-  금: {color:'#e2e8f0', bg:'rgba(226,232,240,0.12)', sport:'수영·격투기', planet:'금성', en:'Metal'},
-  수: {color:'#60a5fa', bg:'rgba(96,165,250,0.12)', sport:'수영·조정', planet:'수성', en:'Water'}
+  목: {color:'#4ade80', bg:'rgba(74,222,128,0.12)', sport:'축구·테니스', planet:'목성', en:'Wood', sportEn:'Soccer·Tennis', planetEn:'Jupiter'},
+  화: {color:'#f87171', bg:'rgba(248,113,113,0.12)', sport:'농구·배구', planet:'화성', en:'Fire', sportEn:'Basketball·Volleyball', planetEn:'Mars'},
+  토: {color:'#fbbf24', bg:'rgba(251,191,36,0.12)', sport:'야구·골프', planet:'토성', en:'Earth', sportEn:'Baseball·Golf', planetEn:'Saturn'},
+  금: {color:'#e2e8f0', bg:'rgba(226,232,240,0.12)', sport:'수영·격투기', planet:'금성', en:'Metal', sportEn:'Swimming·Martial arts', planetEn:'Venus'},
+  수: {color:'#60a5fa', bg:'rgba(96,165,250,0.12)', sport:'수영·조정', planet:'수성', en:'Water', sportEn:'Swimming·Rowing', planetEn:'Mercury'}
 };
 
 
@@ -124789,7 +124789,7 @@ function sptLoadTodayMatches(callback) {
   function _apiTimeStr(isoDate) {
     if (!isoDate) return '—';
     try {
-      return new Date(isoDate).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      return new Date(isoDate).toLocaleTimeString((window._LANG&&window._LANG!=='ko')?'en-US':'ko-KR',{hour:'2-digit',minute:'2-digit'});
     } catch(e) { return isoDate.slice(11,16); }
   }
 
@@ -125081,7 +125081,7 @@ function sptLoadTodayMatches(callback) {
 
       var all = [].concat(soccer, baseball, basketball, volleyball);
       var src = all.length > 0
-        ? '🟢 API-Sports (' + all.length + '경기' + (koreaCount > 0 ? ' · 🇰🇷 국내 '+koreaCount+'경기' : '') + ')'
+        ? ((window._LANG&&window._LANG!=='ko') ? ('🟢 API-Sports (' + all.length + ' matches' + (koreaCount > 0 ? ' · 🇰🇷 KR '+koreaCount : '') + ')') : ('🟢 API-Sports (' + all.length + '경기' + (koreaCount > 0 ? ' · 🇰🇷 국내 '+koreaCount+'경기' : '') + ')'))
         : null;
       return all.length > 0 ? {matches: all, src: src} : null;
     });
@@ -125394,12 +125394,12 @@ function sptCalcBreakdown(myOh, teamOh, ili, matchHour) {
   };
   var rel = ohRel[myOh] || {생:[],극:[],피:[],설:[]};
   var base = 50;
-  var baseReason = '동일 오행';
-  if (rel['생'].indexOf(teamOh) >= 0) { base += 18; baseReason = '상생(生) +18 — 강력한 공명'; }
-  else if (rel['극'].indexOf(teamOh) >= 0) { base += 9; baseReason = '상극(剋) +9 — 도전적 공명'; }
-  else if (rel['피'].indexOf(teamOh) >= 0) { base -= 8; baseReason = '피해(被) -8 — 에너지 유실'; }
-  else if (rel['설'].indexOf(teamOh) >= 0) { base += 4; baseReason = '설(洩) +4 — 약한 보조'; }
-  else if (teamOh === myOh) { base += 12; baseReason = '동일 오행 +12 — 자연스러운 공명'; }
+  var baseReason = ((window._LANG&&window._LANG!=='ko')?'Same element':'동일 오행');
+  if (rel['생'].indexOf(teamOh) >= 0) { base += 18; baseReason = ((window._LANG&&window._LANG!=='ko')?'Generating (+18) — strong resonance':'상생(生) +18 — 강력한 공명'); }
+  else if (rel['극'].indexOf(teamOh) >= 0) { base += 9; baseReason = ((window._LANG&&window._LANG!=='ko')?'Controlling (+9) — challenging resonance':'상극(剋) +9 — 도전적 공명'); }
+  else if (rel['피'].indexOf(teamOh) >= 0) { base -= 8; baseReason = ((window._LANG&&window._LANG!=='ko')?'Weakened (-8) — energy loss':'피해(被) -8 — 에너지 유실'); }
+  else if (rel['설'].indexOf(teamOh) >= 0) { base += 4; baseReason = ((window._LANG&&window._LANG!=='ko')?'Draining (+4) — weak support':'설(洩) +4 — 약한 보조'); }
+  else if (teamOh === myOh) { base += 12; baseReason = ((window._LANG&&window._LANG!=='ko')?'Same element (+12) — natural resonance':'동일 오행 +12 — 자연스러운 공명'); }
 
   var scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
   var np = window._nasaPlanets || {};
@@ -125510,13 +125510,13 @@ function sptCalcBreakdown(myOh, teamOh, ili, matchHour) {
     base: base,
     baseReason: baseReason,
     engines: [
-      {rank:1, name:'🛰️ NASA 행성 트랜짓', weight:25, score:w1, detail:w1Detail.join(', ') || '(NASA 데이터 로딩 중)'},
-      {rank:2, name:'🧭 기문둔갑',        weight:18, score:w2, detail:w2Detail.join(', ')},
-      {rank:3, name:'⭐ 자미두수',         weight:15, score:w3, detail:w3Detail.join(', ') || '(엔진 데이터 로딩 중)'},
-      {rank:4, name:'🌟 구성학',           weight:14, score:w4, detail:w4Detail.join(', ')},
-      {rank:5, name:'☱ 주역',             weight:12, score:w5, detail:w5Detail.join(', ') || '(엔진 데이터 로딩 중)'},
-      {rank:6, name:'☯ 사주명리(오행)',    weight:8,  score:w6, detail:w6Detail.join(', ') || '(엔진 데이터 로딩 중)'},
-      {rank:7, name:'🌌 태을신수',         weight:8,  score:w7, detail:w7Detail.join(', ')}
+      {rank:1, name:((window._LANG&&window._LANG!=='ko')?'🛰️ NASA planetary transit':'🛰️ NASA 행성 트랜짓'), weight:25, score:w1, detail:w1Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading NASA data)':'(NASA 데이터 로딩 중)')},
+      {rank:2, name:((window._LANG&&window._LANG!=='ko')?'🧭 Qi Men Dun Jia':'🧭 기문둔갑'),        weight:18, score:w2, detail:w2Detail.join(', ')},
+      {rank:3, name:((window._LANG&&window._LANG!=='ko')?'⭐ Zi Wei Dou Shu':'⭐ 자미두수'),         weight:15, score:w3, detail:w3Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:4, name:((window._LANG&&window._LANG!=='ko')?'🌟 Nine Star Ki':'🌟 구성학'),           weight:14, score:w4, detail:w4Detail.join(', ')},
+      {rank:5, name:((window._LANG&&window._LANG!=='ko')?'☱ I Ching':'☱ 주역'),             weight:12, score:w5, detail:w5Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:6, name:((window._LANG&&window._LANG!=='ko')?'☯ Four Pillars (element)':'☯ 사주명리(오행)'),    weight:8,  score:w6, detail:w6Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:7, name:((window._LANG&&window._LANG!=='ko')?'🌌 Taeul':'🌌 태을신수'),         weight:8,  score:w7, detail:w7Detail.join(', ')}
     ],
     mspAdj: mspAdj,
     mspDetail: mspDetail.join(', ')
@@ -125529,13 +125529,12 @@ function sptBuildBreakdownCard(myOh, aOh, bOh, ta, tb, ili, matchHour) {
 
   var html = '<div style="margin-top:10px;padding:14px;background:linear-gradient(180deg,rgba(15,15,25,.5),rgba(0,0,0,.25));border:1px solid rgba(212,168,67,0.25);border-radius:12px;">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;" onclick="var x=document.getElementById(\'spt-bd-body\');x.style.display=x.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.bd-arrow\').textContent=x.style.display===\'none\'?\'▼\':\'▲\';">'+
-      '<div style="font-size:12px;font-weight:800;color:#d4a843;letter-spacing:.04em;">🔬 7대 엔진 점수 분해 — '+ta+' 기준</div>'+
+      '<div style="font-size:12px;font-weight:800;color:#d4a843;letter-spacing:.04em;">'+((window._LANG&&window._LANG!=='ko')?('🔬 7-engine score breakdown — '+ta):('🔬 7대 엔진 점수 분해 — '+ta+' 기준'))+'</div>'+
       '<span class="bd-arrow" style="font-size:11px;color:#d4a843;">▼</span>'+
     '</div>'+
     '<div id="spt-bd-body" style="display:none;">'+
       '<div style="padding:9px 11px;background:rgba(212,168,67,0.06);border-left:2px solid #d4a843;border-radius:0 6px 6px 0;margin-bottom:10px;font-size:11px;color:#334155;line-height:1.7;">'+
-        '<b style="color:#d4a843;">⚡ 오행 베이스: '+bdA.base+'점</b><br>'+
-        '내 오행 '+myOh+' × '+ta+' '+aOh+' → '+bdA.baseReason+
+        ((window._LANG&&window._LANG!=='ko')?('<b style="color:#d4a843;">⚡ Element base: '+bdA.base+'</b><br>'+'My element '+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+' × '+ta+' '+((SPT_OH[aOh]&&SPT_OH[aOh].en)||aOh)+' → '+bdA.baseReason):('<b style="color:#d4a843;">⚡ 오행 베이스: '+bdA.base+'점</b><br>'+'내 오행 '+myOh+' × '+ta+' '+aOh+' → '+bdA.baseReason))+
       '</div>';
 
   bdA.engines.forEach(function(e){
@@ -125554,7 +125553,7 @@ function sptBuildBreakdownCard(myOh, aOh, bOh, ta, tb, ili, matchHour) {
     var col = bdA.mspAdj >= 0 ? '#34d399' : '#f87171';
     html += '<div style="padding:8px 10px;background:rgba(167,139,250,.06);border-radius:6px;margin-top:8px;">'+
       '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">'+
-        '<div style="font-size:11px;color:#2563eb;font-weight:700;">🧠 16가지 성격 유형 보정</div>'+
+        '<div style="font-size:11px;color:#2563eb;font-weight:700;">'+((window._LANG&&window._LANG!=='ko')?'🧠 16-type personality adjustment':'🧠 16가지 성격 유형 보정')+'</div>'+
         '<div style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:900;color:'+col+';">'+(bdA.mspAdj>=0?'+':'')+bdA.mspAdj+'</div>'+
       '</div>'+
       '<div style="font-size:10px;color:#64748b;line-height:1.7;">'+bdA.mspDetail+'</div>'+
@@ -125562,7 +125561,7 @@ function sptBuildBreakdownCard(myOh, aOh, bOh, ta, tb, ili, matchHour) {
   }
 
   html += '<div style="margin-top:10px;padding:10px 12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.3);border-radius:8px;font-size:11px;color:#34d399;font-weight:700;text-align:center;">'+
-      '✅ 최종 SRI = 베이스('+bdA.base+') + 7대 엔진('+(bdA.engines.reduce(function(s,e){return s+e.score;},0))+')'+(bdA.mspAdj!==0?' + MSP('+(bdA.mspAdj>=0?'+':'')+bdA.mspAdj+')':'')+' = '+bdA.total+'점'+
+      ((window._LANG&&window._LANG!=='ko')?'✅ Final SRI = base(':'✅ 최종 SRI = 베이스(')+bdA.base+((window._LANG&&window._LANG!=='ko')?') + 7 engines(':') + 7대 엔진(')+(bdA.engines.reduce(function(s,e){return s+e.score;},0))+')'+(bdA.mspAdj!==0?' + MSP('+(bdA.mspAdj>=0?'+':'')+bdA.mspAdj+')':'')+' = '+bdA.total+((window._LANG&&window._LANG!=='ko')?'':'점')+
     '</div>'+
     '</div></div>';
 
@@ -125677,7 +125676,7 @@ function sptRenderMatches(tab) {
     var stars = resA >= 80 ? '★★★★★' : resA >= 70 ? '★★★★☆' : resA >= 60 ? '★★★☆☆' : '★★☆☆☆';
     var ohA = SPT_OH[m.aOh] || SPT_OH['목'];
     var ohB = SPT_OH[m.bOh] || SPT_OH['화'];
-    var resonanceLabel = resA >= 80 ? '🔥 강한 공명' : resA >= 70 ? '✨ 공명 우세' : resA >= 60 ? '〰️ 보통 공명' : '❄️ 낮은 공명';
+    var resonanceLabel = (window._LANG&&window._LANG!=='ko') ? (resA >= 80 ? '🔥 Strong resonance' : resA >= 70 ? '✨ Resonance edge' : resA >= 60 ? '〰️ Moderate resonance' : '❄️ Low resonance') : (resA >= 80 ? '🔥 강한 공명' : resA >= 70 ? '✨ 공명 우세' : resA >= 60 ? '〰️ 보통 공명' : '❄️ 낮은 공명');
     // ── TOP3: 종료(FT)·부전승(AWD) 제외, 미시작(NS)/진행중만 포함 ──
     var st = m.status || 'NS';
     var isOver = (st === 'FT' || st === 'AET' || st === 'PEN' || st === 'AWD' || st === 'WO');
@@ -125707,31 +125706,31 @@ function sptRenderMatches(tab) {
     // 실시간 스코어
     var scoreHtml = '';
     if (m.status && m.status !== 'NS' && m.aGoals !== null && m.bGoals !== null) {
-      var statusLabel = m.status === 'FT' ? '종료' : m.status === '1H' ? '전반' : m.status === 'HT' ? '하프타임' : m.status === '2H' ? '후반' : m.status;
+      var statusLabel = (window._LANG&&window._LANG!=='ko') ? (m.status === 'FT' ? 'Full time' : m.status === '1H' ? '1st half' : m.status === 'HT' ? 'Half time' : m.status === '2H' ? '2nd half' : m.status) : (m.status === 'FT' ? '종료' : m.status === '1H' ? '전반' : m.status === 'HT' ? '하프타임' : m.status === '2H' ? '후반' : m.status);
       scoreHtml = '<div style="font-size:18px;font-weight:900;color:#34d399;margin:4px 0;">'+m.aGoals+' - '+m.bGoals+'</div><div style="font-size:9px;color:#059669;">'+statusLabel+'</div>';
     }
     html += '<div class="spt-team" style="text-align:center;">';
     html += logoHtmlA;
     html += '<div class="spt-team-name">'+sptTeamDisplay(m.a)+'</div>';
-    html += '<div class="spt-team-oh" style="background:'+ohA.bg+';color:'+ohA.color+';">'+m.aOh+' 오행</div>';
-    html += '<div class="spt-team-stat">데이터 '+dataA+'%</div></div>';
+    html += '<div class="spt-team-oh" style="background:'+ohA.bg+';color:'+ohA.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohA.en||m.aOh)+' element'):(m.aOh+' 오행'))+'</div>';
+    html += '<div class="spt-team-stat">'+((window._LANG&&window._LANG!=='ko')?'Data ':'데이터 ')+dataA+'%</div></div>';
     html += '<div class="spt-vs-badge" style="display:flex;flex-direction:column;align-items:center;">';
     html += scoreHtml || '<span>VS</span>';
     html += '</div>';
     html += '<div class="spt-team" style="text-align:center;">';
     html += logoHtmlB;
     html += '<div class="spt-team-name">'+sptTeamDisplay(m.b)+'</div>';
-    html += '<div class="spt-team-oh" style="background:'+ohB.bg+';color:'+ohB.color+';">'+m.bOh+' 오행</div>';
-    html += '<div class="spt-team-stat">데이터 '+(100-dataA)+'%</div></div>';
+    html += '<div class="spt-team-oh" style="background:'+ohB.bg+';color:'+ohB.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohB.en||m.bOh)+' element'):(m.bOh+' 오행'))+'</div>';
+    html += '<div class="spt-team-stat">'+((window._LANG&&window._LANG!=='ko')?'Data ':'데이터 ')+(100-dataA)+'%</div></div>';
     html += '</div>';
     // 종합 승률 바
-    html += '<div class="spt-bar-row"><span class="spt-bar-label">종합 에너지</span>';
+    html += '<div class="spt-bar-row"><span class="spt-bar-label">'+((window._LANG&&window._LANG!=='ko')?'Overall energy':'종합 에너지')+'</span>';
     html += '<span class="spt-pct-a">'+totalA+'%</span>';
     html += '<div class="spt-bar-track"><div class="spt-bar-a" style="width:0%;background:'+ohA.color+';opacity:.8;" data-w="'+totalA+'"></div>';
     html += '<div class="spt-bar-b" style="width:0%;background:'+ohB.color+';opacity:.8;" data-w="'+totalB+'"></div></div>';
     html += '<span class="spt-pct-b">'+totalB+'%</span></div>';
     // 데이터 vs 에너지
-    html += '<div class="spt-bar-row"><span class="spt-bar-label">데이터 기반</span>';
+    html += '<div class="spt-bar-row"><span class="spt-bar-label">'+((window._LANG&&window._LANG!=='ko')?'Data-driven':'데이터 기반')+'</span>';
     html += '<span class="spt-pct-a">'+dataA+'%</span>';
     html += '<div class="spt-bar-track"><div class="spt-bar-a" style="width:0%;background:#60a5fa;opacity:.7;" data-w="'+dataA+'"></div>';
     html += '<div class="spt-bar-b" style="width:0%;background:#f87171;opacity:.7;" data-w="'+(100-dataA)+'"></div></div>';
@@ -125739,12 +125738,12 @@ function sptRenderMatches(tab) {
     // 공명 지수
     html += '<div class="spt-resonance"><span class="spt-res-stars">'+stars+'</span>';
     html += '<span class="spt-res-label">'+resonanceLabel+'</span>';
-    html += '<span class="spt-res-desc">공명 '+resA+'pts</span></div>';
-    html += '<div onclick="(function(){var c=document.getElementById(\'spt-chat-messages\');if(c){c.scrollIntoView({behavior:\'smooth\',block:\'center\'});setTimeout(function(){var i=document.getElementById(\'spt-chat-input\');if(i)i.focus();},500);}})()" style="margin-top:8px;font-size:10px;color:#059669;text-align:right;cursor:pointer;padding:4px 0;">💬 클릭하여 AI 상담 →</div>';
+    html += '<span class="spt-res-desc">'+((window._LANG&&window._LANG!=='ko')?'Resonance ':'공명 ')+resA+'pts</span></div>';
+    html += '<div onclick="(function(){var c=document.getElementById(\'spt-chat-messages\');if(c){c.scrollIntoView({behavior:\'smooth\',block:\'center\'});setTimeout(function(){var i=document.getElementById(\'spt-chat-input\');if(i)i.focus();},500);}})()" style="margin-top:8px;font-size:10px;color:#059669;text-align:right;cursor:pointer;padding:4px 0;">'+((window._LANG&&window._LANG!=='ko')?'💬 Click for AI consultation →':'💬 클릭하여 AI 상담 →')+'</div>';
     html += '</div>';
   });
 
-  list.innerHTML = html || '<div style="font-size:12px;color:#a0afc0;text-align:center;padding:20px;">해당 종목 경기 정보가 없습니다</div>';
+  list.innerHTML = html || '<div style="font-size:12px;color:#a0afc0;text-align:center;padding:20px;">'+((window._LANG&&window._LANG!=='ko')?'No match info for this sport':'해당 종목 경기 정보가 없습니다')+'</div>';
 
   // 바 애니메이션
   setTimeout(function(){
@@ -125775,7 +125774,7 @@ function sptRenderTop3(items) {
     html += '</div></div>';
   });
   if (items.length === 0) {
-    el.innerHTML = '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px;">⏳ 오늘 예정된 경기가 없거나<br>모든 경기가 종료되었습니다</div>';
+    el.innerHTML = '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px;">'+((window._LANG&&window._LANG!=='ko')?'⏳ No matches scheduled today<br>or all matches have ended':'⏳ 오늘 예정된 경기가 없거나<br>모든 경기가 종료되었습니다')+'</div>';
   } else {
     el.innerHTML = html;
   }
@@ -125812,8 +125811,11 @@ function sptSelectMatch(idx) {
   var dataA = sptDataWinRate(m.a, m.b);
   var totalA = Math.round(dataA * 0.6 + resA * 0.4);
 
-  var msg = sptKoName(m.a)+' vs '+sptKoName(m.b)+' ('+m.league+', '+m.time+') 경기를 선택했어요.\n'+
-    '내 오행('+myOh+') × '+m.a+'('+m.aOh+' 오행) 공명 '+resA+'pts, 종합 에너지 '+totalA+'% · '+(100-totalA)+'% 입니다.\n이 경기의 에너지 흐름을 분석해주세요.';
+  var msg = (window._LANG&&window._LANG!=='ko')
+    ? (sptTeamDisplay(m.a)+' vs '+sptTeamDisplay(m.b)+' ('+m.league+', '+m.time+') selected.\n'+
+       'My element ('+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+') × '+m.a+' ('+((SPT_OH[m.aOh]&&SPT_OH[m.aOh].en)||m.aOh)+') resonance '+resA+'pts, overall energy '+totalA+'% · '+(100-totalA)+'%.\nPlease analyze the energy flow of this match.')
+    : (sptKoName(m.a)+' vs '+sptKoName(m.b)+' ('+m.league+', '+m.time+') 경기를 선택했어요.\n'+
+       '내 오행('+myOh+') × '+m.a+'('+m.aOh+' 오행) 공명 '+resA+'pts, 종합 에너지 '+totalA+'% · '+(100-totalA)+'% 입니다.\n이 경기의 에너지 흐름을 분석해주세요.');
   sptAskAI(msg, true);
 
   // 스크롤
@@ -125828,7 +125830,7 @@ function sptAnalyze() {
   var st = (document.getElementById('spt-sport-type')||{}).value || 'soccer';
   var mt = (document.getElementById('spt-match-time')||{}).value || '19:00';
   var res = document.getElementById('spt-analyze-result');
-  if (!ta || !tb) { if(res) res.innerHTML='<div style="color:#f87171;font-size:12px;padding:6px;">홈팀과 원정팀을 입력해주세요.</div>'; return; }
+  if (!ta || !tb) { if(res) res.innerHTML='<div style="color:#f87171;font-size:12px;padding:6px;">'+((window._LANG&&window._LANG!=='ko')?'Please enter both home and away teams.':'홈팀과 원정팀을 입력해주세요.')+'</div>'; return; }
 
   // 임시 오행 자동 배정
   var ohs = ['목','화','토','금','수'];
@@ -125847,18 +125849,18 @@ function sptAnalyze() {
 
   if (res) res.innerHTML =
     '<div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;margin-top:4px;">' +
-    '<div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:8px;">📊 분석 결과</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:8px;">'+((window._LANG&&window._LANG!=='ko')?'📊 Analysis result':'📊 분석 결과')+'</div>' +
     '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
     '<div style="flex:1;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">' +
-    '<div style="font-size:11px;color:'+ohA.color+';">'+aOh+' 오행</div>' +
+    '<div style="font-size:11px;color:'+ohA.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohA.en||aOh)+' element'):(aOh+' 오행'))+'</div>' +
     '<div style="font-size:16px;font-weight:800;color:#34d399;">'+totalA+'%</div>' +
     '<div style="font-size:11px;color:#a0afc0;">'+ta+'</div></div>' +
     '<div style="display:flex;align-items:center;color:#475569;font-weight:700;font-size:12px;">VS</div>' +
     '<div style="flex:1;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">' +
-    '<div style="font-size:11px;color:'+ohB.color+';">'+bOh+' 오행</div>' +
+    '<div style="font-size:11px;color:'+ohB.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohB.en||bOh)+' element'):(bOh+' 오행'))+'</div>' +
     '<div style="font-size:16px;font-weight:800;color:#60a5fa;">'+(100-totalA)+'%</div>' +
     '<div style="font-size:11px;color:#a0afc0;">'+tb+'</div></div></div>' +
-    '<div style="font-size:11px;color:#a0afc0;">데이터 기반 '+dataA+'% + 에너지 보정 '+(totalA-dataA>0?'+':'')+(totalA-dataA)+'% = 종합 '+totalA+'%</div>' +
+    '<div style="font-size:11px;color:#a0afc0;">'+((window._LANG&&window._LANG!=='ko')?('Data-driven '+dataA+'% + energy adj '+(totalA-dataA>0?'+':'')+(totalA-dataA)+'% = overall '+totalA+'%'):('데이터 기반 '+dataA+'% + 에너지 보정 '+(totalA-dataA>0?'+':'')+(totalA-dataA)+'% = 종합 '+totalA+'%'))+'</div>' +
     '</div>';
 
   // ✦ 7대 엔진 점수 분해 카드 추가 (분석 결과 바로 아래) ✦
@@ -125869,9 +125871,12 @@ function sptAnalyze() {
   }
 
   // AI 자동 상담
-  _sptAnalyzed = {a:ta, b:tb, aOh:aOh, bOh:bOh, time:mt, league:'직접입력'};
-  var sportNames = {soccer:'축구',baseball:'야구',basketball:'농구',volleyball:'배구',tennis:'테니스',etc:'기타'};
-  sptAskAI(ta+' vs '+tb+' '+( sportNames[st]||'경기')+' 에너지 분석: 내 오행('+myOh+') × '+ta+'('+aOh+') 공명 '+resA+'pts, 종합 '+totalA+'% · '+(100-totalA)+'% 입니다. 에너지 흐름을 분석해주세요.', true);
+  var _sptEN = (window._LANG&&window._LANG!=='ko');
+  _sptAnalyzed = {a:ta, b:tb, aOh:aOh, bOh:bOh, time:mt, league:(_sptEN?'Direct input':'직접입력')};
+  var sportNames = _sptEN ? {soccer:'Soccer',baseball:'Baseball',basketball:'Basketball',volleyball:'Volleyball',tennis:'Tennis',etc:'match'} : {soccer:'축구',baseball:'야구',basketball:'농구',volleyball:'배구',tennis:'테니스',etc:'기타'};
+  sptAskAI(_sptEN
+    ? (ta+' vs '+tb+' '+(sportNames[st]||'match')+' energy analysis: my element ('+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+') × '+ta+' ('+((SPT_OH[aOh]&&SPT_OH[aOh].en)||aOh)+') resonance '+resA+'pts, overall '+totalA+'% · '+(100-totalA)+'%. Please analyze the energy flow.')
+    : (ta+' vs '+tb+' '+( sportNames[st]||'경기')+' 에너지 분석: 내 오행('+myOh+') × '+ta+'('+aOh+') 공명 '+resA+'pts, 종합 '+totalA+'% · '+(100-totalA)+'% 입니다. 에너지 흐름을 분석해주세요.'), true);
 }
 
 // ── AI 채팅 ──────────────────────────────────────────────
@@ -126006,12 +126011,19 @@ function sptAskAI(userText, isAuto) {
     '## ⚙️ 50대 역학 중 엔진 실시간 수치 (CGO 독자 알고리즘)\n' + _engSummary + '\n\n' +
     '## 🪐 NASA JPL 실시간 행성 위치\n' + _nasaSummary + _cosmoWarn + '\n\n' +
 
-    '## ★ 언어 규칙 (최우선) ★\n' +
+    ((window._LANG&&window._LANG!=='ko')
+    ? ('## ★ LANGUAGE RULE (TOP PRIORITY) ★\n' +
+    '- Answer ONLY in English.\n' +
+    '- Translate ALL metaphysics / engine names to English: Qi Men Dun Jia, Zi Wei Dou Shu, Nine Star Ki, I Ching, Four Pillars (Saju), Taeul, Feng Shui, Kabbalah, Tarot, numerology.\n' +
+    '- Never output Korean, Chinese or Japanese characters.\n' +
+    '- Use English element names: Wood, Fire, Earth, Metal, Water.\n' +
+    '- Do not end with a farewell.\n\n' )
+    : ('## ★ 언어 규칙 (최우선) ★\n' +
     '- 순수 한국어로만 답변하세요\n' +
     '- 중국어(真是, 令人 등), 일본어, 영어, 프랑스어 등 외국어 단어 금지\n' +
     '- Wood, Fire 같은 영어 오행 표현 금지 → 목(木), 화(火) 등 한글로\n' +
     '- 외국어가 나오려는 순간 즉시 한국어로 교체하세요\n' +
-    '- 인사말은 항상 한국어로: "또 봐요" 대신 "다음에 또 질문해 주세요!" 등\n\n' +
+    '- 인사말은 항상 한국어로: "또 봐요" 대신 "다음에 또 질문해 주세요!" 등\n\n')) +
     '## ★ CGO-FULI 정체성 규칙 ★\n' +
     '- 당신은 승패 예측 AI가 아닙니다. "내 에너지와 어느 팀이 공명하는가"를 분석하는 AI입니다\n' +
     '- 예측이 실제 결과와 다를 수 있음을 항상 자연스럽게 안내하세요\n' +
@@ -126469,12 +126481,13 @@ function sptUpdatePopularTeams() {
       var oh = (typeof SPT_TEAM_OH === 'object' && SPT_TEAM_OH[team]) ? SPT_TEAM_OH[team] : '토';
       var col = oh2col[oh] || '#a0afc0';
       // 표시 이름은 짧게 (긴 영문은 첫 단어만)
-      var displayName = team.length > 12 ? team.split(' ')[0] : team;
+      var _dn = (typeof sptTeamDisplay==='function')?sptTeamDisplay(team):team;
+      var displayName = _dn.length > 12 ? _dn.split(' ')[0] : _dn;
       return '<button onclick="sptPickQuick(\'' + side + '\',\'' + team.replace(/'/g,"\\'") + '\')" '+
              'style="padding:4px 9px;background:rgba(16,185,129,0.08);border:1px solid '+col+'33;border-radius:14px;color:#334155;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;" '+
              'onmouseover="this.style.background=\'rgba(16,185,129,0.18)\';this.style.borderColor=\''+col+'\'" '+
              'onmouseout="this.style.background=\'rgba(16,185,129,0.08)\';this.style.borderColor=\''+col+'33\'">'+
-             '<span style="color:'+col+';font-weight:800;margin-right:3px;">'+oh+'</span>'+displayName+
+             '<span style="color:'+col+';font-weight:800;margin-right:3px;">'+((window._LANG&&window._LANG!=='ko')?((typeof SPT_OH==='object'&&SPT_OH[oh]&&SPT_OH[oh].en)||oh):oh)+'</span>'+displayName+
              '</button>';
     }).join('');
   }
@@ -126524,10 +126537,10 @@ function sptUpdateMyEnergy() {
   var chipPlanet = document.getElementById('spt-chip-planet');
   var chipSport = document.getElementById('spt-chip-sport');
 
-  if (chipOh) { chipOh.textContent = _cgoT('오행: ')+oh; chipOh.style.color = ohInfo.color; chipOh.style.borderColor = ohInfo.color.replace(')',',0.3)').replace('rgb','rgba'); }
+  if (chipOh) { chipOh.textContent = _cgoT('오행: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.en||oh):oh); chipOh.style.color = ohInfo.color; chipOh.style.borderColor = ohInfo.color.replace(')',',0.3)').replace('rgb','rgba'); }
   if (chipIli) chipIli.textContent = (M&&M.bio.scanned?'CEI':'ILI')+': '+ili;
-  if (chipPlanet) chipPlanet.textContent = _cgoT('행성: ')+ohInfo.planet;
-  if (chipSport) chipSport.textContent = _cgoT('최적 종목: ')+ohInfo.sport;
+  if (chipPlanet) chipPlanet.textContent = _cgoT('행성: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.planetEn||ohInfo.planet):ohInfo.planet);
+  if (chipSport) chipSport.textContent = _cgoT('최적 종목: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.sportEn||ohInfo.sport):ohInfo.sport);
 }
 
 // ── 페이지 진입 시 초기화 ────────────────────────────────
@@ -126537,15 +126550,15 @@ document.addEventListener('DOMContentLoaded', function() {
     sptUpdateMyEnergy();
     // ── 오늘 경기 실시간 로딩 ──────────────────────────
     var loadingEl = document.getElementById('spt-matches-list');
-    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">📡 오늘 경기 불러오는 중...</div>';
+    if (loadingEl) loadingEl.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8">'+((window._LANG&&window._LANG!=='ko')?'📡 Loading today\'s matches...':'📡 오늘 경기 불러오는 중...')+'</div>';
     sptLoadTodayMatches(function(loaded, src) {
       sptSetApiStatus(loaded, src);
       sptRenderMatches(_sptCurrentTab);
       if (loaded) {
-        var todayStr2 = new Date().toLocaleDateString('ko-KR', {month:'numeric',day:'numeric'});
+        var todayStr2 = new Date().toLocaleDateString((window._LANG&&window._LANG!=='ko')?'en-US':'ko-KR', {month:'numeric',day:'numeric'});
         var totalGames = Object.keys(SPT_MATCH_DB).reduce(function(s,k){return s+SPT_MATCH_DB[k].length;},0);
         var countEl = document.getElementById('spt-today-count');
-        if (countEl) countEl.textContent = todayStr2 + ' 실시간 ' + totalGames + '경기';
+        if (countEl) countEl.textContent = (window._LANG&&window._LANG!=='ko') ? (todayStr2 + ' live · ' + totalGames + ' matches') : (todayStr2 + ' 실시간 ' + totalGames + '경기');
         sptStartLiveUpdate(); // 라이브 자동갱신 시작
       }
     });
@@ -126555,9 +126568,13 @@ document.addEventListener('DOMContentLoaded', function() {
       var oh = (window.calcResult && window.calcResult.domOh) || '목';
       var ohInfo = SPT_OH[oh] || SPT_OH['목'];
       sptAddBubble('ai',
-        '안녕하세요! 스포츠 에너지 AI입니다 ⚽\n' +
-        '오늘 당신의 '+oh+' 오행 에너지로 경기를 분석해 드릴게요.\n' +
-        '팀 전적·역사·에너지 궁합 등 무엇이든 자유롭게 질문해 주세요! 🔮'
+        (window._LANG&&window._LANG!=='ko')
+        ? ('Hello! I am the Sports Energy AI ⚽\n' +
+           'I will analyze today\'s matches with your '+((ohInfo&&ohInfo.en)||oh)+' element energy.\n' +
+           'Ask me anything — team records, history, energy compatibility! 🔮')
+        : ('안녕하세요! 스포츠 에너지 AI입니다 ⚽\n' +
+           '오늘 당신의 '+oh+' 오행 에너지로 경기를 분석해 드릴게요.\n' +
+           '팀 전적·역사·에너지 궁합 등 무엇이든 자유롭게 질문해 주세요! 🔮')
       );
     }
   });
