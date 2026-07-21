@@ -53464,6 +53464,7 @@ function calcLottoEnergy(nums, domOh, lifeNum) {
 
 // 번호 근거 태그 생성
 function makeBasisTags(nums, domOh, lifeNum, method) {
+  var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[domOh]||domOh;
   var tags=[];
   var ohRange=OH_LUCKY_RANGES[domOh]||{primary:[],secondary:[]};
   var lifeArr=LIFE_LUCKY[lifeNum]||[];
@@ -53568,7 +53569,7 @@ function runLotto() {
     bYear=parseInt(bp[0]); bMonth=parseInt(bp[1]); bDay=parseInt(bp[2]);
     domOh='목'; lifeNumVal=5; kujusei=5; domOhEn='Wood';
   } else {
-    alert('대시보드에서 자동 계산하거나 생년월일을 입력하세요');
+    alert(_cgoT?_cgoT('대시보드에서 자동 계산하거나 생년월일을 입력하세요'):'Please open after calculating on the dashboard, or enter your birth date');
     return;
   }
 
@@ -53605,6 +53606,8 @@ function runLotto() {
 
   // 메서드별 풀 조합
   function buildPool(method) {
+    var _bpOh=(window.calcResult&&window.calcResult.domOh)||'목';
+    var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[_bpOh]||_bpOh;
     var base=[];
     var p18=window._nasaPlanets||{};
     // NASA 파생 숫자 공통 생성
@@ -53764,7 +53767,7 @@ function runLotto() {
   '</div>'+
   '<div class="lstat-card">'+
   '<div class="lstat-icon">🔢</div>'+
-  '<div class="lstat-title">생명수</div>'+
+  '<div class="lstat-title">Life No.</div>'+
   '<div class="lstat-val">'+lifeNumVal+'</div>'+
   '<div class="lstat-sub">'+(calcResult&&calcResult.isM?(typeof _cgoT==='function'?_cgoT('마스터 넘버'):'마스터 넘버'):(typeof _cgoT==='function'?_cgoT('수비학 기반'):'수비학 기반'))+'</div>'+
   '</div>'+
@@ -53802,7 +53805,7 @@ function runLotto() {
     '<div class="ball-tags">'+makeBasisTags(s.nums,domOh,lifeNumVal,method)+'</div>'+
     '<div class="lotto-analysis">'+
     '<div class="la-item"><span class="la-label">☯ 오행 에너지</span><span class="la-val" style="color:var(--gold)">'+domOhEn+'-based</span></div>'+
-    '<div class="la-item"><span class="la-label">🔢 수비 에너지</span><span class="la-val" style="color:var(--cyan)">생명수 '+lifeNumVal+'</span></div>'+
+    '<div class="la-item"><span class="la-label">🔢 수비 에너지</span><span class="la-val" style="color:var(--cyan)">'+'Life No. '+lifeNumVal+'</span></div>'+
     '<div class="la-item"><span class="la-label">🧭 방위 에너지</span><span class="la-val" style="color:var(--green)">'+bestDirEn+'</span></div>'+
     '<div class="la-item"><span class="la-label">🌟 구성 에너지</span><span class="la-val" style="color:var(--amber)">'+kjNameEn+'</span></div>'+
     '</div>'+
@@ -54630,10 +54633,10 @@ var _18SYSTEMS = [
   // West 5 · East 6 · Psych 2
   {id:'solar',   name:'태양궁점성', emoji:'☀',  color:'#fbbf24', group:'서',  desc:'핵심 자아와 성격적 본질'},
   {id:'natal',   name:'전체차트',   emoji:'🪐', color:'#60a5fa', group:'서',  desc:'상승궁·달 등 정밀 행성 배치'},
-  {id:'transit', name:'NASA 행성 흐름', emoji:'🛰', color:'#34d399', group:'서',  desc:'실시간 행성 이동에 따른 영향력'},
-  {id:'wesnum',  name:'서양수비학', emoji:'🔢', color:'#f87171', group:'서',  desc:'생명수(Master No.) 기반 인생 목적'},
+  {id:'transit', name:'NASA Planet Flow', emoji:'🛰', color:'#34d399', group:'서',  desc:'실시간 행성 이동에 따른 영향력'},
+  {id:'wesnum',  name:'Numerology', emoji:'🔢', color:'#f87171', group:'서',  desc:'생명수(Master No.) 기반 인생 목적'},
   {id:'kabala',  name:'카발라',     emoji:'🔯', color:'#a78bfa', group:'서',  desc:'영적 진동수와 에너지 배치'},
-  {id:'house',   name:'하우스시스템',emoji:'🏛', color:'#38bdf8', group:'서',  desc:'삶의 12영역별 에너지 분석'},
+  {id:'house',   name:'House System',emoji:'🏛', color:'#38bdf8', group:'서',  desc:'삶의 12영역별 에너지 분석'},
   {id:'synastry',name:'합성차트',   emoji:'💑', color:'#f9a8d4', group:'서',  desc:'대인관계 및 궁합 시너지'},
   {id:'tarot',   name:'타로',       emoji:'🔮', color:'#c4b5fd', group:'서',  desc:'심리적 진동과 직관적 조언'}
 ];
@@ -54646,7 +54649,7 @@ function toggle18Expert(cid) {
   var showing = xEl.style.display !== 'none';
   xEl.style.display = showing ? 'none' : 'block';
   if(btnEl) {
-    btnEl.textContent = showing ? '전문가▾' : '접기▲';
+    btnEl.textContent = showing ? 'Expert ▾' : '▲ Close';
     btnEl.style.background = showing ? 'rgba(212,168,67,.12)' : 'rgba(212,168,67,.25)';
   }
 }
@@ -54805,8 +54808,8 @@ function _lottoBuildSysFitness(method, domOh, lifeNumVal, nums) {
     tarot:   {score:75, group:'B', emoji:'🎴', name:'타로',         short:(typeof _cgoT==='function'?_cgoT('로또·아르카나 페이지'):'Lucky·Arcana page')},
     // 그룹 C: 부적 전용 3대 — 부적 프롬프트만
     kabala:  {score:55, group:'C', emoji:'🔯', name:'카발라',       short:(typeof _cgoT==='function'?_cgoT('부적 프롬프트 전용'):'Talisman prompt only')},
-    chakra:  {score:52, group:'C', emoji:'🌈', name:(typeof _cgoT==='function'?_cgoT('차크라'):'Chakra'),       short:(typeof _cgoT==='function'?_cgoT('부적 프롬프트 전용'):'Talisman prompt only')},
-    runic:   {score:50, group:'C', emoji:'ᚱ',  name:(typeof _cgoT==='function'?_cgoT('루닉'):'Runic'),         short:(typeof _cgoT==='function'?_cgoT('부적 프롬프트 전용'):'Talisman prompt only')},
+    chakra:  {score:52, group:'C', emoji:'🌈', name:'Chakra',       short:(typeof _cgoT==='function'?_cgoT('부적 프롬프트 전용'):'Talisman prompt only')},
+    runic:   {score:50, group:'C', emoji:'ᚱ',  name:'Runic',         short:(typeof _cgoT==='function'?_cgoT('부적 프롬프트 전용'):'Talisman prompt only')},
     // 그룹 D: 바이오 전용 2대 — 바이오스캔만
     gwansang:{score:55, group:'D', emoji:'👁',  name:'관상학',       short:(typeof _cgoT==='function'?_cgoT('바이오스캔·건강'):'Bio scan·health')},
     pungsu:  {score:45, group:'D', emoji:'🌍', name:'풍수지리',     short:(typeof _cgoT==='function'?_cgoT('건강 리포트'):'Health report')}
@@ -54912,7 +54915,7 @@ function _lottoBuildSysFitness(method, domOh, lifeNumVal, nums) {
 
   // 그룹별 막대 출력
   var groupHeaders = {
-    A: {color:'#f87171', label:'🔴 핵심 4대 — ILI 점수 직접 계산'},
+    A: {color:'#f87171', label:'🔴 Core 4 — ILI direct calculation'},
     B: {color:'#fbbf24', label:'🟡 Auxiliary 5 — Health·Fortune·Report actual calc'},
     C: {color:'#38bdf8', label:'🔵 Talisman 3 — CGO-FULI talisman prompt only'},
     D: {color:'#a78bfa', label:'🟤 Bio 2 — Bio scan only'}
@@ -55037,6 +55040,7 @@ function _lottoBuildSysFitness(method, domOh, lifeNumVal, nums) {
 // ✦ 행운 번호 AI 채팅 영역
 // ══════════════════════════════════════════
 function _lottoBuildAIChat(nums, bonus, method, domOh, lifeNumVal) {
+  var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[domOh]||domOh;
   var ctx = '추출 번호: '+nums.join(',')+' (보너스 '+bonus+') / 추출방식: '+method+' / 일간오행: '+domOh+' / 생명수: '+lifeNumVal;
   window._lottoChatCtx = ctx;
   window._lottoChatNums = nums;
@@ -55141,7 +55145,7 @@ function toggleDeepExpert(cid) {
   var showing = xEl.style.display !== 'none';
   xEl.style.display = showing ? 'none' : 'block';
   if (btnEl) {
-    btnEl.textContent = showing ? '전문가▾' : '접기▲';
+    btnEl.textContent = showing ? 'Expert ▾' : '▲ Close';
     btnEl.style.background = showing ? 'rgba(167,139,250,.10)' : 'rgba(167,139,250,.25)';
   }
 }
@@ -55250,6 +55254,7 @@ function buildDeepPanel(contextKey, data) {
 function calcDeepAnalysis(contextKey, data) {
   var p = window._nasaPlanets;
   var sunSign  = p && p.sun      ? p.sun.zodiac.sign      : '분석중';
+  if(typeof _signEn==='function') sunSign=_signEn(sunSign);
   var jupSign  = p && p.jupiter  ? p.jupiter.zodiac.sign  : '분석중';
   var satSign  = p && p.saturn   ? p.saturn.zodiac.sign   : '분석중';
   var marSign  = p && p.mars     ? p.mars.zodiac.sign     : '분석중';
@@ -55492,7 +55497,7 @@ function calc18ForLotto(domOh, lifeNum, kujusei, bYear, bMonth, bDay, nums) {
   var ohNames = (typeof _cgoT==='function')? {목:_cgoT('나무(木)'),화:_cgoT('불(火)'),토:_cgoT('흙(土)'),금:_cgoT('쇠(金)'),수:_cgoT('물(水)')} : {목:'Wood (木)',화:'Fire (火)',토:'Earth (土)',금:'Metal (金)',수:'Water (水)'};
   var ohN = ohNames[domOh]||domOh; var domOhEn = {목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[domOh]||domOh;
   var ohDesc = (typeof _cgoT==='function')? ({목:_cgoT('성장·창조·진취의 에너지를 가지고 있어요'),화:_cgoT('열정·활력·밝음의 에너지를 가지고 있어요'),토:_cgoT('안정·신뢰·중심의 에너지를 가지고 있어요'),금:_cgoT('결단·집중·완성의 에너지를 가지고 있어요'),수:_cgoT('지혜·적응·흐름의 에너지를 가지고 있어요')}[domOh]||_cgoT('강한 에너지를 가지고 있어요')) : ({목:'Growth·Creation·Vitality energy',화:'Passion·Vitality·Brightness energy',토:'Stability·Trust·Centeredness energy',금:'Decision·Focus·Precision energy',수:'Wisdom·Adaptability·Flow energy'}[domOh]||'powerful energy');
-  var lnMeaning = {1:'리더십과 독립심',2:'조화와 협력',3:'창의력과 표현',4:'안정과 기반',5:'자유와 변화',6:'사랑과 책임',7:'분석과 탐구',8:'성취와 번영',9:'지혜와 완성',11:'직관과 영감(마스터)',22:'현실화와 건축(마스터)',33:'사랑과 치유(마스터)'}[lifeNum]||'균형과 성취';
+  var lnMeaning = {1:'Leadership & Independence',2:'Harmony & Cooperation',3:'Creativity & Expression',4:'Stability & Foundation',5:'Freedom & Change',6:'Love & Responsibility',7:'Analysis & Exploration',8:'Achievement & Prosperity',9:'Wisdom & Completion',11:'Intuition & Inspiration (Master)',22:'Manifestation & Architecture (Master)',33:'Love & Healing (Master)'}[lifeNum]||'Balance & Achievement';
 
   return {
     saju: {score:base.saju,
@@ -55561,7 +55566,7 @@ function calc18ForLotto(domOh, lifeNum, kujusei, bYear, bMonth, bDay, nums) {
       expert:'하우스 시스템(Placidus Domification) 2하우스(재물궁·가치궁) 정밀 분석. 목성(♃) '+jupSign+' 트랜짓 에너지('+jupScore+'점) + 토성(♄) '+satSign+' 에너지('+satScore+'점) 평균 산출: '+Math.round((jupScore+satScore)/2)+'점. 재물궁(2H) 행성 합·트라인·육분 각도 에너지 측정. 9하우스(고등 행운) 에너지 교차 반영.',
       advice:p?'재물궁 에너지 활성':'하우스 에너지 분석'},
     synastry: {score:_db('s14', Math.min(99,72+numEnergy)),
-      easy:'The Composite Chart merges your personal energy with the current cosmic energy into a new energy map. The most powerful energy emerges at the midpoint where these two meet. These numbers sit at the intersection where your personal energy and current ergy converge are the most powerful numbers at this very moment.',
+      easy:'The Composite Chart merges your personal energy with the current cosmic energy into a new energy map. The most powerful energy emerges at the midpoint where these two meet. These numbers sit at the intersection where your personal energy and current celestial energy converge are the most powerful numbers at this very moment.',
       expert:'합성 차트(Composite Chart) 분석 — 개인 출생 차트와 현재 천체 배치의 중점(Midpoint) 에너지 산출. 모든 행성 중점값 계산 후 번호 수열 진동수와 교차. 출생년도('+bYear+') 기준 누적 에너지값 반영. 번호합('+numSum+') 에너지 교차점 보정 +'+numEnergy+'. 최종: '+Math.min(99,72+numEnergy)+'점.',
       advice:'Cosmic composite energy reflected'},
     tarot: {score:_db('s16', Math.min(99,65+lifeNum*2+numEnergy)),
@@ -55777,7 +55782,7 @@ function calc18ForNaming(surname, domOh, lifeNum, gender, c1, c2, c3, strokes) {
   var wonGuk = strokes?strokes.wonGuk:'?';
   var ohDesc = {목:'성장하는 나무처럼 끊임없이 발전하는 에너지',화:'밝게 타오르는 불처럼 열정과 활력의 에너지',토:'대지처럼 안정적이고 믿음직한 에너지',금:'단단한 쇠처럼 결단력과 집중력의 에너지',수:'흐르는 물처럼 지혜롭고 유연한 에너지'}[domOh]||'강한 에너지';
   var ohLuck = {목:'창의성·리더십·성장',화:'열정·명예·사교성',토:'신뢰·안정·재물',금:'성취·집중·강인함',수:'지혜·적응·소통'}[domOh]||'균형잡힌 삶';
-  var lnMeaning = {1:'리더십과 독립심',2:'조화와 협력',3:'창의력과 표현',4:'안정과 기반',5:'자유와 변화',6:'사랑과 책임',7:'분석과 탐구',8:'성취와 번영',9:'지혜와 완성',11:'직관과 영감(마스터)',22:'현실화와 건축(마스터)',33:'사랑과 치유(마스터)'}[lifeNum]||'균형과 성취';
+  var lnMeaning = {1:'Leadership & Independence',2:'Harmony & Cooperation',3:'Creativity & Expression',4:'Stability & Foundation',5:'Freedom & Change',6:'Love & Responsibility',7:'Analysis & Exploration',8:'Achievement & Prosperity',9:'Wisdom & Completion',11:'Intuition & Inspiration (Master)',22:'Manifestation & Architecture (Master)',33:'Love & Healing (Master)'}[lifeNum]||'Balance & Achievement';
 
   return {
     saju: {score:Math.min(78,ohScore+5),
@@ -78500,7 +78505,7 @@ function algoPopup(key){
       desc:'태양 궁위 기반으로 핵심 자아 에너지와 생명력을 분석합니다.'},
     tarot:{name:'타로',icon:'🎴',color:'#818cf8',
       desc:'현재 달 위상 변화와 타로 원형 에너지의 공명으로 직관적 조언을 도출합니다.'},
-    nasa:{name:'NASA 행성 흐름',icon:'🛰️',color:'#34d399',
+    nasa:{name:'NASA Planet Flow',icon:'🛰️',color:'#34d399',
       desc:'NASA JPL 실시간 행성 궤도 데이터로 오늘의 우주 에너지 흐름을 정밀 분석합니다.'},
     kusei:{name:'구성학 (九星學)',icon:'🔢',color:'#34d399',
       desc:'1~9성 기반 공간·방위 에너지 패턴으로 오늘의 최적 행동 방향을 분석합니다.'},
