@@ -53904,6 +53904,18 @@ function runLotto() {
   if(rc) {
     rc.innerHTML=html;
     window._lottoDone = true;
+    // PDF 자체번역훅 — 결과 렌더 직후 (철칙①~⑤)
+    if(window._LANG && window._LANG!=='ko'){
+      var _lhook=function(){try{if(typeof _cgoT!=='function')return;
+        var w=document.createTreeWalker(rc,NodeFilter.SHOW_TEXT,null,false),n,a=[];
+        while(n=w.nextNode()){var t=(n.nodeValue||'').trim();if(t&&/[가-힣]/.test(t))a.push(n);}
+        for(var i=0;i<a.length;i++){var raw=a[i].nodeValue||'',tr=_cgoT(raw);
+          if(tr&&tr!==raw&&!/[가-힣]/.test(tr))a[i].nodeValue=tr;}
+      }catch(e){}};
+      _lhook();setTimeout(_lhook,600);setTimeout(_lhook,1600);setTimeout(_lhook,3200);
+      if(window._cgoLoadLangPack)_cgoLoadLangPack(window._LANG,_lhook);
+      if(typeof _cgoTranslateNode==='function')setTimeout(function(){_cgoTranslateNode(rc);},3400);
+    }
   }
 
   if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-lotto');if(_pg)_cgoAiTranslatePage(window._LANG,CGO_I18N[window._LANG]||{},_pg);},700);}}
@@ -55500,12 +55512,12 @@ function calc18ForLotto(domOh, lifeNum, kujusei, bYear, bMonth, bDay, nums) {
 
   return {
     saju: {score:base.saju,
-      easy:(window._LANG&&window._LANG!=='ko')?'Your innate element is '+ohN+'. '+ohDesc+'.'   :'타고난 오행은 '+ohN+'입니다. '+ohDesc+'. In Four Pillars, numbers that strengthen or balance this energy become your lucky numbers. This score shows how well these numbers resonate with your innate energy — the higher the score, the stronger your energy when these numbers are with you.'
+      easy:(window._LANG&&window._LANG!=='ko')?'Your innate element is '+ohN+'. '+ohDesc+'.':'타고난 오행은 '+ohN+'입니다. '+ohDesc+'. In Four Pillars, numbers that strengthen or balance this energy become your lucky numbers. This score shows how well these numbers resonate with your innate energy — the higher the score, the stronger your energy when these numbers are with you.'
       +'→ '+ohN+' element·number harmony',
       expert:'일간(日干) '+domOh+' 오행(五行) 에너지 기반 번호 진동수 정밀 분석. 사주 오행 분포표에서 '+domOh+' 기운을 보강·균형하는 1~45 수(數)를 우선 추출. 오행 상생(相生) 연쇄: '+{목:'수→목→화',화:'목→화→토',토:'화→토→금',금:'토→금→수',수:'금→수→목'}[domOh]+'의 중심 에너지값. 생명수(生命數) '+lifeNum+'('+lnMeaning+') 보정값 +'+lnBonus+'. 종합 조화도: '+base.saju+'점.',
       advice:domOhEn+' element energy harmony'},
     jami: {score:base.jami,
-      easy:'Zi Wei Dou Shu (紫微斗數) maps your destiny from the stars at birth. It reads the flow of fate from where the heavens stood when you arrived. Your central star (Nine Star) is '+kujusei+(window._LANG&&window._LANG!=='ko')?'. This score measures how well this star\'s energy resonates with the vibrations of these numbers. The stronger the resonance, the more naturally these numbers ride the flow of your destiny.'   :'번이에요. 이 별이 가진 에너지와 이 번호의 숫자 파동이 얼마나 잘 공명하는지 측정한 점수예요. 공명이 잘 될수록 이 번호가 내 운명 흐름에 자연스럽게 올라타는 번호예요.',
+      easy:'Zi Wei Dou Shu (紫微斗數) maps your destiny from the stars at birth. It reads the flow of fate from where the heavens stood when you arrived. Your central star (Nine Star) is '+kujusei+(window._LANG&&window._LANG!=='ko')?'. This score measures how well this star\'s energy resonates with the vibrations of these numbers.':'번이에요. 이 별이 가진 에너지와 이 번호의 숫자 파동이 얼마나 잘 공명하는지 측정한 점수예요.',
       expert:'자미두수(紫微斗數) 명궁(命宮) 주성(主星) 에너지 × 추출 번호 수리 진동수 정밀 교차 분석. 본명성 '+kujusei+'궁 기준 삼방사정(三方四正) 행운수 파생. 번호합('+numSum+') 에너지 진동수 → 명궁 에너지 공명도 산출. 보정 +'+numEnergy+'. 자미두수 12지반(地盤) 길흉 배치 반영.',
       advice:'Palace energy·number resonance'},
     gimu: {score:base.gimu,
@@ -55521,7 +55533,7 @@ function calc18ForLotto(domOh, lifeNum, kujusei, bYear, bMonth, bDay, nums) {
       expert:'풍수지리(風水地理) 출생지 방위각(方位角) 기반 지기(地氣) 에너지 수치화. 산룡(山龍)·수룡(水龍)·입향(立向) 에너지 — 용(龍)·혈(穴)·사(砂)·수(水)·향(向) 5요소 에너지값을 1~45 수로 변환. 출생지 좌향(坐向) 에너지 보정 +3. 현재 거주지 방위 에너지 교차 반영.',
       advice:'Spatial energy reflected'},
     seong: {score:base.seong,
-      easy:'Your name carries a unique numerological energy. Name Science holds that the stroke count and phonetic energy of a name influence destiny. Your Life Number (sum of all birthday digits) is '+lifeNum+(window._LANG&&window._LANG!=='ko')?'. When this energy resonates with the numbers at the same wavelength, powerful synergy emerges.'   :'인데, 이 에너지가 번호와 같은 파동으로 공명할 때 시너지가 생겨요.',
+      easy:'Your name carries a unique numerological energy. Name Science holds that the stroke count and phonetic energy of a name influence destiny. Your Life Number (sum of all birthday digits) is '+lifeNum+(window._LANG&&window._LANG!=='ko')?'. When this energy resonates with the numbers at the same wavelength, powerful synergy emerges.':'인데, 이 에너지가 번호와 같은 파동으로 공명할 때 시너지가 생겨요.',
       expert:'성명학(姓名學) 수리오행(數理五行) 정밀 분석. 생명수(生命數) '+lifeNum+'('+lnMeaning+')의 파동수(波動數)와 번호 진동수 공명 분석. 81수리(數理) 기준 원형(元格)·형격(亨格)·이격(利格)·정격(貞格) 에너지 교차 측정. 이름 오행 에너지 보정 +'+lnBonus+'.',
       advice:'Name energy·number resonance'},
     taeul: {score:base.taeul,
