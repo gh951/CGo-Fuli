@@ -51387,6 +51387,27 @@ function _cgoApplyDictionary(lang) {
   }catch(e){}
 })();
 
+/* ★ 인트로 팝업 표시 순간 번역 — 개별 팝업 1개만 스코프(전역 감시✗, 특허 철학: 활성 1개만 처리) */
+(function(){
+  function _attach(){
+    try{
+      var pops=document.querySelectorAll('[id$="-intro-pop"]');
+      for(var i=0;i<pops.length;i++){ (function(el){
+        if(!el || el._cgoIntroObs) return;
+        try{
+          var ob=new MutationObserver(function(){
+            try{ if(window._LANG && window._LANG!=='ko' && el.style && el.style.display && el.style.display!=='none' && window._cgoTranslateNode){ _cgoTranslateNode(el); } }catch(e){}
+          });
+          ob.observe(el,{attributes:true,attributeFilter:['style']});
+          el._cgoIntroObs=ob;
+        }catch(e){}
+      })(pops[i]); }
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_attach); else _attach();
+  setTimeout(_attach,1500); setTimeout(_attach,4000);
+})();
+
 /* ★ 안전 자동번역 폴백 — 사전에 없는 것만 순차·소량·캐시 (예전 병렬대량 크래시 회피) */
 (function(){
   var Q=[], seen=Object.create(null), running=false, MAXQ=4000;
