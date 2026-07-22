@@ -51379,10 +51379,10 @@ function _cgoApplyDictionary(lang) {
   try{
     var mo=new MutationObserver(function(muts){
       var L=window._LANG; if(!L||L==='ko') return;
-      for(var m=0;m<muts.length;m++){ var mu=muts[m]; if(mu.type==='characterData'){ if(mu.target) _pend.push(mu.target); continue; } var ad=mu.addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
+      for(var m=0;m<muts.length;m++){ var mu=muts[m]; if(mu.type==='attributes'){ var _at=mu.target; if(_at&&_at.nodeType===1&&_at.style&&_at.style.display&&_at.style.display!=='none'&&/display\s*:\s*none/.test(mu.oldValue||'')){ try{ _cgoTNode(_at); }catch(e){} } continue; } if(mu.type==='characterData'){ if(mu.target) _pend.push(mu.target); continue; } var ad=mu.addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
       if(_pend.length&&!_sched){ _sched=true; setTimeout(_flush,50); }
     });
-    function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true,characterData:true});/*★C-63: textContent 변경도 번역 (eyeDebug 등 동적 상태문구)*/ }catch(e){} }
+    function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style'],attributeOldValue:true});/*★C-63: textContent 변경도 번역 (eyeDebug 등 동적 상태문구)*/ }catch(e){} }
     if(document.body) _st(); else document.addEventListener('DOMContentLoaded',_st);
   }catch(e){}
 })();
