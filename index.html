@@ -151812,6 +151812,68 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   }, 400);
 })();
 </script>
+<script>
+/* ★ 전체 언어팩 생성기 (C-67) — 콘솔에서 cgoBuildFullLangPack('zh') 실행
+   en.json의 전체 한글 키를 /api/groq(openai/gpt-oss)로 배치 번역 → <lang>.json 다운로드.
+   이어하기 지원(localStorage 캐시), 손번역본 유지(LANG_DICTIONARY 우선). */
+window.cgoBuildFullLangPack = async function(lang, opt){
+  opt = opt || {};
+  lang = lang || 'zh';
+  var BATCH = opt.batch || 40, DELAY = opt.delay || 1200;
+  var NAMES = {zh:'Chinese (Simplified)', 'zh-TW':'Chinese (Traditional)', hk:'Cantonese (Traditional Chinese)',
+    ja:'Japanese', vi:'Vietnamese', es:'Spanish', fr:'French', de:'German', ar:'Arabic', ru:'Russian',
+    pt:'Portuguese', it:'Italian', id:'Indonesian', th:'Thai', hi:'Hindi', tr:'Turkish', nl:'Dutch',
+    uk:'Ukrainian', my:'Malay', ph:'Filipino (Tagalog)'};
+  var langName = NAMES[lang] || lang;
+  console.log('%c[전체번역] '+lang+' ('+langName+') 시작','color:#10b981;font-weight:bold');
+  // 1) en.json 키(한글) 확보
+  var en;
+  try{ var r0 = await fetch('/lang/en.json?t='+Date.now()); en = await r0.json(); }
+  catch(e){ try{ var r1=await fetch('https://raw.githubusercontent.com/gh951/CGo-Fuli/main/lang/en.json'); en=await r1.json(); }catch(e2){ console.error('en.json 로드 실패:',e2.message); return; } }
+  var keys = Object.keys(en);
+  // 2) 기존 것 유지 (손번역 zh.json + 캐시)
+  var out = {};
+  try{ if(window.LANG_DICTIONARY && LANG_DICTIONARY[lang]) Object.assign(out, LANG_DICTIONARY[lang]); }catch(e){}
+  try{ Object.assign(out, JSON.parse(localStorage.getItem('cgo_lp_'+lang)||'{}')); }catch(e){}
+  var todo = keys.filter(function(k){ return !out[k] || out[k]===k; });
+  console.log('[전체번역] 전체 '+keys.length+'개 · 기존 '+(keys.length-todo.length)+'개 유지 · 번역할 '+todo.length+'개');
+  var done = 0;
+  for(var i=0;i<todo.length;i+=BATCH){
+    var batch = todo.slice(i, i+BATCH);
+    try{
+      var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        model:'openai/gpt-oss-20b', reasoning_effort:'low', include_reasoning:false,
+        messages:[
+          {role:'system',content:'You are a professional UI localizer. Translate each Korean UI string to '+langName+'. Return ONLY a JSON array of strings, exactly same count and order as input. Keep emojis, numbers, currency, and brand/technical names unchanged: CGO-FULI, NASA, rPPG, VIP, ILI, ML-KEM-768, KakaoPay, NaverPay. For Five Elements use natural target-language terms (in Chinese: 木火土金水/五行). Never add explanations.'},
+          {role:'user',content:JSON.stringify(batch)}
+        ],
+        max_tokens:2048, temperature:0.2
+      })});
+      var data = await r.json();
+      var raw = (((data.choices||[])[0]||{}).message||{}).content||'';
+      var m = raw.match(/\[[\s\S]*\]/);
+      if(m){ var arr = JSON.parse(m[0]);
+        for(var j=0;j<batch.length;j++){ if(arr[j]&&typeof arr[j]==='string') out[batch[j]]=arr[j]; }
+      } else { console.warn('[전체번역] 배치 파싱실패 @'+i); }
+    }catch(e){ console.warn('[전체번역] 배치 실패 @'+i+':', e.message); }
+    done += batch.length;
+    if(i % (BATCH*10) === 0){
+      try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){}
+      console.log('[전체번역] 진행 '+Math.min(done,todo.length)+'/'+todo.length+' ('+Math.round(done/todo.length*100)+'%)');
+    }
+    await new Promise(function(res){ setTimeout(res, DELAY); });
+  }
+  try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){}
+  // 3) 파일 다운로드
+  var blob = new Blob([JSON.stringify(out, null, 1)], {type:'application/json'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = lang+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  console.log('%c[전체번역] 완료! 총 '+Object.keys(out).length+'개. '+lang+'.json 다운로드됨 → /lang/'+lang+'.json 에 올리세요.','color:#10b981;font-weight:bold');
+  return out;
+};
+console.log('%c[언어팩 도구] 준비됨 · 사용: cgoBuildFullLangPack(\'zh\')','color:#38bdf8');
+</script>
+
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:flex-start;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;">
