@@ -151006,9 +151006,11 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     if(t.id==='c61cam'){
       const h=parseFloat((document.getElementById('bmHeight2')||{}).value); if(!h||h<120||h>220){ alert(_cgoT('앞 화면에서 키를 먼저 입력하세요 (120~220cm)')); return; }
       $('c61cam').disabled=true;
-      try{ if(!pose) await initPose(); }catch(err){ setS('❌ '+_cgoT('엔진 실패')+': '+err.message); $('c61cam').disabled=false; return; }
+      // ★ 카메라 먼저 즉시 켜기 (포즈 엔진은 백그라운드 로딩 — 카메라 지연 제거)
       try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1080},height:{ideal:1440}}}); vid().srcObject=stream; await vid().play(); sizeC(); $('c61guide').style.display='none'; $('c61shoot').disabled=false; $('c61retry').disabled=false; $('c61cam').textContent=_cgoT('📷 켜짐'); setS(phase==='front'?_cgoT('전신 정면으로 서서 [촬영]'):_cgoT('전신 측면(90°)으로 서서 [촬영]')); }
-      catch(err){ setS('❌ '+_cgoT('카메라 실패')+': '+err.message); $('c61cam').disabled=false; }
+      catch(err){ setS('❌ '+_cgoT('카메라 실패')+': '+err.message); $('c61cam').disabled=false; return; }
+      // ★ 포즈 엔진 백그라운드 로딩 (카메라는 이미 떠 있음). 완료 후 안내문 복원
+      if(!pose){ initPose().then(function(){ setS(phase==='front'?_cgoT('전신 정면으로 서서 [촬영]'):_cgoT('전신 측면(90°)으로 서서 [촬영]')); }).catch(function(err){ setS('❌ '+_cgoT('엔진 실패')+': '+err.message); }); }
     }
     else if(t.id==='c61rEA'||t.id==='c61rWE'){ c61Region=t.id==='c61rEA'?'ea':'we';
       $('c61rEA').style.background=c61Region==='ea'?'rgba(52,211,153,.2)':'rgba(255,255,255,.05)'; $('c61rEA').style.color=c61Region==='ea'?'#34d399':'#64748b';
@@ -151026,8 +151028,9 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   });
 
   function drawVid(){ const v=vid(), vw=v.videoWidth, vh=v.videoHeight, fc=frz().getContext('2d'); const sc=Math.min(CW/vw,CH/vh),dw=vw*sc,dh=vh*sc,ox=(CW-dw)/2,oy=(CH-dh)/2; fc.fillStyle='#000';fc.fillRect(0,0,CW,CH); fc.drawImage(v,0,0,vw,vh,ox,oy,dw,dh); return {vw,vh,sc,ox,oy}; }
-  function doShoot(){
+  async function doShoot(){
     const v=vid(); if(!v.videoWidth) return;
+    if(!pose){ setS(_cgoT('⏳ 엔진 로딩...')); try{ await initPose(); }catch(err){ setS('❌ '+_cgoT('엔진 실패')+': '+err.message); return; } }
     const map=drawVid(); v.style.display='none'; frz().style.display='block'; if($('c61cross'))$('c61cross').style.display='none';
     const res=pose.detect(v);
     if(!res.landmarks||!res.landmarks.length){ setS(_cgoT('⚠️ 사람 못 찾음. 전신 보이게 다시.')); v.style.display='block'; frz().style.display='none'; return; }
