@@ -51425,6 +51425,17 @@ function _cgoApplyDictionary(lang) {
   var langNames={en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
   window._cgoQueueMiss=function(t){
     try{
+      /* ★ 누락 수집기 (C-67): cgoMissOn() 실행 시 화면에 실제로 뜬 미번역 한글을 자동 수집 */
+      if(window._cgoMissCollect && t && /[\uac00-\ud7a3]/.test(t)){
+        try{
+          var _mt=String(t).trim();
+          if(_mt.length>=2 && _mt.length<=200 && !window._cgoMissSet[_mt]){
+            window._cgoMissSet[_mt]=1; window._cgoMissCount=(window._cgoMissCount||0)+1;
+            if(window._cgoMissCount%25===0) console.log('%c[누락수집] '+window._cgoMissCount+'개','color:#fbbf24');
+            try{ localStorage.setItem('cgo_miss_'+(window._LANG||'x'), JSON.stringify(Object.keys(window._cgoMissSet))); }catch(e){}
+          }
+        }catch(e){}
+      }
       if(window._cgoAutoFillOff !== false) return;       // 기본 OFF (하이브리드 나중에 · 켜려면 _cgoAutoFillOff=false)
       if(!t||seen[t]) return;
       var L=window._LANG; if(!L||L==='ko') return;
@@ -151816,15 +151827,63 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 /* ★ 전체 언어팩 생성기 (C-67) — 콘솔에서 cgoBuildFullLangPack('zh') 실행
    en.json의 전체 한글 키를 /api/groq(openai/gpt-oss)로 배치 번역 → <lang>.json 다운로드.
    이어하기 지원(localStorage 캐시), 손번역본 유지(LANG_DICTIONARY 우선). */
+/* ★ 언어팩 도구 v3 (C-67) — 진단 + 안전저장 + 내보내기 */
+window._cgoLangName = {zh:'Chinese (Simplified)', hk:'Cantonese (Traditional Chinese)', tw:'Chinese (Traditional)',
+  ja:'Japanese', vi:'Vietnamese', es:'Spanish', fr:'French', de:'German', ar:'Arabic', ru:'Russian',
+  pt:'Portuguese', it:'Italian', id:'Indonesian', th:'Thai', hi:'Hindi', tr:'Turkish', nl:'Dutch',
+  uk:'Ukrainian', my:'Malay', ph:'Filipino (Tagalog)'};
+
+/* ① 진단: API가 왜 실패하는지 실제 응답 확인 */
+window.cgoTestGroq = async function(){
+  try{
+    var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'openai/gpt-oss-20b', messages:[{role:'system',content:'Return ONLY a JSON array.'},{role:'user',content:JSON.stringify(['대시보드','오늘의 운세'])}],
+      max_tokens:200, temperature:0.2 })});
+    var txt = await r.text();
+    console.log('%c[진단] HTTP '+r.status+' '+r.statusText,'color:'+(r.ok?'#10b981':'#ef4444')+';font-weight:bold');
+    console.log('[진단] 응답 본문:', txt.slice(0,800));
+    if(r.status===429) console.log('%c→ 요청 한도 초과(429). 시간이 지난 뒤 다시 시도하세요.','color:#fbbf24');
+    if(r.status===400) console.log('%c→ 요청 형식/토큰 문제(400).','color:#fbbf24');
+    if(r.status>=500) console.log('%c→ 서버 오류('+r.status+').','color:#fbbf24');
+    return {status:r.status, body:txt.slice(0,2000)};
+  }catch(e){ console.error('[진단] 호출 자체 실패:', e.message); return {error:e.message}; }
+};
+
+/* ② 현황 */
+window.cgoLangStatus = function(lang){
+  lang=lang||'zh';
+  var cache={}; try{ cache=JSON.parse(localStorage.getItem('cgo_lp_'+lang)||'{}'); }catch(e){}
+  var dict={}; try{ if(window.LANG_DICTIONARY&&LANG_DICTIONARY[lang]) dict=LANG_DICTIONARY[lang]; }catch(e){}
+  var merged=Object.assign({},dict,cache);
+  console.log('[현황] '+lang+' · 로드된사전 '+Object.keys(dict).length+'개 · 로컬캐시 '+Object.keys(cache).length+'개 · 합계 '+Object.keys(merged).length+'개');
+  return merged;
+};
+
+/* ③ 내보내기 (다운로드 실패 대비: 클립보드 + 새창 + 전역변수) */
+window.cgoExportLangPack = async function(lang){
+  lang=lang||'zh';
+  var data = window.cgoLangStatus(lang);
+  var json = JSON.stringify(data, null, 1);
+  window._cgoLangJSON = json;
+  try{ await navigator.clipboard.writeText(json); console.log('%c[내보내기] 클립보드 복사 완료 ('+Object.keys(data).length+'개) — 메모장에 붙여넣고 '+lang+'.json 으로 저장하세요.','color:#10b981;font-weight:bold'); }
+  catch(e){ console.log('[내보내기] 클립보드 실패 — 아래 방법 사용'); }
+  try{
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=lang+'.json'; document.body.appendChild(a); a.click(); a.remove();
+    console.log('[내보내기] 다운로드 시도됨. 안 되면 새 탭으로 열기:');
+    console.log('%c   window.open("'+url+'")','color:#38bdf8');
+    window._cgoLangURL = url;
+  }catch(e){}
+  console.log('%c[내보내기] 전역변수 window._cgoLangJSON 에도 저장됨 (복사: copy(_cgoLangJSON))','color:#38bdf8');
+  return json;
+};
+
+/* ④ 번역 생성 (안전 저장 · 429 감지 시 중단) */
 window.cgoBuildFullLangPack = async function(lang, opt){
-  opt = opt || {};
-  lang = lang || 'zh';
-  var BATCH = opt.batch || 20, DELAY = opt.delay || 900, RETRY = opt.retry || 2;
-  var NAMES = {zh:'Chinese (Simplified)', hk:'Cantonese (Traditional Chinese)', tw:'Chinese (Traditional)',
-    ja:'Japanese', vi:'Vietnamese', es:'Spanish', fr:'French', de:'German', ar:'Arabic', ru:'Russian',
-    pt:'Portuguese', it:'Italian', id:'Indonesian', th:'Thai', hi:'Hindi', tr:'Turkish', nl:'Dutch',
-    uk:'Ukrainian', my:'Malay', ph:'Filipino (Tagalog)'};
-  var langName = NAMES[lang] || lang;
+  opt = opt || {}; lang = lang || 'zh';
+  var BATCH = opt.batch || 30, DELAY = opt.delay || 1100, MAXFAIL = opt.maxfail || 12;
+  var langName = window._cgoLangName[lang] || lang;
   var KO = /[\uac00-\ud7a3]/;
   console.log('%c[전체번역] '+lang+' ('+langName+') 시작','color:#10b981;font-weight:bold');
 
@@ -151837,97 +151896,101 @@ window.cgoBuildFullLangPack = async function(lang, opt){
   try{ if(window.LANG_DICTIONARY && LANG_DICTIONARY[lang]) Object.assign(out, LANG_DICTIONARY[lang]); }catch(e){}
   try{ Object.assign(out, JSON.parse(localStorage.getItem('cgo_lp_'+lang)||'{}')); }catch(e){}
   if(opt.seed && typeof opt.seed==='object') Object.assign(out, opt.seed);
-  // 기존 값 중 불량(한글 잔존/키와 동일)은 다시 번역
   function bad(k){ var v=out[k]; return !v || v===k || KO.test(String(v)); }
   var todo = keys.filter(bad);
-  console.log('[전체번역] 전체 '+keys.length+'개 · 유지 '+(keys.length-todo.length)+'개 · 번역대상 '+todo.length+'개');
+  console.log('[전체번역] 전체 '+keys.length+' · 보유 '+(keys.length-todo.length)+' · 번역대상 '+todo.length);
+  if(!todo.length){ console.log('%c이미 완료 상태입니다. cgoExportLangPack(\''+lang+'\') 로 내보내세요.','color:#10b981'); return out; }
 
-  var SYS = 'You are a professional UI localizer. Translate each Korean UI string into '+langName+'.\n'
-    + 'RULES:\n'
-    + '1) Output ONLY a raw JSON array of strings. No markdown, no code fences, no explanation.\n'
-    + '2) The array MUST have EXACTLY the same number of items, in the same order.\n'
-    + '3) Translate EVERYTHING into '+langName+'. Never leave any Korean (Hangul) characters.\n'
-    + '4) Korean currency 원 -> write as KRW (e.g. "9,900원" -> "9,900 KRW").\n'
-    + '5) Keep unchanged: emojis, numbers, and these names: CGO-FULI, NASA, JPL, rPPG, VIP, ILI, BEI, AI, ML-KEM-768, PWA, KakaoPay, NaverPay, Google, Apple, Kakao, Naver.\n'
-    + '6) Korean proper nouns (홈택스 etc.) -> transliterate/translate naturally in '+langName+'.\n'
-    + '7) Five Elements: use natural target-language terms (Chinese: 木火土金水 / 五行).';
+  var SYS = 'Translate each Korean UI string into '+langName+'. Output ONLY a raw JSON array of strings with exactly the same count and order. No markdown, no explanation. Never leave Korean characters. Korean 원 -> KRW. Keep unchanged: emojis, numbers, CGO-FULI, NASA, JPL, rPPG, VIP, ILI, BEI, AI, ML-KEM-768, PWA, KakaoPay, NaverPay. Five Elements: use natural terms (Chinese: 木火土金水/五行).';
 
-  async function callAPI(arr){
-    var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      model:'openai/gpt-oss-20b', reasoning_effort:'low', include_reasoning:false,
-      messages:[{role:'system',content:SYS},{role:'user',content:JSON.stringify(arr)}],
-      max_tokens:4096, temperature:0.2
-    })});
-    var data = await r.json();
-    var raw = (((data.choices||[])[0]||{}).message||{}).content||'';
-    raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-    var m = raw.match(/\[[\s\S]*\]/);
-    if(!m) return null;
-    var parsed;
-    try{ parsed = JSON.parse(m[0]); }
+  function save(){
+    try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); return true; }
     catch(e){
-      var fixed = m[0].replace(/,\s*\]/,']');
-      try{ parsed = JSON.parse(fixed); }catch(e2){ return null; }
+      try{ for(var kk in localStorage){ if(kk.indexOf('cgo_lp_')===0 && kk!=='cgo_lp_'+lang) localStorage.removeItem(kk); }
+           localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); return true; }catch(e2){ return false; }
     }
-    return Array.isArray(parsed) ? parsed : null;
   }
 
-  function apply(batch, arr){
-    var n=0;
-    for(var j2=0;j2<batch.length;j2++){
-      var v = arr[j2];
-      if(v && typeof v==='string' && v.trim()){ out[batch[j2]] = v; n++; }
-    }
-    return n;
-  }
-
-  var done=0, okCount=0, failKeys=[];
+  var done=0, okCount=0, failStreak=0, stopped=false;
   for(var i2=0;i2<todo.length;i2+=BATCH){
-    var batch = todo.slice(i2, i2+BATCH);
-    var arr=null;
-    for(var t=0;t<=RETRY;t++){
-      try{ arr = await callAPI(batch); }catch(e){ arr=null; }
-      if(arr && arr.length===batch.length) break;
-      if(arr && arr.length && t===RETRY) break;
-      arr=null;
-      if(t<RETRY) await new Promise(function(res){ setTimeout(res, 700); });
-    }
-    if(arr){ okCount += apply(batch, arr); }
-    else {
-      // 폴백: 5개씩 소분할 재시도
-      var rescued=0;
-      for(var s=0;s<batch.length;s+=5){
-        var mini = batch.slice(s, s+5);
-        var marr=null;
-        try{ marr = await callAPI(mini); }catch(e){ marr=null; }
-        if(marr) rescued += apply(mini, marr);
-        await new Promise(function(res){ setTimeout(res, 400); });
+    var batch = todo.slice(i2, i2+BATCH), arr=null, status=0;
+    try{
+      var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        model:'openai/gpt-oss-20b', reasoning_effort:'low', include_reasoning:false,
+        messages:[{role:'system',content:SYS},{role:'user',content:JSON.stringify(batch)}],
+        max_tokens:2048, temperature:0.2 })});
+      status = r.status;
+      if(r.ok){
+        var data = await r.json();
+        var raw = (((data.choices||[])[0]||{}).message||{}).content||'';
+        raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+        var m = raw.match(/\[[\s\S]*\]/);
+        if(m){ try{ arr = JSON.parse(m[0]); }catch(e){ try{ arr = JSON.parse(m[0].replace(/,\s*\]/,']')); }catch(e2){ arr=null; } } }
       }
-      okCount += rescued;
-      if(!rescued) failKeys = failKeys.concat(batch);
-      console.warn('[전체번역] 배치 @'+i2+' 재시도 → 복구 '+rescued+'/'+batch.length);
+    }catch(e){ status=-1; }
+
+    if(Array.isArray(arr) && arr.length){
+      for(var j2=0;j2<batch.length;j2++){ var v=arr[j2]; if(v&&typeof v==='string'&&v.trim()){ out[batch[j2]]=v; okCount++; } }
+      failStreak=0;
+    } else {
+      failStreak++;
+      if(failStreak===3 || failStreak===MAXFAIL) console.warn('[전체번역] 연속 실패 '+failStreak+'회 (HTTP '+status+')');
+      if(status===429){ console.warn('[전체번역] 요청 한도(429) — 20초 대기'); await new Promise(function(res){setTimeout(res,20000);}); }
+      if(failStreak>=MAXFAIL){
+        stopped=true;
+        console.error('%c[전체번역] 연속 '+MAXFAIL+'회 실패 → 중단합니다. cgoTestGroq() 로 원인을 확인하세요.','color:#ef4444;font-weight:bold');
+        break;
+      }
     }
     done += batch.length;
-    if((i2/BATCH) % 20 === 0){
-      try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){
-        try{ for(var kk in localStorage){ if(kk.indexOf('cgo_lp_')===0 && kk!=='cgo_lp_'+lang) localStorage.removeItem(kk); } localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e2){}
-      }
-      console.log('[전체번역] 진행 '+Math.min(done,todo.length)+'/'+todo.length+' ('+Math.round(done/todo.length*100)+'%) · 성공 '+okCount+'개');
+    if((i2/BATCH) % 15 === 0){
+      save();
+      console.log('[전체번역] '+Math.min(done,todo.length)+'/'+todo.length+' ('+Math.round(done/todo.length*100)+'%) · 누적성공 '+okCount);
     }
     await new Promise(function(res){ setTimeout(res, DELAY); });
   }
 
-  try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){}
+  var saved = save();
   var remain = keys.filter(bad).length;
-  var blob = new Blob([JSON.stringify(out, null, 1)], {type:'application/json'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = lang+'.json';
-  document.body.appendChild(a); a.click(); a.remove();
-  console.log('%c[전체번역] 완료! 저장 '+Object.keys(out).length+'개 · 이번 성공 '+okCount+'개 · 남은 미번역 '+remain+'개','color:#10b981;font-weight:bold');
-  if(remain) console.log('%c남은 '+remain+'개는 cgoBuildFullLangPack(\''+lang+'\') 다시 실행하면 이어서 채웁니다.','color:#fbbf24');
-  window._cgoLastFail = failKeys;
+  console.log('%c[전체번역] '+(stopped?'중단':'완료')+' · 보유 '+Object.keys(out).length+'개 · 이번 성공 '+okCount+'개 · 남은 '+remain+'개','color:'+(stopped?'#ef4444':'#10b981')+';font-weight:bold');
+  if(!saved) console.warn('[전체번역] 로컬 저장 실패(용량) — 지금 바로 cgoExportLangPack(\''+lang+'\') 실행하세요.');
+  console.log('%c내보내기: cgoExportLangPack(\''+lang+'\')','color:#38bdf8');
   return out;
 };
-console.log('%c[언어팩 도구 v2] 준비됨 · 사용: cgoBuildFullLangPack(\'zh\')','color:#38bdf8');
+console.log('%c[언어팩 도구 v3] cgoTestGroq() · cgoLangStatus(\'zh\') · cgoBuildFullLangPack(\'zh\') · cgoExportLangPack(\'zh\')','color:#38bdf8');
+</script>
+
+<script>
+/* ★ 언어팩 누락 수집 도구 (C-67) — 다음 언어 작업자를 위한 핵심 도구
+   사용법: ① cgoMissOn()  ② 앱을 두루 돌아다님(모든 기능 열어보기)  ③ cgoMissReport() */
+window._cgoMissSet = {}; window._cgoMissCount = 0; window._cgoMissCollect = false;
+window.cgoMissOn = function(){
+  window._cgoMissCollect = true;
+  try{ var s=JSON.parse(localStorage.getItem('cgo_miss_'+(window._LANG||'x'))||'[]');
+       s.forEach(function(k){ window._cgoMissSet[k]=1; }); window._cgoMissCount=s.length; }catch(e){}
+  console.log('%c[누락수집] ON — 지금부터 앱을 두루 돌아다니세요. 화면에 뜨는 미번역 한글이 자동 수집됩니다.','color:#10b981;font-weight:bold');
+  console.log('%c현재 '+window._cgoMissCount+'개 수집됨 · 끝나면 cgoMissReport() 실행','color:#38bdf8');
+  return window._cgoMissCount;
+};
+window.cgoMissOff = function(){ window._cgoMissCollect=false; console.log('[누락수집] OFF · 총 '+window._cgoMissCount+'개'); return window._cgoMissCount; };
+window.cgoMissReport = function(){
+  var arr = Object.keys(window._cgoMissSet);
+  console.log('%c[누락수집] 총 '+arr.length+'개','color:#10b981;font-weight:bold');
+  var json = JSON.stringify(arr, null, 1);
+  window._cgoMissJSON = json;
+  try{ navigator.clipboard.writeText(json); console.log('%c클립보드 복사 완료 — 메모장에 붙여넣어 저장하세요','color:#10b981'); }catch(e){}
+  try{
+    var blob=new Blob([json],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='missing_'+(window._LANG||'x')+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){}
+  console.log('%c파일 다운로드 시도됨 (missing_'+(window._LANG||'x')+'.json) · 전역변수 window._cgoMissJSON','color:#38bdf8');
+  return arr;
+};
+window.cgoMissClear = function(){ window._cgoMissSet={}; window._cgoMissCount=0;
+  try{ localStorage.removeItem('cgo_miss_'+(window._LANG||'x')); }catch(e){}
+  console.log('[누락수집] 초기화 완료'); };
+console.log('%c[누락수집 도구] cgoMissOn() → 앱 순회 → cgoMissReport()','color:#38bdf8');
 </script>
 
 </body>
