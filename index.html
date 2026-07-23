@@ -151819,59 +151819,115 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 window.cgoBuildFullLangPack = async function(lang, opt){
   opt = opt || {};
   lang = lang || 'zh';
-  var BATCH = opt.batch || 40, DELAY = opt.delay || 1200;
-  var NAMES = {zh:'Chinese (Simplified)', 'zh-TW':'Chinese (Traditional)', hk:'Cantonese (Traditional Chinese)',
+  var BATCH = opt.batch || 20, DELAY = opt.delay || 900, RETRY = opt.retry || 2;
+  var NAMES = {zh:'Chinese (Simplified)', hk:'Cantonese (Traditional Chinese)', tw:'Chinese (Traditional)',
     ja:'Japanese', vi:'Vietnamese', es:'Spanish', fr:'French', de:'German', ar:'Arabic', ru:'Russian',
     pt:'Portuguese', it:'Italian', id:'Indonesian', th:'Thai', hi:'Hindi', tr:'Turkish', nl:'Dutch',
     uk:'Ukrainian', my:'Malay', ph:'Filipino (Tagalog)'};
   var langName = NAMES[lang] || lang;
+  var KO = /[\uac00-\ud7a3]/;
   console.log('%c[전체번역] '+lang+' ('+langName+') 시작','color:#10b981;font-weight:bold');
-  // 1) en.json 키(한글) 확보
+
   var en;
   try{ var r0 = await fetch('/lang/en.json?t='+Date.now()); en = await r0.json(); }
   catch(e){ try{ var r1=await fetch('https://raw.githubusercontent.com/gh951/CGo-Fuli/main/lang/en.json'); en=await r1.json(); }catch(e2){ console.error('en.json 로드 실패:',e2.message); return; } }
   var keys = Object.keys(en);
-  // 2) 기존 것 유지 (손번역 zh.json + 캐시)
+
   var out = {};
   try{ if(window.LANG_DICTIONARY && LANG_DICTIONARY[lang]) Object.assign(out, LANG_DICTIONARY[lang]); }catch(e){}
   try{ Object.assign(out, JSON.parse(localStorage.getItem('cgo_lp_'+lang)||'{}')); }catch(e){}
-  var todo = keys.filter(function(k){ return !out[k] || out[k]===k; });
-  console.log('[전체번역] 전체 '+keys.length+'개 · 기존 '+(keys.length-todo.length)+'개 유지 · 번역할 '+todo.length+'개');
-  var done = 0;
-  for(var i=0;i<todo.length;i+=BATCH){
-    var batch = todo.slice(i, i+BATCH);
-    try{
-      var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        model:'openai/gpt-oss-20b', reasoning_effort:'low', include_reasoning:false,
-        messages:[
-          {role:'system',content:'You are a professional UI localizer. Translate each Korean UI string to '+langName+'. Return ONLY a JSON array of strings, exactly same count and order as input. Keep emojis, numbers, currency, and brand/technical names unchanged: CGO-FULI, NASA, rPPG, VIP, ILI, ML-KEM-768, KakaoPay, NaverPay. For Five Elements use natural target-language terms (in Chinese: 木火土金水/五行). Never add explanations.'},
-          {role:'user',content:JSON.stringify(batch)}
-        ],
-        max_tokens:2048, temperature:0.2
-      })});
-      var data = await r.json();
-      var raw = (((data.choices||[])[0]||{}).message||{}).content||'';
-      var m = raw.match(/\[[\s\S]*\]/);
-      if(m){ var arr = JSON.parse(m[0]);
-        for(var j=0;j<batch.length;j++){ if(arr[j]&&typeof arr[j]==='string') out[batch[j]]=arr[j]; }
-      } else { console.warn('[전체번역] 배치 파싱실패 @'+i); }
-    }catch(e){ console.warn('[전체번역] 배치 실패 @'+i+':', e.message); }
+  if(opt.seed && typeof opt.seed==='object') Object.assign(out, opt.seed);
+  // 기존 값 중 불량(한글 잔존/키와 동일)은 다시 번역
+  function bad(k){ var v=out[k]; return !v || v===k || KO.test(String(v)); }
+  var todo = keys.filter(bad);
+  console.log('[전체번역] 전체 '+keys.length+'개 · 유지 '+(keys.length-todo.length)+'개 · 번역대상 '+todo.length+'개');
+
+  var SYS = 'You are a professional UI localizer. Translate each Korean UI string into '+langName+'.\n'
+    + 'RULES:\n'
+    + '1) Output ONLY a raw JSON array of strings. No markdown, no code fences, no explanation.\n'
+    + '2) The array MUST have EXACTLY the same number of items, in the same order.\n'
+    + '3) Translate EVERYTHING into '+langName+'. Never leave any Korean (Hangul) characters.\n'
+    + '4) Korean currency 원 -> write as KRW (e.g. "9,900원" -> "9,900 KRW").\n'
+    + '5) Keep unchanged: emojis, numbers, and these names: CGO-FULI, NASA, JPL, rPPG, VIP, ILI, BEI, AI, ML-KEM-768, PWA, KakaoPay, NaverPay, Google, Apple, Kakao, Naver.\n'
+    + '6) Korean proper nouns (홈택스 etc.) -> transliterate/translate naturally in '+langName+'.\n'
+    + '7) Five Elements: use natural target-language terms (Chinese: 木火土金水 / 五行).';
+
+  async function callAPI(arr){
+    var r = await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'openai/gpt-oss-20b', reasoning_effort:'low', include_reasoning:false,
+      messages:[{role:'system',content:SYS},{role:'user',content:JSON.stringify(arr)}],
+      max_tokens:4096, temperature:0.2
+    })});
+    var data = await r.json();
+    var raw = (((data.choices||[])[0]||{}).message||{}).content||'';
+    raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    var m = raw.match(/\[[\s\S]*\]/);
+    if(!m) return null;
+    var parsed;
+    try{ parsed = JSON.parse(m[0]); }
+    catch(e){
+      var fixed = m[0].replace(/,\s*\]/,']');
+      try{ parsed = JSON.parse(fixed); }catch(e2){ return null; }
+    }
+    return Array.isArray(parsed) ? parsed : null;
+  }
+
+  function apply(batch, arr){
+    var n=0;
+    for(var j2=0;j2<batch.length;j2++){
+      var v = arr[j2];
+      if(v && typeof v==='string' && v.trim()){ out[batch[j2]] = v; n++; }
+    }
+    return n;
+  }
+
+  var done=0, okCount=0, failKeys=[];
+  for(var i2=0;i2<todo.length;i2+=BATCH){
+    var batch = todo.slice(i2, i2+BATCH);
+    var arr=null;
+    for(var t=0;t<=RETRY;t++){
+      try{ arr = await callAPI(batch); }catch(e){ arr=null; }
+      if(arr && arr.length===batch.length) break;
+      if(arr && arr.length && t===RETRY) break;
+      arr=null;
+      if(t<RETRY) await new Promise(function(res){ setTimeout(res, 700); });
+    }
+    if(arr){ okCount += apply(batch, arr); }
+    else {
+      // 폴백: 5개씩 소분할 재시도
+      var rescued=0;
+      for(var s=0;s<batch.length;s+=5){
+        var mini = batch.slice(s, s+5);
+        var marr=null;
+        try{ marr = await callAPI(mini); }catch(e){ marr=null; }
+        if(marr) rescued += apply(mini, marr);
+        await new Promise(function(res){ setTimeout(res, 400); });
+      }
+      okCount += rescued;
+      if(!rescued) failKeys = failKeys.concat(batch);
+      console.warn('[전체번역] 배치 @'+i2+' 재시도 → 복구 '+rescued+'/'+batch.length);
+    }
     done += batch.length;
-    if(i % (BATCH*10) === 0){
-      try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){}
-      console.log('[전체번역] 진행 '+Math.min(done,todo.length)+'/'+todo.length+' ('+Math.round(done/todo.length*100)+'%)');
+    if((i2/BATCH) % 20 === 0){
+      try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){
+        try{ for(var kk in localStorage){ if(kk.indexOf('cgo_lp_')===0 && kk!=='cgo_lp_'+lang) localStorage.removeItem(kk); } localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e2){}
+      }
+      console.log('[전체번역] 진행 '+Math.min(done,todo.length)+'/'+todo.length+' ('+Math.round(done/todo.length*100)+'%) · 성공 '+okCount+'개');
     }
     await new Promise(function(res){ setTimeout(res, DELAY); });
   }
+
   try{ localStorage.setItem('cgo_lp_'+lang, JSON.stringify(out)); }catch(e){}
-  // 3) 파일 다운로드
+  var remain = keys.filter(bad).length;
   var blob = new Blob([JSON.stringify(out, null, 1)], {type:'application/json'});
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = lang+'.json';
   document.body.appendChild(a); a.click(); a.remove();
-  console.log('%c[전체번역] 완료! 총 '+Object.keys(out).length+'개. '+lang+'.json 다운로드됨 → /lang/'+lang+'.json 에 올리세요.','color:#10b981;font-weight:bold');
+  console.log('%c[전체번역] 완료! 저장 '+Object.keys(out).length+'개 · 이번 성공 '+okCount+'개 · 남은 미번역 '+remain+'개','color:#10b981;font-weight:bold');
+  if(remain) console.log('%c남은 '+remain+'개는 cgoBuildFullLangPack(\''+lang+'\') 다시 실행하면 이어서 채웁니다.','color:#fbbf24');
+  window._cgoLastFail = failKeys;
   return out;
 };
-console.log('%c[언어팩 도구] 준비됨 · 사용: cgoBuildFullLangPack(\'zh\')','color:#38bdf8');
+console.log('%c[언어팩 도구 v2] 준비됨 · 사용: cgoBuildFullLangPack(\'zh\')','color:#38bdf8');
 </script>
 
 </body>
