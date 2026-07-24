@@ -51400,6 +51400,14 @@ function _cgoApplyDictionary(lang) {
       function w(node){
         if(node.nodeType===3){ /* ★C-67: 한국어 원본을 노드에 영구 보존 → 언어 재전환 시 짬뽕 방지 */ if(node.__cgoKO===undefined&&/[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO=node.nodeValue; var _src=(node.__cgoKO!==undefined?node.__cgoKO:(node.nodeValue||'')); var t=(_src||'').trim(); /* ★C-67 무한루프 차단: 같은 값을 다시 대입해도 브라우저는 '변경'으로 감지 → 감시기↔번역기가 50ms마다 영원히 되먹임(CPU 상시 소모). 값이 실제로 다를 때만 쓴다. */ if(t&&(t in dict)){ var _v=dict[t]; if(node.nodeValue!==_v) node.nodeValue=_v; } else if(t&&t.length<=64&&/[\uac00-\ud7a3]/.test(t)&&node.parentNode&&node.parentNode.className&&(''+node.parentNode.className).indexOf('ac-title')>=0&&typeof _cgoT==='function'){ var _tr=_cgoT(t); if(_tr&&_tr!==t){ if(node.nodeValue!==_tr) node.nodeValue=_tr; } else if(window._cgoQueueMiss) window._cgoQueueMiss(t); } else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
         else if(node.nodeType===1){
+          /* ★C-67 통로 죽이기 (지휘자 설계) — 언어 선택 버튼은 번역 금지.
+             '한국어'·'English'·'中文'은 각 언어의 고유 이름이라 번역 대상이 아닌데,
+             사전에 '한국어'→'Korean'이 있어서 영어 적용 시 버튼 이름까지 바뀌었다.
+             그러면 사용자가 자기 언어를 못 찾고 선택 상태도 꼬인다.
+             → .p0lb(대문) / .lang-opt(상단메뉴) 안쪽은 번역기가 아예 들어가지 않는다. */
+          try{ var _cn=(''+(node.className||''));
+               if(_cn.indexOf('p0lb')>=0 || _cn.indexOf('lang-opt')>=0) return;
+               if(node.getAttribute && node.getAttribute('data-noxl')!==null) return; }catch(e){}
           if(node.getAttribute){ var A=['placeholder','title','aria-label']; if(!node.__cgoAttrKO) node.__cgoAttrKO={}; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ if(node.__cgoAttrKO[A[a]]===undefined&&/[\uac00-\ud7a3]/.test(av)) node.__cgoAttrKO[A[a]]=av; var _sa=(node.__cgoAttrKO[A[a]]!==undefined?node.__cgoAttrKO[A[a]]:av); var tv=_sa.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
           if(!skip[node.tagName]){ for(var i=0;i<node.childNodes.length;i++) w(node.childNodes[i]); }
         }
