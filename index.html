@@ -36349,6 +36349,9 @@ function _cgoReportIntroPopup(){
 
   h+='</div>';
   pop.innerHTML=h;
+  /* ★C-67 팝업 잔상 수정 — 리포트 팝업은 공통 빌더(_cgoFDIntro)를 쓰지 않아
+     '삽입 전 번역'이 아예 없었다. 화면에 붙이기 전에 번역해 한글 노출을 원천 차단. */
+  try{ if(window._cgoTranslateNode) window._cgoTranslateNode(pop); }catch(e){}
   document.body.appendChild(pop);
 }
 
@@ -45666,7 +45669,7 @@ function setLang(lang) {
   var cgd=document.getElementById('cosmicGearDesc');
   if(cgd && p.cosmic_gear_default) cgd.innerHTML=p.cosmic_gear_default;
   // data-i18n 일괄 교체 (textContent + option value)
-  (function(){var _sm={cgoip:'section_info',cgosec2:'section_cheon',cgosec3:'section_bio',cgosec4:'section_ili',cgosec5:'section_energy_book',cgosec6:'section_chat',cgosec7:'section_all'};Object.keys(_sm).forEach(function(id){var bd=document.getElementById(id);if(!bd||!bd.previousSibling)return;var tEl=bd.previousSibling.querySelector&&bd.previousSibling.querySelector('.cgo-bar-title');if(tEl&&p[_sm[id]])tEl.textContent=p[_sm[id]];});})();
+  (function(){var _sm={cgoip:'section_info',cgosec2:'section_cheon',cgosec3:'section_bio',cgosec4:'section_ili',cgosec5:'section_energy_book',cgosec6:'section_chat',cgosec7:'section_all'};/* ★C-67 섹션 바 제목 미번역 수정 — CGO_I18N의 section_* 키는 21개 언어 중 7개(zh,zh_HK,ru,id,it,tl,nl)에만 존재. en/ja/es/de/fr 등은 값이 undefined라 제목이 갱신되지 않고 이전 언어 그대로 남았다. → CGO_I18N에 없으면 한국어 원문을 언어팩(_cgoT)으로 번역해 채운다. 모든 언어 자동 대응. */var _kd={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',cgosec4:'\ud83d\udcca ILI \uc810\uc218',cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};Object.keys(_sm).forEach(function(id){var bd=document.getElementById(id);if(!bd||!bd.previousSibling)return;var tEl=bd.previousSibling.querySelector&&bd.previousSibling.querySelector('.cgo-bar-title');if(!tEl)return;var _v=p[_sm[id]];if(!_v){try{var _k=_kd[id];if(_k&&typeof _cgoT==='function'){var _t=_cgoT(_k);if(_t&&_t!==_k)_v=_t;}}catch(e){}}if(_v)tEl.textContent=_v;});})();
   document.querySelectorAll('[data-i18n]').forEach(function(el){
     var k=el.getAttribute('data-i18n');
     if(p[k]===undefined) return;
