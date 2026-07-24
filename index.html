@@ -51367,17 +51367,31 @@ function _cgoApplyDictionary(lang) {
   // 모든 텍스트 노드 순회
   function walk(node) {
     if (node.nodeType === 3) {
-      var t = (node.nodeValue||'').trim();
+      /* ★C-67 핵심 수정 — 이 함수는 '지금 화면에 떠 있는 글자'로 사전을 조회했다.
+         사전 열쇠는 한국어인데, 한 번 번역되고 나면 화면 글자는 영어·중국어다.
+         → 두 번째부터는 사전에서 못 찾아 '사전 즉시 적용: 0개'가 되고
+           18,222개를 실어놓고도 적용할 방법이 없었다.
+         → 노드에 보관된 한국어 원본(__cgoKO)에서 조회한다. (_cgoTNode와 동일 방식) */
+      if (node.__cgoKO === undefined && /[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO = node.nodeValue;
+      var _src = (node.__cgoKO !== undefined ? node.__cgoKO : (node.nodeValue||''));
+      var t = _src.trim();
       if (t in dict) {
-        node.nodeValue = dict[t];
-        count++;
+        var _v = dict[t];
+        if (node.nodeValue !== _v) { node.nodeValue = _v; count++; }   /* 같은 값이면 안 씀(루프 방지) */
       } else if (t && window._cgoQueueMiss) { window._cgoQueueMiss(t); }
     } else if (node.nodeType === 1) {
       try {
         var _cgAttrs = ['placeholder','title','aria-label'];
         for (var _ca=0; _ca<_cgAttrs.length; _ca++) {
           var _cav = node.getAttribute && node.getAttribute(_cgAttrs[_ca]);
-          if (_cav) { var _ctv = _cav.trim(); if (_ctv in dict) { node.setAttribute(_cgAttrs[_ca], dict[_ctv]); count++; } }
+          if (_cav) {
+            /* ★C-67 속성도 한국어 원본에서 조회 */
+            if (!node.__cgoAttrKO) node.__cgoAttrKO = {};
+            if (node.__cgoAttrKO[_cgAttrs[_ca]] === undefined && /[\uac00-\ud7a3]/.test(_cav)) node.__cgoAttrKO[_cgAttrs[_ca]] = _cav;
+            var _asrc = (node.__cgoAttrKO[_cgAttrs[_ca]] !== undefined ? node.__cgoAttrKO[_cgAttrs[_ca]] : _cav);
+            var _ctv = _asrc.trim();
+            if (_ctv in dict) { var _av = dict[_ctv]; if (_cav !== _av) { node.setAttribute(_cgAttrs[_ca], _av); count++; } }
+          }
         }
       } catch(e){}
       var skip = {SCRIPT:1,STYLE:1,NOSCRIPT:1,INPUT:1,TEXTAREA:1};
