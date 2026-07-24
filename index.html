@@ -152183,9 +152183,36 @@ window._cgoReTranslateAll = function(){
   };
 
   /* ② 원점 복귀 → 최종 언어 한 번만 적용 */
+  /* ★C-67 (B안) 한글 찰나 노출 제거
+     원점복귀는 짬뽕을 없애주지만, '한국어로 되돌린 순간'이 화면에 그려지면
+     한글이 번쩍 보인다. 그런데 사전이 100%인 언어끼리 오갈 때는
+     모든 글자가 목표 언어에 존재하므로 원점을 거치지 않고 덮어써도 잔재가 없다.
+     → 완성 언어끼리는 전체 되돌림을 생략하고, 목표 언어에 없는 data-i18n 키만
+       한국어로 정리한다(196개, 즉시). 불완전한 언어가 끼면 기존대로 전체 되돌림. */
+  var _COMPLETE = {ko:1, en:1, zh:1, zh_HK:1};
+  function _prepSwitch(target){
+    var prev = window._LANG || 'ko';
+    if(!(_COMPLETE[prev] && _COMPLETE[target])){ window._cgoResetToKO(); return; }
+    try{
+      if(typeof CGO_I18N==='undefined') return;
+      var p = CGO_I18N[target] || {}, ko = CGO_I18N.ko || {};
+      var a = document.querySelectorAll('[data-i18n]');
+      for(var i=0;i<a.length;i++){
+        var k=a[i].getAttribute('data-i18n');
+        if(p[k]!==undefined || ko[k]===undefined) continue;
+        if(a[i].textContent!==ko[k]) a[i].textContent=ko[k];
+      }
+      var b = document.querySelectorAll('[data-i18n-html]');
+      for(var j=0;j<b.length;j++){
+        var k2=b[j].getAttribute('data-i18n-html');
+        if(p[k2]!==undefined || ko[k2]===undefined) continue;
+        if(b[j].innerHTML!==ko[k2]) b[j].innerHTML=ko[k2];
+      }
+    }catch(e){}
+  }
   window.cgoSwitchLang = function(lang){
     try{
-      window._cgoResetToKO();
+      _prepSwitch(lang);
       window._LANG = lang;
       try{ localStorage.setItem('cgo_lang', lang); localStorage.setItem('cgo_lang_user_set','1'); }catch(e){}
       if(typeof setLang==='function') setLang(lang);
