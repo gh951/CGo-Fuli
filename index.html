@@ -152177,7 +152177,24 @@ window._cgoReTranslateAll = function(){
       }
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
-      /* 3) data-i18n 요소 — 한국어 사전으로 복원 (여기가 짬뽕의 주범이었다) */
+      /* 3) 섹션 바 제목 — setLang이 textContent로 통째 교체하는 순간
+            노드에 보관돼 있던 __cgoKO(한국어 원본)가 사라져 되돌릴 근거가 없어진다.
+            그래서 여기서만 한국어 기본값을 직접 써넣는다. (7개뿐이라 즉시 끝남) */
+      try{
+        var _KD={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',
+                 cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',
+                 cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',
+                 cgosec4:'\ud83d\udcca ILI \uc810\uc218',
+                 cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',
+                 cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',
+                 cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};
+        for(var _id in _KD){
+          var _bd=document.getElementById(_id); if(!_bd||!_bd.previousSibling) continue;
+          var _tt=_bd.previousSibling.querySelector && _bd.previousSibling.querySelector('.cgo-bar-title');
+          if(_tt && _tt.textContent!==_KD[_id]) _tt.textContent=_KD[_id];
+        }
+      }catch(e){}
+      /* 4) data-i18n 요소 — 한국어 사전으로 복원 */
       if(typeof CGO_I18N!=='undefined' && CGO_I18N.ko){
         var ko=CGO_I18N.ko;
         var a=document.querySelectorAll('[data-i18n]');
