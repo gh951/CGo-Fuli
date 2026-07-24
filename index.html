@@ -5073,7 +5073,12 @@ function updateTransitSectionWithNASA(planets) {
           }
         }
 
-        function initSections(){
+        /* ★C-67 특허 원칙 적용 (지휘자 설계) — 섹션 바는 '태어날 때부터 한국어'로 고정.
+     기존: CGO_I18N[현재언어] 로 바를 만들어서, 만든 시점의 언어가 글자에 박혀버렸다.
+           → 한국어 원본이 없으니 언어를 바꿔도 되돌릴 수 없어 마지막까지 한자가 남았다.
+     변경: 바는 무조건 한국어로 태어나고, 번역은 기존 파이프라인 하나만 담당한다.
+           → 다른 언어가 끼어들 통로 자체를 죽였다. */
+  function initSections(){
           var ip   = document.getElementById('sec-ip');
           var cheon= document.getElementById('sec-cheon');
           var bio  = document.getElementById('sec-bio');
@@ -5106,7 +5111,7 @@ function updateTransitSectionWithNASA(planets) {
           // ── STEP 1: sec-ip 컨테이너 자체를 아코디언화 ──
           // sec-ip 는 <div class="input-panel"> 컨테이너 — 내용이 안에 있음
           var ipParent = ip.parentNode;
-          var ipBar  = makeBar(_sp.section_info||'📋 정보 입력 & 가입','cgoip',false);
+          var ipBar  = makeBar('📋 정보 입력 & 가입','cgoip',false);
           try{ ipBar.classList.add('cgo-bar-signup'); }catch(e){}  /* ★ C-63: 이 바만 강조 (가입 유도) */
           var ipWrap = document.createElement('div');
           ipWrap.id = 'cgoip'; ipWrap.className = 'cgo-sec-bd';
@@ -5144,13 +5149,13 @@ function updateTransitSectionWithNASA(planets) {
           }
 
           // ── STEP 4: 각 섹션 아코디언 생성 ──
-          wrapSection(cheon, bio,   'cgosec2', _sp.section_cheon       ||'🌌 천지인 에너지');
-          wrapSection(bio,   ili,   'cgosec3', _sp.section_bio         ||'🧬 생체 스캔');
+          wrapSection(cheon, bio,   'cgosec2', '🌌 천지인 에너지');
+          wrapSection(bio,   ili,   'cgosec3', '🧬 생체 스캔');
       setTimeout(function(){try{var _bd=document.getElementById('cgosec3');if(_bd){_bd.style.display='none';var _bar=_bd.previousElementSibling;if(_bar)_bar.style.display='none';}var _hq=document.getElementById('qn3');if(_hq)_hq.style.display='none';}catch(e){}},900); /* 생체스캔 대시보드 제거: 바+본문+퀵네비 (STEP5 후) */
-          wrapSection(ili,   enrg,  'cgosec4', _sp.section_ili         ||'📊 ILI 점수');
-          wrapSection(enrg,  chat,  'cgosec5', _sp.section_energy_book ||'✦ CGO-FULI 에너지의 서');
-          wrapSection(chat,  all,   'cgosec6', _sp.section_chat        ||'💬 CGO 메신저');
-          wrapSection(all,   null,  'cgosec7', _sp.section_all         ||'✦ 전체 기능 — 정보 입력 후 사용');
+          wrapSection(ili,   enrg,  'cgosec4', '📊 ILI 점수');
+          wrapSection(enrg,  chat,  'cgosec5', '✦ CGO-FULI 에너지의 서');
+          wrapSection(chat,  all,   'cgosec6', '💬 CGO 메신저');
+          wrapSection(all,   null,  'cgosec7', '✦ 전체 기능 — 정보 입력 후 사용');
           // ★ C-40 박입 ⑪ v4 — 대장님 명령: cgosec5 결과물만 숨김 (화살표 ID 기반 정확 매칭)
           // makeBar는 화살표에 unique ID 'cgo-arr-{wrapId}'를 박입함. 그 부모 = 헤더 바
           setTimeout(function(){
@@ -152138,24 +152143,7 @@ window._cgoReTranslateAll = function(){
       if(typeof window._cgoRestoreKO==='function'){ try{ window._cgoRestoreKO(document.body); }catch(e){} }
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
-      /* 3) 섹션 바 제목 — initSections가 '만들 때의 언어'로 글자를 박아 넣어서
-            한국어 원본이 노드에 없다(=복원 불가). 여기서 한국어 기본값으로 강제 복원한다.
-            (📋 정보 입력 & 가입 / ✦ 전체 기능 — 이 두 줄이 마지막까지 한자로 남던 원인) */
-      try{
-        var _kd={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',
-                 cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',
-                 cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',
-                 cgosec4:'\ud83d\udcca ILI \uc810\uc218',
-                 cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',
-                 cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',
-                 cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};
-        Object.keys(_kd).forEach(function(id){
-          var bd=document.getElementById(id); if(!bd||!bd.previousSibling) return;
-          var tEl=bd.previousSibling.querySelector && bd.previousSibling.querySelector('.cgo-bar-title');
-          if(tEl && tEl.textContent!==_kd[id]) tEl.textContent=_kd[id];
-        });
-      }catch(e){}
-      /* 4) data-i18n 요소 — 한국어 사전으로 복원 */
+      /* 3) data-i18n 요소 — 한국어 사전으로 복원 (여기가 짬뽕의 주범이었다) */
       if(typeof CGO_I18N!=='undefined' && CGO_I18N.ko){
         var ko=CGO_I18N.ko;
         var a=document.querySelectorAll('[data-i18n]');
