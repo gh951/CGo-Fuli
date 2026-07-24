@@ -132075,7 +132075,7 @@ function cgpShow(){
        (안개·역사·PIN·회원가입·결제)만 스킵해서 대시보드로 직행한다. 아래 기존 의식 코드는
        삭제하지 않고 그대로 보존(도달만 안 함). 옛 흐름 복원: window._cgoSkipCeremony=false */
     if(window._cgoSkipCeremony!==false){
-      /* ★C-67 파이프라인: 대문에서 여러 언어를 눌러본 흔적을 지우고 최종 언어만 적용 */ try{ if(typeof window._cgoResetToKO==='function') window._cgoResetToKO(); }catch(e){} try{ if(_p0Lang && _p0Lang!=='ko' && typeof setLang==='function') setLang(_p0Lang); }catch(e){}
+      /* ★C-67 파이프라인: 대문에서 여러 언어를 눌러본 흔적을 지우고 최종 언어만 적용 */ try{ if(typeof window._cgoResetToKO==='function') window._cgoResetToKO(); }catch(e){} try{ if(_p0Lang && _p0Lang!=='ko' && typeof setLang==='function') setLang(_p0Lang); }catch(e){} /* ★C-67 한국어-키 data-i18n 81개도 입장 시 함께 적용 */ try{ if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(_p0Lang); }catch(e){}
       setTimeout(function(){
         try{ document.body.style.background=''; }catch(e){} /* ★ C-63: 밝은 민트 body 잔상 제거 → 어두운 테마 복구 (원래 cgoShowEntPw에서 하던 것) */
         if(typeof _cgoEntranceDone==='function') _cgoEntranceDone();
@@ -152156,6 +152156,47 @@ window._cgoReTranslateAll = function(){
    해결: 덧칠하지 말고 → ① 한국어 원점으로 완전 복귀 → ② 최종 언어 한 번만 적용.
          입장할 때와 언어를 바꿀 때만 실행되므로 평소 동작에는 영향이 없다. */
 (function(){
+  /* ★C-67 구조적 결함 수정 — data-i18n 166개 중 81개는 '표식 이름이 곧 한국어 원문'이다.
+     (예: data-i18n="3중 융합 리딩", "C-61 세무·회계", "50 역학 × NASA·기상")
+     앱의 모든 언어적용 코드가 `if(CGO_I18N[lang][key]===undefined) return;` 이라
+     이 81개는 한 번도 갱신되지 않고 '마지막에 칠해진 언어'가 그대로 남았다.
+     → 영어→중국어 시 영어가, 영어→한국어 시 영어가 남던 원인.
+     열쇠가 한국어이므로 언어팩(zh/en/zh_HK)에 100% 존재한다. 여기서 직접 처리한다. */
+  window._cgoApplyKeyedI18n = function(lang){
+    try{
+      var L = lang || window._LANG || 'ko';
+      var dict = (L!=='ko' && typeof LANG_DICTIONARY!=='undefined') ? (LANG_DICTIONARY[L]||null) : null;
+      var p = (typeof CGO_I18N!=='undefined' && CGO_I18N[L]) ? CGO_I18N[L] : {};
+      var KOre = /[\uac00-\ud7a3]/;
+      function run(attr, prop){
+        var a = document.querySelectorAll('['+attr+']');
+        for(var i=0;i<a.length;i++){
+          var el=a[i], k=el.getAttribute(attr);
+          if(!k || !KOre.test(k)) continue;      /* 한국어 열쇠만 대상 */
+          if(p[k]!==undefined) continue;         /* CGO_I18N이 맡은 건 건드리지 않음 */
+          var v = (dict && dict[k]) ? dict[k] : k;   /* 없으면 한국어 원문(=열쇠) */
+          if(el[prop]!==v) el[prop]=v;
+        }
+      }
+      run('data-i18n','textContent');
+      run('data-i18n-html','innerHTML');
+    }catch(e){}
+  };
+
+  /* 지금 눈에 보이는 영역만 모은다 (특허 원칙) */
+  window._cgoVisibleRoots = function(){
+    var r=[];
+    try{
+      var a=document.querySelector('.page.active'); if(a) r.push(a);
+      var t=document.querySelector('.topbar');      if(t) r.push(t);
+      var s=document.querySelector('.sidebar');     if(s) r.push(s);
+      var m=document.getElementById('langMenu');    if(m) r.push(m);
+      var p=document.getElementById('phase0');      if(p && p.style.display!=='none') r.push(p);
+    }catch(e){}
+    if(!r.length) r=[document.body];
+    return r;
+  };
+
   /* ① 화면 전체를 한국어 원점으로 되돌린다 */
   window._cgoResetToKO = function(){
     try{
@@ -152163,15 +152204,7 @@ window._cgoReTranslateAll = function(){
             ★C-67 특허 원칙: 문서 전체(10.7MB)가 아니라 '지금 보이는 곳'만 되돌린다.
               · 화면 밖 페이지는 어차피 열 때 번역되므로 지금 만질 이유가 없다
               · 작업량이 50배 이상 줄어 브라우저가 멈추지 않고, 한글 노출 순간도 짧다 */
-      var _roots=[];
-      try{
-        var _act=document.querySelector('.page.active'); if(_act) _roots.push(_act);
-        var _tb=document.querySelector('.topbar'); if(_tb) _roots.push(_tb);
-        var _sb=document.querySelector('.sidebar'); if(_sb) _roots.push(_sb);
-        var _lm=document.getElementById('langMenu'); if(_lm) _roots.push(_lm);
-        var _p0=document.getElementById('phase0'); if(_p0 && _p0.style.display!=='none') _roots.push(_p0);
-      }catch(e){}
-      if(!_roots.length) _roots=[document.body];
+      var _roots = window._cgoVisibleRoots();
       if(typeof window._cgoRestoreKO==='function'){
         for(var _r=0;_r<_roots.length;_r++){ try{ window._cgoRestoreKO(_roots[_r]); }catch(e){} }
       }
@@ -152194,7 +152227,9 @@ window._cgoReTranslateAll = function(){
           if(_tt && _tt.textContent!==_KD[_id]) _tt.textContent=_KD[_id];
         }
       }catch(e){}
-      /* 4) data-i18n 요소 — 한국어 사전으로 복원 */
+      /* 4) 한국어-키 data-i18n 81개 — 열쇠 자체가 한국어이므로 그대로 되돌린다 */
+      try{ if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n('ko'); }catch(e){}
+      /* 5) data-i18n 요소 — 한국어 사전으로 복원 */
       if(typeof CGO_I18N!=='undefined' && CGO_I18N.ko){
         var ko=CGO_I18N.ko;
         var a=document.querySelectorAll('[data-i18n]');
@@ -152247,10 +152282,25 @@ window._cgoReTranslateAll = function(){
       window._LANG = lang;
       try{ localStorage.setItem('cgo_lang', lang); localStorage.setItem('cgo_lang_user_set','1'); }catch(e){}
       if(typeof setLang==='function') setLang(lang);
+      /* ★C-67 한국어 잔상 제거 — setLang은 data-i18n만 즉시 바꾸고
+         '일반 글자'는 뒤늦게(setTimeout) 번역한다. 그 틈에 브라우저가 화면을 그리면
+         원점복귀로 되돌려둔 한국어가 번쩍 보인다.
+         → 같은 작업(task) 안에서 보이는 영역 글자까지 끝내면 중간 페인트가 없어 잔상이 사라진다. */
+      try{
+        if(lang!=='ko' && typeof window._cgoTranslateNode==='function'){
+          var _vr=window._cgoVisibleRoots();
+          for(var _i=0;_i<_vr.length;_i++) window._cgoTranslateNode(_vr[_i]);
+        }
+        /* ★ 한국어-키 data-i18n 81개도 같은 작업 안에서 처리 (혼합 원천 차단) */
+        if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(lang);
+      }catch(e){}
       /* 사전 로드가 늦을 수 있어 한 번 더 */
       setTimeout(function(){ try{ if(window._LANG===lang && typeof setLang==='function') setLang(lang); }catch(e){} }, 700);
     }catch(e){ try{ if(typeof setLang==='function') setLang(lang); }catch(_){} }
   };
+  /* 부팅 직후에도 한 번 적용 — 저장된 언어로 들어올 때 81개가 한국어로 남지 않도록 */
+  setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 1200);
+  setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 3000);
   console.log('%c[언어 파이프라인] 원점복귀 → 단일적용 준비 완료','color:#10b981');
 })();
 </script>
