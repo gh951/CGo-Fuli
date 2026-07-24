@@ -152080,6 +152080,11 @@ window._cgoReTranslateAll = function(){
   var IDLE = window.requestIdleCallback || function(f){ return setTimeout(f,16); };
 
   /* 페이지 하나를 조각내어 예열 (프레임 블로킹 방지) */
+  /* ★C-67 언어가 바뀌면 예열 기록을 지운다.
+     기존: 중국어로 예열해둔 페이지는 영어로 바꿔도 W[id]=1 이라 '이미 완료'로 건너뛰었다.
+           → 그 페이지를 열면 중국어가 그대로 나왔다. */
+  window._cgoWarmReset = function(){ try{ W = {}; }catch(e){} };
+
   window._cgoWarmPage = function(pageId, cb){
     try{
       if(!pageId) return;
@@ -152293,6 +152298,8 @@ window._cgoReTranslateAll = function(){
         }
         /* ★ 한국어-키 data-i18n 81개도 같은 작업 안에서 처리 (혼합 원천 차단) */
         if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(lang);
+        /* ★ 안 보이는 페이지들의 예열 기록을 지워 새 언어로 다시 준비되게 한다 */
+        if(typeof window._cgoWarmReset==='function') window._cgoWarmReset();
       }catch(e){}
       /* 사전 로드가 늦을 수 있어 한 번 더 */
       setTimeout(function(){ try{ if(window._LANG===lang && typeof setLang==='function') setLang(lang); }catch(e){} }, 700);
@@ -152369,6 +152376,51 @@ window._cgoReTranslateAll = function(){
   document.addEventListener('DOMContentLoaded', _guard);
   setTimeout(_guard, 300);
   setInterval(_guard, 4000);   /* 최후 안전망 — 부하 거의 없음 */
+})();
+</script>
+
+<script>
+/* ★C-67 페이지 부활 감시기 (지휘자 설계 ③단계)
+   특허 원칙: 보이는 것만 살리고 나머지는 죽여둔다 → 그래서 빠르다.
+   그런데 '죽은 페이지를 다시 살리는 순간' 번역을 보장하는 장치가 없었다.
+     · 예열이 우연히 끝난 페이지 → 번역됨
+     · 예열 전에 열린 페이지     → 이전 언어 그대로   ← 들쭉날쭉의 원인
+   해결: 페이지에 active가 붙는 '그 순간'을 감지해 번역을 보장한다.
+        감시기 콜백은 브라우저가 그리기 직전에 실행되므로 사용자 눈엔 안 보인다. */
+(function(){
+  function revive(pg){
+    try{
+      var L = window._LANG;
+      if(!L || L==='ko') return;
+      /* 예열 엔진으로 처리(프레임당 8ms 분할) — 큰 페이지도 멈추지 않는다 */
+      if(pg.id && typeof window._cgoWarmPage==='function'){ window._cgoWarmPage(pg.id); }
+      else if(typeof window._cgoTranslateNode==='function'){ window._cgoTranslateNode(pg); }
+      if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(L);
+    }catch(e){}
+  }
+  function attach(){
+    try{
+      var pages = document.querySelectorAll('.page');
+      if(!pages.length) return false;
+      var mo = new MutationObserver(function(muts){
+        for(var i=0;i<muts.length;i++){
+          var t = muts[i].target;
+          try{ if(t.classList && t.classList.contains('active')) revive(t); }catch(e){}
+        }
+      });
+      for(var i=0;i<pages.length;i++){
+        mo.observe(pages[i], {attributes:true, attributeFilter:['class']});
+      }
+      /* 지금 켜져 있는 페이지도 한 번 */
+      var act = document.querySelector('.page.active'); if(act) revive(act);
+      console.log('%c[페이지 부활 감시기] '+pages.length+'개 페이지 감시 시작','color:#10b981');
+      return true;
+    }catch(e){ return false; }
+  }
+  (function boot(n){
+    if(attach()) return;
+    if((n||0) < 60) setTimeout(function(){ boot((n||0)+1); }, 100);
+  })(0);
 })();
 </script>
 
