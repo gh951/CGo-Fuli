@@ -51374,7 +51374,7 @@ function _cgoApplyDictionary(lang) {
       var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict) return;
       var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
       function w(node){
-        if(node.nodeType===3){ /* ★C-67: 한국어 원본을 노드에 영구 보존 → 언어 재전환 시 짬뽕 방지 */ if(node.__cgoKO===undefined&&/[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO=node.nodeValue; var _src=(node.__cgoKO!==undefined?node.__cgoKO:(node.nodeValue||'')); var t=(_src||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; else if(t&&t.length<=64&&/[\uac00-\ud7a3]/.test(t)&&node.parentNode&&node.parentNode.className&&(''+node.parentNode.className).indexOf('ac-title')>=0&&typeof _cgoT==='function'){ var _tr=_cgoT(t); if(_tr&&_tr!==t) node.nodeValue=_tr; else if(window._cgoQueueMiss) window._cgoQueueMiss(t); } else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
+        if(node.nodeType===3){ /* ★C-67: 한국어 원본을 노드에 영구 보존 → 언어 재전환 시 짬뽕 방지 */ if(node.__cgoKO===undefined&&/[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO=node.nodeValue; var _src=(node.__cgoKO!==undefined?node.__cgoKO:(node.nodeValue||'')); var t=(_src||'').trim(); /* ★C-67 무한루프 차단: 값이 같은데도 대입하면 characterData 변경이 다시 감지돼 감시기↔번역기가 영원히 되먹임 → 값이 실제로 다를 때만 쓴다 */ if(t&&(t in dict)){ var _v=dict[t]; if(node.nodeValue!==_v) node.nodeValue=_v; } else if(t&&t.length<=64&&/[\uac00-\ud7a3]/.test(t)&&node.parentNode&&node.parentNode.className&&(''+node.parentNode.className).indexOf('ac-title')>=0&&typeof _cgoT==='function'){ var _tr=_cgoT(t); if(_tr&&_tr!==t){ if(node.nodeValue!==_tr) node.nodeValue=_tr; } else if(window._cgoQueueMiss) window._cgoQueueMiss(t); } else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
         else if(node.nodeType===1){
           if(node.getAttribute){ var A=['placeholder','title','aria-label']; if(!node.__cgoAttrKO) node.__cgoAttrKO={}; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ if(node.__cgoAttrKO[A[a]]===undefined&&/[\uac00-\ud7a3]/.test(av)) node.__cgoAttrKO[A[a]]=av; var _sa=(node.__cgoAttrKO[A[a]]!==undefined?node.__cgoAttrKO[A[a]]:av); var tv=_sa.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
           if(!skip[node.tagName]){ for(var i=0;i<node.childNodes.length;i++) w(node.childNodes[i]); }
@@ -51390,7 +51390,7 @@ function _cgoApplyDictionary(lang) {
     var mo=new MutationObserver(function(muts){
       var L=window._LANG; if(!L||L==='ko') return;
       for(var m=0;m<muts.length;m++){ var mu=muts[m]; if(mu.type==='characterData'){ if(mu.target) _pend.push(mu.target); continue; } var ad=mu.addedNodes; for(var n=0;n<ad.length;n++){ var x=ad[n]; if(x.nodeType===1||x.nodeType===3) _pend.push(x); } }
-      if(_pend.length&&!_sched){ _sched=true; /* ★C-67 잔상 제거: setTimeout(50ms)는 브라우저가 3프레임 그린 뒤 번역 → 한글 번쩍임. 마이크로태스크는 페인트 직전에 실행되어 한글이 화면에 뜨지 않음 */ if(window.queueMicrotask){ queueMicrotask(_flush); } else if(window.Promise){ Promise.resolve().then(_flush); } else { setTimeout(_flush,0); } }
+      if(_pend.length&&!_sched){ _sched=true; setTimeout(_flush,50); }
     });
     function _st(){ try{ if(document.body) mo.observe(document.body,{childList:true,subtree:true,characterData:true});/*★C-63: textContent 변경도 번역 (eyeDebug 등 동적 상태문구)*/ }catch(e){} }
     if(document.body) _st(); else document.addEventListener('DOMContentLoaded',_st);
