@@ -152210,10 +152210,40 @@ window._cgoReTranslateAll = function(){
       }
     }catch(e){}
   };
-  /* 번역이 지나간 뒤 곧바로 되돌린다 */
-  setInterval(window._cgoFixLangLabels, 700);
-  setTimeout(window._cgoFixLangLabels, 300);
-  document.addEventListener('DOMContentLoaded', window._cgoFixLangLabels);
+  /* ★ 즉시 복구 — 0.7초 폴링은 그 사이 잘못된 이름이 보인다.
+        감시기를 언어 버튼에만 붙여 '글자가 바뀌는 순간' 되돌린다.
+        감시기 콜백은 브라우저가 화면을 그리기 직전에 실행되므로 사용자 눈엔 안 보인다.
+        (값이 같으면 쓰지 않으므로 되먹임 루프도 생기지 않는다) */
+  var _guarding=false;
+  function _guard(){
+    if(_guarding) return; _guarding=true;
+    try{ window._cgoFixLangLabels(); }catch(e){}
+    _guarding=false;
+  }
+  function attach(){
+    try{
+      var targets=[];
+      var a=document.querySelectorAll('.p0lb');
+      for(var i=0;i<a.length;i++) targets.push(a[i]);
+      for(var k in MN){ var el=document.getElementById('langOpt-'+k); if(el) targets.push(el); }
+      if(!targets.length) return false;
+      var mo=new MutationObserver(_guard);
+      for(var j=0;j<targets.length;j++){
+        mo.observe(targets[j], {childList:true, subtree:true, characterData:true});
+      }
+      _guard();
+      return true;
+    }catch(e){ return false; }
+  }
+  /* 버튼이 생기는 즉시 감시 시작 */
+  (function boot(n){
+    if(attach()) return;
+    if((n||0)<40) setTimeout(function(){ boot((n||0)+1); }, 50);
+  })(0);
+  /* 언어 전환 직후에도 한 번 (감시기가 놓칠 경우 대비) */
+  document.addEventListener('DOMContentLoaded', _guard);
+  setTimeout(_guard, 300);
+  setInterval(_guard, 4000);   /* 최후 안전망 — 부하 거의 없음 */
 })();
 </script>
 
