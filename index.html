@@ -51374,9 +51374,9 @@ function _cgoApplyDictionary(lang) {
       var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict) return;
       var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
       function w(node){
-        if(node.nodeType===3){ var t=(node.nodeValue||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; else if(t&&t.length<=64&&/[\uac00-\ud7a3]/.test(t)&&node.parentNode&&node.parentNode.className&&(''+node.parentNode.className).indexOf('ac-title')>=0&&typeof _cgoT==='function'){ var _tr=_cgoT(t); if(_tr&&_tr!==t) node.nodeValue=_tr; else if(window._cgoQueueMiss) window._cgoQueueMiss(t); } else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
+        if(node.nodeType===3){ /* ★C-67: 한국어 원본을 노드에 영구 보존 → 언어 재전환 시 짬뽕 방지 */ if(node.__cgoKO===undefined&&/[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO=node.nodeValue; var _src=(node.__cgoKO!==undefined?node.__cgoKO:(node.nodeValue||'')); var t=(_src||'').trim(); if(t&&(t in dict)) node.nodeValue=dict[t]; else if(t&&t.length<=64&&/[\uac00-\ud7a3]/.test(t)&&node.parentNode&&node.parentNode.className&&(''+node.parentNode.className).indexOf('ac-title')>=0&&typeof _cgoT==='function'){ var _tr=_cgoT(t); if(_tr&&_tr!==t) node.nodeValue=_tr; else if(window._cgoQueueMiss) window._cgoQueueMiss(t); } else if(t&&window._cgoQueueMiss) window._cgoQueueMiss(t); }
         else if(node.nodeType===1){
-          if(node.getAttribute){ var A=['placeholder','title','aria-label']; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ var tv=av.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
+          if(node.getAttribute){ var A=['placeholder','title','aria-label']; if(!node.__cgoAttrKO) node.__cgoAttrKO={}; for(var a=0;a<A.length;a++){ var av=node.getAttribute(A[a]); if(av){ if(node.__cgoAttrKO[A[a]]===undefined&&/[\uac00-\ud7a3]/.test(av)) node.__cgoAttrKO[A[a]]=av; var _sa=(node.__cgoAttrKO[A[a]]!==undefined?node.__cgoAttrKO[A[a]]:av); var tv=_sa.trim(); if(tv in dict) node.setAttribute(A[a],dict[tv]); } } }
           if(!skip[node.tagName]){ for(var i=0;i<node.childNodes.length;i++) w(node.childNodes[i]); }
         }
       }
@@ -151991,6 +151991,40 @@ window.cgoMissClear = function(){ window._cgoMissSet={}; window._cgoMissCount=0;
   try{ localStorage.removeItem('cgo_miss_'+(window._LANG||'x')); }catch(e){}
   console.log('[누락수집] 초기화 완료'); };
 console.log('%c[누락수집 도구] cgoMissOn() → 앱 순회 → cgoMissReport()','color:#38bdf8');
+</script>
+
+<script>
+/* ★C-67 언어 재전환 짬뽕 방지 — 동적 노드 한국어 복원 + 전체 재번역 */
+window._cgoRestoreKO = function(root){
+  try{
+    var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
+    (function w(n){
+      if(n.nodeType===3){ if(n.__cgoKO!==undefined) n.nodeValue=n.__cgoKO; }
+      else if(n.nodeType===1){
+        if(n.__cgoAttrKO){ for(var k in n.__cgoAttrKO){ try{ n.setAttribute(k,n.__cgoAttrKO[k]); }catch(e){} } }
+        if(!skip[n.tagName]){ for(var i=0;i<n.childNodes.length;i++) w(n.childNodes[i]); }
+      }
+    })(root||document.body);
+  }catch(e){}
+};
+/* 언어 전환 후 전체 재번역 — 저장된 한국어 원본에서 새 언어로 다시 그림 */
+window._cgoReTranslateAll = function(){
+  try{
+    window._cgoRestoreKO(document.body);
+    if(typeof _cgoRestoreTexts==='function') _cgoRestoreTexts();
+    var L=window._LANG;
+    if(L&&L!=='ko'&&typeof window._cgoTranslateNode==='function') window._cgoTranslateNode(document.body);
+  }catch(e){}
+};
+/* 언어 변경 감지 → 자동 재번역 (0.4초 후 1회) */
+(function(){
+  var _last=window._LANG;
+  setInterval(function(){
+    try{
+      if(window._LANG!==_last){ _last=window._LANG; setTimeout(window._cgoReTranslateAll,400); }
+    }catch(e){}
+  },300);
+})();
 </script>
 
 </body>
