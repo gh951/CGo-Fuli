@@ -152121,6 +152121,61 @@ window._cgoReTranslateAll = function(){
 })();
 </script>
 
+<script>
+/* ★C-67 언어 찌꺼기 최종 제거 — data-i18n 경로
+   문제: 앱 곳곳(10곳)에서 [data-i18n] 요소를 CGO_I18N[lang][key] 로 갱신하는데
+         모두 `if(p[k]!==undefined)` 조건이라, 해당 언어에 그 키가 없으면
+         갱신을 건너뛰고 '직전 언어 글자'가 그대로 남는다.
+         대문에서 여러 언어를 눌러보면 힌디·러시아·영어가 층층이 쌓여 뒤섞였다.
+   해결: 언어 적용 직후 한 번 더 훑어서, 해당 언어에 없는 키는
+         한국어 원문을 언어팩(_cgoT)으로 번역해 채우고, 그래도 없으면 한국어로.
+         → 화면은 항상 '선택 언어 + 한국어' 두 가지로만 유지된다. */
+(function(){
+  function resolve(key, L, p, ko){
+    if(p && p[key]!==undefined) return null;          /* 해당 언어에 있으면 건드리지 않음 */
+    if(!ko || ko[key]===undefined) return null;       /* 한국어 원문도 없으면 포기 */
+    var src = ko[key];
+    if(L && L!=='ko' && typeof _cgoT==='function'){
+      try{ var t=_cgoT(src); if(t && t!==src) return t; }catch(e){}
+    }
+    return src;                                        /* 언어팩에도 없으면 한국어 */
+  }
+  window._cgoI18nFallback = function(){
+    try{
+      if(typeof CGO_I18N==='undefined') return;
+      var L  = window._LANG || 'ko';
+      var p  = CGO_I18N[L] || {};
+      var ko = CGO_I18N.ko || {};
+      var a = document.querySelectorAll('[data-i18n]');
+      for(var i=0;i<a.length;i++){
+        var el=a[i], k=el.getAttribute('data-i18n');
+        var v=resolve(k, L, p, ko);
+        if(v!==null && el.textContent!==v) el.textContent=v;
+      }
+      var b = document.querySelectorAll('[data-i18n-html]');
+      for(var j=0;j<b.length;j++){
+        var e2=b[j], k2=e2.getAttribute('data-i18n-html');
+        var v2=resolve(k2, L, p, ko);
+        if(v2!==null && e2.innerHTML!==v2) e2.innerHTML=v2;
+      }
+    }catch(e){}
+  };
+  /* 언어가 바뀌면 적용이 끝난 뒤 한 번 훑는다 */
+  var _last=window._LANG;
+  setInterval(function(){
+    try{
+      if(window._LANG!==_last){
+        _last=window._LANG;
+        setTimeout(window._cgoI18nFallback, 600);
+        setTimeout(window._cgoI18nFallback, 1800);
+      }
+    }catch(e){}
+  }, 400);
+  /* 최초 진입 시에도 한 번 */
+  setTimeout(function(){ try{ window._cgoI18nFallback(); }catch(e){} }, 2500);
+})();
+</script>
+
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:flex-start;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;">
