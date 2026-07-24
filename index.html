@@ -152138,7 +152138,24 @@ window._cgoReTranslateAll = function(){
       if(typeof window._cgoRestoreKO==='function'){ try{ window._cgoRestoreKO(document.body); }catch(e){} }
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
-      /* 3) data-i18n 요소 — 한국어 사전으로 복원 (여기가 짬뽕의 주범이었다) */
+      /* 3) 섹션 바 제목 — initSections가 '만들 때의 언어'로 글자를 박아 넣어서
+            한국어 원본이 노드에 없다(=복원 불가). 여기서 한국어 기본값으로 강제 복원한다.
+            (📋 정보 입력 & 가입 / ✦ 전체 기능 — 이 두 줄이 마지막까지 한자로 남던 원인) */
+      try{
+        var _kd={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',
+                 cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',
+                 cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',
+                 cgosec4:'\ud83d\udcca ILI \uc810\uc218',
+                 cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',
+                 cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',
+                 cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};
+        Object.keys(_kd).forEach(function(id){
+          var bd=document.getElementById(id); if(!bd||!bd.previousSibling) return;
+          var tEl=bd.previousSibling.querySelector && bd.previousSibling.querySelector('.cgo-bar-title');
+          if(tEl && tEl.textContent!==_kd[id]) tEl.textContent=_kd[id];
+        });
+      }catch(e){}
+      /* 4) data-i18n 요소 — 한국어 사전으로 복원 */
       if(typeof CGO_I18N!=='undefined' && CGO_I18N.ko){
         var ko=CGO_I18N.ko;
         var a=document.querySelectorAll('[data-i18n]');
