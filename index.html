@@ -45674,7 +45674,7 @@ function setLang(lang) {
   var cgd=document.getElementById('cosmicGearDesc');
   if(cgd && p.cosmic_gear_default) cgd.innerHTML=p.cosmic_gear_default;
   // data-i18n 일괄 교체 (textContent + option value)
-  (function(){var _sm={cgoip:'section_info',cgosec2:'section_cheon',cgosec3:'section_bio',cgosec4:'section_ili',cgosec5:'section_energy_book',cgosec6:'section_chat',cgosec7:'section_all'};/* ★C-67 섹션 바 제목 미번역 수정 — CGO_I18N의 section_* 키는 21개 언어 중 7개(zh,zh_HK,ru,id,it,tl,nl)에만 존재. en/ja/es/de/fr 등은 값이 undefined라 제목이 갱신되지 않고 이전 언어 그대로 남았다. → CGO_I18N에 없으면 한국어 원문을 언어팩(_cgoT)으로 번역해 채운다. 모든 언어 자동 대응. */var _kd={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',cgosec4:'\ud83d\udcca ILI \uc810\uc218',cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};Object.keys(_sm).forEach(function(id){var bd=document.getElementById(id);if(!bd||!bd.previousSibling)return;var tEl=bd.previousSibling.querySelector&&bd.previousSibling.querySelector('.cgo-bar-title');if(!tEl)return;var _v=p[_sm[id]];if(!_v){try{var _k=_kd[id];if(_k&&typeof _cgoT==='function'){var _t=_cgoT(_k);if(_t&&_t!==_k)_v=_t;}}catch(e){}}if(_v)tEl.textContent=_v;});})();
+  (function(){var _sm={cgoip:'section_info',cgosec2:'section_cheon',cgosec3:'section_bio',cgosec4:'section_ili',cgosec5:'section_energy_book',cgosec6:'section_chat',cgosec7:'section_all'};/* ★C-67 섹션 바 제목 미번역 수정 — CGO_I18N의 section_* 키는 21개 언어 중 7개(zh,zh_HK,ru,id,it,tl,nl)에만 존재. en/ja/es/de/fr 등은 값이 undefined라 제목이 갱신되지 않고 이전 언어 그대로 남았다. → CGO_I18N에 없으면 한국어 원문을 언어팩(_cgoT)으로 번역해 채운다. 모든 언어 자동 대응. */var _kd={cgoip:'\ud83d\udccb \uc815\ubcf4 \uc785\ub825 & \uac00\uc785',cgosec2:'\ud83c\udf0c \ucc9c\uc9c0\uc778 \uc5d0\ub108\uc9c0',cgosec3:'\ud83e\uddec \uc0dd\uccb4 \uc2a4\uce94',cgosec4:'\ud83d\udcca ILI \uc810\uc218',cgosec5:'\u2726 CGO-FULI \uc5d0\ub108\uc9c0\uc758 \uc11c',cgosec6:'\ud83d\udcac CGO \uba54\uc2e0\uc800',cgosec7:'\u2726 \uc804\uccb4 \uae30\ub2a5 \u2014 \uc815\ubcf4 \uc785\ub825 \ud6c4 \uc0ac\uc6a9'};Object.keys(_sm).forEach(function(id){var bd=document.getElementById(id);if(!bd||!bd.previousSibling)return;var tEl=bd.previousSibling.querySelector&&bd.previousSibling.querySelector('.cgo-bar-title');if(!tEl)return;var _v=p[_sm[id]];if(!_v){try{var _k=_kd[id];if(_k&&typeof _cgoT==='function'){var _t=_cgoT(_k);if(_t&&_t!==_k)_v=_t;}}catch(e){}}/* ★C-67 원흉 수정 — 번역값을 못 구하면 그냥 넘어가서 '직전 언어'(아랍어 등)가 그대로 남았다. 이제는 못 구하면 반드시 한국어 원문으로 되돌린다 → 다른 언어가 남을 수 없다. */if(!_v)_v=_kd[id];if(_v&&tEl.textContent!==_v)tEl.textContent=_v;});})();
   document.querySelectorAll('[data-i18n]').forEach(function(el){
     var k=el.getAttribute('data-i18n');
     if(p[k]===undefined) return;
@@ -131938,6 +131938,9 @@ function cgpShow(){
 
   // 언어 선택
   window.p0SelectLang = function(lang, autoEnter) {
+    /* ★C-67 파이프라인 — 대문에서 언어를 바꿀 때마다 먼저 한국어 원점으로 되돌린다.
+       (여러 언어를 눌러본 흔적이 층층이 쌓이는 것을 원천 차단) */
+    try{ if(typeof window._cgoResetToKO==='function') window._cgoResetToKO(); }catch(e){}
     _p0Lang = lang;
 
     // 1. 버튼 하이라이트
@@ -152180,6 +152183,37 @@ window._cgoReTranslateAll = function(){
     }catch(e){ try{ if(typeof setLang==='function') setLang(lang); }catch(_){} }
   };
   console.log('%c[언어 파이프라인] 원점복귀 → 단일적용 준비 완료','color:#10b981');
+})();
+</script>
+
+<script>
+/* ★C-67 언어 버튼 이름 고정 (지휘자 지적)
+   문제: 사전에 '한국어'→'Korean' 이 있어서, 영어를 적용하면 언어 선택 버튼 이름까지
+         번역돼 버렸다(한국어→Korean, 中文→Chinese). 여러 번역 경로가 있어
+         한 곳만 막아서는 뚫린다.
+   해결: 언어 버튼의 이름은 '고정 상수'다. 어떤 번역이 지나가든 곧바로 원래 이름으로
+         되돌려 놓는다. 각 언어는 항상 자기 언어로 표기되어야 한다(국제 표준). */
+(function(){
+  var P0 = {"ko": "🇰🇷 한국어", "en": "🇺🇸 English", "zh": "🇨🇳 中文", "zh_HK": "🇹🇼 繁體中文", "ja": "🇯🇵 日本語", "ru": "🇷🇺 Русский", "ar": "🇸🇦 العربية", "tr": "🇹🇷 Türkçe", "hi": "🇮🇳 हिन्दी", "es": "🇪🇸 Español", "de": "🇩🇪 Deutsch", "fr": "🇫🇷 Français", "it": "🇮🇹 Italiano", "pt": "🇧🇷 Português", "nl": "🇳🇱 Nederlands", "vi": "🇻🇳 Tiếng Việt", "th": "🇹🇭 ภาษาไทย", "id": "🇮🇩 Indonesia", "ms": "🇲🇾 Melayu", "tl": "🇵🇭 Filipino"};
+  var MN = {"ko": "한국어", "en": "English", "zh": "中文", "zh_HK": "繁體中文", "ja": "日本語", "ru": "Русский", "hi": "हिन्दी", "ar": "العربية", "tr": "Türkçe", "es": "Español", "pt": "Português", "fr": "Français", "it": "Italiano", "de": "Deutsch", "nl": "Nederlands", "vi": "Tiếng Việt", "th": "ภาษาไทย", "id": "Bahasa Indonesia", "ms": "Bahasa Melayu", "tl": "Filipino"};
+  window._cgoFixLangLabels = function(){
+    try{
+      var a=document.querySelectorAll('.p0lb');
+      for(var i=0;i<a.length;i++){
+        var c=a[i].getAttribute('data-lang'); if(!c||!P0[c]) continue;
+        if(a[i].textContent.trim()!==P0[c]) a[i].textContent=P0[c];
+      }
+      for(var k in MN){
+        var el=document.getElementById('langOpt-'+k); if(!el) continue;
+        var sp=el.querySelectorAll('span');
+        if(sp.length>=2 && sp[1].textContent!==MN[k]) sp[1].textContent=MN[k];
+      }
+    }catch(e){}
+  };
+  /* 번역이 지나간 뒤 곧바로 되돌린다 */
+  setInterval(window._cgoFixLangLabels, 700);
+  setTimeout(window._cgoFixLangLabels, 300);
+  document.addEventListener('DOMContentLoaded', window._cgoFixLangLabels);
 })();
 </script>
 
