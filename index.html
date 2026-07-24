@@ -131973,10 +131973,20 @@ function cgpShow(){
     } catch(e){}
     window._LANG = lang;
 
-    // 4. CGO_I18N 즉시 번역
-    if(typeof setLang === 'function') {
-      try { setLang(lang); } catch(e){}
-    }
+    // 4. ★C-67 특허 원칙 적용 (지휘자 설계) — 보이는 것만 번역
+    /*  기존: 언어를 누를 때마다 setLang(lang)이 '문서 전체'를 번역했다.
+              → 아직 보이지도 않는 대시보드까지 그 언어로 칠해지고,
+                여러 언어를 눌러보면 대시보드에 흔적이 층층이 쌓였다.
+        변경: 대문에서는 '지금 보이는 대문'만 번역한다.
+              대시보드는 한국어 원본 그대로 잠들어 있다가,
+              입장할 때 최종 선택 언어로 딱 한 번 칠해진다.
+              → 선택하지 않은 언어는 대시보드에 발도 못 붙인다. */
+    try{
+      var _p0el = document.getElementById('phase0');
+      if(_p0el && lang !== 'ko' && typeof window._cgoTranslateNode === 'function'){
+        window._cgoTranslateNode(_p0el);
+      }
+    }catch(e){}
 
     // 5. 번역 중 애니메이션 (사용자가 직접 클릭한 경우에만)
     if(autoEnter === false) return;
