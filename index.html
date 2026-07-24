@@ -5236,27 +5236,11 @@ function updateTransitSectionWithNASA(planets) {
           }
         };
 
-        /* ★C-67 펼침→접힘 깜빡임 제거
-           문제: initSections가 DOMContentLoaded를 기다렸는데, 이 문서는 10.7MB라
-                 전체 파싱에 약 2초가 걸린다. 그 2초 동안 대시보드 섹션이
-                 '펼쳐진 상태'로 보이다가 뒤늦게 접히면서 깜빡였다.
-           해결: 대시보드는 문서의 5% 지점(#page-scan 직전)에서 이미 다 파싱된다.
-                 #page-scan이 나타나는 순간 = 대시보드 완성 시점에 바로 접는다. */
-        (function(){
-          var _t0=Date.now(), _done=false;
-          function _run(){ if(_done) return; _done=true; try{ initSections(); }catch(e){} }
-          function _poll(){
-            if(_done) return;
-            try{
-              if(document.getElementById('page-scan') && document.getElementById('sec-all')){ _run(); return; }
-            }catch(e){}
-            if(Date.now()-_t0 < 12000) setTimeout(_poll,20);
-          }
-          if(document.readyState==='loading'){
-            _poll();                                   /* 조기 실행 시도 */
-            document.addEventListener('DOMContentLoaded',_run);  /* 안전망 */
-          } else { setTimeout(_run,0); }
-        })();
+        if(document.readyState==='loading'){
+          document.addEventListener('DOMContentLoaded',initSections);
+        } else {
+          setTimeout(initSections,500);
+        }
       })();
       </script>
       <!-- ══ /CGO 퀵 점프 네비 바 ══ -->
