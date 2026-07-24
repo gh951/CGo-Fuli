@@ -152062,15 +152062,13 @@ window._cgoReTranslateAll = function(){
     if(L&&L!=='ko'&&typeof window._cgoTranslateNode==='function') window._cgoTranslateNode(document.body);
   }catch(e){}
 };
-/* 언어 변경 감지 → 자동 재번역 (0.4초 후 1회) */
-(function(){
-  var _last=window._LANG;
-  setInterval(function(){
-    try{
-      if(window._LANG!==_last){ _last=window._LANG; setTimeout(window._cgoReTranslateAll,400); }
-    }catch(e){}
-  },300);
-})();
+/* ★C-67 자동 재번역 감시기 제거
+   이 감시기는 언어가 바뀌면 0.4초 뒤 _cgoReTranslateAll()을 돌렸는데,
+   그 함수는 문서 전체(10.7MB)를 한국어로 되돌린 뒤 다시 전부 번역한다.
+   ① cgoSwitchLang 파이프라인이 이미 정확히 같은 일을 하고 있어 '두 번' 돌았고
+   ② 두 경로가 서로 덮어쓰며 지나간 언어가 다시 살아나는 원인이 됐다
+   ③ 스마트폰에서는 이 전체 순회가 특히 무겁다
+   → 자동 실행만 끈다. 함수 자체는 남겨두어 필요 시 콘솔에서 호출 가능. */
 </script>
 
 <script>
@@ -152161,8 +152159,22 @@ window._cgoReTranslateAll = function(){
   /* ① 화면 전체를 한국어 원점으로 되돌린다 */
   window._cgoResetToKO = function(){
     try{
-      /* 1) 텍스트 노드 — 노드에 보관된 한국어 원본 복원 */
-      if(typeof window._cgoRestoreKO==='function'){ try{ window._cgoRestoreKO(document.body); }catch(e){} }
+      /* 1) 텍스트 노드 — 노드에 보관된 한국어 원본 복원
+            ★C-67 특허 원칙: 문서 전체(10.7MB)가 아니라 '지금 보이는 곳'만 되돌린다.
+              · 화면 밖 페이지는 어차피 열 때 번역되므로 지금 만질 이유가 없다
+              · 작업량이 50배 이상 줄어 브라우저가 멈추지 않고, 한글 노출 순간도 짧다 */
+      var _roots=[];
+      try{
+        var _act=document.querySelector('.page.active'); if(_act) _roots.push(_act);
+        var _tb=document.querySelector('.topbar'); if(_tb) _roots.push(_tb);
+        var _sb=document.querySelector('.sidebar'); if(_sb) _roots.push(_sb);
+        var _lm=document.getElementById('langMenu'); if(_lm) _roots.push(_lm);
+        var _p0=document.getElementById('phase0'); if(_p0 && _p0.style.display!=='none') _roots.push(_p0);
+      }catch(e){}
+      if(!_roots.length) _roots=[document.body];
+      if(typeof window._cgoRestoreKO==='function'){
+        for(var _r=0;_r<_roots.length;_r++){ try{ window._cgoRestoreKO(_roots[_r]); }catch(e){} }
+      }
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
       /* 3) data-i18n 요소 — 한국어 사전으로 복원 (여기가 짬뽕의 주범이었다) */
@@ -152191,8 +152203,10 @@ window._cgoReTranslateAll = function(){
        한국어로 정리한다(196개, 즉시). 불완전한 언어가 끼면 기존대로 전체 되돌림. */
   var _COMPLETE = {ko:1, en:1, zh:1, zh_HK:1};
   function _prepSwitch(target){
-    var prev = window._LANG || 'ko';
-    if(!(_COMPLETE[prev] && _COMPLETE[target])){ window._cgoResetToKO(); return; }
+    /* ★C-67 수정 — B안(완성 언어끼리 원점복귀 생략)은 잔재를 되살렸다.
+       '외국어로 태어난 노드'는 한국어 원본이 없어 덮어쓰기만으로는 안 바뀌기 때문.
+       원점복귀를 '보이는 곳'으로 한정해 가볍게 만들었으므로 이제 항상 수행한다. */
+    window._cgoResetToKO();
     try{
       if(typeof CGO_I18N==='undefined') return;
       var p = CGO_I18N[target] || {}, ko = CGO_I18N.ko || {};
