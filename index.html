@@ -19221,7 +19221,12 @@ function _cgoFDIntro(cfg){
   h+='<button onclick="(function(){var cb=document.getElementById(\''+cbId+'\');if(cb&&cb.checked){try{localStorage.setItem(\''+(sk||'')+'\',\'1\');}catch(e){}}var p=document.getElementById(\''+id+'\');if(p)p.remove();'+(cfg.launch||'')+'})();" style="width:100%;padding:16px;background:linear-gradient(135deg,'+ac+','+ac2+');border:none;border-radius:14px;color:#334155;font-size:15px;font-weight:900;cursor:pointer;">'+(cfg.btnLabel||'시작하기')+'</button>';
   h+='</div>';
   pop.innerHTML=h;
-  try{ if(window._cgoTNode) _cgoTNode(pop); }catch(e){} document.body.appendChild(pop);
+  /* ★C-67 팝업 잔상 근본 수정 — 원래 '삽입 전 번역'이 여기 있었으나
+     전역명 오타(window._cgoTNode)로 항상 false → 단 한 번도 실행되지 않았다.
+     실제 전역은 window._cgoTranslateNode.  화면에 붙이기 전(아직 안 그려진 상태)에
+     번역하므로 한글이 화면에 뜰 기회 자체가 없어진다. */
+  try{ if(window._cgoTranslateNode) window._cgoTranslateNode(pop); }catch(e){}
+  document.body.appendChild(pop);
 }
 
 
@@ -133238,7 +133243,7 @@ if('serviceWorker' in navigator){
 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;z-index:2;">
 <div style="font-size:30px;font-weight:900;letter-spacing:-.03em;color:#ffffff !important;margin-bottom:8px;">👁️ 나의 눈 건강</div>
 <div style="font-size:13px;color:#ffffff !important;line-height:1.5;">눈동자 추적 · 깜빡임 분석 · 눈가 rPPG · 시각 인지<br/>거리 체크 + 선명도 + AI 분석 융합</div>
-<button onclick="document.getElementById('eye-usage-pop').style.display='block';if(window._cgoTNode){_cgoTNode(document.getElementById('eye-usage-pop'));}" style="margin-top:14px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.6);color:#ffffff !important;font-size:12px;font-weight:800;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:.02em;backdrop-filter:blur(8px);">📖 사용법 보기</button>
+<button onclick="document.getElementById('eye-usage-pop').style.display='block';if(window._cgoTranslateNode){window._cgoTranslateNode(document.getElementById('eye-usage-pop'));}" style="margin-top:14px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.6);color:#ffffff !important;font-size:12px;font-weight:800;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;letter-spacing:.02em;backdrop-filter:blur(8px);">📖 사용법 보기</button>
 </div>
 </div>
 
