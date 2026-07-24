@@ -51766,7 +51766,7 @@ function _applyLangLocalization(lang) {
       // 대문이 보이는 중이면 실행 안 함 (대문에서 선택 → _cgoEntranceDone에서 처리)
       var p0 = document.getElementById('phase0');
       if(p0 && p0.style.display !== 'none') return;
-      setTimeout(function(){ setLang(saved); }, 300);
+      setTimeout(function(){ /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */ if(window._LANG===saved) setLang(saved); }, 300);
     }
   } catch(e){}
 })();
@@ -131321,7 +131321,8 @@ document.addEventListener('DOMContentLoaded', function(){
           if(_rl !== 'ko') {
             window._LANG = _rl;
             setTimeout(function(){
-              if(typeof setLang==='function') setLang(_rl);
+              /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */
+              if(window._LANG===_rl && typeof setLang==='function') setLang(_rl);
             }, 200);
           }
         } catch(e){}
@@ -131354,7 +131355,7 @@ document.addEventListener('DOMContentLoaded', function(){
         var _savedLang2 = 'ko';
         try { _savedLang2 = localStorage.getItem('cgo_lang') || 'ko'; } catch(e){}
         if(_savedLang2 && _savedLang2 !== 'ko' && typeof setLang === 'function') {
-          setTimeout(function(){ setLang(_savedLang2); }, 400);
+          setTimeout(function(){ /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */ if(window._LANG===_savedLang2) setLang(_savedLang2); }, 400);
           // 2차: 동적 텍스트까지 확실히 번역
           setTimeout(function(){ if(window._LANG===_savedLang2) setLang(_savedLang2); }, 2000);
         }
@@ -131479,7 +131480,8 @@ function _cgoEntranceDone(){
     }
     // 3차: 500ms — DOM 안정화 후 재적용
     setTimeout(function(){
-      if(typeof setLang === 'function') setLang(_savedLang);
+      /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */
+      if(window._LANG===_savedLang && typeof setLang === 'function') setLang(_savedLang);
     }, 500);
     // 4차: 2000ms — AI로 나머지 텍스트 번역
     setTimeout(function(){
@@ -152391,7 +152393,15 @@ window._cgoReTranslateAll = function(){
   function revive(pg){
     try{
       var L = window._LANG;
-      if(!L || L==='ko') return;
+      if(!L || L==='ko'){
+        /* ★C-67 한국어로 돌아온 경우 — 기존 코드는 그냥 return 했다.
+           그래서 중국어로 번역돼 잠들어 있던 페이지를 열면 중국어가 그대로 나왔다.
+           (파트너 제보: "대시보드는 한국어인데 페이지는 전부 중국어")
+           → 한국어일 때는 그 페이지를 한국어 원본으로 되돌린다. */
+        try{ if(typeof window._cgoRestoreKO==='function') window._cgoRestoreKO(pg); }catch(e){}
+        try{ if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n('ko'); }catch(e){}
+        return;
+      }
       /* 예열 엔진으로 처리(프레임당 8ms 분할) — 큰 페이지도 멈추지 않는다 */
       if(pg.id && typeof window._cgoWarmPage==='function'){ window._cgoWarmPage(pg.id); }
       else if(typeof window._cgoTranslateNode==='function'){ window._cgoTranslateNode(pg); }
