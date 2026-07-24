@@ -152027,6 +152027,81 @@ window._cgoReTranslateAll = function(){
 })();
 </script>
 
+<script>
+/* ★C-67 예열 엔진 — 특허 원칙(보이는 것만 살림) 유지 + 팝업 뒤에서 미리 준비
+   화면에 켜지기 전에 번역·준비를 프레임당 8ms씩 잘게 나눠 미리 끝내둔다.
+   → 사용자는 전환 순간 렉을 못 느낌. 안 여는 페이지는 여전히 죽어 있음. */
+(function(){
+  var W = {};                       // 예열 완료 기록
+  var IDLE = window.requestIdleCallback || function(f){ return setTimeout(f,16); };
+
+  /* 페이지 하나를 조각내어 예열 (프레임 블로킹 방지) */
+  window._cgoWarmPage = function(pageId, cb){
+    try{
+      if(!pageId) return;
+      if(W[pageId]){ if(cb)cb(); return; }
+      var el = document.getElementById(pageId);
+      if(!el){ if(cb)cb(); return; }
+      W[pageId] = 1;
+      var L = window._LANG;
+      if(!L || L==='ko' || typeof window._cgoTranslateNode!=='function'){ if(cb)cb(); return; }
+      var kids = el.children, i = 0;
+      (function step(){
+        var t0 = (window.performance&&performance.now)?performance.now():Date.now();
+        while(i < kids.length){
+          try{ window._cgoTranslateNode(kids[i]); }catch(e){}
+          i++;
+          var t1 = (window.performance&&performance.now)?performance.now():Date.now();
+          if(t1 - t0 > 8) break;        /* 프레임당 8ms 예산 */
+        }
+        if(i < kids.length) IDLE(step);
+        else if(cb) cb();
+      })();
+    }catch(e){ if(cb)cb(); }
+  };
+
+  /* ① 의도 감지 — 버튼을 누르는 순간(팝업 뜨기 전) 대상 페이지를 미리 깨움 */
+  document.addEventListener('pointerdown', function(ev){
+    try{
+      var n = ev.target, hop = 0;
+      while(n && hop++ < 6){
+        var oc = (n.getAttribute && (n.getAttribute('onclick')||n.getAttribute('data-page')))||'';
+        var m = (''+oc).match(/page-[\w-]+/);
+        if(m){ window._cgoWarmPage(m[0]); return; }
+        if(n.getAttribute && n.getAttribute('data-page')){
+          window._cgoWarmPage('page-'+n.getAttribute('data-page')); return;
+        }
+        n = n.parentNode;
+      }
+    }catch(e){}
+  }, true);
+
+  /* ② 유휴 예열 — 앱이 한가할 때 나머지 페이지를 하나씩 조용히 준비 */
+  function idleWarmAll(){
+    try{
+      var pages = document.querySelectorAll('.page');
+      var idx = 0;
+      (function next(){
+        while(idx < pages.length && W[pages[idx].id]) idx++;
+        if(idx >= pages.length) return;
+        var id = pages[idx].id; idx++;
+        window._cgoWarmPage(id, function(){ IDLE(next); });
+      })();
+    }catch(e){}
+  }
+  /* 로드 4초 후, 사용자가 쓰기 시작한 뒤 조용히 시작 */
+  setTimeout(function(){ IDLE(idleWarmAll); }, 4000);
+
+  /* ③ 언어 전환 시 예열 기록 초기화 (새 언어로 다시 준비) */
+  var _lastL = window._LANG;
+  setInterval(function(){
+    try{ if(window._LANG !== _lastL){ _lastL = window._LANG; W = {}; setTimeout(function(){ IDLE(idleWarmAll); }, 1200); } }catch(e){}
+  }, 500);
+
+  console.log('%c[예열 엔진] 준비 완료 — 버튼 누르는 순간 뒤에서 미리 깨웁니다','color:#10b981');
+})();
+</script>
+
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:flex-start;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;">
