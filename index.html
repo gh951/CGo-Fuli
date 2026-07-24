@@ -152221,6 +152221,14 @@ window._cgoReTranslateAll = function(){
   /* ① 화면 전체를 한국어 원점으로 되돌린다 */
   window._cgoResetToKO = function(){
     try{
+      /* ★C-67 되돌리기 전에, 한국어 원본이 없는 글자를 사전 역방향으로 되찾아 심는다.
+         (그래야 아래 복원이 실제로 작동한다) */
+      try{
+        if(typeof window._cgoRecoverKO==='function' && typeof window._cgoVisibleRoots==='function'){
+          var _rr = window._cgoVisibleRoots();
+          for(var _q=0;_q<_rr.length;_q++) window._cgoRecoverKO(_rr[_q]);
+        }
+      }catch(e){}
       /* 1) 텍스트 노드 — 노드에 보관된 한국어 원본 복원
             ★C-67 특허 원칙: 문서 전체(10.7MB)가 아니라 '지금 보이는 곳'만 되돌린다.
               · 화면 밖 페이지는 어차피 열 때 번역되므로 지금 만질 이유가 없다
@@ -152298,29 +152306,26 @@ window._cgoReTranslateAll = function(){
     }catch(e){}
   }
   window.cgoSwitchLang = function(lang){
+    /* ★C-67 단순화 (지휘자 설계) — 화면 위에서 글자를 갈아끼우려니 복잡해졌다.
+       (원점복귀 · 역방향복구 · 부활감시기 … 장치가 계속 늘고 빈틈이 생겼다)
+       해법: 언어를 저장하고 페이지를 새로 띄운다.
+         · HTML 원본은 100% 한국어 → 모든 글자에 한국어 원본이 존재
+         · 저장된 언어로 딱 한 번 번역
+         · 이전 언어 흔적이 남을 수가 없다 (DOM 자체가 새것)
+       힘들게 만든 18,222개 사전을 '그대로 한 번' 적용하는 가장 확실한 방법. */
     try{
-      _prepSwitch(lang);
-      window._LANG = lang;
-      try{ localStorage.setItem('cgo_lang', lang); localStorage.setItem('cgo_lang_user_set','1'); }catch(e){}
-      if(typeof setLang==='function') setLang(lang);
-      /* ★C-67 한국어 잔상 제거 — setLang은 data-i18n만 즉시 바꾸고
-         '일반 글자'는 뒤늦게(setTimeout) 번역한다. 그 틈에 브라우저가 화면을 그리면
-         원점복귀로 되돌려둔 한국어가 번쩍 보인다.
-         → 같은 작업(task) 안에서 보이는 영역 글자까지 끝내면 중간 페인트가 없어 잔상이 사라진다. */
-      try{
-        if(lang!=='ko' && typeof window._cgoTranslateNode==='function'){
-          var _vr=window._cgoVisibleRoots();
-          for(var _i=0;_i<_vr.length;_i++) window._cgoTranslateNode(_vr[_i]);
-        }
-        /* ★ 한국어-키 data-i18n 81개도 같은 작업 안에서 처리 (혼합 원천 차단) */
-        if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(lang);
-        /* ★ 안 보이는 페이지들의 예열 기록을 지워 새 언어로 다시 준비되게 한다 */
-        if(typeof window._cgoWarmReset==='function') window._cgoWarmReset();
-      }catch(e){}
-      /* 사전 로드가 늦을 수 있어 한 번 더 */
-      setTimeout(function(){ try{ if(window._LANG===lang && typeof setLang==='function') setLang(lang); }catch(e){} }, 700);
-    }catch(e){ try{ if(typeof setLang==='function') setLang(lang); }catch(_){} }
+      if(!lang) return;
+      if(window._LANG === lang) return;                 /* 같은 언어면 무시 */
+      localStorage.setItem('cgo_lang', lang);
+      localStorage.setItem('cgo_lang_user_set','1');
+    }catch(e){}
+    try{
+      var m=document.getElementById('langMenu'); if(m) m.style.display='none';
+      document.body.style.opacity='0.35';               /* 전환 표시 */
+    }catch(e){}
+    setTimeout(function(){ try{ location.reload(); }catch(e){ location.href=location.href; } }, 60);
   };
+;
   /* 부팅 직후에도 한 번 적용 — 저장된 언어로 들어올 때 81개가 한국어로 남지 않도록 */
   setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 1200);
   setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 3000);
@@ -152407,6 +152412,8 @@ window._cgoReTranslateAll = function(){
   function revive(pg){
     try{
       var L = window._LANG;
+      /* ★C-67 이 페이지가 '한국어 원본 없이' 외국어로 굳어 있으면 사전을 거꾸로 찾아 복구 */
+      try{ if(typeof window._cgoRecoverKO==='function') window._cgoRecoverKO(pg); }catch(e){}
       if(!L || L==='ko'){
         /* ★C-67 한국어로 돌아온 경우 — 기존 코드는 그냥 return 했다.
            그래서 중국어로 번역돼 잠들어 있던 페이지를 열면 중국어가 그대로 나왔다.
@@ -152484,10 +152491,20 @@ window._cgoReTranslateAll = function(){
       }
       for(var r=0;r<roots.length;r++) walk(roots[r]);
       var act=document.querySelector('.page.active');
-      console.log('%c───── CGO 번역 진단 ─────','color:#d4a843;font-weight:bold');
-      console.log('  현재 언어 :', L, '| 사전:', dict? Object.keys(dict).length+'개' : '❌ 없음');
-      console.log('  보는 화면 :', act? act.id : '(없음)');
-      console.table(stat);
+      /* ★ 복사하기 쉬운 한 덩어리 텍스트로 출력 + 클립보드 자동 복사 */
+      var rep = '===== CGO 번역진단 =====\n'
+        + '언어=' + L + ' | 사전=' + (dict? Object.keys(dict).length : 0) + '개\n'
+        + '화면=' + (act? act.id : '(없음)') + '\n'
+        + '노드=' + stat.노드
+        + ' | 이미번역=' + stat.이미번역됨
+        + ' | 번역가능=' + stat.사전에있어서번역가능
+        + ' | 사전없음=' + stat.사전에없음_한국어잔존
+        + ' | 원본없음=' + stat.원본없음_복구불가 + '\n';
+      if(missList.length) rep += '[사전없음 예시] ' + missList.slice(0,10).join(' / ') + '\n';
+      if(stuckList.length) rep += '[원본없음 예시] ' + stuckList.slice(0,10).join(' / ') + '\n';
+      console.log('%c' + rep, 'color:#d4a843;font-weight:bold');
+      try{ if(navigator.clipboard) navigator.clipboard.writeText(rep).then(function(){ console.log('%c  ↑ 클립보드에 복사됨 — 그대로 붙여넣기 하세요','color:#047857'); }); }catch(e){}
+      window.CGO_DIAG_TEXT = rep;
       if(stat.사전에없음_한국어잔존>0){
         console.log('%c  ⚠ 사전에 없어 한국어로 남는 문구','color:#b91c1c');
         console.log(missList);
@@ -152509,8 +152526,8 @@ window._cgoReTranslateAll = function(){
 /* ★C-67 빌드 표식 — 지금 브라우저가 어느 파일을 쓰고 있는지 즉시 확인용.
    서비스워커(sw.js)가 옛 index.html을 캐시하고 있으면 새 파일을 올려도 반영되지 않는다.
    콘솔 맨 위 이 줄의 번호가 최신인지 먼저 확인할 것. */
-console.log('%c[CGO-FULI BUILD] C67-0724-1405  ← 이 번호가 최신인지 확인','background:#d4a843;color:#000;font-weight:bold;padding:2px 6px');
-window.CGO_BUILD='C67-0724-1405';
+console.log('%c[CGO-FULI BUILD] C67-0724-1428  ← 이 번호가 최신인지 확인','background:#d4a843;color:#000;font-weight:bold;padding:2px 6px');
+window.CGO_BUILD='C67-0724-1428';
 /* 캐시 강제 갱신 도구 — 콘솔에서 cgoUpdate() */
 window.cgoUpdate = function(){
   try{
@@ -152528,6 +152545,65 @@ window.cgoUpdate = function(){
   }catch(e){ location.reload(true); }
 };
 console.log('%c[CGO] 새 파일이 반영 안 되면 콘솔에 cgoUpdate() 입력','color:#d4a843');
+</script>
+
+<script>
+/* ★C-67 역방향 복구 — 한국어 원본이 없는 글자를 사전에서 거꾸로 찾아 되살린다.
+   진단 결과: 어떤 페이지는 글자 231개 중 218개가 __cgoKO(한국어 원본) 없이 중국어로 존재했다.
+   원인: 그 페이지 내용이 '만들어질 때부터' 선택 언어로 생성돼 한국어 노드가 존재한 적이 없다.
+   해결: 우리에겐 완전한 사전이 있다. 한국어→중국어 사전을 뒤집으면 중국어→한국어를 얻는다.
+        어떤 언어로 굳어 있든 한국어 원본을 되찾아 __cgoKO에 심어주면
+        기존 파이프라인이 정상 작동한다. */
+(function(){
+  window._cgoRev = null;
+  window._cgoBuildReverse = function(){
+    try{
+      if(window._cgoRev) return window._cgoRev;
+      if(typeof LANG_DICTIONARY==='undefined') return null;
+      var rev = Object.create(null), n = 0;
+      ['zh','zh_HK','en','ja','ru','es','de','fr','pt','vi','th','id','ar','tr','it','tl','ms','nl','hi'].forEach(function(L){
+        var d = LANG_DICTIONARY[L]; if(!d) return;
+        for(var k in d){
+          var v = d[k];
+          if(typeof v === 'string' && v && v !== k && rev[v] === undefined){ rev[v] = k; n++; }
+        }
+      });
+      window._cgoRev = rev;
+      console.log('%c[역방향 복구] 사전 뒤집기 완료: ' + n + '개','color:#047857');
+      return rev;
+    }catch(e){ return null; }
+  };
+  /* 한 요소 안에서 한국어 원본이 없는 글자들을 되찾아 심는다 */
+  window._cgoRecoverKO = function(root){
+    try{
+      var rev = window._cgoRev || window._cgoBuildReverse();
+      if(!rev) return 0;
+      var KO = /[\uac00-\ud7a3]/, skip = {SCRIPT:1,STYLE:1,NOSCRIPT:1}, cnt = 0;
+      (function w(n){
+        if(n.nodeType===3){
+          if(n.__cgoKO !== undefined) return;
+          var cur = (n.nodeValue||'').trim();
+          if(!cur || KO.test(cur)) return;          /* 이미 한국어면 대상 아님 */
+          var ko = rev[cur];
+          if(ko){ n.__cgoKO = n.nodeValue.replace(cur, ko); cnt++; }
+        } else if(n.nodeType===1){
+          if(skip[n.tagName]) return;
+          for(var i=0;i<n.childNodes.length;i++) w(n.childNodes[i]);
+        }
+      })(root || document.body);
+      return cnt;
+    }catch(e){ return 0; }
+  };
+  /* 언어팩 로드 후 한 번 만들어 둔다 */
+  setTimeout(function(){ try{ window._cgoBuildReverse(); }catch(e){} }, 2500);
+  console.log('%c[역방향 복구] 준비 — cgoRecover() 로 현재 화면 복구 가능','color:#d4a843');
+  window.cgoRecover = function(){
+    var r = window._cgoVisibleRoots ? window._cgoVisibleRoots() : [document.body];
+    var t = 0; for(var i=0;i<r.length;i++) t += window._cgoRecoverKO(r[i]);
+    console.log('%c[역방향 복구] 한국어 원본 되찾음: ' + t + '개','color:#047857');
+    return t;
+  };
+})();
 </script>
 
 </body>
