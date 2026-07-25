@@ -45645,6 +45645,24 @@ function setLang(lang) {
   var _cgoPrevLang = (typeof _LANG !== 'undefined' && _LANG) ? _LANG : (window._LANG || 'ko');
   _LANG = lang;
   window._LANG = lang; // ★ 명시적으로 window._LANG도 설정
+  /* ★C-68 잔상 제거 ② — 폰 캐시(localStorage)의 언어팩을 '동기'로 먼저 메모리에 올린다.
+     새로고침 직후 첫 전환 때 LANG_DICTIONARY가 비어 있어 번역이 0건 → 한국어가 그대로 보였고,
+     뒤늦게 팩이 로드된 다음에야 번역돼 잔상이 생겼다. (두 번째 전환부터 안 보이던 이유)
+     localStorage는 동기라 네트워크 대기 없이 즉시 채워진다. */
+  try{
+    if(lang!=='ko' && typeof LANG_DICTIONARY!=='undefined'
+       && !(window._cgoLangPackLoaded && window._cgoLangPackLoaded[lang])){
+      var _cLp = localStorage.getItem('cgo_lp_'+lang);
+      if(_cLp){
+        var _jLp = JSON.parse(_cLp);
+        if(_jLp && typeof _jLp==='object'){
+          LANG_DICTIONARY[lang] = Object.assign({}, LANG_DICTIONARY[lang]||{}, _jLp);
+          window._cgoTKeys = null;
+          if(window._cgoLangPackLoaded) window._cgoLangPackLoaded[lang] = true;
+        }
+      }
+    }
+  }catch(e){}
   try{ if(window._nasaPlanets && typeof _applyNASAData==='function') _applyNASAData(window._nasaPlanets, null); }catch(e){}
   // 한국어가 아닌 경우 localStorage 저장
   if(lang !== 'ko') {
