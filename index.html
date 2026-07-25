@@ -5782,7 +5782,8 @@ function cgoGuideFeature(key){
         <div class="ip-form">
           <div class="ip-group">
             <div class="ip-label" data-i18n="labelName">이름 (성명)</div>
-            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name" oninput="if(typeof _checkCalcReady==='function')_checkCalcReady();if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();if(typeof syncBirthField==='function')syncBirthField();">
+            <input class="ip-field" id="ipName" type="text" placeholder="예: 이주원" data-i18n-ph="ph_name" oninput="if(typeof _checkCalcReady==='function')_checkCalcReady();if(typeof _cgoAutoSaveInputs==='function')_cgoAutoSaveInputs();if(typeof syncBirthField==='function')syncBirthField();" onkeyup="if(window._cgoHanjaSuggest)_cgoHanjaSuggest();">
+            <div id="cgoHanjaPick" style="display:none;margin-top:8px;padding:10px;border-radius:10px;background:rgba(212,168,67,.07);border:1px solid rgba(212,168,67,.28)"><div style="font-size:11px;font-weight:800;color:#d4a843;margin-bottom:7px" data-i18n="hanjaPickTitle">漢 한자 이름 — 탭하면 채워집니다 (선택)</div><div id="cgoHanjaRows"></div><div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:900;color:var(--text-1)" id="cgoHanjaOut">—</span><button type="button" onclick="_cgoHanjaApply()" style="padding:4px 12px;border-radius:10px;border:1px solid rgba(212,168,67,.5);background:rgba(212,168,67,.15);color:#d4a843;font-size:11px;font-weight:800;cursor:pointer" data-i18n="hanjaApply">✓ 적용</button><button type="button" onclick="_cgoHanjaReset()" style="padding:4px 10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-2);font-size:11px;cursor:pointer" data-i18n="hanjaReset">↺ 초기화</button></div></div>
           </div>
           <div class="ip-group">
             <div class="ip-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -152841,6 +152842,88 @@ window._cgoAiFinishKO = function(rootEl, delay){
     }, delay||7200);
   }catch(e){}
 };
+</script>
+
+<script>
+/* ★C-68 한글 이름 → 한자 탭 선택기
+   복사·붙여넣기 없이, 이미 앱에 있는 ALL_SURNAMES(225개)와 HANJA_DB(609자)를 재활용해
+   음절별 한자 후보를 칩으로 띄우고 탭하면 #myNameHanja 에 채운다. 한자 입력은 선택 사항. */
+(function(){
+  var sel = {};
+  function db(){ try{ return (typeof HANJA_DB!=='undefined')?HANJA_DB:null; }catch(e){ return null; } }
+  function surnames(){ try{ return (typeof ALL_SURNAMES!=='undefined')?ALL_SURNAMES:null; }catch(e){ return null; } }
+  function cands(ch, isFirst){
+    var out=[], seen={};
+    if(isFirst){
+      var S=surnames();
+      if(S) S.forEach(function(p){ if(p[0]===ch && !seen[p[1]]){ seen[p[1]]=1; out.push({hj:p[1],mean:''}); } });
+    }
+    var D=db();
+    if(D) for(var k in D){ (D[k]||[]).forEach(function(e){
+      if(e && e.kr===ch && !seen[e.hj]){ seen[e.hj]=1; out.push({hj:e.hj, mean:(e.mean||'')}); }
+    }); }
+    return out.slice(0,14);
+  }
+  window._cgoHanjaSuggest = function(){
+    try{
+      var el=document.getElementById('ipName'), box=document.getElementById('cgoHanjaPick');
+      if(!el||!box) return;
+      var nm=(el.value||'').replace(/\s/g,'');
+      var ko=nm.split('').filter(function(c){ return /[\uac00-\ud7a3]/.test(c); });
+      if(ko.length<2 || ko.length>4){ box.style.display='none'; return; }
+      var rows=document.getElementById('cgoHanjaRows'); rows.innerHTML='';
+      var any=false;
+      ko.forEach(function(ch,idx){
+        var list=cands(ch, idx===0);
+        if(!list.length) return;
+        any=true;
+        var r=document.createElement('div');
+        r.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px';
+        var lb=document.createElement('span');
+        lb.style.cssText='font-size:12px;font-weight:800;color:var(--text-2);min-width:20px';
+        lb.textContent=ch; r.appendChild(lb);
+        list.forEach(function(c){
+          var b=document.createElement('button'); b.type='button';
+          b.style.cssText='padding:3px 9px;border-radius:9px;border:1px solid var(--border);background:var(--bg-panel);'
+            +'font-size:13px;font-weight:800;color:var(--text-1);cursor:pointer';
+          b.textContent=c.hj; if(c.mean) b.title=c.mean;
+          b.onclick=function(){
+            sel[idx]=c.hj;
+            Array.prototype.forEach.call(r.querySelectorAll('button'),function(x){
+              x.style.background='var(--bg-panel)'; x.style.borderColor='var(--border)'; });
+            b.style.background='rgba(212,168,67,.25)'; b.style.borderColor='#d4a843';
+            paint();
+          };
+          r.appendChild(b);
+        });
+        rows.appendChild(r);
+      });
+      box.style.display = any ? 'block' : 'none';
+      paint();
+    }catch(e){}
+  };
+  function paint(){
+    try{
+      var el=document.getElementById('ipName');
+      var ko=((el&&el.value)||'').replace(/\s/g,'').split('').filter(function(c){return /[\uac00-\ud7a3]/.test(c);});
+      var s=''; ko.forEach(function(c,i){ s += (sel[i]||'□'); });
+      var o=document.getElementById('cgoHanjaOut'); if(o) o.textContent = s || '—';
+    }catch(e){}
+  }
+  window._cgoHanjaApply = function(){
+    try{
+      var o=document.getElementById('cgoHanjaOut'); if(!o) return;
+      var v=(o.textContent||'').replace(/□/g,'').trim();
+      if(!v) return;
+      var t=document.getElementById('myNameHanja');
+      if(t){ t.value=v; try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+      if(typeof _cgoAutoSaveInputs==='function') try{ _cgoAutoSaveInputs(); }catch(e){}
+      o.style.color='#34d399';
+      setTimeout(function(){ try{ o.style.color=''; }catch(e){} },1200);
+    }catch(e){}
+  };
+  window._cgoHanjaReset = function(){ sel={}; if(window._cgoHanjaSuggest) _cgoHanjaSuggest(); };
+})();
 </script>
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
