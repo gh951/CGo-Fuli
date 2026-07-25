@@ -45850,6 +45850,12 @@ function setLang(lang) {
       }
     } catch(e){}
     // CGO_I18N + LANG_DICTIONARY 즉시 번역
+    /* ★C-68 한글 잔상 제거 — 여기서 100ms 기다리는 동안 브라우저가 '한국어 원점복귀' 상태를
+       그대로 한 번 그렸다. (setLang이 반환 → 한국어 페인트 → 100ms → 번역 페인트 = 잔상)
+       → setLang이 반환하기 전에 동기로 먼저 적용하면 중간 페인트 자체가 사라진다.
+         _cgoApplyDictionary는 보이는 영역만 순회하므로 동기 호출도 가볍다.
+         아래 setTimeout은 뒤늦게 도착하는 요소를 위한 안전망으로 그대로 둔다. */
+    try{ if(window._LANG === lang && typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(lang); }catch(e){}
     setTimeout(function(){
       if(window._LANG === lang) _cgoApplyDictionary(lang);
     }, 100);
