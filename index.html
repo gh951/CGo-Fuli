@@ -151864,7 +151864,43 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     }
     if(window.requestIdleCallback) requestIdleCallback(step,{timeout:900}); else setTimeout(step,150);
   }
+  /* ★C-68 잔상 근본 수정 — localStorage는 5MB인데 언어팩 하나가 ~1.8MB라
+     새 언어를 저장할 때 아래 catch가 '다른 언어 캐시를 전부 삭제'한다.
+     → 항상 1개만 남아 매번 네트워크 재요청 → 새로고침 후 첫 전환 때 한글 잔상.
+     해결: 용량이 큰 Cache API에도 함께 보관하고, 로드 직후 메모리에 미리 올린다.
+           (이미 받은 데이터를 재사용하므로 추가 통신 없음) */
+  function packCachePut(L){
+    try{
+      if(!window.caches || typeof LANG_DICTIONARY==='undefined') return;
+      var d=LANG_DICTIONARY[L]; if(!d || Object.keys(d).length<1000) return;
+      var body=JSON.stringify(d);
+      caches.open('cgo-lang-v1').then(function(c){
+        c.put(new Request('/__cgolang/'+L), new Response(body,{headers:{'Content-Type':'application/json'}}));
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function packCacheWarm(){
+    try{
+      if(!window.caches) return;
+      caches.open('cgo-lang-v1').then(function(c){
+        c.keys().then(function(reqs){
+          reqs.forEach(function(rq){
+            var L=(rq.url||'').split('/__cgolang/')[1]; if(!L) return;
+            var have=(typeof LANG_DICTIONARY!=='undefined')&&LANG_DICTIONARY[L];
+            if(have && Object.keys(LANG_DICTIONARY[L]).length>1000) return;
+            c.match(rq).then(function(res){ return res?res.json():null; }).then(function(j){
+              if(j && typeof j==='object' && typeof LANG_DICTIONARY!=='undefined'){
+                LANG_DICTIONARY[L]=Object.assign({}, LANG_DICTIONARY[L]||{}, j);
+                window._cgoTKeys=null;   /* 조각키 캐시 무효화 */
+              }
+            }).catch(function(){});
+          });
+        }).catch(function(){});
+      }).catch(function(){});
+    }catch(e){}
+  }
   function saveCacheResilient(L){
+    try{ packCachePut(L); }catch(e){}
     try{
       var ckey='cgo_lp_'+L;
       if(localStorage.getItem(ckey)) return;
@@ -151906,6 +151942,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     if(!has) sameOriginPack(L, visibleFirst);
     visibleFirst(); /* 이미 사전이 있으면(내장+캐시) 즉시 1차 적용 */
   }
+  try{ if(window.requestIdleCallback) requestIdleCallback(packCacheWarm); else setTimeout(packCacheWarm,300); }catch(e){ try{packCacheWarm();}catch(e2){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
   /* 페이지 이동 직후 즉시 번역 — 리포트 등 innerHTML 대량 렌더가 한글로 보였다가 뒤늦게 바뀌는 잔상 제거 */
   function hookNav(){
