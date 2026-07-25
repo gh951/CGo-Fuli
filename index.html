@@ -34139,14 +34139,16 @@ function _cgoT(str){
     if(d[str]) return d[str];
     /* 통짜 매칭 실패 시: 한글 조각 치환 (긴 것부터) */
     if(!/[가-힣]/.test(str)) return str;
-    if(!window._cgoTKeys){
+    /* ★C-68 ① 조각키 캐시를 언어별로 분리 — 직전 언어 키가 남아 오염되던 문제 */
+    if(!window._cgoTKeys || window._cgoTKeysLang!==L){
       var ks=[]; for(var k in d){ if(k.length>=2 && /[가-힣]/.test(k)) ks.push(k); }
       ks.sort(function(a,b){ return b.length-a.length; });
-      window._cgoTKeys=ks;
+      window._cgoTKeys=ks; window._cgoTKeysLang=L;
     }
     var K=window._cgoTKeys, out=str;
     for(var i=0;i<K.length;i++){
-      if(out.indexOf(K[i])>=0) out=out.split(K[i]).join(d[K[i]]);
+      /* ★C-68 ② join(undefined)는 JS가 쉼표로 잇는다 → 번역값 없으면 건드리지 않는다 */
+      if(out.indexOf(K[i])>=0){ var _rp=d[K[i]]; if(_rp==null||_rp==='') continue; out=out.split(K[i]).join(_rp); }
       if(!/[가-힣]/.test(out)) break;
     }
     return out;
