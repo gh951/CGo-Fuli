@@ -29177,7 +29177,7 @@ window.tvyCamRunFullAnalysis = function(){
     + '- 사용자 사주 오행: ' + userOh + '\n'
     + '- 10방위 평균 방위각: ' + Math.round(totalDeg / 10) + '°\n'
     + '- 결정론 시드: ' + seed + '\n'
-    + '\n위 데이터 기반으로 C-29 분석 점수와 보고서를 한국어로 작성해주세요. 마크다운 #### 헤더 사용. 600~900자.';
+    + '\n위 데이터 기반으로 C-29 분석 점수와 보고서를' + ((window._LANG&&window._LANG!=='ko')?' 작성해주세요.':' 한국어로 작성해주세요.') + ' 마크다운 #### 헤더 사용. 600~900자.';
   var fullPrompt = info.prompt + '\n\n' + contextStr;
 
   fetch('/api/groq', {
@@ -39237,6 +39237,10 @@ var CGO_I18N = {
     pct_btn: '',
   },
   en: {
+    /* ★C-68: 중국어·대만어·일본어엔 있고 영어엔 없던 섹션바 제목 7개 보충 */
+    section_info:'📋 Enter Info', section_cheon:'🌌 Heaven-Earth-Human Energy', section_bio:'🧬 Bio Scan',
+    section_ili:'📊 ILI Score', section_energy_book:'✦ CGO-FULI Book of Energy',
+    section_chat:'💬 CGO Messenger', section_all:'✦ All Features',
     flag:'🇺🇸', code:'EN',
     sync_date:'{y}/{m}/{d}',
     sync_msg:'{name}\'s info auto-filled!',
@@ -39318,7 +39322,7 @@ var CGO_I18N = {
     lbl_cur_place:'Current Residence',
     lbl_cur_hint:'Enter current neighborhood',
     nasaLive:'NASA JPL',
-    bioScan:'🧬 CGO FULI 생체 v2.0',
+    bioScan:'🧬 CGO FULI Bio v2.0',
     optMale:'Male',
     optFemale:'Female',
     btnSolar:'Solar Cal.',
@@ -39386,7 +39390,7 @@ var CGO_I18N = {
     avoid_action:'Actions to Avoid',
     avoid_color:'Colors to Avoid',
     avoid_dir:'Direction to Avoid',
-    lbl_bioskin:'CGO FULI 생체 v2.0',
+    lbl_bioskin:'CGO FULI Bio v2.0',
     core8_label:'Core 8 Lines — Space Direct',
     west5_label:'West5·East6·Psych2',
     bio_sync:'Bio Real-time Link',
@@ -40061,6 +40065,10 @@ var CGO_I18N = {
     pct_btn: 'PCT國際專利申請中',
   },
   ja: {
+    /* ★C-68: 중국어·대만어엔 있고 일본어엔 없던 섹션바 제목 7개 보충 */
+    section_info:'📋 情報入力', section_cheon:'🌌 天地人エネルギー', section_bio:'🧬 生体スキャン',
+    section_ili:'📊 ILIスコア', section_energy_book:'✦ CGO-FULI エネルギーの書',
+    section_chat:'💬 CGO メッセンジャー', section_all:'✦ 全機能',
     flag:'🇯🇵', code:'JA',
     sync_date:'{y}年{m}月{d}日',
     sync_msg:'{name}さんの情報が自動入力されました！',
@@ -126451,7 +126459,7 @@ function sptAskAI(userText, isAuto) {
 
       if (hasConcreteData) {
         augSystem =
-          '당신은 스포츠 통계 전문 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          '당신은 스포츠 통계 전문 AI입니다. ' + ((window._LANG&&window._LANG!=='ko')?'':'반드시 한국어로만 답변하세요.') + '\n\n' +
           '## 규칙\n' +
           '1. [검색 결과]의 스코어·날짜·대회명을 최우선 활용\n' +
           '2. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
@@ -126511,7 +126519,7 @@ function sptAskAI(userText, isAuto) {
         });
 
         augSystem =
-          'CGO-FULI 스포츠 역학 AI입니다. 반드시 한국어로만 답변하세요.\n\n' +
+          'CGO-FULI 스포츠 역학 AI입니다. ' + ((window._LANG&&window._LANG!=='ko')?'':'반드시 한국어로만 답변하세요.') + '\n\n' +
           '## 중요: 전적/승률 질문 답변 방침\n' +
           '- 학습 데이터(2024년 초까지)를 최대한 활용해 실제 전적·성적을 답변하세요.\n' +
           '- 작은 지역 리그 팀이라도 리그명·구조·팀 특성을 최대한 설명하세요.\n' +
@@ -151359,7 +151367,8 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
     window.fetch = function(u, o){
       try{
         var url = (typeof u==='string') ? u : (u && u.url) || '';
-        if(url.indexOf('/api/groq')>=0 && o && typeof o.body==='string' && window._LANG && window._LANG!=='ko'){
+        /* ★C-68: vision-analyze 등 다른 LLM 엔드포인트도 언어 지시 대상에 포함 */
+        if((url.indexOf('/api/groq')>=0 || url.indexOf('/api/vision-analyze')>=0) && o && typeof o.body==='string' && window._LANG && window._LANG!=='ko'){
           var dir = window._demLangDirective ? window._demLangDirective() : '';
           if(dir){
             var b = JSON.parse(o.body);
