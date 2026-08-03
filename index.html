@@ -8607,6 +8607,7 @@ function cgoGuideFeature(key){
   (function(){
     // ─── 데이터 ────────────────────────────────────
     var DFU_QUICK = ['돼지','용','뱀','물','불','하늘','이빨','죽음','쫓김','시험'];
+    window._dfuTag=function(t){var L=window._LANG;if(!L||L==='ko'||!t)return t;var M={'재물':{zh:'财运',zh_HK:'財運',ja:'財運',en:'Wealth'},'성공':{zh:'成功',zh_HK:'成功',ja:'成功',en:'Success'},'인연':{zh:'缘分',zh_HK:'緣分',ja:'縁',en:'Bond'},'재물·인연':{zh:'财运·缘分',zh_HK:'財運·緣分',ja:'財運·縁',en:'Wealth·Bond'},'명예':{zh:'名誉',zh_HK:'名譽',ja:'名誉',en:'Honor'},'희망':{zh:'希望',zh_HK:'希望',ja:'希望',en:'Hope'}};if(M[t])return M[t][L]||t;return (typeof _cgoT==='function')?(_cgoT(t)||t):t;};
     var DFU_POPULAR = [
       {name:'돼지꿈', emoji:'🐷', bg:'linear-gradient(135deg,#fde68a,#f59e0b)', tag:'재물', meta:'大吉'},
       {name:'용꿈',   emoji:'🐉', bg:'linear-gradient(135deg,#fecaca,#dc2626)', tag:'성공', meta:'大吉'},
@@ -8632,7 +8633,7 @@ function cgoGuideFeature(key){
       el.innerHTML = DFU_POPULAR.map(function(p){
         return '<div class="dfu-popular-card" onclick="window.dfuQuickAnalyze(\''+p.name+'\')">'
           + '<div class="dfu-popular-img" style="background:'+p.bg+';">'
-          +   '<span class="dfu-popular-tag">'+p.tag+'</span>'
+          +   '<span class="dfu-popular-tag">'+window._dfuTag(p.tag)+'</span>'
           +   p.emoji
           + '</div>'
           + '<div class="dfu-popular-name">'+p.name+'</div>'
@@ -67841,7 +67842,7 @@ function c13Analyze(textOverride){
   if(btn) btn.disabled=true;
   if(btnTxt) btnTxt.textContent=_cgoT('⏳ 분석 중...');
   var dEl=document.getElementById('c13PopupDream');
-  if(dEl) dEl.textContent='"'+text.substring(0,30)+(text.length>30?'...':'')+'"';
+  var _dTit=(window._LANG&&window._LANG!=='ko'&&typeof _cgoT==='function')?(_cgoT(text)||text):text; if(dEl) dEl.textContent='"'+_dTit.substring(0,30)+(_dTit.length>30?'...':'')+'"';
 
   var steps=[{t:300,p:15,msg:'🔮 전통 역학 해석 중...'},{t:800,p:30,msg:'🧠 수면 인지·심리 분석 중...'},{t:1400,p:50,msg:'🛰️ NASA 행성 에너지 교차 중...'},{t:2000,p:70,msg:'👑 C-14 통합 해몽 도출 중...'},{t:2600,p:88,msg:'✨ AI 해몽 완성 중...'}];
   steps.forEach(function(s){ setTimeout(function(){
@@ -67947,8 +67948,8 @@ function c13ShowResult(res,ili,oh,jupOk,marsRetro,kp){
     // 카드3
     document.getElementById('c13Card3').innerHTML=
       '<div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:rgba(196,181,253,.7);">'+
-        '🛰️ '+(jupOk?'목성 순행★':'목성 역행')+(marsRetro?' · 화성 역행⚠️':'')+
-        ' · ILI <b style="color:#c4b5fd">'+ili+'</b>점 · '+oh+' · Kp '+(kp>=0?kp.toFixed(1):'?')+
+        '🛰️ '+(jupOk?(_cgoT('목성')+' '+_cgoT('순행')+'★'):(_cgoT('목성')+' '+_cgoT('역행')))+(marsRetro?(' · '+_cgoT('화성')+' '+_cgoT('역행')+'⚠️'):'')+
+        ' · ILI <b style="color:#c4b5fd">'+ili+'</b>'+_cgoT('점')+' · '+((function(x){var L=window._LANG;if(!L||L==='ko'||!x)return x;var m=(L==='en')?{'목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water'}:{'목':'木','화':'火','토':'土','금':'金','수':'水'};return m[x]||x;})(oh))+' · Kp '+(kp>=0?kp.toFixed(1):'?')+
       '</div>'+
       '<div style="white-space:pre-line;line-height:1.95;font-size:13px;">'+res.card3+'</div>';
 
@@ -67958,10 +67959,12 @@ function c13ShowResult(res,ili,oh,jupOk,marsRetro,kp){
     if(iliBar&&scoreTags&&Object.keys(s18).length>0){
       iliBar.style.display='block';
       var tagMap={s01:'사주',s02:'자미',s06:'행성',s13:'태을',s16:'타로',s17:'관상',s18:'손금'};
+      var _sclL=window._LANG,_SCLM={'사주':{zh:'四柱',zh_HK:'四柱',ja:'四柱',en:'Saju'},'자미':{zh:'紫微',zh_HK:'紫微',ja:'紫微',en:'Zi Wei'},'행성':{zh:'行星',zh_HK:'行星',ja:'惑星',en:'Planet'},'태을':{zh:'太乙',zh_HK:'太乙',ja:'太乙',en:'Tai Yi'},'타로':{zh:'塔罗',zh_HK:'塔羅',ja:'タロット',en:'Tarot'},'관상':{zh:'面相',zh_HK:'面相',ja:'観相',en:'Face'},'손금':{zh:'手相',zh_HK:'手相',ja:'手相',en:'Palm'}};
+      function _scl(x){if(!_sclL||_sclL==='ko')return x;var m=_SCLM[x];return (m&&m[_sclL])||x;}
       var tagHtml='';
       Object.keys(tagMap).forEach(function(k){
         if(s18[k]){var v=s18[k],c=v>=80?'#34d399':v>=65?'#d4a843':'#f87171';
-          tagHtml+='<span style="font-size:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:3px 8px;color:'+c+';">'+tagMap[k]+' '+v+'</span>';}
+          tagHtml+='<span style="font-size:10px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:3px 8px;color:'+c+';">'+_scl(tagMap[k])+' '+v+'</span>';}
       });
       scoreTags.innerHTML=tagHtml;
     }
@@ -151599,7 +151602,7 @@ import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
   /* ===== Music(My Frequency) NOW PLAYING·Fusion 라벨 번역 (값병합 조각용) ===== */
   window._mfuTx = window._mfuTx || (function(){
     var D={'자시':'Rat hour','축시':'Ox hour','인시':'Tiger hour','묘시':'Rabbit hour','진시':'Dragon hour','사시':'Snake hour','오시':'Horse hour','미시':'Goat hour','신시':'Monkey hour','유시':'Rooster hour','술시':'Dog hour','해시':'Pig hour','봄':'Spring','여름':'Summer','가을':'Autumn','겨울':'Winter','목':'Wood','화':'Fire','토':'Earth','금':'Metal','수':'Water','내 오행':'My element','자동 감지':'Auto-detect','(오행)':'(element)','(시진)':'(hour)','(계절)':'(season)','융합':'Fusion'};
-    return function(ko){ var L=window._LANG; if(!L||L==='ko') return ko; return (D[ko]!=null)?D[ko]:ko; };
+    return function(ko){ var L=window._LANG; if(!L||L==='ko') return ko; if(L==='en') return (D[ko]!=null)?D[ko]:ko; var HJ={'자시':'子時','축시':'丑時','인시':'寅時','묘시':'卯時','진시':'辰時','사시':'巳時','오시':'午時','미시':'未時','신시':'申時','유시':'酉時','술시':'戌時','해시':'亥時'}; if(HJ[ko]) return HJ[ko]; var t=(typeof _cgoT==='function')?_cgoT(ko):ko; return (t!=null&&t!=='')?t:ko; };
   })();
 
   /* ===== 1) C-65 엔진 ===== */
@@ -152651,7 +152654,7 @@ window._cgoReTranslateAll = function(){
 /* ★C-67 빌드 표식 — 지금 브라우저가 어느 파일을 쓰고 있는지 즉시 확인용.
    서비스워커(sw.js)가 옛 index.html을 캐시하고 있으면 새 파일을 올려도 반영되지 않는다.
    콘솔 맨 위 이 줄의 번호가 최신인지 먼저 확인할 것. */
-console.log('%c[CGO-FULI BUILD] C39-0726-tarot  ← 이 번호가 최신인지 확인','background:#d4a843;color:#000;font-weight:bold;padding:2px 6px');
+console.log('%c[CGO-FULI BUILD] C39-0726-dream2  ← 이 번호가 최신인지 확인','background:#d4a843;color:#000;font-weight:bold;padding:2px 6px');
 window.CGO_BUILD='C67-0724-1710';
 /* 캐시 강제 갱신 도구 — 콘솔에서 cgoUpdate() */
 window.cgoUpdate = function(){
