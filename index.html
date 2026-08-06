@@ -8987,7 +8987,7 @@ function cgoGuideFeature(key){
             <div id="c24-stage-dots" style="display:flex;gap:4px;"></div>
             <div id="c24-stage-label" style="font-size:11px;font-weight:800;color:#34d399;flex:1;"></div>
           </div>
-          <div id="c24-face-warn" style="display:none;font-size:10px;color:#f87171;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:goldPulse 1s infinite;">⚠️ 얼굴을 화면 중앙에 맞춰주세요</div>
+          <div id="c24-face-warn" style="display:none;font-size:10px;color:#f87171;margin-top:2px;line-height:1.35;word-break:keep-all;animation:goldPulse 1s infinite;">⚠️ 얼굴을 화면 중앙에 맞춰주세요</div>
         </div>
         <div id="c24-idle-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);">
           <div style="font-size:36px;margin-bottom:8px;">📷</div>
@@ -34326,9 +34326,10 @@ function _c24DrawGuide(skinRatio){
       _lbl=_cgoT(_lbl);   /* ★ C-63: 캔버스 번역 (너비 계산 전에) */
       var _tw=ctx.measureText(_lbl).width+12;
       ctx.fillStyle=_isFM?'rgba(6,78,59,.85)':'rgba(69,26,3,.85)';
-      ctx.fillRect(6,6,_tw,20);
+      /* ★C-68: HTML 단계 오버레이(상단 ~46px)와 겹쳐 글자가 포개졌다 → 캔버스 배지를 아래로 */
+      ctx.fillRect(6,52,_tw,20);
       ctx.fillStyle=_isFM?'#34d399':'#fbbf24';
-      ctx.fillText(_lbl, 12, 20);
+      ctx.fillText(_lbl, 12, 66);
       /* ★ C-63: FaceMesh 진단 (콘솔 없이 확인) — 전송/응답/검출 */
       /* ★ C-63: 진단 배지는 개발/검증용 → 언어 무관하게 영어 고정 (단독 '응답','검출'을
          전역 사전에 넣으면 다른 화면에서 오역될 위험이 있음 — C-60 용어집 경고) */
@@ -34336,9 +34337,9 @@ function _c24DrawGuide(skinRatio){
       ctx.font='10px sans-serif';
       ctx.fillStyle='rgba(0,0,0,.7)';
       var _dw=ctx.measureText(_dg).width+10;
-      ctx.fillRect(6,30,_dw,16);
+      ctx.fillRect(6,76,_dw,16);
       ctx.fillStyle=(_c24._fmHit>0)?'#5eead4':'rgba(255,255,255,.75)';
-      ctx.fillText(_dg, 11, 42);
+      ctx.fillText(_dg, 11, 88);
       /* 부위별 정렬 기호 */
       /* ★ C-63: 상황별 안내 — 얼굴 못 잡으면 무엇을 할지 알려준다 */
       var _sym;
@@ -34356,7 +34357,21 @@ function _c24DrawGuide(skinRatio){
         ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
         ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=4;
         ctx.fillStyle='rgba(255,255,255,.92)';
-        ctx.fillText(_cgoT(_sym), cv.width*0.5, cv.height*0.075);   /* ★ C-63: 캔버스 번역 */
+        /* ★C-68: 상단은 HTML 오버레이가 차지 → 아래쪽에 배치.
+           번역으로 길어지면 폭에 맞춰 2줄로 나눈다 (요약·생략 없음). */
+        var _txt=_cgoT(_sym), _maxW=cv.width*0.92;
+        if(ctx.measureText(_txt).width<=_maxW){
+          ctx.fillText(_txt, cv.width*0.5, cv.height*0.88);
+        } else {
+          var _ws=_txt.split(' '), _l1='', _l2='';
+          for(var _wi=0;_wi<_ws.length;_wi++){
+            var _try=_l1?(_l1+' '+_ws[_wi]):_ws[_wi];
+            if(!_l2 && ctx.measureText(_try).width<=_maxW) _l1=_try;
+            else _l2=_l2?(_l2+' '+_ws[_wi]):_ws[_wi];
+          }
+          ctx.fillText(_l1, cv.width*0.5, cv.height*0.84);
+          if(_l2) ctx.fillText(_l2, cv.width*0.5, cv.height*0.90);
+        }
         ctx.shadowBlur=0;
       }
       ctx.restore();
@@ -34400,7 +34415,7 @@ function _c24UpdateStageUI(){
     /* ★C-68: labels 에 이미 이모지가 있어 icons[cur] 를 또 붙이면 아이콘이 중복되고,
    번역 후 길이가 늘어 오버레이를 넘쳐 글자가 겹쳤다 → 아이콘 제거 + 한 줄 말줄임 */
       lbl.textContent=(cur+1)+'/'+s.steps.length+' '+((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
-      lbl.style.whiteSpace='nowrap'; lbl.style.overflow='hidden'; lbl.style.textOverflow='ellipsis'; lbl.style.minWidth='0';
+      lbl.style.whiteSpace='normal'; lbl.style.lineHeight='1.3'; lbl.style.wordBreak='keep-all'; lbl.style.minWidth='0';
   }
 }
 
