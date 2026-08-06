@@ -51601,6 +51601,8 @@ function _cgoApplyDictionary(lang) {
   function _cgoTNode(root){
     try{
       var L=window._LANG; if(!L||L==='ko') return;
+      /* ★2026-08-07 — 칠한 곳 기록 (되돌릴 때 함께 훑는다) */
+      try{ if(root && root.nodeType===1 && window._cgoMarkDirty) window._cgoMarkDirty(root); }catch(e){}
       var dict=(typeof LANG_DICTIONARY!=='undefined')?LANG_DICTIONARY[L]:null; if(!dict) return;
       var skip={SCRIPT:1,STYLE:1,NOSCRIPT:1};
       function w(node){
@@ -51910,6 +51912,8 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
   /* ★C-68: zh_HK·ar·tr·it·tl·ms·uk·nl 누락 → 영어로 떨어지던 문제 보충 */
   var langNames = {en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese (Cantonese)',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
   var tgtLang = langNames[lang]||'English';
+  /* ★2026-08-07 — 우리가 칠한 곳을 기록해 둔다 (되돌릴 때 쓴다) */
+  try{ if(rootEl && window._cgoMarkDirty) window._cgoMarkDirty(rootEl); }catch(e){}
   var nodes = _cgoGetNodes(rootEl);
     if (!nodes.length) return;
 
@@ -51940,7 +51944,15 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
         var m=raw.match(/(\[[\s\S]*\])/);
         if(!m) return;
         var arr=JSON.parse(m[1]);
-        batch.forEach(function(node,i){if(arr[i]&&arr[i].trim()) node.nodeValue=arr[i];});
+        batch.forEach(function(node,i){
+          if(!(arr[i]&&arr[i].trim())) return;
+          /* ★2026-08-07 — AI 번역도 한국어 원본을 보존한다.
+             이게 없어서 AI가 칠한 팝업은 되돌릴 근거가 아예 사라졌다.
+             (사전 번역은 __cgoKO를 남기는데 AI 번역만 덮어써 버렸다)
+             = 일본어→한국어로 바꿔도 팝업만 일본어로 남던 진짜 원인. */
+          try{ if(node.__cgoKO===undefined && /[\uac00-\ud7a3]/.test(node.nodeValue||'')) node.__cgoKO=node.nodeValue; }catch(e){}
+          node.nodeValue=arr[i];
+        });
       }catch(e){}
       doBatch(bi+1);
     })
@@ -152536,13 +152548,55 @@ window._cgoReTranslateAll = function(){
       var s=document.querySelector('.sidebar');     if(s) r.push(s);
       var m=document.getElementById('langMenu');    if(m) r.push(m);
       var p=document.getElementById('phase0');      if(p && p.style.display!=='none') r.push(p);
+      /* ★2026-08-07 — 화면에 떠 있는 팝업/오버레이는 정의상 '보이는 것'이다.
+         .page.active 밖에 있다는 이유로 빠져 있어서 번역·복원 모두 누락됐다. */
+      var OV=['fortunePopupOverlay','sijinPopupOverlay','algoPopup','hvDetailOverlay',
+              'cosmicOrderSection','fpBody','fortunePopup','hvDetailBox','sijinDetailBox',
+              'algoDetailBox','reportContainer','consultChat','bioSkinResult',
+              '_raiMainPop','cgoModal','cgoPopup'];
+      for(var _o=0;_o<OV.length;_o++){
+        var _el=document.getElementById(OV[_o]);
+        if(!_el) continue;
+        var _cs; try{ _cs=window.getComputedStyle(_el); }catch(e){ _cs=null; }
+        if(_cs && (_cs.display==='none' || _cs.visibility==='hidden')) continue;
+        if(!_el.offsetParent && _cs && _cs.position!=='fixed') continue;
+        var _in=false;
+        for(var _q=0;_q<r.length;_q++){ if(r[_q]===_el || (r[_q].contains && r[_q].contains(_el))){ _in=true; break; } }
+        if(!_in) r.push(_el);
+      }
     }catch(e){}
     if(!r.length) r=[document.body];
     return r;
   };
 
   /* ① 화면 전체를 한국어 원점으로 되돌린다 */
-  window._cgoResetToKO = function(){
+  /* ★2026-08-07 — "우리가 칠한 곳은 우리가 되돌린다"
+   팝업·오버레이는 .page.active 밖에 있어서 _cgoVisibleRoots()에 안 잡힌다.
+   그래서 한국어로 되돌릴 때 통째로 빠졌고, 일본어가 그대로 남았다.
+   (다시 열면 한국어인 이유 = 그때는 JS가 한국어 원본에서 새로 그리기 때문)
+   해결: 번역이 실제로 지나간 뿌리만 기록해 두고 되돌릴 때 함께 훑는다.
+        문서 전체(10.45MB)를 훑지 않으므로 특허 원칙도 0.2초도 그대로다. */
+window._cgoDirtyRoots = window._cgoDirtyRoots || [];
+window._cgoMarkDirty = function(root){
+  try{
+    if(!root || root.nodeType!==1) return;
+    var a = window._cgoDirtyRoots;
+    for(var i=0;i<a.length;i++){ if(a[i]===root) return; }
+    a.push(root);
+    if(a.length>60) a.shift();          /* 무한 증식 방지 */
+  }catch(e){}
+};
+window._cgoDirtyList = function(){
+  var out=[];
+  try{
+    var a=window._cgoDirtyRoots||[];
+    for(var i=0;i<a.length;i++){ var n=a[i]; if(n && n.isConnected) out.push(n); }
+    window._cgoDirtyRoots = out.slice();   /* 사라진 노드 정리 */
+  }catch(e){}
+  return out;
+};
+
+window._cgoResetToKO = function(){
     try{
       /* ★C-67 되돌리기 전에, 한국어 원본이 없는 글자를 사전 역방향으로 되찾아 심는다.
          (그래야 아래 복원이 실제로 작동한다) */
@@ -152557,9 +152611,25 @@ window._cgoReTranslateAll = function(){
               · 화면 밖 페이지는 어차피 열 때 번역되므로 지금 만질 이유가 없다
               · 작업량이 50배 이상 줄어 브라우저가 멈추지 않고, 한글 노출 순간도 짧다 */
       var _roots = window._cgoVisibleRoots();
+      /* ★2026-08-07 — 번역이 지나간 팝업·오버레이도 함께 되돌린다 */
+      try{
+        var _dl = (typeof window._cgoDirtyList==='function') ? window._cgoDirtyList() : [];
+        for(var _d=0; _d<_dl.length; _d++){
+          var _dup=false;
+          for(var _e=0; _e<_roots.length; _e++){ if(_roots[_e]===_dl[_d] || (_roots[_e].contains && _roots[_e].contains(_dl[_d]))){ _dup=true; break; } }
+          if(!_dup) _roots.push(_dl[_d]);
+        }
+      }catch(e){}
       if(typeof window._cgoRestoreKO==='function'){
         for(var _r=0;_r<_roots.length;_r++){ try{ window._cgoRestoreKO(_roots[_r]); }catch(e){} }
       }
+      /* 원본이 없는 노드는 역방향 사전으로 한 번 더 시도 */
+      try{
+        if(typeof window._cgoRecoverKO==='function'){
+          for(var _r2=0;_r2<_roots.length;_r2++){ window._cgoRecoverKO(_roots[_r2]); }
+          for(var _r3=0;_r3<_roots.length;_r3++){ window._cgoRestoreKO(_roots[_r3]); }
+        }
+      }catch(e){}
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
       /* 3) 섹션 바 제목 — setLang이 textContent로 통째 교체하는 순간
