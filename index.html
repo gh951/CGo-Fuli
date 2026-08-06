@@ -52157,18 +52157,33 @@ function _applyLangLocalization(lang) {
   function _watchEl(id) {
     var el = document.getElementById(id);
     if (!el) return;
+    /* 결과·분석 본문이 들어가는 곳 — 여기만 API가 마저 채운다 (지휘자 설계) */
+    var RESULT = {reportContainer:1, consultChat:1, hvDetailBox:1, sijinDetailBox:1,
+                  algoDetailBox:1, bioSkinResult:1};
     new MutationObserver(function(mutations){
       // 실제 내용이 추가됐을 때만 번역
       var hasContent = mutations.some(function(m){ return m.addedNodes.length > 0; });
       if (!hasContent) return;
-      if (window._LANG && window._LANG !== 'ko') {
+      if (!window._LANG || window._LANG === 'ko') return;
+      /* ★2026-08-07 — 팝업이 '걸렸다 넘어가는' 원인 제거.
+         기존: 내용 생성 → 200ms 대기 → API 왕복(300~800ms) → 글자 교체
+               = 한국어로 한 번, 번역으로 한 번, 두 번 그려졌다.
+         수정: 우리 DB로 그 자리에서 즉시 칠한다(동기·네트워크 없음).
+               DB는 이미 기기에 있으므로 기다릴 이유가 없다.
+               UI 글자는 이제 API를 타지 않는다(원칙 복원). */
+      var res = { missing: 1 };
+      try{
+        if (window._cgoBind && window._cgoPaint) {
+          window._cgoBind(el);
+          res = window._cgoPaint(window._LANG, el);
+        }
+      }catch(e){}
+      /* 결과·분석 본문에 아직 남은 것만 API로 (원래 자리) */
+      if (RESULT[id] && res.missing > 0) {
         clearTimeout(window._cgoPopupTransTimer);
         window._cgoPopupTransTimer = setTimeout(function(){
           var p = CGO_I18N[window._LANG];
-          if (p && typeof _cgoAiTranslate==='function') {
-            // 팝업 루트만 번역 (빠르게)
-            _cgoAiTranslatePage(window._LANG, p, el);
-          }
+          if (p && typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG, p, el);
         }, 200);
       }
     }).observe(el, {childList:true, subtree:true, characterData:false});
@@ -52191,11 +52206,21 @@ function _applyLangLocalization(lang) {
           if (m.type==='attributes' && m.attributeName==='style') {
             var vis = el.style.display !== 'none' && el.style.visibility !== 'hidden';
             if (vis && window._LANG && window._LANG !== 'ko') {
-              clearTimeout(window._cgoPopupTransTimer);
-              window._cgoPopupTransTimer = setTimeout(function(){
-                var p = CGO_I18N[window._LANG];
-                if (p && typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG, p, el);
-              }, 250);
+              /* ★2026-08-07 — 열리는 그 순간 우리 DB로 즉시 칠한다 (대기 없음) */
+              var _r2 = { missing: 1 };
+              try{
+                if (window._cgoBind && window._cgoPaint) {
+                  window._cgoBind(el);
+                  _r2 = window._cgoPaint(window._LANG, el);
+                }
+              }catch(e){}
+              if (_r2.missing > 0) {
+                clearTimeout(window._cgoPopupTransTimer);
+                window._cgoPopupTransTimer = setTimeout(function(){
+                  var p = CGO_I18N[window._LANG];
+                  if (p && typeof _cgoAiTranslatePage==='function') _cgoAiTranslatePage(window._LANG, p, el);
+                }, 250);
+              }
             }
           }
         });
@@ -164611,3 +164636,132 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
 
 
 
+
+<script>
+/* ★2026-08-07 — 자리표 방식 번역 엔진 (LJR 방식으로 가는 1단계)
+   지금까지: 화면을 한국어로 그린 뒤 글자마다 DB를 뒤져 바꿨다.
+             조각 조립·한글 스침·원본 소멸·역방향 사전·팝업 재렌더 —
+             다섯 문제가 전부 '뒤진다'는 한 가지에서 나왔다.
+   이제:     최초 1회만 훑으며 "이 자리 = 이 글자"를 기록한다.
+             그 뒤로는 찾지 않는다. 기록된 자리에 DB 값을 쓴다.
+   덤:       그 목록이 (가)단계 설계도다. cgoKeyMap() 으로 뽑는다. */
+(function(){
+  var KO = /[\uac00-\ud7a3]/;
+  var SKIP = {SCRIPT:1,STYLE:1,NOSCRIPT:1,TEXTAREA:1,CANVAS:1,IFRAME:1};
+  var ATTRS = ['placeholder','title','aria-label'];
+  var REG = window._cgoReg = [];
+  var SEEN = (typeof WeakSet !== 'undefined') ? new WeakSet() : null;
+
+  function dictOf(l){ try{ return (typeof LANG_DICTIONARY!=='undefined')?(LANG_DICTIONARY[l]||null):null; }catch(e){ return null; } }
+
+  function bindText(n){
+    if(SEEN && SEEN.has(n)) return;
+    var v=n.nodeValue; if(!v) return;
+    var t=v.trim();
+    if(!t || t.length>300 || !KO.test(t)) return;
+    if(SEEN) SEEN.add(n);
+    var i=v.indexOf(t);
+    if(n.__cgoKO===undefined) n.__cgoKO=v;
+    REG.push({n:n,k:t,pre:v.slice(0,i),post:v.slice(i+t.length)});
+  }
+  function bindAttr(el){
+    for(var a=0;a<ATTRS.length;a++){
+      var key=ATTRS[a], av=el.getAttribute&&el.getAttribute(key);
+      if(!av||!KO.test(av)) continue;
+      var t=av.trim(); if(!t||t.length>300) continue;
+      if(!el.__cgoAttrKO) el.__cgoAttrKO={};
+      if(el.__cgoAttrKO[key]!==undefined) continue;
+      el.__cgoAttrKO[key]=av;
+      REG.push({n:el,k:t,a:key});
+    }
+  }
+  function bind(root){
+    try{
+      (function w(n){
+        if(n.nodeType===3){ bindText(n); return; }
+        if(n.nodeType!==1) return;
+        if(SKIP[n.tagName]) return;
+        var cn=''+(n.className||'');
+        if(cn.indexOf('p0lb')>=0||cn.indexOf('lang-opt')>=0) return;
+        if(n.getAttribute&&n.getAttribute('data-noxl')!==null) return;
+        bindAttr(n);
+        var c=n.childNodes;
+        for(var i=0;i<c.length;i++) w(c[i]);
+      })(root||document.body);
+    }catch(e){}
+    return REG.length;
+  }
+  function paint(lang, only){
+    var d=(lang&&lang!=='ko')?dictOf(lang):null;
+    var ai=(window._cgoAiDict&&window._cgoAiDict[lang])||null;
+    var done=0, miss=0;
+    for(var i=0;i<REG.length;i++){
+      var r=REG[i], el=r.n;
+      if(!el) continue;
+      try{ if(!el.isConnected) continue; }catch(e){ continue; }
+      if(only){ try{ if(only!==el && !(only.contains&&only.contains(el))) continue; }catch(e){ continue; } }
+      var v;
+      if(lang==='ko'){ v=r.k; }
+      else{
+        v = d ? d[r.k] : null;
+        if(!v && ai) v = ai[r.k];
+        if(!v){ miss++; try{ if(window._cgoQueueMiss) window._cgoQueueMiss(r.k); }catch(e){} continue; }
+      }
+      try{
+        if(r.a){ if(el.getAttribute(r.a)!==v){ el.setAttribute(r.a,v); done++; } }
+        else { var nv=(r.pre||'')+v+(r.post||''); if(el.nodeValue!==nv){ el.nodeValue=nv; done++; } }
+      }catch(e){}
+    }
+    return {painted:done, missing:miss, total:REG.length};
+  }
+  window._cgoBind=bind; window._cgoPaint=paint;
+  window._cgoRepaint=function(){ return paint(window._LANG); };
+
+  window.cgoKeyMap=function(){
+    var out={};
+    for(var i=0;i<REG.length;i++){
+      var r=REG[i], el=r.n, host=r.a?el:(el.parentNode||null), page='', box='';
+      try{ if(host&&host.closest){ var pg=host.closest('.page'); page=pg?(pg.id||''):''; var bx=host.closest('[id]'); box=bx?(bx.id||''):''; } }catch(e){}
+      if(!out[r.k]) out[r.k]={page:page,box:box,attr:r.a||'',count:0};
+      out[r.k].count++;
+    }
+    var json=JSON.stringify(out,null,1);
+    window._cgoKeyMapJSON=json;
+    try{ navigator.clipboard.writeText(json); }catch(e){}
+    try{ var bl=new Blob([json],{type:'application/json'}), a=document.createElement('a');
+         a.href=URL.createObjectURL(bl); a.download='cgo_keymap.json';
+         document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
+    console.log('%c[자리표] 고유 글자 '+Object.keys(out).length+'개 · 자리 '+REG.length+'개','color:#10b981;font-weight:bold');
+    console.log('%ccgo_keymap.json 내려받음 — (가)단계 설계도입니다','color:#38bdf8');
+    return out;
+  };
+  window.cgoRegCount=function(){ console.log('%c[자리표] 등록된 자리 '+REG.length+'개','color:#10b981'); return REG.length; };
+
+  function wrapFn(name){
+    var orig=window[name];
+    if(typeof orig!=='function'||orig.__cgoWrapped) return;
+    var w=function(lang){
+      var r=orig.apply(this,arguments);
+      try{
+        var L=(typeof lang==='string')?lang:window._LANG;
+        var rts=(typeof window._cgoVisibleRoots==='function')?window._cgoVisibleRoots():[document.body];
+        for(var i=0;i<rts.length;i++) bind(rts[i]);
+        paint(L);
+      }catch(e){}
+      return r;
+    };
+    w.__cgoWrapped=true; window[name]=w;
+  }
+  function boot(){
+    try{
+      var rts=(typeof window._cgoVisibleRoots==='function')?window._cgoVisibleRoots():[document.body];
+      for(var i=0;i<rts.length;i++) bind(rts[i]);
+      if(window._LANG&&window._LANG!=='ko') paint(window._LANG);
+      wrapFn('cgoSwitchLang'); wrapFn('setLang');
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(boot,300); });
+  else setTimeout(boot,300);
+  setTimeout(function(){ try{ wrapFn('cgoSwitchLang'); wrapFn('setLang'); }catch(e){} },2000);
+})();
+</script>
