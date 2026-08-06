@@ -2571,9 +2571,9 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
         }
       }catch(e){}
       if(Date.now() - _t0 > 3000){ window._cgoLangGuardOff(); return; }
-      setTimeout(_cgoGuardTick, 16);
+      setTimeout(_cgoGuardTick, 24);
     }
-    setTimeout(_cgoGuardTick, 0);
+    _cgoGuardTick();
     /* 뒤로가기 복원(bfcache)에서도 화면이 잠기지 않도록 안전망 */
     try{ window.addEventListener('pageshow', function(){ setTimeout(window._cgoLangGuardOff, 1500); }); }catch(e){}
   }catch(e){}
@@ -34227,6 +34227,9 @@ function _cgoT(str){
     var d=LANG_DICTIONARY[L];
     if(!d) return str;
     if(d[str]) return d[str];
+    /* ★2026-08-07 — 이번 세션에서 API가 이미 번역한 것은 그 값을 재사용한다.
+       같은 글자가 열 때마다 다르게 번역되던 문제와 중복 비용을 함께 없앤다. */
+    try{ var _ai=window._cgoAiDict && window._cgoAiDict[L]; if(_ai && _ai[str]) return _ai[str]; }catch(e){}
     /* 통짜 매칭 실패 시: 한글 조각 치환 (긴 것부터) */
     if(!/[가-힣]/.test(str)) return str;
     /* ★C-68 ① 조각키 캐시를 언어별로 분리 — 직전 언어 키가 남아 오염되던 문제 */
@@ -34246,7 +34249,7 @@ function _cgoT(str){
 }
 
 /* C-64: 값병합 전용 exact-only 번역 (폴백 미사용 → 엉킴 원천 차단) */
-function _cgoTx(str){ try{ var L=window._LANG; if(!L||L==='ko'||!str) return str; if(typeof LANG_DICTIONARY==='undefined') return str; var d=LANG_DICTIONARY[L]; if(!d) return str; return d[str]||str; }catch(e){ return str; } }
+function _cgoTx(str){ try{ var L=window._LANG; if(!L||L==='ko'||!str) return str; if(typeof LANG_DICTIONARY==='undefined') return str; var d=LANG_DICTIONARY[L]; if(!d) return str; if(d[str]) return d[str]; /* ★2026-08-07 API 재사용 */ var _ai=window._cgoAiDict&&window._cgoAiDict[L]; if(_ai&&_ai[str]) return _ai[str]; return str; }catch(e){ return str; } }
 
 /* C-64: alert/confirm 중앙 번역 래퍼 (통짜 매칭 + 조각 치환) */
 (function(){
@@ -51663,6 +51666,90 @@ function _cgoApplyDictionary(lang) {
   var Q=[], seen=Object.create(null), running=false, MAXQ=4000;
   var _ric=window.requestIdleCallback||function(f){return setTimeout(f,200);};
   var langNames={en:'English',zh:'Simplified Chinese',zh_HK:'Traditional Chinese',ja:'Japanese',ru:'Russian',hi:'Hindi',es:'Spanish',de:'German',fr:'French',pt:'Portuguese (Brazil)',vi:'Vietnamese',th:'Thai',id:'Indonesian',ar:'Arabic',tr:'Turkish',it:'Italian',tl:'Filipino',ms:'Malay',uk:'Ukrainian',nl:'Dutch'};
+  /* ═══════════════════════════════════════════════════════════════
+     ★2026-08-07 — API 유출 기록기 (원칙 복원 장치)
+
+     원칙: 사용자가 보는 UI = 우리 사전 / 결과·분석 = API
+     현실: 사전에서 못 찾은 UI 글자가 API로 새어 나가고 있다.
+           같은 버튼이 열 때마다 다르게 번역되고, 비용이 나가고,
+           오프라인이면 한국어로 남는다.
+
+     이 장치는 API가 번역한 것을 전부 기록한다.
+     = "지금 사전에 뚫려 있는 구멍"의 정확한 목록.
+     눈으로 찾을 필요 없이, 실제 사용자가 밟은 곳만 정확히 모인다.
+
+     cgoLeakReport()  → 한국어:번역문 짝을 JSON으로 내려받는다 (사전에 바로 붙여넣기)
+     cgoLeakCount()   → 지금까지 몇 개가 샜는지
+     cgoLeakClear()   → 초기화
+     ═══════════════════════════════════════════════════════════════ */
+  window._cgoAiDict = window._cgoAiDict || {};
+  window._cgoLeakRecord = function(lang, src, out){
+    try{
+      if(!lang || lang==='ko' || !src || !out) return;
+      var KO=/[\uac00-\ud7a3]/;
+      var D = window._cgoAiDict[lang] = window._cgoAiDict[lang] || {};
+      var added = 0;
+      for(var i=0;i<src.length;i++){
+        var k=(src[i]||'').trim(), v=(out[i]||'').trim();
+        if(!k || !v || k===v) continue;
+        if(!KO.test(k)) continue;          /* 한국어 원문만 */
+        if(KO.test(v)) continue;           /* 번역 실패분은 버린다 */
+        if(k.length<2 || k.length>300) continue;
+        if(D[k]) continue;
+        D[k]=v; added++;
+        /* 같은 세션에서 같은 글자를 다시 API로 보내지 않는다 */
+        try{ if(window._cgoRev && window._cgoRev[v]===undefined) window._cgoRev[v]=k; }catch(e){}
+      }
+      if(!added) return;
+      try{
+        var all = JSON.stringify(D);
+        if(all.length < 2000000) localStorage.setItem('cgo_leak_'+lang, all);
+      }catch(e){}
+      window._cgoLeakN = (window._cgoLeakN||0) + added;
+      if(window._cgoLeakN % 50 < added){
+        console.log('%c[API유출] '+window._cgoLeakN+'개 — cgoLeakReport() 로 사전에 넣으세요','color:#f59e0b;font-weight:bold');
+      }
+    }catch(e){}
+  };
+  /* 새로고침해도 이어서 모은다 */
+  try{
+    (function(){
+      var L=localStorage.getItem('cgo_lang');
+      if(L && L!=='ko'){
+        var s=localStorage.getItem('cgo_leak_'+L);
+        if(s){ window._cgoAiDict[L]=JSON.parse(s); window._cgoLeakN=Object.keys(window._cgoAiDict[L]).length; }
+      }
+    })();
+  }catch(e){}
+  window.cgoLeakCount = function(){
+    var L=window._LANG||'x', D=(window._cgoAiDict[L]||{});
+    var n=Object.keys(D).length;
+    console.log('%c[API유출] '+L+' — '+n+'개가 사전에 없어 API로 처리됐습니다','color:#f59e0b;font-weight:bold');
+    return n;
+  };
+  window.cgoLeakReport = function(lang){
+    var L=lang||window._LANG||'x', D=(window._cgoAiDict[L]||{});
+    var keys=Object.keys(D);
+    console.log('%c[API유출] '+L+' — 총 '+keys.length+'개','color:#f59e0b;font-weight:bold');
+    console.log('%c이 목록을 검수 후 lang/'+L+'.json 에 넣으면 그만큼 API가 줄어듭니다','color:#38bdf8');
+    var json=JSON.stringify(D, null, 1);
+    window._cgoLeakJSON=json;
+    try{ navigator.clipboard.writeText(json); }catch(e){}
+    try{
+      var bl=new Blob([json],{type:'application/json'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(bl); a.download='api_leak_'+L+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+    }catch(e){}
+    return D;
+  };
+  window.cgoLeakClear = function(lang){
+    var L=lang||window._LANG||'x';
+    window._cgoAiDict[L]={}; window._cgoLeakN=0;
+    try{ localStorage.removeItem('cgo_leak_'+L); }catch(e){}
+    console.log('[API유출] '+L+' 초기화');
+  };
+
   window._cgoQueueMiss=function(t){
     try{
       /* ★ 누락 수집기 (C-67): cgoMissOn() 실행 시 화면에 실제로 뜬 미번역 한글을 자동 수집 */
@@ -51944,6 +52031,8 @@ function _cgoAiTranslatePage(lang, pack, rootEl) {
         var m=raw.match(/(\[[\s\S]*\])/);
         if(!m) return;
         var arr=JSON.parse(m[1]);
+        /* ★2026-08-07 — API가 번역한 것을 기록한다 (사전 구멍 목록) */
+        try{ if(window._cgoLeakRecord) window._cgoLeakRecord(lang, texts, arr); }catch(e){}
         batch.forEach(function(node,i){
           if(!(arr[i]&&arr[i].trim())) return;
           /* ★2026-08-07 — AI 번역도 한국어 원본을 보존한다.
@@ -152549,20 +152638,30 @@ window._cgoReTranslateAll = function(){
       var m=document.getElementById('langMenu');    if(m) r.push(m);
       var p=document.getElementById('phase0');      if(p && p.style.display!=='none') r.push(p);
       /* ★2026-08-07 — 화면에 떠 있는 팝업/오버레이는 정의상 '보이는 것'이다.
-         .page.active 밖에 있다는 이유로 빠져 있어서 번역·복원 모두 누락됐다. */
-      var OV=['fortunePopupOverlay','sijinPopupOverlay','algoPopup','hvDetailOverlay',
-              'cosmicOrderSection','fpBody','fortunePopup','hvDetailBox','sijinDetailBox',
-              'algoDetailBox','reportContainer','consultChat','bioSkinResult',
-              '_raiMainPop','cgoModal','cgoPopup'];
-      for(var _o=0;_o<OV.length;_o++){
-        var _el=document.getElementById(OV[_o]);
-        if(!_el) continue;
-        var _cs; try{ _cs=window.getComputedStyle(_el); }catch(e){ _cs=null; }
-        if(_cs && (_cs.display==='none' || _cs.visibility==='hidden')) continue;
-        if(!_el.offsetParent && _cs && _cs.position!=='fixed') continue;
-        var _in=false;
-        for(var _q=0;_q<r.length;_q++){ if(r[_q]===_el || (r[_q].contains && r[_q].contains(_el))){ _in=true; break; } }
-        if(!_in) r.push(_el);
+         .page.active 밖에 있다는 이유로 빠져 있어서 번역·복원 모두 누락됐다.
+         ※ 이 함수는 아주 자주 불린다. getComputedStyle 16회를 매번 하면 느려지므로
+           레이아웃 읽기 없이 판정하고, 결과를 120ms만 재사용한다. */
+      var _now = Date.now();
+      if(window._cgoOvCache && _now - window._cgoOvCache.t < 120){
+        var _c = window._cgoOvCache.v;
+        for(var _z=0;_z<_c.length;_z++){ if(_c[_z].isConnected) r.push(_c[_z]); }
+      } else {
+        var OV=['fortunePopupOverlay','sijinPopupOverlay','algoPopup','hvDetailOverlay',
+                'cosmicOrderSection','fpBody','fortunePopup','hvDetailBox','sijinDetailBox',
+                'algoDetailBox','reportContainer','consultChat','bioSkinResult',
+                '_raiMainPop','cgoModal','cgoPopup'];
+        var _found=[];
+        for(var _o=0;_o<OV.length;_o++){
+          var _el=document.getElementById(OV[_o]);
+          if(!_el) continue;
+          /* 인라인 display:none 이 대부분이라 여기서 대부분 걸러진다 (비용 0) */
+          if(_el.style && (_el.style.display==='none' || _el.style.visibility==='hidden')) continue;
+          if(!_el.offsetParent && !(_el.style && _el.style.position==='fixed')) continue;
+          var _in=false;
+          for(var _q=0;_q<r.length;_q++){ if(r[_q]===_el || (r[_q].contains && r[_q].contains(_el))){ _in=true; break; } }
+          if(!_in){ r.push(_el); _found.push(_el); }
+        }
+        window._cgoOvCache = { t:_now, v:_found };
       }
     }catch(e){}
     if(!r.length) r=[document.body];
@@ -152623,11 +152722,18 @@ window._cgoResetToKO = function(){
       if(typeof window._cgoRestoreKO==='function'){
         for(var _r=0;_r<_roots.length;_r++){ try{ window._cgoRestoreKO(_roots[_r]); }catch(e){} }
       }
-      /* 원본이 없는 노드는 역방향 사전으로 한 번 더 시도 */
+      /* 원본이 없는 노드만 역방향 사전으로 한 번 더 시도.
+         ★역방향 사전 만들기는 무겁다(19,096키 × 언어수). 전체 뿌리를 두 번 더 훑으면
+           언어 전환이 눈에 띄게 느려진다. → 이번 전환에서 실제로 복구가 필요한
+           뿌리(칠해둔 팝업)만, 한 번만 훑는다. */
       try{
-        if(typeof window._cgoRecoverKO==='function'){
-          for(var _r2=0;_r2<_roots.length;_r2++){ window._cgoRecoverKO(_roots[_r2]); }
-          for(var _r3=0;_r3<_roots.length;_r3++){ window._cgoRestoreKO(_roots[_r3]); }
+        var _need = (typeof window._cgoDirtyList==='function') ? window._cgoDirtyList() : [];
+        if(_need.length && typeof window._cgoRecoverKO==='function'){
+          for(var _r2=0;_r2<_need.length;_r2++){
+            if(!_need[_r2].isConnected) continue;
+            window._cgoRecoverKO(_need[_r2]);
+            window._cgoRestoreKO(_need[_r2]);
+          }
         }
       }catch(e){}
       /* 2) 최초 스냅샷 복원기(있으면) */
