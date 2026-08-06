@@ -2561,7 +2561,8 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
           var vis = '';
           try{
             var rts = (typeof window._cgoVisibleRoots === 'function') ? window._cgoVisibleRoots() : [document.body];
-            for(var _v=0; _v<rts.length; _v++) vis += (rts[_v].innerText || rts[_v].textContent || '');
+            /* ★innerText는 레이아웃을 강제 계산한다(느림). textContent로 충분하다. */
+            for(var _v=0; _v<rts.length; _v++) vis += (rts[_v].textContent || '');
           }catch(e){}
           var koLeft = (vis.match(/[\uac00-\ud7a3]/g) || []).length;
           if(koLeft <= 2 || Date.now() - _t0 > 1200){
@@ -152695,6 +152696,46 @@ window._cgoDirtyList = function(){
   return out;
 };
 
+/* ★2026-08-07 — 뒷줄: 지금 안 보이는 팝업 되돌리기.
+   브라우저가 한가해질 때(requestIdleCallback) 하나씩 처리한다.
+   화면에 이미 보이는 뿌리는 앞줄에서 끝났으므로 건너뛴다.
+   역방향 사전 생성이 무거우므로 '원본이 없는 뿌리'가 있을 때만 만든다. */
+window._cgoDeferredRestore = function(doneRoots){
+  try{
+    var _ric = window.requestIdleCallback || function(f){ return setTimeout(function(){ f({timeRemaining:function(){return 8;}}); }, 60); };
+    var list = (typeof window._cgoDirtyList==='function') ? window._cgoDirtyList() : [];
+    var todo = [];
+    for(var i=0;i<list.length;i++){
+      var n=list[i], skip=false;
+      if(!n || !n.isConnected) continue;
+      for(var j=0;j<(doneRoots||[]).length;j++){
+        var d=doneRoots[j];
+        if(d===n || (d.contains && d.contains(n))){ skip=true; break; }
+      }
+      if(!skip) todo.push(n);
+    }
+    if(!todo.length) return;
+    if(window._cgoDeferTimer){ try{ clearTimeout(window._cgoDeferTimer); }catch(e){} }
+    var k = 0;
+    function step(dl){
+      var budget = 3;
+      while(k < todo.length && budget-- > 0){
+        var el = todo[k++];
+        try{
+          if(!el.isConnected) continue;
+          if(typeof window._cgoRestoreKO==='function') window._cgoRestoreKO(el);
+          /* 원본이 없는 노드가 남아 있을 때만 역방향 복구 (무거운 작업) */
+          if(typeof window._cgoRecoverKO==='function'){
+            if(window._cgoRecoverKO(el) > 0 && typeof window._cgoRestoreKO==='function') window._cgoRestoreKO(el);
+          }
+        }catch(e){}
+      }
+      if(k < todo.length) _ric(step);
+    }
+    _ric(step);
+  }catch(e){}
+};
+
 window._cgoResetToKO = function(){
     try{
       /* ★C-67 되돌리기 전에, 한국어 원본이 없는 글자를 사전 역방향으로 되찾아 심는다.
@@ -152709,33 +152750,17 @@ window._cgoResetToKO = function(){
             ★C-67 특허 원칙: 문서 전체(10.7MB)가 아니라 '지금 보이는 곳'만 되돌린다.
               · 화면 밖 페이지는 어차피 열 때 번역되므로 지금 만질 이유가 없다
               · 작업량이 50배 이상 줄어 브라우저가 멈추지 않고, 한글 노출 순간도 짧다 */
+      /* ★2026-08-07 — 특허 원칙 그대로: 앞줄은 '보이는 것'만.
+         팝업·오버레이 되돌리기를 여기(앞줄)에 두었더니 언어 전환이 느려졌다.
+         사용자는 새 언어를 기다리는데 그 앞에서 옛 언어를 지우고 있었던 것.
+         → 지금 화면에 없는 것은 급하지 않다. 사용자가 열기 전에만 끝나면 된다.
+           앞줄: 보이는 화면만 (아래)
+           뒷줄: 칠해둔 팝업 (한가할 때 · _cgoDeferredRestore) */
       var _roots = window._cgoVisibleRoots();
-      /* ★2026-08-07 — 번역이 지나간 팝업·오버레이도 함께 되돌린다 */
-      try{
-        var _dl = (typeof window._cgoDirtyList==='function') ? window._cgoDirtyList() : [];
-        for(var _d=0; _d<_dl.length; _d++){
-          var _dup=false;
-          for(var _e=0; _e<_roots.length; _e++){ if(_roots[_e]===_dl[_d] || (_roots[_e].contains && _roots[_e].contains(_dl[_d]))){ _dup=true; break; } }
-          if(!_dup) _roots.push(_dl[_d]);
-        }
-      }catch(e){}
       if(typeof window._cgoRestoreKO==='function'){
         for(var _r=0;_r<_roots.length;_r++){ try{ window._cgoRestoreKO(_roots[_r]); }catch(e){} }
       }
-      /* 원본이 없는 노드만 역방향 사전으로 한 번 더 시도.
-         ★역방향 사전 만들기는 무겁다(19,096키 × 언어수). 전체 뿌리를 두 번 더 훑으면
-           언어 전환이 눈에 띄게 느려진다. → 이번 전환에서 실제로 복구가 필요한
-           뿌리(칠해둔 팝업)만, 한 번만 훑는다. */
-      try{
-        var _need = (typeof window._cgoDirtyList==='function') ? window._cgoDirtyList() : [];
-        if(_need.length && typeof window._cgoRecoverKO==='function'){
-          for(var _r2=0;_r2<_need.length;_r2++){
-            if(!_need[_r2].isConnected) continue;
-            window._cgoRecoverKO(_need[_r2]);
-            window._cgoRestoreKO(_need[_r2]);
-          }
-        }
-      }catch(e){}
+      try{ if(window._cgoDeferredRestore) window._cgoDeferredRestore(_roots); }catch(e){}
       /* 2) 최초 스냅샷 복원기(있으면) */
       if(typeof _cgoRestoreTexts==='function'){ try{ _cgoRestoreTexts(); }catch(e){} }
       /* 3) 섹션 바 제목 — setLang이 textContent로 통째 교체하는 순간
