@@ -164737,6 +164737,36 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
   };
   window.cgoRegCount=function(){ console.log('%c[자리표] 등록된 자리 '+REG.length+'개','color:#10b981'); return REG.length; };
 
+  /* ★ 한 방에 전수 수집 — 지금 문서에 있는 모든 한국어 글자를 기록한다.
+     숨은 페이지도 DOM에는 있으므로 돌아다니지 않아도 잡힌다.
+     (팝업·결과처럼 '누를 때 만들어지는 것'만 따로 열어보면 된다) */
+  window.cgoKeyScan = function(){
+    var t0=Date.now(), before=REG.length;
+    bind(document.body);
+    var add=REG.length-before;
+    console.log('%c[자리표] 전수 수집 +'+add+'개 · 누적 '+REG.length+'개 · '+(Date.now()-t0)+'ms','color:#10b981;font-weight:bold');
+    console.log('%c이제 팝업·결과 화면만 몇 개 열어본 뒤 cgoKeyMap() 하세요','color:#38bdf8');
+    return REG.length;
+  };
+
+  /* 페이지를 옮길 때마다 그 페이지를 자동 기록 */
+  (function hookNav(){
+    try{
+      if(window._cgoBindNavHooked) return;
+      if(typeof window.cgoGoPage!=='function'){ setTimeout(hookNav,1500); return; }
+      window._cgoBindNavHooked=true;
+      var _o=window.cgoGoPage;
+      window.cgoGoPage=function(){
+        var r=_o.apply(this,arguments);
+        try{ setTimeout(function(){
+          var ap=document.querySelector('.page.active');
+          if(ap){ bind(ap); if(window._LANG&&window._LANG!=='ko') paint(window._LANG,ap); }
+        },120); }catch(e){}
+        return r;
+      };
+    }catch(e){}
+  })();
+
   function wrapFn(name){
     var orig=window[name];
     if(typeof orig!=='function'||orig.__cgoWrapped) return;
