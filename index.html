@@ -22990,7 +22990,18 @@ function checkHealth(){
               el.className='surname-chip';
               el.style.cssText='font-size:11px;padding:2px 7px;flex-shrink:0;white-space:nowrap';
               el.innerHTML=s[0]+'<span style="font-size:9px;color:var(--text-3);margin-left:2px">'+s[1]+'</span>';
-              el.onclick=(function(sn){ return function(){ selectSurname(sn); }; })(s[0]);
+              /* ★C-68: selectSurname 은 다른 <script> 블록에 있어 전역에서 못 찾는 경우가 있었다
+                 (ReferenceError → 칩 클릭 무반응). window 경유 + 자체 폴백으로 항상 동작시킨다. */
+              el.onclick=(function(sn){ return function(){
+                try{ if(typeof window.selectSurname==='function'){ window.selectSurname(sn); return; } }catch(e){}
+                var f=document.getElementById('nmSurname');
+                if(f){ f.value=sn; try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+                try{
+                  document.querySelectorAll('.surname-chip').forEach(function(c){
+                    c.classList.toggle('active', c.textContent.indexOf(sn)===0);
+                  });
+                }catch(e){}
+              }; })(s[0]);
               wrap.appendChild(el);
             });
           })();
@@ -23000,7 +23011,7 @@ function checkHealth(){
             <!-- 성씨 + 년도 한 행 -->
             <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;align-items:end">
               <div class="naming-group">
-                <div class="naming-label">성씨 (姓)</div>
+                <div class="naming-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>성씨 (姓)</span><button type="button" id="cgoPasteSurBtn" onclick="window._cgoPasteSurname&&window._cgoPasteSurname()" style="padding:2px 9px;border-radius:8px;border:1px solid rgba(212,168,67,.45);background:rgba(212,168,67,.12);color:#d4a843;font-size:10.5px;font-weight:800;cursor:pointer;white-space:nowrap;line-height:1.5" data-i18n="pasteName">📋 붙여넣기</button></div>
                 <input class="naming-field" id="nmSurname" type="text" placeholder="이, 남궁, Smith, García" maxlength="20">
               </div>
               <div class="naming-group">
@@ -56208,11 +56219,13 @@ function namingSeed(surname, birthY, birthM, birthD, gender) {
 function nmRng(s){ return ((s*1103515245+12345)&0x7fffffff); }
 
 function selectSurname(sn) {
-  document.getElementById('nmSurname').value = sn;
+  var f=document.getElementById('nmSurname');
+  if(f){ f.value = sn; try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
   document.querySelectorAll('.surname-chip').forEach(function(c){
     c.classList.toggle('active', c.textContent.startsWith(sn));
   });
 }
+try{ window.selectSurname = selectSurname; }catch(e){}   /* ★C-68 전역 노출 */
 
 window._C66_FORBID_KO = "亡死哀孤終滅敗傷痛恨哭葬枯凋零落破碎裂禍災厄凶惡毒害賊殺刑囚獄辱恥醜賤貧窮困乏飢餓患疾病疫邪魔鬼妖怪妄荒僻狂暴逆叛怨怒愁憂懼怖驚慌亂混迷惑欺詐瞞盜姦淫嫉妬傲慢惰怠驕奢浪費損虧耗竭絶斷罷廢棄遺逝歿殯棺塚墓幽冥暗癡聾盲啞跛瘡疽瘤癖";
 // ★ C-66 글로벌 작명 데이터 (20개국: 한자·이름·나크샤트라·99미덕·요일금기)
@@ -153001,6 +153014,39 @@ window._cgoAiFinishKO = function(rootEl, delay){
 /* ★C-68 이름 붙여넣기 — 중국 6,000자·일본 히라가나/가타카나·베트남 로마자 등
    선택기로 감당할 수 없는 문자권을 위해 클립보드 붙여넣기를 제공한다.
    권한 거부·미지원 환경에서는 안내 문구로 폴백. */
+/* ★C-68 성씨 붙여넣기 (작명 페이지) — 이름 붙여넣기와 동일 규칙 */
+window._cgoPasteSurname = function(){
+  var el=document.getElementById('nmSurname');
+  var btn=document.getElementById('cgoPasteSurBtn');
+  if(!el) return;
+  function T(d){ try{ if(window._cgoT) return window._cgoT(d); }catch(e){} return d; }
+  function flash(txt, ok){
+    if(!btn) return;
+    var keep=btn.textContent, kc=btn.style.color, kb=btn.style.borderColor;
+    btn.textContent=txt;
+    btn.style.color = ok?'#34d399':'#f87171';
+    btn.style.borderColor = ok?'rgba(52,211,153,.5)':'rgba(248,113,113,.5)';
+    setTimeout(function(){ btn.textContent=keep; btn.style.color=kc; btn.style.borderColor=kb; }, 1600);
+  }
+  function apply(v){
+    v=(v||'').replace(/[\r\n\t]/g,' ').trim().slice(0,20);
+    if(!v){ flash(T('비어있음'), false); return; }
+    el.value=v;
+    try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+    try{ document.querySelectorAll('.surname-chip').forEach(function(c){ c.classList.remove('active'); }); }catch(e){}
+    flash(T('✓ 완료'), true);
+    try{ el.focus(); }catch(e){}
+  }
+  try{
+    if(navigator.clipboard && navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(v){
+        try{ apply(v); }catch(e){ flash(T('✓ 완료'), true); }
+      }, function(){ el.focus(); flash(T('길게 눌러 붙여넣기'), false); });
+      return;
+    }
+  }catch(e){}
+  el.focus(); flash(T('길게 눌러 붙여넣기'), false);
+};
 window._cgoPasteName = function(){
   var el=document.getElementById('ipName');
   var btn=document.getElementById('cgoPasteBtn');
