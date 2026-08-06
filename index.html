@@ -152877,17 +152877,33 @@ window._cgoAiFinishKO = function(rootEl, delay){
     (INM[ch]||'').split('').forEach(function(x){ if(!seen[x]){seen[x]=1;out.push(x);} });
     return out;
   }
+  /* 이름칸이 한자로 바뀐 뒤에도 '원래 한글 음절'을 기억해 목록을 복원한다 */
   function koChars(){
     var el=document.getElementById('ipName');
-    return ((el&&el.value)||'').replace(/\s/g,'').split('').filter(function(c){return /[\uac00-\ud7a3]/.test(c);});
+    var v=((el&&el.value)||'').replace(/\s/g,'');
+    var prev=window._cgoHanjaKo||[], picked=window._cgoHanjaPicked||'';
+    if(v===picked && prev.length) return prev;          /* 우리가 바꿔놓은 값 → 원본 유지 */
+    var ko=v.split('').filter(function(c){return /[\uac00-\ud7a3]/.test(c);});
+    if(ko.length!==v.length){                            /* 한자가 섞여 있으면 이전 원본과 대조 */
+      if(prev.length===v.length) return prev;
+    }
+    window._cgoHanjaKo=ko; sel={};                       /* 새로 타이핑 → 선택 초기화 */
+    return ko;
   }
+  /* ★C-68: 고른 한자를 '이름칸 자체'에 바로 반영한다 (이 → 李).
+     한글 원본은 _cgoHanjaKo 에 보관해 다시 고를 때 음절 목록을 복원한다. */
   function preview(){
-    var ko=koChars(), s='';
-    ko.forEach(function(c,i){ s += (sel[i]||'□'); });
+    var ko=(window._cgoHanjaKo||[]), s='';
+    ko.forEach(function(c,i){ s += (sel[i]||c); });     /* 아직 안 고른 자리는 한글 그대로 */
     var o=document.getElementById('cgoHanjaOut'); if(o) o.textContent = s||'—';
+    var el=document.getElementById('ipName');
+    if(el && s){ el.value=s; window._cgoHanjaPicked=s; }   /* ← 이름칸에 직접 반영 */
+    var picked=''; ko.forEach(function(c,i){ if(sel[i]) picked+=sel[i]; });
     var t=document.getElementById('myNameHanja');
-    if(t && s.indexOf('□')<0 && s){ t.value=s; try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
-      if(typeof _cgoAutoSaveInputs==='function') try{ _cgoAutoSaveInputs(); }catch(e){} }
+    if(t && picked.length===ko.length && picked){ t.value=picked;
+      try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
+    try{ if(typeof _cgoAutoSaveInputs==='function') _cgoAutoSaveInputs(); }catch(e){}
+    try{ if(typeof _checkCalcReady==='function') _checkCalcReady(); }catch(e){}
   }
   window._cgoHanjaClose = function(){
     var b=document.getElementById('cgoHanjaPick'); if(b) b.style.display='none'; curIdx=-1;
