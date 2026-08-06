@@ -2527,7 +2527,11 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
     var L = localStorage.getItem('cgo_lang');
     var U = localStorage.getItem('cgo_lang_user_set');
     if(U!=='1' || !L || L==='ko') return;
-    var raw = localStorage.getItem('cgo_lp_'+L);
+    /* ★2026-08-07 — UI 전용 팩을 우선 쓴다.
+       전체 사전은 1.9MB라 <head>에서 읽으면 그만큼 부팅이 늦다.
+       화면에 실제로 뜨는 UI 글자만 추린 팩은 0.2~0.3MB — 6배 가볍다.
+       나머지(결과 본문 등)는 뒤에서 전체 사전이 도착하면 채워진다. */
+    var raw = localStorage.getItem('cgo_ui_'+L) || localStorage.getItem('cgo_lp_'+L);
     if(!raw) return;
     var D; try{ D = JSON.parse(raw); }catch(e){ return; }
     if(!D || typeof D!=='object') return;
@@ -46171,9 +46175,21 @@ function setLang(lang) {
   }
   // ★ 대시보드는 비밀번호 입력 후 나타나므로, 지연 재적용으로 늦게 뜨는 화면도 번역
   if(lang && lang !== 'ko'){
-    [500,1200,2500,4000,6000,9000,13000].forEach(function(_ms){
+    /* ★2026-08-07 — 예전엔 7번에 걸쳐 화면 전체를 다시 훑었다(매번 사전을 뒤짐).
+       이제 자리표가 있으므로 '기록된 자리에 값만 쓰면' 된다. 훑지 않는다.
+       횟수도 7 → 3으로 줄였다. */
+    [400,1500,5000].forEach(function(_ms){
       setTimeout(function(){
-        try{ if(window._LANG===lang && typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(lang); }catch(e){}
+        try{
+          if(window._LANG!==lang) return;
+          if(typeof window._cgoPaint==='function'){
+            if(typeof window._cgoBind==='function'){
+              var rts=(typeof window._cgoVisibleRoots==='function')?window._cgoVisibleRoots():[document.body];
+              for(var i=0;i<rts.length;i++) window._cgoBind(rts[i]);
+            }
+            window._cgoPaint(lang);
+          } else if(typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(lang);
+        }catch(e){}
       }, _ms);
     });
   }
@@ -51869,6 +51885,29 @@ function _cgoApplyDictionary(lang) {
     });
   }
 })();
+
+/* ★2026-08-07 — UI 전용 팩 캐시.
+   다음 새로고침부터 <head>가 이 작은 팩으로 즉시 번역한다(암전·잔상 0). */
+window._cgoCacheUiPack = function(lang){
+  try{
+    if(!lang || lang==='ko') return;
+    var key='cgo_ui_'+lang;
+    fetch('lang/ui.'+lang+'.json').then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      if(!j || typeof j!=='object') return;
+      try{ localStorage.setItem(key, JSON.stringify(j)); }catch(e){}
+      try{
+        if(typeof LANG_DICTIONARY!=='undefined'){
+          LANG_DICTIONARY[lang]=Object.assign({}, j, LANG_DICTIONARY[lang]||{});
+        }
+      }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
+};
+try{
+  var _ric0 = window.requestIdleCallback || function(f){ return setTimeout(f, 1500); };
+  _ric0(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoCacheUiPack(window._LANG); }catch(e){} });
+}catch(e){}
 
 /* ★ 깃허브 언어팩 로더 — lang/{code}.json 불러와 사전에 병합 */
 window._cgoLangPackLoaded = window._cgoLangPackLoaded || {};
@@ -164741,6 +164780,7 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
      숨은 페이지도 DOM에는 있으므로 돌아다니지 않아도 잡힌다.
      (팝업·결과처럼 '누를 때 만들어지는 것'만 따로 열어보면 된다) */
   window.cgoKeyScan = function(){
+    try{ markNoxl(); }catch(e){}
     var t0=Date.now(), before=REG.length;
     bind(document.body);
     var add=REG.length-before;
@@ -164782,7 +164822,26 @@ console.log('[C-63 v2.2] 시작: 도→솔 상승 (350ms) · 종료: 도-미-솔
     };
     w.__cgoWrapped=true; window[name]=w;
   }
+  /* ★2026-08-07 — 번역할 이유가 없는 곳은 번역기가 들어가지 않는다.
+     설계도 분석 결과 출생지/거주지 자동완성 목록 하나가 고유 글자의 33%(3,497개)를
+     차지하고 있었다. 전부 '전주시덕진구 …' 같은 지명이라 번역 대상이 아니다.
+     여기만 빼도 훑는 양이 3분의 1 줄어든다. */
+  var NOXL = ['ipBirthPlace','ipCurPlace','ipBirthPlaceList','ipCurPlaceList',
+              'birthPlaceSuggest','curPlaceSuggest'];
+  function markNoxl(){
+    try{
+      for(var i=0;i<NOXL.length;i++){
+        var e=document.getElementById(NOXL[i]);
+        if(e && e.getAttribute('data-noxl')===null) e.setAttribute('data-noxl','');
+        if(e && e.parentNode && e.parentNode.id && /place|Place/.test(e.parentNode.id)){
+          if(e.parentNode.getAttribute('data-noxl')===null) e.parentNode.setAttribute('data-noxl','');
+        }
+      }
+    }catch(e){}
+  }
+
   function boot(){
+    markNoxl();
     try{
       var rts=(typeof window._cgoVisibleRoots==='function')?window._cgoVisibleRoots():[document.body];
       for(var i=0;i<rts.length;i++) bind(rts[i]);
