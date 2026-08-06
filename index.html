@@ -8982,12 +8982,12 @@ function cgoGuideFeature(key){
         <!-- ★ 얼굴 가이드 캔버스 -->
         <canvas id="c24-guide-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;"></canvas>
         <!-- ★ 단계 표시 오버레이 -->
-        <div id="c24-stage-overlay" style="display:none;position:absolute;top:0;left:0;right:0;padding:8px 12px;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent);">
+        <div id="c24-stage-overlay" style="display:none;position:absolute;top:0;left:0;right:0;padding:8px 74px 8px 12px;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent);">
           <div style="display:flex;align-items:center;gap:6px;">
             <div id="c24-stage-dots" style="display:flex;gap:4px;"></div>
             <div id="c24-stage-label" style="font-size:11px;font-weight:800;color:#34d399;flex:1;"></div>
           </div>
-          <div id="c24-face-warn" style="display:none;font-size:10px;color:#f87171;margin-top:2px;animation:goldPulse 1s infinite;">⚠️ 얼굴을 화면 중앙에 맞춰주세요</div>
+          <div id="c24-face-warn" style="display:none;font-size:10px;color:#f87171;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:goldPulse 1s infinite;">⚠️ 얼굴을 화면 중앙에 맞춰주세요</div>
         </div>
         <div id="c24-idle-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);">
           <div style="font-size:36px;margin-bottom:8px;">📷</div>
@@ -34397,7 +34397,10 @@ function _c24UpdateStageUI(){
   if(lbl){
     var cur=s.step;
     lbl.style.color=colors[cur]||'#34d399';
-    lbl.textContent=(cur+1)+'/'+s.steps.length+' '+icons[cur]+' '+((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
+    /* ★C-68: labels 에 이미 이모지가 있어 icons[cur] 를 또 붙이면 아이콘이 중복되고,
+   번역 후 길이가 늘어 오버레이를 넘쳐 글자가 겹쳤다 → 아이콘 제거 + 한 줄 말줄임 */
+      lbl.textContent=(cur+1)+'/'+s.steps.length+' '+((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
+      lbl.style.whiteSpace='nowrap'; lbl.style.overflow='hidden'; lbl.style.textOverflow='ellipsis'; lbl.style.minWidth='0';
   }
 }
 
@@ -135675,18 +135678,18 @@ if('serviceWorker' in navigator){
   var TOTALQ=QFLAT.length, sAns={};
   window.cgoSlpSelfCheck=function(){
     sAns={};
-    var h='<div class="slp-badge">SLEEP SELF-CHECK · '+TOTALQ+'</div><h2 class="slp-h">수면 자가 점검</h2><p class="slp-sub" style="margin-bottom:4px;">'+((window._LANG&&window._LANG!=='ko')?'Self-report based · ':'자가 보고 기반 ')+TOTALQ+((window._LANG&&window._LANG!=='ko')?' questions.':'문항.')+'<br>최근 2~4주를 기준으로 1번부터 차례로 체크하세요.</p>';
+    var h='<div class="slp-badge">SLEEP SELF-CHECK · '+TOTALQ+'</div><h2 class="slp-h">'+((typeof _cgoT==='function')?_cgoT('수면 자가 점검'):'수면 자가 점검')+'</h2><p class="slp-sub" style="margin-bottom:4px;">'+((window._LANG&&window._LANG!=='ko')?'Self-report based · ':'자가 보고 기반 ')+TOTALQ+((window._LANG&&window._LANG!=='ko')?' questions.':'문항.')+'<br>'+((typeof _cgoT==='function')?_cgoT('최근 2~4주를 기준으로 1번부터 차례로 체크하세요.'):'최근 2~4주를 기준으로 1번부터 차례로 체크하세요.')+'</p>';
     var n=0;
     for(var p=0;p<SQ.length;p++){
-      h+='<div class="slp-qpart">'+SQ[p].hd+'<span class="leg">'+SQ[p].leg+'</span></div>';
+      h+='<div class="slp-qpart">'+((typeof _cgoT==='function')?_cgoT(SQ[p].hd):SQ[p].hd)+'<span class="leg">'+((typeof _cgoT==='function')?_cgoT(SQ[p].leg):SQ[p].leg)+'</span></div>';
       for(var i=0;i<SQ[p].items.length;i++){
         n++; var it=SQ[p].items[i]; var opts=(it[1]==='n5')?['0','1','2','3','4']:it[1]; var num=(it[1]==='n5');
-        h+='<div class="slp-q" id="slp-q-'+n+'"><div class="slp-q-t">'+n+'. '+it[0]+'</div><div class="slp-q-opts '+(num?'numrow':'labrow')+'">';
-        for(var o=0;o<opts.length;o++) h+='<button class="'+(num?'num':'')+'" onclick="__slpAns('+n+','+o+',this)">'+opts[o]+'</button>';
+        h+='<div class="slp-q" id="slp-q-'+n+'"><div class="slp-q-t">'+n+'. '+((typeof _cgoT==='function')?_cgoT(it[0]):it[0])+'</div><div class="slp-q-opts '+(num?'numrow':'labrow')+'">';
+        for(var o=0;o<opts.length;o++) h+='<button class="'+(num?'num':'')+'" onclick="__slpAns('+n+','+o+',this)">'+(num?opts[o]:((typeof _cgoT==='function')?_cgoT(opts[o]):opts[o]))+'</button>';
         h+='</div></div>';
       }
     }
-    h+='<div id="slp-q-warn" class="slp-q-warn"></div><button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpScore()">결과 보기 →</button><button class="slp-btn2" onclick="cgoSleepOpen()">처음으로</button>';
+    h+='<div id="slp-q-warn" class="slp-q-warn"></div><button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpScore()">'+((typeof _cgoT==='function')?_cgoT('결과 보기 →'):'결과 보기 →')+'</button><button class="slp-btn2" onclick="cgoSleepOpen()">처음으로</button>';
     var ac=$('slp-acc-self'); if(ac) ac.open=true;
     $('slp-self-q').innerHTML='<div class="slp-q-wrap">'+h+'</div>';
   };
