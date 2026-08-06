@@ -2595,8 +2595,6 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
     var L = localStorage.getItem('cgo_lang');
     var U = localStorage.getItem('cgo_lang_user_set');
     if(U!=='1' || !L || L==='ko') return;          /* 한국어는 손대지 않음 */
-    /* ★2026-08-07 — 조기 번역기가 붙었으면 가릴 이유가 없다(암전 제거) */
-    if(window._cgoEarlyDict){ window._cgoLangGuardOff = function(){}; return; }
     var st = document.createElement('style');
     st.id = '_cgoLangGuard';
     st.textContent = 'body{opacity:0}';            /* 레이아웃 유지, 글자만 안 보임 */
@@ -2618,16 +2616,21 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
     function _cgoGuardTick(){
       if(done) return;
       try{
-        var ready = (typeof setLang === 'function')
+        /* ★2026-08-07 재수정 — 조기 번역기가 붙어 있으면 setLang을 기다리지 않는다.
+           setLang은 문서 3MB 지점에서야 정의된다. 그때까지 가려두면 암전이 길어진다.
+           조기 번역기는 <head>에서 이미 돌고 있으므로 한글이 사라지는 즉시 열면 된다. */
+        var early = !!window._cgoEarlyDict;
+        var hasDom = document.body && document.querySelector('.topbar, .page.active, #phase0');
+        var ready = early ? !!hasDom
+                 : ((typeof setLang === 'function')
                  && (typeof _applyLangLocalization === 'function')
                  && (typeof _cgoApplyDictionary === 'function')
                  && (typeof CGO_I18N !== 'undefined') && CGO_I18N[L]
                  && (typeof LANG_DICTIONARY !== 'undefined')
-                 && document.body
-                 && document.querySelector('.topbar, .page.active, #phase0');
+                 && hasDom);
         if(ready){
           window._LANG = L;
-          if(_tried < 2){ _tried++; try{ setLang(L); }catch(e){} }
+          if(!early && _tried < 2){ _tried++; try{ setLang(L); }catch(e){} }
           var vis = '';
           try{
             var rts = (typeof window._cgoVisibleRoots === 'function') ? window._cgoVisibleRoots() : [document.body];
@@ -2635,7 +2638,7 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
             for(var _v=0; _v<rts.length; _v++) vis += (rts[_v].textContent || '');
           }catch(e){}
           var koLeft = (vis.match(/[\uac00-\ud7a3]/g) || []).length;
-          if(koLeft <= 2 || Date.now() - _t0 > 1200){
+          if(koLeft <= 2 || Date.now() - _t0 > (early ? 700 : 1200)){
             requestAnimationFrame(function(){ requestAnimationFrame(window._cgoLangGuardOff); });
             return;
           }
@@ -52203,7 +52206,15 @@ function _applyLangLocalization(lang) {
       // 실제 내용이 추가됐을 때만 번역
       var hasContent = mutations.some(function(m){ return m.addedNodes.length > 0; });
       if (!hasContent) return;
-      if (!window._LANG || window._LANG === 'ko') return;
+      if (!window._LANG) return;
+      if (window._LANG === 'ko') {
+        /* ★2026-08-07 — 한국어일 때도 이전 언어 잔재를 그 자리에서 되돌린다 */
+        try{
+          if (window._cgoRestoreKO) window._cgoRestoreKO(el);
+          if (window._cgoBind && window._cgoPaint) { window._cgoBind(el); window._cgoPaint('ko', el); }
+        }catch(e){}
+        return;
+      }
       /* ★2026-08-07 — 팝업이 '걸렸다 넘어가는' 원인 제거.
          기존: 내용 생성 → 200ms 대기 → API 왕복(300~800ms) → 글자 교체
                = 한국어로 한 번, 번역으로 한 번, 두 번 그려졌다.
@@ -52244,6 +52255,15 @@ function _applyLangLocalization(lang) {
         mutations.forEach(function(m){
           if (m.type==='attributes' && m.attributeName==='style') {
             var vis = el.style.display !== 'none' && el.style.visibility !== 'hidden';
+            /* ★2026-08-07 — 한국어로 돌아온 뒤 팝업을 열면 이전 언어가 잠깐 보였다.
+               되돌리기를 뒷줄로 미뤘는데 사용자가 그보다 먼저 열었기 때문.
+               → 여는 그 순간 한국어로 즉시 복원한다. */
+            if (vis && window._LANG === 'ko') {
+              try{
+                if (window._cgoRestoreKO) window._cgoRestoreKO(el);
+                if (window._cgoBind && window._cgoPaint) { window._cgoBind(el); window._cgoPaint('ko', el); }
+              }catch(e){}
+            }
             if (vis && window._LANG && window._LANG !== 'ko') {
               /* ★2026-08-07 — 열리는 그 순간 우리 DB로 즉시 칠한다 (대기 없음) */
               var _r2 = { missing: 1 };
