@@ -152226,6 +152226,52 @@ window.cgoMissOn = function(){
   console.log('%c현재 '+window._cgoMissCount+'개 수집됨 · 끝나면 cgoMissReport() 실행','color:#38bdf8');
   return window._cgoMissCount;
 };
+/* ★C-68 누락수집 강화 — 기존 수집기는 _cgoT 를 통과한 것만 잡아
+   ① _cgoT 를 아예 안 부르는 코드  ② 조각 조립  ③ 캔버스 텍스트 를 놓쳤다.
+   → 화면에 실제로 보이는 DOM 한글을 직접 훑어 보완한다. (스캔 시점의 가시 영역만) */
+window.cgoMissScan = function(){
+  var n=0;
+  try{
+    if(!window._LANG || window._LANG==='ko'){ console.log('%c[누락수집] 외국어로 바꾼 뒤 실행하세요','color:#f87171'); return 0; }
+    var KO=/[\uac00-\ud7a3]/;
+    var roots=document.querySelectorAll('body *');
+    var seen={};
+    for(var i=0;i<roots.length;i++){
+      var el=roots[i];
+      if(!el.getClientRects || !el.getClientRects().length) continue;      /* 안 보이면 제외 */
+      var tag=el.tagName;
+      if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT') continue;
+      for(var c=0;c<el.childNodes.length;c++){
+        var nd=el.childNodes[c];
+        if(nd.nodeType!==3) continue;                                       /* 텍스트 노드만 */
+        var t=(nd.nodeValue||'').trim();
+        if(!t || t.length<2 || t.length>200 || !KO.test(t)) continue;
+        if(seen[t]) continue; seen[t]=1;
+        if(!window._cgoMissSet[t]){ window._cgoMissSet[t]=1; window._cgoMissCount=(window._cgoMissCount||0)+1; n++; }
+      }
+      /* placeholder · title · value 도 화면에 노출된다 */
+      ['placeholder','title'].forEach(function(a){
+        try{ var v=el.getAttribute&&el.getAttribute(a);
+          if(v && KO.test(v) && v.length>=2 && !window._cgoMissSet[v]){
+            window._cgoMissSet[v]=1; window._cgoMissCount=(window._cgoMissCount||0)+1; n++; }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+  console.log('%c[누락수집] 이 화면에서 +'+n+'개 · 누적 '+window._cgoMissCount+'개','color:#10b981;font-weight:bold');
+  return n;
+};
+/* 페이지를 옮길 때마다 자동 스캔 — 수집 중일 때만 */
+try{
+  var _origGo = window.cgoGoPage;
+  if(typeof _origGo==='function'){
+    window.cgoGoPage = function(){
+      var r=_origGo.apply(this, arguments);
+      try{ if(window._cgoMissCollect) setTimeout(function(){ window.cgoMissScan(); }, 700); }catch(e){}
+      return r;
+    };
+  }
+}catch(e){}
 window.cgoMissOff = function(){ window._cgoMissCollect=false; console.log('[누락수집] OFF · 총 '+window._cgoMissCount+'개'); return window._cgoMissCount; };
 window.cgoMissReport = function(){
   var arr = Object.keys(window._cgoMissSet);
@@ -156294,7 +156340,7 @@ function _rmaiArInitColorPicker(){
   var pct = Math.round(curIntensity / maxIntensity * 100);
   var sliderHtml = '<div style="margin-top:14px;padding:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-    + '<span style="font-size:11px;font-weight:800;color:#581c87;">⚙️ '+_cgoT(currentCat.name)+' 진하기</span>'
+    + '<span style="font-size:11px;font-weight:800;color:#581c87;">'+_cgoT('⚙️ '+currentCat.name+' 진하기')+'</span>'
     + '<span id="rmai-ar-intensity-pct" style="font-size:11px;font-weight:900;color:#7c3aed;">'+pct+'%</span>'
     + '</div>'
     + '<input type="range" id="rmai-ar-intensity-slider" min="0" max="100" value="'+pct+'" oninput="rmaiArSetIntensity(this.value)" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;background:linear-gradient(90deg,#e9d5ff,#a855f7);border-radius:3px;outline:none;cursor:pointer;" />'
