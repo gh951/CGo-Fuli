@@ -2516,6 +2516,43 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 }
 .ladder-btn, #skipBtn{ filter: none !important; }
 </style>
+<script>
+/* ★C-68 새로고침 언어 깜빡임 완전 차단
+   원인: HTML 은 한국어로 즉시 렌더되는데 setLang(저장언어) 는 3MB 뒤 스크립트에서 실행된다.
+        → 한국어가 먼저 보였다가 나중에 번역되는 '한글 → 외국어' 깜빡임.
+   해결: 저장된 언어가 외국어면 렌더 전에 본문을 감춰두고, 번역이 끝나면 드러낸다.
+        (안전장치: 어떤 이유로든 번역이 늦어도 2.5초 뒤 무조건 보이게 한다) */
+(function(){
+  try{
+    var L = localStorage.getItem('cgo_lang');
+    var U = localStorage.getItem('cgo_lang_user_set');
+    if(U!=='1' || !L || L==='ko') return;               /* 한국어면 감출 이유 없음 */
+    var st = document.createElement('style');
+    st.id = '_cgoLangGuard';
+    st.textContent = 'body{visibility:hidden !important}'
+      + '#_cgoLangSplash{visibility:visible !important;position:fixed;inset:0;z-index:99999;'
+      + 'background:#0b1120;display:flex;align-items:center;justify-content:center}';
+    document.head.appendChild(st);
+    window._cgoLangGuardOff = function(){
+      try{
+        var s=document.getElementById('_cgoLangGuard'); if(s) s.remove();
+        var sp=document.getElementById('_cgoLangSplash'); if(sp) sp.remove();
+      }catch(e){}
+    };
+    /* 안전장치 — 번역이 실패해도 화면이 영영 안 보이면 안 된다 */
+    setTimeout(function(){ try{ window._cgoLangGuardOff(); }catch(e){} }, 2500);
+    document.addEventListener('DOMContentLoaded', function(){
+      try{
+        var sp=document.createElement('div'); sp.id='_cgoLangSplash';
+        sp.innerHTML='<div style="width:34px;height:34px;border:3px solid rgba(212,168,67,.25);'
+          + 'border-top-color:#d4a843;border-radius:50%;animation:_cgoSpin .8s linear infinite"></div>'
+          + '<style>@keyframes _cgoSpin{to{transform:rotate(360deg)}}</style>';
+        document.body.appendChild(sp);
+      }catch(e){}
+    });
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 <script>
@@ -51915,7 +51952,8 @@ function _applyLangLocalization(lang) {
       // 대문이 보이는 중이면 실행 안 함 (대문에서 선택 → _cgoEntranceDone에서 처리)
       var p0 = document.getElementById('phase0');
       if(p0 && p0.style.display !== 'none') return;
-      setTimeout(function(){ /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */ if(window._LANG===saved) setLang(saved); }, 300);
+      setTimeout(function(){ /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */ if(window._LANG===saved) setLang(saved);
+      try{ setTimeout(function(){ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }, 250); }catch(e){} }, 300);
     }
   } catch(e){}
 })();
@@ -67496,6 +67534,7 @@ document.addEventListener('DOMContentLoaded', function(){
     var saved = localStorage.getItem('cgo_lang') || 'ko';
     if (saved && saved !== 'ko' && typeof setLang === 'function') {
       setLang(saved);
+      try{ setTimeout(function(){ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }, 250); }catch(e){}
     }
   }
   // (대문이 보이는 경우는 _cgoEntranceDone에서 처리)
