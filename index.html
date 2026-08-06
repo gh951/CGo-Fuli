@@ -2517,6 +2517,70 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 .ladder-btn, #skipBtn{ filter: none !important; }
 </style>
 <script>
+/* ★2026-08-07 — 조기 번역기 (암전 제거)
+   가릴 게 아니라, 한국어가 '그려지기 전에' 바꿔치기한다.
+   사전은 이미 기기(localStorage)에 있어 네트워크가 필요 없다.
+   관찰 콜백은 마이크로태스크 = 브라우저가 그리기 전에 실행된다.
+   → 한국어도, 암전도 보이지 않는다. 특허 원칙(사전 조회만·숨은 페이지 제외) 그대로. */
+(function(){
+  try{
+    var L = localStorage.getItem('cgo_lang');
+    var U = localStorage.getItem('cgo_lang_user_set');
+    if(U!=='1' || !L || L==='ko') return;
+    var raw = localStorage.getItem('cgo_lp_'+L);
+    if(!raw) return;
+    var D; try{ D = JSON.parse(raw); }catch(e){ return; }
+    if(!D || typeof D!=='object') return;
+    window._cgoEarlyDict = D;
+    var KO = /[\uac00-\ud7a3]/;
+    var SKIP = {SCRIPT:1, STYLE:1, NOSCRIPT:1, TEXTAREA:1};
+    var ATTRS = ['placeholder','title','aria-label'];
+    function tx(n){
+      if(n.nodeType===3){
+        var v = n.nodeValue;
+        if(!v || !KO.test(v)) return;
+        var t = v.trim(); if(!t) return;
+        var hit = D[t];
+        if(hit===undefined || hit===null || hit==='') return;
+        if(n.__cgoKO===undefined) n.__cgoKO = v;
+        n.nodeValue = (v===t) ? hit : v.replace(t, hit);
+        return;
+      }
+      if(n.nodeType!==1) return;
+      if(SKIP[n.tagName]) return;
+      var cn = '' + (n.className || '');
+      if(cn.indexOf('p0lb')>=0 || cn.indexOf('lang-opt')>=0) return;
+      try{
+        for(var a=0;a<ATTRS.length;a++){
+          var av = n.getAttribute && n.getAttribute(ATTRS[a]);
+          if(!av || !KO.test(av)) continue;
+          var h2 = D[av.trim()];
+          if(!h2) continue;
+          if(!n.__cgoAttrKO) n.__cgoAttrKO = {};
+          if(n.__cgoAttrKO[ATTRS[a]]===undefined) n.__cgoAttrKO[ATTRS[a]] = av;
+          n.setAttribute(ATTRS[a], h2);
+        }
+      }catch(e){}
+      var c = n.childNodes;
+      for(var i=0;i<c.length;i++) tx(c[i]);
+    }
+    var mo = new MutationObserver(function(ms){
+      for(var i=0;i<ms.length;i++){
+        var an = ms[i].addedNodes;
+        for(var j=0;j<an.length;j++){ try{ tx(an[j]); }catch(e){} }
+      }
+    });
+    mo.observe(document.documentElement, {childList:true, subtree:true});
+    window._cgoEarlyStop = function(){ try{ mo.disconnect(); }catch(e){} window._cgoEarlyOn=false; };
+    window._cgoEarlyOn = true;
+    document.addEventListener('DOMContentLoaded', function(){
+      try{ tx(document.body); }catch(e){}
+      setTimeout(window._cgoEarlyStop, 1200);
+    });
+  }catch(e){}
+})();
+</script>
+<script>
 /* ★C-68 새로고침 언어 깜빡임 제거 — 특허 원칙(보이는 것만 번역 → 점진 부활) 그대로.
    원인: HTML 은 한국어로 즉시 렌더되는데 setLang(저장언어)은 3MB 뒤에서 실행된다.
    해결: 저장 언어가 외국어면 '한글이 스치는 그 한 프레임'만 건너뛴다.
@@ -2527,6 +2591,8 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
     var L = localStorage.getItem('cgo_lang');
     var U = localStorage.getItem('cgo_lang_user_set');
     if(U!=='1' || !L || L==='ko') return;          /* 한국어는 손대지 않음 */
+    /* ★2026-08-07 — 조기 번역기가 붙었으면 가릴 이유가 없다(암전 제거) */
+    if(window._cgoEarlyDict){ window._cgoLangGuardOff = function(){}; return; }
     var st = document.createElement('style');
     st.id = '_cgoLangGuard';
     st.textContent = 'body{opacity:0}';            /* 레이아웃 유지, 글자만 안 보임 */
@@ -152736,6 +152802,52 @@ window._cgoDeferredRestore = function(doneRoots){
   }catch(e){}
 };
 
+/* ★2026-08-07 — 3단계 점진 번역 (지휘자 설계)
+   1단계 대시보드 : 즉시 (사용자가 체감하는 유일한 구간)
+   2단계 팝업     : 카드를 누르기 전까지 여유가 있다
+   3단계 다른 페이지: 팝업을 열고 읽는 동안 여유가 있다
+
+   ※ 예전에는 미리 번역하면 한국어 원본이 소멸해 금지였다.
+     이제 모든 경로가 __cgoKO에 원본을 남기므로 안전하다.
+     사전 조회만 하고 API는 부르지 않는다(원칙). 한가할 때만 돈다. */
+window._cgoProgressive = function(lang){
+  try{
+    if(!lang || lang==='ko') return;
+    if(typeof window._cgoTranslateNode!=='function' && typeof _cgoTNode!=='function') return;
+    var T = (typeof window._cgoTranslateNode==='function') ? window._cgoTranslateNode : _cgoTNode;
+    var _ric = window.requestIdleCallback || function(f){ return setTimeout(function(){ f(); }, 120); };
+    if(window._cgoProgToken) window._cgoProgToken++; else window._cgoProgToken = 1;
+    var token = window._cgoProgToken;
+
+    /* 2단계 — 팝업·오버레이 */
+    var OV=['fortunePopupOverlay','sijinPopupOverlay','algoPopup','hvDetailOverlay',
+            'cosmicOrderSection','fpBody','fortunePopup','hvDetailBox','sijinDetailBox',
+            'algoDetailBox','reportContainer','consultChat','bioSkinResult'];
+    var stage2 = [];
+    for(var i=0;i<OV.length;i++){ var e=document.getElementById(OV[i]); if(e) stage2.push(e); }
+
+    /* 3단계 — 지금 안 보이는 페이지 */
+    var stage3 = [];
+    try{
+      var pgs = document.querySelectorAll('.page');
+      for(var p=0;p<pgs.length;p++){ if(!pgs[p].classList.contains('active')) stage3.push(pgs[p]); }
+    }catch(e){}
+
+    var queue = stage2.concat(stage3), k = 0;
+    function step(){
+      if(token !== window._cgoProgToken) return;      /* 그 사이 언어가 또 바뀌었다 */
+      if(window._LANG !== lang) return;
+      var budget = 1;                                  /* 한 번에 하나 — 화면을 막지 않는다 */
+      while(k < queue.length && budget-- > 0){
+        var el = queue[k++];
+        try{ if(el && el.isConnected) T(el); }catch(e){}
+      }
+      if(k < queue.length) _ric(step);
+    }
+    _ric(step);
+  }catch(e){}
+};
+
 window._cgoResetToKO = function(){
     try{
       /* ★C-67 되돌리기 전에, 한국어 원본이 없는 글자를 사전 역방향으로 되찾아 심는다.
@@ -152851,8 +152963,11 @@ window._cgoResetToKO = function(){
         for(var i=0;i<vr.length;i++) window._cgoTranslateNode(vr[i]);
       }
       if(typeof window._cgoApplyKeyedI18n==='function') window._cgoApplyKeyedI18n(lang);
-      /* 4) 숨은 페이지는 건드리지 않는다 — 열 때 부활 감시기가 번역한다 */
+      /* 4) 숨은 페이지는 '앞줄에서' 건드리지 않는다.
+         대신 한가해지면 2단계(팝업) → 3단계(다른 페이지) 순서로 미리 칠해둔다.
+         사용자가 카드를 누르고 팝업을 읽는 시간이면 충분하다. */
       if(typeof window._cgoWarmReset==='function') window._cgoWarmReset();
+      try{ if(window._cgoProgressive) setTimeout(function(){ window._cgoProgressive(lang); }, 250); }catch(e){}
     }catch(e){ try{ if(typeof setLang==='function') setLang(lang); }catch(_){} }
   };
 ;
@@ -152860,6 +152975,8 @@ window._cgoResetToKO = function(){
   /* 부팅 직후에도 한 번 적용 — 저장된 언어로 들어올 때 81개가 한국어로 남지 않도록 */
   setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 1200);
   setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko') window._cgoApplyKeyedI18n(window._LANG); }catch(e){} }, 3000);
+  /* ★2026-08-07 — 새로고침으로 들어온 경우에도 2단계(팝업)·3단계(페이지)를 미리 칠해둔다 */
+  setTimeout(function(){ try{ if(window._LANG && window._LANG!=='ko' && window._cgoProgressive) window._cgoProgressive(window._LANG); }catch(e){} }, 1500);
   console.log('%c[언어 파이프라인] 원점복귀 → 단일적용 준비 완료','color:#10b981');
 })();
 </script>
