@@ -153108,6 +153108,61 @@ window._cgoPasteName = function(){
   el.focus(); flash(T('','길게 눌러 붙여넣기'), false);
 };
 </script>
+
+<script>
+/* ★C-68 글로벌 불용문자·작명 데이터 지연 로드 (bulyong_global.js · 255KB)
+   index.html 에 넣으면 모든 사용자가 255KB 를 받는다. 작명은 35개 기능 중 하나뿐.
+   → 작명/이름 관련 페이지를 열 때만 1회 내려받고, 이후는 브라우저 캐시.
+     지침 "보이는 것만 먼저, 나머지는 뒤로" 를 데이터에도 적용. */
+(function(){
+  var _st = 0;                                   /* 0=미로드 1=로딩중 2=완료 3=실패 */
+  window._c66LoadGlobal = function(cb){
+    if(_st===2){ if(cb) try{ cb(true); }catch(e){} return; }
+    if(_st===1){ document.addEventListener('c66:ready', function(){ if(cb) try{ cb(true); }catch(e){} }, {once:true}); return; }
+    _st = 1;
+    var s = document.createElement('script');
+    s.src = 'bulyong_global.js';
+    s.async = true;
+    s.onload = function(){
+      _st = 2;
+      try{ if(window._C66_FORBID && window._c66MergeGlobal) window._c66MergeGlobal(); }catch(e){}
+      try{ document.dispatchEvent(new Event('c66:ready')); }catch(e){}
+      if(cb) try{ cb(true); }catch(e){}
+    };
+    s.onerror = function(){ _st = 3; if(cb) try{ cb(false); }catch(e){} };   /* 실패해도 기존 내장 데이터로 동작 */
+    document.head.appendChild(s);
+  };
+  /* 로드된 글로벌 데이터를 앱 내부 구조에 합친다 (기존 값 우선 보존) */
+  window._c66MergeGlobal = function(){
+    try{
+      if(window._C66_NAMEDATA && window._C66_NAMES){
+        for(var k in window._C66_NAMES){
+          if(!window._C66_NAMEDATA[k]) window._C66_NAMEDATA[k]={};
+          if(!window._C66_NAMEDATA[k].names) window._C66_NAMEDATA[k].names = window._C66_NAMES[k];
+        }
+      }
+    }catch(e){}
+  };
+  /* 작명 관련 페이지 진입 시 자동 로드 */
+  var _pages = {naming:1,'c66':1,'c66-naming':1,'biz-naming':1};
+  try{
+    var _orig = window.cgoGoPage;
+    if(typeof _orig === 'function'){
+      window.cgoGoPage = function(page){
+        try{ if(page && _pages[page]) window._c66LoadGlobal(); }catch(e){}
+        return _orig.apply(this, arguments);
+      };
+    }
+  }catch(e){}
+  /* 작명 패널이 이미 화면에 있으면(직접 진입) 즉시 로드 */
+  try{
+    if(document.getElementById('nmSurname')){
+      var _p = document.getElementById('page-naming');
+      if(_p && _p.style.display!=='none') window._c66LoadGlobal();
+    }
+  }catch(e){}
+})();
+</script>
 </body>
 <!-- ✨ 478-C-15 · 4-7-8 호흡 분석 팝업 -->
 <div id="breathPopup478" style="display:none;position:fixed;inset:0;z-index:30000;background:rgba(2,8,23,.97);backdrop-filter:blur(16px);align-items:center;justify-content:flex-start;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;">
