@@ -152871,52 +152871,69 @@ window._cgoAiFinishKO = function(rootEl, delay){
     }catch(e){}
     return [];
   }
+  /* ★C-68 실제 인구 상위 성씨 — 첫 글자일 때 무조건 1번 자리 */
+  var TOPSN={'김':'金','이':'李','박':'朴','최':'崔','정':'鄭','강':'姜','조':'趙','윤':'尹',
+    '장':'張','임':'林','오':'吳','한':'韓','신':'申','서':'徐','권':'權','황':'黃','안':'安',
+    '송':'宋','전':'全','홍':'洪','유':'劉','고':'高','문':'文','양':'梁','손':'孫','배':'裵',
+    '백':'白','허':'許','남':'南','심':'沈','노':'盧','하':'河','곽':'郭','성':'成','차':'車',
+    '주':'朱','우':'禹','구':'具','나':'羅','민':'閔','진':'陳','지':'池','엄':'嚴','채':'蔡',
+    '원':'元','천':'千','방':'方','공':'孔','현':'玄','함':'咸','변':'卞','염':'廉','여':'呂',
+    '추':'秋','도':'都','소':'蘇','석':'石','선':'宣','설':'薛','마':'馬','길':'吉','연':'延',
+    '위':'魏','표':'表','명':'明','기':'奇','반':'潘','왕':'王','금':'琴','옥':'玉','육':'陸',
+    '인':'印','맹':'孟','제':'諸','모':'牟','탁':'卓','국':'鞠','계':'桂','봉':'奉',
+    '피':'皮','두':'杜','감':'甘','음':'陰','온':'溫','편':'片','용':'龍'};
   function cands(ch,isFirst){
     var seen={}, out=[];
-    if(isFirst) surnameOf(ch).forEach(function(x){ if(!seen[x]){seen[x]=1;out.push(x);} });  /* 인구순 유지 */
+    if(isFirst){
+      var top=TOPSN[ch];
+      if(top){ seen[top]=1; out.push(top); }                    /* ← 대표 성씨 1번 고정 */
+      surnameOf(ch).forEach(function(x){ if(!seen[x]){seen[x]=1;out.push(x);} });
+    }
     (INM[ch]||'').split('').forEach(function(x){ if(!seen[x]){seen[x]=1;out.push(x);} });
     return out;
   }
-  /* 이름칸이 한자로 바뀐 뒤에도 '원래 한글 음절'을 기억해 목록을 복원한다 */
-  function koChars(){
+  /* ★C-68 위치추적 방식
+     이름칸이 [李柱원] 처럼 한자·한글 섞여도 각 자리의 '원래 한글'을 잃지 않는다.
+     _koArr : 자리별 원래 한글   /  sel : 자리별 고른 한자 */
+  function syncFromField(){
     var el=document.getElementById('ipName');
     var v=((el&&el.value)||'').replace(/\s/g,'');
-    var prev=window._cgoHanjaKo||[], picked=window._cgoHanjaPicked||'';
-    if(v===picked && prev.length) return prev;          /* 우리가 바꿔놓은 값 → 원본 유지 */
-    var ko=v.split('').filter(function(c){return /[\uac00-\ud7a3]/.test(c);});
-    if(ko.length!==v.length){                            /* 한자가 섞여 있으면 이전 원본과 대조 */
-      if(prev.length===v.length) return prev;
+    var prev=window._cgoHanjaKo||[];
+    var out=[], ns={};
+    for(var i=0;i<v.length;i++){
+      var c=v[i];
+      if(/[\uac00-\ud7a3]/.test(c)){ out.push(c); }            /* 한글 → 그 자리 원음 */
+      else if(prev[i]){ out.push(prev[i]); ns[i]=c; }           /* 한자 → 이전 원음 복원 + 선택 유지 */
+      else { out.push(''); ns[i]=c; }                           /* 원음 모름 → 선택만 유지 */
     }
-    window._cgoHanjaKo=ko; sel={};                       /* 새로 타이핑 → 선택 초기화 */
-    return ko;
+    window._cgoHanjaKo=out; sel=ns;
+    return out;
   }
-  /* ★C-68: 고른 한자를 '이름칸 자체'에 바로 반영한다 (이 → 李).
-     한글 원본은 _cgoHanjaKo 에 보관해 다시 고를 때 음절 목록을 복원한다. */
+  function koChars(){ return window._cgoHanjaKo||[]; }
   function preview(){
-    var ko=(window._cgoHanjaKo||[]), s='';
-    ko.forEach(function(c,i){ s += (sel[i]||c); });     /* 아직 안 고른 자리는 한글 그대로 */
+    var ko=koChars(), s='';
+    ko.forEach(function(c,i){ s += (sel[i]||c); });
     var o=document.getElementById('cgoHanjaOut'); if(o) o.textContent = s||'—';
     var el=document.getElementById('ipName');
-    if(el && s){ el.value=s; window._cgoHanjaPicked=s; }   /* ← 이름칸에 직접 반영 */
-    var picked=''; ko.forEach(function(c,i){ if(sel[i]) picked+=sel[i]; });
+    if(el && s && el.value!==s){ el.value=s; }                  /* 이름칸에 직접 반영 */
+    var picked=''; ko.forEach(function(c,i){ picked += (sel[i]||''); });
     var t=document.getElementById('myNameHanja');
-    if(t && picked.length===ko.length && picked){ t.value=picked;
+    if(t && picked && picked.length===ko.length){ t.value=picked;
       try{ t.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
     try{ if(typeof _cgoAutoSaveInputs==='function') _cgoAutoSaveInputs(); }catch(e){}
     try{ if(typeof _checkCalcReady==='function') _checkCalcReady(); }catch(e){}
   }
-  window._cgoHanjaClose = function(){
+    window._cgoHanjaClose = function(){
     var b=document.getElementById('cgoHanjaPick'); if(b) b.style.display='none'; curIdx=-1;
   };
   /* 아직 안 고른 첫 글자의 팝업을 연다 */
   window._cgoHanjaSuggest = function(force){
     try{
       var box=document.getElementById('cgoHanjaPick'); if(!box) return;
-      var ko=koChars();
+      var ko=syncFromField();
       if(!ko.length){ box.style.display='none'; return; }
-      for(var k in sel){ if(k>=ko.length) delete sel[k]; }
       var idx=(typeof force==='number')?force:-1;
-      if(idx<0){ for(var i2=0;i2<ko.length;i2++){ if(!sel[i2]){ idx=i2; break; } } }
+      if(idx<0){ for(var i2=0;i2<ko.length;i2++){ if(!sel[i2] && ko[i2]){ idx=i2; break; } } }
       if(idx<0){ box.style.display='none'; preview(); return; }   /* 다 골랐으면 닫기 */
       curIdx=idx;
       var ch=ko[idx], list=cands(ch, idx===0);
