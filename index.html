@@ -22983,41 +22983,37 @@ function checkHealth(){
               ['남궁','南宮'],['독고','獨孤'],['황보','皇甫'],['제갈','諸葛'],['사공','司空'],['선우','鮮于'],['동방','東方'],['서문','西門'],
               ['소봉','小峯'],['팔봉','八峯'],['망절','網切'],['흥선','興宣']
             ];
+            /* ★C-68 v3 — 가장 단순하고 확실한 방식.
+               ① 전역 함수 window.cgoPickSurname 을 먼저 정의
+               ② 칩마다 onclick 속성을 HTML 로 직접 박음 (인라인이라 스코프 문제 없음)
+               이 IIFE 앞의 다른 스크립트가 죽어도 칩은 살아있게 한다. */
+            window.cgoPickSurname = function(sn){
+              var f=document.getElementById('nmSurname');
+              if(f){
+                f.value=sn;
+                try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+                try{ f.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+              }
+              try{
+                var cs=document.querySelectorAll('#surnameChips .surname-chip');
+                for(var q=0;q<cs.length;q++){
+                  cs[q].classList.toggle('active', cs[q].getAttribute('data-sn')===sn);
+                }
+              }catch(e){}
+              return false;
+            };
             var wrap=document.getElementById('surnameChips');
             if(!wrap) return;
+            var _html='';
             ALL_SURNAMES.forEach(function(s){
-              var el=document.createElement('div');
-              el.className='surname-chip';
-              el.style.cssText='font-size:11px;padding:2px 7px;flex-shrink:0;white-space:nowrap';
-              el.innerHTML=s[0]+'<span style="font-size:9px;color:var(--text-3);margin-left:2px">'+s[1]+'</span>';
-              /* ★C-68 v2: 개별 onclick 대신 컨테이너 위임 + 터치 대응.
-                 스크롤 영역 안의 칩은 모바일에서 click 이 안 뜨는 경우가 있어
-                 pointerup/touchend 까지 함께 받는다. (아래 wrap 에 한 번만 바인딩) */
-              el.setAttribute('data-sn', s[0]);
-              el.style.touchAction='manipulation';
-              wrap.appendChild(el);
+              var sn=String(s[0]).replace(/'/g,"\\'");
+              _html += '<div class="surname-chip" data-sn="'+s[0]+'"'
+                    +  ' onclick="return window.cgoPickSurname(\''+sn+'\')"'
+                    +  ' style="font-size:11px;padding:2px 7px;flex-shrink:0;white-space:nowrap;touch-action:manipulation;cursor:pointer;user-select:none">'
+                    +  s[0]+'<span style="font-size:9px;color:var(--text-3);margin-left:2px;pointer-events:none">'+s[1]+'</span>'
+                    +  '</div>';
             });
-            /* ★C-68: 이벤트 위임 — 칩이 몇 개든 핸들러 하나. 터치·마우스 모두 대응 */
-            var _lock={};
-            function _pickSn(ev){
-              var t=ev.target;
-              while(t && t!==wrap && !(t.getAttribute && t.getAttribute('data-sn'))) t=t.parentNode;
-              if(!t || t===wrap) return;
-              var sn=t.getAttribute('data-sn'); if(!sn) return;
-              /* touchend 후 click 이 이어서 오는 중복만 차단 (같은 칩·400ms 이내) */
-              var now=Date.now();
-              if(ev.type==='click' && _lock.t && (now-_lock.t)<400 && _lock.sn===sn) return;
-              if(ev.type==='touchend'){ _lock={t:now, sn:sn}; try{ ev.preventDefault(); }catch(e){} }
-              try{ if(typeof window.selectSurname==='function'){ window.selectSurname(sn); return; } }catch(e){}
-              var f=document.getElementById('nmSurname');
-              if(f){ f.value=sn; try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
-              try{
-                var cs=wrap.querySelectorAll('.surname-chip');
-                for(var q=0;q<cs.length;q++) cs[q].classList.toggle('active', cs[q].getAttribute('data-sn')===sn);
-              }catch(e){}
-            }
-            wrap.addEventListener('click', _pickSn, false);
-            wrap.addEventListener('touchend', _pickSn, {passive:false});
+            wrap.innerHTML=_html;
           })();
           </script>
 
@@ -56233,6 +56229,7 @@ function namingSeed(surname, birthY, birthM, birthD, gender) {
 function nmRng(s){ return ((s*1103515245+12345)&0x7fffffff); }
 
 function selectSurname(sn) {
+  if(window.cgoPickSurname){ window.cgoPickSurname(sn); return; }   /* ★C-68 v3 단일 경로 */
   var f=document.getElementById('nmSurname');
   if(f){ f.value = sn; try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
   document.querySelectorAll('#surnameChips .surname-chip').forEach(function(c){
