@@ -2536,7 +2536,46 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
       if(done) return; done = true;
       try{ var s=document.getElementById('_cgoLangGuard'); if(s) s.remove(); }catch(e){}
     };
-    setTimeout(window._cgoLangGuardOff, 150);      /* 상한 — 번역이 끝나면 그 전에 해제됨 */
+    /* ★2026-08-07 수정 — '한국어 갔다가 영어로 오는' 원인 제거.
+       기존 결함: 150ms 타이머가 무조건 먼저 터졌다. 10.45MB 문서의 DOMContentLoaded는
+                 그보다 훨씬 늦으므로 가드가 열린 뒤에야 setLang이 돌았다.
+                 = 한국어 화면이 반드시 한 번 드러났다가 영어로 바뀐다.
+       수정: 타이머로 열지 않는다. 번역기가 준비되는 즉시 '보이는 영역만' 번역하고,
+             화면에서 한글이 사라진 것을 확인한 다음 프레임에 드러낸다.
+             특허 원칙(보이는 것만 살리고 나머지는 죽인다)은 그대로다.
+             상한 3000ms는 안전망일 뿐 정상 경로에서는 쓰이지 않는다. */
+    var _t0 = Date.now(), _tried = 0;
+    function _cgoGuardTick(){
+      if(done) return;
+      try{
+        var ready = (typeof setLang === 'function')
+                 && (typeof _applyLangLocalization === 'function')
+                 && (typeof _cgoApplyDictionary === 'function')
+                 && (typeof CGO_I18N !== 'undefined') && CGO_I18N[L]
+                 && (typeof LANG_DICTIONARY !== 'undefined')
+                 && document.body
+                 && document.querySelector('.topbar, .page.active, #phase0');
+        if(ready){
+          window._LANG = L;
+          if(_tried < 2){ _tried++; try{ setLang(L); }catch(e){} }
+          var vis = '';
+          try{
+            var rts = (typeof window._cgoVisibleRoots === 'function') ? window._cgoVisibleRoots() : [document.body];
+            for(var _v=0; _v<rts.length; _v++) vis += (rts[_v].innerText || rts[_v].textContent || '');
+          }catch(e){}
+          var koLeft = (vis.match(/[\uac00-\ud7a3]/g) || []).length;
+          if(koLeft <= 2 || Date.now() - _t0 > 1200){
+            requestAnimationFrame(function(){ requestAnimationFrame(window._cgoLangGuardOff); });
+            return;
+          }
+        }
+      }catch(e){}
+      if(Date.now() - _t0 > 3000){ window._cgoLangGuardOff(); return; }
+      setTimeout(_cgoGuardTick, 16);
+    }
+    setTimeout(_cgoGuardTick, 0);
+    /* 뒤로가기 복원(bfcache)에서도 화면이 잠기지 않도록 안전망 */
+    try{ window.addEventListener('pageshow', function(){ setTimeout(window._cgoLangGuardOff, 1500); }); }catch(e){}
   }catch(e){}
 })();
 </script>
@@ -51937,8 +51976,10 @@ function _applyLangLocalization(lang) {
       // 대문이 보이는 중이면 실행 안 함 (대문에서 선택 → _cgoEntranceDone에서 처리)
       var p0 = document.getElementById('phase0');
       if(p0 && p0.style.display !== 'none') return;
-      setTimeout(function(){ /* ★C-67 사용자가 그 사이 언어를 바꿨으면 무시 */ if(window._LANG===saved) setLang(saved);
-      try{ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }catch(e){}   /* 보이는 영역 번역 완료 → 즉시 노출 */ }, 300);
+      /* ★2026-08-07: 300ms 지연 제거 — 가드는 150ms에 이미 열려 한국어가 노출된 뒤였다.
+         지연 없이 즉시 적용하고, 그려진 다음 프레임에 드러낸다. */
+      if(window._LANG===saved){ try{ setLang(saved); }catch(e){} }
+      requestAnimationFrame(function(){ try{ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }catch(e){} });
     }
   } catch(e){}
 })();
@@ -67528,8 +67569,11 @@ document.addEventListener('DOMContentLoaded', function(){
     // 새로고침으로 대문 건너뛴 경우만 — 저장된 언어 복원
     var saved = localStorage.getItem('cgo_lang') || 'ko';
     if (saved && saved !== 'ko' && typeof setLang === 'function') {
-      setLang(saved);
-      try{ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }catch(e){}   /* 보이는 영역 번역 완료 → 즉시 노출 */
+      try{ setLang(saved); }catch(e){}
+      /* ★2026-08-07: 번역 결과가 실제로 그려진 다음 프레임에 드러낸다 */
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){
+        try{ if(window._cgoLangGuardOff) window._cgoLangGuardOff(); }catch(e){}
+      }); });
     }
   }
   // (대문이 보이는 경우는 _cgoEntranceDone에서 처리)
