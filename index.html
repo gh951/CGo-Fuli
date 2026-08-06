@@ -2517,39 +2517,31 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 .ladder-btn, #skipBtn{ filter: none !important; }
 </style>
 <script>
-/* ★C-68 새로고침 언어 깜빡임 완전 차단
-   원인: HTML 은 한국어로 즉시 렌더되는데 setLang(저장언어) 는 3MB 뒤 스크립트에서 실행된다.
-        → 한국어가 먼저 보였다가 나중에 번역되는 '한글 → 외국어' 깜빡임.
-   해결: 저장된 언어가 외국어면 렌더 전에 본문을 감춰두고, 번역이 끝나면 드러낸다.
-        (안전장치: 어떤 이유로든 번역이 늦어도 2.5초 뒤 무조건 보이게 한다) */
+/* ★C-68 새로고침 언어 깜빡임 제거 — 스피너 없음, 특허 원칙 그대로.
+   원인: HTML 은 한국어로 즉시 렌더되는데 setLang(저장언어)은 3MB 뒤에서 실행된다.
+   해결: 저장 언어가 외국어면 첫 페인트만 아주 짧게 미룬다(opacity 0).
+        화면은 그대로 있고 '한글이 보이는 순간'만 건너뛴다.
+        번역이 끝나면 즉시 드러내고, 늦어도 400ms 뒤 무조건 드러낸다.
+        → 사용자는 로딩을 못 느끼고, 한글도 못 본다. */
 (function(){
   try{
     var L = localStorage.getItem('cgo_lang');
     var U = localStorage.getItem('cgo_lang_user_set');
-    if(U!=='1' || !L || L==='ko') return;               /* 한국어면 감출 이유 없음 */
+    if(U!=='1' || !L || L==='ko') return;              /* 한국어는 손대지 않음 */
     var st = document.createElement('style');
     st.id = '_cgoLangGuard';
-    st.textContent = 'body{visibility:hidden !important}'
-      + '#_cgoLangSplash{visibility:visible !important;position:fixed;inset:0;z-index:99999;'
-      + 'background:#0b1120;display:flex;align-items:center;justify-content:center}';
+    st.textContent = 'body{opacity:0}';                /* 자리는 그대로, 글자만 안 보임 */
     document.head.appendChild(st);
+    var done = false;
     window._cgoLangGuardOff = function(){
+      if(done) return; done = true;
       try{
-        var s=document.getElementById('_cgoLangGuard'); if(s) s.remove();
-        var sp=document.getElementById('_cgoLangSplash'); if(sp) sp.remove();
+        var s=document.getElementById('_cgoLangGuard');
+        if(s) s.textContent = 'body{opacity:1;transition:opacity .12s}';
+        setTimeout(function(){ try{ var q=document.getElementById('_cgoLangGuard'); if(q) q.remove(); }catch(e){} }, 200);
       }catch(e){}
     };
-    /* 안전장치 — 번역이 실패해도 화면이 영영 안 보이면 안 된다 */
-    setTimeout(function(){ try{ window._cgoLangGuardOff(); }catch(e){} }, 2500);
-    document.addEventListener('DOMContentLoaded', function(){
-      try{
-        var sp=document.createElement('div'); sp.id='_cgoLangSplash';
-        sp.innerHTML='<div style="width:34px;height:34px;border:3px solid rgba(212,168,67,.25);'
-          + 'border-top-color:#d4a843;border-radius:50%;animation:_cgoSpin .8s linear infinite"></div>'
-          + '<style>@keyframes _cgoSpin{to{transform:rotate(360deg)}}</style>';
-        document.body.appendChild(sp);
-      }catch(e){}
-    });
+    setTimeout(window._cgoLangGuardOff, 400);          /* 안전장치 — 무슨 일이 있어도 400ms */
   }catch(e){}
 })();
 </script>
