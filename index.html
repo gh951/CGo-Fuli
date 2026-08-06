@@ -152916,19 +152916,20 @@ window._cgoAiFinishKO = function(rootEl, delay){
   /* ★C-68 위치추적 방식
      이름칸이 [李柱원] 처럼 한자·한글 섞여도 각 자리의 '원래 한글'을 잃지 않는다.
      _koArr : 자리별 원래 한글   /  sel : 자리별 고른 한자 */
+  /* ★C-68 재설계 — 인덱스 대신 '확정 맵'으로 추적한다.
+     IME 조합(李 + ㅈ → 즈 → 주) 도중 자모가 끼어들어도 이미 고른 한자를 잃지 않는다.
+     _cgoHanjaMap : { 한자 → 원래 한글 }  (예: {李:'이', 朱:'주'}) */
   function syncFromField(){
     var el=document.getElementById('ipName');
-    /* ★C-68: 공백을 지우면 'Nguyễn Văn A' 같은 이름이 망가진다 → 자리를 그대로 보존 */
     var v=((el&&el.value)||'');
-    var prev=window._cgoHanjaKo||[];
+    var map=window._cgoHanjaMap||(window._cgoHanjaMap={});
     var out=[], ns={};
     for(var i=0;i<v.length;i++){
       var c=v[i];
-      if(/\s/.test(c)){ out.push(c); ns[i]=c; }                 /* 공백은 그 자리 그대로 */
-      else if(/[\uac00-\ud7a3]/.test(c)){ out.push(c); }        /* 완성형 한글 → 그 자리 원음 */
-      else if(/[\u3131-\u318e]/.test(c)){ out.push(''); }        /* IME 조합 중 자모 → 건너뜀 */
-      else if(prev[i]){ out.push(prev[i]); ns[i]=c; }           /* 한자 → 이전 원음 복원 + 선택 유지 */
-      else { out.push(''); ns[i]=c; }                           /* 원음 모름 → 선택만 유지 */
+      if(/[\uac00-\ud7a3]/.test(c)){ out.push(c); }             /* 완성형 한글 = 아직 안 고른 자리 */
+      else if(/[\u3131-\u318e]/.test(c)){ out.push(c); ns[out.length-1]=c; }  /* 조합 중 자모: 자리 유지 */
+      else if(map[c]){ out.push(map[c]); ns[out.length-1]=c; }   /* 우리가 고른 한자 → 원음 복원 */
+      else { out.push(c); ns[out.length-1]=c; }                  /* 사용자가 직접 넣은 글자 → 그대로 확정 */
     }
     window._cgoHanjaKo=out; sel=ns;
     return out;
@@ -152957,7 +152958,7 @@ window._cgoAiFinishKO = function(rootEl, delay){
       var ko=syncFromField();
       if(!ko.length){ box.style.display='none'; return; }
       var idx=(typeof force==='number')?force:-1;
-      if(idx<0){ for(var i2=0;i2<ko.length;i2++){ if(!sel[i2] && ko[i2] && !/\s/.test(ko[i2])){ idx=i2; break; } } }
+      if(idx<0){ for(var i2=0;i2<ko.length;i2++){ if(!sel[i2] && ko[i2] && /[\uac00-\ud7a3]/.test(ko[i2])){ idx=i2; break; } } }
       if(idx<0){ box.style.display='none'; preview(); return; }   /* 다 골랐으면 닫기 */
       curIdx=idx;
       var ch=ko[idx], list=cands(ch, idx===0);
@@ -152974,7 +152975,11 @@ window._cgoAiFinishKO = function(rootEl, delay){
           +'border:1px solid var(--border);background:var(--bg-panel);font-size:17px;font-weight:800;'
           +'color:var(--text-1);cursor:pointer;line-height:1.25';
         b.textContent=hj;
-        b.onclick=function(){ sel[curIdx]=hj; preview(); window._cgoHanjaSuggest(); };  /* 확정 → 다음 글자 */
+        b.onclick=function(){
+          sel[curIdx]=hj;
+          (window._cgoHanjaMap||(window._cgoHanjaMap={}))[hj]=ch;   /* 한자→원음 기록 */
+          preview(); window._cgoHanjaSuggest();
+        };  /* 확정 → 다음 글자 */
         sc.appendChild(b);
       });
       rows.appendChild(sc);
@@ -152983,7 +152988,12 @@ window._cgoAiFinishKO = function(rootEl, delay){
     }catch(e){}
   };
   window._cgoHanjaApply = function(){ window._cgoHanjaClose(); };
-  window._cgoHanjaReset = function(){ sel={}; curIdx=-1; window._cgoHanjaSuggest(0); };
+  window._cgoHanjaReset = function(){
+    var el=document.getElementById('ipName'), map=window._cgoHanjaMap||{}, v=((el&&el.value)||''), r='';
+    for(var i=0;i<v.length;i++){ r += (map[v[i]]||v[i]); }      /* 한자 → 한글로 되돌림 */
+    if(el) el.value=r;
+    window._cgoHanjaMap={}; sel={}; curIdx=-1; window._cgoHanjaSuggest();
+  };
 })();
 </script>
 
