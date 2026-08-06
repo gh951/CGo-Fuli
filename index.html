@@ -34414,7 +34414,10 @@ function _c24UpdateStageUI(){
     lbl.style.color=colors[cur]||'#34d399';
     /* ★C-68: labels 에 이미 이모지가 있어 icons[cur] 를 또 붙이면 아이콘이 중복되고,
    번역 후 길이가 늘어 오버레이를 넘쳐 글자가 겹쳤다 → 아이콘 제거 + 한 줄 말줄임 */
-      lbl.textContent=(cur+1)+'/'+s.steps.length+' '+((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
+      /* ★C-68: labels 앞 이모지가 좁은 오버레이를 밀어내 글자가 겹쳤다 → 표시할 때만 이모지 제거 */
+      var _lb=((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
+      _lb=_lb.replace(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u200D]*\s*|^[\u2190-\u2BFF\u3000-\u303F][\uFE0F\u200D]*\s*/,'');
+      lbl.textContent=(cur+1)+'/'+s.steps.length+' '+_lb;
       lbl.style.whiteSpace='normal'; lbl.style.lineHeight='1.3'; lbl.style.wordBreak='keep-all'; lbl.style.minWidth='0';
   }
 }
