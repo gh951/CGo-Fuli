@@ -22987,10 +22987,12 @@ function checkHealth(){
                ① 전역 함수 window.cgoPickSurname 을 먼저 정의
                ② 칩마다 onclick 속성을 HTML 로 직접 박음 (인라인이라 스코프 문제 없음)
                이 IIFE 앞의 다른 스크립트가 죽어도 칩은 살아있게 한다. */
-            window.cgoPickSurname = function(sn){
+            /* val = 실제로 넣을 값(한자), ko = 한글 성씨(활성표시용) */
+            window.cgoPickSurname = function(val, ko){
+              var sn = ko || val;
               var f=document.getElementById('nmSurname');
               if(f){
-                f.value=sn;
+                f.value=val;
                 try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
                 try{ f.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
               }
@@ -23007,8 +23009,9 @@ function checkHealth(){
             var _html='';
             ALL_SURNAMES.forEach(function(s){
               var sn=String(s[0]).replace(/'/g,"\\'");
-              _html += '<div class="surname-chip" data-sn="'+s[0]+'"'
-                    +  ' onclick="return window.cgoPickSurname(\''+sn+'\')"'
+              var hj=String(s[1]).replace(/'/g,"\\'");   /* ★C-68: 한자를 입력값으로 */
+              _html += '<div class="surname-chip" data-sn="'+s[0]+'" data-hj="'+s[1]+'"'
+                    +  ' onclick="return window.cgoPickSurname(\''+hj+'\',\''+sn+'\')"'
                     +  ' style="font-size:11px;padding:2px 7px;flex-shrink:0;white-space:nowrap;touch-action:manipulation;cursor:pointer;user-select:none">'
                     +  s[0]+'<span style="font-size:9px;color:var(--text-3);margin-left:2px;pointer-events:none">'+s[1]+'</span>'
                     +  '</div>';
@@ -56229,7 +56232,15 @@ function namingSeed(surname, birthY, birthM, birthD, gender) {
 function nmRng(s){ return ((s*1103515245+12345)&0x7fffffff); }
 
 function selectSurname(sn) {
-  if(window.cgoPickSurname){ window.cgoPickSurname(sn); return; }   /* ★C-68 v3 단일 경로 */
+  if(window.cgoPickSurname){
+    /* ★C-68: 한글 성씨로 불려도 칩의 한자를 찾아 넣는다 */
+    var hj=sn;
+    try{
+      var c=document.querySelector('#surnameChips .surname-chip[data-sn="'+sn+'"]');
+      if(c && c.getAttribute('data-hj')) hj=c.getAttribute('data-hj');
+    }catch(e){}
+    window.cgoPickSurname(hj, sn); return;
+  }
   var f=document.getElementById('nmSurname');
   if(f){ f.value = sn; try{ f.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
   document.querySelectorAll('#surnameChips .surname-chip').forEach(function(c){
