@@ -34436,9 +34436,7 @@ function _c24UpdateStageUI(){
   if(lbl){
     var cur=s.step;
     lbl.style.color=colors[cur]||'#34d399';
-    /* ★C-68: labels 에 이미 이모지가 있어 icons[cur] 를 또 붙이면 아이콘이 중복되고,
-   번역 후 길이가 늘어 오버레이를 넘쳐 글자가 겹쳤다 → 아이콘 제거 + 한 줄 말줄임 */
-      /* ★C-68: labels 앞 이모지가 좁은 오버레이를 밀어내 글자가 겹쳤다 → 표시할 때만 이모지 제거 */
+          /* ★C-68: labels 앞 이모지가 좁은 오버레이를 밀어내 글자가 겹쳤다 → 표시할 때만 이모지 제거 */
       var _lb=((typeof _cgoT==='function')?_cgoT(s.labels[cur]):s.labels[cur]);
       _lb=_lb.replace(/^[\uD800-\uDBFF][\uDC00-\uDFFF][\uFE0F\u200D]*\s*|^[\u2190-\u2BFF\u3000-\u303F][\uFE0F\u200D]*\s*/,'');
       lbl.textContent=(cur+1)+'/'+s.steps.length+' '+_lb;
@@ -66350,8 +66348,18 @@ function drawGrowth(){
 }
 
 function refreshData(){
-  if(calcResult) updateDashboard(calcResult);
-  else drawTrend();
+  /* ★C-68: calcResult 가 없으면 아무 일도 안 해 '버튼이 죽은' 것처럼 보였다.
+     → 눌린 것을 눈으로 알 수 있게 하고, 갱신 가능한 것을 모두 시도한다. */
+  try{ var _b=document.querySelector('.icon-btn[onclick*="refreshData"]');
+       if(_b){ _b.style.transition='transform .5s'; _b.style.transform='rotate(360deg)';
+               setTimeout(function(){ try{ _b.style.transition=''; _b.style.transform=''; }catch(e){} },520); }
+  }catch(e){}
+  try{ if(typeof calcResult!=='undefined' && calcResult && typeof updateDashboard==='function') updateDashboard(calcResult); }catch(e){}
+  try{ if(typeof drawTrend==='function') drawTrend(); }catch(e){}
+  try{ if(typeof _cgoUpdateWeather==='function') _cgoUpdateWeather(); }catch(e){}
+  try{ if(typeof _tzrUpdate==='function') _tzrUpdate(); }catch(e){}
+  try{ if(typeof _cgoV2Compass==='function') _cgoV2Compass(); }catch(e){}
+  try{ if(window._LANG && window._LANG!=='ko' && typeof _cgoApplyDictionary==='function') _cgoApplyDictionary(window._LANG); }catch(e){}
 }
 
 
@@ -78028,8 +78036,7 @@ function cgBackToExit() {
 }
 
 // ── 앱 종료 확인 팝업 (C-build: 실수 나가기 방지) 복구:index_before_exitconfirm.html ──
-var _cgExitArmed = false;
-setTimeout(function(){ _cgExitArmed = true; }, 2500);
+var _cgExitArmed = false;   /* ★C-68: 새로고침 경고 원인 → 자동 활성화 제거 */
 function cgShowExitConfirm() {
   var ex = document.getElementById('cgExitConfirm');
   if (ex) { ex.style.display = 'flex'; document.body.style.overflow = 'hidden'; _cgHistoryPush(_cgCurrent); return; }
@@ -78062,11 +78069,14 @@ function cgExitConfirmDo() {
   // (스토어 앱으로 배포되면 위 window.close()가 작동하여 실제 종료됨)
 }
 // 탭 닫기·새로고침·주소 이동 시 브라우저 기본 경고 (실수 데이터 손실 방지)
-window.addEventListener('beforeunload', function(e) {
-  if (!_cgExitArmed) return;
+/* ★C-68 재수정: 앞선 수정은 경고를 통째로 없애 '진짜 저장 안 된 작업'도 못 지켰다.
+   원래 결함은 조건이 '2.5초 지났나' 였다는 점 — 시간은 저장 여부와 아무 상관이 없다.
+   (5초 만에 글을 썼으면 경고해야 하고, 10분을 그냥 봤으면 경고하면 안 된다)
+   → 조건을 '저장 안 된 변경이 있는가(_cgDirty)' 로 바꾼다. */
+window.addEventListener('beforeunload', function (e) {
+  if (!window._cgDirty) return;          /* 변경 없으면 조용히 나감 */
   e.preventDefault();
   e.returnValue = '';
-  return '';
 });
 
 // ── 페이지 목차 카드 ──────────────────────────────────────────
@@ -153117,7 +153127,6 @@ window._cgoAiFinishKO = function(rootEl, delay){
       preview();
     }catch(e){}
   };
-  window._cgoHanjaApply = function(){ window._cgoHanjaClose(); };
   window._cgoHanjaReset = function(){
     var el=document.getElementById('ipName'), map=window._cgoHanjaMap||{}, v=((el&&el.value)||''), r='';
     for(var i=0;i<v.length;i++){ r += (map[v[i]]||v[i]); }      /* 한자 → 한글로 되돌림 */
@@ -153253,6 +153262,40 @@ window._cgoPasteName = function(){
     if(document.getElementById('nmSurname')){
       var _p = document.getElementById('page-naming');
       if(_p && _p.style.display!=='none') window._c66LoadGlobal();
+    }
+  }catch(e){}
+})();
+</script>
+
+<script>
+/* ★C-68 저장 안 된 변경 추적 — beforeunload 경고의 유일한 근거 */
+(function(){
+  window._cgDirty = false;
+  window.markDirty = function(){ window._cgDirty = true;  };
+  window.markSaved = function(){ window._cgDirty = false; };
+
+  /* 사용자가 실제로 입력·수정하면 dirty */
+  function onEdit(ev){
+    try{
+      var t=ev && ev.target; if(!t || !t.tagName) return;
+      var tag=t.tagName;
+      if(tag!=='INPUT' && tag!=='TEXTAREA' && tag!=='SELECT') return;
+      if(t.type==='button'||t.type==='submit'||t.type==='file') return;
+      window.markDirty();
+    }catch(e){}
+  }
+  document.addEventListener('input',  onEdit, true);
+  document.addEventListener('change', onEdit, true);
+
+  /* 자동저장이 돌면 저장된 것으로 본다 (이 앱은 localStorage 즉시 저장 구조) */
+  try{
+    var _origSave = window._cgoAutoSaveInputs;
+    if(typeof _origSave === 'function'){
+      window._cgoAutoSaveInputs = function(){
+        var r = _origSave.apply(this, arguments);
+        try{ window.markSaved(); }catch(e){}
+        return r;
+      };
     }
   }catch(e){}
 })();
