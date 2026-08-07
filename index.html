@@ -2589,6 +2589,20 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 })();
 </script>
 <script>
+/* ★2026-08-07 — 선택 언어가 '진짜'다(머리에서 미리 정의).
+   문서 뒤쪽에도 같은 정의가 있지만, 부팅 도중 도는 장치들이 있어 여기서 먼저 세운다. */
+window._cgoLangNow = function(){
+  var L = window._LANG;
+  if(L) return L;
+  try{
+    var S = localStorage.getItem('cgo_lang');
+    var U = localStorage.getItem('cgo_lang_user_set');
+    if(U==='1' && S) return S;
+  }catch(e){}
+  return L || 'ko';
+};
+</script>
+<script>
 /* ★C-68 새로고침 언어 깜빡임 제거 — 특허 원칙(보이는 것만 번역 → 점진 부활) 그대로.
    원인: HTML 은 한국어로 즉시 렌더되는데 setLang(저장언어)은 3MB 뒤에서 실행된다.
    해결: 저장 언어가 외국어면 '한글이 스치는 그 한 프레임'만 건너뛴다.
@@ -52206,9 +52220,13 @@ function _applyLangLocalization(lang) {
       if (!window._LANG) return;
       if (window._LANG === 'ko') {
         /* 한국어로 돌아온 뒤 새로 그려지는 내용의 이전 언어 잔재를 즉시 되돌린다 */
+        /* ★2026-08-07 — 선택 언어가 외국어면 되돌리지 않는다(막바지 한글 번쩍임 방지) */
         try{
-          if (window._cgoRestoreKO) window._cgoRestoreKO(el);
-          if (window._cgoBind && window._cgoPaint) { window._cgoBind(el); window._cgoPaint('ko', el); }
+          var _Lnow = (typeof window._cgoLangNow==='function') ? window._cgoLangNow() : window._LANG;
+          if(!_Lnow || _Lnow==='ko'){
+            if (window._cgoRestoreKO) window._cgoRestoreKO(el);
+            if (window._cgoBind && window._cgoPaint) { window._cgoBind(el); window._cgoPaint('ko', el); }
+          }
         }catch(e){}
         return;
       }
@@ -52251,7 +52269,7 @@ function _applyLangLocalization(lang) {
           if (m.type==='attributes' && m.attributeName==='style') {
             var vis = el.style.display !== 'none' && el.style.visibility !== 'hidden';
             /* ★2026-08-07 — 여는 그 순간 처리한다. 기다리지 않는다. */
-            if (vis && window._LANG === 'ko') {
+            if (vis && (function(){var _q=(typeof window._cgoLangNow==='function')?window._cgoLangNow():window._LANG; return !_q||_q==='ko';})()) {
               try{
                 if (window._cgoRestoreKO) window._cgoRestoreKO(el);
                 if (window._cgoBind && window._cgoPaint) { window._cgoBind(el); window._cgoPaint('ko', el); }
@@ -153137,6 +153155,23 @@ window._cgoResetToKO = function(){
 </script>
 
 <script>
+
+/* ★2026-08-07 — 선택 언어가 '진짜'다.
+   새로고침 막바지에 한글이 번쩍이던 원인:
+   페이지 부활·한국어 복원 장치들이 window._LANG 하나만 보는데,
+   그 값이 아직 안 잡힌 찰나에 돌면 "한국어구나" 판단하고 되돌려버렸다.
+   → 저장된 선택 언어를 최종 근거로 삼는다. LJR와 같은 원칙(선택 언어 고정). */
+window._cgoLangNow = function(){
+  var L = window._LANG;
+  if(L) return L;
+  try{
+    var S = localStorage.getItem('cgo_lang');
+    var U = localStorage.getItem('cgo_lang_user_set');
+    if(U==='1' && S) return S;
+  }catch(e){}
+  return L || 'ko';
+};
+
 /* ★C-67 페이지 부활 감시기 (지휘자 설계 ③단계)
    특허 원칙: 보이는 것만 살리고 나머지는 죽여둔다 → 그래서 빠르다.
    그런데 '죽은 페이지를 다시 살리는 순간' 번역을 보장하는 장치가 없었다.
@@ -153147,7 +153182,7 @@ window._cgoResetToKO = function(){
 (function(){
   function revive(pg){
     try{
-      var L = window._LANG;
+      var L = (typeof window._cgoLangNow==='function') ? window._cgoLangNow() : window._LANG;
       /* ★C-67 이 페이지가 '한국어 원본 없이' 외국어로 굳어 있으면 사전을 거꾸로 찾아 복구 */
       try{ if(typeof window._cgoRecoverKO==='function') window._cgoRecoverKO(pg); }catch(e){}
       if(!L || L==='ko'){
