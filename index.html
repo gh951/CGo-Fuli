@@ -2591,16 +2591,26 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 <script>
 /* ★2026-08-07 — 선택 언어가 '진짜'다(머리에서 미리 정의).
    문서 뒤쪽에도 같은 정의가 있지만, 부팅 도중 도는 장치들이 있어 여기서 먼저 세운다. */
+window._cgoBootPhase = true;   /* 부팅 중에만 저장 언어를 근거로 삼는다 */
 window._cgoLangNow = function(){
   var L = window._LANG;
   if(L) return L;
+  /* ★2026-08-07 수정 — 부팅이 끝난 뒤에도 저장값을 보면
+     한국어로 돌아갈 때 '아직 영어다'로 판단해 페이지가 영어로 굳었다.
+     그래서 부팅 구간에서만 저장값을 본다. */
+  if(!window._cgoBootPhase) return 'ko';
   try{
     var S = localStorage.getItem('cgo_lang');
     var U = localStorage.getItem('cgo_lang_user_set');
     if(U==='1' && S) return S;
   }catch(e){}
-  return L || 'ko';
+  return 'ko';
 };
+try{
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ window._cgoBootPhase = false; }, 2000);
+  });
+}catch(e){}
 </script>
 <script>
 /* ★C-68 새로고침 언어 깜빡임 제거 — 특허 원칙(보이는 것만 번역 → 점진 부활) 그대로.
@@ -153161,16 +153171,7 @@ window._cgoResetToKO = function(){
    페이지 부활·한국어 복원 장치들이 window._LANG 하나만 보는데,
    그 값이 아직 안 잡힌 찰나에 돌면 "한국어구나" 판단하고 되돌려버렸다.
    → 저장된 선택 언어를 최종 근거로 삼는다. LJR와 같은 원칙(선택 언어 고정). */
-window._cgoLangNow = function(){
-  var L = window._LANG;
-  if(L) return L;
-  try{
-    var S = localStorage.getItem('cgo_lang');
-    var U = localStorage.getItem('cgo_lang_user_set');
-    if(U==='1' && S) return S;
-  }catch(e){}
-  return L || 'ko';
-};
+window._cgoLangNow = window._cgoLangNow || function(){ return window._LANG || 'ko'; };
 
 /* ★C-67 페이지 부활 감시기 (지휘자 설계 ③단계)
    특허 원칙: 보이는 것만 살리고 나머지는 죽여둔다 → 그래서 빠르다.
