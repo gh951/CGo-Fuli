@@ -34784,12 +34784,16 @@ function _cgoT(str){
     if(!L || L==='ko' || !str) return str;
     if(typeof LANG_DICTIONARY==='undefined') return str;
     var d=LANG_DICTIONARY[L];
+    /* ★2026-08-08 — 두 가지를 함께 고친다.
+       ① 그 언어에 없으면 영어로 내려간다 (예전엔 한국어가 그대로 남았다).
+       ② 조각 치환은 '완전히 한국어가 사라진 경우'에만 쓴다.
+          예전엔 절반만 바뀌어 'Путешествие지' 같은 혼용 글자가 나왔다. */
+    var _en = (L!=='en' && LANG_DICTIONARY['en']) ? LANG_DICTIONARY['en'] : null;
+    if(!d) d = _en;
     if(!d) return str;
     if(d[str]) return d[str];
-    /* ★2026-08-07 — 이번 세션에서 API가 이미 번역한 것은 그 값을 재사용한다.
-       같은 글자가 열 때마다 다르게 번역되던 문제와 중복 비용을 함께 없앤다. */
+    if(_en && _en[str]) return _en[str];
     try{ var _ai=window._cgoAiDict && window._cgoAiDict[L]; if(_ai && _ai[str]) return _ai[str]; }catch(e){}
-    /* 통짜 매칭 실패 시: 한글 조각 치환 (긴 것부터) */
     if(!/[가-힣]/.test(str)) return str;
     /* ★C-68 ① 조각키 캐시를 언어별로 분리 — 직전 언어 키가 남아 오염되던 문제 */
     if(!window._cgoTKeys || window._cgoTKeysLang!==L){
@@ -34799,9 +34803,26 @@ function _cgoT(str){
     }
     var K=window._cgoTKeys, out=str;
     for(var i=0;i<K.length;i++){
-      /* ★C-68 ② join(undefined)는 JS가 쉼표로 잇는다 → 번역값 없으면 건드리지 않는다 */
-      if(out.indexOf(K[i])>=0){ var _rp=d[K[i]]; if(_rp==null||_rp==='') continue; out=out.split(K[i]).join(_rp); }
+      if(out.indexOf(K[i])>=0){
+        var _rp=d[K[i]];
+        if((_rp==null||_rp==='') && _en) _rp=_en[K[i]];
+        if(_rp==null||_rp==='') continue;
+        out=out.split(K[i]).join(_rp);
+      }
       if(!/[가-힣]/.test(out)) break;
+    }
+    /* ★2026-08-08 — 조각을 다 바꾸지 못해 한국어가 남았다면 그 결과는 버린다.
+       반쪽짜리 혼용 글자보다, 영어 한 벌이 훨씬 낫다. */
+    if(/[가-힣]/.test(out)){
+      if(_en && _en[str]) return _en[str];
+      if(_en){
+        var out2=str;
+        for(var j=0;j<K.length;j++){
+          if(out2.indexOf(K[j])>=0){ var _r2=_en[K[j]]; if(_r2==null||_r2==='') continue; out2=out2.split(K[j]).join(_r2); }
+          if(!/[가-힣]/.test(out2)) break;
+        }
+        if(!/[가-힣]/.test(out2)) return out2;
+      }
     }
     return out;
   }catch(e){ return str; }
