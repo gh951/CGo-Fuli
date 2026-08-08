@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>CGO-FULI 번역 인수인계</title>
+<style>
+  doc-page:not(:defined){visibility:hidden}
+  body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;}
+  h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px;color:#0f172a;}
+  .sub{font-size:12.5px;color:#64748b;margin:0 0 26px;}
+  h2{font-size:16px;font-weight:800;color:#0f172a;margin:30px 0 10px;padding-bottom:6px;border-bottom:2px solid #0f172a;}
+  h3{font-size:13.5px;font-weight:800;color:#334155;margin:18px 0 6px;}
+  p,li{font-size:12.5px;line-height:1.85;color:#334155;}
+  ul{margin:6px 0 6px 18px;padding:0;}
+  li{margin-bottom:3px;}
+  table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:12px;}
+  th{background:#f1f5f9;text-align:left;padding:7px 9px;border:1px solid #cbd5e1;font-weight:800;color:#0f172a;}
+  td{padding:7px 9px;border:1px solid #cbd5e1;color:#334155;}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;}
+  code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11.5px;font-family:ui-monospace,Menlo,monospace;color:#0f172a;}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;font-size:11px;line-height:1.7;overflow-x:auto;font-family:ui-monospace,Menlo,monospace;break-inside:avoid;}
+  .box{background:#f8fafc;border:1px solid #cbd5e1;border-left:3px solid #0f172a;border-radius:0 8px 8px 0;padding:11px 14px;margin:12px 0;break-inside:avoid;}
+  .warn{background:#fffbeb;border-color:#fcd34d;border-left-color:#d97706;}
+  .ok{background:#f0fdf4;border-color:#bbf7d0;border-left-color:#16a34a;}
+  .box p{margin:0;font-size:12px;}
+  .box p+p{margin-top:6px;}
+  .lead{font-size:13px;line-height:1.9;color:#1e293b;}
+  .ft{font-size:10.5px;color:#94a3b8;text-align:center;}
+</style>
+</head>
+<body>
+<doc-page margin="0.8in">
+
+  <div slot="footer" class="ft">CGO-FULI 번역 인수인계 · 2026-08-08</div>
+
+  <h1>CGO-FULI 번역 인수인계</h1>
+  <p class="sub">6개 언어 · 번호표 방식 + 사전 방식 · 2026년 8월 8일 기준</p>
+
+  <p class="lead">이 문서는 다음 작업자가 <strong>파일만 받아서 바로 이어갈 수 있도록</strong> 쓴 것입니다.
+  구조가 왜 이렇게 됐는지, 지금 어디까지 왔는지, 다음에 뭘 하면 되는지 순서대로 담았습니다.</p>
+
+  <h2>1. 지금 상태</h2>
+  <table>
+    <thead><tr><th>언어</th><th>번호팩(자리)</th><th>사전(항목)</th><th>상태</th></tr></thead>
+    <tbody>
+      <tr><td>한국어 (ko)</td><td class="n">7,600</td><td class="n">—</td><td>원본</td></tr>
+      <tr><td>영어 (en)</td><td class="n">7,600</td><td class="n">8,574</td><td>기준 · 완료</td></tr>
+      <tr><td>러시아어 (ru)</td><td class="n">7,600</td><td class="n">4,809</td><td>진행 중 · 3,773 남음</td></tr>
+      <tr><td>일본어 (ja)</td><td class="n">7,600</td><td class="n">6,144</td><td>2,430 남음</td></tr>
+      <tr><td>중국어 간체 (zh)</td><td class="n">7,600</td><td class="n">6,144</td><td>2,430 남음</td></tr>
+      <tr><td>중국어 번체 (zh_HK)</td><td class="n">7,600</td><td class="n">6,144</td><td>2,430 남음</td></tr>
+    </tbody>
+  </table>
+
+  <div class="ok box">
+    <p><strong>파일은 하나입니다.</strong> <code>index.html</code> 안에 번역이 전부 들어 있습니다.
+    따로 올릴 언어 파일이 없고, 첫 방문부터 바로 번역돼 나옵니다.</p>
+  </div>
+
+  <h2>2. 번역이 두 갈래인 이유</h2>
+
+  <p>이 앱의 글자는 성격이 둘로 나뉩니다. 그래서 번역 방식도 둘입니다.</p>
+
+  <h3>① 번호표 — 파일에 박힌 글자</h3>
+  <p>화면 마크업에 처음부터 적혀 있는 글자입니다. 자리마다 번호를 새겨 두고,
+  언어를 바꾸면 <strong>그 번호의 값을 쓰기만</strong> 합니다. 글자를 읽지 않으므로 빠릅니다(전체 40ms).</p>
+<pre>&lt;div data-k="436,437,439"&gt;   ← 이 요소의 텍스트 자리 번호
+  Lighter than a cup of coffee
+  &lt;span data-k="438"&gt;₩330 a day&lt;/span&gt;
+&lt;/div&gt;
+
+cgo-pack-ru[436] = "Легче чашки кофе"
+cgo-pack-ru[438] = "₩330 в день"</pre>
+
+  <h3>② 사전 — 눌러야 생기는 글자</h3>
+  <p>팝업 내용, 계산 결과, AI 답변처럼 <strong>JS가 만들어 넣는</strong> 글자입니다.
+  화면에 없으니 번호를 붙일 수 없어, 한국어를 열쇠로 사전을 찾습니다.</p>
+<pre>cgo-ui-ru = { "별 충전소": "Звёздная станция", ... }</pre>
+
+  <div class="warn box">
+    <p><strong>지금 남은 일은 전부 ②쪽입니다.</strong> 번호표는 6개 언어 모두 채워져 있습니다.
+    페이지 본문이 92% 러시아어인 게 그 증거입니다. 사전만 채우면 팝업도 따라옵니다.</p>
+  </div>
+
+  <h2>3. 한국어가 새지 않는 이유</h2>
+  <p>사전에 그 언어 값이 없으면 <strong>영어로 내려갑니다.</strong> 한국어는 사용자에게 보이지 않습니다.</p>
+<pre>자기 언어 있음  →  자기 언어
+        없음  →  영어
+한국어는 어떤 경우에도 노출되지 않음</pre>
+  <p>이 규칙은 세 곳에 모두 들어 있습니다 — <code>_cgoT</code>(통짜),
+  <code>_cgoTNode</code>(페이지·팝업 본문과 <code>placeholder</code>·<code>title</code>),
+  그리고 코드 안의 언어 분기 <code>_cgoTX</code>/<code>_cgoTP</code>/<code>_cgoTV</code>.</p>
+
+  <h2>4. 다음 작업자가 할 일</h2>
+
+  <h3>러시아어 마저 채우기 (3,773개)</h3>
+  <p>남은 목록은 <code>work/ru_todo_sorted.json</code>에 <strong>긴 문장부터</strong> 정렬돼 있습니다.
+  긴 것이 화면에서 더 눈에 띄므로 위에서부터 하면 체감이 빠릅니다.</p>
+  <ol>
+    <li><code>cgo-ui-en</code>에서 그 열쇠의 영어 문장을 봅니다</li>
+    <li>영어를 러시아어로 옮깁니다 — <strong>Вы 존칭</strong>으로 통일</li>
+    <li><code>cgo-ui-ru</code>에 <code>{ 한국어열쇠: 러시아어 }</code>로 넣습니다</li>
+    <li>목록에서 지웁니다</li>
+  </ol>
+
+  <h3>번역하면 안 되는 것</h3>
+  <ul>
+    <li><strong>성씨</strong> 김·이·박·최 등 78개 — 코드에서 이미 차단 (성 '강'이 River가 되던 일이 있었음)</li>
+    <li><strong>브랜드·기술명</strong> CGO-FULI · NASA JPL · rPPG · MUFE</li>
+    <li><strong>언어 이름</strong> English · 中文 · Русский — 자기 언어를 못 찾게 됨</li>
+    <li><strong>지명·인명</strong> 제주도 · 서울 · 가수 이름</li>
+  </ul>
+
+  <h3>일본어·중국어·번체</h3>
+  <p>방식은 같습니다. 각 2,430개씩. <code>cgo-ui-en</code>에는 있는데
+  <code>cgo-ui-ja</code>/<code>zh</code>/<code>zh_HK</code>에 없는 열쇠가 그만큼입니다.</p>
+
+  <h2>5. 겪었던 함정 — 다시 밟지 마세요</h2>
+
+  <h3>자리 번호가 밀린다</h3>
+  <p>칠할 때마다 "빈 글자는 건너뛰기"로 번호를 다시 세면, 번역값이 공백처럼 보일 때
+  그 자리를 건너뛰어 <strong>이후 번호가 한 칸씩 밀립니다.</strong>
+  배너에 <code>₩330 в день, 즉 ₩10 за функцию으로</code> 같은 혼용이 났던 원인입니다.</p>
+  <p class="lead">→ 번호는 노드에 <code>__cgoK</code>로 <strong>한 번만 새기고</strong> 그 뒤로는 그것만 씁니다.</p>
+
+  <h3>번호가 마지막에 말해야 한다</h3>
+  <p>옛 장치들(<code>setLang</code>·사전 적용·페이지 부활 감시기)이 부팅 뒤에도 돌면서
+  번호가 칠해 놓은 자리를 덮어씁니다.</p>
+  <p class="lead">→ <code>setLang</code> 직후와 700·2000·4000·7000ms에 번호를 다시 확정합니다.</p>
+
+  <h3>사전을 거꾸로 뒤지지 말 것</h3>
+  <p><code>_cgoRecoverKO</code>는 영어를 한국어로 되돌립니다. 외국어 화면에서 돌면 혼용이 납니다.</p>
+  <p class="lead">→ 한국어일 때만 실행되게 막아 두었습니다.</p>
+
+  <h3>JS가 만든 페이지는 열 때 번역</h3>
+  <p>작명·음악·주식 페이지는 내용을 JS가 넣습니다. 팝업의 <code>appendChild</code> 길목을 타지 않습니다.</p>
+  <p class="lead">→ <code>cgoGoPage</code>에서 그 페이지만 한 번 번역합니다.</p>
+
+  <h2>6. 속도 — 건드리면 안 되는 것들</h2>
+  <table>
+    <thead><tr><th>장치</th><th>왜 이렇게 두었나</th></tr></thead>
+    <tbody>
+      <tr><td>지명 목록 <code>data-noxl</code></td><td>출생지 자동완성 13,078개가 한국어 글자의 99%였음. 번역 대상이 아닌데 매번 훑고 있었음</td></tr>
+      <tr><td>팝업 <code>backdrop-filter</code> 제거</td><td>오버레이 151곳이 화면 전체를 매 프레임 흐리게 그림 — 팝업이 걸리는 느낌의 주범</td></tr>
+      <tr><td>팝업 등장 0.14초 통일</td><td>원래 0.2초~2.5초로 제각각이라 앱이 굼떠 보였음</td></tr>
+      <tr><td>붙이는 길목 후킹</td><td>팝업 94개 중 5개만 삽입 전 번역이었음. 이제 전부 화면에 붙기 전에 번역됨</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. 검사하는 법</h2>
+  <p>브라우저 콘솔에 그대로 붙여 넣으면 그 언어에 남은 한국어를 셉니다.</p>
+<pre>(function(){
+  var n=0, s=[];
+  document.querySelectorAll('[id^="page-"]').forEach(function(p){
+    (function w(x){
+      if(x.nodeType===3){
+        var v=(x.nodeValue||'').trim();
+        if(v && /[\uac00-\ud7a3]/.test(v)){ n++; if(s.length&lt;10) s.push(v.slice(0,30)); }
+        return;
+      }
+      if(x.nodeType!==1) return;
+      if(x.tagName==='SCRIPT'||x.tagName==='STYLE'||x.tagName==='OPTION') return;
+      for(var i=0;i&lt;x.childNodes.length;i++) w(x.childNodes[i]);
+    })(p);
+  });
+  return { 남은한국어:n, 표본:s };
+})()</pre>
+  <p>성씨·지명·가수 이름이 나오면 정상입니다. 그 밖의 문장이 나오면 사전에 채울 대상입니다.</p>
+
+  <h2>8. 파일 위치</h2>
+  <table>
+    <thead><tr><th>파일</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td><code>CGO_new/index.html</code></td><td>본체 — 번역이 이 안에 전부 들어 있음</td></tr>
+      <tr><td><code>work/ru_todo_sorted.json</code></td><td>러시아어 남은 3,773개 (긴 문장 순)</td></tr>
+      <tr><td><code>work/pack.*.json</code></td><td>언어별 번호팩 원본</td></tr>
+      <tr><td><code>work/ru1~25.json</code></td><td>영어→러시아어 번역 5,193개</td></tr>
+      <tr><td><code>work/rud1~6.json</code></td><td>사전용 러시아어 추가분</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box">
+    <p><strong>한 가지 부탁</strong> — 번역을 채울 때 문장을 조각내지 마세요.
+    <code>'목성(' + jupSign + ') 에너지'</code>처럼 값이 문장 한가운데 박히면 통짜 열쇠가 성립하지 않습니다.
+    자리표시자를 쓰세요: <code>_cgoTP('목성({0}) 에너지', 'Jupiter ({0}) energy', jupSign)</code></p>
+  </div>
+
+</doc-page>
+<script src="./doc-page.js"></script>
+</body>
+</html>
