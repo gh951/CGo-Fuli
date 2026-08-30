@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- 카톡 등 인앱 브라우저(WebView)에서는 마이크 권한이 반복됨. 페이지가 뜨는 즉시 화면 표시 없이
+     기기 기본 브라우저(크롬/삼성인터넷 등)로 한 번 빠져나간다. 진짜 브라우저에선 아무 동작 안 함. 루프 방지 포함. -->
+<script>
+(function(){
+  try{
+    var ua=navigator.userAgent||'';
+    var isKakao=/KAKAOTALK/i.test(ua);
+    var isAndroid=/Android/i.test(ua);
+    var isInApp=isKakao || /NAVER\(inapp|Instagram|FBAN|FBAV|FB_IAB|Line\/|DaumApps|; ?BAND/i.test(ua);
+    if(!isInApp) return;                       /* 일반 크롬·사파리·삼성인터넷 → 그대로 */
+    try{ if(sessionStorage.getItem('memo_ext')==='1') return; sessionStorage.setItem('memo_ext','1'); }catch(e){}
+    var href=location.href;
+    if(isKakao){ location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(href); return; }
+    if(isAndroid){ location.href='intent://'+href.replace(/^https?:\/\//,'')+'#Intent;scheme=https;end'; return; }
+    /* iOS의 카톡 외 인앱은 자동 탈출 수단이 없어 그대로 둠 */
+  }catch(e){}
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메모장</title>
+<!-- 링크 미리보기(카톡·문자·SNS): preview.jpeg를 index.html과 같은 위치에 올리면 자동 표시 -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="메모장 C-61">
+<meta property="og:description" content="서버 없이 내 기기에만 저장되는 무료 메모장 — 빠르게 적고, 말로 받아쓰고, 검색으로 찾기.">
+<meta property="og:image" content="https://xn--sp5btl31b.com/preview.jpeg">
+<meta property="og:url" content="https://xn--sp5btl31b.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="메모장 C-61">
+<meta name="twitter:description" content="서버 없이 내 기기에만 저장되는 무료 메모장.">
+<meta name="twitter:image" content="https://xn--sp5btl31b.com/preview.jpeg">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f8fafc; --line:#e8ecf2;
+    --accent:#d97706; --accent2:#b45309; --teal:#059669;
+    --text:#1e293b; --muted:#64748b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',sans-serif;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'Consolas','Menlo','Courier New',monospace;}
+
+  /* ── 상단 바 ── */
+  header{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px; border-bottom:1px solid var(--line);
+    background:#fff; flex-shrink:0;
+  }
+  .brand{font-size:14px; font-weight:800; color:var(--text); margin-right:2px;}
+  header .spacer{flex:1;}
+  .hdr-tools{display:flex; align-items:center; gap:8px;}
+  .show-sm{display:none;}
+  .icon-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border:1px solid var(--line); background:#fff;
+    color:var(--muted); border-radius:9px; cursor:pointer; font-size:15px; transition:all .12s;
+  }
+  .icon-btn:hover{border-color:rgba(217,119,6,.4); color:var(--accent); background:#fff7ed;}
+  .btn{
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--text);
+    padding:8px 13px; border-radius:9px; transition:all .12s; white-space:nowrap;
+  }
+  .btn:hover{border-color:rgba(217,119,6,.4); background:#fff7ed;}
+  .btn.ghost{color:var(--muted); font-weight:600;}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1200; border:none;}
+  .btn.primary:hover{filter:brightness(1.07);}
+  .fontctrl{display:flex; align-items:center; gap:3px; margin-right:2px;}
+  .fontctrl button{width:30px; height:32px; border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:8px; cursor:pointer; font-size:12px; font-weight:800; font-family:inherit;}
+  .fontctrl button:hover{border-color:rgba(217,119,6,.4); color:var(--accent);}
+  .fontctrl #fSize{font-size:12px; color:var(--muted); min-width:22px; text-align:center; font-weight:700;}
+
+  /* ── 본문 ── */
+  .main{display:flex; flex:1; min-height:0;}
+  .main.collapsed .side{display:none;}
+
+  /* 사이드바 */
+  .side{width:290px; flex-shrink:0; border-right:1px solid var(--line); display:flex; flex-direction:column; background:#f8fafc;}
+  .side-hd{padding:11px 14px 6px; font-size:10.5px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; font-weight:700; display:flex; align-items:center; gap:6px;}
+
+  /* 파일(폴더) 영역 — 접히는 구조 */
+  .folders-wrap{border-bottom:1px solid var(--line); display:flex; flex-direction:column; max-height:44%; background:#f2f5f9;}
+  .folders-hd{cursor:pointer; user-select:none; align-items:center; padding:12px 12px 8px;}
+  .folders-hd .fold-toggle{display:inline-block; width:14px; font-size:11px; transition:transform .15s; color:var(--muted);}
+  .folders-hd .spacer{flex:1;}
+  .folders-hd .mini-add{border:1px solid var(--line); background:#fff; color:var(--muted); width:24px; height:24px; border-radius:7px; cursor:pointer; font-size:15px; font-weight:800; line-height:1; padding:0;}
+  .folders-hd .mini-add:hover{border-color:var(--accent); color:var(--accent);}
+  .folders{overflow-y:auto; padding:0 8px 8px;}
+  .folders-wrap.folded .fold-toggle{transform:rotate(-90deg);}
+  .folders-wrap.folded .folders{display:none;}
+  .folders .fempty{padding:6px 12px 10px; font-size:11.5px; color:#9aa4b2; line-height:1.5;}
+  .folder-item{
+    display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:9px; cursor:pointer;
+    margin-bottom:3px; border:1px solid transparent; position:relative; transition:background .12s; background:#fff;
+  }
+  .folder-item:hover{background:#fffdf8;}
+  .folder-item.active{background:#fff7ed; border-color:rgba(217,119,6,.5);}
+  .folder-item .fname{flex:1; font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .folder-item .fcount{font-size:11px; color:var(--muted); background:#eef1f6; padding:1px 7px; border-radius:10px; flex-shrink:0;}
+  .folder-item.active .fcount{background:#fde9d0; color:var(--accent2);}
+  .folder-item .facts{display:none; gap:2px; flex-shrink:0;}
+  .folder-item:hover .facts{display:flex;}
+  .folder-item .facts button{border:none; background:transparent; cursor:pointer; font-size:12px; width:22px; height:22px; border-radius:6px; color:var(--muted);}
+  .folder-item .facts button:hover{background:rgba(0,0,0,.06);}
+  .folder-item.drop-over{background:#fde9d0; border-color:var(--accent); box-shadow:inset 0 0 0 2px rgba(217,119,6,.4);}
+  .newfolder{margin:2px 10px 10px; padding:9px; border:1px dashed #cbd5e1; background:transparent; color:var(--muted); border-radius:9px; cursor:pointer; font-size:12.5px; font-weight:700; font-family:inherit;}
+  .newfolder:hover{border-color:var(--accent); color:var(--accent); background:#fff7ed;}
+  .folder-toggle{ cursor:pointer; justify-content:space-between; user-select:none; }
+  .folder-toggle:hover{ color:var(--accent); }
+  .folder-toggle .chev{ font-size:11px; }
+  .folders-wrap.collapsed{ max-height:none; }
+  .folders-wrap.collapsed .folders, .folders-wrap.collapsed .drag-hint, .folders-wrap.collapsed .newfolder{ display:none; }
+
+  /* 메모칸 제목 + 파일 열람 시 뒤로가기 */
+  #memoHd{justify-content:flex-start;}
+  #memoHd .back{margin-left:auto; text-transform:none; letter-spacing:0; font-weight:700; color:var(--accent); background:#fff7ed; border:1px solid rgba(217,119,6,.35); border-radius:20px; padding:3px 10px; cursor:pointer; font-size:11px;}
+  #memoHd .back:hover{background:#ffedd5;}
+
+  /* 검색 + 메모 목록 */
+  .search{padding:11px 12px 8px;}
+  .search input{width:100%; background:#fff; border:1px solid var(--line); color:var(--text); padding:9px 12px; border-radius:9px; font-size:13px; font-family:inherit; outline:none;}
+  .search input:focus{border-color:rgba(217,119,6,.35);}
+  .list{flex:1; overflow-y:auto; padding:0 8px 12px;}
+  .note-item{padding:11px 12px; border-radius:10px; cursor:pointer; margin-bottom:4px; border:1px solid transparent; position:relative; transition:background .12s; content-visibility:auto; contain-intrinsic-size:auto 62px;}
+  .note-item:hover{background:#fff;}
+  .note-item.active{background:#fff7ed; border-color:rgba(217,119,6,.4);}
+  .note-item .date{font-family:'Consolas','Menlo',monospace; font-size:11px; color:var(--muted); margin-bottom:3px;}
+  .note-item .title{font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:22px;}
+  .note-item .meta{font-size:11px; color:var(--muted); margin-top:3px; padding-right:32px;}
+  .note-item .mv{position:absolute; bottom:8px; right:8px; width:27px; height:27px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;}
+  .note-item .mv:hover{border-color:var(--accent); color:var(--accent); background:#fff7ed;}
+  .note-item .del{position:absolute; top:9px; right:8px; width:28px; height:28px; border:none; border-radius:7px; background:rgba(248,113,113,.10); color:#e05a5a; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; opacity:.55;}
+  .note-item:hover .del{opacity:1;}
+  .note-item .del:hover{background:rgba(248,113,113,.22);}
+  @keyframes recblink{0%,100%{background:#b4453a;} 50%{background:#e2897c;}}
+  .btn.rec{animation:recblink .85s infinite; color:#fff!important; border-color:#b4453a!important;}
+  .empty-list{padding:26px 16px; text-align:center; color:var(--muted); font-size:12.5px; line-height:1.7;}
+
+  /* 에디터 */
+  .editor{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .ed-folder{display:flex; align-items:center; gap:7px; padding:12px 26px 0; font-size:12px; color:var(--muted);}
+  .ed-folder select{font-family:inherit; font-size:12.5px; color:var(--text); border:1px solid var(--line); background:#fff; border-radius:8px; padding:5px 8px; outline:none; cursor:pointer;}
+  .ed-folder select:focus{border-color:rgba(217,119,6,.4);}
+  .ed-top{padding:8px 26px 6px;}
+  .ed-top input{width:100%; background:transparent; border:none; color:var(--text); font-size:19px; font-weight:700; font-family:inherit; outline:none;}
+  .ed-top input::placeholder{color:#b4bccb;}
+  textarea{flex:1; width:100%; background:transparent; border:none; resize:none; outline:none; color:#1e293b; font-size:15px; line-height:1.75; font-family:inherit; padding:8px 26px 22px; letter-spacing:.005em;}
+  textarea::placeholder{color:#b4bccb;}
+  .ed-foot{display:flex; align-items:center; gap:16px; padding:9px 26px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); flex-shrink:0; background:#fbfcfe;}
+  .ed-foot .count{font-family:'Consolas','Menlo',monospace;}
+  .ed-foot .count b{color:var(--accent); font-weight:700;}
+  .ed-foot .spacer{flex:1;}
+  .ed-foot .saved{color:var(--teal); display:flex; align-items:center; gap:5px; opacity:0; transition:opacity .3s;}
+  .ed-foot .saved.show{opacity:1;}
+
+  .blank{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px;}
+  .blank .big{font-size:40px; opacity:.35;}
+  .blank .t{font-size:14px; text-align:center; line-height:1.6;}
+
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1; border-radius:6px; border:2px solid #f8fafc;}
+  ::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+
+  /* 드래그해서 파일로 이동 */
+  .note-item{ user-select:none; }
+  .note-item.dragging{ opacity:.45; }
+  .folder-item.drop-over{ background:#fde9d0; border-color:var(--accent); box-shadow:inset 0 0 0 2px rgba(217,119,6,.4); }
+  .drag-hint{ padding:2px 15px 8px; font-size:11px; color:#9aa4b2; line-height:1.5; }
+
+  /* 이동 알림 토스트 */
+  #toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(12px);
+    background:#1e293b; color:#fff; font-size:13px; font-weight:600;
+    padding:10px 18px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.22);
+    opacity:0; pointer-events:none; transition:all .22s; z-index:50; white-space:nowrap;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── 잠금 화면 ── */
+  .lock-overlay{ position:fixed; inset:0; background:#0f172a; display:none; align-items:center; justify-content:center; z-index:100; }
+  .lock-box{ width:280px; max-width:88vw; text-align:center; color:#e2e8f0; }
+  .lock-title{ font-size:18px; font-weight:800; margin-bottom:14px; }
+  .pin-dots{ font-size:26px; letter-spacing:9px; min-height:34px; color:#fbbf24; margin-bottom:6px; }
+  .lock-msg{ font-size:12.5px; color:#94a3b8; margin-bottom:18px; min-height:34px; line-height:1.5; }
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .keypad button{ height:58px; border:none; border-radius:14px; background:#1e293b; color:#e2e8f0; font-size:22px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .keypad button:hover{ background:#334155; }
+  .keypad .kp-ok{ background:#d97706; color:#1a1200; }
+  .keypad .kp-alt{ background:#0b1220; color:#94a3b8; }
+  .lock-box.shake{ animation:lkshake .35s; }
+  @keyframes lkshake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-9px);} 75%{transform:translateX(9px);} }
+
+  /* ── 공용 모달 ── */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:center; justify-content:center; z-index:90; }
+  .modal-box{ width:260px; max-width:86vw; background:#fff; border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:9px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .modal-title{ font-size:15px; font-weight:800; text-align:center; margin-bottom:6px; }
+  .modal-btn{ padding:12px; border:1px solid var(--line); background:#fff; border-radius:11px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--text); }
+  .modal-btn:hover{ background:#f8fafc; border-color:rgba(217,119,6,.4); }
+  .modal-btn.danger{ color:#dc2626; }
+  .modal-btn.ghost{ color:var(--muted); font-weight:600; }
+
+  /* ── 계산기 ── */
+  .calc-box{ width:334px; max-width:94vw; background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .calc-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; font-weight:800; font-size:14px; border-bottom:1px solid var(--line); }
+  #calcModal{ background:transparent; pointer-events:none; align-items:flex-start; justify-content:flex-start; }
+  #calcModal .calc-box{ pointer-events:auto; position:fixed; top:76px; left:calc(50% - 167px); }
+  #calcModal .calc-head{ cursor:move; user-select:none; }
+  .calc-x{ border:none; background:transparent; font-size:15px; cursor:pointer; color:var(--muted); width:28px; height:28px; border-radius:7px; }
+  .calc-x:hover{ background:#f1f5f9; }
+  .calc-expr{ padding:11px 20px 0; text-align:right; font-size:13px; color:var(--muted); font-family:'Consolas','Menlo',monospace; min-height:16px; word-break:break-all; }
+  .calc-disp{ padding:5px 20px 13px; text-align:right; font-size:30px; font-weight:700; font-family:'Consolas','Menlo',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .calc-pad{ display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--line); }
+  .calc-pad button{ height:50px; border:none; background:#fff; font-size:16px; font-weight:600; cursor:pointer; font-family:inherit; color:var(--text); }
+  .calc-pad button:hover{ background:#f8fafc; }
+  .calc-pad .c-op{ color:var(--accent); font-weight:800; }
+  .calc-pad .c-fn{ color:var(--muted); }
+  .calc-pad .c-eq{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1200; font-weight:800; }
+
+  #printArea{display:none;}
+
+  @media(max-width:640px){
+    .side{width:100%; position:absolute; z-index:20; height:calc(100% - 52px);}
+    .main:not(.collapsed) .side{display:flex;}
+    .main{position:relative;}
+    .btn.hide-sm{display:none;}
+    .folders-wrap{max-height:38%;}
+    header{gap:6px; padding:8px 10px;}
+    .show-sm{display:flex;}
+    #pinBtn, #capBtn{display:none;}   /* 폰 브라우저 미지원 → 숨김 */
+    .icon-btn{width:40px; height:40px; font-size:17px;}
+    .btn{padding:10px 14px; font-size:14px;}
+    #hdrTools{
+      display:none; position:absolute; right:8px; top:56px; z-index:60;
+      flex-wrap:wrap; align-items:center; gap:8px; width:min(88vw,300px); padding:12px;
+      background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 16px 36px rgba(0,0,0,.22);
+    }
+    #hdrTools.open{display:flex;}
+    #hdrTools .btn{flex:1 1 44%;}
+    #uiLang{max-width:100%!important; flex:1 1 100%;}
+    .note-item{padding:13px 12px;}
+    .note-item .del{opacity:1; width:36px; height:36px; font-size:17px; top:8px; right:8px;}
+    .folder-item{padding:11px 10px;}
+    .ed-foot .btn{padding:8px 12px;}
+  }
+
+  @media print{
+    body{height:auto; overflow:visible; display:block;}
+    header, .main, .ed-foot{display:none !important;}
+    #printArea{display:block !important; padding:16mm 14mm; color:#111;}
+    #printArea h1{font-size:20px; font-weight:800; margin-bottom:4px; padding-bottom:10px; border-bottom:1.5px solid #ccc;}
+    #printArea .pdate{font-size:12px; color:#666; margin-bottom:18px;}
+    #printArea .pbody{font-family:'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',sans-serif; font-size:14.5px; color:#1a1a1a;}
+    #printArea .pbody p{white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; line-height:1.9; margin:0 0 13px;}
+    #printArea .pbody p:last-child{margin-bottom:0;}
+    @page{margin:14mm;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="icon-btn" id="toggleSide" title="목록 접기 / 펼치기">☰</button>
+  <span class="brand">메모장 <span style="color:#2f6fb0; font-weight:900;">C-61</span> <span style="font-size:10px; font-weight:700; color:#c0663a; vertical-align:super;">v17</span></span>
+  <div class="spacer"></div>
+  <button class="icon-btn show-sm" id="moreBtn" title="더보기">⋯</button>
+  <div id="hdrTools" class="hdr-tools">
+  <button class="icon-btn" id="calcBtn" title="계산기">🧮</button>
+  <button class="icon-btn" id="lockBtn" title="잠금 설정">🔒</button>
+  <button class="icon-btn" id="vidBtn" title="영상 보며 메모 (유튜브·내 영상)">📺</button>
+  <button class="icon-btn" id="pinBtn" title="메모를 영상 앞에 띄우기 (순수 메모창)">📌</button>
+  <button class="icon-btn" id="capBtn" title="화면 캡처 — 영역을 잘라 PNG로 저장">📸</button>
+  <select id="uiLang" title="언어 / Language" style="height:34px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:var(--text);max-width:130px;margin-left:2px;"><option value="">🌐 한국어</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option><option value="es">Español</option><option value="es-MX">Español (MX)</option><option value="de">Deutsch</option><option value="fr">Français</option><option value="it">Italiano</option><option value="nl">Nederlands</option><option value="pl">Polski</option><option value="ru">Русский</option><option value="pt">Português</option><option value="id">Indonesia</option><option value="vi">Tiếng Việt</option><option value="ar">العربية</option><option value="hi">हिन्दी</option></select>
+  <span class="fontctrl"><button id="fMinus" title="글자 작게">A−</button><span id="fSize" class="mono">15</span><button id="fPlus" title="글자 크게">A＋</button></span>
+  <span class="fontctrl" title="줄 간격(행간)"><button id="lhMinus" title="줄 간격 좁게">↕−</button><span id="lhVal" class="mono">1.8</span><button id="lhPlus" title="줄 간격 넓게">↕＋</button></span>
+  <button class="btn ghost" id="pdfBtn">📄 PDF 저장</button>
+  <button class="btn ghost" id="saveTxtBtn">💾 TXT</button>
+  <button class="btn ghost" id="exportBtn">⬇ 전체 백업</button>
+  </div>
+  <button class="btn" id="voiceBtn" title="누르면 새 음성 메모가 열리고 바로 받아쓰기가 시작돼요" style="background:#e9f1f8; border:1px solid #bcd3e7; color:#1f4e79; font-weight:800;">🎤 음성 메모</button>
+  <button class="btn primary" id="newBtn">＋ 새 메모</button>
+</header>
+
+<!-- 📺 영상 보며 메모 (떠 있는 미니 창) -->
+<div id="vidPanel" style="display:none; position:fixed; z-index:70; right:20px; bottom:20px; width:380px; height:280px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.25); overflow:hidden; resize:both; min-width:260px; min-height:190px;">
+  <div id="vidHead" style="display:flex; align-items:center; gap:6px; padding:7px 9px; background:#faf9f6; border-bottom:1px solid var(--line); cursor:move; user-select:none;">
+    <span style="font-size:12px; font-weight:800; white-space:nowrap;">📺 보며 메모</span>
+    <input id="vidUrl" placeholder="유튜브 링크 붙여넣기" style="flex:1; min-width:0; height:26px; border:1px solid var(--line); border-radius:7px; padding:0 8px; font-size:12px; outline:none; font-family:inherit;">
+    <button id="vidGo" style="height:26px; padding:0 9px; border:1px solid var(--line); background:#fff; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">열기</button>
+    <button id="vidFileBtn" title="내 PC 영상 파일 열기" style="height:26px; padding:0 8px; border:1px solid var(--line); background:#fff; border-radius:7px; font-size:12px; cursor:pointer;">📁</button>
+    <button id="vidStamp" title="지금 영상 시각을 메모에 찍기 (로컬 영상)" style="height:26px; padding:0 8px; border:1px solid var(--line); background:#fff; border-radius:7px; font-size:12px; cursor:pointer;">⏱</button>
+    <button id="vidPip" title="메모를 화면 맨 앞에 띄우기 — 무슨 영상이든 위에서 바로 적기" style="height:26px; padding:0 8px; border:1px solid var(--line); background:#fff; border-radius:7px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap;">📌 앞에</button>
+    <button id="vidClose" title="닫기" style="border:0; background:transparent; font-size:16px; cursor:pointer; color:var(--muted); padding:0 2px;">✕</button>
+  </div>
+  <div id="vidBody" style="width:100%; height:calc(100% - 41px); background:#000; display:flex; align-items:center; justify-content:center;">
+    <div style="color:#999; font-size:12px; text-align:center; padding:16px; line-height:1.7;">① <b>유튜브 링크</b> 붙여넣고 열기 · <b>📁</b> 내 영상<br>② 넷플릭스 등 뭐든 볼 땐 <b>📌 앞에</b><br>= 메모를 영상 위에 띄워 바로 적기</div>
+  </div>
+  <input type="file" id="vidFile" accept="video/*" style="display:none;">
+</div>
+
+<!-- 📌 앞 메모 사용 중: 본페이지를 깨끗이 비움 (창을 키우거나 닫으면 복귀) -->
+<div id="pipAway" style="display:none; position:fixed; inset:0; z-index:200; background:#faf9f6; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:24px;">
+  <div style="font-size:40px;">📌</div>
+  <div style="font-size:16px; font-weight:800; color:#1b1b1a;">메모를 앞 창에서 쓰는 중</div>
+  <div style="font-size:13px; color:#8b887f; line-height:1.6;">화면 맨 앞의 작은 메모창에서 적고 있어요.<br>그 창을 <b>키우거나 닫으면</b> 이 화면으로 돌아옵니다.</div>
+  <button id="pipAwayBack" style="margin-top:6px; height:40px; padding:0 20px; border:0; border-radius:10px; background:#2b4b6f; color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;">메모장으로 돌아가기</button>
+</div>
+
+<div class="main" id="main">
+  <aside class="side" id="side">
+    <div class="folders-wrap" id="foldersWrap">
+      <div class="side-hd folders-hd" id="foldersHd">
+        <span class="fold-toggle" id="foldToggle">▾</span> 📁 파일
+        <span class="spacer"></span>
+        <button class="mini-add" id="newFolderBtn" title="새 파일 만들기">＋</button>
+      </div>
+      <div class="folders" id="folders"></div>
+    </div>
+    <div class="search"><input id="searchInput" placeholder="🔍  검색..."></div>
+    <div class="side-hd" id="memoHd">메모</div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <section class="editor">
+    <div id="edWrap" style="display:none; flex:1; flex-direction:column; min-height:0;">
+      <div class="ed-folder">📁 파일: <select id="folderSelect"></select></div>
+      <div class="ed-top"><input id="titleInput" placeholder="제목 (없으면 첫 줄이 제목)"></div>
+      <textarea id="contentInput" placeholder="여기에 마음껏 적으세요. 글자 수 제한 없어요.&#10;입력하면 자동으로 저장됩니다."></textarea>
+      <div class="ed-foot">
+        <span class="count"><b id="charCount">0</b> 자</span>
+        <button class="btn ghost" id="tidyBtn" title="문장마다 줄을 바꿔 읽기 좋게 정리" style="padding:4px 11px; font-size:12px;">🧹 줄 정리</button>
+        <button class="btn ghost" id="splitBtn" title="드래그한 부분을 위아래로 줄 띄워 떼어내기" style="padding:4px 11px; font-size:12px;">↵ 줄 떼기</button>
+        <button class="btn ghost" id="micBtn" title="음성으로 받아쓰기 (말하면 글자로)" style="padding:4px 11px; font-size:12px;">🎤 받아쓰기</button>
+        <button class="btn ghost" id="stampBtn" title="지금 영상 시각을 메모에 찍기 (로컬 영상)" style="padding:4px 10px; font-size:12px;">⏱ 시각</button>
+        <select id="micLang" title="받아쓰기 언어" style="height:26px; border:1px solid var(--line); border-radius:7px; font-size:11px; font-family:inherit; background:#fff; color:var(--text);"><option value="">언어 자동</option><option value="ko-KR">한국어</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="zh-CN">中文(简)</option><option value="zh-TW">中文(繁)</option><option value="es-ES">Español</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="pt-BR">Português</option><option value="ru-RU">Русский</option><option value="id-ID">Indonesia</option><option value="vi-VN">Tiếng Việt</option><option value="th-TH">ไทย</option><option value="hi-IN">हिन्दी</option><option value="ar-SA">العربية</option></select>
+        <span class="spacer"></span>
+        <span class="saved" id="savedTag">✓ 자동 저장됨</span>
+      </div>
+    </div>
+    <div class="blank" id="blank">
+      <div class="big">📝</div>
+      <div class="t">왼쪽에서 파일과 메모를 고르거나,<br><b style="color:var(--accent)">＋ 새 메모</b>를 눌러 시작하세요.</div>
+    </div>
+  </section>
+</div>
+
+<!-- 잠금 화면 -->
+<div id="lockScreen" class="lock-overlay">
+  <div class="lock-box">
+    <div class="lock-title" id="lockTitle">🔒 암호 입력</div>
+    <div class="pin-dots" id="pinDots">&nbsp;</div>
+    <div class="lock-msg" id="lockMsg">저장된 암호를 순서대로 누르세요.</div>
+    <div class="keypad" id="lockPad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="back" class="kp-alt">⌫</button><button data-k="0">0</button><button data-k="ok" class="kp-ok">✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- 잠금 설정 -->
+<div id="lockSettings" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">🔒 잠금 설정</div>
+    <button class="modal-btn" id="lsSet">암호 설정</button>
+    <button class="modal-btn" id="lsLockNow">지금 잠그기</button>
+    <button class="modal-btn danger" id="lsDel">암호 삭제</button>
+    <button class="modal-btn ghost" id="lsClose">닫기</button>
+  </div>
+</div>
+
+<!-- 계산기 -->
+<div id="calcModal" class="modal-overlay">
+  <div class="calc-box">
+    <div class="calc-head"><span>🧮 계산기</span><div style="display:flex;align-items:center;gap:8px;"><button id="degRad" style="border:1px solid var(--line);border-radius:7px;padding:3px 10px;font-size:11px;font-weight:800;background:#fff;cursor:pointer;color:var(--accent);font-family:inherit;">DEG</button><button id="calcClose" class="calc-x">✕</button></div></div>
+    <div class="calc-expr" id="calcExpr">&nbsp;</div>
+    <div class="calc-disp" id="calcDisp">0</div>
+    <div class="calc-pad" id="calcPad">
+      <button data-c="C" class="c-fn">C</button>
+      <button data-c="(" class="c-fn">(</button>
+      <button data-c=")" class="c-fn">)</button>
+      <button data-c="%" class="c-fn">%</button>
+      <button data-c="back" class="c-fn">⌫</button>
+      <button data-c="sin" class="c-fn">sin</button>
+      <button data-c="cos" class="c-fn">cos</button>
+      <button data-c="tan" class="c-fn">tan</button>
+      <button data-c="ln" class="c-fn">ln</button>
+      <button data-c="log" class="c-fn">log</button>
+      <button data-c="7">7</button>
+      <button data-c="8">8</button>
+      <button data-c="9">9</button>
+      <button data-c="√" class="c-fn">√</button>
+      <button data-c="÷" class="c-op">÷</button>
+      <button data-c="4">4</button>
+      <button data-c="5">5</button>
+      <button data-c="6">6</button>
+      <button data-c="x²" class="c-fn">x²</button>
+      <button data-c="×" class="c-op">×</button>
+      <button data-c="1">1</button>
+      <button data-c="2">2</button>
+      <button data-c="3">3</button>
+      <button data-c="xʸ" class="c-fn">xʸ</button>
+      <button data-c="−" class="c-op">−</button>
+      <button data-c="e" class="c-fn">e</button>
+      <button data-c="0">0</button>
+      <button data-c=".">.</button>
+      <button data-c="π" class="c-fn">π</button>
+      <button data-c="+" class="c-op">+</button>
+      <button data-c="±" class="c-fn">±</button>
+      <button data-c="=" class="c-eq" style="grid-column:span 4">=</button>
+    </div>
+  </div>
+</div>
+
+<!-- 메모를 파일로 이동 (버튼용) -->
+<div id="movePicker" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">📁 어느 파일로 옮길까요?</div>
+    <input id="moveSearch" placeholder="🔍 파일 이름 검색 (많으면 여기서 찾기)" style="width:100%; box-sizing:border-box; margin:2px 0 10px; padding:9px 12px; border:1px solid var(--line); border-radius:9px; font-size:13px; font-family:inherit; outline:none;">
+    <div id="moveList" style="display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto;"></div>
+    <button class="modal-btn ghost" id="moveClose">닫기</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="printArea"><h1></h1><div class="pdate"></div><div class="pbody"></div></div>
+
+<!-- 📸 화면 캡처: 영역 드래그 → PNG 저장 (다시 잡기 / 다른 화면 / 취소) -->
+<div id="capOverlay" style="display:none; position:fixed; inset:0; z-index:300; background:rgba(10,12,16,.93); flex-direction:column;">
+  <div id="capBar" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#1b1d22; color:#fff; flex-wrap:wrap;">
+    <span id="capHint" style="font-size:13px; font-weight:700; margin-right:auto;">① 저장할 곳을 마우스로 드래그해 네모로 잡으세요 → ② ✂️ 이 부분 저장</span>
+    <button id="capSave" style="height:34px; padding:0 14px; border:0; border-radius:9px; background:#2f6fb0; color:#fff; font-size:13px; font-weight:800; cursor:pointer; font-family:inherit;">💾 저장(PNG)</button>
+    <button id="capRedo" style="height:34px; padding:0 12px; border:1px solid #444; border-radius:9px; background:#2a2c31; color:#fff; font-size:13px; cursor:pointer; font-family:inherit;">↺ 다시 잡기</button>
+    <button id="capOther" style="height:34px; padding:0 12px; border:1px solid #444; border-radius:9px; background:#2a2c31; color:#fff; font-size:13px; cursor:pointer; font-family:inherit;">🖥️ 다른 화면</button>
+    <button id="capCancel" style="height:34px; padding:0 12px; border:1px solid #444; border-radius:9px; background:#2a2c31; color:#fff; font-size:13px; cursor:pointer; font-family:inherit;">✕ 취소</button>
+  </div>
+  <div id="capStage" style="flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; padding:14px;">
+    <div id="capImgWrap" style="position:relative; line-height:0;">
+      <img id="capImg" alt="" style="max-width:96vw; max-height:78vh; display:block; user-select:none; -webkit-user-drag:none; cursor:crosshair;">
+      <div id="capSel" style="position:absolute; display:none; pointer-events:none; border:2px solid #4a90d9; background:rgba(74,144,217,.18); box-shadow:0 0 0 9999px rgba(0,0,0,.35);">
+        <button id="capCrop" style="pointer-events:auto; position:absolute; right:0; bottom:-40px; height:34px; padding:0 14px; border:0; border-radius:9px; background:#2f6fb0; color:#fff; font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,.4);">✂️ 이 부분 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="micDbg" style="position:fixed; left:6px; right:6px; bottom:6px; z-index:400; background:rgba(18,20,26,.92); color:#7fe3c0; font:11px/1.45 monospace; padding:7px 9px; border-radius:9px; max-height:130px; overflow:auto; white-space:pre-wrap; display:none;"></div>
+
+<script>
+'use strict';
+/* ───────── IndexedDB (기존 메모 그대로 유지) ───────── */
+var DB=null, DB_NAME='c61memo', STORE='notes';
+function openDB(){
+  return new Promise(function(res,rej){
+    var r=indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded=function(e){var db=e.target.result; if(!db.objectStoreNames.contains(STORE)){db.createObjectStore(STORE,{keyPath:'id'});}};
+    r.onsuccess=function(e){DB=e.target.result; res(DB);};
+    r.onerror=function(e){rej(e);};
+  });
+}
+function tx(mode){return DB.transaction(STORE,mode).objectStore(STORE);}
+function dbGetAll(){
+  return new Promise(function(res){
+    var out=[], c=tx('readonly').openCursor();
+    c.onsuccess=function(e){var cur=e.target.result; if(cur){out.push(cur.value); cur.continue();} else res(out);};
+    c.onerror=function(){res(out);};
+  });
+}
+function dbPut(note){return new Promise(function(res){var r=tx('readwrite').put(note); r.onsuccess=function(){res();}; r.onerror=function(){res();};});}
+function dbDel(id){return new Promise(function(res){var r=tx('readwrite').delete(id); r.onsuccess=function(){res();}; r.onerror=function(){res();};});}
+
+/* ───────── 파일(폴더) : localStorage 저장 ───────── */
+var FKEY='c61memo_folders';
+var folders=[];
+function loadFolders(){
+  var arr=[];
+  try{ arr=JSON.parse(localStorage.getItem(FKEY))||[]; }catch(e){ arr=[]; }
+  if(!arr.some(function(f){return f.id==='default';})){ arr.unshift({id:'default', name:'기본 메모', created:Date.now()}); }
+  if(!arr.some(function(f){return f.id==='voice';})){ arr.push({id:'voice', name:'🎤 음성 메모', created:Date.now()}); }
+  return arr;
+}
+function saveFolders(){ localStorage.setItem(FKEY, JSON.stringify(folders)); }
+function folderName(id){ var f=folders.find(function(x){return x.id===id;}); return f?f.name:'기본 메모'; }
+
+/* ───────── 상태 ───────── */
+var notes=[], currentId=null, saveTimer=null;
+var curFolder=localStorage.getItem('c61memo_curfolder')||'default';
+var $=function(id){return document.getElementById(id);};
+var listEl=$('list'), titleEl=$('titleInput'), contentEl=$('contentInput'),
+    charEl=$('charCount'), savedTag=$('savedTag'), edWrap=$('edWrap'), blank=$('blank');
+
+function folderOf(n){ return n.folderId||'default'; }
+
+/* ───────── 유틸 ───────── */
+function fmtDate(ts){var d=new Date(ts), p=function(n){return (n<10?'0':'')+n;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+function numf(n){return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function deriveTitle(note){
+  if(note.title && note.title.trim()) return note.title.trim();
+  var first=(note.content||'').split('\n').find(function(l){return l.trim();});
+  return first? first.trim().slice(0,60) : '(제목 없음)';
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ───────── 파일 목록 렌더 ───────── */
+function renderFolders(){
+  var q=currentQuery();
+  var wrap=$('folders'); wrap.innerHTML='';
+  var entries=[{id:'__all__', name:'전체 메모', count:notes.length, edit:false}];
+  entries.push({id:'voice', name:'🎤 음성 메모', count:notes.filter(function(n){return folderOf(n)==='voice';}).length, edit:false});
+  folders.forEach(function(f){ if(f.id==='voice') return; entries.push({id:f.id, name:f.name, count:notes.filter(function(n){return folderOf(n)===f.id;}).length, edit:f.id!=='default'}); });
+  var shown = q ? entries.filter(function(e){ return e.id!=='__all__' && e.name.toLowerCase().indexOf(q)>=0; }) : entries;
+  if(!shown.length){
+    wrap.innerHTML='<div class="fempty">일치하는 파일이 없어요.</div>';
+  } else {
+    shown.forEach(function(e){ wrap.appendChild(folderRow(e.id, e.name, e.count, e.edit)); });
+  }
+  $('memoHd').textContent = q ? (window.t?window.t('메모 · 검색 결과'):'메모 · 검색 결과') : ((curFolder==='__all__') ? (window.t?window.t('메모 · 전체'):'메모 · 전체') : ((window.t?window.t('메모'):'메모') + ' · ' + (window.t?window.t(folderName(curFolder)):folderName(curFolder))));
+}
+function folderRow(id, name, count, canEdit){
+  var div=document.createElement('div');
+  div.className='folder-item'+(id===curFolder?' active':'');
+  var acts=canEdit ? '<span class="facts"><button class="fren" title="이름 변경">✎</button><button class="fdel" title="파일 삭제">🗑</button></span>' : '';
+  div.innerHTML='<span class="fname">'+(id==='__all__'?'📋 ':'')+escapeHtml(name)+'</span>'+acts+'<span class="fcount">'+count+'</span>';
+  div.onclick=function(e){
+    if(e.target.classList.contains('fren')){ renameFolder(id); e.stopPropagation(); return; }
+    if(e.target.classList.contains('fdel')){ delFolder(id); e.stopPropagation(); return; }
+    setFolder(id);
+  };
+  // 메모를 끌어다 놓을 수 있는 파일 (전체 보기는 제외)
+  if(id!=='__all__'){
+    div.addEventListener('dragover', function(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; div.classList.add('drop-over'); });
+    div.addEventListener('dragleave', function(){ div.classList.remove('drop-over'); });
+    div.addEventListener('drop', function(e){
+      e.preventDefault(); div.classList.remove('drop-over');
+      var nid=e.dataTransfer.getData('text/plain');
+      moveNoteToFolder(nid, id, name);
+    });
+  }
+  return div;
+}
+function moveNoteToFolder(noteId, fid, fname){
+  var n=notes.find(function(x){return x.id===noteId;}); if(!n) return;
+  if(folderOf(n)===fid) return;
+  n.folderId=fid; n.updated=Date.now();
+  dbPut(n).then(function(){
+    renderFolders(); renderFolderSelect(); renderList();
+    showToast('📁 "'+(fname||folderName(fid))+'"(으)로 옮겼어요');
+  });
+}
+var moveNoteId=null;
+function renderMoveList(){
+  var n=notes.find(function(x){return x.id===moveNoteId;});
+  var cur=n?folderOf(n):null;
+  var q=($('moveSearch').value||'').toLowerCase().trim();
+  var box=$('moveList'); box.innerHTML='';
+  var list=folders.filter(function(f){ return !q || f.name.toLowerCase().indexOf(q)>=0; });
+  if(!list.length){ box.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:14px;">그런 이름의 파일이 없어요</div>'; return; }
+  list.forEach(function(f){
+    var b=document.createElement('button'); b.className='modal-btn';
+    b.textContent=(f.id===cur?'✓ ':'')+f.name;
+    b.onclick=function(){ moveNoteToFolder(moveNoteId, f.id, f.name); $('movePicker').style.display='none'; };
+    box.appendChild(b);
+  });
+}
+function openMovePicker(noteId){
+  moveNoteId=noteId;
+  $('moveSearch').value='';
+  renderMoveList();
+  $('movePicker').style.display='flex';
+  setTimeout(function(){ $('moveSearch').focus(); },50);
+}
+$('moveSearch').addEventListener('input', renderMoveList);
+$('moveClose').onclick=function(){ $('movePicker').style.display='none'; };
+var toastTimer=null;
+function showToast(msg){
+  var t=$('toast'); if(!t) return;
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+function setFolder(id){ curFolder=id; localStorage.setItem('c61memo_curfolder',id); var si=$('searchInput'); if(si) si.value=''; renderFolders(); renderList(); }
+
+function newFolder(){
+  var name=prompt('새 파일 이름을 입력하세요.',''); if(name===null) return; name=name.trim(); if(!name) return;
+  var id='f_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  folders.push({id:id, name:name, created:Date.now()}); saveFolders(); setFolder(id);
+}
+function renameFolder(id){
+  var f=folders.find(function(x){return x.id===id;}); if(!f) return;
+  var name=prompt('파일 이름 변경', f.name); if(name===null) return; name=name.trim(); if(!name) return;
+  f.name=name; saveFolders(); renderFolders(); renderFolderSelect();
+}
+function delFolder(id){
+  var f=folders.find(function(x){return x.id===id;}); if(!f) return;
+  var moved=notes.filter(function(n){return folderOf(n)===id;});
+  var msg='"'+f.name+'" 파일을 삭제할까요?';
+  if(moved.length) msg+='\n\n이 파일 안의 메모 '+moved.length+'개는 "기본 메모"로 옮겨집니다.\n(메모 자체는 지워지지 않아요.)';
+  if(!confirm(msg)) return;
+  Promise.all(moved.map(function(n){ n.folderId='default'; return dbPut(n); })).then(function(){
+    folders=folders.filter(function(x){return x.id!==id;}); saveFolders();
+    renderFolderSelect();
+    if(curFolder===id) setFolder('default'); else { renderFolders(); renderList(); }
+  });
+}
+
+/* 에디터의 파일 선택 드롭다운 */
+function renderFolderSelect(){
+  var sel=$('folderSelect'); if(!sel) return;
+  sel.innerHTML='';
+  folders.forEach(function(f){
+    var o=document.createElement('option'); o.value=f.id; o.textContent=f.name; sel.appendChild(o);
+  });
+  var n=notes.find(function(x){return x.id===currentId;});
+  if(n) sel.value=folderOf(n);
+}
+$('folderSelect') && ($('folderSelect').onchange=function(){
+  if(!currentId) return;
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return;
+  n.folderId=this.value; n.updated=Date.now();
+  dbPut(n).then(function(){ renderFolders(); renderList(); });
+});
+
+/* ───────── 메모 목록 렌더 ───────── */
+function renderList(){
+  var q=currentQuery();
+  var searching=!!q;
+  var arr = searching
+    ? notes.filter(function(n){ return deriveTitle(n).toLowerCase().indexOf(q)>=0 || (n.content||'').toLowerCase().indexOf(q)>=0; })
+    : notes.filter(function(n){ return curFolder==='__all__' ? true : folderOf(n)===curFolder; });
+  arr.sort(function(a,b){return b.updated-a.updated;});
+  if(!arr.length){
+    listEl.innerHTML='<div class="empty-list">'+(searching?'검색 결과가 없어요.':'이 파일엔 아직 메모가 없어요.<br>＋ 새 메모로 시작하세요.')+'</div>';
+    return;
+  }
+  listEl.innerHTML='';
+  var showTag = searching || curFolder==='__all__';
+  arr.forEach(function(n){
+    var div=document.createElement('div');
+    div.className='note-item'+(n.id===currentId?' active':'');
+    var meta = showTag ? (numf((n.content||'').length)+'자 · '+escapeHtml(folderName(folderOf(n)))) : (numf((n.content||'').length)+'자');
+    div.innerHTML='<div class="date">'+fmtDate(n.updated)+'</div><div class="title">'+escapeHtml(deriveTitle(n))+'</div><div class="meta">'+meta+'</div><button class="mv" title="파일로 이동">📁</button><button class="del" title="삭제">🗑</button>';
+    div.title='📁 버튼으로 파일 이동 · 끌어서도 이동 가능';
+    div.onclick=function(e){
+      if(e.target.classList.contains('del')){ delNote(n.id); e.stopPropagation(); return; }
+      if(e.target.classList.contains('mv')){ openMovePicker(n.id); e.stopPropagation(); return; }
+      if(searching){ $('searchInput').value=''; curFolder=folderOf(n); localStorage.setItem('c61memo_curfolder',curFolder); renderFolders(); }
+      openNote(n.id);
+      if(window.innerWidth<=640){ COLLAPSED=true; applyCollapsed(); }
+    };
+    div.setAttribute('draggable','true');
+    div.addEventListener('dragstart', function(e){ e.dataTransfer.setData('text/plain', n.id); e.dataTransfer.effectAllowed='move'; div.classList.add('dragging'); });
+    div.addEventListener('dragend', function(){ div.classList.remove('dragging'); });
+    listEl.appendChild(div);
+  });
+}
+
+/* ───────── 열기 / 새로 / 저장 / 삭제 ───────── */
+function openNote(id){
+  var n=notes.find(function(x){return x.id===id;}); if(!n) return;
+  currentId=id; titleEl.value=n.title||''; contentEl.value=n.content||'';
+  updateCount(); renderFolderSelect();
+  edWrap.style.display='flex'; blank.style.display='none';
+  renderList(); contentEl.focus();
+  if(typeof _uReset==='function') _uReset();
+}
+function newNote(){
+  var now=Date.now();
+  var fid = (curFolder==='__all__') ? 'default' : curFolder;
+  var n={id:'n_'+now+'_'+Math.random().toString(36).slice(2,7), title:'', content:'', folderId:fid, created:now, updated:now};
+  notes.push(n); dbPut(n);
+  openNote(n.id); renderFolders(); renderList(); titleEl.focus();
+}
+/* ══ 유료 회원만 무제한 — 무료는 저장 3개까지 ══
+   구독 상태는 CGO 본체가 남긴 값을 본다. 자료는 본인 폰에만 남는다. */
+function memoIsPaid(){
+  try{
+    var g=localStorage.getItem('cgo_grade')||localStorage.getItem('cgo_plan')||'';
+    if(/member|vvip|vip|pro|paid|unlimited/i.test(g)) return true;
+    if(localStorage.getItem('cgo_master_on')==='1') return true;
+  }catch(e){}
+  return false;
+}
+var MEMO_FREE_MAX=3;
+function memoCanSaveNew(){
+  if(memoIsPaid()) return true;
+  return notes.length<=MEMO_FREE_MAX;
+}
+function memoPaidNotice(){
+  showToast('무료 회원은 메모 '+MEMO_FREE_MAX+'개까지 저장됩니다 · 유료 회원은 무제한');
+}
+
+function saveCurrent(){
+  if(!currentId) return;
+  if(!memoCanSaveNew()){ memoPaidNotice(); return; }
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return;
+  n.title=titleEl.value; n.content=contentEl.value; if(!n.folderId) n.folderId='default'; n.updated=Date.now();
+  dbPut(n).then(function(){
+    savedTag.classList.add('show'); setTimeout(function(){savedTag.classList.remove('show');},1400);
+    updateCurrentListItem();   /* 목록 전체 재생성 대신 현재 항목만 갱신 (성능) */
+  });
+}
+/* 현재 메모의 목록 항목만 제자리 갱신 — 저장할 때마다 전체를 다시 그리지 않도록 */
+function updateCurrentListItem(){
+  if(!currentId) return;
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return;
+  var div=listEl.querySelector('.note-item.active'); if(!div) return;
+  var showTag = !!currentQuery() || curFolder==='__all__';
+  var fn = window.t ? window.t(folderName(folderOf(n))) : folderName(folderOf(n));
+  var meta = showTag ? (numf((n.content||'').length)+'자 · '+escapeHtml(fn)) : (numf((n.content||'').length)+'자');
+  var t=div.querySelector('.title'); if(t) t.textContent=deriveTitle(n);
+  var d=div.querySelector('.date'); if(d) d.textContent=fmtDate(n.updated);
+  var m=div.querySelector('.meta'); if(m) m.innerHTML=meta;
+}
+function delNote(id){
+  var n=notes.find(function(x){return x.id===id;}); var name=n?deriveTitle(n):'이 메모';
+  if(!confirm('"'+name+'"\n\n삭제하면 되돌릴 수 없어요. 삭제할까요?')) return;
+  dbDel(id).then(function(){
+    notes=notes.filter(function(x){return x.id!==id;});
+    if(currentId===id){ currentId=null; edWrap.style.display='none'; blank.style.display='flex'; }
+    renderFolders(); renderList();
+  });
+}
+
+/* ───────── 글자 수 / 자동 저장 ───────── */
+function updateCount(){ charEl.textContent=numf(contentEl.value.length); }
+function scheduleSave(){ updateCount(); clearTimeout(saveTimer); saveTimer=setTimeout(saveCurrent, 600); }
+titleEl.addEventListener('input', scheduleSave);
+contentEl.addEventListener('input', scheduleSave);
+
+/* ───────── 실행취소 ↩ / 다시실행 ↪ (Ctrl+Z / Ctrl+Y · 최대 10단계) ─────────
+   받아쓰기·줄 정리·시각 찍기 같은 자동 변경도 함께 되돌려집니다. */
+var _uUndo=[], _uRedo=[], _uTimer=null, _uHold=false, _uMAX=10;
+function _uSnap(){ return contentEl.value+'\u0001'+(titleEl.value||''); }
+function _uApply(s){ _uHold=true; var i=s.indexOf('\u0001'); contentEl.value=s.slice(0,i); titleEl.value=s.slice(i+1); contentEl.dispatchEvent(new Event('input')); titleEl.dispatchEvent(new Event('input')); _uHold=false; }
+function _uReset(){ _uUndo=[_uSnap()]; _uRedo=[]; clearTimeout(_uTimer); }
+function _uCommit(){ if(_uHold) return; var s=_uSnap(); if(_uUndo.length && _uUndo[_uUndo.length-1]===s) return; _uUndo.push(s); if(_uUndo.length>_uMAX+1) _uUndo.shift(); _uRedo=[]; }
+function _uEdit(){ if(_uHold) return; clearTimeout(_uTimer); _uTimer=setTimeout(_uCommit, 500); }
+function _uUndoDo(){ clearTimeout(_uTimer); _uCommit(); if(_uUndo.length<=1) return; var cur=_uUndo.pop(); _uRedo.push(cur); if(_uRedo.length>_uMAX) _uRedo.shift(); _uApply(_uUndo[_uUndo.length-1]); }
+function _uRedoDo(){ if(!_uRedo.length) return; var s=_uRedo.pop(); _uUndo.push(s); _uApply(s); }
+function _uKey(e){ if((e.ctrlKey||e.metaKey)&&!e.altKey){ var k=(e.key||'').toLowerCase(); if(k==='z'&&!e.shiftKey){ e.preventDefault(); _uUndoDo(); } else if(k==='y'||(k==='z'&&e.shiftKey)){ e.preventDefault(); _uRedoDo(); } } }
+contentEl.addEventListener('input', _uEdit);
+titleEl.addEventListener('input', _uEdit);
+contentEl.addEventListener('keydown', _uKey);
+titleEl.addEventListener('keydown', _uKey);
+_uReset();
+function currentQuery(){ return ($('searchInput').value||'').toLowerCase().trim(); }
+function applySearch(){ renderFolders(); renderList(); }
+$('searchInput').addEventListener('input', applySearch);
+$('newBtn').onclick=newNote;
+$('newFolderBtn').onclick=newFolder;
+
+/* 파일칸 접기 / 펼치기 (기억됨) */
+var FOLDED=localStorage.getItem('c61memo_folded')==='1';
+function applyFolded(){ var w=$('foldersWrap'); if(w) w.classList.toggle('folded', FOLDED); var t=$('foldToggle'); if(t) t.textContent=FOLDED?'▸':'▾'; localStorage.setItem('c61memo_folded', FOLDED?'1':'0'); }
+$('foldersHd').onclick=function(e){ if(e.target && e.target.id==='newFolderBtn') return; FOLDED=!FOLDED; applyFolded(); };
+applyFolded();
+
+/* 목록 접기 / 펼치기 (기억됨) */
+var COLLAPSED=localStorage.getItem('c61memo_collapsed')==='1';
+function applyCollapsed(){ $('main').classList.toggle('collapsed', COLLAPSED); localStorage.setItem('c61memo_collapsed', COLLAPSED?'1':'0'); }
+$('toggleSide').onclick=function(){ COLLAPSED=!COLLAPSED; applyCollapsed(); };
+/* 폰: ⋯ 더보기 드롭다운 */
+$('moreBtn').onclick=function(e){ e.stopPropagation(); $('hdrTools').classList.toggle('open'); };
+document.addEventListener('click', function(e){ var t=$('hdrTools'); if(t&&t.classList.contains('open') && !t.contains(e.target) && e.target.id!=='moreBtn'){ t.classList.remove('open'); } });
+applyCollapsed();
+
+/* 글자 크기 (기억됨) */
+var FSIZE=parseInt(localStorage.getItem('c61memo_fsize'),10); if(isNaN(FSIZE)||FSIZE<11||FSIZE>30){ FSIZE=15; }
+function applyFont(){ contentEl.style.fontSize=FSIZE+'px'; var fs=$('fSize'); if(fs) fs.textContent=FSIZE; localStorage.setItem('c61memo_fsize',FSIZE); }
+$('fMinus').onclick=function(){ if(FSIZE>11){FSIZE--; applyFont();} };
+$('fPlus').onclick=function(){ if(FSIZE<30){FSIZE++; applyFont();} };
+applyFont();
+
+/* 줄 간격(행간) — 한 칸씩 조절, 기억됨 */
+var LH=parseFloat(localStorage.getItem('c61memo_lh')); if(isNaN(LH)||LH<1.2||LH>3){ LH=1.75; }
+function applyLH(){ contentEl.style.lineHeight=LH; var el=$('lhVal'); if(el) el.textContent=LH.toFixed(1); localStorage.setItem('c61memo_lh',LH); }
+$('lhMinus').onclick=function(){ if(LH>1.2){ LH=Math.round((LH-0.15)*100)/100; applyLH(); } };
+$('lhPlus').onclick=function(){ if(LH<3){ LH=Math.round((LH+0.15)*100)/100; applyLH(); } };
+applyLH();
+
+/* 줄 정리 — 문장마다 줄을 바꿔 읽기 좋게 (소수점·번호·괄호는 건드리지 않음) */
+function cleanLines(t){
+  var s=(t||'').replace(/\r\n/g,'\n');
+  /* A. 문장 끝(…다. 요. ! ? …) 뒤 줄바꿈 — 숫자 앞 마침표(소수점)는 제외 */
+  s=s.replace(/([가-힣A-Za-z”’"')\]])([.!?…]+)(["'”’)\]]*)/g,'$1$2$3\n');
+  /* B. 번호 목록(1. 2. 3. …) 앞에서 줄바꿈 — 앞이 한글/영문/닫음일 때만(소수점 오인 방지) */
+  s=s.replace(/([가-힣A-Za-z)\]”’"])\s*(\d{1,2}\.\s+[가-힣A-Za-z])/g,'$1\n$2');
+  /* C. 콜론 소제목("공략 명분:" 등) 뒤 줄바꿈 — 시간(10:30) 등 숫자 콜론은 제외 */
+  s=s.replace(/([가-힣])(:)\s*(?=\S)/g,'$1$2\n');
+  s=s.replace(/[ \t]+\n/g,'\n').replace(/\n[ \t]+/g,'\n').replace(/\n{3,}/g,'\n\n').replace(/^\n+|\n+$/g,'');
+  return s;
+}
+$('tidyBtn').onclick=function(){
+  if(!currentId){ alert('정리할 메모가 없어요. 먼저 메모를 여세요.'); return; }
+  var ta=$('contentInput'); var s=ta.selectionStart, e=ta.selectionEnd;
+  if(s!==e){ /* 드래그로 고른 부분만 정리 */
+    var sel=ta.value.slice(s,e), out=cleanLines(sel);
+    if(out===sel){ showToast('고른 부분은 이미 정리돼 있어요 👍'); return; }
+    ta.value=ta.value.slice(0,s)+out+ta.value.slice(e);
+    try{ ta.selectionStart=s; ta.selectionEnd=s+out.length; }catch(err){}
+    ta.dispatchEvent(new Event('input')); ta.focus();
+    showToast('🧹 고른 부분만 정리했어요'); return;
+  }
+  var before=ta.value, after=cleanLines(before);
+  if(after===before){ showToast('이미 줄바꿈이 되어 있어요 👍 (일부만 하려면 그 부분을 드래그하고 누르세요)'); return; }
+  ta.value=after; ta.dispatchEvent(new Event('input'));
+  showToast('🧹 문장마다 줄을 바꿔 정리했어요 (일부만 하려면 드래그 후 누르세요)');
+};
+
+/* ↵ 줄 떼기 — 드래그한 부분을 위아래로 줄 띄워 문단으로 떼어내기 */
+$('splitBtn').onclick=function(){
+  if(!currentId){ alert('먼저 메모를 여세요.'); return; }
+  var ta=$('contentInput'), s=ta.selectionStart, e=ta.selectionEnd;
+  if(s===e){ showToast('먼저 떼어낼 부분을 드래그해서 선택하세요'); return; }
+  var pre=ta.value.slice(0,s).replace(/\s+$/,''), selT=ta.value.slice(s,e).replace(/^\s+|\s+$/g,''), post=ta.value.slice(e).replace(/^\s+/,'');
+  ta.value=(pre?pre+'\n\n':'')+selT+(post?'\n\n'+post:'');
+  var np=(pre?pre.length+2:0); try{ ta.selectionStart=np; ta.selectionEnd=np+selT.length; }catch(err){}
+  ta.dispatchEvent(new Event('input')); ta.focus();
+  showToast('↵ 선택한 부분을 떼어냈어요');
+};
+
+/* PDF 저장 (인쇄 → "PDF로 저장" 선택) */
+$('pdfBtn').onclick=function(){
+  if(!currentId){ alert('PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.'); return; }
+  clearTimeout(saveTimer); saveCurrent();
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return;
+  var pa=$('printArea');
+  pa.querySelector('h1').textContent=deriveTitle(n);
+  pa.querySelector('.pdate').textContent=fmtDate(n.updated)+'  ·  '+folderName(folderOf(n));
+  var body=cleanLines(n.content||'');
+  var paras=body.split(/\n{2,}/);
+  pa.querySelector('.pbody').innerHTML = body ? paras.map(function(p){ return '<p style="line-height:'+LH+'">'+escapeHtml(p)+'</p>'; }).join('') : '';
+  document.title=deriveTitle(n);
+  window.print();
+  setTimeout(function(){ document.title='메모장'; },500);
+};
+
+/* 현재 메모 TXT 저장 */
+$('saveTxtBtn').onclick=function(){
+  if(!currentId){ alert('저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.'); return; }
+  clearTimeout(saveTimer); saveCurrent();
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return;
+  var name=deriveTitle(n).replace(/[\\/:*?"<>|\n]/g,'_').slice(0,50) || '메모';
+  var blob=new Blob([n.content||''],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name+'.txt'; a.click();
+};
+
+/* Ctrl+S 즉시 저장 */
+document.addEventListener('keydown', function(e){ if((e.ctrlKey||e.metaKey) && e.key==='s'){ e.preventDefault(); clearTimeout(saveTimer); saveCurrent(); } });
+
+/* 전체 백업 (.txt) — 파일별로 묶어서 */
+$('exportBtn').onclick=function(){
+  if(!notes.length){ alert('내보낼 메모가 없어요.'); return; }
+  var out=[];
+  folders.forEach(function(f){
+    var arr=notes.filter(function(n){return folderOf(n)===f.id;}).sort(function(a,b){return b.updated-a.updated;});
+    if(!arr.length) return;
+    out.push('\n\n██████  파일: '+f.name+'  ██████\n');
+    arr.forEach(function(n){ out.push('════════════════════════════\n'+fmtDate(n.updated)+'  ·  '+deriveTitle(n)+'\n════════════════════════════\n'+(n.content||'')); });
+  });
+  var blob=new Blob([out.join('\n\n')],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='메모백업_'+fmtDate(Date.now()).replace(/[: ]/g,'-')+'.txt'; a.click();
+};
+
+/* js 씨앗 자동저장 — 모든 메모가 .js 파일 하나에 담김, 한 달 기준 */
+function buildSeedJs(){ var data={app:'메모장',version:1,exportedAt:new Date().toISOString(),folders:folders,notes:notes}; return '/* 메모장 씨앗 — 모든 메모가 이 파일 하나에 담겨 있습니다. */\nwindow.__MEMO_SEED__='+JSON.stringify(data)+';\n'; }
+function downloadSeedJs(){ var blob=new Blob([buildSeedJs()],{type:'text/javascript;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='메모_'+fmtDate(Date.now()).replace(/[: ]/g,'-')+'.js'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },2000); }
+function monthlyAutoJs(){ try{ if(!notes.length) return; var last=parseInt(localStorage.getItem('c61memo_lastjs')||'0',10); var MONTH=30*24*60*60*1000; if(Date.now()-last>=MONTH){ downloadSeedJs(); localStorage.setItem('c61memo_lastjs', String(Date.now())); showToast('🌱 한 달이 지나 메모를 .js로 자동 저장했어요'); } }catch(e){} }
+
+/* 떠날 때 저장 */
+window.addEventListener('beforeunload', function(){ clearTimeout(saveTimer); saveCurrent(); });
+
+/* ═════════ 잠금(암호) ═════════ */
+var LKEY='c61memo_lock';
+function getLock(){ try{ return JSON.parse(localStorage.getItem(LKEY)); }catch(e){ return null; } }
+function hasLock(){ return !!getLock(); }
+function randSalt(){ return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function hashPin(pin, salt){
+  var s=salt+':'+pin;
+  if(window.crypto && crypto.subtle && crypto.subtle.digest){
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+    }).catch(function(){ return simpleHash(s); });
+  }
+  return Promise.resolve(simpleHash(s));
+}
+function simpleHash(s){ var h=5381; for(var i=0;i<s.length;i++){ h=(((h<<5)+h)+s.charCodeAt(i))>>>0; } return 'f'+h.toString(16); }
+
+var lockMode='unlock', pinBuf='', pinFirst='';
+var lockScreen=$('lockScreen'), pinDots=$('pinDots'), lockTitle=$('lockTitle'), lockMsg=$('lockMsg');
+function renderDots(){ pinDots.textContent = pinBuf.replace(/./g,'●') || '\u00A0'; }
+function shakeLock(){ var b=lockScreen.querySelector('.lock-box'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+function showLock(mode){
+  lockMode=mode||'unlock'; pinBuf=''; pinFirst='';
+  if(lockMode==='unlock'){ lockTitle.textContent='🔒 암호 입력'; lockMsg.textContent='저장된 암호를 순서대로 누르세요.'; }
+  else if(lockMode==='setNew'){ lockTitle.textContent='🔒 새 암호 설정'; lockMsg.textContent='원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.'; }
+  renderDots(); lockScreen.style.display='flex';
+}
+function hideLock(){ lockScreen.style.display='none'; pinBuf=''; pinFirst=''; }
+function pinPress(d){ if(pinBuf.length<12){ pinBuf+=d; renderDots(); } }
+function pinBack(){ pinBuf=pinBuf.slice(0,-1); renderDots(); }
+function pinEnter(){
+  if(!pinBuf) return;
+  if(lockMode==='unlock'){
+    var lk=getLock(); if(!lk){ hideLock(); return; }
+    hashPin(pinBuf, lk.salt).then(function(h){
+      if(h===lk.hash){ hideLock(); }
+      else { lockMsg.textContent='암호가 달라요. 다시 눌러보세요.'; pinBuf=''; renderDots(); shakeLock(); }
+    });
+  } else if(lockMode==='setNew'){
+    pinFirst=pinBuf; pinBuf=''; renderDots(); lockMode='confirmNew';
+    lockTitle.textContent='🔒 한 번 더'; lockMsg.textContent='확인을 위해 같은 암호를 다시 누르세요.';
+  } else if(lockMode==='confirmNew'){
+    if(pinBuf===pinFirst){
+      var salt=randSalt();
+      hashPin(pinBuf, salt).then(function(h){
+        localStorage.setItem(LKEY, JSON.stringify({salt:salt, hash:h}));
+        hideLock(); showToast('🔒 암호가 설정됐어요');
+      });
+    } else {
+      lockMode='setNew'; pinFirst=''; pinBuf=''; renderDots();
+      lockTitle.textContent='🔒 새 암호 설정'; lockMsg.textContent='두 번이 달라요. 처음부터 다시 눌러주세요.'; shakeLock();
+    }
+  }
+}
+$('lockPad').addEventListener('click', function(e){
+  var k=e.target.getAttribute('data-k'); if(k===null) return;
+  if(k==='back') pinBack(); else if(k==='ok') pinEnter(); else pinPress(k);
+});
+document.addEventListener('keydown', function(e){
+  if(lockScreen.style.display!=='flex') return;
+  if(e.key>='0' && e.key<='9'){ pinPress(e.key); }
+  else if(e.key==='Backspace'){ e.preventDefault(); pinBack(); }
+  else if(e.key==='Enter'){ e.preventDefault(); pinEnter(); }
+});
+$('lockBtn').onclick=function(){
+  $('lsSet').textContent = hasLock()?'암호 변경':'암호 설정';
+  $('lsDel').style.display = hasLock()?'block':'none';
+  $('lsLockNow').style.display = hasLock()?'block':'none';
+  $('lockSettings').style.display='flex';
+};
+$('lsSet').onclick=function(){ $('lockSettings').style.display='none'; showLock('setNew'); };
+$('lsLockNow').onclick=function(){ $('lockSettings').style.display='none'; showLock('unlock'); };
+$('lsDel').onclick=function(){ if(confirm('암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.')){ localStorage.removeItem(LKEY); $('lockSettings').style.display='none'; showToast('암호를 삭제했어요'); } };
+$('lsClose').onclick=function(){ $('lockSettings').style.display='none'; };
+
+/* ═════════ 계산기 (공학용 · eval 없이 직접 파싱) ═════════ */
+var calcModal=$('calcModal'), calcDisp=$('calcDisp'), calcExpr=$('calcExpr');
+var cExpr='', cJustEq=false, cDeg=true;
+function calcFmt(n){ if(!isFinite(n)) return '오류'; return (Math.round(n*1e12)/1e12).toString(); }
+function calcShow(){ calcExpr.textContent=cExpr.replace(/\*/g,'×').replace(/\//g,'÷').replace(/sqrt\(/g,'√(')||'\u00A0'; var v=calcEvalSafe(cExpr); calcDisp.textContent=(cExpr==='')?'0':(v==null?'…':calcFmt(v)); }
+function calcPress(k){
+  if(k==='C'){ cExpr=''; cJustEq=false; return calcShow(); }
+  if(k==='back'){ cExpr=cExpr.slice(0,-1); return calcShow(); }
+  if(k==='='){ var v=calcEvalSafe(cExpr); if(v==null){ calcDisp.textContent='오류'; return; } cExpr=calcFmt(v); cJustEq=true; calcExpr.textContent='\u00A0'; calcDisp.textContent=cExpr; return; }
+  if(k==='±'){ var v2=calcEvalSafe(cExpr); if(v2!=null){ cExpr=calcFmt(-v2); calcShow(); } return; }
+  if(cJustEq && /[0-9.]/.test(k)){ cExpr=''; }
+  cJustEq=false;
+  var map={'×':'*','÷':'/','−':'-','√':'sqrt(','x²':'^2','xʸ':'^','sin':'sin(','cos':'cos(','tan':'tan(','ln':'ln(','log':'log('};
+  cExpr += (map[k]!==undefined?map[k]:k); calcShow();
+}
+function calcEvalSafe(src){
+  if(!src||!src.trim()) return null;
+  try{
+    var toks=calcTok(src), i=0;
+    function peek(){return toks[i];} function eat(){return toks[i++];}
+    function expr(){ var v=term(); while(peek()==='+'||peek()==='-'){ var o=eat(); var r=term(); v=(o==='+')?v+r:v-r; } return v; }
+    function term(){ var v=pw(); while(peek()==='*'||peek()==='/'){ var o=eat(); var r=pw(); v=(o==='*')?v*r:v/r; } return v; }
+    function pw(){ var v=un(); if(peek()==='^'){ eat(); var r=pw(); return Math.pow(v,r); } return v; }
+    function un(){ if(peek()==='-'){ eat(); return -un(); } if(peek()==='+'){ eat(); return un(); } return post(); }
+    function post(){ var v=prim(); while(peek()==='!'||peek()==='%'){ var o=eat(); v=(o==='!')?cfact(v):v/100; } return v; }
+    function prim(){ var t=peek(); if(t==='('){ eat(); var v=expr(); if(eat()!==')')throw 0; return v; } if(t&&t.n!==undefined){ eat(); return t.n; } if(t&&t.id!==undefined){ eat(); var id=t.id; if(id==='pi'||id==='π')return Math.PI; if(id==='e')return Math.E; if(eat()!=='(')throw 0; var a=expr(); if(eat()!==')')throw 0; return cfn(id,a); } throw 0; }
+    var out=expr(); if(i<toks.length)throw 0; return isFinite(out)?out:null;
+  }catch(e){ return null; }
+}
+function calcTok(s){ var t=[],i=0; while(i<s.length){ var c=s[i]; if(c===' '){i++;continue;} if(/[0-9.]/.test(c)){ var j=i+1; while(j<s.length&&/[0-9.]/.test(s[j]))j++; t.push({n:parseFloat(s.slice(i,j))}); i=j; continue; } if(c==='π'){ t.push({id:'π'}); i++; continue; } if(/[a-z]/i.test(c)){ var k=i+1; while(k<s.length&&/[a-z]/i.test(s[k]))k++; t.push({id:s.slice(i,k).toLowerCase()}); i=k; continue; } if('+-*/^()!%'.indexOf(c)>=0){ t.push(c); i++; continue; } throw 0; } return t; }
+function cfn(id,a){ var R=cDeg?Math.PI/180:1; if(id==='sin')return Math.sin(a*R); if(id==='cos')return Math.cos(a*R); if(id==='tan')return Math.tan(a*R); if(id==='asin')return Math.asin(a)/R; if(id==='acos')return Math.acos(a)/R; if(id==='atan')return Math.atan(a)/R; if(id==='sqrt')return Math.sqrt(a); if(id==='ln')return Math.log(a); if(id==='log')return Math.log10(a); if(id==='exp')return Math.exp(a); if(id==='abs')return Math.abs(a); throw 0; }
+function cfact(n){ if(n<0||n!==Math.floor(n))return NaN; var r=1; for(var k=2;k<=n;k++)r*=k; return r; }
+$('calcBtn').onclick=function(){ calcModal.style.display='flex'; calcShow(); };
+$('calcClose').onclick=function(){ calcModal.style.display='none'; };
+$('degRad').onclick=function(){ cDeg=!cDeg; $('degRad').textContent=cDeg?'DEG':'RAD'; calcShow(); };
+/* 계산기 이동(헤더 잡고 드래그) — 화면 안 가리고 떠 있게 */
+(function(){
+  var box=document.querySelector('#calcModal .calc-box'), head=document.querySelector('#calcModal .calc-head');
+  if(!box||!head) return;
+  var drag=false, ox=0, oy=0;
+  head.addEventListener('mousedown', function(e){
+    if(e.target.tagName==='BUTTON') return;
+    drag=true; var r=box.getBoundingClientRect(); box.style.left=r.left+'px'; box.style.top=r.top+'px'; ox=e.clientX-r.left; oy=e.clientY-r.top; e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){ if(!drag) return; var x=Math.max(0,Math.min(window.innerWidth-80, e.clientX-ox)), y=Math.max(0,Math.min(window.innerHeight-40, e.clientY-oy)); box.style.left=x+'px'; box.style.top=y+'px'; });
+  document.addEventListener('mouseup', function(){ drag=false; });
+})();
+$('calcPad').addEventListener('click', function(e){ var k=e.target.getAttribute('data-c'); if(k===null) return; calcPress(k); });
+calcShow();
+
+/* ───────── 시작 ───────── */
+folders=loadFolders(); saveFolders();
+/* 📺 영상 보며 메모 — 유튜브 / 내 PC 영상 (넷플릭스·디즈니 등 DRM 영상은 어느 앱에서도 불가) */
+function ytId(u){ if(!u) return null; u=u.trim(); var m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|[?&]v=)([A-Za-z0-9_-]{11})/); return m?m[1]:(/^[A-Za-z0-9_-]{11}$/.test(u)?u:null); }
+function vidLoadYt(){ window._vid=null; var id=ytId($('vidUrl').value); if(!id){ $('vidUrl').style.borderColor='#b4453a'; showToast('유튜브 링크를 확인해 주세요'); return; } $('vidUrl').style.borderColor=''; $('vidBody').innerHTML='<iframe width="100%" height="100%" style="border:0;display:block;" src="https://www.youtube.com/embed/'+id+'?rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>'; }
+function vidLoadFile(file){ if(!file) return; var url=URL.createObjectURL(file); $('vidBody').innerHTML=''; var v=document.createElement('video'); v.src=url; v.controls=true; v.style.cssText='width:100%;height:100%;background:#000;display:block;'; $('vidBody').appendChild(v); window._vid=v; }
+/* ⏱ 영상 시각 → 메모에 찍기 / 텍스트의 [mm:ss] 누르면 그 장면으로 점프 (로컬 영상) */
+function fmtT(s){ s=Math.floor(s||0); var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60,p=function(n){return(n<10?'0':'')+n;}; return h>0?(h+':'+p(m)+':'+p(x)):(m+':'+p(x)); }
+function parseT(str){ var a=str.split(':').map(Number); if(a.some(isNaN))return null; if(a.length===3)return a[0]*3600+a[1]*60+a[2]; if(a.length===2)return a[0]*60+a[1]; return null; }
+function insertAtCursor(ta,text){ var s=(ta.selectionStart!=null?ta.selectionStart:ta.value.length), e=(ta.selectionEnd!=null?ta.selectionEnd:s); ta.value=ta.value.slice(0,s)+text+ta.value.slice(e); var pos=s+text.length; try{ta.selectionStart=ta.selectionEnd=pos;}catch(err){} ta.focus(); ta.dispatchEvent(new Event('input')); }
+function stampInto(ta){ if(!window._vid){ showToast('먼저 📁 내 영상 파일을 여세요 (유튜브는 시각 기록이 안 돼요)'); return; } insertAtCursor(ta, '['+fmtT(window._vid.currentTime)+'] '); }
+function seekFromTextarea(ta){ if(!window._vid) return; var pos=ta.selectionStart, val=ta.value, re=/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, m; while((m=re.exec(val))){ var st=m.index, en=st+m[0].length; if(pos>=st&&pos<=en){ var t=parseT(m[1]); if(t!=null){ try{ window._vid.currentTime=t; if(window._vid.play) window._vid.play(); }catch(e){} showToast('▶ '+m[1]); } return; } } }
+$('vidBtn').onclick=function(){ var p=$('vidPanel'); p.style.display=(!p.style.display||p.style.display==='none')?'block':'none'; };
+$('vidClose').onclick=function(){ $('vidPanel').style.display='none'; };
+$('vidGo').onclick=vidLoadYt;
+$('vidUrl').addEventListener('keydown', function(e){ if(e.key==='Enter') vidLoadYt(); });
+$('vidFileBtn').onclick=function(){ $('vidFile').click(); };
+$('vidStamp').onclick=function(){ stampInto(contentEl); };
+$('stampBtn').onclick=function(){ stampInto(contentEl); };
+contentEl.addEventListener('click', function(){ seekFromTextarea(contentEl); });
+$('vidFile').onchange=function(e){ if(e.target.files[0]) vidLoadFile(e.target.files[0]); };
+/* 📌 메모를 화면 맨 앞에 띄우기 (Document Picture-in-Picture) — 무슨 영상 위에서든 바로 적기 */
+async function openMemoPiP(){
+  if(!window.documentPictureInPicture){ showToast('이 브라우저는 "앞에 띄우기"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.'); return; }
+  if(!currentId){ newNote(); }
+  try{
+    var pip=await documentPictureInPicture.requestWindow({width:300,height:170});
+    window._memoPip=pip;
+    var d=pip.document;
+    d.body.style.cssText='margin:0;font-family:-apple-system,"Malgun Gothic",sans-serif;background:#faf9f6;overflow:hidden;';
+    /* 넓혔을 때만 나타나는 머리띠: 제목 + 닫기 */
+    var bar=d.createElement('div');
+    bar.style.cssText='display:none;align-items:center;gap:8px;height:36px;padding:0 10px;background:#fff;border-bottom:1px solid #eae7df;box-sizing:border-box;';
+    var titleSpan=d.createElement('span');
+    titleSpan.style.cssText='flex:1;min-width:0;font-size:12.5px;font-weight:800;color:#1b1b1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    titleSpan.textContent=titleEl.value||'제목 없음';
+    function mkBtn(txt,tip){ var b=d.createElement('button'); b.textContent=txt; b.title=tip; b.style.cssText='border:1px solid #eae7df;background:#fff;border-radius:7px;width:24px;height:24px;font-size:14px;cursor:pointer;color:#1b1b1a;line-height:1;padding:0;'; return b; }
+    var smallBtn=mkBtn('−','축소'), bigBtn=mkBtn('＋','확대');
+    smallBtn.addEventListener('click', function(){ resizeStep(-44); });
+    bigBtn.addEventListener('click', function(){ resizeStep(44); });
+    var closeBtn=d.createElement('button');
+    closeBtn.textContent='✕'; closeBtn.title='닫기';
+    closeBtn.style.cssText='border:0;background:transparent;font-size:16px;cursor:pointer;color:#8b887f;padding:0 2px;';
+    closeBtn.addEventListener('click', function(){ try{ pip.close(); }catch(e){} });
+    bar.appendChild(titleSpan); bar.appendChild(smallBtn); bar.appendChild(bigBtn); bar.appendChild(closeBtn);
+    /* 순수 메모칸 */
+    var ta=d.createElement('textarea');
+    ta.value=contentEl.value;
+    ta.placeholder='영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.';
+    ta.style.cssText='width:100%;box-sizing:border-box;height:100vh;border:0;outline:0;resize:none;padding:12px 14px;font-size:15px;line-height:1.7;background:#faf9f6;color:#1b1b1a;';
+    ta.addEventListener('input', function(){ contentEl.value=ta.value; contentEl.dispatchEvent(new Event('input')); });
+    ta.addEventListener('click', function(){ seekFromTextarea(ta); });
+    d.body.appendChild(bar); d.body.appendChild(ta);
+    var pipStamp=d.createElement('button'); pipStamp.textContent='⏱'; pipStamp.title='영상 시각 찍기 (로컬 영상)';
+    pipStamp.style.cssText='position:fixed;right:9px;bottom:9px;width:30px;height:30px;border-radius:9px;border:1px solid #d8d5cd;background:rgba(255,255,255,.92);font-size:14px;cursor:pointer;opacity:.55;transition:opacity .15s;';
+    pipStamp.addEventListener('mouseenter',function(){pipStamp.style.opacity='1';});
+    pipStamp.addEventListener('mouseleave',function(){pipStamp.style.opacity='.55';});
+    pipStamp.addEventListener('click',function(){ stampInto(ta); });
+    d.body.appendChild(pipStamp);
+    function updateChrome(){ var big=(pip.innerHeight>200||pip.innerWidth>360); bar.style.display=big?'flex':'none'; ta.style.height=big?'calc(100vh - 36px)':'100vh'; }
+    function mergeBack(){ try{ window.focus(); }catch(e){} try{ pip.close(); }catch(e){} }
+    function onResize(){ updateChrome(); if(pip.innerWidth>620||pip.innerHeight>470) mergeBack(); }
+    function resizeStep(delta){ try{ var w=Math.max(220, pip.innerWidth+Math.round(delta*1.4)); var h=Math.max(130, pip.innerHeight+delta); pip.resizeTo(w, h); }catch(e){} setTimeout(onResize, 30); }
+    pip.addEventListener('resize', onResize); updateChrome();
+    var mirror=function(){ if(ta.value!==contentEl.value) ta.value=contentEl.value; titleSpan.textContent=titleEl.value||'제목 없음'; };
+    contentEl.addEventListener('input', mirror);
+    titleEl.addEventListener('input', mirror);
+    pip.addEventListener('pagehide', function(){ contentEl.removeEventListener('input', mirror); titleEl.removeEventListener('input', mirror); $('pipAway').style.display='none'; });
+    setTimeout(function(){ try{ ta.focus(); }catch(e){} },120);
+  }catch(e){ showToast('앞에 띄우기를 열 수 없어요'); }
+}
+$('vidPip').onclick=openMemoPiP;
+$('pinBtn').onclick=openMemoPiP;
+$('pipAwayBack').onclick=function(){ try{ if(window._memoPip) window._memoPip.close(); }catch(e){} $('pipAway').style.display='none'; };
+
+/* 🎤 음성 받아쓰기 — 브라우저 내장(Web Speech API), 비용 0. 받아쓰는 순간만 온라인. 언어 미지정 시 기기 언어 */
+var recog=null, recognizing=false, wantRec=false, micPaused=false, micFatal=false, micShouldRestart=false, micAbort=0, micBase0='', micCommitted='';
+function setMicUI(on){
+  var b=$('micBtn'); if(b){ b.textContent=on?'⏺ 받아쓰는 중…(누르면 멈춤)':'🎤 받아쓰기'; b.style.color=on?'#b4453a':''; b.style.fontWeight=on?'800':''; b.classList.toggle('rec',on); }
+  var v=$('voiceBtn'); if(v){ v.textContent=on?'⏺ 듣는 중…(누르면 멈춤)':'🎤 음성 메모'; v.classList.toggle('rec',on); v.style.color=on?'#fff':''; }
+}
+/* 폰 음성인식:
+   (1) 버튼 누른 그 순간(사용자 제스처) 바로 인식 시작 → 폰이 인식을 막지 않음(글 써짐).
+   (2) getUserMedia 미사용 → 권한 팝업이 겹쳐 뜨지 않음.
+   (3) continuous 이어듣기 + onend에서 1초 뒤 안전 재시작.
+   (4) aborted 에러면 재시작 금지(안드로이드 권한 반복 루프 차단).
+   (5) resultIndex 이후 확정분만 반영 + 접두사 대체로 겹침 제거.
+   ※ 카톡 등 인앱 브라우저는 재시작마다 권한을 다시 물을 수 있음 → 크롬으로 열면 한 번만. */
+function _micDbg(s){ }
+function _micBuild(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recog=new SR();
+  recog.lang=($('micLang')&&$('micLang').value)||navigator.language||'ko-KR';
+  recog.interimResults=true; recog.continuous=true;
+  recog.onstart=function(){ recognizing=true; micAbort=0; if(!micPaused) setMicUI(true); };
+  recog.onresult=function(e){
+    if(micPaused) return;                 /* 일시정지 중엔 무시 (마이크는 계속 유지) */
+    var interim='', fin='';
+    for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript; if(e.results[i].isFinal) fin+=t; else interim+=t; }
+    if(fin){ micCommitted += fin; }
+    contentEl.value = micBase0 + micCommitted + interim;
+    contentEl.dispatchEvent(new Event('input'));
+  };
+  recog.onerror=function(ev){
+    var er=ev&&ev.error;
+    if(er==='not-allowed'||er==='service-not-allowed'||er==='audio-capture'){ micFatal=false; wantRec=false; micShouldRestart=false; recognizing=false; setMicUI(false); showToast('마이크를 켜고 다시 눌러 주세요'); }
+    else if(er==='aborted'){ micShouldRestart=false; }   /* 안드로이드 권한 반복 루프 차단 */
+  };
+  recog.onend=function(){
+    recognizing=false;
+    if(micFatal || !wantRec || !micShouldRestart){ return; }
+    /* 무음 등으로 자연 종료된 경우만 1초 뒤 안전 재시작 (마이크 유지 상태라 권한 재요청 없음) */
+    setTimeout(function(){ if(wantRec && !micFatal && micShouldRestart && !recognizing && recog){ try{ recog.start(); }catch(e){} } }, 1000);
+  };
+}
+function toggleMic(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showToast('이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.'); return; }
+  if(wantRec){ /* 멈춤 (마이크 스트림은 유지 → 다시 시작해도 권한 재요청 없음) */
+    wantRec=false; micShouldRestart=false;
+    try{ if(recog) recog.stop(); }catch(e){}
+    recognizing=false; setMicUI(false); return;
+  }
+  if(!currentId){ newNote(); }
+  micBase0=contentEl.value; if(micBase0 && !/\n$/.test(micBase0)) micBase0+='\n';
+  micCommitted=''; try{ contentEl.focus(); }catch(e){}
+  micFatal=false; micPaused=false; wantRec=true; micShouldRestart=true; setMicUI(true);
+  function startRecog(){ try{ _micBuild(); recog.start(); }catch(e){ wantRec=false; setMicUI(false); showToast('다시 한 번 눌러 주세요'); } }
+  if(window._micStream){ startRecog(); }                                       /* 스트림 보유 → 권한 재요청 없이 시작 */
+  else if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      window._micStream=stream;   /* ★ 스트림 유지(정지하지 않음) → 권한 유지 */
+      startRecog();
+    }).catch(function(){ wantRec=false; setMicUI(false); showToast('마이크를 켜고 다시 눌러 주세요'); });
+  } else { startRecog(); }
+}
+$('micBtn').onclick=toggleMic;
+/* 🎤 음성 메모 버튼 하나로: 새 음성 메모 열고 → 바로 받아쓰기 시작 (다시 누르면 멈춤) */
+function startVoiceMemo(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showToast('이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.'); return; }
+  if(wantRec){ toggleMic(); return; }   /* 이미 받아쓰는 중이면 멈춤 */
+  setFolder('voice'); newNote();
+  if(window.innerWidth<=640){ COLLAPSED=true; applyCollapsed(); }
+  toggleMic();
+}
+$('voiceBtn').onclick=startVoiceMemo;
+(function(){
+  var p=$('vidPanel'), h=$('vidHead'), drag=false, ox=0, oy=0;
+  h.addEventListener('mousedown', function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+    drag=true; var r=p.getBoundingClientRect();
+    p.style.left=r.left+'px'; p.style.top=r.top+'px'; p.style.right='auto'; p.style.bottom='auto';
+    ox=e.clientX-r.left; oy=e.clientY-r.top; e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e){ if(!drag) return; var x=Math.max(0,Math.min(window.innerWidth-60, e.clientX-ox)), y=Math.max(0,Math.min(window.innerHeight-40, e.clientY-oy)); p.style.left=x+'px'; p.style.top=y+'px'; });
+  document.addEventListener('mouseup', function(){ drag=false; });
+})();
+
+/* ===== 다국어(i18n) ===== */
+var I18N={"en":{"메모장":"Notepad","Calculator(계산기)":"Calculator","잠금 설정":"Lock Settings","글자 작게":"Decrease Text Size","글자 크게":"Increase Text Size","줄 간격 좁게":"Decrease Line Spacing","줄 간격 넓게":"Increase Line Spacing","줄 간격(행간)":"Line Spacing","📄 PDF 저장":"📄 Save as PDF","⬇ 전체 백업":"⬇ Full Backup","＋ 새 메모":"＋ New Note","목록 접기 / 펼치기":"Collapse / Expand List","영상 보며 메모 (유튜브·내 영상)":"Notes While Watching Video (YouTube / Local Video)","메모를 영상 앞에 띄우기 (순수 메모창)":"Float Note Above Video (Clean Note Window)","📁 파일":"📁 Files","새 파일 만들기":"Create New File","전체 메모":"All Notes","🎤 음성 메모":"🎤 Voice Notes","기본 메모":"General Notes","🔍 검색...":"🔍 Search...","메모":"Notes","이름 변경":"Rename","파일 삭제":"Delete File","파일로 이동":"Move to File","삭제":"Delete","📁 파일:":"📁 File:","제목 (없으면 첫 줄이 제목)":"Title (If empty, the first line becomes the title)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Write freely here. No character limit.","/ 입력하면 자동으로 저장됩니다.":"/ Automatically saved as you type.","자":"characters","🧹 줄 정리":"🧹 Clean Lines","문장마다 줄을 바꿔 읽기 좋게 정리":"Break lines by sentence for easier reading","🎤 받아쓰기":"🎤 Dictation","음성으로 받아쓰기 (말하면 글자로)":"Voice Dictation (Speak to convert to text)","받아쓰기 언어":"Dictation Language","언어 자동":"Auto Language","✓ 자동 저장됨":"✓ Saved Automatically","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Select a file and note from the left, or click ＋ New Note to begin.","제목 없음":"Untitled","(제목 없음)":"(Untitled)","📁 어느 파일로 옮길까요?":"📁 Move to which file?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Search file name (Find here if there are many)","그런 이름의 파일이 없어요":"No such file exists","닫기":"Close","🧮 계산기":"🧮 Calculator","오류":"Error","🔒 암호 입력":"🔒 Enter Password","🔒 잠금 설정":"🔒 Lock Settings","🔒 새 암호 설정":"🔒 Set New Password","🔒 암호 변경":"🔒 Change Password","🔒 한 번 더":"🔒 Once More","암호 설정":"Set Password","암호 삭제":"Delete Password","암호 변경":"Change Password","지금 잠그기":"Lock Now","저장된 암호를 순서대로 누르세요.":"Enter the saved password in the correct order.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Press the desired numbers in order and tap ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Enter the same password again for confirmation.","암호가 달라요. 다시 눌러보세요.":"Incorrect password. Please try again.","두 번이 달라요. 처음부터 다시 눌러주세요.":"The two passwords do not match. Please start over from the beginning.","🔒 암호가 설정됐어요":"🔒 Password Set","암호를 삭제했어요":"Password Deleted","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Delete password? From now on, it will open directly without a lock.","📺 보며 메모":"📺 Notes While Watching","유튜브 링크 붙여넣기":"Paste YouTube Link","열기":"Open","내 PC 영상 파일 열기":"Open PC Local Video File","유튜브 링크를 확인해 주세요":"Please check the YouTube link","앞에 띄우기를 열 수 없어요":"Cannot open floating view","① 유튜브 링크 붙여넣고 열기":"① Paste YouTube Link and Open","📁 내 영상":"📁 My Videos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② When watching Netflix or anything else, use 📌 Float","= 메모를 영상 위에 띄워 바로 적기":"= Float Note Above Video to write directly","📌 앞에":"📌 Float","축소":"Zoom Out","확대":"Zoom In","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Jot down good quotes right here while watching the video. They will be saved.","메모를 앞 창에서 쓰는 중":"Writing note in the front window","{파일}(으)로 옮겼어요":"Moved to {파일}","📁 버튼으로 파일 이동":"Move file via 📁 button","끌어서도 이동 가능":"Can also be dragged","이미 줄바꿈이 되어 있어요 👍":"Lines are already formatted 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Formatted lines by sentence","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Recording dictation… (Tap to stop)","정리할 메모가 없어요. 먼저 메모를 여세요.":"No notes to format. Open a note first.","마이크 권한을 허용해 주세요":"Please allow microphone permission","음성 받아쓰기를 시작할 수 없어요":"Could not start voice dictation","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"This browser does not support voice dictation. Please open in Chrome or Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"This browser does not support \"Float\". Please open in Chrome or Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 A month has passed, note automatically saved as .js","새 파일 이름을 입력하세요.":"Enter a new file name.","{파일} 파일을 삭제할까요?":"Delete file {파일}?","내보낼 메모가 없어요.":"No notes to export.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No notes to save. Open or create a note first.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No notes to make PDF. Open or create a note first.","검색 결과가 없어요.":"No search results.","이 파일엔 아직 메모가 없어요.":"This file has no notes yet.","일치하는 파일이 없어요.":"No matching files found.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Cannot open storage. Please check browser settings (Incognito mode, etc.).","메모 · 전체":"Notes · All","🔍  검색...":"🔍 Search...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Write freely here. No character limit.\nAutomatically saved as you type.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Delete password? From now on, it will open directly without a lock.","계산기":"Calculator","메모 · 검색 결과":"Notes · Search Results"},"zh":{"메모장":"记事本","Calculator(계산기)":"计算器","잠금 설정":"锁定设置","글자 작게":"缩小字体","글자 크게":"放大字体","줄 간격 좁게":"缩窄行距","줄 간격 넓게":"加宽行距","줄 간격(행간)":"行距","📄 PDF 저장":"📄 保存为 PDF","⬇ 전체 백업":"⬇ 全部备份","＋ 새 메모":"＋ 新建备忘录","목록 접기 / 펼치기":"折叠 / 展开列表","영상 보며 메모 (유튜브·내 영상)":"边看视频边记笔记（YouTube·本地视频）","메모를 영상 앞에 띄우기 (순수 메모창)":"将笔记置于视频前方（纯净便签窗）","📁 파일":"📁 文件","새 파일 만들기":"新建文件","전체 메모":"全部备忘录","🎤 음성 메모":"🎤 语音备忘录","기본 메모":"默认备忘录","🔍 검색...":"🔍 搜索...","메모":"备忘录","이름 변경":"重命名","파일 삭제":"删除文件","파일로 이동":"移动至文件","삭제":"删除","📁 파일:":"📁 文件：","제목 (없으면 첫 줄이 제목)":"标题（无标题时取第一行为标题）","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"请在此处尽情书写，字数不限。","/ 입력하면 자동으로 저장됩니다.":"/ 输入后将自动保存。","자":"字","🧹 줄 정리":"🧹 整理行文","문장마다 줄을 바꿔 읽기 좋게 정리":"按句子换行，以便阅读","🎤 받아쓰기":"🎤 语音听写","음성으로 받아쓰기 (말하면 글자로)":"语音听写（语音转文字）","받아쓰기 언어":"听写语言","언어 자동":"自动识别语言","✓ 자동 저장됨":"✓ 已自动保存","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"请从左侧选择文件和备忘录，或点击“＋ 新建备忘录”开始。","제목 없음":"无标题","(제목 없음)":"（无标题）","📁 어느 파일로 옮길까요?":"📁 要移动到哪个文件？","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 搜索文件名（如文件较多可在此查找）","그런 이름의 파일이 없어요":"没有找到该名称的文件","닫기":"关闭","🧮 계산기":"🧮 计算器","오류":"错误","🔒 암호 입력":"🔒 输入密码","🔒 잠금 설정":"🔒 锁定设置","🔒 새 암호 설정":"🔒 设置新密码","🔒 암호 변경":"🔒 修改密码","🔒 한 번 더":"🔒 再输一次","암호 설정":"设置密码","암호 삭제":"删除密码","암호 변경":"修改密码","지금 잠그기":"立即锁定","저장된 암호를 순서대로 누르세요.":"请按顺序输入已保存的密码。","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"请按顺序点击所需数字，然后点击 ✓。","확인을 위해 같은 암호를 다시 누르세요.":"请再次输入相同的密码以供确认。","암호가 달라요. 다시 눌러보세요.":"密码不一致，请重新输入。","두 번이 달라요. 처음부터 다시 눌러주세요.":"两次输入不一致，请从头开始重新输入。","🔒 암호가 설정됐어요":"🔒 密码设置成功","암호를 삭제했어요":"已删除密码","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"要删除密码吗？之后将无需锁定直接打开。","📺 보며 메모":"📺 边看边记","유튜브 링크 붙여넣기":"粘贴 YouTube 链接","열기":"打开","내 PC 영상 파일 열기":"打开本地电脑视频文件","유튜브 링크를 확인해 주세요":"请检查 YouTube 链接","앞에 띄우기를 열 수 없어요":"无法打开置顶悬浮窗","① 유튜브 링크 붙여넣고 열기":"① 粘贴 YouTube 链接并打开","📁 내 영상":"📁 本地视频","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② 观看 Netflix 等任何内容时使用 📌 置顶","= 메모를 영상 위에 띄워 바로 적기":"= 将备忘录浮于视频上方直接书写","📌 앞에":"📌 置顶","축소":"缩小","확대":"放大","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"观看视频时遇到好句子可直接在此记下，会自动保存。","메모를 앞 창에서 쓰는 중":"正在前置窗口中编写备忘录","{파일}(으)로 옮겼어요":"已移动至 {파일}","📁 버튼으로 파일 이동":"通过 📁 按钮移动文件","끌어서도 이동 가능":"也可通过拖拽移动","이미 줄바꿈이 되어 있어요 👍":"已经完成换行 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 已按句子换行整理","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ 正在听写…（点击停止）","정리할 메모가 없어요. 먼저 메모를 여세요.":"没有可整理的备忘录。请先打开备忘录。","마이크 권한을 허용해 주세요":"请允许麦克风权限","음성 받아쓰기를 시작할 수 없어요":"无法启动语音听写","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"当前浏览器不支持语音听写。请使用 Chrome 或 Edge 浏览器打开。","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"当前浏览器不支持“置顶悬浮”功能。请使用 Chrome 或 Edge 浏览器打开。","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 已过一个月，备忘录已自动保存为 .js 文件","새 파일 이름을 입력하세요.":"请输入新文件名。","{파일} 파일을 삭제할까요?":"要删除 {파일} 文件吗？","내보낼 메모가 없어요.":"没有可导出的备忘录。","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"没有可保存的备忘录。请先打开或新建备忘录。","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"没有可生成 PDF 的备忘录。请先打开或新建备忘录。","검색 결과가 없어요.":"无搜索结果。","이 파일엔 아직 메모가 없어요.":"该文件暂无备忘录。","일치하는 파일이 없어요.":"没有匹配的文件。","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"无法打开存储空间。请检查浏览器设置（如无痕模式等）。","메모 · 전체":"备忘录 · 全部","🔍  검색...":"🔍 搜索...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"请在此处尽情书写，字数不限。\n输入后将自动保存。","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"要删除密码吗？之后将无需锁定直接打开。","계산기":"计算器","메모 · 검색 결과":"备忘录 · 搜索结果"},"ja":{"메모장":"メモ帳","Calculator(계산기)":"電卓","잠금 설정":"ロック設定","글자 작게":"文字小さく","글자 크게":"文字大きく","줄 간격 좁게":"行間を狭く","줄 간격 넓게":"行間を広く","줄 간격(행간)":"行間","📄 PDF 저장":"📄 PDF 保存","⬇ 전체 백업":"⬇ すべてバックアップ","＋ 새 메모":"＋ 新規メモ","목록 접기 / 펼치기":"リストを折り畳む / 展開する","영상 보며 메모 (유튜브·내 영상)":"動画を見ながらメモ (YouTube・マイ動画)","메모를 영상 앞에 띄우기 (순수 메모창)":"動画の前面にメモを表示 (純粋なメモウィンドウ)","📁 파일":"📁 ファイル","새 파일 만들기":"新規ファイル作成","전체 메모":"すべてのメモ","🎤 음성 메모":"🎤 音声メモ","기본 메모":"デフォルトメモ","🔍 검색...":"🔍 検索...","메모":"メモ","이름 변경":"名前変更","파일 삭제":"ファイル削除","파일로 이동":"ファイルへ移動","삭제":"削除","📁 파일:":"📁 ファイル:","제목 (없으면 첫 줄이 제목)":"タイトル (ない場合は1行目がタイトル)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"ここに自由にお書きください。文字数制限はありません。","/ 입력하면 자동으로 저장됩니다.":"/ 入力すると自動的に保存されます。","자":"字","🧹 줄 정리":"🧹 行の整理","문장마다 줄을 바꿔 읽기 좋게 정리":"文ごとに改行して読みやすく整理","🎤 받아쓰기":"🎤 音声入力","음성으로 받아쓰기 (말하면 글자로)":"音声で入力 (話すと文字に)","받아쓰기 언어":"音声入力の言語","언어 자동":"言語自動","✓ 자동 저장됨":"✓ 自動保存済み","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"左側からファイルとメモを選ぶか、＋ 新規メモを押して始めてください。","제목 없음":"無題","(제목 없음)":"(無題)","📁 어느 파일로 옮길까요?":"📁 どのファイルに移動しますか？","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 ファイル名検索 (多い場合はここで探す)","그런 이름의 파일이 없어요":"そのような名前のファイルはありません","닫기":"閉じる","🧮 계산기":"🧮 電卓","오류":"エラー","🔒 암호 입력":"🔒 パスワード入力","🔒 잠금 설정":"🔒 ロック設定","🔒 새 암호 설정":"🔒 新しいパスワード設定","🔒 암호 변경":"🔒 パスワード変更","🔒 한 번 더":"🔒 もう一度","암호 설정":"パスワード設定","암호 삭제":"パスワード削除","암호 변경":"パスワード変更","지금 잠그기":"今すぐロック","저장된 암호를 순서대로 누르세요.":"保存されたパスワードを順番に入力してください。","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"希望の数字を順番に押して ✓ を押してください。","확인을 위해 같은 암호를 다시 누르세요.":"確認のため同じパスワードをもう一度押してください。","암호가 달라요. 다시 눌러보세요.":"パスワードが違います。もう一度押してみてください。","두 번이 달라요. 처음부터 다시 눌러주세요.":"2回目が違います。最初からもう一度押してください。","🔒 암호가 설정됐어요":"🔒 パスワードが設定されました","암호를 삭제했어요":"パスワードを削除しました","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"パスワードを削除しますか？次からはロックなしでそのまま開きます。","📺 보며 메모":"📺 見ながらメモ","유튜브 링크 붙여넣기":"YouTube リンクを貼り付け","열기":"開く","내 PC 영상 파일 열기":"マイPCの動画ファイルを開く","유튜브 링크를 확인해 주세요":"YouTube リンクを確認してください","앞에 띄우기를 열 수 없어요":"前面表示を開けません","① 유튜브 링크 붙여넣고 열기":"① YouTube リンクを貼り付けて開く","📁 내 영상":"📁 マイ動画","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Netflix など何を見る時も 📌 前面に","= 메모를 영상 위에 띄워 바로 적기":"= 動画の上にメモを表示してすぐに記入","📌 앞에":"📌 前面に","축소":"縮小","확대":"拡大","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"動画を見ながら良いフレーズをここに直接書いてください。保存されます。","메모를 앞 창에서 쓰는 중":"前面ウィンドウでメモを作成中","{파일}(으)로 옮겼어요":"{파일}へ移動しました","📁 버튼으로 파일 이동":"📁 ボタンでファイル移動","끌어서도 이동 가능":"ドラッグでも移動可能","이미 줄바꿈이 되어 있어요 👍":"すでに改行されています 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 文ごとに改行して整理しました","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ 音声入力中…(押すと停止)","정리할 메모가 없어요. 먼저 메모를 여세요.":"整理するメモがありません。まずメモを開いてください。","마이크 권한을 허용해 주세요":"マイクの権限を許可してください","음성 받아쓰기를 시작할 수 없어요":"音声入力を開始できません","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"このブラウザは音声入力をサポートしていません。Chrome·Edgeで開いてください。","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"このブラウザは「前面表示」をサポートしていません。Chrome·Edgeで開いてください。","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 1か月が経ち、メモを .js として自動保存しました","새 파일 이름을 입력하세요.":"新しいファイル名を入力してください。","{파일} 파일을 삭제할까요?":"{파일}ファイルを削除しますか？","내보낼 메모가 없어요.":"エクスポートするメモがありません。","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"保存するメモがありません。まずメモを開くか新しく作成してください。","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"PDFにするメモがありません。まずメモを開くか新しく作成してください。","검색 결과가 없어요.":"検索結果がありません。","이 파일엔 아직 메모가 없어요.":"このファイルにはまだメモがありません。","일치하는 파일이 없어요.":"一致するファイルがありません。","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"ストレージを開けません。ブラウザの設定（シークレットモードなど）を確認してください。","메모 · 전체":"メモ · すべて","🔍  검색...":"🔍 検索...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"ここに自由にお書きください。文字数制限はありません。\n入力すると自動的に保存されます。","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"パスワードを削除しますか？次からはロックなしでそのまま開きます。","계산기":"電卓","메모 · 검색 결과":"メモ · 検索結果"},"es":{"메모장":"Bloc de notas","Calculator(계산기)":"Calculadora","잠금 설정":"Configuración de bloqueo","글자 작게":"Texto más pequeño","글자 크게":"Texto más grande","줄 간격 좁게":"Interlineado más estrecho","줄 간격 넓게":"Interlineado más amplio","줄 간격(행간)":"Interlineado","📄 PDF 저장":"📄 Guardar como PDF","⬇ 전체 백업":"⬇ Copia de seguridad total","＋ 새 메모":"＋ Nueva nota","목록 접기 / 펼치기":"Contraer / expandir lista","영상 보며 메모 (유튜브·내 영상)":"Tomar notas mientras ves un video (YouTube / video local)","메모를 영상 앞에 띄우기 (순수 메모창)":"Mostrar notas al frente del video (ventana de notas limpia)","📁 파일":"📁 Archivos","새 파일 만들기":"Crear nuevo archivo","전체 메모":"Todas las notas","🎤 음성 메모":"🎤 Notas de voz","기본 메모":"Notas generales","🔍 검색...":"🔍 Buscar...","메모":"Notas","이름 변경":"Cambiar nombre","파일 삭제":"Eliminar archivo","파일로 이동":"Mover a archivo","삭제":"Eliminar","📁 파일:":"📁 Archivo:","제목 (없으면 첫 줄이 제목)":"Título (si no hay, la primera línea será el título)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Escribe aquí libremente. Sin límite de caracteres.","/ 입력하면 자동으로 저장됩니다.":"/ Se guarda automáticamente al escribir.","자":"caracteres","🧹 줄 정리":"🧹 Organizar líneas","문장마다 줄을 바꿔 읽기 좋게 정리":"Cambiar de línea por frase para facilitar la lectura","🎤 받아쓰기":"🎤 Dictado","음성으로 받아쓰기 (말하면 글자로)":"Dictado por voz (hablar para convertir en texto)","받아쓰기 언어":"Idioma de dictado","언어 자동":"Idioma automático","✓ 자동 저장됨":"✓ Guardado automático","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Selecciona un archivo y una nota a la izquierda, o haz clic en ＋ Nueva nota para empezar.","제목 없음":"Sin título","(제목 없음)":"(Sin título)","📁 어느 파일로 옮길까요?":"📁 ¿A qué archivo deseas moverlo?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Buscar nombre de archivo (encuéntralo aquí si hay muchos)","그런 이름의 파일이 없어요":"No existe un archivo con ese nombre","닫기":"Cerrar","🧮 계산기":"🧮 Calculadora","오류":"Error","🔒 암호 입력":"🔒 Ingresar contraseña","🔒 잠금 설정":"🔒 Configuración de bloqueo","🔒 새 암호 설정":"🔒 Establecer nueva contraseña","🔒 암호 변경":"🔒 Cambiar contraseña","🔒 한 번 더":"🔒 Una vez más","암호 설정":"Establecer contraseña","암호 삭제":"Eliminar contraseña","암호 변경":"Cambiar contraseña","지금 잠그기":"Bloquear ahora","저장된 암호를 순서대로 누르세요.":"Introduce la contraseña guardada en orden.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Pulsa los números deseados en orden y luego haz clic en ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Introduce la misma contraseña de nuevo para confirmar.","암호가 달라요. 다시 눌러보세요.":"La contraseña es incorrecta. Inténtalo de nuevo.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Los dos intentos no coinciden. Por favor, empieza de nuevo.","🔒 암호가 설정됐어요":"🔒 Contraseña establecida","암호를 삭제했어요":"Contraseña eliminada","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"¿Eliminar la contraseña? A partir de ahora se abrirá directamente sin bloqueo.","📺 보며 메모":"📺 Notas al ver","유튜브 링크 붙여넣기":"Pegar enlace de YouTube","열기":"Abrir","내 PC 영상 파일 열기":"Abrir archivo de video local de la PC","유튜브 링크를 확인해 주세요":"Por favor, verifica el enlace de YouTube","앞에 띄우기를 열 수 없어요":"No se puede abrir la ventana flotante al frente","① 유튜브 링크 붙여넣고 열기":"① Pegar enlace de YouTube y abrir","📁 내 영상":"📁 Mis videos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Al ver Netflix u otro contenido, usa 📌 Al frente","= 메모를 영상 위에 띄워 바로 적기":"= Mostrar notas al frente del video para escribir directamente","📌 앞에":"📌 Al frente","축소":"Reducir","확대":"Ampliar","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Escribe aquí directamente las frases interesantes mientras ves el video. Se guardarán.","메모를 앞 창에서 쓰는 중":"Escribiendo nota en la ventana frontal","{파일}(으)로 옮겼어요":"Movido a {파일}","📁 버튼으로 파일 이동":"Mover archivo con el botón 📁","끌어서도 이동 가능":"También se puede arrastrar","이미 줄바꿈이 되어 있어요 👍":"Las líneas ya están organizadas 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Líneas organizadas por frase","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Grabando dictado… (pulsar para detener)","정리할 메모가 없어요. 먼저 메모를 여세요.":"No hay notas para organizar. Abre una nota primero.","마이크 권한을 허용해 주세요":"Por favor, permite el acceso al micrófono","음성 받아쓰기를 시작할 수 없어요":"No se puede iniciar el dictado por voz","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador no admite el dictado por voz. Ábrelo en Chrome o Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador no admite \"Mostrar al frente\". Ábrelo en Chrome o Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Ha pasado un mes, la nota se ha guardado automáticamente como .js","새 파일 이름을 입력하세요.":"Introduce un nuevo nombre de archivo.","{파일} 파일을 삭제할까요?":"¿Eliminar el archivo {파일}?","내보낼 메모가 없어요.":"No hay notas para exportar.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No hay notas para guardar. Abre una nota o crea una nueva primero.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No hay notas para convertir a PDF. Abre o crea una nota primero.","검색 결과가 없어요.":"No hay resultados de búsqueda.","이 파일엔 아직 메모가 없어요.":"Este archivo aún no tiene notas.","일치하는 파일이 없어요.":"No hay archivos coincidentes.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"No se puede abrir el almacenamiento. Comprueba la configuración del navegador (modo incógnito, etc.).","메모 · 전체":"Notas · Todo","🔍  검색...":"🔍 Buscar...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Escribe aquí libremente. Sin límite de caracteres.\nSe guarda automáticamente al escribir.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"¿Eliminar la contraseña? A partir de ahora se abrirá directamente sin bloqueo.","계산기":"Calculadora","메모 · 검색 결과":"Notas · Resultados de búsqueda"},"de":{"메모장":"Notizblock","Calculator(계산기)":"Rechner","잠금 설정":"Sperreinstellungen","글자 작게":"Kleinere Schrift","글자 크게":"Größere Schrift","줄 간격 좁게":"Engerer Zeilenabstand","줄 간격 넓게":"Breiterer Zeilenabstand","줄 간격(행간)":"Zeilenabstand","📄 PDF 저장":"📄 Als PDF speichern","⬇ 전체 백업":"⬇ Alles sichern","＋ 새 메모":"＋ Neue Notiz","목록 접기 / 펼치기":"Liste einklappen / ausklappen","영상 보며 메모 (유튜브·내 영상)":"Notizen beim Video-Ansehen machen (YouTube / lokales Video)","메모를 영상 앞에 띄우기 (순수 메모창)":"Notizen vor dem Video einblenden (sauberes Notizfenster)","📁 파일":"📁 Dateien","새 파일 만들기":"Neue Datei erstellen","전체 메모":"Alle Notizen","🎤 음성 메모":"🎤 Sprachnotizen","기본 메모":"Allgemeine Notizen","🔍 검색...":"🔍 Suchen...","메모":"Notizen","이름 변경":"Umbenennen","파일 삭제":"Datei löschen","파일로 이동":"In Datei verschieben","삭제":"Löschen","📁 파일:":"📁 Datei:","제목 (없으면 첫 줄이 제목)":"Titel (wenn leer, ist die erste Zeile der Titel)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Schreibe hier nach Belieben. Keine Zeichenbegrenzung.","/ 입력하면 자동으로 저장됩니다.":"/ Wird bei der Eingabe automatisch gespeichert.","자":"Zeichen","🧹 줄 정리":"🧹 Zeilen anordnen","문장마다 줄을 바꿔 읽기 좋게 정리":"Nach Sätzen umbrechen, um die Lesbarkeit zu verbessern","🎤 받아쓰기":"🎤 Diktieren","음성으로 받아쓰기 (말하면 글자로)":"Sprachdiktat (sprechen, um in Text umzuwandeln)","받아쓰기 언어":"Diktatsprache","언어 자동":"Automatische Sprache","✓ 자동 저장됨":"✓ Automatisch gespeichert","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Wähle links eine Datei und Notiz aus oder klicke auf ＋ Neue Notiz, um zu beginnen.","제목 없음":"Unbenannt","(제목 없음)":"(Unbenannt)","📁 어느 파일로 옮길까요?":"📁 In welche Datei verschieben?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Dateinamen suchen (hier finden, wenn es viele gibt)","그런 이름의 파일이 없어요":"Es gibt keine Datei mit diesem Namen","닫기":"Schließen","🧮 계산기":"🧮 Rechner","오류":"Fehler","🔒 암호 입력":"🔒 Passwort eingeben","🔒 잠금 설정":"🔒 Sperreinstellungen","🔒 새 암호 설정":"🔒 Neues Passwort festlegen","🔒 암호 변경":"🔒 Passwort ändern","🔒 한 번 더":"🔒 Noch einmal","암호 설정":"Passwort festlegen","암호 삭제":"Passwort löschen","암호 변경":"Passwort ändern","지금 잠그기":"Jetzt sperren","저장된 암호를 순서대로 누르세요.":"Gib das gespeicherte Passwort der Reihe nach ein.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Drücke die gewünschten Ziffern der Reihe nach und tippe auf ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Gib dasselbe Passwort zur Bestätigung erneut ein.","암호가 달라요. 다시 눌러보세요.":"Das Passwort ist falsch. Versuche es noch einmal.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Die beiden Eingaben stimmen nicht überein. Bitte von vorne beginnen.","🔒 암호가 설정됐어요":"🔒 Passwort wurde festgelegt","암호를 삭제했어요":"Passwort gelöscht","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Passwort löschen? Ab jetzt wird es ohne Sperre direkt geöffnet.","📺 보며 메모":"📺 Notizen beim Ansehen","유튜브 링크 붙여넣기":"YouTube-Link einfügen","열기":"Öffnen","내 PC 영상 파일 열기":"Lokale Videodatei vom PC öffnen","유튜브 링크를 확인해 주세요":"Bitte überprüfe den YouTube-Link","앞에 띄우기를 열 수 없어요":"Kann die Vordergrund-Anzeige nicht öffnen","① 유튜브 링크 붙여넣고 열기":"① YouTube-Link einfügen und öffnen","📁 내 영상":"📁 Meine Videos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Beim Ansehen von Netflix etc. 📌 Im Vordergrund","= 메모를 영상 위에 띄워 바로 적기":"= Notizen vor dem Video einblenden und direkt schreiben","📌 앞에":"📌 Im Vordergrund","축소":"Verkleinern","확대":"Vergrößern","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Schreibe interessante Zitate beim Videoansehen direkt hier auf. Sie werden gespeichert.","메모를 앞 창에서 쓰는 중":"Notiz wird im Vordergrundfenster verfasst","{파일}(으)로 옮겼어요":"Nach {파일} verschoben","📁 버튼으로 파일 이동":"Datei mit der 📁-Schaltfläche verschieben","끌어서도 이동 가능":"Auch durch Ziehen möglich","이미 줄바꿈이 되어 있어요 👍":"Zeilen wurden bereits umbrochen 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Zeilen nach Sätzen neu geordnet","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Diktat läuft… (zum Stoppen drücken)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Keine Notizen zum Anordnen vorhanden. Öffne zuerst eine Notiz.","마이크 권한을 허용해 주세요":"Bitte erlaube den Mikrofonzugriff","음성 받아쓰기를 시작할 수 없어요":"Sprachdiktat kann nicht gestartet werden","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Dieser Browser unterstützt kein Sprachdiktat. Bitte in Chrome oder Edge öffnen.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Dieser Browser unterstützt „Im Vordergrund“ nicht. Bitte in Chrome oder Edge öffnen.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Ein Monat ist vergangen, Notiz wurde automatisch als .js gespeichert","새 파일 이름을 입력하세요.":"Bitte neuen Dateinamen eingeben.","{파일} 파일을 삭제할까요?":"Datei {파일} löschen?","내보낼 메모가 없어요.":"Keine Notizen zum Exportieren.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Keine Notizen zum Speichern. Öffne oder erstelle zuerst eine Notiz.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Keine Notizen für PDF vorhanden. Öffne oder erstelle zuerst eine Notiz.","검색 결과가 없어요.":"Keine Suchergebnisse.","이 파일엔 아직 메모가 없어요.":"Diese Datei hat noch keine Notizen.","일치하는 파일이 없어요.":"Keine passenden Dateien gefunden.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Speicher kann nicht geöffnet werden. Bitte Browsereinstellungen (Inkognitomodus etc.) überprüfen.","메모 · 전체":"Notizen · Alle","🔍  검색...":"🔍 Suchen...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Schreibe hier nach Belieben. Keine Zeichenbegrenzung.\nWird bei der Eingabe automatisch gespeichert.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Passwort löschen? Ab jetzt wird es ohne Sperre direkt geöffnet.","계산기":"Rechner","메모 · 검색 결과":"Notizen · Suchergebnisse"},"fr":{"메모장":"Bloc-notes","Calculator(계산기)":"Calculatrice","잠금 설정":"Paramètres de verrouillage","글자 작게":"Texte plus petit","글자 크게":"Texte plus grand","줄 간격 좁게":"Interligne plus serré","줄 간격 넓게":"Interligne plus large","줄 간격(행간)":"Interligne","📄 PDF 저장":"📄 Enregistrer en PDF","⬇ 전체 백업":"⬇ Sauvegarde complète","＋ 새 메모":"＋ Nouvelle note","목록 접기 / 펼치기":"Réduire / développer la liste","영상 보며 메모 (유튜브·내 영상)":"Prendre des notes en regardant une vidéo (YouTube / vidéo locale)","메모를 영상 앞에 띄우기 (순수 메모창)":"Afficher la note au premier plan de la vidéo (fenêtre de notes épurée)","📁 파일":"📁 Fichiers","새 파일 만들기":"Créer un nouveau fichier","전체 메모":"Toutes les notes","🎤 음성 메모":"🎤 Notes vocales","기본 메모":"Notes générales","🔍 검색...":"🔍 Rechercher...","메모":"Notes","이름 변경":"Renommer","파일 삭제":"Supprimer le fichier","파일로 이동":"Déplacer vers le fichier","삭제":"Supprimer","📁 파일:":"📁 Fichier :","제목 (없으면 첫 줄이 제목)":"Titre (si vide, la première ligne sert de titre)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Écrivez ici en toute liberté. Pas de limite de caractères.","/ 입력하면 자동으로 저장됩니다.":"/ Enregistrement automatique lors de la saisie.","자":"caractères","🧹 줄 정리":"🧹 Organiser les lignes","문장마다 줄을 바꿔 읽기 좋게 정리":"Changer de ligne par phrase pour une lecture plus aisée","🎤 받아쓰기":"🎤 Dictée","음성으로 받아쓰기 (말하면 글자로)":"Dictée vocale (parler pour transcrire en texte)","받아쓰기 언어":"Langue de dictée","언어 자동":"Langue automatique","✓ 자동 저장됨":"✓ Enregistré automatiquement","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Sélectionnez un fichier et une note à gauche, ou cliquez sur ＋ Nouvelle note pour commencer.","제목 없음":"Sans titre","(제목 없음)":"(Sans titre)","📁 어느 파일로 옮길까요?":"📁 Vers quel fichier souhaitez-vous le déplacer ?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Rechercher un nom de fichier (trouvez-le ici s'il y en a beaucoup)","그런 이름의 파일이 없어요":"Aucun fichier ne porte ce nom","닫기":"Fermer","🧮 계산기":"🧮 Calculatrice","오류":"Erreur","🔒 암호 입력":"🔒 Entrer le mot de passe","🔒 잠금 설정":"🔒 Paramètres de verrouillage","🔒 새 암호 설정":"🔒 Définir un nouveau mot de passe","🔒 암호 변경":"🔒 Modifier le mot de passe","🔒 한 번 더":"🔒 Encore une fois","암호 설정":"Définir le mot de passe","암호 삭제":"Supprimer le mot de passe","암호 변경":"Modifier le mot de passe","지금 잠그기":"Verrouiller maintenant","저장된 암호를 순서대로 누르세요.":"Entrez le mot de passe enregistré dans l'ordre.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Appuyez sur les chiffres souhaités dans l'ordre, puis sur ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Entrez à nouveau le même mot de passe pour confirmer.","암호가 달라요. 다시 눌러보세요.":"Le mot de passe est incorrect. Veuillez réessayer.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Les deux essais ne correspondent pas. Veuillez recommencer du début.","🔒 암호가 설정됐어요":"🔒 Mot de passe défini","암호를 삭제했어요":"Mot de passe supprimé","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Supprimer le mot de passe ? Il s'ouvrira directement sans verrouillage par la suite.","📺 보며 메모":"📺 Notes en visionnant","유튜브 링크 붙여넣기":"Coller le lien YouTube","열기":"Ouvrir","내 PC 영상 파일 열기":"Ouvrir un fichier vidéo local du PC","유튜브 링크를 확인해 주세요":"Veuillez vérifier le lien YouTube","앞에 띄우기를 열 수 없어요":"Impossible d'ouvrir l'affichage au premier plan","① 유튜브 링크 붙여넣고 열기":"① Coller le lien YouTube et ouvrir","📁 내 영상":"📁 Mes vidéos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② En regardant Netflix ou autre, utilisez 📌 Premier plan","= 메모를 영상 위에 띄워 바로 적기":"= Afficher la note au premier plan de la vidéo pour écrire directement","📌 앞에":"📌 Premier plan","축소":"Réduire","확대":"Agrandir","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Notez directement ici les belles citations en regardant la vidéo. Elles seront enregistrées.","메모를 앞 창에서 쓰는 중":"Rédaction de la note dans la fenêtre de premier plan","{파일}(으)로 옮겼어요":"Déplacé vers {파일}","📁 버튼으로 파일 이동":"Déplacer le fichier via le bouton 📁","끌어서도 이동 가능":"Déplacement par glisser-déposer également possible","이미 줄바꿈이 되어 있어요 👍":"Les lignes sont déjà organisées 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Lignes organisées par phrase","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Enregistrement de la dictée… (appuyer pour arrêter)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Aucune note à organiser. Veuillez d'abord ouvrir une note.","마이크 권한을 허용해 주세요":"Veuillez autoriser l'accès au microphone","음성 받아쓰기를 시작할 수 없어요":"Impossible de démarrer la dictée vocale","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Ce navigateur ne prend pas en charge la dictée vocale. Veuillez l'ouvrir dans Chrome ou Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Ce navigateur ne prend pas en charge « Premier plan ». Veuillez l'ouvrir dans Chrome ou Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Un mois s'est écoulé, la note a été enregistrée automatiquement sous .js","새 파일 이름을 입력하세요.":"Veuillez entrer un nouveau nom de fichier.","{파일} 파일을 삭제할까요?":"Supprimer le fichier {파일} ?","내보낼 메모가 없어요.":"Aucune note à exporter.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Aucune note à enregistrer. Veuillez d'abord ouvrir ou créer une note.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Aucune note à convertir en PDF. Veuillez d'abord ouvrir ou créer une note.","검색 결과가 없어요.":"Aucun résultat de recherche.","이 파일엔 아직 메모가 없어요.":"Ce fichier ne contient pas encore de notes.","일치하는 파일이 없어요.":"Aucun fichier correspondant.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Impossible d'ouvrir le stockage. Veuillez vérifier les paramètres du navigateur (mode navigation privée, etc.).","메모 · 전체":"Notes · Tout","🔍  검색...":"🔍 Rechercher...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Écrivez ici en toute liberté. Pas de limite de caractères.\nEnregistrement automatique lors de la saisie.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Supprimer le mot de passe ? Il s'ouvrira directement sans verrouillage par la suite.","계산기":"Calculatrice","메모 · 검색 결과":"Notes · Résultats de recherche"},"it":{"메모장":"Blocco note","Calculator(계산기)":"Calcolatrice","잠금 설정":"Impostazioni di blocco","글자 작게":"Carattere più piccolo","글자 크게":"Carattere più grande","줄 간격 좁게":"Interlinea più stretta","줄 간격 넓게":"Interlinea più larga","줄 간격(행간)":"Interlinea","📄 PDF 저장":"📄 Salva come PDF","⬇ 전체 백업":"⬇ Backup completo","＋ 새 메모":"＋ Nuova nota","목록 접기 / 펼치기":"Comprimi / espandi elenco","영상 보며 메모 (유튜브·내 영상)":"Prendi note guardando un video (YouTube / video locale)","메모를 영상 앞에 띄우기 (순수 메모창)":"Mostra la nota in primo piano sul video (finestra di note pulita)","📁 파일":"📁 File","새 파일 만들기":"Crea nuovo file","전체 메모":"Tutte le note","🎤 음성 메모":"🎤 Note vocali","기본 메모":"Note generali","🔍 검색...":"🔍 Cerca...","메모":"Note","이름 변경":"Rinomina","파일 삭제":"Elimina file","파일로 이동":"Sposta nel file","삭제":"Elimina","📁 파일:":"📁 File:","제목 (없으면 첫 줄이 제목)":"Titolo (se vuoto, la prima riga è il titolo)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Scrivi liberamente qui. Nessun limite di caratteri.","/ 입력하면 자동으로 저장됩니다.":"/ Salvataggio automatico durante la digitazione.","자":"caratteri","🧹 줄 정리":"🧹 Organizza righe","문장마다 줄을 바꿔 읽기 좋게 정리":"Vai a capo per frase per una migliore leggibilità","🎤 받아쓰기":"🎤 Detta","음성으로 받아쓰기 (말하면 글자로)":"Dettatura vocale (parla per convertire in testo)","받아쓰기 언어":"Lingua di dettatura","언어 자동":"Lingua automatica","✓ 자동 저장됨":"✓ Salvato automaticamente","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Seleziona un file e una nota a sinistra, oppure fai clic su ＋ Nuova nota per iniziare.","제목 없음":"Senza titolo","(제목 없음)":"(Senza titolo)","📁 어느 파일로 옮길까요?":"📁 In quale file desideri spostarlo?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Cerca nome file (trovalo hier se ce ne sono molti)","그런 이름의 파일이 없어요":"Nessun file con questo nome","닫기":"Chiudi","🧮 계산기":"🧮 Calcolatrice","오류":"Errore","🔒 암호 입력":"🔒 Inserisci password","🔒 잠금 설정":"🔒 Impostazioni di blocco","🔒 새 암호 설정":"🔒 Imposta nuova password","🔒 암호 변경":"🔒 Modifica password","🔒 한 번 더":"🔒 Ancora una volta","암호 설정":"Imposta password","암호 삭제":"Elimina password","암호 변경":"Modifica password","지금 잠그기":"Blocca ora","저장된 암호를 순서대로 누르세요.":"Inserisci la password salvata nell'ordine.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Premi le cifre desiderate in sequenza e tocca ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Inserisci nuovamente la stessa password per conferma.","암호가 달라요. 다시 눌러보세요.":"La password è errata. Riprova.","두 번이 달라요. 처음부터 다시 눌러주세요.":"I due tentativi non corrispondono. Ricomincia da capo.","🔒 암호가 설정됐어요":"🔒 Password impostata","암호를 삭제했어요":"Password eliminata","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Vuoi eliminare la password? Da ora in poi si aprirà direttamente senza blocco.","📺 보며 메모":"📺 Note durante la visione","유튜브 링크 붙여넣기":"Incolla link YouTube","열기":"Apri","내 PC 영상 파일 열기":"Apri file video locale dal PC","유튜브 링크를 확인해 주세요":"Verifica il link di YouTube","앞에 띄우기를 열 수 없어요":"Impossibile aprire la visualizzazione in primo piano","① 유튜브 링크 붙여넣고 열기":"① Incolla link YouTube e apri","📁 내 영상":"📁 I miei video","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Quando guardi Netflix o altro, usa 📌 Primo piano","= 메모를 영상 위에 띄워 바로 적기":"= Mostra la nota in primo piano sul video per scriverci sopra direttamente","📌 앞에":"📌 Primo piano","축소":"Riduci","확대":"Ingrandisci","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Annota direttamente qui le citazioni interessanti mentre guardi il video. Verranno salvate.","메모를 앞 창에서 쓰는 중":"Scrittura della nota nella finestra in primo piano","{파일}(으)로 옮겼어요":"Spostato in {파일}","📁 버튼으로 파일 이동":"Sposta il file tramite il pulsante 📁","끌어서도 이동 가능":"Spostamento possibile anche trascinando","이미 줄바꿈이 되어 있어요 👍":"Le righe sono già state formattate 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Righe organizzate per frase","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Dettatura in corso… (premi per fermare)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Nessuna nota da organizzare. Apri prima una nota.","마이크 권한을 허용해 주세요":"Consenti l'accesso al microfono","음성 받아쓰기를 시작할 수 없어요":"Impossibile avviare la dettatura vocale","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Questo browser non supporta la dettatura vocale. Aprilo in Chrome o Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Questo browser non supporta \"Primo piano\". Aprilo in Chrome o Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 È passato un mese, la nota è stata salvata automaticamente come .js","새 파일 이름을 입력하세요.":"Inserisci il nuovo nome del file.","{파일} 파일을 삭제할까요?":"Eliminare il file {파일}?","내보낼 메모가 없어요.":"Nessuna nota da esportare.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Nessuna nota da salvare. Apri o crea prima una nota.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Nessuna nota da convertire in PDF. Apri o crea prima una nota.","검색 결과가 없어요.":"Nessun risultato di ricerca.","이 파일엔 아직 메모가 없어요.":"Questo file non contiene ancora note.","일치하는 파일이 없어요.":"Nessun file corrispondente.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Impossibile aprire lo storage. Controlla le impostazioni del browser (modalità in incognito, ecc.).","메모 · 전체":"Note · Tutti","🔍  검색...":"🔍 Cerca...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Scrivi liberamente qui. Nessun limite di caratteri.\nSalvataggio automatico durante la digitazione.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Vuoi eliminare la password? Da ora in poi si aprirà direttamente senza blocco.","계산기":"Calcolatrice","메모 · 검색 결과":"Note · Risultati della ricerca"},"nl":{"메모장":"Kladblok","Calculator(계산기)":"Rekenmachine","잠금 설정":"Vergrendelingsinstellingen","글자 작게":"Kleinere tekst","글자 크게":"Grotere tekst","줄 간격 좁게":"Smaller regelafstand","줄 간격 넓게":"Breder regelafstand","줄 간격(행간)":"Regelafstand","📄 PDF 저장":"📄 Opslaan als PDF","⬇ 전체 백업":"⬇ Volledige backup","＋ 새 메모":"＋ Nieuwe notitie","목록 접기 / 펼치기":"Lijst samenvouwen / uitvouwen","영상 보며 메모 (유튜브·내 영상)":"Notities maken tijdens het bekijken van video's (YouTube / lokale video)","메모를 영상 앞에 띄우기 (순수 메모창)":"Notitie voor de video weergeven (schone notitievenster)","📁 파일":"📁 Bestanden","새 파일 만들기":"Nieuw bestand maken","전체 메모":"Alle notities","🎤 음성 메모":"🎤 Spraaknotities","기본 메모":"Algemene notities","🔍 검색...":"🔍 Zoeken...","메모":"Notities","이름 변경":"Naam wijzigen","파일 삭제":"Bestand verwijderen","파일로 이동":"Verplaats naar bestand","삭제":"Verwijderen","📁 파일:":"📁 Bestand:","제목 (없으면 첫 줄이 제목)":"Titel (indien leeg, is de eerste regel de titel)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Typ hier naar wens. Geen tekenlimiet.","/ 입력하면 자동으로 저장됩니다.":"/ Wordt automatisch opgeslagen tijdens het typen.","자":"tekens","🧹 줄 정리":"🧹 Regels ordenen","문장마다 줄을 바꿔 읽기 좋게 정리":"Regelafbreking per zin voor betere leesbaarheid","🎤 받아쓰기":"🎤 Dicteren","음성으로 받아쓰기 (말하면 글자로)":"Spraakdictee (spreken om naar tekst te converteren)","받아쓰기 언어":"Dicteertaal","언어 자동":"Automatische taal","✓ 자동 저장됨":"✓ Automatisch opgeslagen","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Selecteer links een bestand en notitie, of klik op ＋ Nieuwe notitie om te beginnen.","제목 없음":"Naamloos","(제목 없음)":"(Naamloos)","📁 어느 파일로 옮길까요?":"📁 Naar welk bestand verplaatsen?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Bestandsnaam zoeken (vind het hier als er veel zijn)","그런 이름의 파일이 없어요":"Geen bestand met die naam gevonden","닫기":"Sluiten","🧮 계산기":"🧮 Rekenmachine","오류":"Fout","🔒 암호 입력":"🔒 Wachtwoord invoeren","🔒 잠금 설정":"🔒 Vergrendelingsinstellingen","🔒 새 암호 설정":"🔒 Nieuw wachtwoord instellen","🔒 암호 변경":"🔒 Wachtwoord wijzigen","🔒 한 번 더":"🔒 Nogmaals","암호 설정":"Wachtwoord instellen","암호 삭제":"Wachtwoord verwijderen","암호 변경":"Wachtwoord wijzigen","지금 잠그기":"Nu vergrendelen","저장된 암호를 순서대로 누르세요.":"Voer het opgeslagen wachtwoord in de juiste volgorde in.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Druk achtereenvolgens op de gewenste cijfers en tik op ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Voer ter bevestiging hetzelfde wachtwoord opnieuw in.","암호가 달라요. 다시 눌러보세요.":"Het wachtwoord is onjuist. Probeer het opnieuw.","두 번이 달라요. 처음부터 다시 눌러주세요.":"De twee invoeren komen niet overeen. Begin alstublieft opnieuw.","🔒 암호가 설정됐어요":"🔒 Wachtwoord is ingesteld","암호를 삭제했어요":"Wachtwoord verwijderd","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Wachtwoord verwijderen? Vanaf nu wordt het direct geopend zonder vergrendeling.","📺 보며 메모":"📺 Notities tijdens het kijken","유튜브 링크 붙여넣기":"YouTube-link plakken","열기":"Openen","내 PC 영상 파일 열기":"Lokaal videobestand van pc openen","유튜브 링크를 확인해 주세요":"Controleer de YouTube-link","앞에 띄우기를 열 수 없어요":"Kan de voorgrondweergave niet openen","① 유튜브 링크 붙여넣고 열기":"① YouTube-link plakken en openen","📁 내 영상":"📁 Mijn video's","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Bij het bekijken van Netflix of iets anders, gebruik 📌 Op voorgrond","= 메모를 영상 위에 띄워 바로 적기":"= Notitie op de video weergeven om direct te schrijven","📌 앞에":"📌 Op voorgrond","축소":"Verkleinen","확대":"Vergroten","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Noteer hier direct interessante citaten tijdens het bekijken van de video. Wordt opgeslagen.","메모를 앞 창에서 쓰는 중":"Notitie wordt geschreven in het voorgrondvenster","{파일}(으)로 옮겼어요":"Verplaatst naar {파일}","📁 버튼으로 파일 이동":"Bestand verplaatsen via de knop 📁","끌어서도 이동 가능":"Slepen is ook mogelijk","이미 줄바꿈이 되어 있어요 👍":"Regels zijn al opgemaakt 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Regels per zin geordend","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Dicteren bezig… (druk om te stoppen)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Geen notities om te ordenen. Open eerst een notitie.","마이크 권한을 허용해 주세요":"Sta microfoontoegang toe","음성 받아쓰기를 시작할 수 없어요":"Kan spraakdictee niet starten","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Deze browser ondersteunt geen spraakdictee. Open in Chrome of Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Deze browser ondersteunt \"Op voorgrond\" niet. Open in Chrome of Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Een maand is verstreken, notitie is automatisch opgeslagen als .js","새 파일 이름을 입력하세요.":"Voer een nieuwe bestandsnaam in.","{파일} 파일을 삭제할까요?":"Bestand {파일} verwijderen?","내보낼 메모가 없어요.":"Geen notities om te exporteren.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Geen notities om op te slaan. Open of maak eerst een notitie.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Geen notities voor PDF. Open of maak eerst een notitie.","검색 결과가 없어요.":"Geen zoekresultaten.","이 파일엔 아직 메모가 없어요.":"Dit bestand heeft nog geen notities.","일치하는 파일이 없어요.":"Geen overeenkomende bestanden gevonden.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Kan opslag niet openen. Controleer de browserinstellingen (incognitomodus, etc.).","메모 · 전체":"Notities · Alles","🔍  검색...":"🔍 Zoeken...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Typ hier naar wens. Geen tekenlimiet.\nWordt automatisch opgeslagen tijdens het typen.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Wachtwoord verwijderen? Vanaf nu wordt het direct geopend zonder vergrendeling.","계산기":"Rekenmachine","메모 · 검색 결과":"Notities · Zoekresultaten"},"pl":{"메모장":"Notatnik","Calculator(계산기)":"Kalkulator","잠금 설정":"Ustawienia blokady","글자 작게":"Mniejsza czcionka","글자 크게":"Większa czcionka","줄 간격 좁게":"Węższa interlinia","줄 간격 넓게":"Szersza interlinia","줄 간격(행간)":"Interlinia","📄 PDF 저장":"📄 Zapisz jako PDF","⬇ 전체 백업":"⬇ Pełna kopia zapasowa","＋ 새 메모":"＋ Nowa notatka","목록 접기 / 펼치기":"Zwiń / rozwiń listę","영상 보며 메모 (유튜브·내 영상)":"Notatki podczas oglądania wideo (YouTube / wideo lokalne)","메모를 영상 앞에 띄우기 (순수 메모창)":"Wyświetl notatkę na wideo (czyste okno notatek)","📁 파일":"📁 Pliki","새 파일 만들기":"Utwórz nowy plik","전체 메모":"Wszystkie notatki","🎤 음성 메모":"🎤 Notatki głosowe","기본 메모":"Notatki ogólne","🔍 검색...":"🔍 Szukaj...","메모":"Notatki","이름 변경":"Zmień nazwę","파일 삭제":"Usuń plik","파일로 이동":"Przenieś do pliku","삭제":"Usuń","📁 파일:":"📁 Plik:","제목 (없으면 첫 줄이 제목)":"Tytuł (jeśli pusty, pierwsza linia jest tytułem)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Piszesz tutaj swobodnie. Brak limitu znaków.","/ 입력하면 자동으로 저장됩니다.":"/ Zapisuje się automatycznie podczas wpisywania.","자":"znaków","🧹 줄 정리":"🧹 Porządkuj linie","문장마다 줄을 바꿔 읽기 좋게 정리":"Złam wiersze według zdań dla lepszej czytelności","🎤 받아쓰기":"🎤 Dyktowanie","음성으로 받아쓰기 (말하면 글자로)":"Dyktowanie głosowe (mów, aby zamienić na tekst)","받아쓰기 언어":"Język dyktowania","언어 자동":"Język automatyczny","✓ 자동 저장됨":"✓ Zapisano automatycznie","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Wybierz plik i notatkę po lewej stronie lub kliknij ＋ Nowa notatka, aby rozpocząć.","제목 없음":"Bez tytułu","(제목 없음)":"(Bez tytułu)","📁 어느 파일로 옮길까요?":"📁 Do którego pliku przenieść?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Szukaj nazwy pliku (znajdź tutaj, jeśli jest ich dużo)","그런 이름의 파일이 없어요":"Brak pliku o takiej nazwie","닫기":"Zamknij","🧮 계산기":"🧮 Kalkulator","오류":"Błąd","🔒 암호 입력":"🔒 Wprowadź hasło","🔒 잠금 설정":"🔒 Ustawienia blokady","🔒 새 암호 설정":"🔒 Ustaw nowe hasło","🔒 암호 변경":"🔒 Zmień hasło","🔒 한 번 더":"🔒 Jeszcze raz","암호 설정":"Ustaw hasło","암호 삭제":"Usuń hasło","암호 변경":"Zmień hasło","지금 잠그기":"Zablokuj teraz","저장된 암호를 순서대로 누르세요.":"Wprowadź zapisane hasło w odpowiedniej kolejności.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Naciśnij wybrane cyfry w kolejności, a następnie ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Wprowadź ponownie to samo hasło w celu potwierdzenia.","암호가 달라요. 다시 눌러보세요.":"Hasło jest błędne. Spróbuj ponownie.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Oba wprowadzone hasła nie zgadzają się. Zacznij od nowa.","🔒 암호가 설정됐어요":"🔒 Hasło zostało ustawione","암호를 삭제했어요":"Hasło zostało usunięte","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Usunąć hasło? Od teraz będzie otwierać się bezpośrednio bez blokady.","📺 보며 메모":"📺 Notatki podczas oglądania","유튜브 링크 붙여넣기":"Wklej link YouTube","열기":"Otwórz","내 PC 영상 파일 열기":"Otwórz lokalny plik wideo z komputera","유튜브 링크를 확인해 주세요":"Sprawdź link YouTube","앞에 띄우기를 열 수 없어요":"Nie można otworzyć widoku na pierwszym planie","① 유튜브 링크 붙여넣고 열기":"① Wklej link YouTube i otwórz","📁 내 영상":"📁 Moje wideo","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Podczas oglądania Netflixa itp. użyj 📌 Na pierwszym planie","= 메모를 영상 위에 띄워 바로 적기":"= Wyświetl notatkę na wideo, aby od razu pisać","📌 앞에":"📌 Na pierwszym planie","축소":"Zmniejsz","확대":"Powiększ","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Zapisuj tutaj ciekawe cytaty podczas oglądania wideo. Zostaną zapisane.","메모를 앞 창에서 쓰는 중":"Pisanie notatki w oknie na pierwszym planie","{파일}(으)로 옮겼어요":"Przeniesiono do {파일}","📁 버튼으로 파일 이동":"Przenieś plik za pomocą przycisku 📁","끌어서도 이동 가능":"Możliwe również przez przeciągnięcie","이미 줄바꿈이 되어 있어요 👍":"Wiersze zostały już złamane 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Wiersze uporządkowane według zdań","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Nagrywanie dyktowania… (naciśnij, aby zatrzymać)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Brak notatek do uporządkowania. Najpierw otwórz notatkę.","마이크 권한을 허용해 주세요":"Proszę zezwolić na dostęp do mikrofonu","음성 받아쓰기를 시작할 수 없어요":"Nie można uruchomić dyktowania głosowego","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Ta przeglądarka nie obsługuje dyktowania głosowego. Otwórz w przeglądarce Chrome lub Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Ta przeglądarka nie obsługuje funkcji „Na pierwszym planie”. Otwórz w przeglądarce Chrome lub Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Minął miesiąc, notatka została automatycznie zapisana jako .js","새 파일 이름을 입력하세요.":"Wprowadź nową nazwę pliku.","{파일} 파일을 삭제할까요?":"Usunąć plik {파일}?","내보낼 메모가 없어요.":"Brak notatek do wyeksportowania.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Brak notatek do zapisania. Najpierw otwórz lub utwórz notatkę.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Brak notatek do utworzenia pliku PDF. Najpierw otwórz lub utwórz notatkę.","검색 결과가 없어요.":"Brak wyników wyszukiwania.","이 파일엔 아직 메모가 없어요.":"Ten plik nie ma jeszcze żadnych notatek.","일치하는 파일이 없어요.":"Brak pasujących plików.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Nie można otworzyć pamięci. Sprawdź ustawienia przeglądarki (tryb incognito itp.).","메모 · 전체":"Notatki · Wszystkie","🔍  검색...":"🔍 Szukaj...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Piszesz tutaj swobodnie. Brak limitu znaków.\nZapisuje się automatycznie podczas wpisywania.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Usunąć hasło? Od teraz będzie otwierać się bezpośrednio bez blokady.","계산기":"Kalkulator","메모 · 검색 결과":"Notatki · Wyniki wyszukiwania"},"ru":{"메모장":"Блокнот","Calculator(계산기)":"Калькулятор","잠금 설정":"Настройки блокировки","글자 작게":"Меньший шрифт","글자 크게":"Больший шрифт","줄 간격 좁게":"Уменьшить межстрочный интервал","줄 간격 넓게":"Увеличить межстрочный интервал","줄 간격(행간)":"Межстрочный интервал","📄 PDF 저장":"📄 Сохранить в PDF","⬇ 전체 백업":"⬇ Полная резервная копия","＋ 새 메모":"＋ Новая заметка","목록 접기 / 펼치기":"Свернуть / развернуть список","영상 보며 메모 (유튜브·내 영상)":"Заметки при просмотре видео (YouTube / локальное видео)","메모를 영상 앞에 띄우기 (순수 메모창)":"Поверх видео (чистое окно заметок)","📁 파일":"📁 Файлы","새 파일 만들기":"Создать новый файл","전체 메모":"Все заметки","🎤 음성 메모":"🎤 Голосовые заметки","기본 메모":"Общие заметки","🔍 검색...":"🔍 Поиск...","메모":"Заметки","이름 변경":"Переименовать","파일 삭제":"Удалить файл","파일로 이동":"Переместить в файл","삭제":"Удалить","📁 파일:":"📁 Файл:","제목 (없으면 첫 줄이 제목)":"Заголовок (если пусто, первая строка станет заголовком)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Пишите здесь всё, что хотите. Без ограничений по символам.","/ 입력하면 자동으로 저장됩니다.":"/ Сохраняется автоматически при вводе.","자":"символов","🧹 줄 정리":"🧹 Форматировать строки","문장마다 줄을 바꿔 읽기 좋게 정리":"Разбить по предложениям для удобства чтения","🎤 받아쓰기":"🎤 Диктовка","음성으로 받아쓰기 (말하면 글자로)":"Голосовой ввод (говорите — текст печатается)","받아쓰기 언어":"Язык диктовки","언어 자동":"Автоматический язык","✓ 자동 저장됨":"✓ Сохранено автоматически","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Выберите файл и заметку слева или нажмите ＋ Новая заметка, чтобы начать.","제목 없음":"Без названия","(제목 없음)":"(Без названия)","📁 어느 파일로 옮길까요?":"📁 В какой файл переместить?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Поиск имени файла (если их много)","그런 이름의 파일이 없어요":"Нет файла с таким именем","닫기":"Закрыть","🧮 계산기":"🧮 Калькулятор","오류":"Ошибка","🔒 암호 입력":"🔒 Введите пароль","🔒 잠금 설정":"🔒 Настройки блокировки","🔒 새 암호 설정":"🔒 Установить новый пароль","🔒 암호 변경":"🔒 Изменить пароль","🔒 한 번 더":"🔒 Ещё раз","암호 설정":"Установить пароль","암호 삭제":"Удалить пароль","암호 변경":"Изменить пароль","지금 잠그기":"Заблокировать сейчас","저장된 암호를 순서대로 누르세요.":"Введите сохраненный пароль по порядку.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Нажимайте нужные цифры по порядку и нажмите ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Введите тот же пароль еще раз для подтверждения.","암호가 달라요. 다시 눌러보세요.":"Неверный пароль. Попробуйте еще раз.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Введенные пароли не совпадают. Пожалуйста, начните сначала.","🔒 암호가 설정됐어요":"🔒 Пароль установлен","암호를 삭제했어요":"Пароль удален","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Удалить пароль? В дальнейшем он будет открываться сразу без блокировки.","📺 보며 메모":"📺 Заметки при просмотре","유튜브 링크 붙여넣기":"Вставить ссылку YouTube","열기":"Открыть","내 PC 영상 파일 열기":"Открыть локальный видеофайл на ПК","유튜브 링크를 확인해 주세요":"Пожалуйста, проверьте ссылку YouTube","앞에 띄우기를 열 수 없어요":"Не удается открыть режим поверх окон","① 유튜브 링크 붙여넣고 열기":"① Вставьте ссылку YouTube и откройте","📁 내 영상":"📁 Мои видео","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② При просмотре Netflix и др. используйте 📌 Поверх окон","= 메모를 영상 위에 띄워 바로 적기":"= Заметки поверх видео для быстрого ввода","📌 앞에":"📌 Поверх окон","축소":"Уменьшить","확대":"Увеличить","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Записывайте интересные цитаты прямо здесь во время просмотра видео. Они сохранятся.","메모를 앞 창에서 쓰는 중":"Запись заметки в окне поверх остальных","{파일}(으)로 옮겼어요":"Перемещено в {파일}","📁 버튼으로 파일 이동":"Перемещение файла кнопкой 📁","끌어서도 이동 가능":"Также доступно перетаскивание","이미 줄바꿈이 되어 있어요 👍":"Строки уже разбиты 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Строки упорядочены по предложениям","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Идет диктовка… (нажмите, чтобы остановить)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Нет заметок для форматирования. Сначала откройте заметку.","마이크 권한을 허용해 주세요":"Пожалуйста, разрешите доступ к микрофону","음성 받아쓰기를 시작할 수 없어요":"Не удалось запустить голосовой ввод","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Этот браузер не поддерживает голосовой ввод. Откройте в Chrome или Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Этот браузер не поддерживает функцию «Поверх окон». Откройте в Chrome или Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Прошел месяц, заметка автоматически сохранена как .js","새 파일 이름을 입력하세요.":"Введите новое имя файла.","{파일} 파일을 삭제할까요?":"Удалить файл {파일}?","내보낼 메모가 없어요.":"Нет заметок для экспорта.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Нет заметок для сохранения. Сначала откройте или создайте заметку.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Нет заметок для конвертации в PDF. Сначала откройте или создайте заметку.","검색 결과가 없어요.":"Результатов поиска нет.","이 파일엔 아직 메모가 없어요.":"В этом файле пока нет заметок.","일치하는 파일이 없어요.":"Подходящих файлов не найдено.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Не удается открыть хранилище. Проверьте настройки браузера (режим инкогнито и т.д.).","메모 · 전체":"Заметки · Все","🔍  검색...":"🔍 Поиск...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Пишите здесь всё, что хотите. Без ограничений по символам.\nСохраняется автоматически при вводе.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Удалить пароль? В дальнейшем он будет открываться сразу без блокировки.","계산기":"Калькулятор","메모 · 검색 결과":"Заметки · Результаты поиска"},"pt":{"메모장":"Bloco de notas","Calculator(계산기)":"Calculadora","잠금 설정":"Configurações de bloqueio","글자 작게":"Fonte menor","글자 크게":"Fonte maior","줄 간격 좁게":"Diminuir espaçamento entre linhas","줄 간격 넓게":"Aumentar espaçamento entre linhas","줄 간격(행간)":"Espaçamento entre linhas","📄 PDF 저장":"📄 Salvar como PDF","⬇ 전체 백업":"⬇ Backup completo","＋ 새 메모":"＋ Nova nota","목록 접기 / 펼치기":"Recolher / expandir lista","영상 보며 메모 (유튜브·내 영상)":"Notas ao assistir vídeo (YouTube / vídeo local)","메모를 영상 앞에 띄우기 (순수 메모창)":"Exibir nota sobre o vídeo (janela de notas limpa)","📁 파일":"📁 Arquivos","새 파일 만들기":"Criar novo arquivo","전체 메모":"Todas as notas","🎤 음성 메모":"🎤 Notas de voz","기본 메모":"Notas gerais","🔍 검색...":"🔍 Pesquisar...","메모":"Notas","이름 변경":"Renomear","파일 삭제":"Excluir arquivo","파일로 이동":"Mover para o arquivo","삭제":"Excluir","📁 파일:":"📁 Arquivo:","제목 (없으면 첫 줄이 제목)":"Título (se vazio, a primeira linha será o título)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Escreva livremente aqui. Sem limite de caracteres.","/ 입력하면 자동으로 저장됩니다.":"/ Salva automaticamente ao digitar.","자":"caracteres","🧹 줄 정리":"🧹 Organizar linhas","문장마다 줄을 바꿔 읽기 좋게 정리":"Quebrar linhas por frase para melhor leitura","🎤 받아쓰기":"🎤 Ditado","음성으로 받아쓰기 (말하면 글자로)":"Ditado por voz (fale para converter em texto)","받아쓰기 언어":"Idioma do ditado","언어 자동":"Idioma automático","✓ 자동 저장됨":"✓ Salvo automaticamente","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Selecione um arquivo e uma nota à esquerda ou clique em ＋ Nova nota para começar.","제목 없음":"Sem título","(제목 없음)":"(Sem título)","📁 어느 파일로 옮길까요?":"📁 Mover para qual arquivo?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Pesquisar nome do arquivo (encontre aqui se houver muitos)","그런 이름의 파일이 없어요":"Nenhum arquivo com esse nome","닫기":"Fechar","🧮 계산기":"🧮 Calculadora","오류":"Erro","🔒 암호 입력":"🔒 Digite a senha","🔒 잠금 설정":"🔒 Configurações de bloqueio","🔒 새 암호 설정":"🔒 Definir nova senha","🔒 암호 변경":"🔒 Alterar senha","🔒 한 번 더":"🔒 Mais uma vez","암호 설정":"Definir senha","암호 삭제":"Excluir senha","암호 변경":"Alterar senha","지금 잠그기":"Bloquear agora","저장된 암호를 순서대로 누르세요.":"Digite a senha salva na ordem correta.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Pressione os números desejados em ordem e toque em ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Digite a mesma senha novamente para confirmar.","암호가 달라요. 다시 눌러보세요.":"A senha está incorreta. Tente novamente.","두 번이 달라요. 처음부터 다시 눌러주세요.":"As duas senhas não coincidem. Comece de novo, por favor.","🔒 암호가 설정됐어요":"🔒 Senha definida","암호를 삭제했어요":"Senha excluída","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Excluir senha? A partir de agora, abrirá diretamente sem bloqueio.","📺 보며 메모":"📺 Notas ao assistir","유튜브 링크 붙여넣기":"Colar link do YouTube","열기":"Abrir","내 PC 영상 파일 열기":"Abrir arquivo de vídeo local do PC","유튜브 링크를 확인해 주세요":"Verifique o link do YouTube","앞에 띄우기를 열 수 없어요":"Não é possível abrir a visualização em primeiro plano","① 유튜브 링크 붙여넣고 열기":"① Colar link do YouTube e abrir","📁 내 영상":"📁 Meus vídeos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Ao assistir Netflix ou qualquer outra coisa, use 📌 Em primeiro plano","= 메모를 영상 위에 띄워 바로 적기":"= Exibir nota sobre o vídeo para escrever imediatamente","📌 앞에":"📌 Em primeiro plano","축소":"Reduzir","확대":"Ampliar","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Anote citações interessantes diretamente aqui enquanto assiste ao vídeo. Elas serão salvas.","메모를 앞 창에서 쓰는 중":"Escrevendo nota na janela em primeiro plano","{파일}(으)로 옮겼어요":"Movido para {파일}","📁 버튼으로 파일 이동":"Mover arquivo pelo botão 📁","끌어서도 이동 가능":"Arrastar também é possível","이미 줄바꿈이 되어 있어요 👍":"As linhas já foram quebradas 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Linhas organizadas por frase","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Gravando ditado… (pressione para parar)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Nenhuma nota para organizar. Abra uma nota primeiro.","마이크 권한을 허용해 주세요":"Permita o acesso ao microfone","음성 받아쓰기를 시작할 수 없어요":"Não foi possível iniciar o ditado por voz","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador não suporta ditado por voz. Abra no Chrome ou Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador não suporta \"Em primeiro plano\". Abra no Chrome ou Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Passou um mês, a nota foi salva automaticamente como .js","새 파일 이름을 입력하세요.":"Digite um novo nome de arquivo.","{파일} 파일을 삭제할까요?":"Excluir o arquivo {파일}?","내보낼 메모가 없어요.":"Nenhuma nota para exportar.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Nenhuma nota para salvar. Abra ou crie uma nota primeiro.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Nenhuma nota para PDF. Abra ou crie uma nota primeiro.","검색 결과가 없어요.":"Nenhum resultado de pesquisa.","이 파일엔 아직 메모가 없어요.":"Este arquivo ainda não tem notas.","일치하는 파일이 없어요.":"Nenhum arquivo correspondente encontrado.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Não é possível abrir o armazenamento. Verifique as configurações do navegador (modo anônimo, etc.).","메모 · 전체":"Notas · Tudo","🔍  검색...":"🔍 Pesquisar...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Escreva livremente aqui. Sem limite de caracteres.\nSalva automaticamente ao digitar.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Excluir senha? A partir de agora, abrirá diretamente sem bloqueio.","계산기":"Calculadora","메모 · 검색 결과":"Notas · Resultados da pesquisa"},"es-MX":{"메모장":"Bloc de notas","Calculator(계산기)":"Calculadora","잠금 설정":"Configuración de bloqueo","글자 작게":"Texto más pequeño","글자 크게":"Texto más grande","줄 간격 좁게":"Interlineado más estrecho","줄 간격 넓게":"Interlineado más ancho","줄 간격(행간)":"Interlineado","📄 PDF 저장":"📄 Guardar como PDF","⬇ 전체 백업":"⬇ Respaldo completo","＋ 새 메모":"＋ Nueva nota","목록 접기 / 펼치기":"Contraer / expandir lista","영상 보며 메모 (유튜브·내 영상)":"Notas al ver videos (YouTube / video local)","메모를 영상 앞에 띄우기 (순수 메모창)":"Mostrar nota sobre el video (ventana de notas limpia)","📁 파일":"📁 Archivos","새 파일 만들기":"Crear nuevo archivo","전체 메모":"Todas las notas","🎤 음성 메모":"🎤 Notas de voz","기본 메모":"Notas generales","🔍 검색...":"🔍 Buscar...","메모":"Notas","이름 변경":"Cambiar nombre","파일 삭제":"Eliminar archivo","파일로 이동":"Mover al archivo","삭제":"Eliminar","📁 파일:":"📁 Archivo:","제목 (없으면 첫 줄이 제목)":"Título (si está vacío, la primera línea es el título)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Escribe aquí libremente. Sin límite de caracteres.","/ 입력하면 자동으로 저장됩니다.":"/ Se guarda automáticamente al escribir.","자":"caracteres","🧹 줄 정리":"🧹 Organizar líneas","문장마다 줄을 바꿔 읽기 좋게 정리":"Dividir líneas por oración para mejor lectura","🎤 받아쓰기":"🎤 Dictado","음성으로 받아쓰기 (말하면 글자로)":"Dictado por voz (habla para convertir a texto)","받아쓰기 언어":"Idioma de dictado","언어 자동":"Idioma automático","✓ 자동 저장됨":"✓ Guardado automáticamente","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Selecciona un archivo y una nota a la izquierda, o haz clic en ＋ Nueva nota para comenzar.","제목 없음":"Sin título","(제목 없음)":"(Sin título)","📁 어느 파일로 옮길까요?":"📁 ¿A qué archivo mover?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Buscar nombre de archivo (encuéntralo aquí si hay muchos)","그런 이름의 파일이 없어요":"No hay ningún archivo con ese nombre","닫기":"Cerrar","🧮 계산기":"🧮 Calculadora","오류":"Error","🔒 암호 입력":"🔒 Ingresar contraseña","🔒 잠금 설정":"🔒 Configuración de bloqueo","🔒 새 암호 설정":"🔒 Establecer nueva contraseña","🔒 암호 변경":"🔒 Cambiar contraseña","🔒 한 번 더":"🔒 Otra vez","암호 설정":"Establecer contraseña","암호 삭제":"Eliminar contraseña","암호 변경":"Cambiar contraseña","지금 잠그기":"Bloquear ahora","저장된 암호를 순서대로 누르세요.":"Ingresa la contraseña guardada en el orden correcto.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Presiona los números deseados en orden y toca ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Ingresa la misma contraseña nuevamente para confirmar.","암호가 달라요. 다시 눌러보세요.":"La contraseña es incorrecta. Inténtalo de nuevo.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Las dos contraseñas no coinciden. Comienza de nuevo, por favor.","🔒 암호가 설정됐어요":"🔒 Contraseña establecida","암호를 삭제했어요":"Contraseña eliminada","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"¿Eliminar contraseña? A partir de ahora se abrirá directamente sin bloqueo.","📺 보며 메모":"📺 Notas al ver","유튜브 링크 붙여넣기":"Pegar enlace de YouTube","열기":"Abrir","내 PC 영상 파일 열기":"Abrir archivo de video local de la PC","유튜브 링크를 확인해 주세요":"Verifica el enlace de YouTube","앞에 띄우기를 열 수 없어요":"No se puede abrir la vista flotante","① 유튜브 링크 붙여넣고 열기":"① Pegar enlace de YouTube y abrir","📁 내 영상":"📁 Mis videos","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Al ver Netflix o cualquier otra cosa, usa 📌 Flotante","= 메모를 영상 위에 띄워 바로 적기":"= Mostrar nota sobre el video para escribir de inmediato","📌 앞에":"📌 Flotante","축소":"Reducir","확대":"Ampliar","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Anota frases interesantes directamente aquí mientras ves el video. Se guardarán.","메모를 앞 창에서 쓰는 중":"Escribiendo nota en la ventana flotante","{파일}(으)로 옮겼어요":"Movido a {파일}","📁 버튼으로 파일 이동":"Mover archivo mediante el botón 📁","끌어서도 이동 가능":"También se puede arrastrar","이미 줄바꿈이 되어 있어요 👍":"Las líneas ya están organizadas 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Líneas organizadas por oración","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Grabando dictado… (presiona para detener)","정리할 메모가 없어요. 먼저 메모를 여세요.":"No hay notas para organizar. Abre una nota primero.","마이크 권한을 허용해 주세요":"Permite el acceso al micrófono","음성 받아쓰기를 시작할 수 없어요":"No se pudo iniciar el dictado por voz","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador no admite dictado por voz. Ábrelo en Chrome o Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Este navegador no admite \"Flotante\". Ábrelo en Chrome o Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Pasó un mes, la nota se guardó automáticamente como .js","새 파일 이름을 입력하세요.":"Ingresa un nuevo nombre de archivo.","{파일} 파일을 삭제할까요?":"¿Eliminar el archivo {파일}?","내보낼 메모가 없어요.":"No hay notas para exportar.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No hay notas para guardar. Abre o crea una nota primero.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"No hay notas para PDF. Abre o crea una nota primero.","검색 결과가 없어요.":"No hay resultados de búsqueda.","이 파일엔 아직 메모가 없어요.":"Este archivo aún no tiene notas.","일치하는 파일이 없어요.":"No se encontraron archivos coincidentes.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"No se puede abrir el almacenamiento. Revisa la configuración del navegador (modo incógnito, etc.).","메모 · 전체":"Notas · Todo","🔍  검색...":"🔍 Buscar...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Escribe aquí libremente. Sin límite de caracteres.\nSe guarda automáticamente al escribir.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"¿Eliminar contraseña? A partir de ahora se abrirá directamente sin bloqueo.","계산기":"Calculadora","메모 · 검색 결과":"Notas · Resultados de búsqueda"},"id":{"메모장":"Buku catatan","Calculator(계산기)":"Kalkulator","잠금 설정":"Pengaturan kunci","글자 작게":"Perkecil teks","글자 크게":"Perbesar teks","줄 간격 좁게":"Rapatkan jarak baris","줄 간격 넓게":"Longgarkan jarak baris","줄 간격(행간)":"Jarak baris","📄 PDF 저장":"📄 Simpan sebagai PDF","⬇ 전체 백업":"⬇ Cadangan penuh","＋ 새 메모":"＋ Catatan baru","목록 접기 / 펼치기":"Tutup / buka daftar","영상 보며 메모 (유튜브·내 영상)":"Catatan saat menonton video (YouTube / video lokal)","메모를 영상 앞에 띄우기 (순수 메모창)":"Tampilkan catatan di atas video (jendela catatan bersih)","📁 파일":"📁 Berkas","새 파일 만들기":"Buat berkas baru","전체 메모":"Semua catatan","🎤 음성 메모":"🎤 Catatan suara","기본 메모":"Catatan umum","🔍 검색...":"🔍 Cari...","메모":"Catatan","이름 변경":"Ubah nama","파일 삭제":"Hapus berkas","파일로 이동":"Pindahkan ke berkas","삭제":"Hapus","📁 파일:":"📁 Berkas:","제목 (없으면 첫 줄이 제목)":"Judul (jika kosong, baris pertama adalah judul)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Tulis sesuka Anda di sini. Tanpa batas karakter.","/ 입력하면 자동으로 저장됩니다.":"/ Disimpan otomatis saat Anda mengetik.","자":"karakter","🧹 줄 정리":"🧹 Rapikan baris","문장마다 줄을 바꿔 읽기 좋게 정리":"Pecah baris per kalimat agar lebih mudah dibaca","🎤 받아쓰기":"🎤 Dikte","음성으로 받아쓰기 (말하면 글자로)":"Dikte suara (bicara untuk mengubah ke teks)","받아쓰기 언어":"Bahasa dikte","언어 자동":"Bahasa otomatis","✓ 자동 저장됨":"✓ Disimpan otomatis","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Pilih berkas dan catatan di sebelah kiri, atau klik ＋ Catatan baru untuk mulai.","제목 없음":"Tanpa judul","(제목 없음)":"(Tanpa judul)","📁 어느 파일로 옮길까요?":"📁 Pindahkan ke berkas mana?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Cari nama berkas (temukan di sini jika banyak)","그런 이름의 파일이 없어요":"Tidak ada berkas dengan nama tersebut","닫기":"Tutup","🧮 계산기":"🧮 Kalkulator","오류":"Galat","🔒 암호 입력":"🔒 Masukkan kata sandi","🔒 잠금 설정":"🔒 Pengaturan kunci","🔒 새 암호 설정":"🔒 Atur kata sandi baru","🔒 암호 변경":"🔒 Ubah kata sandi","🔒 한 번 더":"🔒 Sekali lagi","암호 설정":"Atur kata sandi","암호 삭제":"Hapus kata sandi","암호 변경":"Ubah kata sandi","지금 잠그기":"Kunci sekarang","저장된 암호를 순서대로 누르세요.":"Masukkan kata sandi yang disimpan sesuai urutan.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Tekan angka yang diinginkan secara berurutan lalu ketuk ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Masukkan kata sandi yang sama sekali lagi untuk konfirmasi.","암호가 달라요. 다시 눌러보세요.":"Kata sandi salah. Silakan coba lagi.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Kedua masukan tidak cocok. Silakan mulai dari awal.","🔒 암호가 설정됐어요":"🔒 Kata sandi telah disetel","암호를 삭제했어요":"Kata sandi dihapus","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Hapus kata sandi? Mulai sekarang akan langsung terbuka tanpa kunci.","📺 보며 메모":"📺 Catatan saat menonton","유튜브 링크 붙여넣기":"Tempel tautan YouTube","열기":"Buka","내 PC 영상 파일 열기":"Buka berkas video lokal PC","유튜브 링크를 확인해 주세요":"Periksa tautan YouTube","앞에 띄우기를 열 수 없어요":"Tidak dapat membuka tampilan mengapung","① 유튜브 링크 붙여넣고 열기":"① Tempel tautan YouTube dan buka","📁 내 영상":"📁 Video saya","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Saat menonton Netflix atau apa pun, gunakan 📌 Di atas","= 메모를 영상 위에 띄워 바로 적기":"= Tampilkan catatan di atas video untuk menulis langsung","📌 앞에":"📌 Di atas","축소":"Perkecil","확대":"Perbesar","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Catat kutipan menarik langsung di sini saat menonton video. Akan disimpan.","메모를 앞 창에서 쓰는 중":"Menulis catatan di jendela depan","{파일}(으)로 옮겼어요":"Dipindahkan ke {파일}","📁 버튼으로 파일 이동":"Pindahkan berkas melalui tombol 📁","끌어서도 이동 가능":"Bisa juga dengan menyeret","이미 줄바꿈이 되어 있어요 👍":"Baris sudah dirapikan 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Baris diatur ulang per kalimat","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Sedang mendikte… (tekan untuk berhenti)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Tidak ada catatan untuk dirapikan. Buka catatan terlebih dahulu.","마이크 권한을 허용해 주세요":"Izinkan akses mikrofon","음성 받아쓰기를 시작할 수 없어요":"Tidak dapat memulai dikte suara","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Peramban ini tidak mendukung dikte suara. Buka di Chrome atau Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Peramban ini tidak mendukung \"Di atas\". Buka di Chrome atau Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Sebulan tuntas, catatan otomatis disimpan sebagai .js","새 파일 이름을 입력하세요.":"Masukkan nama berkas baru.","{파일} 파일을 삭제할까요?":"Hapus berkas {파일}?","내보낼 메모가 없어요.":"Tidak ada catatan untuk diekspor.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Tidak ada catatan untuk disimpan. Buka atau buat catatan terlebih dahulu.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Tidak ada catatan untuk PDF. Buka atau buat catatan terlebih dahulu.","검색 결과가 없어요.":"Tidak ada hasil pencarian.","이 파일엔 아직 메모가 없어요.":"Berkas ini belum memiliki catatan.","일치하는 파일이 없어요.":"Tidak ada berkas yang cocok ditemukan.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Tidak dapat membuka penyimpanan. Periksa pengaturan peramban (mode penyamaran, dll.).","메모 · 전체":"Catatan · Semua","🔍  검색...":"🔍 Cari...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Tulis sesuka Anda di sini. Tanpa batas karakter.\nDisimpan otomatis saat Anda mengetik.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Hapus kata sandi? Mulai sekarang akan langsung terbuka tanpa kunci.","계산기":"Kalkulator","메모 · 검색 결과":"Catatan · Hasil pencarian"},"vi":{"메모장":"Sổ tay","Calculator(계산기)":"Máy tính","잠금 설정":"Cài đặt khóa","글자 작게":"Chữ nhỏ hơn","글자 크게":"Chữ lớn hơn","줄 간격 좁게":"Thu hẹp khoảng cách dòng","줄 간격 넓게":"Mở rộng khoảng cách dòng","줄 간격(행간)":"Khoảng cách dòng","📄 PDF 저장":"📄 Lưu thành PDF","⬇ 전체 백업":"⬇ Sao lưu toàn bộ","＋ 새 메모":"＋ Ghi chú mới","목록 접기 / 펼치기":"Thu gọn / mở rộng danh sách","영상 보며 메모 (유튜브·내 영상)":"Ghi chú khi xem video (YouTube / video cục bộ)","메모를 영상 앞에 띄우기 (순수 메모창)":"Hiển thị ghi chú trên video (cửa sổ ghi chú sạch)","📁 파일":"📁 Tệp","새 파일 만들기":"Tạo tệp mới","전체 메모":"Tất cả ghi chú","🎤 음성 메모":"🎤 Ghi chú thoại","기본 메모":"Ghi chú chung","🔍 검색...":"🔍 Tìm kiếm...","메모":"Ghi chú","이름 변경":"Đổi tên","파일 삭제":"Xóa tệp","파일로 이동":"Di chuyển đến tệp","삭제":"Xóa","📁 파일:":"📁 Tệp:","제목 (없으면 첫 줄이 제목)":"Tiêu đề (nếu trống, dòng đầu tiên sẽ là tiêu đề)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"Viết thoải mái ở đây. Không giới hạn ký tự.","/ 입력하면 자동으로 저장됩니다.":"/ Tự động lưu khi bạn nhập.","자":"ký tự","🧹 줄 정리":"🧹 Sắp xếp dòng","문장마다 줄을 바꿔 읽기 좋게 정리":"Ngắt dòng theo câu để dễ đọc hơn","🎤 받아쓰기":"🎤 Đọc chính tả","음성으로 받아쓰기 (말하면 글자로)":"Nhập liệu bằng giọng nói (nói để chuyển thành văn bản)","받아쓰기 언어":"Ngôn ngữ đọc chính tả","언어 자동":"Ngôn ngữ tự động","✓ 자동 저장됨":"✓ Đã tự động lưu","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"Chọn một tệp và ghi chú ở bên trái, hoặc nhấp vào ＋ Ghi chú mới để bắt đầu.","제목 없음":"Không có tiêu đề","(제목 없음)":"(Không có tiêu đề)","📁 어느 파일로 옮길까요?":"📁 Di chuyển đến tệp nào?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 Tìm kiếm tên tệp (tìm ở đây nếu có nhiều)","그런 이름의 파일이 없어요":"Không tìm thấy tệp có tên đó","닫기":"Đóng","🧮 계산기":"🧮 Máy tính","오류":"Lỗi","🔒 암호 입력":"🔒 Nhập mật khẩu","🔒 잠금 설정":"🔒 Cài đặt khóa","🔒 새 암호 설정":"🔒 Đặt mật khẩu mới","🔒 암호 변경":"🔒 Thay đổi mật khẩu","🔒 한 번 더":"🔒 Một lần nữa","암호 설정":"Đặt mật khẩu","암호 삭제":"Xóa mật khẩu","암호 변경":"Thay đổi mật khẩu","지금 잠그기":"Khóa ngay","저장된 암호를 순서대로 누르세요.":"Nhập mật khẩu đã lưu theo đúng thứ tự.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"Nhấn các số mong muốn theo thứ tự và chạm vào ✓.","확인을 위해 같은 암호를 다시 누르세요.":"Nhập lại mật khẩu tương tự để xác nhận.","암호가 달라요. 다시 눌러보세요.":"Mật khẩu không đúng. Vui lòng thử lại.","두 번이 달라요. 처음부터 다시 눌러주세요.":"Hai lần nhập không khớp. Vui lòng bắt đầu lại từ đầu.","🔒 암호가 설정됐어요":"🔒 Đã thiết lập mật khẩu","암호를 삭제했어요":"Đã xóa mật khẩu","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"Xóa mật khẩu? Từ bây giờ sẽ mở trực tiếp không cần khóa.","📺 보며 메모":"📺 Ghi chú khi xem","유튜브 링크 붙여넣기":"Dán liên kết YouTube","열기":"Mở","내 PC 영상 파일 열기":"Mở tệp video cục bộ trên PC","유튜브 링크를 확인해 주세요":"Vui lòng kiểm tra liên kết YouTube","앞에 띄우기를 열 수 없어요":"Không thể mở chế độ nổi phía trước","① 유튜브 링크 붙여넣고 열기":"① Dán liên kết YouTube và mở","📁 내 영상":"📁 Video của tôi","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② Khi xem Netflix hoặc bất cứ thứ gì, hãy dùng 📌 Ghim phía trước","= 메모를 영상 위에 띄워 바로 적기":"= Hiển thị ghi chú trên video để viết trực tiếp","📌 앞에":"📌 Ghim phía trước","축소":"Thu nhỏ","확대":"Phóng to","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"Ghi lại các câu nói hay trực tiếp ở đây khi xem video. Sẽ được lưu lại.","메모를 앞 창에서 쓰는 중":"Đang viết ghi chú ở cửa sổ phía trước","{파일}(으)로 옮겼어요":"Đã chuyển đến {파일}","📁 버튼으로 파일 이동":"Di chuyển tệp bằng nút 📁","끌어서도 이동 가능":"Có thể kéo thả","이미 줄바꿈이 되어 있어요 👍":"Các dòng đã được ngắt sẵn 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 Đã sắp xếp lại dòng theo câu","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ Đang đọc chính tả… (nhấn để dừng)","정리할 메모가 없어요. 먼저 메모를 여세요.":"Không có ghi chú để sắp xếp. Vui lòng mở ghi chú trước.","마이크 권한을 허용해 주세요":"Vui lòng cho phép quyền truy cập micrô","음성 받아쓰기를 시작할 수 없어요":"Không thể bắt đầu đọc chính tả bằng giọng nói","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Trình duyệt này không hỗ trợ đọc chính tả bằng giọng nói. Vui lòng mở trong Chrome hoặc Edge.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"Trình duyệt này không hỗ trợ tính năng \"Ghim phía trước\". Vui lòng mở trong Chrome hoặc Edge.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 Đã qua một tháng, ghi chú được tự động lưu dưới dạng .js","새 파일 이름을 입력하세요.":"Nhập tên tệp mới.","{파일} 파일을 삭제할까요?":"Xóa tệp {파일}?","내보낼 메모가 없어요.":"Không có ghi chú để xuất.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Không có ghi chú để lưu. Vui lòng mở hoặc tạo ghi chú trước.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"Không có ghi chú để tạo PDF. Vui lòng mở hoặc tạo ghi chú trước.","검색 결과가 없어요.":"Không có kết quả tìm kiếm.","이 파일엔 아직 메모가 없어요.":"Tệp này chưa có ghi chú nào.","일치하는 파일이 없어요.":"Không tìm thấy tệp phù hợp.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"Không thể mở bộ nhớ. Vui lòng kiểm tra cài đặt trình duyệt (chế độ ẩn danh, v.v.).","메모 · 전체":"Ghi chú · Tất cả","🔍  검색...":"🔍 Tìm kiếm...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"Viết thoải mái ở đây. Không giới hạn ký tự.\nTự động lưu khi bạn nhập.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"Xóa mật khẩu? Từ bây giờ sẽ mở trực tiếp không cần khóa.","계산기":"Máy tính","메모 · 검색 결과":"Ghi chú · Kết quả tìm kiếm"},"ar":{"메모장":"مفكرة","Calculator(계산기)":"آلة حاسبة","잠금 설정":"إعدادات القفل","글자 작게":"تصغير النص","글자 크게":"تكبير النص","줄 간격 좁게":"تقليل تباعد الأسطر","줄 간격 넓게":"زيادة تباعد الأسطر","줄 간격(행간)":"تباعد الأسطر","📄 PDF 저장":"📄 حفظ كملف PDF","⬇ 전체 백업":"⬇ نسخ احتياطي كامل","＋ 새 메모":"＋ ملاحظة جديدة","목록 접기 / 펼치기":"طي / توسيع القائمة","영상 보며 메모 (유튜브·내 영상)":"ملاحظات أثناء مشاهدة الفيديو (يوتيوب / فيديو محلي)","메모를 영상 앞에 띄우기 (순수 메모창)":"عرض الملاحظة فوق الفيديو (نافذة ملاحظات نظيفة)","📁 파일":"📁 الملفات","새 파일 만들기":"إنشاء ملف جديد","전체 메모":"جميع الملاحظات","🎤 음성 메모":"🎤 ملاحظات صوتية","기본 메모":"ملاحظات عامة","🔍 검색...":"🔍 بحث...","메모":"ملاحظات","이름 변경":"إعادة تسمية","파일 삭제":"حذف الملف","파일로 이동":"نقل إلى الملف","삭제":"حذف","📁 파일:":"📁 الملف:","제목 (없으면 첫 줄이 제목)":"العنوان (إذا كان فارغاً، السطر الأول هو العنوان)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"اكتب بحرية هنا. لا يوجد حد أقصى للحروف.","/ 입력하면 자동으로 저장됩니다.":"/ يتم الحفظ تلقائياً عند الكتابة.","자":"حرف","🧹 줄 정리":"🧹 ترتيب الأسطر","문장마다 줄을 바꿔 읽기 좋게 정리":"تقسيم الأسطر حسب الجملة لسهولة القراءة","🎤 받아쓰기":"🎤 الإملاء الصوتي","음성으로 받아쓰기 (말하면 글자로)":"الإملاء الصوتي (تحدث لتحويله إلى نص)","받아쓰기 언어":"لغة الإملاء","언어 자동":"لغة تلقائية","✓ 자동 저장됨":"✓ تم الحفظ تلقائياً","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"اختر ملفاً وملاحظة من اليسار، أو انقر فوق ＋ ملاحظة جديدة للبدء.","제목 없음":"بدون عنوان","(제목 없음)":"(بدون عنوان)","📁 어느 파일로 옮길까요?":"📁 إلى أي ملف تريد النقل؟","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 البحث عن اسم الملف (ابحث هنا إذا كان هناك الكثير)","그런 이름의 파일이 없어요":"لا يوجد ملف بهذا الاسم","닫기":"إغلاق","🧮 계산기":"🧮 آلة حاسبة","오류":"خطأ","🔒 암호 입력":"🔒 إدخال كلمة المرور","🔒 잠금 설정":"🔒 إعدادات القفل","🔒 새 암호 설정":"🔒 تعيين كلمة مرور جديدة","🔒 암호 변경":"🔒 تغيير كلمة المرور","🔒 한 번 더":"🔒 مرة أخرى","암호 설정":"تعيين كلمة المرور","암호 삭제":"حذف كلمة المرور","암호 변경":"تغيير كلمة المرور","지금 잠그기":"قفل الآن","저장된 암호를 순서대로 누르세요.":"أدخل كلمة المرور المحفوظة بالترتيب الصحيح.","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"اضغط على الأرقام المطلوبة بالترتيب ثم انقر فوق ✓.","확인을 위해 같은 암호를 다시 누르세요.":"أدخل نفس كلمة المرور مرة أخرى للتأكيد.","암호가 달라요. 다시 눌러보세요.":"كلمة المرور غير صحيحة. حاول مرة أخرى.","두 번이 달라요. 처음부터 다시 눌러주세요.":"كلمتا المرور غير متطابقتين. ابدأ من جديد من فضلك.","🔒 암호가 설정됐어요":"🔒 تم تعيين كلمة المرور","암호를 삭제했어요":"تم حذف كلمة المرور","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"هل تريد حذف كلمة المرور؟ من الآن فصاعداً سيتم فتحها مباشرة بدون قفل.","📺 보며 메모":"📺 ملاحظات المشاهدة","유튜브 링크 붙여넣기":"لصق رابط يوتيوب","열기":"فتح","내 PC 영상 파일 열기":"فتح ملف فيديو محلي من الكمبيوتر","유튜브 링크를 확인해 주세요":"يرجى التحقق من رابط يوتيوب","앞에 띄우기를 열 수 없어요":"لا يمكن فتح نافذة العرض العائمة","① 유튜브 링크 붙여넣고 열기":"① لصق رابط يوتيوب والفتح","📁 내 영상":"📁 فيديوهاتي","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② عند مشاهدة نتفليكس أو أي شيء آخر، استخدم 📌 عائم","= 메모를 영상 위에 띄워 바로 적기":"= عرض الملاحظة فوق الفيديو للكتابة المباشرة","📌 앞에":"📌 عائم","축소":"تصغير","확대":"تكبير","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"اكتب الجمل الجميلة هنا مباشرة أثناء مشاهدة الفيديو. سيتم حفظها.","메모를 앞 창에서 쓰는 중":"جاري كتابة الملاحظة في النافذة الأمامية","{파일}(으)로 옮겼어요":"تم النقل إلى {파일}","📁 버튼으로 파일 이동":"نقل الملف عبر زر 📁","끌어서도 이동 가능":"يمكن السحب والإفلات أيضاً","이미 줄바꿈이 되어 있어요 👍":"الأسطر مرتبة بالفعل 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 تم ترتيب الأسطر حسب الجملة","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ جاري التسجيل الصوتي… (اضغط للإيقاف)","정리할 메모가 없어요. 먼저 메모를 여세요.":"لا توجد ملاحظات للترتيب. افتح ملاحظة أولاً.","마이크 권한을 허용해 주세요":"يرجى السماح بالوصول إلى الميكروفون","음성 받아쓰기를 시작할 수 없어요":"تعذر بدء الإملاء الصوتي","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"هذا المتصفح لا يدعم الإملاء الصوتي. يرجى فتحه في كروم أو إيدج.","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"هذا المتصفح لا يدعم ميزة \"عائم\". يرجى فتحه في كروم أو إيدج.","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 مضى شهر، وتم حفظ الملاحظة تلقائياً كملف .js","새 파일 이름을 입력하세요.":"أدخل اسم الملف الجديد.","{파일} 파일을 삭제할까요?":"هل تريد حذف الملف {파일}؟","내보낼 메모가 없어요.":"لا توجد ملاحظات للتصدير.","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"لا توجد ملاحظات للحفظ. افتح ملاحظة أو أنشئ واحدة جديدة أولاً.","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"لا توجد ملاحظات لإنشاء ملف PDF. افتح ملاحظة أو أنشئ واحدة جديدة أولاً.","검색 결과가 없어요.":"لا توجد نتائج بحث.","이 파일엔 아직 메모가 없어요.":"لا توجد ملاحظات في هذا الملف حتى الآن.","일치하는 파일이 없어요.":"لم يتم العثور على ملفات مطابقة.","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"تعذر فتح التخزين. يرجى التحقق من إعدادات المتصفح (وضع التصفح المخفي، إلخ).","메모 · 전체":"ملاحظات · الكل","🔍  검색...":"🔍 بحث...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"اكتب بحرية هنا. لا يوجد حد أقصى للحروف.\nيتم الحفظ تلقائياً عند الكتابة.","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"هل تريد حذف كلمة المرور؟ من الآن فصاعداً سيتم فتحها مباشرة بدون قفل.","계산기":"آلة حاسبة","메모 · 검색 결과":"ملاحظات · نتائج البحث"},"hi":{"메모장":"नोटपैड","Calculator(계산기)":"कैलकुलेटर","잠금 설정":"लॉक सेटिंग्स","글자 작게":"छोटा पाठ","글자 크게":"बड़ा पाठ","줄 간격 좁게":"पंक्ति अंतराल कम करें","줄 간격 넓게":"पंक्ति अंतराल बढ़ाएं","줄 간격(행간)":"पंक्ति अंतराल","📄 PDF 저장":"📄 PDF के रूप में सहेजें","⬇ 전체 백업":"⬇ पूर्ण बैकअप","＋ 새 메모":"＋ नया नोट","목록 접기 / 펼치기":"सूची संक्षिप्त / विस्तृत करें","영상 보며 메모 (유튜브·내 영상)":"वीडियो देखते समय notes (यूट्यूब / स्थानीय वीडियो)","메모를 영상 앞에 띄우기 (순수 메모창)":"वीडियो के ऊपर नोट प्रदर्शित करें (स्वच्छ नोट विंडो)","📁 파일":"📁 फ़ाइलें","새 파일 만들기":"नई फ़ाइल बनाएं","전체 메모":"सभी नोट्स","🎤 음성 메모":"🎤 आवाज़ के नोट्स","기본 메모":"सामान्य नोट्स","🔍 검색...":"🔍 खोजें...","메모":"नोट्स","이름 변경":"नाम बदलें","파일 삭제":"फ़ाइल हटाएं","파일로 이동":"फ़ाइल में ले जाएं","삭제":"हटाएं","📁 파일:":"📁 फ़ाइल:","제목 (없으면 첫 줄이 제목)":"शीर्षक (यदि खाली है, तो पहली पंक्ति शीर्षक होगी)","여기에 마음껏 적으세요. 글자 수 제한 없어요.":"यहाँ स्वतंत्र रूप से लिखें। कोई वर्ण सीमा नहीं है।","/ 입력하면 자동으로 저장됩니다.":"/ टाइप करते ही यह स्वचालित रूप से सहेज लिया जाता है।","자":"वर्ण","🧹 줄 정리":"🧹 पंक्तियाँ व्यवस्थित करें","문장마다 줄을 바꿔 읽기 좋게 정리":"बेहतर पठन के लिए प्रत्येक वाक्य द्वारा पंक्तियाँ विभाजित करें","🎤 받아쓰기":"🎤 श्रुतलेख (डिक्टेशन)","음성으로 받아쓰기 (말하면 글자로)":"आवाज़ से श्रुतलेख (बोलने पर पाठ में परिवर्तित होता है)","받아쓰기 언어":"श्रुतलेख भाषा","언어 자동":"स्वचालित भाषा","✓ 자동 저장됨":"✓ स्वचालित रूप से सहेजा गया","왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.":"बाईं ओर से कोई फ़ाइल और नोट चुनें, या शुरू करने के लिए ＋ नया नोट पर क्लिक करें।","제목 없음":"शीर्षकहीन","(제목 없음)":"(शीर्षकहीन)","📁 어느 파일로 옮길까요?":"📁 किस फ़ाइल में ले जाएं?","🔍 파일 이름 검색 (많으면 여기서 찾기)":"🔍 फ़ाइल का नाम खोजें (यदि बहुत सारे हैं तो यहाँ खोजें)","그런 이름의 파일이 없어요":"इस नाम की कोई फ़ाइल नहीं है","닫기":"बंद करें","🧮 계산기":"🧮 कैलकुलेटर","오류":"त्रुटि","🔒 암호 입력":"🔒 पासवर्ड दर्ज करें","🔒 잠금 설정":"🔒 लॉक सेटिंग्स","🔒 새 암호 설정":"🔒 नया पासवर्ड सेट करें","🔒 암호 변경":"🔒 पासवर्ड बदलें","🔒 한 번 더":"🔒 एक बार फिर","암호 설정":"पासवर्ड सेट करें","암호 삭제":"पासवर्ड हटाएं","암호 변경":"पासवर्ड बदलें","지금 잠그기":"अभी लॉक करें","저장된 암호를 순서대로 누르세요.":"सहेजे गए पासवर्ड को सही क्रम में दर्ज करें।","원하는 숫자를 순서대로 누르고 ✓ 를 누르세요.":"वांछित संख्याओं को क्रम से दबाएं और ✓ पर टैप करें।","확인을 위해 같은 암호를 다시 누르세요.":"पुष्टि के लिए वही पासवर्ड दोबारा दर्ज करें।","암호가 달라요. 다시 눌러보세요.":"पासवर्ड गलत है। कृपया पुनः प्रयास करें।","두 번이 달라요. 처음부터 다시 눌러주세요.":"दोनों पासवर्ड मेल नहीं खाते। कृपया शुरुआत से पुनः प्रयास करें।","🔒 암호가 설정됐어요":"🔒 पासवर्ड सेट हो गया है","암호를 삭제했어요":"पासवर्ड हटा दिया गया है","암호를 삭제할까요? 다음부턴 잠금 없이 바로 열려요.":"पासवर्ड हटाएं? इसके बाद से यह बिना लॉक के सीधे खुलेगा।","📺 보며 메모":"📺 देखते समय नोट्स","유튜브 링크 붙여넣기":"यूट्यूब लिंक पेस्ट करें","열기":"खोलें","내 PC 영상 파일 열기":"पीसी स्थानीय वीडियो फ़ाइल खोलें","유튜브 링크를 확인해 주세요":"कृपया यूट्यूब लिंक की जाँच करें","앞에 띄우기를 열 수 없어요":"फ्लोटिंग व्यू नहीं खोला जा सकता","① 유튜브 링크 붙여넣고 열기":"① यूट्यूब लिंक पेस्ट करें और खोलें","📁 내 영상":"📁 मेरे वीडियो","② 넷플릭스 등 뭐든 볼 땐 📌 앞에":"② नेटफ्लिक्स या कुछ भी देखते समय 📌 फ़्लोटिंग का उपयोग करें","= 메모를 영상 위에 띄워 바로 적기":"= वीडियो के ऊपर नोट प्रदर्शित करें और सीधे लिखें","📌 앞에":"📌 फ़्लोटिंग","축소":"छोटा करें","확대":"बड़ा करें","영상 보다가 좋은 글귀를 여기 바로 적으세요. 저장돼요.":"वीडियो देखते समय अच्छे उद्धरणों को यहाँ सीधे लिखें। यह सहेज लिया जाएगा।","메모를 앞 창에서 쓰는 중":"फ़्रंट विंडो में नोट लिखा जा रहा है","{파일}(으)로 옮겼어요":"{파일} में स्थानांतरित किया गया","📁 버튼으로 파일 이동":"📁 बटन से फ़ाइल ले जाएं","끌어서도 이동 가능":"खींचकर भी ले जाया जा सकता है","이미 줄바꿈이 되어 있어요 👍":"पंक्तियाँ पहले से ही व्यवस्थित हैं 👍","🧹 문장마다 줄을 바꿔 정리했어요":"🧹 वाक्य के अनुसार पंक्तियाँ व्यवस्थित की गईं","⏺ 받아쓰는 중…(누르면 멈춤)":"⏺ श्रुतलेख रिकॉर्ड हो रहा है… (रोकने के लिए दबाएं)","정리할 메모가 없어요. 먼저 메모를 여세요.":"व्यवस्थित करने के लिए कोई नोट नहीं है। कृपया पहले कोई नोट खोलें।","마이크 권한을 허용해 주세요":"कृपया माइक्रोफ़ोन की अनुमति दें","음성 받아쓰기를 시작할 수 없어요":"आवाज़ का श्रुतलेख शुरू नहीं किया जा सकता","이 브라우저는 음성 받아쓰기를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"यह ब्राउज़र आवाज़ के श्रुतलेख का समर्थन नहीं करता है। कृपया क्रोम या एज में खोलें।","이 브라우저는 \"앞에 띄우기\"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.":"यह ब्राउज़र \"फ़्लोटिंग\" का समर्थन नहीं करता है। कृपया क्रोम या एज में खोलें।","🌱 한 달이 지나 메모를 .js로 자동 저장했어요":"🌱 एक महीना बीत गया, नोट को स्वचालित रूप से .js के रूप में सहेज लिया गया","새 파일 이름을 입력하세요.":"नया फ़ाइल नाम दर्ज करें।","{파일} 파일을 삭제할까요?":"फ़ाइल {파일} को हटाएं?","내보낼 메모가 없어요.":"निर्यात करने के लिए कोई नोट नहीं है।","저장할 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"सहेजने के लिए कोई नोट नहीं है। कृपया पहले कोई नोट खोलें या नया बनाएं।","PDF로 만들 메모가 없어요. 먼저 메모를 열거나 새로 만드세요.":"PDF बनाने के लिए कोई नोट नहीं है। कृपया पहले कोई नोट खोलें या नया बनाएं।","검색 결과가 없어요.":"कोई खोज परिणाम नहीं है।","이 파일엔 아직 메모가 없어요.":"इस फ़ाइल में अभी तक कोई नोट नहीं है।","일치하는 파일이 없어요.":"कोई मेल खाने वाली फ़ाइल नहीं मिली।","저장소를 열 수 없어요. 브라우저 설정(시크릿 모드 등)을 확인해 주세요.":"स्टोरेज नहीं खोला जा सकता। कृपया ब्राउज़र सेटिंग्स (गुप्त मोड आदि) की जाँच करें।","메모 · 전체":"नोट्स · सभी","🔍  검색...":"🔍 खोजें...","여기에 마음껏 적으세요. 글자 수 제한 없어요.\n입력하면 자동으로 저장됩니다.":"यहाँ स्वतंत्र रूप से लिखें। कोई वर्ण सीमा नहीं है।\nटाइप करते ही यह स्वचालित रूप से सहेज लिया जाता है।","암호를 삭제할까요?\n다음부턴 잠금 없이 바로 열려요.":"पासवर्ड हटाएं? इसके बाद से यह बिना लॉक के सीधे खुलेगा।","계산기":"कैलकुलेटर","메모 · 검색 결과":"नोट्स · खोज परिणाम"}};
+(function(){
+  var LKEY='c61memo_uilang';
+  window.UILANG = localStorage.getItem(LKEY) || '';
+  var KEYSET=null;
+  function keyset(){ if(!KEYSET){ KEYSET={}; var d=I18N['en']||{}; for(var k in d) KEYSET[k]=1; } return KEYSET; }
+  window.t=function(ko){ if(!window.UILANG) return ko; var d=I18N[window.UILANG]; return (d&&d[ko]!=null)?d[ko]:ko; };
+  function tr(node){
+    if(!node) return;
+    if(node.nodeType===3){
+      var raw=(node.__ko!==undefined)?node.__ko:node.nodeValue;
+      var key=raw.trim(), useKey=null, pfx='';
+      if(keyset()[key]) useKey=key;
+      else { var mm=key.match(/^([^\uAC00-\uD7A3A-Za-z0-9]+\s*)([\s\S]+)$/); if(mm&&keyset()[mm[2].trim()]){ pfx=mm[1]; useKey=mm[2].trim(); } }
+      if(useKey){ if(node.__ko===undefined) node.__ko=raw; node.nodeValue = window.UILANG ? (pfx+window.t(useKey)) : node.__ko; }
+      return;
+    }
+    if(node.nodeType!==1) return;
+    var tag=node.tagName;
+    if(tag==='SCRIPT'||tag==='STYLE'||tag==='TEXTAREA') { if(tag==='TEXTAREA'){ return; } }
+    ['placeholder','title'].forEach(function(a){
+      if(node.hasAttribute&&node.hasAttribute(a)){
+        var da='data-ko-'+a, raw=node.getAttribute(da); if(raw===null) raw=node.getAttribute(a);
+        var key=(raw||'').trim();
+        if(keyset()[key]){ if(node.getAttribute(da)===null) node.setAttribute(da,raw); node.setAttribute(a, window.UILANG?window.t(key):node.getAttribute(da)); }
+      }
+    });
+    var ch=node.childNodes; for(var i=0;i<ch.length;i++) tr(ch[i]);
+  }
+  function special(){
+    var bt=document.querySelector('#blank .t');
+    if(bt){ if(bt.__html===undefined) bt.__html=bt.innerHTML; var full='왼쪽에서 파일과 메모를 고르거나, ＋ 새 메모를 눌러 시작하세요.'; if(window.UILANG){ bt.textContent=window.t(full); } else { bt.innerHTML=bt.__html; } }
+  }
+  window.applyI18n=function(){ try{ tr(document.body); special(); }catch(e){} };
+  window.setUILang=function(code){ window.UILANG=code||''; localStorage.setItem(LKEY, window.UILANG); window.applyI18n(); try{ if(typeof renderFolders==='function') renderFolders(); if(typeof renderList==='function') renderList(); }catch(e){} var s=document.getElementById('uiLang'); if(s) s.value=window.UILANG; };
+  if(typeof showToast==='function'){ var __st=showToast; showToast=function(m){ return __st(window.t(m)); }; }
+  try{ var mo=new MutationObserver(function(ms){ if(!window.UILANG) return; for(var i=0;i<ms.length;i++){ var a=ms[i].addedNodes; for(var j=0;j<a.length;j++) tr(a[j]); } }); mo.observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  var sel=document.getElementById('uiLang'); if(sel){ sel.value=window.UILANG; sel.addEventListener('change', function(){ window.setUILang(sel.value); }); }
+  window.applyI18n(); setTimeout(window.applyI18n, 400);
+})();
+
+/* ===== 📸 화면 캡처: 화면 골라 한 프레임 → 영역 드래그 → PNG 저장 ===== */
+(function(){
+  var overlay=$('capOverlay'), img=$('capImg'), sel=$('capSel'), wrap=$('capImgWrap');
+  var capC=null, selRect=null, drag=false, sx=0, sy=0;
+  function pad(n){ return (n<10?'0':'')+n; }
+  function stamp(){ var d=new Date(); return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds()); }
+  function clearSel(){ sel.style.display='none'; selRect=null; }
+  async function start(){
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)){ showToast('이 브라우저는 화면 캡처를 지원하지 않아요 (크롬·엣지 권장). 배포(https)에서 잘 됩니다.'); return; }
+    try{
+      var stream=await navigator.mediaDevices.getDisplayMedia({ video:true, audio:false });
+      var v=document.createElement('video'); v.muted=true; v.srcObject=stream;
+      await v.play().catch(function(){});
+      if(!v.videoWidth){ await new Promise(function(res){ v.onloadedmetadata=res; setTimeout(res,800); }); }
+      var c=document.createElement('canvas'); c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      capC=c; img.src=c.toDataURL('image/png');
+      clearSel(); overlay.style.display='flex';
+    }catch(e){ if(e && e.name==='NotAllowedError'){ /* 사용자가 취소 */ } else { showToast('화면 캡처를 시작할 수 없어요'); } }
+  }
+  function rel(e){ var r=img.getBoundingClientRect(); return { x:Math.max(0,Math.min(r.width, e.clientX-r.left)), y:Math.max(0,Math.min(r.height, e.clientY-r.top)) }; }
+  img.addEventListener('mousedown', function(e){ drag=true; var p=rel(e); sx=p.x; sy=p.y; sel.style.left=sx+'px'; sel.style.top=sy+'px'; sel.style.width='0'; sel.style.height='0'; sel.style.display='block'; e.preventDefault(); });
+  document.addEventListener('mousemove', function(e){ if(!drag) return; var p=rel(e); var x=Math.min(sx,p.x), y=Math.min(sy,p.y), w=Math.abs(p.x-sx), h=Math.abs(p.y-sy); sel.style.left=x+'px'; sel.style.top=y+'px'; sel.style.width=w+'px'; sel.style.height=h+'px'; selRect={x:x,y:y,w:w,h:h}; });
+  document.addEventListener('mouseup', function(){ drag=false; });
+  function save(){
+    if(!capC){ return; }
+    var r=img.getBoundingClientRect(), scale=capC.width/r.width;
+    var sxp,syp,swp,shp;
+    if(selRect && selRect.w>4 && selRect.h>4){ sxp=selRect.x*scale; syp=selRect.y*scale; swp=selRect.w*scale; shp=selRect.h*scale; }
+    else { sxp=0; syp=0; swp=capC.width; shp=capC.height; }
+    var out=document.createElement('canvas'); out.width=Math.max(1,Math.round(swp)); out.height=Math.max(1,Math.round(shp));
+    out.getContext('2d').drawImage(capC, sxp,syp,swp,shp, 0,0, out.width,out.height);
+    out.toBlob(function(blob){
+      if(!blob){ showToast('저장에 실패했어요'); return; }
+      var url=URL.createObjectURL(blob), a=document.createElement('a'), name='캡처_'+stamp()+'.png';
+      a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      showToast('📸 저장했어요 · '+name);
+    }, 'image/png');
+  }
+  $('capBtn').onclick=start;
+  $('capSave').onclick=save;
+  $('capCrop').onclick=function(e){ e.stopPropagation(); save(); };
+  $('capRedo').onclick=clearSel;
+  $('capOther').onclick=start;
+  $('capCancel').onclick=function(){ overlay.style.display='none'; clearSel(); capC=null; };
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && overlay.style.display!=='none'){ overlay.style.display='none'; clearSel(); } });
+})();
+
+openDB().then(dbGetAll).then(function(all){
+  notes=all||[];
+  if(curFolder==='__all__') curFolder='default';  /* 열 때는 '전체'가 아니라 정리 전 작업목록(기본)으로 */
+  if(!folders.some(function(f){return f.id===curFolder;})) curFolder='default';
+  renderFolders(); renderFolderSelect(); renderList();
+  var inFolder=notes.filter(function(n){return curFolder==='__all__'?true:folderOf(n)===curFolder;});
+  if(inFolder.length){ openNote(inFolder.sort(function(a,b){return b.updated-a.updated;})[0].id); }
+  monthlyAutoJs();
+}).catch(function(e){
+  listEl.innerHTML='<div class="empty-list">저장소를 열 수 없어요.<br>브라우저 설정(시크릿 모드 등)을 확인해 주세요.</div>';
+});
+if(hasLock()) showLock('unlock');
+</script>
+</body>
+</html>
