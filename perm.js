@@ -9,7 +9,10 @@
 window.cgoResetFeatures = function(){
   /* 1) 카메라 — 취소 함수만 부른다 (결과를 만드는 종료 함수는 절대 부르지 않는다)
         새 기능을 만들면 그 기능의 '취소' 함수 이름을 아래 목록에 넣는다 */
-  ['foodCamStop','musicStop','sviCancel','_c24Cancel','c39Stop','scStop','iqCamStop','rmaiScanStop','rmaiArStop','rppgArStop','eyeCancelMeasure','eyeStopMeasure','cgoSleepStopAll','cgoAccCamClose'].forEach(function(fn){
+  /* ★ 이 둘이 루프 안에 있어 15번씩 불렸다 — 한 번만 부른다 */
+  try{ if(window._cgoVisionClose) _cgoVisionClose(); }catch(e){}
+  try{ if(window.cgoNaviStop) cgoNaviStop(); }catch(e){}
+  ['foodCamStop','musicStop','sviCancel','_c24Cancel','c39Stop','scStop','iqCamStop','rmaiScanStop','rmaiArStop','rppgArStop','eyeCancelMeasure','eyeStopMeasure','cgoSleepStopAll','cgoAccCamClose','_cplCancel'].forEach(function(fn){
     try{ if(typeof window[fn] === 'function') window[fn](); }catch(e){}
   });
   try{ if(window._cgoStopAllCams) window._cgoStopAllCams(); }catch(e){}
@@ -23,8 +26,10 @@ window.cgoResetFeatures = function(){
   }catch(e){}
   /* 2) 떠 있는 것을 종류 가리지 않고 모두 닫는다 — 팝업 안의 팝업까지 */
   try{
-    Array.prototype.forEach.call(document.querySelectorAll('div[id]'), function(el){
-      if(!/Pop$|Popup$|-pop$|Overlay$|-overlay$/.test(el.id)) return;
+    /* ★ div[id] 전부(793개)에 getComputedStyle 을 걸어 페이지 이동마다 배치가 다시 셈해졌다 */
+    Array.prototype.forEach.call(document.querySelectorAll(
+      'div[id$="Pop"],div[id$="Popup"],div[id$="-pop"],div[id$="-popup"],div[id$="Overlay"],div[id$="-overlay"]'), function(el){
+      if(el.style.display === 'none' || el.style.display === '') return;
       if(getComputedStyle(el).position !== 'fixed') return;
       el.style.display = 'none';
       if(el.classList) el.classList.remove('on','active','show','open');
@@ -48,9 +53,8 @@ window.cgoResetFeatures = function(){
   /* 4) 스크롤 맨 위 */
   try{
     Array.prototype.forEach.call(document.querySelectorAll('.page'), function(p){ p.scrollTop = 0; });
-    Array.prototype.forEach.call(document.querySelectorAll('div[id]'), function(el){
-      if(/Pop$|Popup$|-pop$/.test(el.id)) el.scrollTop = 0;
-    });
+    Array.prototype.forEach.call(document.querySelectorAll(
+      'div[id$="Pop"],div[id$="Popup"],div[id$="-pop"],div[id$="-popup"]'), function(el){ el.scrollTop = 0; });
     window.scrollTo(0,0);
     var c = document.querySelector('.content'); if(c) c.scrollTop = 0;
   }catch(e){}
@@ -61,7 +65,7 @@ window.cgoResetFeatures = function(){
 
   /* ── 카메라 기능이 있는 페이지 ──
      새 기능을 만들면 여기에 페이지 id 를 넣는다 (넣지 않으면 나갈 때 카메라가 살아 남는다) */
-  var CAM_PAGES = ['food','svi','rppg-ar','c24','c39','scalp','iq','c44-eye','c41','acc-cam','vision','iq'];
+  var CAM_PAGES = ['food','svi','rppg-ar','c24','c39','scalp','iq','c44-eye','c41','acc-cam','vision','iq','couple','gmd','travel-yeogi'];
 
   /* ── 켜져 있는 카메라 목록 ── */
   var live = [];
@@ -103,7 +107,8 @@ window.cgoResetFeatures = function(){
       });
     }catch(e){}
     /* 기능별 '취소' 함수만 부른다 — 결과를 계산해 저장하는 종료 함수는 부르지 않는다 */
-    ['eyeCancelMeasure','eyeCamStop','_c24Cancel','c39Stop','scStop','iqCamStop','cgoAccCamClose'].forEach(function(fn){
+    ['eyeCancelMeasure','eyeCamStop','_c24Cancel','c39Stop','scStop','iqCamStop','cgoAccCamClose',
+     '_cplCancel','_cgoVisionClose','cgoNaviStop','sviCancel','foodCamStop','fc360ResetScan'].forEach(function(fn){
       try{ if(typeof window[fn] === 'function') window[fn](); }catch(e){}
     });
     return n;
@@ -129,14 +134,29 @@ window.cgoResetFeatures = function(){
           el.classList.remove('cgo-rest');
           el.style.contentVisibility = 'visible';
           el.style.containIntrinsicSize = '';
-          /* ★특허 — 안쪽까지 다 깨우면 배치 셈이 한 덩이로 몰린다.
-             페이지 자체만 깨우고, 안쪽은 관찰기가 화면에 들어올 때 깨운다 */
+          el.querySelectorAll('.cgo-rest').forEach(function(x){
+            x.classList.remove('cgo-rest');
+            x.style.contentVisibility = 'visible';
+            x.style.containIntrinsicSize = '';
+          });
           try{ if(window.cgoResetFeatures) cgoResetFeatures(); }catch(e){}
           /* ★ 스크롤은 .content 가 쥐고 있다. 페이지만 0으로 돌려선 소용이 없어
              앞 화면에서 내려둔 만큼 제목이 헤더 뒤로 숨은 것처럼 보였다. */
           try{
             var sc = document.querySelector('.content');
-            if(sc){ sc.scrollTop = 0; }
+            if(sc){
+              sc.scrollTop = 0;
+              /* ★ 60·240ms 뒤에도 0으로 되돌려, 그 사이 사용자가 굴린 것이 되감겼다.
+                 「바가 조금 있다가 움직인다」의 원인 — 손이 닿으면 그 자리에서 멈춘다 */
+              (function(){
+                var EV=['wheel','touchstart','touchmove','pointerdown','keydown'], stop=false;
+                function off(){ EV.forEach(function(e){ sc.removeEventListener(e,hand,true); }); }
+                function hand(){ stop=true; off(); }
+                EV.forEach(function(e){ sc.addEventListener(e,hand,{capture:true,passive:true}); });
+                [60,240].forEach(function(d){ setTimeout(function(){ if(!stop) sc.scrollTop = 0; }, d); });
+                setTimeout(off,400);
+              })();
+            }
           }catch(e){}
           [0, 60, 240].forEach(function(d){
             setTimeout(function(){
