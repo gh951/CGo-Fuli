@@ -7183,7 +7183,9 @@ function refreshData(){
   try{ sessionStorage.setItem('cgo_ent','1'); localStorage.setItem('cgo_ent_day', new Date().toDateString()); }catch(_){}
   try{ if(window._p0Entered) sessionStorage.setItem('cgo_lang_ok','1'); }catch(_){}
   try{ if(window._cgoStopAllCams) window._cgoStopAllCams(); }catch(_){}
-  location.reload();
+  /* ★ 캐시가 줄 수 없는 주소로 — 그냥 reload 는 옛 파일을 또 꺼내 온다 */
+  try{ location.replace(location.pathname + '?v=' + Date.now()); }
+  catch(e){ location.reload(); }
 }
 window.refreshData=refreshData;
 
@@ -11993,7 +11995,9 @@ try{
       function reg(){ if(typeof window.cgoRepaintOn!=='function') return false; window.cgoRepaintOn(rp); return true; }
       if(!reg()){ var _c=0,t=setInterval(function(){ if(document.hidden) return; if(reg()||++_c>75) clearInterval(t); },400); }
     })();
-    if(typeof _cgoNaviIntroPopup==='function') _cgoNaviIntroPopup();
+    /* ★ 여기서 안내 팝업을 다시 띄우고 있었다 — 팝업의 「시작」 단추가 부르는 것이 이 함수이므로
+       페이지를 연 뒤 팝업이 곧바로 되살아나 「눌러도 팝업만 뜬다」가 됐다.
+       안내는 카드(_cgoNaviIntroPopup)가 띄운다 — 여기서는 띄우지 않는다. */
   };
   window.cgoNaviClose=function(){ stopAll(); var p=$('page-cgo-navi'); if(p) p.style.display='none'; try{ if(window._cgoHideFeatBar) window._cgoHideFeatBar(); }catch(e){} };
   window.cgoNaviHelp=function(on){ var h=$('cgn-help'); if(h) h.style.display=on?'block':'none'; };
@@ -13200,7 +13204,13 @@ try{if(window.caches&&caches.keys){caches.keys().then(function(ks){ks.forEach(fu
 alert('\u2705 탈퇴 완료 \u2014 기기 내 모든 데이터가 분쇄되었습니다.');
 setTimeout(function(){location.reload(true);},600);
 };
-window._myReload=function(){location.reload(true);};
+window._myReload=function(){
+  /* ★ location.reload(true) 의 true 는 브라우저들이 오래전에 무시하기로 했다 —
+     캐시에 있는 옛 파일이 또 나와서 「새로고침해도 그대로」가 됐다.
+     캐시가 줄 수 없는 주소로 간다. */
+  try{ location.replace(location.pathname + '?v=' + Date.now()); }
+  catch(e){ location.reload(); }
+};
 window._myCacheClear=function(){try{if(window.caches&&caches.keys){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}alert('캐시를 삭제했습니다. 새로고침됩니다.');setTimeout(function(){location.reload(true);},400);};
 window._myZoom=function(z){try{document.body.style.zoom=z;localStorage.setItem('cgo_zoom',z);}catch(e){}};
 window._myToggle=function(key,el){var v=(localStorage.getItem(key)==='on')?'off':'on';localStorage.setItem(key,v);el.textContent=(v==='on'?'ON':'OFF');el.style.background=(v==='on'?'#06b6d4':'#cbd5e1');el.style.color=(v==='on'?'#fff':'#475569');};
@@ -14298,7 +14308,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.06';
+  var ver='CGO-FULI v2026.08.31-a';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -36564,8 +36574,8 @@ function _vgAnalyze(){
 html{overflow:hidden!important;height:100%!important;background:#f0fdf9!important}
 body{overflow:hidden!important;height:100%!important;background:#f0fdf9!important}
 /* .content 를 상단 바 아래에 붙박아 두고, 그 안에서만 구르게 한다 */
-.content{position:fixed!important;top:56px!important;left:0!important;right:0!important;bottom:0!important;
-  overflow-y:auto!important;overflow-x:hidden!important;padding-top:0!important;-webkit-overflow-scrolling:touch}
+.content{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+  overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch}
 header.topbar{border-bottom:0!important;background:#060d1a!important}
 .content{padding-top:var(--hdrH,56px)!important}
 #cgo-hero-banner{margin:0!important;width:100%!important;background:#020817!important}
