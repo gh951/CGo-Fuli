@@ -7229,18 +7229,21 @@ function cgoHome(){
   ['c24-scan-guide-pop','c24-chat-guide','c24-capture-cd','cgoInAppGuide','cpl-invite-pop','vg-popup'].forEach(function(id){
     var e=document.getElementById(id); if(e&&e.parentNode) e.parentNode.removeChild(e); });
   document.querySelectorAll('.modal.on,.popup.on,.fsp.on').forEach(function(e){ e.classList.remove('on'); });
-  /* 측정 중이면 결과를 만들지 않고 접는다 · 카메라도 끈다 */
-  try{ if(window._c24Cancel) window._c24Cancel(); }catch(_){}
-  try{ if(window.c39Stop) window.c39Stop(); }catch(_){}
-  try{ if(window.scStop) window.scStop(); }catch(_){}
-  try{ if(window.sviCancel) window.sviCancel(); }catch(_){}
-  try{ if(window._cplCancel) window._cplCancel(); }catch(_){}
-  try{ if(window.musicStop) window.musicStop(); }catch(_){}
-  try{ if(window._cgoStopAllCams) window._cgoStopAllCams(); }catch(_){}
-  /* 팝업이 잠갔던 스크롤을 되돌린다 */
-  try{ void 0; }catch(_){}
+  /* ★ 눈이 먼저 대문을 본다 — 화면부터 옮기고, 무거운 뒷정리는 손이 쉬는 뒤에.
+     예전엔 카메라 끄기(6ms)와 취소 처리를 다 끝낸 뒤에야 화면을 옮겨
+     그 사이 옛 화면이 남아 「찰나의 잔상」으로 보였다. */
   try{ cgoGoPage('dashboard'); }catch(_){}
   try{ window.scrollTo(0,0); }catch(_){}
+  setTimeout(function(){
+    /* 측정 중이면 결과를 만들지 않고 접는다 · 카메라도 끈다 */
+    try{ if(window._c24Cancel) window._c24Cancel(); }catch(_){}
+    try{ if(window.c39Stop) window.c39Stop(); }catch(_){}
+    try{ if(window.scStop) window.scStop(); }catch(_){}
+    try{ if(window.sviCancel) window.sviCancel(); }catch(_){}
+    try{ if(window._cplCancel) window._cplCancel(); }catch(_){}
+    try{ if(window.musicStop) window.musicStop(); }catch(_){}
+    try{ if(window._cgoStopAllCams) window._cgoStopAllCams(); }catch(_){}
+  }, 0);
 }
 window.cgoHome=cgoHome;
 
@@ -13250,12 +13253,21 @@ window.cgoGoPage=function(page){
  var box=document.querySelector('.content');
  if(box){
    var kids=box.children;
+   /* ★ 읽기와 쓰기를 번갈아 하면 브라우저가 그때마다 배치를 다시 셈하고,
+      그 틈에 중간 상태가 그려져 「찰나의 잔상」이 보였다.
+      ① 먼저 읽기만 몰아서 끝내고 ② 그 다음 쓰기만 몰아서 한다. */
+   var _fx=[], m;
+   for(m=0;m<kids.length;m++){
+     var e1=kids[m];
+     if(e1._cgoFx===undefined) e1._cgoFx=(getComputedStyle(e1).position==='fixed');
+     _fx[m]=e1._cgoFx;
+   }
    for(var k=0;k<kids.length;k++){
      var el=kids[k];
      if(el===t){ el.style.display='block'; continue; }
      /* 화면에 붙어 있는 덮개(속도계·언어메뉴·팝업)는 페이지 전환과 무관하다 */
      if(el.id==='spd'||el.id==='langMenu'||el.id==='mypage-pop') continue;
-     if(getComputedStyle(el).position==='fixed') continue;
+     if(_fx[k]) continue;
      if(page==='dashboard'){ el.style.display=el._cgoD||''; }
      else { if(el._cgoD===undefined) el._cgoD=el.style.display||''; el.style.display='none'; }
    }
