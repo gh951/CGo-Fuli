@@ -13062,19 +13062,15 @@ window.cgoPaintKo=function(root){
    if(!window._cgoRevKo){ window._cgoRevKo={};
      for(var n in D.ko){ var _k=String(D.ko[n]).trim(); if(_k && !(_k in window._cgoRevKo)) window._cgoRevKo[_k]=n; } }
    var tgt=D[L]||D.en, rev=window._cgoRevKo;
-   var w=document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, {
-     acceptNode:function(nd){
-       var p=nd.parentElement;
-       if(!p) return NodeFilter.FILTER_REJECT;
-       /* 언어 이름과 기기 고유번호는 나라말·실행값이라 손대지 않는다 */
-       if(p.closest('#langMenu,#langSelector,.lang-opt,.p0lb')) return NodeFilter.FILTER_REJECT;
-       return NodeFilter.FILTER_ACCEPT;
-     }
-   });
+   /* ★ 걸러내기(closest 네 갈래)를 글자칸마다 부르고 있었다 — 대시보드에서만 0.27초.
+      한글이 든 칸은 전체의 몇 %뿐이니, 그 칸에만 물어본다 (하는 일은 똑같다) */
+   var w=document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, null);
    var hits=[], t;
    while((t=w.nextNode())){
      var s=t.nodeValue; if(!s || s.indexOf('\u0000')>=0) continue;
      var k=s.trim(); if(k.length<2 || !/[\uac00-\ud7a3]/.test(k)) continue;
+     var _pe=t.parentElement; if(!_pe) continue;
+     if(_pe.closest('#langMenu,#langSelector,.lang-opt,.p0lb')) continue;
      var num=rev[k], v=null, cut=k, head='';
      if(num){ var _nv=(tgt&&tgt[num]); if(_nv && window._cgoFitLang) _nv=window._cgoFitLang(L,_nv); v=_nv||null; }
      if(!v){
@@ -13106,13 +13102,19 @@ window.cgoPaintKo=function(root){
      }
      if(!v){
        /* 뒤에 실행값이 붙는 자리(기기 ID 등)는 앞머리만 맞춰 바꾼다 — 통째로는 절대 안 맞는다 */
-       if(!window._cgoPre){
-         window._cgoPre=[];
-         for(var kk in rev) if(kk.length>=4) window._cgoPre.push(kk);
-         window._cgoPre.sort(function(a,b){ return b.length-a.length; });
+       /* ★ 여기서 사전 열쇠 7천 개를 글자칸마다 처음부터 끝까지 훑고 있었다.
+          대시보드 한 장에 0.25초 — 페이지를 열 때마다 그 값을 냈다.
+          앞 네 글자로 미리 갈라 두면 볼 것이 몇 개로 준다 (고르는 결과는 똑같다:
+          열쇠는 네 글자 이상이므로, 앞 네 글자가 다르면 앞머리가 될 수 없다) */
+       if(!window._cgoPre4){
+         window._cgoPre4={};
+         for(var kk in rev){ if(kk.length<4) continue; var _h4=kk.slice(0,4);
+           (window._cgoPre4[_h4]||(window._cgoPre4[_h4]=[])).push(kk); }
+         for(var _hk in window._cgoPre4)
+           window._cgoPre4[_hk].sort(function(a,b){ return b.length-a.length; });
        }
-       var P=window._cgoPre;
-       for(var pi=0;pi<P.length;pi++){
+       var P=window._cgoPre4[k.slice(0,4)];
+       if(P) for(var pi=0;pi<P.length;pi++){
          if(k.indexOf(P[pi])===0){
            var pn=rev[P[pi]], pv=(tgt&&tgt[pn])||(D.en&&D.en[pn]);
            if(pv && pv!==P[pi]){ v=pv; cut=P[pi]; }
