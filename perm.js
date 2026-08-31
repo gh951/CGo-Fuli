@@ -30,7 +30,9 @@ window.cgoResetFeatures = function(){
     Array.prototype.forEach.call(document.querySelectorAll(
       'div[id$="Pop"],div[id$="Popup"],div[id$="-pop"],div[id$="-popup"],div[id$="Overlay"],div[id$="-overlay"]'), function(el){
       if(el.style.display === 'none' || el.style.display === '') return;
-      if(getComputedStyle(el).position !== 'fixed') return;
+      /* ★ 팝업의 자리(fixed)는 바뀌지 않는다 — 한 번만 묻고 기억한다 (이동마다 9.6ms 였다) */
+      if(el._cgoFixed === undefined) el._cgoFixed = (getComputedStyle(el).position === 'fixed');
+      if(!el._cgoFixed) return;
       el.style.display = 'none';
       if(el.classList) el.classList.remove('on','active','show','open');
     });
@@ -39,12 +41,15 @@ window.cgoResetFeatures = function(){
   }catch(e){}
   /* 3) 펼친 것을 접고, 고른 것을 지운다 */
   try{
-    Array.prototype.forEach.call(document.querySelectorAll('[id^="scFold-"]'), function(el){
+    /* ★ 접힘 칸은 마크업에 박혀 있어 늘 같다 — 한 번만 찾고 기억한다 (이동마다 4.4ms 였다) */
+    if(!window._cgoFoldEls || !window._cgoFoldEls.length){
+      window._cgoFoldEls = [].slice.call(document.querySelectorAll('[id^="scFold-"],[id^="fold-"]'));
+    }
+    window._cgoFoldEls.forEach(function(el){
+      if(!el.isConnected) return;
       if(/-arrow$/.test(el.id)){ el.textContent = '▼'; return; }
       el.style.display = 'none';
     });
-    Array.prototype.forEach.call(document.querySelectorAll('[id^="fold-"]'),
-      function(el){ el.style.display = 'none'; });
   }catch(e){}
   try{
     window._scAreaCur = null; window._scStepCur = null;
@@ -62,6 +67,39 @@ window.cgoResetFeatures = function(){
   try{ document.body.style.overflow = ''; document.documentElement.style.overflow = ''; }catch(e){}
 };
 
+
+  /* ── 되돌릴 것이 있는가 ──
+     대시보드↔마이페이지처럼 카메라도 팝업도 없는 이동에서도 전부 돌아
+     이동마다 10~19ms 를 냈다. 끌 것이 있을 때만 부른다.
+     (합의 규칙 「나가면 다 꺼지고 처음으로 돌아간다」는 그대로 — 끌 것이 있으면 반드시 돈다) */
+  window._cgoNeedsReset = function(){
+    try{
+      if(window._cgoCamStreams && window._cgoCamStreams.length) return true;
+      var v = document.getElementsByTagName('video');
+      for(var i=0;i<v.length;i++) if(v[i].srcObject) return true;
+      if(!window._cgoPopEls || !window._cgoPopEls.length){
+        window._cgoPopEls = [].slice.call(document.querySelectorAll(
+          'div[id$="Pop"],div[id$="Popup"],div[id$="-pop"],div[id$="-popup"],div[id$="Overlay"],div[id$="-overlay"]'));
+      }
+      for(var j=0;j<window._cgoPopEls.length;j++){
+        var d = window._cgoPopEls[j].style.display;
+        if(!d || d === 'none') continue;
+        /* ★ 늘 flex 로 열려 있으나 제 페이지가 감춰져 화면에 없는 것(c24-idle-overlay 등)이 있다.
+           정말 화면에 그려져 있을 때만 「떠 있다」로 본다 */
+        if(window._cgoPopEls[j].getClientRects().length) return true;
+      }
+      if(!window._cgoFoldEls || !window._cgoFoldEls.length){
+        window._cgoFoldEls = [].slice.call(document.querySelectorAll('[id^="scFold-"],[id^="fold-"]'));
+      }
+      for(var k=0;k<window._cgoFoldEls.length;k++){
+        var f = window._cgoFoldEls[k];
+        if(/-arrow$/.test(f.id)) continue;
+        if(f.style.display && f.style.display !== 'none') return true;
+      }
+      if(document.querySelector('.modal.on,.popup.on,.fsp.on')) return true;
+    }catch(e){ return true; }
+    return false;
+  };
 
   /* ── 카메라 기능이 있는 페이지 ──
      새 기능을 만들면 여기에 페이지 id 를 넣는다 (넣지 않으면 나갈 때 카메라가 살아 남는다) */
@@ -139,7 +177,15 @@ window.cgoResetFeatures = function(){
             x.style.contentVisibility = 'visible';
             x.style.containIntrinsicSize = '';
           });
-          try{ if(window.cgoResetFeatures) cgoResetFeatures(); }catch(e){}
+          try{
+            if(window._cgoNeedsReset && !window._cgoNeedsReset()){
+              /* 끌 것이 없다 — 가벼운 길: 자리만 처음으로 되돌린다 */
+              window._scAreaCur=null; window._scStepCur=null;
+              window._c39CareCur=null; window._iqRun=null;
+              document.body.style.removeProperty('overflow');
+              document.documentElement.style.removeProperty('overflow');
+            } else if(window.cgoResetFeatures){ cgoResetFeatures(); }
+          }catch(e){ try{ if(window.cgoResetFeatures) cgoResetFeatures(); }catch(_){} }
           /* ★ 스크롤은 .content 가 쥐고 있다. 페이지만 0으로 돌려선 소용이 없어
              앞 화면에서 내려둔 만큼 제목이 헤더 뒤로 숨은 것처럼 보였다. */
           try{
