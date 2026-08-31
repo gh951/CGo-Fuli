@@ -12953,6 +12953,7 @@ function cgoGoPage(page){
   if(page==='stock'){
     if(typeof _cgoStockIntroPopup==='function') _cgoStockIntroPopup();
     setTimeout(function(){ try{ if(typeof stkStartLive==='function') stkStartLive(); }catch(e){} }, 400);
+    setTimeout(function(){ try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){} }, 200);
   }
   /* 숙소·여행 — .active 를 보고 채우던 길이 display 전환에서는 돌지 않았다.
      여기서 직접 채운다 (민트 바탕만 보이던 원인) */
@@ -39801,6 +39802,48 @@ list.innerHTML = scored.map(function(d){
         <div style="background:var(--bg-card);border:1px solid rgba(167,139,250,0.22);border-radius:14px;padding:14px 16px;">
           <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:6px;">🌍 국가별 보기</div>
           <div id="stk-country-chips" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:7px;"></div>
+        </div>
+
+        <!-- ══ ③ 분석 등급을 고르세요 ══ -->
+        <div style="background:#f0fdfa;border:1px solid rgba(52,211,153,.28);border-radius:16px;padding:18px 16px;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:900;color:#0f1b2e;margin-bottom:4px;">분석 등급을 고르세요</div>
+          <div style="font-size:11px;color:#4b6470;margin-bottom:14px;">✦ 보는 것은 같고, 풀이의 깊이가 다릅니다</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div id="csi-tier-basic" onclick="csiSetTier('basic')" style="cursor:pointer;background:#fff;border:2px solid #34d399;border-radius:12px;padding:12px 8px;text-align:center;">
+              <div style="font-size:18px;">🟢</div>
+              <div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">기본</div>
+              <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;">유료 회원 1회 무료</div>
+              <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;">궁합 점수 · 오행 등급<br>오늘의 흐름</div>
+            </div>
+            <div id="csi-tier-pro" onclick="csiSetTier('pro')" style="cursor:pointer;background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;">
+              <div style="font-size:18px;">⭐</div>
+              <div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">고급</div>
+              <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;">1회 2,000원</div>
+              <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;">갈래별 상세 풀이<br>행성 각도 해석</div>
+            </div>
+            <div id="csi-tier-max" onclick="csiSetTier('max')" style="cursor:pointer;background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;">
+              <div style="font-size:18px;">💎</div>
+              <div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">최고급</div>
+              <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;">1회 5,000원</div>
+              <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;">전문가급 + 30일 전환점<br>진입 시점 후보</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:11px 13px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28);border-radius:11px;font-size:10.5px;color:#4b6470;line-height:1.75;">
+            주식은 <b style="color:#0f1b2e">36,404개 종목의 개업일</b> × <b style="color:#0f1b2e">실시간 행성 각도</b> × <b style="color:#0f1b2e">내 사주·생체</b>를 함께 셈합니다.<br>
+            같은 분석을 파는 곳은 <b style="color:#059669">건당 4만 6천 원</b>부터입니다.
+          </div>
+        </div>
+
+        <!-- ══ ④ 메뉴얼 선택 ══ -->
+        <div style="background:#f0fdfa;border:1px solid rgba(52,211,153,.28);border-radius:16px;padding:18px 16px;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:900;color:#0f1b2e;margin-bottom:4px;">메뉴얼 선택</div>
+          <div style="font-size:11px;color:#4b6470;margin-bottom:14px;">✦ 켠 갈래만 점수에 섞입니다 — 많이 켤수록 촘촘해집니다</div>
+          <div id="csi-lane-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+          <div id="csi-lane-detail" style="margin-top:12px;"></div>
+          <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:#fff;border:1px solid rgba(52,211,153,.28);border-radius:11px;">
+            <span style="font-size:11px;color:#4b6470;">고른 갈래</span>
+            <span id="csi-lane-count" style="font-size:13px;font-weight:900;color:#059669;">0개</span>
+          </div>
         </div>
 
         <!-- 🔍 AI 지능형 종목 검색 -->
@@ -89169,6 +89212,242 @@ try{ window.stkAiBubble=stkAiBubble; }catch(e){}
 try{ window.stkAiTypingOn=stkAiTypingOn; }catch(e){}
 try{ window.stkAiTypingOff=stkAiTypingOff; }catch(e){}
 try{ window.stkAiCallApi=stkAiCallApi; }catch(e){}
+
+</script>
+
+<script>
+
+/* ══════════════════════════════════════════════════════════════
+   CSI — Cosmic Stock Index
+   거래소의 생일 × 종목의 개업일 × 지금 하늘의 행성 각도 × 내 사주·생체
+
+   MMA·AstroCycle 은 지수 하나(다우존스)의 네이탈 차트만 본다.
+   우리는 ① 거래소 ② 종목 ③ 사람 — 세 겹을 겹친다. 그것이 다른 점이다.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 나라별 대표 거래소의 생일 (공개된 사실) ───────────────── */
+var CSI_EXCHANGE = {
+  '🇰🇷':{n:'KRX 한국거래소',d:'1956-03-03',c:'서울'},
+  '🇺🇸':{n:'NYSE 뉴욕증권거래소',d:'1792-05-17',c:'뉴욕'},
+  '🇯🇵':{n:'TSE 도쿄증권거래소',d:'1878-05-15',c:'도쿄'},
+  '🇨🇳':{n:'SSE 상하이증권거래소',d:'1990-11-26',c:'상하이'},
+  '🇭🇰':{n:'HKEX 홍콩거래소',d:'1891-02-03',c:'홍콩'},
+  '🇹🇼':{n:'TWSE 대만증권거래소',d:'1962-02-09',c:'타이베이'},
+  '🇬🇧':{n:'LSE 런던증권거래소',d:'1801-12-30',c:'런던'},
+  '🇩🇪':{n:'FWB 프랑크푸르트증권거래소',d:'1585-09-09',c:'프랑크푸르트'},
+  '🇫🇷':{n:'Euronext Paris',d:'1724-09-24',c:'파리'},
+  '🇳🇱':{n:'Euronext Amsterdam',d:'1602-03-20',c:'암스테르담'},
+  '🇨🇭':{n:'SIX 스위스거래소',d:'1996-08-14',c:'취리히'},
+  '🇮🇹':{n:'Borsa Italiana',d:'1808-01-06',c:'밀라노'},
+  '🇪🇸':{n:'BME 마드리드증권거래소',d:'1831-10-20',c:'마드리드'},
+  '🇸🇪':{n:'Nasdaq Stockholm',d:'1863-02-04',c:'스톡홀름'},
+  '🇮🇳':{n:'BSE 봄베이증권거래소',d:'1875-07-09',c:'뭄바이'},
+  '🇧🇷':{n:'B3 브라질거래소',d:'1890-08-23',c:'상파울루'},
+  '🇨🇦':{n:'TSX 토론토증권거래소',d:'1852-10-25',c:'토론토'},
+  '🇦🇺':{n:'ASX 호주증권거래소',d:'1987-04-01',c:'시드니'},
+  '🇸🇬':{n:'SGX 싱가포르거래소',d:'1999-12-01',c:'싱가포르'},
+  '🇮🇩':{n:'IDX 인도네시아증권거래소',d:'1912-12-14',c:'자카르타'},
+  '🇹🇭':{n:'SET 태국증권거래소',d:'1975-04-30',c:'방콕'},
+  '🇲🇾':{n:'Bursa Malaysia',d:'1964-03-02',c:'쿠알라룸푸르'},
+  '🇵🇭':{n:'PSE 필리핀증권거래소',d:'1927-08-08',c:'마닐라'},
+  '🇻🇳':{n:'HOSE 호치민증권거래소',d:'2000-07-28',c:'호치민'},
+  '🇹🇷':{n:'BIST 이스탄불거래소',d:'1986-01-03',c:'이스탄불'},
+  '🇷🇺':{n:'MOEX 모스크바거래소',d:'2011-12-19',c:'모스크바'},
+  '🇸🇦':{n:'Tadawul 사우디거래소',d:'2007-03-19',c:'리야드'},
+  '🇦🇪':{n:'DFM 두바이금융시장',d:'2000-03-26',c:'두바이'},
+  '🇿🇦':{n:'JSE 요하네스버그증권거래소',d:'1887-11-08',c:'요하네스버그'},
+  '🇲🇽':{n:'BMV 멕시코증권거래소',d:'1894-10-31',c:'멕시코시티'},
+  '🇮🇱':{n:'TASE 텔아비브증권거래소',d:'1953-09-01',c:'텔아비브'},
+  '🇳🇴':{n:'Oslo Børs',d:'1819-04-15',c:'오슬로'},
+  '🇩🇰':{n:'Nasdaq Copenhagen',d:'1808-01-01',c:'코펜하겐'},
+  '🇫🇮':{n:'Nasdaq Helsinki',d:'1912-10-07',c:'헬싱키'},
+  '🇧🇪':{n:'Euronext Brussels',d:'1801-07-15',c:'브뤼셀'},
+  '🇦🇹':{n:'Wiener Börse',d:'1771-09-02',c:'빈'},
+  '🇵🇱':{n:'GPW 바르샤바증권거래소',d:'1991-04-16',c:'바르샤바'},
+  '🇳🇿':{n:'NZX 뉴질랜드거래소',d:'1974-01-01',c:'웰링턴'},
+  '🇨🇱':{n:'Bolsa de Santiago',d:'1893-11-27',c:'산티아고'},
+  '🇮🇪':{n:'Euronext Dublin',d:'1793-01-01',c:'더블린'},
+  '🇵🇹':{n:'Euronext Lisbon',d:'1769-01-01',c:'리스본'},
+  '🇬🇷':{n:'ATHEX 아테네증권거래소',d:'1876-09-30',c:'아테네'},
+  '🇨🇿':{n:'PSE 프라하증권거래소',d:'1993-04-06',c:'프라하'},
+  '🇭🇺':{n:'BÉT 부다페스트증권거래소',d:'1864-01-18',c:'부다페스트'},
+  '🇦🇷':{n:'BYMA 부에노스아이레스거래소',d:'1854-07-10',c:'부에노스아이레스'},
+  '🇵🇪':{n:'BVL 리마증권거래소',d:'1860-12-31',c:'리마'},
+  '🇨🇴':{n:'BVC 콜롬비아증권거래소',d:'2001-07-03',c:'보고타'},
+  '🇧🇲':{n:'BSX 버뮤다증권거래소',d:'1971-01-01',c:'해밀턴'},
+  '🇱🇺':{n:'LuxSE 룩셈부르크증권거래소',d:'1929-04-05',c:'룩셈부르크'},
+  '🇲🇴':{n:'MOX 마카오금융거래소',d:'2021-10-01',c:'마카오'},
+  '🇨🇾':{n:'CSE 키프로스증권거래소',d:'1996-03-29',c:'니코시아'},
+  '🇲🇹':{n:'MSE 몰타증권거래소',d:'1992-01-08',c:'발레타'},
+  '🇮🇸':{n:'Nasdaq Iceland',d:'1985-01-01',c:'레이캬비크'},
+  '🇨🇷':{n:'BNV 코스타리카증권거래소',d:'1976-08-29',c:'산호세'},
+  '🇵🇦':{n:'Latinex 파나마증권거래소',d:'1990-06-26',c:'파나마시티'},
+  '🇺🇾':{n:'BVM 몬테비데오증권거래소',d:'1867-06-19',c:'몬테비데오'},
+  '🇯🇴':{n:'ASE 암만증권거래소',d:'1978-01-01',c:'암만'}
+};
+
+/* ── 지난 100년, 무너지고 솟구친 날들 ───────────────────────
+   그날 하늘이 어떤 각도였는지를 기준 자로 삼는다. */
+var CSI_CYCLES = [
+  {d:'1929-10-24',n:'대공황 (검은 목요일)',k:'down',w:10},
+  {d:'1929-10-29',n:'검은 화요일',k:'down',w:10},
+  {d:'1987-10-19',n:'블랙 먼데이',k:'down',w:10},
+  {d:'2000-03-10',n:'닷컴 거품 붕괴',k:'down',w:9},
+  {d:'2008-09-15',n:'리먼 브러더스 파산',k:'down',w:10},
+  {d:'2020-03-16',n:'코로나 대폭락',k:'down',w:9},
+  {d:'2022-06-13',n:'인플레이션 충격',k:'down',w:7},
+  {d:'1932-07-08',n:'대공황 바닥 · 반등 시작',k:'up',w:9},
+  {d:'1982-08-12',n:'80년대 대세 상승 출발',k:'up',w:9},
+  {d:'2009-03-09',n:'금융위기 바닥 · 대반등',k:'up',w:10},
+  {d:'2020-03-23',n:'코로나 바닥 · V자 반등',k:'up',w:9},
+  {d:'2023-01-06',n:'AI 장세 출발',k:'up',w:8}
+];
+
+/* ── 행성 자리 셈 (율리우스일 기반 평균 황경) ──────────────
+   각도(Aspect)를 짚는 데는 이 정도면 넉넉하다 — 도(度) 단위. */
+function csiJD(dateStr){
+  var p=String(dateStr).split('-'), Y=+p[0], M=+p[1]||1, D=+p[2]||1;
+  if(M<=2){ Y-=1; M+=12; }
+  var A=Math.floor(Y/100), B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(Y+4716))+Math.floor(30.6001*(M+1))+D+B-1524.5;
+}
+var CSI_PLANETS = [
+  {k:'sun',   n:'태양',   e:'☉', L0:280.4665, R:0.9856474},
+  {k:'moon',  n:'달',     e:'☾', L0:218.3162, R:13.176396},
+  {k:'mercury',n:'수성',  e:'☿', L0:252.2509, R:4.0923771},
+  {k:'venus', n:'금성',   e:'♀', L0:181.9798, R:1.6021304},
+  {k:'mars',  n:'화성',   e:'♂', L0:355.4330, R:0.5240208},
+  {k:'jupiter',n:'목성',  e:'♃', L0:34.35148, R:0.0830912},
+  {k:'saturn',n:'토성',   e:'♄', L0:50.07747, R:0.0334979},
+  {k:'uranus',n:'천왕성', e:'♅', L0:314.0550, R:0.0117258},
+  {k:'neptune',n:'해왕성',e:'♆', L0:304.3487, R:0.0059810},
+  {k:'pluto', n:'명왕성', e:'♇', L0:238.9508, R:0.0039793}
+];
+function csiNorm(x){ x=x%360; return x<0?x+360:x; }
+function csiChart(dateStr){
+  var d=csiJD(dateStr)-2451545.0, out={};
+  for(var i=0;i<CSI_PLANETS.length;i++){ var p=CSI_PLANETS[i];
+    out[p.k]=csiNorm(p.L0 + p.R*d); }
+  return out;
+}
+/* ── 두 자리 사이의 각도가 무슨 뜻인가 ────────────────────── */
+var CSI_ASPECTS = [
+  {a:0,   orb:8, n:'합',   sym:'☌', pol:+1, w:1.00, say:'힘이 한 점에 모입니다'},
+  {a:60,  orb:5, n:'육합', sym:'⚹', pol:+1, w:0.55, say:'길이 부드럽게 열립니다'},
+  {a:90,  orb:7, n:'형',   sym:'□', pol:-1, w:0.90, say:'힘이 서로 부딪칩니다'},
+  {a:120, orb:7, n:'삼합', sym:'△', pol:+1, w:0.85, say:'흐름이 순하게 이어집니다'},
+  {a:180, orb:8, n:'충',   sym:'☍', pol:-1, w:1.00, say:'양쪽으로 팽팽히 당깁니다'}
+];
+function csiAspect(x,y){
+  var diff=Math.abs(csiNorm(x)-csiNorm(y)); if(diff>180) diff=360-diff;
+  for(var i=0;i<CSI_ASPECTS.length;i++){ var A=CSI_ASPECTS[i];
+    var off=Math.abs(diff-A.a);
+    if(off<=A.orb) return {asp:A, off:off, tight:1-(off/A.orb), deg:diff};
+  }
+  return null;
+}
+/* 두 차트를 겹쳐 걸리는 각도를 모두 찾는다 */
+function csiCross(natal, transit, only){
+  var hits=[], keys=only||['sun','mars','jupiter','saturn','uranus','neptune','pluto'];
+  for(var i=0;i<keys.length;i++) for(var j=0;j<keys.length;j++){
+    var a=csiAspect(transit[keys[i]], natal[keys[j]]);
+    if(a) hits.push({t:keys[i], nk:keys[j], a:a});
+  }
+  hits.sort(function(p,q){ return (q.a.asp.w*q.a.tight)-(p.a.asp.w*p.a.tight); });
+  return hits;
+}
+function csiPlanetName(k){ for(var i=0;i<CSI_PLANETS.length;i++) if(CSI_PLANETS[i].k===k) return CSI_PLANETS[i]; return {n:k,e:''}; }
+
+</script>
+
+<script>
+
+/* ══ ③④ 등급과 갈래 ══ */
+window.csiTier='basic';
+window.csiLanes={yeok:true, sat:false, dir:false, wea:false, bio:false, exch:true};
+var CSI_LANES=[
+  {k:'yeok', ico:'🔮', n:'역학',            d:'사주·오행·50대 역학'},
+  {k:'sat',  ico:'🛰️', n:'위성',            d:'NASA 실시간 궤도'},
+  {k:'dir',  ico:'🧭', n:'방위',            d:'기문둔갑·구성기학'},
+  {k:'wea',  ico:'🌤️', n:'날씨',            d:'기온·습도·오행 기상'},
+  {k:'bio',  ico:'💗', n:'생체 컨디션',      d:'rPPG 실측'},
+  {k:'exch', ico:'🏛️', n:'국가별 증권시장',  d:'거래소 개업일 네이탈'}
+];
+function csiSetTier(t){
+  window.csiTier=t;
+  ['basic','pro','max'].forEach(function(x){
+    var e=document.getElementById('csi-tier-'+x);
+    if(e) e.style.border='2px solid '+(x===t?'#34d399':'#e6eef0');
+  });
+  csiRenderLanes();
+}
+function csiToggleLane(k){
+  window.csiLanes[k]=!window.csiLanes[k];
+  /* 날씨·시장은 고급 이상에서만 — 값이 드는 갈래 */
+  csiRenderLanes();
+  try{ if(window.csiRefresh) csiRefresh(); }catch(e){}
+}
+function csiLaneLive(k){
+  function tx(id){ var e=document.getElementById(id); return e?(e.textContent||'').trim():''; }
+  if(k==='sat')  return [tx('cgoSatAlt'), tx('cgoSatLat'), tx('cgoSatVel')].filter(Boolean).join(' · ');
+  if(k==='wea')  return [tx('cgoWeatherTempBar'), tx('cgoWeatherHumBar'), tx('cgoWeatherOhBar')].filter(Boolean).join(' · ');
+  if(k==='dir')  return [tx('cgoCompassDegBar'), tx('cgoCompassDirBar'), tx('cgoCompassFengBar')].filter(Boolean).join(' · ');
+  if(k==='bio'){ var r=(window.calcResult&&window.calcResult.ili)||null; return r?('ILI '+r):'대시보드에서 측정하면 들어옵니다'; }
+  if(k==='yeok'){ var o=(window.calcResult&&window.calcResult.domOh)||null; return o?('내 오행 '+o):'대시보드에서 사주를 넣으면 들어옵니다'; }
+  if(k==='exch'){ var f=window._stkCountryFilter; var x=f&&CSI_EXCHANGE[f];
+    return x?(x.n+' · '+x.d):'나라를 고르면 그 거래소의 생일을 봅니다'; }
+  return '';
+}
+function csiRenderLanes(){
+  var row=document.getElementById('csi-lane-row'); if(!row) return;
+  var tier=window.csiTier||'basic';
+  row.innerHTML=CSI_LANES.map(function(L){
+    var on=!!window.csiLanes[L.k];
+    var paid=(L.k==='wea'||L.k==='exch');
+    var lock=paid && tier==='basic';
+    if(lock) on=false;
+    return '<div onclick="'+(lock?'':'csiToggleLane(\''+L.k+'\')')+'" style="cursor:'+(lock?'not-allowed':'pointer')+';opacity:'+(lock?'.45':'1')+';background:'+(on?'rgba(52,211,153,.12)':'#fff')+';border:2px solid '+(on?'#34d399':'#e6eef0')+';border-radius:12px;padding:11px 7px;text-align:center;transition:all .15s;">'
+      +'<div style="font-size:17px;">'+L.ico+'</div>'
+      +'<div style="font-size:11px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+L.n+'</div>'
+      +'<div style="font-size:9px;color:#4b6470;margin-top:2px;line-height:1.4;">'+(lock?'고급 이상':L.d)+'</div>'
+      +(on?'<div style="font-size:9px;color:#059669;font-weight:800;margin-top:3px;">● 켬</div>':'')
+      +'</div>';
+  }).join('');
+  /* 켠 갈래의 세부 */
+  var det=document.getElementById('csi-lane-detail');
+  if(det){
+    var open=CSI_LANES.filter(function(L){ return window.csiLanes[L.k]; });
+    det.innerHTML = open.length? open.map(function(L){
+      var live=csiLaneLive(L.k);
+      return '<div style="background:#fff;border:1px solid rgba(52,211,153,.28);border-radius:11px;padding:10px 12px;margin-bottom:7px;">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+        +'<span style="font-size:11.5px;font-weight:800;color:#0f1b2e;">'+L.ico+' '+L.n+'</span>'
+        +'<span style="font-size:10px;color:#059669;font-weight:700;">'+(live||'—')+'</span></div>'
+        +(L.k==='yeok'?'<div id="csi-yeok-list" style="margin-top:8px;"></div>':'')
+        +'</div>';
+    }).join('') : '<div style="font-size:11px;color:#4b6470;padding:10px 2px;">갈래를 하나 이상 켜 주세요.</div>';
+    if(window.csiLanes.yeok) csiRenderYeok();
+  }
+  var c=document.getElementById('csi-lane-count');
+  if(c) c.textContent=CSI_LANES.filter(function(L){return window.csiLanes[L.k];}).length+'개';
+}
+/* 역학을 켜면 — 순수역학처럼 주르륵 */
+var CSI_YEOK=['사주팔자','자미두수','구성기학','기문둔갑','매화역수','육임','토정비결','주역','성명학','풍수지리','서양점성','수비학'];
+window.csiYeokPick=window.csiYeokPick||{'사주팔자':1,'자미두수':1,'구성기학':1,'서양점성':1};
+function csiToggleYeok(k){ window.csiYeokPick[k]=!window.csiYeokPick[k]; csiRenderYeok(); }
+function csiRenderYeok(){
+  var el=document.getElementById('csi-yeok-list'); if(!el) return;
+  el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:5px;">'+CSI_YEOK.map(function(k){
+    var on=!!window.csiYeokPick[k];
+    return '<span onclick="csiToggleYeok(\''+k+'\')" style="cursor:pointer;font-size:10px;padding:4px 9px;border-radius:8px;font-weight:700;'
+      +(on?'background:rgba(52,211,153,.16);color:#059669;border:1px solid rgba(52,211,153,.45);':'background:#f5f7f8;color:#8a9aa3;border:1px solid #e6eef0;')+'">'+k+'</span>';
+  }).join('')+'</div>';
+}
+try{ window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
+/* 주식 페이지가 열릴 때 한 번 그린다 */
+(function(){ function boot(){ try{ if(document.getElementById('csi-lane-row')) csiRenderLanes(); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,600); })();
 
 </script>
 </body></html>
