@@ -12998,6 +12998,7 @@ function cgoGoPage(page){
   if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
     if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
+  if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
   if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
   if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
@@ -38900,6 +38901,817 @@ list.innerHTML = scored.map(function(d){
 
 </div>
 
+<!-- ★ 오행 맞춤 쇼핑 — 구앱에서 그대로 옮겨 옴 (이미지 파일명 동일: /bujeok-series.jpeg, /c-1~24.jpeg, /c-handbag.jpeg, /c-tableware.jpeg) -->
+<div class="page" id="page-shop" style="background:#f5f6fa;min-height:100vh;padding:0;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(212,168,67,.25),rgba(251,191,36,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+
+
+  <!-- ★ Sticky 상단 헤더 -->
+  <div style="position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #e8eaf0;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">🛡️</span>
+      <div>
+        <div style="font-size:16px;font-weight:900;color:#1a1408;letter-spacing:-.02em;line-height:1;">FULI <span style="color:#d4a843;">오행 맞춤</span></div>
+        <div style="font-size:9px;color:#888;margin-top:2px;letter-spacing:.06em;font-weight:700;">BUJEOK LIFESTYLE</div>
+      </div>
+    </div>
+    <div style="font-size:9px;color:#666;background:#f5f6fa;padding:5px 10px;border-radius:8px;font-weight:700;letter-spacing:.04em;">CGO · 12역학 × AI 디자인</div>
+  </div>
+
+  <!-- ★ 풀폭 Hero — CGO.png + 텍스트 오버레이 -->
+  <div style="position:relative;min-height:380px;background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,.55) 100%),url('/CGO1.jpeg') center/cover no-repeat,linear-gradient(135deg,#1a1408 0%,#4a3220 50%,#1a1408 100%);padding:48px 18px 36px;display:flex;flex-direction:column;justify-content:center;">
+
+    <div style="text-align:center;color:#fff;max-width:520px;margin:0 auto;">
+      <div style="font-size:30px;font-weight:900;line-height:1.2;letter-spacing:-.04em;margin-bottom:8px;text-shadow:0 2px 16px rgba(0,0,0,.5);">
+        오행 맞춤 라이프스타일
+      </div>
+      <div style="font-size:13px;opacity:.95;text-shadow:0 1px 8px rgba(0,0,0,.5);line-height:1.5;font-weight:500;">
+        사주 × 12역학 × AI 디자인 × OEM 제작
+      </div>
+      <!-- ★ C-39 박제 (영원히 남음) — Hero 중앙 -->
+      <div style="display:inline-flex;align-items:center;margin-top:18px;padding:7px 20px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);border:1px solid rgba(251,191,36,.5);border-radius:12px;font-family:'Courier New',monospace;box-shadow:0 4px 16px rgba(0,0,0,.3);">
+        <span style="font-size:12px;font-weight:800;color:#fbbf24;letter-spacing:.16em;">C-39</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:0 24px 80px;max-width:1200px;margin:0 auto;">
+
+    <!-- 헤더 -->
+    <div style="background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #f0e6d4;border-radius:16px;padding:20px 18px;margin-bottom:18px;">
+      <div id="shop-oh-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:8px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:#34d399;">🌳 목(木) 기운 · 맞춤 에너지웨어</div>
+      <div style="font-size:15px;font-weight:800;color:#1a1408;margin-bottom:4px;">나만의 오행 부적 라이프스타일</div>
+      <div style="font-size:11px;color:#666;margin-bottom:12px;">12가지 역학 분석 × 생체 데이터 기반 맞춤 상품</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+        <div>
+          <div style="font-size:9px;color:rgba(212,168,67,.5);margin-bottom:2px;">ILI 통합 에너지</div>
+          <div id="shop-ili-num" style="font-size:36px;font-weight:900;color:#d4a843;">—</div>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span id="shop-ili-grade" style="font-size:9px;color:#666;">분석 대기</span>
+            <span id="shop-lucky-color" style="font-size:9px;color:rgba(212,168,67,.5);">행운색 —</span>
+          </div>
+          <div style="background:#f0f2f7;border-radius:6px;height:8px;overflow:hidden;">
+            <div id="shop-ili-bar" style="width:0%;height:100%;border-radius:6px;background:linear-gradient(90deg,#d4a843,#34d399);transition:width 1.2s ease;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══ 🛡️ CGO 부적 시리즈 19종 (符籍 BUJEOK SERIES) ══ -->
+    <div style="background:#fff;border:1px solid rgba(52,211,153,.3);border-radius:20px;padding:20px;margin-bottom:18px;box-shadow:0 4px 24px rgba(0,0,0,.4);">
+
+      <!-- 헤더 -->
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="display:inline-block;padding:4px 14px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);border-radius:20px;font-size:10px;font-weight:800;color:#34d399;letter-spacing:.12em;margin-bottom:10px;">符籍 · BUJEOK SERIES</div>
+        <div style="font-size:19px;font-weight:900;color:#1a1408;letter-spacing:.01em;margin-bottom:5px;">🛡️ CGO 부적 시리즈</div>
+        <div style="font-size:11px;color:#888;line-height:1.5;">사주 × 오행 × AI 디자인 × OEM 제작<br><span style="color:#34d399;font-weight:700;">19종 라이프스타일 풀 커버리지</span></div>
+      </div>
+
+      <!-- 메인 룩북 이미지 (CGO.png 인라인) -->
+      <div style="border-radius:14px;overflow:hidden;margin-bottom:16px;background:#000;border:1px solid rgba(52,211,153,.15);box-shadow:0 2px 12px rgba(0,0,0,.5);">
+        <img src="/bujeok-series.jpeg" alt="CGO 부적 시리즈 룩북" style="width:100%;display:block;">
+      </div>
+
+      <!-- 8개 카테고리 카드 (4컬럼 × 2줄) -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;">
+        <div onclick="shopTab('wear',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">👕</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">의류</div>
+        </div>
+        <div onclick="shopTab('suit',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">🤵</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">슈트</div>
+        </div>
+        <div onclick="shopTab('training',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">🏃</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">트레이닝</div>
+        </div>
+        <div onclick="shopTab('jewelry',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">💍</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">주얼리</div>
+        </div>
+        <div onclick="shopTab('shoes',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">👟</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">신발</div>
+        </div>
+        <div onclick="shopTab('home',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">🏠</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">홈·리빙</div>
+        </div>
+        <div onclick="shopTab('etc',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:#fff;border:1px solid #f0e6d4;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.15)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">📦</div>
+          <div style="font-size:11px;color:#1a1408;font-weight:800;letter-spacing:.02em;">기타</div>
+        </div>
+        <div onclick="shopTab('custom',this)" class="shop-tab" style="text-align:center;padding:12px 6px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #d4a843;border-radius:12px;cursor:pointer;transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(212,168,67,.25)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+          <div style="font-size:22px;margin-bottom:4px;">✨</div>
+          <div style="font-size:11px;color:#d4a843;font-weight:800;letter-spacing:.02em;">주문제작</div>
+        </div>
+      </div>
+
+      <!-- 24개 제품 그리드 (C-01 ~ C-24) -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+      <div onclick="shopOpenPop('t001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-1.jpeg" alt="부적 티셔츠" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 티셔츠</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-01</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 티셔츠</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">오행 맞춤 에너지웨어</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('t002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-2.jpeg" alt="부적 잠옷" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 잠옷</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-02</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 잠옷</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">수면 기운 정렬 잠옷</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('t003')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-3.jpeg" alt="부적 잠바" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 잠바</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-03</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 잠바</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">사주 맞춤 기운 아우터</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('t004')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-4.jpeg" alt="오행 후드집업" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">오행 후드집업</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-04</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">오행 후드집업</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">머리 에너지 보호 · 집중력 강화</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('su001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-5.jpeg" alt="부적 슈트 셋업" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 슈트 셋업</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-05</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 슈트 셋업</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">오행 맞춤 고급 자수 정장</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('su002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-6.jpeg" alt="부적 슈트 재킷" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 슈트 재킷</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-06</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 슈트 재킷</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">오행 기운 상의 단품</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('tr001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-7.jpeg" alt="부적 트레이닝복 셋업" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 트레이닝복 셋업</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-07</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 트레이닝복 셋업</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">기운 순환 운동복 풀세트</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('tr002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-8.jpeg" alt="부적 조거팬츠" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 조거팬츠</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-08</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 조거팬츠</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">하체 기운 정렬 · 운동 집중</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('j001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-9.jpeg" alt="부적 반지" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 반지</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-09</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 반지</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">손가락 경혈 자극 · 기운 순환</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('j002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-10.jpeg" alt="부적 목걸이" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 목걸이</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-10</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 목걸이</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">심장 에너지 정렬 · 직관 강화</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('j003')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-11.jpeg" alt="부적 팔찌" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 팔찌</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-11</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 팔찌</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">손목 맥박 에너지 증폭</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('s001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-12.jpeg" alt="부적 운동화" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 운동화</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-12</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 운동화</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">행운 방위 에너지 슈즈</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('s002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-13.jpeg" alt="부적 슬리퍼" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 슬리퍼</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-13</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 슬리퍼</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">여름·야외 기운 정렬</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('s003')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-14.jpeg" alt="부적 실내화" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 실내화</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-14</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 실내화</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">가정 내 기운 정렬 · 휴식 강화</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h008')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-15.jpeg" alt="스마트폰 부적 케이스" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">스마트폰 부적 케이스</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-15</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">스마트폰 부적 케이스</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">특정 기원 심리 효과 증폭</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-16.jpeg" alt="부적 베개" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 베개</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-16</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 베개</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">수면 기운 보호 · 꿈 에너지 정렬</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-17.jpeg" alt="부적 쿠션" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 쿠션</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-17</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 쿠션</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">공간 기운 정렬 · 안정 에너지</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h003')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-18.jpeg" alt="부적 식기 세트" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 식기 세트</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-18</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 식기 세트</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">음식 에너지 정화 · 건강 기운</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('c001')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-19.jpeg" alt="맞춤 부적 풀세트" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">맞춤 부적 풀세트</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-19</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">맞춤 부적 풀세트</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">티셔츠+반지+목걸이 통일 문양</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('c002')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-20.jpeg" alt="24시간 부적 세트" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">24시간 부적 세트</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-20</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">24시간 부적 세트</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">잠옷+잠바 취침~외출 연속 에너지</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h004')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-21.jpeg" alt="부적 테이블" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 테이블</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-21</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 테이블</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">거실 중심 기운 응집 · 가족 에너지 모음</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h005')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-22.jpeg" alt="부적 식탁" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 식탁</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-22</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 식탁</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">식사 에너지 순환 · 가족 건강 기운</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h006')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-23.jpeg" alt="부적 액자" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 액자</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-23</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 액자</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">공간 기운 보호 · 시각 에너지 정렬</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      <div onclick="shopOpenPop('h007')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-24.jpeg" alt="부적 의자" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🛡️</div>
+            <div style="font-size:9px;color:#888;">부적 의자</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;">C-24</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 의자</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">좌식 기운 순환 · 척추 에너지 정렬</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+
+      <!-- h009 부적 핸드백 (신규) -->
+      <div onclick="shopOpenPop('h009')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-handbag.jpeg" alt="부적 핸드백" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">👜</div>
+            <div style="font-size:9px;color:#888;">부적 핸드백</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Orbitron',sans-serif;">NEW</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">부적 핸드백</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">외출 동행 에너지 · 휴대용 부적 가방</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+
+      <!-- h010 CGO-FULI 식기 세트 (신규) -->
+      <div onclick="shopOpenPop('h010')" style="background:#fff;border:1px solid #f0e6d4;border-radius:14px;padding:10px;transition:all .25s;cursor:pointer;" onmouseover="this.style.borderColor='#d4a843';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(212,168,67,.12)'" onmouseout="this.style.borderColor='#f0e6d4';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="aspect-ratio:1.2;background:linear-gradient(135deg,#fef9f3,#fffbeb);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;position:relative;">
+          <img src="/c-tableware.jpeg" alt="CGO-FULI 식기 세트" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+          <div style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(212,168,67,.4);">
+            <div style="font-size:32px;">🥢</div>
+            <div style="font-size:9px;color:#888;">CGO-FULI 식기 세트</div>
+          </div>
+          <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:3px 8px;border-radius:8px;font-size:9px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Orbitron',sans-serif;">NEW</div>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#1a1408;line-height:1.35;min-height:30px;margin-bottom:2px;">CGO-FULI 식기 세트</div>
+        <div style="font-size:9px;color:#888;line-height:1.35;min-height:24px;margin-bottom:4px;">그릇+수저+포크+나이프 풀세트</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid #f0e6d4;">
+          <span style="font-size:9px;color:rgba(212,168,67,.55);font-weight:600;letter-spacing:.04em;">PRICE</span>
+          <span style="font-size:10px;color:#d4a843;font-weight:800;letter-spacing:.02em;">준비중</span>
+        </div>
+      </div>
+      </div>
+
+      <!-- OEM 안내 푸터 -->
+      <div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(212,168,67,.06),rgba(52,211,153,.04));border:1px solid #f0e6d4;border-radius:14px;">
+        <div style="font-size:11px;font-weight:800;color:#d4a843;margin-bottom:8px;letter-spacing:.04em;">🏭 OEM 맞춤 제작 안내</div>
+        <div style="font-size:10.5px;color:rgba(240,230,200,.75);line-height:1.8;">사주 측정 → AI 디자인 자동 생성 → OEM 공장 의뢰 → 1~2주 제작 → 배송<br>본 제품들은 디자인 시안이며, 출시 시 실제 제품과 차이가 있을 수 있습니다.<br>가격 및 출시 일정은 추후 공개됩니다.</div>
+      </div>
+
+      <!-- 신뢰 푸터 -->
+      <div style="text-align:center;margin-top:12px;font-size:9px;color:rgba(167,139,250,.5);letter-spacing:.08em;">
+        BUJEOK SERIES · 19 PRODUCTS · AI × ORIENTAL DESIGN<br>
+        CGO-FULI
+      </div>
+
+    </div>
+    <!-- ══ 📐 신체 치수 자동 측정 ══ -->
+    <div id="bodyMeasureMain" style="background:rgba(16,24,40,.9);border:1px solid rgba(52,211,153,.25);border-radius:18px;padding:20px;margin-bottom:18px;">
+      <div style="font-size:13px;font-weight:800;color:#34d399;display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        📐 나만의 오행 의류 — 신체 치수 자동 측정
+        <span style="font-size:12px;background:#34d399;padding:2px 10px;border-radius:8px;color:#04170f;font-weight:900;">🆕 C-61 v1</span>
+      </div>
+      <div style="font-size:11px;color:#666;margin-bottom:14px;">정면+측면 촬영 → 라인을 직접 드래그로 보정 → 정직한 실측 (과장 없음)</div>
+
+      <!-- 작동 순서 -->
+      <div style="background:rgba(0,0,0,.3);border-radius:12px;padding:12px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:rgba(52,211,153,.7);margin-bottom:8px;">📋 작동 순서</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">①</span>키 / 몸무게 입력 (cm / kg)</div>
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">②</span>📸 촬영 시작 → C-61 측정 카메라 (관절 인식 + 라인 드래그 보정)</div>
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">③</span>정면 촬영 → 자동으로 측면 촬영으로 전환</div>
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#34d399;font-weight:800;flex-shrink:0;">④</span>측면 촬영 완료</div>
+          <div style="font-size:11px;color:#666;display:flex;gap:8px;"><span style="color:#d4a843;font-weight:800;flex-shrink:0;">⑤</span>⚡ 치수 분석 버튼 → 약 2초 후 결과 표시</div>
+        </div>
+      </div>
+
+      <!-- 키/몸무게 입력 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;color:#666;margin-bottom:6px;letter-spacing:.08em;">키 (cm)</div>
+          <input id="bmHeight2" type="number" min="140" max="220" placeholder="예: 175" style="width:100%;background:#f0f2f7;border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:12px;color:#1a1408;font-size:15px;font-weight:700;text-align:center;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#666;margin-bottom:6px;letter-spacing:.08em;">몸무게 (kg)</div>
+          <input id="bmWeight2" type="number" min="30" max="200" placeholder="예: 70" style="width:100%;background:#f0f2f7;border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:12px;color:#1a1408;font-size:15px;font-weight:700;text-align:center;outline:none;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- 단계 표시바 -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">
+        <div id="bm2Step1dot" style="width:28px;height:28px;border-radius:50%;background:rgba(52,211,153,.3);border:2px solid #34d399;color:#34d399;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+        <span style="font-size:11px;color:#34d399;font-weight:600;">정면</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px;"><div id="bm2Step1bar" style="width:0%;height:100%;background:#34d399;transition:width .6s;border-radius:2px;"></div></div>
+        <div id="bm2Step2dot" style="width:28px;height:28px;border-radius:50%;background:#f0f2f7;border:2px solid rgba(255,255,255,.15);color:#aaa;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+        <span style="font-size:11px;color:#666;font-weight:600;">측면</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px;"><div id="bm2Step2bar" style="width:0%;height:100%;background:#34d399;transition:width .6s;border-radius:2px;"></div></div>
+        <div id="bm2DoneDot" style="width:28px;height:28px;border-radius:50%;background:#f0f2f7;border:2px solid rgba(255,255,255,.15);color:#aaa;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✓</div>
+      </div>
+
+      <!-- 카메라 뷰 -->
+      <div id="bm2CamWrap" style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:14px;display:none;">
+        <video id="bm2Video" autoplay playsinline muted style="width:100%;max-height:300px;object-fit:cover;display:block;"></video>
+        <div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 120 260" width="90" style="opacity:.3;">
+            <ellipse cx="60" cy="22" rx="16" ry="18" fill="none" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="60" y1="40" x2="60" y2="130" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="60" y1="60" x2="25" y2="95" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="60" y1="60" x2="95" y2="95" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="60" y1="130" x2="40" y2="210" stroke="#34d399" stroke-width="2.5"/>
+            <line x1="60" y1="130" x2="80" y2="210" stroke="#34d399" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div id="bm2GuideText" style="position:absolute;bottom:52px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#34d399;text-shadow:0 1px 6px rgba(0,0,0,.8);">정면을 향해 똑바로 서주세요</div>
+        <button onclick="bm2Shoot()" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.95);border:3px solid #34d399;cursor:pointer;font-size:24px;box-shadow:0 0 20px rgba(52,211,153,.6);">📸</button>
+      </div>
+
+      <!-- 사진 미리보기 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:#666;margin-bottom:5px;">① 정면 사진</div>
+          <div id="bm2Preview1" style="width:100%;height:90px;border-radius:10px;border:1px dashed rgba(52,211,153,.3);background:rgba(52,211,153,.03);display:flex;align-items:center;justify-content:center;color:rgba(52,211,153,.25);font-size:26px;">📷</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:#666;margin-bottom:5px;">② 측면 사진</div>
+          <div id="bm2Preview2" style="width:100%;height:90px;border-radius:10px;border:1px dashed rgba(52,211,153,.3);background:rgba(52,211,153,.03);display:flex;align-items:center;justify-content:center;color:rgba(52,211,153,.25);font-size:26px;">📷</div>
+        </div>
+      </div>
+
+      <!-- 버튼 -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <button id="bm2StartBtn" onclick="bm2Start()" style="flex:1;padding:16px;border-radius:14px;background:linear-gradient(135deg,#34d399,#10b981);border:none;color:#1a1408;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(52,211,153,.3);">📸 촬영 시작</button>
+        <button id="bm2AnalyzeBtn" onclick="bm2Analyze()" style="flex:1;padding:16px;border-radius:14px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.35);color:#d4a843;font-size:14px;font-weight:800;cursor:pointer;display:none;">⚡ 치수 분석</button>
+        <button onclick="bm2Reset()" style="width:52px;border-radius:14px;background:#fafbfc;border:1px solid #e8eaf0;color:#666;font-size:18px;cursor:pointer;">↺</button>
+      </div>
+
+      <!-- 측정 결과 (수정 가능) -->
+      <div id="bm2Result" style="display:none;background:rgba(0,0,0,.3);border-radius:14px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:800;color:#34d399;">📏 측정 결과</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="bm2ToggleEdit()" id="bm2EditBtn" style="padding:4px 12px;border-radius:8px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer;">✏️ 수정</button>
+            <button onclick="bm2SaveEdit()" id="bm2SaveBtn" style="padding:4px 12px;border-radius:8px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);color:#34d399;font-size:10px;font-weight:700;cursor:pointer;display:none;">✅ 저장</button>
+            <button onclick="bm2Reset()" style="padding:4px 12px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:#f87171;font-size:10px;font-weight:700;cursor:pointer;">🔄 재측정</button>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#aaa;margin-bottom:10px;" id="bm2EditHint">💡 수정 버튼을 눌러 각 항목을 직접 변경할 수 있어요</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="bm2ResultGrid"></div>
+        <div style="margin-top:12px;padding:12px 14px;background:rgba(212,168,67,.08);border:1px solid #f0e6d4;border-radius:10px;font-size:12px;color:#d4a843;font-weight:700;line-height:1.8;" id="bm2SizeRecom"></div>
+        <button onclick="shopCustomOrder()" style="width:100%;margin-top:12px;padding:14px;border-radius:12px;background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(212,168,67,.15));border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:13px;font-weight:800;cursor:pointer;">✨ 이 치수로 주문제작 신청하기</button>
+      </div>
+      <canvas id="bm2Canvas" style="display:none;"></canvas>
+    </div>
+
+    <!-- AI 프롬프트 카드 -->
+    <div style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.2);border-radius:14px;padding:16px;margin-bottom:18px;">
+      <div style="font-size:12px;font-weight:700;color:#38bdf8;margin-bottom:10px;">🤖 AI 이미지 생성 프롬프트 <span style="font-size:9px;background:rgba(56,189,248,.1);padding:2px 7px;border-radius:8px;">Microsoft Copilot — 무료 AI 이미지 생성</span></div>
+      <div id="shop-prompt-box" style="background:rgba(0,0,0,.3);border-radius:10px;padding:12px;font-size:11px;color:rgba(240,230,200,.75);line-height:1.8;white-space:pre-wrap;word-break:break-all;max-height:110px;overflow-y:auto;margin-bottom:8px;">⚡ 대시보드에서 생년월일을 입력하고 분석하면&#10;나만의 역학 데이터 기반 AI 부적 이미지 프롬프트가 자동 생성됩니다.</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="shopCopyPrompt(event)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.1);color:#38bdf8;font-size:11px;font-weight:600;cursor:pointer;">📋 프롬프트 복사</button>
+        <button onclick="shopShowAllPrompts()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(212,168,67,.3);background:rgba(212,168,67,.1);color:#d4a843;font-size:11px;font-weight:600;cursor:pointer;">📦 전 상품 프롬프트</button>
+      </div>
+      <!-- ═══ 부적 프롬프트 2종 버튼 ═══ -->
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button onclick="bujukPromptPop('oriental')" style="flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(212,168,67,.4);background:rgba(212,168,67,.1);color:#d4a843;font-size:11px;font-weight:700;cursor:pointer;">
+          ☯️ 동양 부적<br><span style="font-size:9px;opacity:.7">전통 점술 기반</span>
+        </button>
+        <button onclick="bujukPromptPop('cgo')" style="flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.1);color:#a855f7;font-size:11px;font-weight:700;cursor:pointer;">
+          ✨ CGO-FULI<br><span style="font-size:9px;opacity:.7">12역학 추상 패션 부적</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 주문제작 안내 -->
+    <div style="background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:14px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:12px;">✨ 주문제작 · OEM 맞춤 3단계</div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.2);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">1</div>
+        <div><div style="font-size:12px;font-weight:600;color:#1a1408;margin-bottom:2px;">AI 프롬프트 복사</div><div style="font-size:11px;color:#666;line-height:1.6;">나의 오행·ILI 기반 프롬프트 복사 → Microsoft Copilot에서 무료로 이미지 생성</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.2);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">2</div>
+        <div><div style="font-size:12px;font-weight:600;color:#1a1408;margin-bottom:2px;">상품 선택 &amp; 이미지 업로드</div><div style="font-size:11px;color:#666;line-height:1.6;">원하는 상품(티·잠옷·잠바·신발·반지·목걸이)을 선택하고 주문</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(248,113,113,.2);border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">3</div>
+        <div><div style="font-size:12px;font-weight:600;color:#1a1408;margin-bottom:2px;">OEM 제작 · 배송</div><div style="font-size:11px;color:#666;line-height:1.6;">주문 접수 후 7~14일 내 세상에 하나뿐인 나만의 오행 부적 상품 수령</div></div>
+      </div>
+      <div style="text-align:center;">
+        <button onclick="shopCustomOrder()" style="padding:11px 28px;background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(212,168,67,.15));border:1px solid rgba(248,113,113,.3);border-radius:10px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">✨ 주문제작 신청하기</button>
+      </div>
+
+      <!-- ══ 이미지 업로드 주문 접수 ══ -->
+      <div style="margin-top:14px;border-top:1px solid rgba(248,113,113,.12);padding-top:14px;">
+        <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:4px;">📎 AI 부적 이미지 업로드 주문</div>
+        <div style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.7;">Microsoft Copilot에서 생성한 이미지를 업로드하고 상품·사이즈를 선택하면 주문이 접수됩니다.</div>
+
+        <!-- 이미지 업로드 영역 -->
+        <div id="uploadDropZone" onclick="document.getElementById('shopImageInput').click()"
+          style="border:2px dashed rgba(248,113,113,.3);border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:rgba(248,113,113,.03);transition:all .2s;margin-bottom:12px;"
+          ondragover="event.preventDefault();this.style.borderColor='#f87171';this.style.background='rgba(248,113,113,.08)'"
+          ondragleave="this.style.borderColor='rgba(248,113,113,.3)';this.style.background='rgba(248,113,113,.03)'"
+          ondrop="uploadHandleDrop(event)">
+          <div id="uploadPreviewArea">
+            <div style="font-size:36px;margin-bottom:8px;">🖼️</div>
+            <div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:4px;">이미지를 여기에 끌어다 놓거나</div>
+            <div style="font-size:11px;color:#666;margin-bottom:10px;">JPG · PNG · WEBP 파일 지원</div>
+            <div style="display:inline-block;padding:8px 20px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);border-radius:10px;color:#f87171;font-size:12px;font-weight:700;">📂 파일 선택</div>
+          </div>
+          <img id="uploadPreviewImg" style="display:none;width:100%;max-height:200px;object-fit:contain;border-radius:10px;" />
+        </div>
+        <input type="file" id="shopImageInput" accept="image/*" style="display:none;" onchange="uploadHandleFile(this.files[0])">
+
+        <!-- 업로드 후 주문 폼 -->
+        <div id="uploadOrderForm" style="display:none;">
+          <div style="font-size:11px;color:#666;margin-bottom:6px;">📦 주문 상품 선택</div>
+          <select id="uploadProductSel" style="width:100%;padding:10px 12px;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#1a1408;font-size:12px;margin-bottom:10px;">
+            <option value="">— 상품을 선택하세요 —</option>
+            <option value="부적 티셔츠">👕 부적 티셔츠 — 준비중</option>
+            <option value="부적 잠옷">🌙 부적 잠옷 — 준비중</option>
+            <option value="부적 잠바">🧥 부적 잠바 — 준비중</option>
+            <option value="오행 후드집업">🧢 오행 후드집업 — 준비중</option>
+            <option value="부적 반지">💍 부적 반지 — 준비중</option>
+            <option value="부적 목걸이">📿 부적 목걸이 — 준비중</option>
+            <option value="부적 팔찌">🔮 부적 팔찌 — 준비중</option>
+            <option value="부적 신발">👟 부적 신발 — 준비중</option>
+            <option value="부적 슬리퍼">🥿 부적 슬리퍼 — 준비중</option>
+            <option value="맞춤 풀세트">🎁 맞춤 부적 풀세트 — 준비중</option>
+            <option value="24시간 세트">🌟 24시간 부적 세트 — 준비중</option>
+          </select>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:#666;margin-bottom:5px;">사이즈</div>
+              <select id="uploadSizeSel" style="width:100%;padding:9px 10px;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#1a1408;font-size:11px;">
+                <option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option>
+                <option>225</option><option>230</option><option>235</option><option>240</option><option>245</option>
+                <option>250</option><option>255</option><option>260</option><option>265</option><option>270</option>
+                <option>10호</option><option>11호</option><option>12호</option><option>13호</option><option>14호</option>
+                <option>40cm</option><option>45cm</option><option>50cm</option><option>풀세트</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#666;margin-bottom:5px;">수량</div>
+              <select id="uploadQtySel" style="width:100%;padding:9px 10px;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#1a1408;font-size:11px;">
+                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#666;margin-bottom:5px;">연락처 (이름 · 전화번호)</div>
+            <input id="uploadContact" type="text" placeholder="홍길동 · 010-1234-5678"
+              style="width:100%;padding:10px 12px;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#1a1408;font-size:12px;box-sizing:border-box;">
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;color:#666;margin-bottom:5px;">배송지 주소</div>
+            <input id="uploadAddr" type="text" placeholder="서울시 강남구 테헤란로 123"
+              style="width:100%;padding:10px 12px;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#1a1408;font-size:12px;box-sizing:border-box;">
+          </div>
+
+          <!-- 요약 + 접수 버튼 -->
+          <div id="uploadSummary" style="background:rgba(212,168,67,.06);border:1px solid #f0e6d4;border-radius:12px;padding:12px;margin-bottom:10px;display:none;">
+            <div style="font-size:11px;font-weight:700;color:#d4a843;margin-bottom:8px;">📋 주문 요약</div>
+            <div id="uploadSummaryContent" style="font-size:11px;color:#888;line-height:2;"></div>
+          </div>
+
+          <button onclick="uploadPreviewOrder()" style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(212,168,67,.4);background:rgba(212,168,67,.1);color:#d4a843;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;">🔍 주문 내용 확인</button>
+          <button onclick="uploadSubmitOrder()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#f87171,#d4a843);color:#1a1408;font-size:14px;font-weight:800;cursor:pointer;">⚡ 주문 접수하기</button>
+          <button onclick="uploadReset()" style="width:100%;padding:9px;border-radius:10px;border:none;background:transparent;color:#aaa;font-size:11px;cursor:pointer;margin-top:6px;">↺ 다시 선택</button>
+        </div>
+
+        <!-- 접수 완료 메시지 -->
+        <div id="uploadSuccess" style="display:none;text-align:center;padding:20px;">
+          <div style="font-size:48px;margin-bottom:12px;">✅</div>
+          <div style="font-size:16px;font-weight:800;color:#34d399;margin-bottom:6px;">주문이 접수되었습니다!</div>
+          <div style="font-size:12px;color:rgba(240,230,200,0.87);line-height:1.8;margin-bottom:14px;">24시간 내 담당자가 연락드립니다.<br>카카오톡: @CGo-Life</div>
+          <button onclick="uploadReset()" style="padding:10px 24px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:10px;color:#34d399;font-size:12px;font-weight:700;cursor:pointer;">+ 추가 주문하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 장바구니 -->
+    <div id="shopCartSummary" style="display:none;background:rgba(212,168,67,.06);border:1px solid #f0e6d4;border-radius:14px;padding:16px;margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:#d4a843;margin-bottom:10px;">🛒 장바구니</div>
+      <div id="shopCartList"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);">
+        <span style="font-size:13px;color:#888;">합계</span>
+        <span id="shopCartTotal" style="font-size:18px;font-weight:900;color:#d4a843;">준비중</span>
+      </div>
+      <button onclick="shopCheckout()" style="width:100%;margin-top:10px;padding:13px;background:linear-gradient(135deg,#d4a843,#f59e0b);border:none;border-radius:12px;color:#1a1408;font-size:14px;font-weight:800;cursor:pointer;">⚡ 구매하기</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="shopPopOv" style="position:fixed;inset:0;background:rgba(2,8,23,.75);z-index:300;display:none;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)shopPopClose()">
+  <div id="shopPop" style="background:#0f172a;border:1px solid rgba(212,168,67,.25);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 36px;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div id="shopPopTitle" style="font-size:16px;font-weight:800;color:#e2e8f0;"></div>
+      <div onclick="shopPopClose()" style="cursor:pointer;color:#94a3b8;font-size:22px;">✕</div>
+    </div>
+    <div id="shopPopImg" style="width:100%;aspect-ratio:1.2;display:flex;align-items:center;justify-content:center;font-size:72px;background:rgba(255,255,255,.03);border-radius:14px;margin-bottom:16px;position:relative;"></div>
+    <div id="shopPopBody"></div>
+  </div>
+</div>
+<div id="bujukPromptPop" style="position:fixed;inset:0;background:rgba(2,8,23,.92);z-index:500;display:none;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#0d1829;border:1px solid rgba(212,168,67,.3);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:0 0 40px;">
+    <div style="position:sticky;top:0;background:#0d1829;padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;z-index:1;">
+      <div>
+        <div id="bujukPopTitle" style="font-size:15px;font-weight:900;color:#d4a843;"></div>
+        <div id="bujukPopSub" style="font-size:10px;color:rgba(212,168,67,.5);margin-top:2px;"></div>
+      </div>
+      <button onclick="document.getElementById('bujukPromptPop').style.display='none'" style="background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.5);border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;">&#x2715;</button>
+    </div>
+    <div id="bujukTabBar" style="display:flex;gap:6px;padding:14px 16px 0;overflow-x:auto;scrollbar-width:none;flex-wrap:wrap;"></div>
+    <div id="bujukPromptBody" style="padding:16px 16px 8px;"></div>
+  </div>
+</div>
+
 <div class="page cgop" id="page-report-v2" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--bg-deep2:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;">
   <!-- ━━━━━━━ Chapter I: 18개 분야 ━━━━━━━ -->
   <div class="rfu-chap">
@@ -47320,6 +48132,1056 @@ window.tvyGuideGo = function(){
   }
   if(!mark()) addEventListener('DOMContentLoaded', mark);
 })();
+</script>
+
+<script>
+/* ★ 오행 맞춤 쇼핑 — 구앱 로직 그대로 */
+
+// ══ 오행 맞춤 쇼핑 ══════════════════════════════════════════
+var SHOP_ITEMS=[
+  {id:'t001',cat:'wear',name:'부적 티셔츠',sub:'오행 맞춤 에너지웨어',emoji:'👕',price:52000,badge:'hot',sizes:['S','M','L','XL','2XL'],colors:['#34d399','#f87171','#fbbf24','#a78bfa','#38bdf8'],detail:'사주 오행 기운에 맞춘 고유 부적 문양을 전면에 프린팅. 천연 코튼 100% 소재로 착용 중에도 에너지가 지속됩니다.',pk:'tshirt'},
+  {id:'t002',cat:'wear',name:'부적 잠옷',sub:'수면 기운 정렬 잠옷',emoji:'🌙',price:89000,badge:'new',sizes:['S','M','L','XL'],colors:['#38bdf8','#a78bfa','#fbbf24','#34d399'],detail:'취침 중에도 나의 오행 에너지가 순환하도록 설계된 부적 잠옷. 깊은 수면과 함께 건강 기운을 회복합니다.',pk:'pajama'},
+  {id:'t003',cat:'wear',name:'부적 잠바',sub:'사주 맞춤 기운 아우터',emoji:'🧥',price:148000,badge:'',sizes:['S','M','L','XL','2XL'],colors:['#020817','#1e3a5f','#2d1f3d','#1a2e1a'],detail:'등판에 사주 맞춤 대형 부적 문양, 소매에 행운 문자를 자수. 나가는 길마다 기운이 보호합니다.',pk:'jumper'},
+  {id:'t004',cat:'wear',name:'오행 후드집업',sub:'머리 에너지 보호 · 집중력 강화',emoji:'🧢',price:98000,badge:'',sizes:['S','M','L','XL','2XL'],colors:['#34d399','#38bdf8','#f87171','#fbbf24'],detail:'두뇌·정신 에너지를 보호하는 후드 형태. 전면 포켓에 내면 부적 문양을 숨겨 일상에서도 기운 유지.',pk:'hoodie'},
+  {id:'su001',cat:'suit',name:'부적 슈트 셋업',sub:'오행 맞춤 고급 자수 정장',emoji:'🤵',price:680000,badge:'new',sizes:['44','46','48','50','52','54','56'],colors:['#8B1A1A','#1a3a2a','#1a1a3a','#3a2a00'],detail:'사주 오행에 맞는 색상의 원단에 고유 부적 문양을 전면 패턴으로 제작. 재킷+바지 풀세트. 어깨·가슴·허리 3개 부위 맞춤 제작으로 체형에 최적화.',pk:'suit'},
+  {id:'su002',cat:'suit',name:'부적 슈트 재킷',sub:'오행 기운 상의 단품',emoji:'🧣',price:420000,badge:'',sizes:['44','46','48','50','52','54','56'],colors:['#8B1A1A','#1a3a2a','#1a1a3a','#3a2a00','#2a1a00'],detail:'슈트 셋업의 재킷 단품. 기존 바지와 매치하거나 캐주얼하게 연출 가능. 등판 안감에 수호 부적 문양 숨김 자수.',pk:'suit_jacket'},
+  {id:'tr001',cat:'training',name:'부적 트레이닝복 셋업',sub:'기운 순환 운동복 풀세트',emoji:'🏃',price:298000,badge:'hot',sizes:['S','M','L','XL','2XL'],colors:['#0a0a1a','#1a2e1a','#2e1a1a','#1a1a2e'],detail:'운동 중 오행 에너지가 온몸에 순환하도록 설계된 부적 트레이닝복. 후드집업+조거팬츠 풀세트.',pk:'training'},
+  {id:'tr002',cat:'training',name:'부적 조거팬츠',sub:'하체 기운 정렬 · 운동 집중',emoji:'🩱',price:128000,badge:'new',sizes:['S','M','L','XL','2XL'],colors:['#0a0a1a','#1a2e1a','#2e1a1a','#fbbf24'],detail:'하체 경락을 따라 부적 문양을 배치한 기능성 조거팬츠. 발목 밴딩부에 오행 수호 문자 자수.',pk:'jogger'},
+  {id:'j001',cat:'acc',name:'부적 반지',sub:'손가락 경혈 자극 · 기운 순환',emoji:'💍',price:128000,badge:'hot',sizes:['10호','11호','12호','13호','14호','15호'],colors:['#d4a843','#c0c0c0','#b87333'],detail:'사주 오행에 맞는 금속(금/은/동)을 선택하고 부적 문양을 레이저 각인.',pk:'ring'},
+  {id:'j002',cat:'acc',name:'부적 목걸이',sub:'심장 에너지 정렬 · 직관 강화',emoji:'📿',price:165000,badge:'new',sizes:['40cm','45cm','50cm','55cm'],colors:['#d4a843','#c0c0c0'],detail:'심장 차크라 위치에 위치하는 부적 펜던트. 사주 오행 기운과 주요 수호 문자를 조합하여 24시간 에너지 보호.',pk:'necklace'},
+  {id:'j003',cat:'acc',name:'부적 팔찌',sub:'손목 맥박 에너지 증폭',emoji:'🔮',price:85000,badge:'',sizes:['14cm','16cm','18cm','20cm'],colors:['#34d399','#f87171','#fbbf24','#a78bfa','#38bdf8'],detail:'손목의 태연혈·어제혈을 자극하는 위치에 오행 부적 비즈 배열.',pk:'bracelet'},
+  {id:'s001',cat:'shoes',name:'부적 운동화',sub:'행운 방위 에너지 슈즈',emoji:'👟',price:185000,badge:'hot',sizes:['225','230','235','240','245','250','255','260','265','270','275','280'],colors:['#020817','#e2e8f0','#d4a843','#a78bfa','#38bdf8'],detail:'인솔(깔창)에 오행 부적 문양 삽입. 발바닥의 용천혈을 통해 대지 에너지를 흡수합니다. 전신 부적 패턴 프린팅.',pk:'sneakers'},
+  {id:'s002',cat:'shoes',name:'부적 슬리퍼',sub:'여름·야외 기운 정렬',emoji:'🩴',price:78000,badge:'new',sizes:['230','240','250','260','270','280'],colors:['#0a0a0a','#1e3a5f','#d4a843','#a78bfa'],detail:'야외용 부적 슬라이드 슬리퍼. 오행 에너지 문양이 발바닥 에너지 포인트를 자극합니다.',pk:'slipper_outdoor'},
+  {id:'s003',cat:'shoes',name:'부적 실내화',sub:'가정 내 기운 정렬 · 휴식 강화',emoji:'🥿',price:68000,badge:'',sizes:['230','240','250','260','270','280'],colors:['#d4a843','#34d399','#38bdf8','#f87171'],detail:'실내에서 대지 기운과 연결되는 편안한 실내화. 오행 에너지 문양으로 가정 내 기운을 정렬합니다.',pk:'indoor_shoe'},
+  {id:'h001',cat:'home',name:'부적 베개',sub:'수면 기운 보호 · 꿈 에너지 정렬',emoji:'🛏️',price:58000,badge:'new',sizes:['40x60cm','50x70cm'],colors:['#34d399','#f87171','#fbbf24','#a78bfa','#38bdf8'],detail:'취침 중 두뇌·정신 에너지를 보호하는 부적 베개. 오행 색상과 부적 문양으로 깊은 수면과 길몽을 유도합니다.',pk:'pillow'},
+  {id:'h002',cat:'home',name:'부적 쿠션',sub:'공간 기운 정렬 · 안정 에너지',emoji:'🛋️',price:48000,badge:'hot',sizes:['40x40cm','50x50cm','60x60cm'],colors:['#34d399','#f87171','#fbbf24','#a78bfa','#38bdf8','#e2e8f0'],detail:'거실·침실의 공간 에너지를 오행 부적 문양으로 정렬. 신성 기하학 패턴으로 공간 기운 활성화.',pk:'cushion'},
+  {id:'h003',cat:'home',name:'부적 식기 세트',sub:'음식 에너지 정화 · 건강 기운',emoji:'🍽️',price:168000,badge:'new',sizes:['2인세트','4인세트','6인세트'],colors:['#e2e8f0','#d4a843','#38bdf8'],detail:'식사 중 음식 에너지를 오행으로 정화하는 부적 식기 세트. 그릇+수저+포크+나이프 풀세트. CGo-FULI 브랜드 패키징 포함.',pk:'tableware'},
+  {id:'c001',cat:'custom',name:'맞춤 부적 풀세트',sub:'티셔츠+반지+목걸이 통일 문양',emoji:'🎁',price:380000,badge:'custom',sizes:['풀세트'],colors:['#d4a843'],detail:'AI로 생성한 고유 이미지를 티셔츠+반지+목걸이에 통일 적용. 세상에 하나뿐인 나만의 OEM 맞춤 세트.',pk:'fullset'},
+  {id:'c002',cat:'custom',name:'24시간 부적 세트',sub:'잠옷+잠바 취침~외출 연속 에너지',emoji:'🌟',price:268000,badge:'custom',sizes:['S','M','L','XL'],colors:['#020817','#1e3a5f'],detail:'잠옷과 잠바를 동일한 부적 스토리로 연결. 취침부터 외출까지 24시간 연속된 에너지 흐름을 구현합니다.',pk:'set2'},
+  {id:'h008',cat:'home',name:'스마트폰 부적 케이스',sub:'특정 기원 심리 효과 증폭',emoji:'📱',price:38000,badge:'new',sizes:['iPhone','Galaxy','범용'],colors:['#1a1408','#d4a843','#34d399'],detail:'스마트폰 케이스에 오행 부적 문양 적용. 매일 손에 닿는 디바이스로 특정 기원의 심리 에너지를 증폭시킵니다.',pk:'phonecase'},
+  {id:'h004',cat:'home',name:'부적 테이블',sub:'거실 중심 기운 응집 · 가족 에너지 모음',emoji:'🪑',price:480000,badge:'new',sizes:['소(80cm)','중(120cm)','대(160cm)'],colors:['#8b4513','#d4a843','#1a1408'],detail:'거실 중심에 놓는 부적 문양 원목 테이블. 가족이 모이는 공간의 기운을 응집시켜 오행 균형을 잡습니다.',pk:'table'},
+  {id:'h005',cat:'home',name:'부적 식탁',sub:'식사 에너지 순환 · 가족 건강 기운',emoji:'🍽️',price:580000,badge:'new',sizes:['4인용','6인용','8인용'],colors:['#8b4513','#d4a843','#1a1408'],detail:'식사 시간 음식의 에너지를 순환시키는 오행 부적 식탁. 가족 건강 기운을 매끼 정화합니다.',pk:'diningtable'},
+  {id:'h006',cat:'home',name:'부적 액자',sub:'공간 기운 보호 · 시각 에너지 정렬',emoji:'🖼️',price:128000,badge:'new',sizes:['A4','A3','A2','A1'],colors:['#d4a843','#1a1408','#e2e8f0'],detail:'벽에 거는 오행 부적 액자. 공간 전체 기운을 보호하고 시각적 에너지를 정렬시킵니다.',pk:'frame'},
+  {id:'h007',cat:'home',name:'부적 의자',sub:'좌식 기운 순환 · 척추 에너지 정렬',emoji:'🪑',price:228000,badge:'new',sizes:['일반','넓은','등받이大'],colors:['#8b4513','#d4a843','#1a1408'],detail:'앉아있는 동안 좌식 기운을 순환시키는 오행 부적 의자. 척추를 따라 에너지를 정렬시킵니다.',pk:'chair'},
+  {id:'h009',cat:'home',name:'부적 핸드백',sub:'외출 동행 에너지 · 휴대용 부적 가방',emoji:'👜',price:328000,badge:'new',sizes:['미니','중형','대형'],colors:['#1e3a5f','#d4a843','#8b5cf6','#020817'],detail:'외출 시 항상 동행하는 오행 부적 핸드백. 8종 만다라 문양 중 사용자 오행에 맞는 패턴 자동 매칭. 매일 손에 들고 다니는 부적 가방.',pk:'handbag'},
+  {id:'h010',cat:'home',name:'CGO-FULI 식기 세트',sub:'그릇+수저+포크+나이프 풀세트',emoji:'🥢',price:188000,badge:'new',sizes:['2인','4인','6인'],colors:['#fef9f3','#d4a843','#8b4513'],detail:'CGO-FULI 로고 박힌 프리미엄 식기 풀세트. 사발+밥그릇+수저+젓가락+포크+나이프 완비. 음식 에너지를 오행으로 정화하는 매끼 의례.',pk:'tableware'},
+];
+
+var SHOP_OH={
+  목:{name:'Wood (木)',emoji:'🌳',color:'#34d399',bg:'rgba(52,211,153,.1)',border:'rgba(52,211,153,.3)',
+      luckyColor:'Jade Green·Forest Green',
+      material:'Natural Wood·Linen·Cotton',
+      items:['Glasses','Potted Plants','Walking Shoes','Eco Bag','Stationery'],
+      img:'lush green forest energy, jade green palette, bamboo spring leaves sacred geometry'},
+  화:{name:'Fire (火)',emoji:'🔥',color:'#f87171',bg:'rgba(248,113,113,.1)',border:'rgba(248,113,113,.3)',
+      luckyColor:'Crimson Red·Violet',
+      material:'Silk·Leather',
+      items:['Lighting','Perfume','Smartwatch','Sunglasses','Lipstick'],
+      img:'fire energy, crimson orange palette, sun flame sacred geometry'},
+  토:{name:'Earth (土)',emoji:'🌍',color:'#fbbf24',bg:'rgba(251,191,36,.1)',border:'rgba(251,191,36,.3)',
+      luckyColor:'Amber·Earthy Brown',
+      material:'Ceramic·Cotton',
+      items:['Ceramic Tableware','Belt','Rug','Bedding','Vitamins'],
+      img:'earth energy, ochre golden palette, mountain sacred symbols'},
+  금:{name:'Metal (金)',emoji:'⚔️',color:'#e2e8f0',bg:'rgba(226,232,240,.06)',border:'rgba(226,232,240,.2)',
+      luckyColor:'White·Gold',
+      material:'Metal·Gemstone',
+      items:['Watch','Ring','Formal Wear','Knife Set','Mechanical Keyboard'],
+      img:'metal warrior energy, white gold palette, geometric sacred symbols'},
+  수:{name:'Water (水)',emoji:'💧',color:'#38bdf8',bg:'rgba(56,189,248,.1)',border:'rgba(56,189,248,.3)',
+      luckyColor:'Black·Navy',
+      material:'Glass·Velvet',
+      items:['Humidifier','Foot Bath','Earphones','Mineral Water','Fountain Pen'],
+      img:'water wisdom energy, deep indigo black palette, wave moon sacred geometry'}
+};
+
+var _sCart=[], _sSz={}, _sCol={};
+
+function _shopPrompt(pk,oh,ili,nm){
+  var o=SHOP_OH[oh]||SHOP_OH['목'];
+  var metal=oh==='금'?'18K Gold':oh==='수'?'Sterling Silver 925':oh==='화'?'Rose Gold':'Bronze';
+
+  // 오행별 추상 패션 감성 키워드
+  var ohStyle={
+    목:{
+      vibe:'Azure Dragon (靑龍) Life Force — Vertical Growth Energy',
+      palette:'Jade #34d399 · Deep Black #0a0a0a · Gold Line #d4a843',
+      pattern:'Deconstructed trigram vertical strokes + bamboo cross-section abstract · Fibonacci spiral contour',
+      mood:'Minimal Zen Power · Natural Energy Abstract · Spring Burst',
+      keyword:'"青龍" hidden micro-text · jade energy field · bamboo geometry abstraction'
+    },
+    화:{
+      vibe:'Vermilion Bird (朱雀) Solar Energy — Radial Explosion Force',
+      palette:'Crimson #f87171 · Obsidian #1a0a0a · Rose Gold Highlight',
+      pattern:'Solar mandala burst · Flame topology · Explosive radial abstract',
+      mood:'Alchemical Fire · Volcanic Energy · Dynamic Street',
+      keyword:'"朱雀" hidden · solar burst geometry · crimson energy wave'
+    },
+    토:{
+      vibe:'Yellow Emperor (黃帝) Earth Force — Core Stability Energy',
+      palette:'Amber #fbbf24 · Terracotta #b45309 · Cream White',
+      pattern:'Concentric square geometry · Earth mandala · Seed of Life grid abstract',
+      mood:'Neolithic Power · Ancient Stone Tablet Texture · Ochre Luxury',
+      keyword:'"皇極" hidden · earth mandala grid · concentric square geometry'
+    },
+    금:{
+      vibe:'White Tiger (白虎) Precision Force — Crystal Energy',
+      palette:'Platinum #e2e8f0 · Mirror Silver · Void Black · Pearlescent Sheen',
+      pattern:'Sacred geometry lattice · Crystal structure abstract · Mirror fractal pattern',
+      mood:'Celestial Precision · Alchemical Gold · Samurai Minimalism',
+      keyword:'"白虎" hidden · crystalline sacred geometry · mirror fractal'
+    },
+    수:{
+      vibe:'Black Tortoise (玄武) Abyss Force — Fluid Wave Energy',
+      palette:'Deep Indigo #38bdf8 · Midnight Navy #0f172a · Silver Mercury · Fluorescent White',
+      pattern:'Fluid topology · Wave interference pattern · Deep-sea bioluminescence abstract',
+      mood:'Primal Ocean · Dreamstate Consciousness · Lunar Mysticism',
+      keyword:'"玄武" hidden · wave interference pattern · lunar fluid abstraction'
+    }
+  };
+  var os=ohStyle[oh]||ohStyle['목'];
+
+  // 제품별 착용/렌더링 방식
+  var wearScene={
+    tshirt:  'young person wearing oversized white t-shirt, hands in pockets, calm gaze, studio minimal background',
+    pajama:  'person in wide-leg pajama set, soft morning light, relaxed standing pose, serene expression',
+    jumper:  'person wearing dark oversized bomber jacket, three-quarter turn showing back panel, editorial pose',
+    hoodie:  'young person wearing oversized white zip-up hoodie, hood up, hands relaxed, strong calm presence',
+    ring:    'close-up of hand with ring, fingers slightly spread, dramatic side lighting, dark background',
+    necklace:'close-up of neck and collarbone, necklace resting naturally, soft diffused light',
+    bracelet:'wrist and forearm close-up, natural light from left, slight motion blur on background',
+    sneakers:'low-angle shot of feet in sneakers on wet concrete, slight motion, editorial street',
+    slipper: 'overhead 45-degree shot of slipper pair on textured stone floor, one slightly turned',
+    fullset: 'full-body editorial: person wearing hoodie + ring + sneakers, walking on brutalist concrete',
+    set2:    'split-frame: left — person in pajama at dawn window, right — same person in jacket outdoors'
+  };
+
+  // 제품별 인쇄/제작 스펙
+  var spec={
+    tshirt:  'front chest panel print, photorealistic garment mockup',
+    pajama:  'all-over seamless textile pattern across entire garment',
+    jumper:  'full back-panel statement art + small breast pocket sigil',
+    hoodie:  'large front zip-panel print, energy wisps extending beyond print edge',
+    ring:    metal+' band, hyper-real metal render, 360-degree macro view',
+    necklace:metal+' pendant, front sigil / back micro-text, macro close-up',
+    bracelet:metal+' or woven band, 360-degree unrolled continuous pattern',
+    sneakers:'upper panel art + heel tab CGO-FULI + insole energy mandala detail',
+    slipper: 'full insole sacred geometry + strap elemental weave pattern',
+    fullset: 'unified design system across all items, luxury campaign flatlay',
+    set2:    '24-hour energy concept — dawn calm + daytime power'
+  };
+
+  var scene = wearScene[pk]||wearScene['hoodie'];
+  var sp    = spec[pk]||'product mockup, editorial quality';
+
+  var prompt =
+    '╔══ CGO-FULI · Five-Element Fashion Artwork Prompt ══╗\n'
+    +'[Element] '+o.name+' · ILI '+ili+'/100\n'
+    +'[Product] '+pk+' — '+sp+'\n\n'
+    +'━━━ ENGLISH PROMPT (for Copilot) ━━━━━━━━━━━━━\n\n'
+    +'SCENE:\n'
+    +scene+'\n\n'
+    +'GARMENT / PRODUCT DESIGN:\n'
+    +'NOT a literal talisman — a pure energy pattern artwork.\n'
+    +'The design looks like high-fashion abstract art, NOT a religious symbol.\n\n'
+    +'DESIGN CONCEPT — '+os.vibe+':\n'
+    +'Core pattern: '+os.pattern+'\n'
+    +'The composition: center dense with energy, edges dissolving into void.\n'
+    +'Abstract bleed: design softly radiates beyond garment edge onto skin/background.\n\n'
+    +'COLOR WORLD:\n'
+    +os.palette+'\n\n'
+    +'HIDDEN EASTER EGG:\n'
+    +os.keyword+'\n'
+    +'"CGO-FULI" logotype in 2pt hairline font hidden within the pattern.\n'
+    +'"12 SYSTEMS · ONE TRUTH" as micro-text along design border.\n\n'
+    +'MOOD & STYLE:\n'
+    +os.mood+'\n'
+    +'References: Yohji Yamamoto calligraphy · Rick Owens darkness · Supreme drops\n'
+    +'NOT: religious, literal, cartoonish, mass-market\n'
+    +'YES: museum-quality wearable art · collector piece · spiritual luxury\n\n'
+    +'PHOTOGRAPHY:\n'
+    +'85mm lens · f/1.8 shallow DOF · single key light + rim light\n'
+    +'Background: brutalist concrete or gradient void\n\n'
+    +'━━━ NEGATIVE PROMPT ━━━━━━━━━━━━━━━━━━━\n'
+    +'no literal religious symbols, no crosses, no obvious talisman text,\n'
+    +'no cartoonish style, no generic streetwear, no busy clutter,\n'
+    +'no oversaturated colors, no stock photo lighting, no mannequin only';
+
+  return prompt;
+}
+function shopInit(){
+  var r=window.calcResult;
+  var M=window._CGO_MASTER;
+  var oh=(r&&r.domOh)||'목';
+  var o=SHOP_OH[oh]||SHOP_OH['목'];
+  var nm=(r&&r.name)||'사용자';
+  // CGO-MASTER CEI 우선 사용
+  var ili = M ? (M.cei||M.ili||72) : 72;
+  if(!ili&&r){var vals=Object.values(r.scores||{});if(vals.length)ili=Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length);}
+  if(!ili&&window._HV&&_HV.scores&&_HV.scores.length===12){ili=Math.round(_HV.scores.reduce(function(a,b){return a+b;},0)/12);}
+  window._sOh=oh; window._sIli=ili; window._sNm=nm;
+
+  var bd=document.getElementById('shop-oh-badge');
+  if(bd){
+    bd.textContent=o.emoji+' '+o.name+' 기운 · 맞춤 에너지웨어';
+    bd.style.background=o.bg;bd.style.border='1px solid '+o.border;bd.style.color=o.color;
+  }
+  // 막둥이 미션6: 오행별 소재·색상·아이템 표시
+  var _shopMeta = document.getElementById('shop-oh-meta');
+  if(!_shopMeta){
+    _shopMeta = document.createElement('div');
+    _shopMeta.id = 'shop-oh-meta';
+    _shopMeta.style.cssText='font-size:10px;color:rgba(240,230,200,.55);margin-bottom:10px;line-height:1.8';
+    if(bd && bd.parentNode) bd.parentNode.insertBefore(_shopMeta, bd.nextSibling);
+  }
+  if(_shopMeta && o.material){
+    _shopMeta.innerHTML='🎨 행운 색상: <strong style="color:'+o.color+'">'+o.luckyColor+'</strong> &nbsp;·&nbsp; 🧵 추천 소재: <strong>'+o.material+'</strong><br>✨ 추천 아이템: <strong>'+(o.items||[]).join(' · ')+'</strong>';
+  }
+  var in_=document.getElementById('shop-ili-num'); if(in_)in_.textContent=ili;
+  var ig=document.getElementById('shop-ili-grade'); if(ig)ig.textContent=(window._isJackpot&&ili>=93)?'🎰 대박!':(window._isLotto&&ili>=88)?'🎰 로또!':ili>=85?'🌟 매우좋음':ili>=75?'⭐ 좋음':ili>=65?'😊 양호':'⚠️ 보통';
+  var ic=document.getElementById('shop-lucky-color'); if(ic)ic.textContent=_cgoT('행운색 ')+o.luckyColor;
+  var ib=document.getElementById('shop-ili-bar'); if(ib)setTimeout(function(){ib.style.width=ili+'%';},200);
+
+  var p=_shopPrompt('tshirt',oh,ili,nm);
+  window._sCurPrompt=p;
+  var pb=document.getElementById('shop-prompt-box'); if(pb)pb.textContent=p;
+  shopRenderGrid('all');
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){_cgoAiTranslatePage(window._LANG,CGO_I18N[window._LANG]||{},document.getElementById('page-shop'));},500);}}
+
+function _shopTalismanSvg(oh, emoji){
+  var cfg={
+    목:{c1:'#34d399',c2:'#059669',sym:'木',lines:[[50,10,50,90],[10,50,90,50],[28,15,72,85],[72,15,28,85]],rings:[40,30,20,10]},
+    화:{c1:'#f87171',c2:'#dc2626',sym:'火',lines:[[50,5,50,95],[5,50,95,50],[18,12,82,88],[82,12,18,88],[35,5,65,95]],rings:[40,28,16]},
+    토:{c1:'#fbbf24',c2:'#d97706',sym:'土',lines:[[50,10,50,90],[10,50,90,50],[20,20,80,80],[80,20,20,80]],rings:[42,30,18,8]},
+    금:{c1:'#e2e8f0',c2:'#94a3b8',sym:'金',lines:[[50,8,50,92],[8,50,92,50],[22,22,78,78],[78,22,22,78]],rings:[42,32,22,12]},
+    수:{c1:'#38bdf8',c2:'#0284c7',sym:'水',lines:[[50,10,50,90],[10,50,90,50],[25,15,75,85],[75,15,25,85]],rings:[38,28,18,8]}
+  };
+  var d=cfg[oh]||cfg['목'];
+  var linesSvg=d.lines.map(function(l){
+    return '<line x1="'+l[0]+'" y1="'+l[1]+'" x2="'+l[2]+'" y2="'+l[3]+'" stroke="'+d.c1+'" stroke-width=".7" opacity=".35"/>';
+  }).join('');
+  var ringsSvg=d.rings.map(function(r,i){
+    return '<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+d.c1+'" stroke-width=".9" opacity="'+(0.55-i*.1)+'"/>';
+  }).join('');
+  var octPts=[[50,8],[79,21],[92,50],[79,79],[50,92],[21,79],[8,50],[21,21]];
+  var octSvg=octPts.map(function(p,i){
+    return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="2.2" fill="'+d.c1+'" opacity="'+(i%2===0?.9:.55)+'"/>';
+  }).join('');
+  return '<svg viewBox="0 0 100 100" style="width:100%;height:100%;position:absolute;inset:0">'
+    +'<defs><radialGradient id="rg'+oh+'" cx="50%" cy="50%"><stop offset="0%" stop-color="'+d.c1+'" stop-opacity=".2"/><stop offset="100%" stop-color="'+d.c2+'" stop-opacity="0"/></radialGradient></defs>'
+    +'<rect width="100" height="100" fill="url(#rg'+oh+')" rx="4"/>'
+    +linesSvg+ringsSvg+octSvg
+    +'<text x="50" y="54" text-anchor="middle" font-size="16" fill="'+d.c1+'" opacity=".45" font-family="serif" font-weight="bold">'+d.sym+'</text>'
+    +'<text x="50" y="70" text-anchor="middle" font-size="22">'+emoji+'</text>'
+    +'</svg>';
+}
+
+function shopRenderGrid(cat){
+  var g=document.getElementById('shopGrid'); if(!g)return;
+  g.innerHTML=''; // ← 핵심 수정: 기존 내용 초기화
+  var items=cat==='all'?SHOP_ITEMS:SHOP_ITEMS.filter(function(i){return i.cat===cat;});
+  var oh=window._sOh||'목';
+  var rgb={목:'52,211,153',화:'248,113,113',토:'251,191,36',금:'226,232,240',수:'56,189,248'};
+  var html='';
+  items.forEach(function(it){
+    var cardOh=it.cat==='custom'?'화':oh;
+    var bg='rgba('+(it.cat==='custom'?'248,113,113':rgb[oh]||'212,168,67')+',.05)';
+    var badgeHtml='';
+    if(it.badge){
+      var bc=it.badge==='new'?'52,211,153':it.badge==='hot'?'251,191,36':'248,113,113';
+      var bcolor=it.badge==='new'?'#34d399':it.badge==='hot'?'#fbbf24':'#f87171';
+      var btxt=it.badge==='new'?'NEW':it.badge==='hot'?'인기':'맞춤';
+      badgeHtml='<span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:7px;font-size:9px;font-weight:700;z-index:2;background:rgba('+bc+',.25);color:'+bcolor+'">'+btxt+'</span>';
+    }
+    var svgImg=_shopTalismanSvg(cardOh,it.emoji);
+    var card=document.createElement('div');
+    card.style.cssText='background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .25s;';
+    card.addEventListener('mouseenter',function(){this.style.borderColor='rgba(212,168,67,.35)';this.style.transform='translateY(-2px)';});
+    card.addEventListener('mouseleave',function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='';});
+    card.addEventListener('click',(function(id){return function(){shopOpenPop(id);};})(it.id));
+    card.innerHTML='<div style="width:100%;aspect-ratio:1;position:relative;background:'+bg+';overflow:hidden;">'+svgImg+badgeHtml+'</div>'
+      +'<div style="padding:10px 10px 12px;">'
+        +'<div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:2px;">'+it.name+'</div>'
+        +'<div style="font-size:10px;color:rgba(240,230,200,0.8);margin-bottom:6px;">'+it.sub+'</div>'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+          +'<div style="font-size:14px;font-weight:800;color:#d4a843;">준비중</div>'
+          +'<div style="width:28px;height:28px;border-radius:8px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.3);color:#d4a843;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;">🛒</div>'
+        +'</div>'
+      +'</div>';
+    card.querySelector('div:last-child div:last-child div:last-child').addEventListener('click',(function(id){return function(e){e.stopPropagation();shopAddCart(id);};})(it.id));
+    g.appendChild(card);
+  });
+}
+function shopTab(cat,el){
+  document.querySelectorAll('.shop-tab').forEach(function(t){
+    t.style.background='rgba(255,255,255,.04)';t.style.borderColor='rgba(255,255,255,.1)';t.style.color='rgba(240,230,200,0.85)';
+  });
+  el.style.background='rgba(212,168,67,.15)';el.style.borderColor='rgba(212,168,67,.4)';el.style.color='#d4a843';
+  shopRenderGrid(cat);
+}
+
+
+// ============================================================
+// 부적 프롬프트 생성기 — 2종
+// ============================================================
+
+// ── 제품 목록 (공통) ─────────────────────────────────────────
+var BUJUK_PRODUCTS = [
+  {k:'tshirt',  n:'👕 티셔츠'},
+  {k:'hoodie',  n:'🧢 후드집업'},
+  {k:'jumper',  n:'🧥 점퍼'},
+  {k:'pajama',  n:'🌙 잠옷'},
+  {k:'sneakers',n:'👟 운동화'},
+  {k:'slipper', n:'🥿 슬리퍼'},
+  {k:'ring',    n:'💍 반지'},
+  {k:'necklace',n:'📿 목걸이'},
+  {k:'bracelet',n:'🔮 팔찌'},
+  {k:'fullset', n:'🎁 풀세트'}
+];
+
+// ── 팝업 열기 ─────────────────────────────────────────────────
+function bujukPromptPop(type){
+  var r = window.calcResult;
+  var pop = document.getElementById('bujukPromptPop');
+  var title = document.getElementById('bujukPopTitle');
+  var sub   = document.getElementById('bujukPopSub');
+  var tabs  = document.getElementById('bujukTabBar');
+  if(!pop) return;
+
+  window._bujukType = type;
+  window._bujukProduct = 'tshirt';
+
+  if(type === 'oriental'){
+    title.innerHTML = _cgoT('☯️ 동양 부적 프롬프트');
+    sub.textContent = _cgoT('전통 오행·사주·기문둔갑 기반 제품별 AI 이미지 프롬프트');
+    title.style.color = '#d4a843';
+    document.querySelector('#bujukPromptPop > div').style.borderColor = 'rgba(212,168,67,.3)';
+  } else {
+    title.innerHTML = _cgoT('✨ CGO-FULI 12역학 추상 부적 프롬프트');
+    sub.textContent = _cgoT('사주·자미두수·점성술·관상·수비학 12가지 융합 — 패션 추상 부적');
+    title.style.color = '#a855f7';
+    document.querySelector('#bujukPromptPop > div').style.borderColor = 'rgba(168,85,247,.3)';
+  }
+
+  // 탭 렌더
+  tabs.innerHTML = BUJUK_PRODUCTS.map(function(p){
+    var active = p.k === 'tshirt';
+    var col = type==='oriental' ? '#d4a843' : '#a855f7';
+    var bg  = type==='oriental' ? 'rgba(212,168,67,.15)' : 'rgba(168,85,247,.15)';
+    var bd  = type==='oriental' ? 'rgba(212,168,67,.4)' : 'rgba(168,85,247,.4)';
+    return '<button id="btab_'+p.k+'" onclick="bujukSelectProduct(\''+p.k+'\')" style="'
+      +'padding:6px 10px;border-radius:8px;border:1px solid '+(active?bd:'rgba(255,255,255,.1)')+';'
+      +'background:'+(active?bg:'rgba(255,255,255,.04)')+';color:'+(active?col:'rgba(240,230,200,0.85)')+';'
+      +'font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;">'+p.n+'</button>';
+  }).join('');
+
+  pop.style.display = 'flex';
+  bujukRenderPrompt('tshirt', type);
+}
+
+// ── 제품 탭 선택 ──────────────────────────────────────────────
+function bujukSelectProduct(pk){
+  window._bujukProduct = pk;
+  var type = window._bujukType || 'oriental';
+  var col = type==='oriental' ? '#d4a843' : '#a855f7';
+  var bg  = type==='oriental' ? 'rgba(212,168,67,.15)' : 'rgba(168,85,247,.15)';
+  var bd  = type==='oriental' ? 'rgba(212,168,67,.4)' : 'rgba(168,85,247,.4)';
+  BUJUK_PRODUCTS.forEach(function(p){
+    var btn = document.getElementById('btab_'+p.k);
+    if(!btn) return;
+    var active = p.k === pk;
+    btn.style.borderColor  = active ? bd  : 'rgba(255,255,255,.1)';
+    btn.style.background   = active ? bg  : 'rgba(255,255,255,.04)';
+    btn.style.color        = active ? col : 'rgba(240,230,200,0.85)';
+  });
+  bujukRenderPrompt(pk, type);
+}
+
+// ── 프롬프트 렌더 ─────────────────────────────────────────────
+function bujukRenderPrompt(pk, type){
+  var body = document.getElementById('bujukPromptBody');
+  if(!body) return;
+  var r = window.calcResult;
+  var oh = window._sOh || (r ? r.domOh : '목') || '목';
+  var ili = window._sIli || (r ? r.ili : 72) || 72;
+  var nm  = window._sNm  || (r ? r.name : '사용자') || '사용자';
+
+  var prompt = type==='oriental'
+    ? _bujukOrientalPrompt(pk, r, oh, ili, nm)
+    : _bujukCgoPrompt(pk, r, oh, ili, nm);
+
+  var col   = type==='oriental' ? '#d4a843' : '#a855f7';
+  var colBg = type==='oriental' ? 'rgba(212,168,67,.06)' : 'rgba(168,85,247,.06)';
+  var colBd = type==='oriental' ? 'rgba(212,168,67,.2)'  : 'rgba(168,85,247,.2)';
+  var pname = (BUJUK_PRODUCTS.find(function(p){return p.k===pk;})||{n:pk}).n;
+  var promptId = 'bujuk_prompt_text';
+
+  body.innerHTML =
+    '<div style="background:'+colBg+';border:1px solid '+colBd+';border-radius:14px;padding:16px;">'
+    // 제품명 + 사용자 정보
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    +'<div>'
+    +'<div style="font-size:13px;font-weight:800;color:'+col+';">'+pname+' 프롬프트</div>'
+    +(r ? '<div style="font-size:10px;color:rgba(240,230,200,0.8);margin-top:2px;">'+nm+' · '+oh+'오행 · ILI '+ili+'</div>' : '<div style="font-size:10px;color:rgba(248,113,113,.6);">⚠️ 계산 후 맞춤 프롬프트 생성됩니다</div>')
+    +'</div>'
+    +'<button onclick="bujukCopyPrompt()" style="padding:6px 14px;background:'+colBg+';border:1px solid '+colBd+';border-radius:8px;color:'+col+';font-size:11px;font-weight:600;cursor:pointer;">📋 복사</button>'
+    +'</div>'
+    // 프롬프트 텍스트
+    +'<div id="'+promptId+'" style="font-size:11px;color:rgba(240,230,200,.75);line-height:1.9;background:rgba(0,0,0,.25);border-radius:10px;padding:14px;white-space:pre-wrap;max-height:340px;overflow-y:auto;letter-spacing:.01em;">'+prompt+'</div>'
+    // 사용 안내
+    +'<div style="margin-top:10px;font-size:10px;color:rgba(240,230,200,.35);line-height:1.6;">'
+    +'💡 아래 Copilot 버튼을 눌러 무료로 이미지를 생성하세요.'    +'</div>'    +'<a href="https://copilot.microsoft.com/" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:11px;border-radius:11px;border:1px solid rgba(56,189,248,.35);background:rgba(56,189,248,.1);color:#38bdf8;font-size:12px;font-weight:700;text-decoration:none;transition:all .2s;" onmouseover="this.style.background=\'rgba(56,189,248,.18)\'" onmouseout="this.style.background=\'rgba(56,189,248,.1)\'">'    +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="#38bdf8"/></svg>'    +'🚀 Microsoft Copilot에서 무료로 이미지 생성'    +'</a>'    +'</div>';
+}
+
+// ── 복사 ─────────────────────────────────────────────────────
+function bujukCopyPrompt(){
+  var el = document.getElementById('bujuk_prompt_text');
+  if(!el) return;
+  var txt = el.innerText || el.textContent;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(function(){
+      var btn = el.parentElement.querySelector('button');
+      if(btn){btn.textContent=_cgoT('✅ 복사됨');setTimeout(function(){btn.textContent=_cgoT('📋 복사');},2000);}
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// 타입 1: 동양 부적 프롬프트 — 오행·사주·기문둔갑·부적 전통
+// ════════════════════════════════════════════════════════════
+function _bujukOrientalPrompt(pk, r, oh, ili, nm){
+  var o = SHOP_OH[oh] || SHOP_OH['목'];
+  // 오행별 부적 데이터
+  var ohData = {
+    목:{
+      char:['木','春','甲','寅','卯'],
+      symbol:'청룡(靑龍)',
+      deity:'동방청제(東方靑帝)',
+      talisman:'오방청룡부(五方靑龍符)',
+      hex:'#34d399', ink:'jade green & gold',
+      mainChar:'木',
+      mantra:'옴 목기청룡 호법신장 수호부(守護符)',
+      pattern:'bamboo hexagram, spring trigram ☳, East wind spiral',
+      energy:'growth·renewal·vitality·liver·east'
+    },
+    화:{
+      char:['火','夏','丙','午','巳'],
+      symbol:'주작(朱雀)',
+      deity:'남방적제(南方赤帝)',
+      talisman:'남방주작화덕부(南方朱雀火德符)',
+      hex:'#f87171', ink:'vermillion & gold',
+      mainChar:'火',
+      mantra:'옴 화기주작 남방호법 초복부(招福符)',
+      pattern:'phoenix feather, summer trigram ☲, flame spiral',
+      energy:'passion·fame·heart·south·transformation'
+    },
+    토:{
+      char:['土','四季','戊','辰','戌'],
+      symbol:'황룡(黃龍)',
+      deity:'중앙황제(中央黃帝)',
+      talisman:'중앙황룡토기부(中央黃龍土氣符)',
+      hex:'#fbbf24', ink:'ochre gold & deep brown',
+      mainChar:'土',
+      mantra:'옴 토기황룡 중궁진수 안정부(安定符)',
+      pattern:'earth square mandala, center trigram ☷, mountain hexagram',
+      energy:'stability·harvest·spleen·center·grounding'
+    },
+    금:{
+      char:['金','秋','庚','申','酉'],
+      symbol:'백호(白虎)',
+      deity:'서방백제(西方白帝)',
+      talisman:'서방백호금기부(西方白虎金氣符)',
+      hex:'#e2e8f0', ink:'silver & white gold',
+      mainChar:'金',
+      mantra:'옴 금기백호 서방수호 승리부(勝利符)',
+      pattern:'tiger stripe hexagram, autumn trigram ☱, metal lattice',
+      energy:'strength·clarity·lung·west·precision'
+    },
+    수:{
+      char:['水','冬','壬','子','亥'],
+      symbol:'현무(玄武)',
+      deity:'북방흑제(北方黑帝)',
+      talisman:'북방현무수기부(北方玄武水氣符)',
+      hex:'#38bdf8', ink:'deep indigo & silver',
+      mainChar:'水',
+      mantra:'옴 수기현무 북방지혜 지혜부(智慧符)',
+      pattern:'wave hexagram, winter trigram ☵, water spiral mandala',
+      energy:'wisdom·flow·kidney·north·abundance'
+    }
+  };
+  var od = ohData[oh] || ohData['목'];
+  var yg = r ? r.yGan : '甲';
+  var yj = r ? r.yJi  : '子';
+  var dg = r ? (r.dGJ&&r.dGJ.gan ? r.dGJ.gan : '甲') : '甲';
+  var dj = r ? (r.dGJ&&r.dGJ.ji  ? r.dGJ.ji  : '子') : '子';
+  var zodiac = r ? r.zodiacName : '말';
+  var life   = r ? r.lifeNum    : 3;
+  var kujusei= r ? r.kujusei    : 5;
+  var grade  = ili>=85?'Supreme':'Strong';
+
+  var productSpec = {
+    tshirt:  'T-shirt front print, 2400×2400px, DTG print-ready, no background',
+    hoodie:  'Hoodie center chest + left sleeve badge print, 2400×2400px, DTG print-ready',
+    jumper:  'Jacket back full print + front chest small emblem, 3000×2000px',
+    pajama:  'All-over repeat textile pattern for pajama set, seamless tile 2000×2000px',
+    sneakers:'Shoe upper panel art + insole talisman, 2800×1400px side view',
+    slipper: 'Slipper insole full art + strap sigil, 2000×800px',
+    ring:    'Ring band engraving + top face inlay design, 1600×1600px, metal render',
+    necklace:'Pendant front face design + chain sigil, 2000×2000px, metal render',
+    bracelet:'Bracelet band full art, 3200×800px unrolled view, metal/textile',
+    fullset: 'Full product lineup: T-shirt + necklace + sneakers, editorial flatlay, 3600×2000px'
+  };
+
+  // 착용 장면
+  var wearScene2={
+    tshirt:  'young person wearing oversized clean white t-shirt, calm editorial pose, minimal studio',
+    pajama:  'person in premium wide-leg pajama set, soft morning window light, relaxed pose',
+    jumper:  'person in dark oversized jacket, three-quarter turn, showing the back panel art',
+    hoodie:  'young person with oversized white zip hoodie, hood up, hands in pocket, strong calm gaze',
+    ring:    'close-up hand with ring, fingers spread, dramatic side-light, dark background',
+    necklace:'neck and collarbone close-up, pendant resting on skin, soft diffused light',
+    bracelet:'wrist forearm close-up, bracelet featured, natural left-side light',
+    sneakers:'low-angle feet shot on wet dark concrete, slight motion, editorial street style',
+    slipper: '45-degree overhead of slipper pair on stone surface, one slightly turned',
+    fullset: 'full-body: person in hoodie + ring + sneakers, walking on brutalist concrete path',
+    set2:    'split-frame: left — pajama set at dawn, right — jacket outdoors in daylight'
+  };
+  var scene2 = wearScene2[pk] || wearScene2['hoodie'];
+
+  var prompt =
+    '╔══ CGO-FULI · 동양 에너지 추상 아트워크 프롬프트 ══╗\n'
+    +'[오행] '+od.mainChar+' ('+oh+') · '+od.symbol+' · ILI '+ili+'/100\n'
+    +'[제품] '+(BUJUK_PRODUCTS.find(function(p){return p.k===pk;})||{n:pk}).n+'\n'
+    +(r ? '[사주] '+yg+'일간 · '+zodiac+'띠 · 생명수 '+life+'\n' : '')
+    +'\n━━━ ENGLISH PROMPT (for Copilot) ━━━━━━━━━━━\n\n'
+    +'SCENE:\n'
+    +scene2+'\n\n'
+    +'DESIGN CONCEPT — NOT A TALISMAN, BUT AN ENERGY PATTERN:\n'
+    +'This design draws from '+od.talisman+' but is abstracted into pure visual energy.\n'
+    +'It looks like luxury fashion art — not a religious object.\n\n'
+    +'ABSTRACT ENERGY ELEMENTS (inspired by tradition, not literal):\n'
+    +'• Core form: the character "'+od.mainChar+'" dissolved into gestural brushstroke abstraction\n'
+    +'• Not legible as text — deconstructed into energy lines and void space\n'
+    +'• Guardian energy: '+od.symbol+' ('+od.deity+') as shadow presence, barely perceptible\n'
+    +'• Bagua (八卦) fragmented into 8 abstract directional vectors around core\n'
+    +(r ? '• '+zodiac+' spirit woven as ghost silhouette within composition\n' : '')
+    +'• Sacred geometry: Lo Shu grid reinterpreted as minimalist dot matrix\n'
+    +'• Border: hairline frame with micro-mantra "'+od.mantra+'" at 4pt size\n\n'
+    +'ABSTRACT BLEED EFFECT:\n'
+    +'The energy pattern softly radiates beyond the garment edge —\n'
+    +'subtle '+od.ink+' light wisps extend onto skin and background,\n'
+    +'as if the design breathes. Center dense, edges dissolving into void.\n\n'
+    +'COLOR WORLD:\n'
+    +'Primary energy: '+od.ink+' on deep obsidian black #0a0a0a\n'
+    +'Metallic accent: '+(oh==='금'?'18K polished gold':'aged bronze & gold leaf')+' hairlines\n'
+    +'Garment: crisp white or off-white premium fabric\n'
+    +'Background: dark charcoal concrete or soft gradient void\n\n'
+    +'HIDDEN EASTER EGG:\n'
+    +'"CGO-FULI · 동양 역학" in 2pt hairline font hidden in composition.\n\n'
+    +'MOOD:\n'
+    +'Ancient power — invisible to the untrained eye.\n'
+    +'Wearable sacred art. Museum quality. Collector piece.\n'
+    +'References: Yohji Yamamoto calligraphy, Japanese noise art, Seoul high-fashion\n\n'
+    +'PHOTOGRAPHY:\n'
+    +'85mm f/1.8 · single key light + rim light · brutalist or void background\n\n'
+    +'━━━ NEGATIVE PROMPT ━━━━━━━━━━━━━━━━━━━\n'
+    +'no literal talisman text visible, no obvious Chinese characters as decoration,\n'
+    +'no religious poster aesthetic, no cartoonish, no busy pattern,\n'
+    +'no mannequin only, no generic product mockup, no stock photo lighting';
+
+  return prompt;
+}
+function _bujukCgoPrompt(pk, r, oh, ili, nm){
+  var o = SHOP_OH[oh] || SHOP_OH['목'];
+
+  // 12역학 시스템 데이터
+  var systems = [
+    {n:'사주명리',  eng:'Four Pillars',    sym:'☯'},
+    {n:'자미두수',  eng:'Purple Star',     sym:'🌟'},
+    {n:'서양점성술',eng:'Astrology',       sym:'♈'},
+    {n:'수비학',    eng:'Numerology',      sym:'🔢'},
+    {n:'기문둔갑',  eng:'Qi Men Dun Jia',  sym:'🧭'},
+    {n:'타로',      eng:'Tarot Arcana',    sym:'🃏'},
+    {n:'관상학',    eng:'Physiognomy',     sym:'👁'},
+    {n:'풍수지리',  eng:'Feng Shui',       sym:'🏔'},
+    {n:'I-Ching',   eng:'I Ching',         sym:'☰'},
+    {n:'카발라',    eng:'Kabbalah Tree',   sym:'✡'},
+    {n:'차크라',    eng:'Chakra System',   sym:'🔴'},
+    {n:'루닉',      eng:'Elder Futhark',   sym:'ᚠ'}
+  ];
+
+  // 추상 비주얼 스타일 데이터
+  var abstractStyles = {
+    목:{
+      palette:'emerald #34d399, forest black #0a1a10, gold #d4a843, jade white',
+      abstract:'vertical growth lines, organic spiral, fibonacci leaf unfurling',
+      texture:'brushed linen, moss relief, bamboo grain',
+      vibe:'primordial forest energy, ancient druidic, Zen garden abstraction'
+    },
+    화:{
+      palette:'crimson #f87171, obsidian #1a0a0a, rose gold #ffa07a, pure white',
+      abstract:'explosive radial burst, flame topology, solar mandala fractal',
+      texture:'charcoal rubbing, ash texture, metallic luster',
+      vibe:'alchemical fire, volcanic genesis, solar deity power'
+    },
+    토:{
+      palette:'amber #fbbf24, terracotta #b45309, cream white, deep umber',
+      abstract:'concentric square geometry, earth mandala, seed of life grid',
+      texture:'cracked clay, woven hemp, ancient stone tablet',
+      vibe:'primordial earth mother, neolithic symbol, harvest abundance'
+    },
+    금:{
+      palette:'platinum #e2e8f0, mirror silver, void black, iridescent pearl',
+      abstract:'sacred geometry lattice, crystalline structure, mirror fractal',
+      texture:'polished metal, etched steel, diamond-cut surface',
+      vibe:'celestial precision, alchemical gold, samurai discipline'
+    },
+    수:{
+      palette:'deep indigo #38bdf8, midnight navy #0f172a, silver mercury, phosphor white',
+      abstract:'fluid topology, wave interference pattern, deep sea bioluminescence',
+      texture:'liquid mercury surface, aged silk, mist diffusion',
+      vibe:'primordial ocean, dreamstate consciousness, lunar mysticism'
+    }
+  };
+
+  var as = abstractStyles[oh] || abstractStyles['목'];
+  var yg = r ? r.yGan : '甲';
+  var dg = r ? (r.dGJ&&r.dGJ.gan ? r.dGJ.gan : '甲') : '甲';
+  var zodiac = r ? r.zodiacName : '말';
+  var life   = r ? r.lifeNum    : 3;
+  var kujusei= r ? r.kujusei    : 5;
+  var wz     = r ? (r.wz ? r.wz.name : '') : '';
+  var ili_pct= Math.round(ili/100*100);
+
+  // 12역학 퓨전 레이어 생성
+  var layers = systems.map(function(s, i){
+    return (i+1)+'. '+s.sym+' '+s.eng+'('+s.n+') — abstract sigil layer '+(i+1);
+  }).join('\n');
+
+  var productSpec = {
+    tshirt:  'T-shirt center chest print, 2400×2400px, clean white & dark version both',
+    hoodie:  'Hoodie oversized back print + sleeve band, 3000×2000px',
+    jumper:  'Jacket back statement art + breast pocket sigil, 2800×2000px',
+    pajama:  'Seamless all-over print textile, repeat tile 2000×2000px, 4-way stretch ready',
+    sneakers:'Shoe upper full art + midsole stripe sigil + outsole hex pattern, 3200×1600px',
+    slipper: 'Full insole sacred geometry art + strap energy band, 2000×900px',
+    ring:    'Ring top face mandala + band continuous sigil, hyper-real metal render, 2000×2000px',
+    necklace:'Pendant double-sided design (front: main sigil / back: 12-system micro text), 2000×2000px',
+    bracelet:'Bracelet band 360° unrolled: 12-system continuous timeline art, 3600×800px',
+    fullset: 'CGO-FULI full collection editorial: hoodie + ring + sneakers, luxury campaign flatlay, 4000×2000px'
+  };
+
+  var prompt =
+    '═══════════════════════════════════════\n'
+    +'✨ CGO-FULI 12역학 추상 패션 부적 프롬프트\n'
+    +'═══════════════════════════════════════\n\n'
+    +'[브랜드] CGO-FULI — 동서양 12역학 융합 패션 부적\n'
+    +'[제품] '+(BUJUK_PRODUCTS.find(function(p){return p.k===pk;})||{n:pk}).n+'\n'
+    +'[오행 에너지] '+oh+'('+o.name+') · ILI '+ili+'/100\n'
+    +(r ? '[개인 역학] '+nm+' · '+yg+'일간 · '+zodiac+'띠 · 생명수'+life+' · 별자리 '+wz+'\n' : '')
+    +'\n━━━ ENGLISH PROMPT ━━━━━━━━━━━━━━━━━━━\n\n'
+    +'CGO-FULI brand '+pk+' — Abstract fashion talisman design.\n'
+    +'Concept: A living sigil that fuses 12 divination systems into one\n'
+    +'abstract composition. Not a religious symbol — a pure energy pattern.\n\n'
+    +'THE 12 SYSTEM FUSION (each as semi-transparent abstracted layer):\n'
+    +layers+'\n\n'
+    +'ABSTRACT COMPOSITION:\n'
+    +'Central focal point: a singular abstract mark derived from compressing\n'
+    +'all 12 system symbols into one unified glyph — the CGO-FULI Sigil.\n'
+    +'Surrounding field: '+as.abstract+'\n'
+    +'The composition breathes — center dense, edges dissolving into void.\n\n'
+    +'COLOR WORLD:\n'
+    +as.palette+'\n'
+    +'Treatment: '+as.texture+'\n'
+    +'Glow system: inner luminance at core sigil, '+ili_pct+'% opacity energy field\n\n'
+    +'STYLE DNA:\n'
+    +'East meets West: Korean shamanic mark + Bauhaus geometry + Swiss graphic precision\n'
+    +'References: Yohji Yamamoto AW calligraphy, Rick Owens darkness,\n'
+    +'            Supreme talisman drops, Kaws abstract sacred geometry\n'
+    +'Mood: '+as.vibe+'\n'
+    +'NOT: religious, literal, cartoonish, tacky, mass-market\n'
+    +'YES: museum-quality, wearable art, collector piece, spiritual luxury\n\n'
+    +'CGO-FULI BRAND MARK:\n'
+    +'Micro-detail: "CGO-FULI" logotype in 3pt custom typeface hidden in the\n'
+    +'composition (Easter egg for collectors). Plus "12 SYSTEMS · ONE TRUTH"\n'
+    +'as hairline text along border.\n\n'
+    +'TECHNICAL SPEC:\n'
+    +productSpec[pk]+'\n'
+    +'Render: ultra-high detail, 8K texture resolution\n'
+    +'Output variants: BLACK background + WHITE background versions\n\n'
+    +'CAMPAIGN DIRECTION:\n'
+    +'Model: non-binary, age 25-35, minimal makeup, strong presence\n'
+    +'Setting: brutalist concrete space or ancient Korean hanok interior\n'
+    +'Lighting: single hard spotlight creating dramatic shadow sigil on wall\n'
+    +'Photography: editorial fashion, Alasdair McLellan meets Araki aesthetic\n\n'
+    +'━━━ NEGATIVE PROMPT ━━━━━━━━━━━━━━━━━\n'
+    +'no literal religious imagery, no crosses or Stars of David as main element,\n'
+    +'no childish illustration, no rainbow colors, no busy clutter,\n'
+    +'no stock photo aesthetic, no generic streetwear logos, no copyright marks';
+
+  return prompt;
+}
+
+
+function shopShowAll(){
+  document.querySelectorAll('.shop-tab').forEach(function(t,i){
+    if(i===0){t.style.background='rgba(212,168,67,.15)';t.style.borderColor='rgba(212,168,67,.4)';t.style.color='#d4a843';}
+    else{t.style.background='rgba(255,255,255,.04)';t.style.borderColor='rgba(255,255,255,.1)';t.style.color='rgba(240,230,200,0.85)';}
+  });
+  shopRenderGrid('all');
+}
+
+function shopOpenPop(id){
+  var it=SHOP_ITEMS.find(function(i){return i.id===id;});if(!it)return;
+  _sSz[id]=it.sizes[0];_sCol[id]=it.colors[0];
+  var oh=window._sOh||'목';var ili=window._sIli||72;var nm=window._sNm||'사용자';
+  var o=SHOP_OH[oh]||SHOP_OH['목'];
+  var p=_shopPrompt(it.pk,oh,ili,nm);
+  window._sCurPrompt=p;
+  var pb=document.getElementById('shop-prompt-box');if(pb)pb.textContent=p;
+  var rgb={목:'52,211,153',화:'248,113,113',토:'251,191,36',금:'226,232,240',수:'56,189,248'};
+  document.getElementById('shopPopTitle').textContent=it.emoji+' '+it.name;
+  var im=document.getElementById('shopPopImg');
+  var popOh=it.cat==='custom'?'화':oh;
+  im.style.background='rgba('+(rgb[oh]||'212,168,67')+',.04)';
+  im.style.position='relative'; im.style.overflow='hidden';
+  im.innerHTML=_shopTalismanSvg(popOh,it.emoji)
+    +'<div style="position:absolute;bottom:10px;right:10px;font-size:10px;background:rgba(0,0,0,.65);padding:4px 10px;border-radius:8px;color:'+o.color+';z-index:3;">'+o.emoji+' '+o.name+' 에너지</div>'
+    +'<div style="position:absolute;bottom:10px;left:10px;font-size:9px;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:7px;color:rgba(212,168,67,.8);z-index:3;">CGO-FULI · 오행 부적</div>';
+  var sh='<div style="font-size:11px;color:rgba(240,230,200,0.85);margin-bottom:7px;">📐 사이즈</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+it.sizes.map(function(s){return '<div class="ssz" onclick="shopSz(\''+id+'\',\''+s+'\',this)" style="padding:5px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:'+(s===_sSz[id]?'rgba(212,168,67,.12)':'rgba(255,255,255,.04)')+';color:'+(s===_sSz[id]?'#d4a843':'rgba(240,230,200,.6)')+';font-size:11px;cursor:pointer;">'+s+'</div>';}).join('')+'</div>';
+  var ch='<div style="font-size:11px;color:rgba(240,230,200,0.85);margin-bottom:7px;margin-top:2px;">🎨 색상</div><div style="display:flex;gap:8px;margin-bottom:14px;">'+it.colors.map(function(c){return '<div onclick="shopCol(\''+id+'\',\''+c+'\',this)" style="width:26px;height:26px;border-radius:50%;background:'+c+';border:2px solid '+(c===_sCol[id]?'#d4a843':'transparent')+';cursor:pointer;transition:all .2s;transform:'+(c===_sCol[id]?'scale(1.2)':'')+'"></div>';}).join('')+'</div>';
+  var dh='<div style="font-size:11px;color:rgba(240,230,200,.65);line-height:1.8;margin-bottom:12px;padding:10px;background:rgba(255,255,255,.03);border-radius:10px;">'+it.detail+'</div>';
+  var ph='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:11px;color:rgba(240,230,200,0.85);">가격</span><span style="font-size:22px;font-weight:900;color:#d4a843;">준비중</span></div>';
+  document.getElementById('shopPopBody').innerHTML=sh+ch+dh+ph
+    +'<button onclick="shopAddCart(\''+id+'\');shopPopClose()" style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#d4a843,#f59e0b);color:#020817;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;">🛒 장바구니 담기</button>'
+    +'<button onclick="shopCustomOrder()" style="width:100%;padding:11px;border-radius:12px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">✨ 주문제작 문의</button>';
+  document.getElementById('shopPopOv').style.display='flex';
+  _cgoTransPopup('shopPopOv');
+}
+
+function shopSz(id,s,el){_sSz[id]=s;el.closest('div').querySelectorAll('.ssz').forEach(function(e){e.style.background='rgba(255,255,255,.04)';e.style.color='rgba(240,230,200,.6)';e.style.borderColor='rgba(255,255,255,.12)';});el.style.background='rgba(212,168,67,.12)';el.style.color='#d4a843';el.style.borderColor='rgba(212,168,67,.4)';}
+function shopCol(id,c,el){_sCol[id]=c;el.parentElement.querySelectorAll('div').forEach(function(e){e.style.border='2px solid transparent';e.style.transform='';});el.style.border='2px solid #d4a843';el.style.transform='scale(1.2)';}
+function shopPopClose(){document.getElementById('shopPopOv').style.display='none';}
+
+function shopAddCart(id){
+  var it=SHOP_ITEMS.find(function(i){return i.id===id;});if(!it)return;
+  var sz=_sSz[id]||it.sizes[0];
+  var ex=_sCart.find(function(c){return c.id===id&&c.sz===sz;});
+  if(ex)ex.qty++;else _sCart.push({id:id,name:it.name,emoji:it.emoji,price:it.price,sz:sz,qty:1});
+  shopUpdateCart();
+}
+
+function shopUpdateCart(){
+  var total=_sCart.reduce(function(s,c){return s+c.price*c.qty;},0);
+  var count=_sCart.reduce(function(s,c){return s+c.qty;},0);
+  var cs=document.getElementById('shopCartSummary');
+  if(count===0){if(cs)cs.style.display='none';return;}
+  if(cs)cs.style.display='block';
+  var ct=document.getElementById('shopCartTotal');if(ct)ct.textContent=_cgoT('준비중');
+  var cl=document.getElementById('shopCartList');
+  if(cl)cl.innerHTML=_sCart.map(function(c,i){return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);"><div style="font-size:18px;">'+c.emoji+'</div><div style="flex:1;"><div style="font-size:11px;font-weight:600;color:#e2e8f0;">'+c.name+'</div><div style="font-size:10px;color:rgba(240,230,200,0.8);">'+c.sz+' ×'+c.qty+'</div></div><div style="font-size:12px;font-weight:700;color:#d4a843;">₩'+(c.price*c.qty).toLocaleString()+'</div><div onclick="shopRemCart('+i+')" style="cursor:pointer;color:#f87171;font-size:14px;padding:0 4px;">✕</div></div>';}).join('');
+}
+function shopRemCart(i){_sCart.splice(i,1);shopUpdateCart();}
+function shopCheckout(){
+  var total=_sCart.reduce(function(s,c){return s+c.price*c.qty;},0);
+  var items=_sCart.map(function(c){return c.emoji+' '+c.name+' ('+c.sz+') x'+c.qty;}).join('\n');
+  alert('📦 주문 접수\n\n'+items+'\n\n합계: ₩'+total.toLocaleString()+'\n\n카카오톡 또는 이메일로 주문 확인 연락드리겠습니다.\n감사합니다! 🙏');
+}
+
+function shopCopyPrompt(e){
+  var text=window._sCurPrompt||'대시보드에서 먼저 분석을 실행해주세요.';
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){var b=e.target;var ot=b.textContent;b.textContent=_cgoT('✓ 복사됨!');b.style.color='#34d399';setTimeout(function(){b.textContent=ot;b.style.color='';},1500);});}
+  else{var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('복사되었습니다!');}
+}
+
+function shopShowAllPrompts(){
+  var oh=window._sOh||'목',ili=window._sIli||72,nm=window._sNm||'사용자';
+  var pop=document.getElementById('shopAllPromptPop'),list=document.getElementById('shopAllPromptList');if(!pop||!list)return;
+  var ks=[{k:'tshirt',n:'👕 부적 티셔츠'},{k:'pajama',n:'🌙 부적 잠옷'},{k:'jumper',n:'🧥 부적 잠바'},{k:'hoodie',n:'🧢 후드집업'},{k:'ring',n:'💍 부적 반지'},{k:'necklace',n:'📿 부적 목걸이'},{k:'bracelet',n:'🔮 부적 팔찌'},{k:'sneakers',n:'👟 부적 신발'},{k:'slipper',n:'🥿 부적 슬리퍼'},{k:'fullset',n:'🎁 맞춤 풀세트'},{k:'set2',n:'🌟 24시간 세트'}];
+  list.innerHTML=ks.map(function(it){var p=_shopPrompt(it.k,oh,ili,nm).replace(/\n/g,'<br>');
+    return '<div style="margin-bottom:12px;padding:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">'
+        +'<div style="font-size:11px;font-weight:700;color:#38bdf8;">'+it.n+'</div>'
+        +'<button onclick="shopCopyId(\'sap_'+it.k+'\')" style="padding:3px 9px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:7px;color:#38bdf8;font-size:10px;cursor:pointer;">📋</button>'
+      +'</div>'
+      +'<div id="sap_'+it.k+'" style="font-size:10px;color:rgba(240,230,200,0.85);line-height:1.7;max-height:70px;overflow-y:auto;">'+p+'</div>'
+    +'</div>';
+  }).join('');
+  pop.style.display='flex';
+}
+function shopCopyId(id){var el=document.getElementById(id);if(!el)return;var t=(el.innerText||el.textContent);if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert('복사 완료! Microsoft Copilot에 붙여넣기 하세요 🎨\nhttps://copilot.microsoft.com/');});}
+
+// ══ 신체 치수 측정 엔진 ═════════════════════════════════════
+var BM2 = {stream:null, step:1, photo1:null, photo2:null, height:0, weight:0, editing:false};
+var BM2_KEYS = ['shoulder','chest','waist','hip','armLen','inseam','thigh','bmi'];
+var BM2_LABELS = (typeof _cgoT==='function')?['어깨 너비',_cgoT('가슴 둘레'),_cgoT('허리 둘레'),_cgoT('엉덩이 둘레'),_cgoT('팔 길이'),_cgoT('인심 (밑위)'),_cgoT('허벅지 둘레'),'BMI'].map(function(x){return _cgoT(x);}):['Shoulder Width','Chest Circumference','Waist Circumference','Hip Circumference','Arm Length','Inseam','Thigh Circumference','BMI'];
+var BM2_ICONS  = ['↔️','🫀','⬛','🔵','💪','📏','🦵','⚖️'];
+var BM2_UNITS  = ['cm','cm','cm','cm','cm','cm','cm',''];
+var BM2_VALS   = {};
+
+function bm2Start(){
+  // ★ C-61: 옛 위저드 건너뛰고 진짜 측정 카메라 바로 열기
+  var ov=document.getElementById('cgoC61Ov');
+  if(ov){ try{ if(window._c61Reset) window._c61Reset(); }catch(e){} ov.style.display='block'; }
+  else { alert('측정 모듈을 불러오지 못했습니다. 새로고침 해주세요.'); }
+}
+
+function bm2Shoot(){
+  var v=document.getElementById('bm2Video'), c=document.getElementById('bm2Canvas');
+  if(!v||!c)return;
+  c.width=v.videoWidth||320; c.height=v.videoHeight||480;
+  c.getContext('2d', { willReadFrequently: true }).drawImage(v,0,0);
+  var url=c.toDataURL('image/jpeg',.8);
+  if(BM2.step===1){
+    BM2.photo1=url;
+    document.getElementById('bm2Preview1').innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
+    var d1=document.getElementById('bm2Step1dot');
+    if(d1){d1.textContent='✓';d1.style.background='rgba(52,211,153,.4)';}
+    document.getElementById('bm2Step1bar').style.width='100%';
+    var d2=document.getElementById('bm2Step2dot');
+    if(d2){d2.style.borderColor='#34d399';d2.style.color='#34d399';d2.style.background='rgba(52,211,153,.2)';}
+    BM2.step=2;
+    document.getElementById('bm2GuideText').textContent=_cgoT('옆으로 돌아서 주세요 (측면)');
+    if(BM2.stream){BM2.stream.getTracks().forEach(function(t){t.stop();});BM2.stream=null;}
+    setTimeout(function(){bm2Start();},400);
+  } else {
+    BM2.photo2=url;
+    document.getElementById('bm2Preview2').innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">';
+    document.getElementById('bm2Step2bar').style.width='100%';
+    var dd=document.getElementById('bm2DoneDot');
+    if(dd){dd.style.borderColor='#d4a843';dd.style.color='#d4a843';dd.style.background='rgba(212,168,67,.2)';}
+    if(BM2.stream){BM2.stream.getTracks().forEach(function(t){t.stop();});BM2.stream=null;}
+    document.getElementById('bm2CamWrap').style.display='none';
+    document.getElementById('bm2AnalyzeBtn').style.display='block';
+  }
+}
+
+function bm2Analyze(){
+  // ★ C-61: 가짜 키/몸무게 공식 제거 → 진짜 카메라 측정 오버레이 열기
+  var ov=document.getElementById('cgoC61Ov');
+  if(ov){ try{ if(window._c61Reset) window._c61Reset(); }catch(e){} ov.style.display='block'; }
+  else { alert('측정 모듈을 불러오지 못했습니다. 새로고침 해주세요.'); }
+}
+
+function bm2RenderResult(){
+  var grid=document.getElementById('bm2ResultGrid');
+  grid.innerHTML=BM2_KEYS.map(function(k,i){
+    var val=BM2_VALS[k];
+    var dispVal = (k==='bmi') ? val : val+BM2_UNITS[i];
+    return '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center;">'
+      +'<span style="font-size:10px;color:rgba(240,230,200,0.85);">'+BM2_ICONS[i]+' '+BM2_LABELS[i]+'</span>'
+      +'<span id="bm2val_'+k+'" style="font-size:13px;font-weight:800;color:#34d399;">'+dispVal+'</span>'
+      +'</div>';
+  }).join('');
+  bm2UpdateSizeRecom();
+}
+
+function bm2UpdateSizeRecom(){
+  var chest=BM2_VALS.chest||0;
+  var size='M';
+  if(chest<=86)size='S';else if(chest<=92)size='M';else if(chest<=98)size='L';else if(chest<=104)size='XL';else size='2XL';
+  var el=document.getElementById('bm2SizeRecom');
+  if(el) el.innerHTML='✅ 추천 사이즈: <span style="font-size:17px;font-weight:900;">'+size+'</span>'
+    +' &nbsp;|&nbsp; 슈트 호수: <span style="font-weight:800;">'+(chest-2)+'호</span>'
+    +'<br><span style="font-size:10px;opacity:.55;">오차 범위 약 ±1~2cm 수준</span>';
+}
+
+function bm2ToggleEdit(){
+  BM2.editing=true;
+  document.getElementById('bm2EditBtn').style.display='none';
+  document.getElementById('bm2SaveBtn').style.display='block';
+  document.getElementById('bm2EditHint').textContent=_cgoT('📝 값을 직접 수정하세요. 수정 후 저장 버튼을 눌러주세요.');
+  document.getElementById('bm2EditHint').style.color='rgba(56,189,248,.7)';
+  // 각 항목을 input으로 변환
+  BM2_KEYS.forEach(function(k,i){
+    var el=document.getElementById('bm2val_'+k);
+    if(!el)return;
+    var cur=BM2_VALS[k];
+    el.outerHTML='<input id="bm2val_'+k+'" type="number" value="'+cur+'" step="'+(k==='bmi'?.1:1)+'"'
+      +' style="width:70px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.4);border-radius:6px;padding:4px 6px;color:#38bdf8;font-size:13px;font-weight:800;text-align:center;outline:none;">';
+  });
+}
+
+function bm2SaveEdit(){
+  // 수정된 값 저장
+  BM2_KEYS.forEach(function(k){
+    var el=document.getElementById('bm2val_'+k);
+    if(el) BM2_VALS[k]=parseFloat(el.value)||BM2_VALS[k];
+  });
+  BM2.editing=false;
+  document.getElementById('bm2EditBtn').style.display='block';
+  document.getElementById('bm2SaveBtn').style.display='none';
+  document.getElementById('bm2EditHint').textContent=_cgoT('💡 수정 버튼을 눌러 각 항목을 직접 변경할 수 있어요');
+  document.getElementById('bm2EditHint').style.color='rgba(240,230,200,.35)';
+  bm2RenderResult();
+}
+
+function bm2Reset(){
+  if(BM2.stream){BM2.stream.getTracks().forEach(function(t){t.stop();});BM2.stream=null;}
+  BM2.step=1; BM2.photo1=null; BM2.photo2=null; BM2.editing=false; BM2_VALS={};
+  document.getElementById('bm2CamWrap').style.display='none';
+  document.getElementById('bm2Result').style.display='none';
+  document.getElementById('bm2Preview1').innerHTML='📷';
+  document.getElementById('bm2Preview2').innerHTML='📷';
+  document.getElementById('bm2StartBtn').style.display='block';
+  var ab=document.getElementById('bm2AnalyzeBtn');
+  ab.style.display='none'; ab.textContent=_cgoT('⚡ 치수 분석'); ab.disabled=false;
+  ab.style.background='rgba(212,168,67,.15)'; ab.style.color='#d4a843'; ab.style.borderColor='rgba(212,168,67,.35)';
+  var d1=document.getElementById('bm2Step1dot');
+  if(d1){d1.textContent='1';d1.style.background='rgba(52,211,153,.3)';d1.style.borderColor='#34d399';d1.style.color='#34d399';}
+  var d2=document.getElementById('bm2Step2dot');
+  if(d2){d2.style.background='rgba(255,255,255,.06)';d2.style.borderColor='rgba(255,255,255,.15)';d2.style.color='rgba(240,230,200,.3)';}
+  var dd=document.getElementById('bm2DoneDot');
+  if(dd){dd.style.borderColor='rgba(255,255,255,.15)';dd.style.color='rgba(240,230,200,.3)';dd.style.background='rgba(255,255,255,.06)';}
+  document.getElementById('bm2Step1bar').style.width='0%';
+  document.getElementById('bm2Step2bar').style.width='0%';
+}
+// ════════════════════════════════════════════════════════════
+
+function shopCustomOrder(){
+  shopPopClose();
+  // 쇼핑 페이지로 이동 후 업로드 영역으로 스크롤
+  var sp=document.getElementById('page-shop');
+  if(sp&&!sp.classList.contains('active')){
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    sp.classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-page')==='shop');});
+  }
+  setTimeout(function(){
+    var dz=document.getElementById('uploadDropZone');
+    if(dz)dz.scrollIntoView({behavior:'smooth',block:'center'});
+  },200);
+}
+
+// ══ 이미지 업로드 함수들 ══════════════════════════════════════
+function uploadHandleFile(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=document.getElementById('uploadPreviewImg');
+    var area=document.getElementById('uploadPreviewArea');
+    var form=document.getElementById('uploadOrderForm');
+    var dz=document.getElementById('uploadDropZone');
+    if(img){img.src=e.target.result;img.style.display='block';}
+    if(area)area.style.display='none';
+    if(form)form.style.display='block';
+    if(dz){dz.style.borderColor='rgba(52,211,153,.4)';dz.style.background='rgba(52,211,153,.04)';}
+    window._uploadFile=file;
+    window._uploadImgData=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadHandleDrop(e){
+  e.preventDefault();
+  var dz=document.getElementById('uploadDropZone');
+  if(dz){dz.style.borderColor='rgba(248,113,113,.3)';dz.style.background='rgba(248,113,113,.03)';}
+  var file=e.dataTransfer.files[0];
+  if(file)uploadHandleFile(file);
+}
+
+function uploadPreviewOrder(){
+  var prod=document.getElementById('uploadProductSel').value;
+  var size=document.getElementById('uploadSizeSel').value;
+  var qty=document.getElementById('uploadQtySel').value;
+  var contact=document.getElementById('uploadContact').value;
+  var addr=document.getElementById('uploadAddr').value;
+  var oh=window._sOh||'목';
+  var ili=window._sIli||72;
+
+  if(!prod){alert('상품을 선택해주세요!');return;}
+  if(!contact){alert('연락처를 입력해주세요!');return;}
+  if(!addr){alert('배송지 주소를 입력해주세요!');return;}
+  if(!window._uploadFile){alert('이미지를 업로드해주세요!');return;}
+
+  // 가격 추출
+  var prices={'부적 티셔츠':52000,'부적 잠옷':89000,'부적 잠바':148000,'오행 후드집업':98000,'부적 반지':128000,'부적 목걸이':165000,'부적 팔찌':85000,'부적 신발':185000,'부적 슬리퍼':68000,'맞춤 풀세트':380000,'24시간 세트':268000};
+  var price=(prices[prod]||0)*parseInt(qty);
+
+  var summary=document.getElementById('uploadSummary');
+  var summaryContent=document.getElementById('uploadSummaryContent');
+  if(summary)summary.style.display='block';
+  if(summaryContent)summaryContent.innerHTML=
+    '🛍️ 상품: <b style="color:#e2e8f0">'+prod+'</b><br>'
+    +'📐 사이즈: <b style="color:#e2e8f0">'+size+'</b> / 수량: <b style="color:#e2e8f0">'+qty+'개</b><br>'
+    +'🌳 오행: <b style="color:#d4a843">'+oh+'('+ili+')</b> 기반 맞춤 이미지<br>'
+    +'🖼️ 이미지: <b style="color:#34d399">'+window._uploadFile.name+'</b><br>'
+    +'📞 연락처: <b style="color:#e2e8f0">'+contact+'</b><br>'
+    +'🏠 배송지: <b style="color:#e2e8f0">'+addr+'</b><br>'
+    +'💰 합계: <b style="color:#d4a843;font-size:14px;">준비중</b>';
+}
+
+function uploadSubmitOrder(){
+  var prod=document.getElementById('uploadProductSel').value;
+  var size=document.getElementById('uploadSizeSel').value;
+  var qty=document.getElementById('uploadQtySel').value;
+  var contact=document.getElementById('uploadContact').value;
+  var addr=document.getElementById('uploadAddr').value;
+
+  if(!prod){alert('상품을 선택해주세요!');return;}
+  if(!contact){alert('연락처를 입력해주세요!');return;}
+  if(!addr){alert('배송지 주소를 입력해주세요!');return;}
+  if(!window._uploadFile){alert('이미지를 업로드해주세요!');return;}
+
+  // 접수 완료 처리
+  var form=document.getElementById('uploadOrderForm');
+  var success=document.getElementById('uploadSuccess');
+  var summary=document.getElementById('uploadSummary');
+  var img=document.getElementById('uploadPreviewImg');
+  if(form)form.style.display='none';
+  if(summary)summary.style.display='none';
+  if(img)img.style.opacity='0.3';
+  if(success)success.style.display='block';
+
+  // 주문번호 생성
+  var orderNo='CGO-'+Date.now().toString().slice(-8);
+  var successDiv=document.getElementById('uploadSuccess');
+  if(successDiv){
+    var orderInfo=successDiv.querySelector('div:nth-child(3)');
+    if(orderInfo)orderInfo.innerHTML='주문번호: <b style="color:#d4a843">'+orderNo+'</b><br>24시간 내 담당자가 연락드립니다.<br>카카오톡: @CGo-Life';
+  }
+}
+
+function uploadReset(){
+  document.getElementById('uploadPreviewImg').style.display='none';
+  document.getElementById('uploadPreviewImg').style.opacity='1';
+  document.getElementById('uploadPreviewArea').style.display='block';
+  document.getElementById('uploadOrderForm').style.display='none';
+  document.getElementById('uploadSuccess').style.display='none';
+  document.getElementById('uploadSummary').style.display='none';
+  document.getElementById('uploadContact').value='';
+  document.getElementById('uploadAddr').value='';
+  document.getElementById('uploadProductSel').value='';
+  var dz=document.getElementById('uploadDropZone');
+  if(dz){dz.style.borderColor='rgba(248,113,113,.3)';dz.style.background='rgba(248,113,113,.03)';}
+  window._uploadFile=null;
+  window._uploadImgData=null;
+  document.getElementById('shopImageInput').value='';
+}
+
+function shopSync(){
+  var sp=document.getElementById('page-shop');
+  if(sp&&sp.classList.contains('active')&&typeof shopInit==='function')shopInit();
+}
+
+
+function _cgoShopIntroPopup(){
+  _cgoFDIntro({
+    id:'cgo-shop-pop', skipKey:'cgo_shop_intro_skip_v2', accent:'#b8860b', accent2:'#9a6f08', ico:'🛍️',
+    title:'오행 맞춤 쇼핑', subtitle:'에너지 부적 라이프스타일',
+    summary:'내 사주의 <b>오행(五行)</b>·<b>12가지 역학</b>·<b>ILI 통합 에너지</b>를 융합해 행운색·맞춤 의류·에너지 부적을 큐레이션합니다. 신체 치수 자동 측정으로 슈트·트레이닝 맞춤 제작까지 연결됩니다.',
+    howtoLabel:'🎁 4가지 핵심 기능',
+    howto:['오행 기운 분석|12가지 역학 + ILI 에너지 → 오늘의 행운색 자동 계산','신체 치수 자동 측정 ★|정면+측면 2장 → 8가지 치수 자동 분석 (슈트·트레이닝)','오행 의류 큐레이션|행운색 + 오행 색상 매칭 → 슈트·캐주얼·운동복 추천','오행 부적 라이프스타일|액세서리·소품·인테리어 → 오행 균형 맞춤 가이드'],
+    howto2Label:'📋 신체 치수 측정 5단계',
+    howto2:['키 / 몸무게 입력 (cm / kg)','📸 촬영 시작 → 후면 카메라 + 인체 가이드 실루엣','정면 촬영 → 자동으로 측면 촬영 전환','측면 촬영 완료','⚡ 치수 분석 → 약 2초 후 결과 표시'],
+    tip:'🎨 5오행 행운색: 🌳목 · 🔥화 · ⛰️토 · ⚔️금 · 💧수',
+    note:'• 추천은 오행 큐레이션 결과입니다 (참고용)<br>• 신체 치수는 카메라·조명에 따라 ±2~5cm 오차 가능',
+    btnLabel:'🛍️ 오행 맞춤 쇼핑 시작하기'
+  });
+}
+window._cgoShopIntroPopup=_cgoShopIntroPopup;
+
 </script>
 </body></html>
 <style>
