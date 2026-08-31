@@ -39780,14 +39780,7 @@ list.innerHTML = scored.map(function(d){
     </div>
     <button onclick="cgShowKeyModal && cgShowKeyModal()" style="padding:7px 12px;background:rgba(248,113,113,.2);border:1px solid rgba(248,113,113,.5);border-radius:8px;color:#dc2626;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔑 키 입력</button>
   </div>
-  <div style="background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(212,168,67,.08));border:1px solid rgba(124,58,237,.35);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-    <div style="font-size:28px;flex-shrink:0;">🤖</div>
-    <div>
-      <div style="font-size:12px;font-weight:800;color:#7c3aed;margin-bottom:3px;">C-60 AI 상담사 활성화됨</div>
-      <div style="font-size:11px;color:#475569;line-height:1.6;">우측 하단 🤖 버튼을 눌러 AI와 대화하세요.<br>종목 검색 후 질문하면 오행 궁합 분석이 더 정확합니다.</div>
-    </div>
-    <button onclick="stkAiToggle()" style="margin-left:auto;padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;">🤖 C-60 AI 상담사</button>
-  </div>
+  
       <div style="max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-bottom:24px;">
 
         <!-- 배너 -->
@@ -40117,7 +40110,16 @@ list.innerHTML = scored.map(function(d){
 
       </div>
 
-      <!-- ★ 금융 면책 고지 (고정 노출) -->
+      <div style="background:#f0fdfa;border:1px solid rgba(52,211,153,.28);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+    <div style="font-size:28px;flex-shrink:0;">🤖</div>
+    <div>
+      <div style="font-size:12px;font-weight:800;color:#0f1b2e;margin-bottom:3px;">🤖 AI 상담사</div>
+      <div style="font-size:11px;color:#4b6470;line-height:1.6;">종목 검색 후 질문하면 오행 궁합 분석이 더 정확합니다.</div>
+    </div>
+    <button onclick="stkAiToggle()" style="margin-left:auto;padding:8px 14px;background:linear-gradient(135deg,#34d399,#059669);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;">🤖 AI 상담 열기</button>
+  </div>
+
+        <!-- ★ 금융 면책 고지 (고정 노출) -->
       <div style="margin:18px 4px 0;padding:14px 16px;background:rgba(15,23,42,.04);border:1px solid rgba(100,116,139,.28);border-radius:12px;">
         <div style="font-size:11px;font-weight:800;color:#dc2626;margin-bottom:6px;">🔒 금융 면책 고지</div>
         <div style="font-size:10.5px;color:#64748b;line-height:1.75;">
@@ -89406,8 +89408,9 @@ function csiRenderLanes(){
   var tier=window.csiTier||'basic';
   row.innerHTML=CSI_LANES.map(function(L){
     var on=!!window.csiLanes[L.k];
-    var paid=(L.k==='wea'||L.k==='exch');
-    var lock=paid && tier==='basic';
+    /* ★ 날씨는 대시보드 LIVE 에서 오고, 거래소는 우리 표다 — 둘 다 값이 들지 않는다.
+       값이 드는 것은 AI 풀이뿐이니 갈래는 어느 등급에서나 켤 수 있다. */
+    var lock=false;
     if(lock) on=false;
     return '<div onclick="'+(lock?'':'csiToggleLane(\''+L.k+'\')')+'" style="cursor:'+(lock?'not-allowed':'pointer')+';opacity:'+(lock?'.45':'1')+';background:'+(on?'rgba(52,211,153,.12)':'#fff')+';border:2px solid '+(on?'#34d399':'#e6eef0')+';border-radius:12px;padding:11px 7px;text-align:center;transition:all .15s;">'
       +'<div style="font-size:17px;">'+L.ico+'</div>'
