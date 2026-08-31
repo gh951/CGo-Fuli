@@ -12963,7 +12963,7 @@ function cgoGoPage(page){
     algo:'⚡ 웰니스 리포트', report:'📜 정밀 리포트', gmd:'📸 풍수 카메라',
     naming:'✍️ 작명', star:'⭐ 별 충전소', food:'🍱 음식 궁합', consult:'🔮 AI 상담',
     lotto:'🎰 행운 번호', couple:'💑 궁합 분석', sports:'⚽ 스포츠',
-    stock:'📈 주식', travel:'🏨 풍수 여행', 'travel-yeogi':'🏨 나에게 맞는 숙소', 'c14-v2':'🌙 꿈 해몽', 'algo-v2':'✨ 나의 건강 밸런스', shop:'🛍️ 쇼핑', profile:'👤 프로필',
+    stock:'📈 주식', travel:'🏨 풍수 여행', 'travel-yeogi':'🏨 나에게 맞는 숙소', 'c14-v2':'🌙 꿈 해몽', 'algo-v2':'✨ 나의 건강 밸런스', profile:'👤 프로필',
     mai:'💄 화장 흡수 분석', svi:'💪 피부 탄력 분석',
     'rppg-ar':'🎨 AR 메이크업'
   };
@@ -12974,12 +12974,9 @@ function cgoGoPage(page){
     if(titleEl){ titleEl.style.display='none'; titleEl.textContent=''; }
   } else {
     if(nasaBar) nasaBar.style.display = 'none';
-    if(titleEl){
-      titleEl.style.display='block';
-      // ★ i18n 번역 우선 적용
-      var _i18nTitle = window._pageTitleI18N && window._pageTitleI18N[page];
-      titleEl.textContent = _i18nTitle || pageTitles[page] || page;
-    }
+    /* ★ 상단 규칙: 로고 · 선택언어 · 새로고침 · 이름 입력. 그 밖은 없다.
+       페이지 이름표는 어느 화면에서도 띄우지 않는다. */
+    if(titleEl){ titleEl.style.display='none'; titleEl.textContent=''; }
   }
   // ★ 페이지 전환 시 data-i18n 정적 번역만 재적용
   if(window._LANG && window._LANG !== 'ko'){
@@ -12992,11 +12989,7 @@ function cgoGoPage(page){
         var k=el.getAttribute('data-i18n');
         if(_p[k]!==undefined) el.textContent=_p[k];
       });
-      // 페이지 타이틀만 갱신
-      var titleEl=document.getElementById('pageTitleText');
-      if(titleEl && window._pageTitleI18N && window._pageTitleI18N[page]){
-        titleEl.textContent = window._pageTitleI18N[page];
-      }
+      /* 이름표는 띄우지 않는다 — 되살리지 않는다 */
     }, 100);
   }
   // 페이지별 초기화
@@ -40897,7 +40890,8 @@ function _setNASAStatus(state, source, jd) {
   bar.style.border = '1px solid ' + c.border;
   bar.style.color = c.tc;
   bar.textContent = c.text;
-  bar.style.display = 'block';
+  /* ★ 상단은 로고·언어·새로고침·이름만 — NASA 띠는 바에 올리지 않는다 */
+  bar.style.display = 'none';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
