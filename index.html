@@ -39945,6 +39945,8 @@ list.innerHTML = scored.map(function(d){
 
         <!-- 결과 영역 (초기 숨김) -->
         <div id="stk-result" style="display:none;flex-direction:column;gap:14px;">
+          <!-- ★ CSI — 거래소의 생일 × 종목의 개업일 × 지금 하늘 × 나 -->
+          <div id="csi-card" style="display:none;background:#f0fdfa;border:1px solid rgba(52,211,153,.28);border-radius:16px;padding:18px 16px;"></div>
 
           <!-- 궁합 점수 헤더 -->
           <div id="stk-score-card" style="background:var(--bg-card);border:1px solid rgba(52,211,153,0.3);border-radius:14px;padding:20px;text-align:center;">
@@ -89380,6 +89382,7 @@ function csiSetTier(t){
     if(e) e.style.border='2px solid '+(x===t?'#34d399':'#e6eef0');
   });
   csiRenderLanes();
+  try{ if(window.csiRender && window.stkSelected) csiRender(); }catch(e){}
 }
 function csiToggleLane(k){
   window.csiLanes[k]=!window.csiLanes[k];
@@ -89448,6 +89451,205 @@ try{ window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.cs
 (function(){ function boot(){ try{ if(document.getElementById('csi-lane-row')) csiRenderLanes(); }catch(e){} }
   if(document.readyState==='loading') addEventListener('DOMContentLoaded',boot); else boot();
   setTimeout(boot,600); })();
+
+</script>
+
+<script>
+
+/* ══════════════════════════════════════════════════════════════
+   CSI 융합 — 종목을 고르면 세 겹을 겹쳐 점수와 대전환점을 낸다
+     ① 거래소의 생일   그 나라 시장 전체의 타고난 기운
+     ② 종목의 개업일   그 회사의 타고난 기운
+     ③ 나의 사주·생체  ← MMA·AstroCycle 에는 없는 겹
+   ══════════════════════════════════════════════════════════════ */
+
+/* 오늘 하늘 — 하루에 한 번만 셈한다 */
+var _csiSkyDay=null, _csiSky=null;
+function csiSky(){
+  var d=new Date().toISOString().slice(0,10);
+  if(_csiSkyDay!==d){ _csiSkyDay=d; _csiSky=csiChart(d); }
+  return _csiSky;
+}
+/* 지난 100년의 그날들과 지금 하늘이 얼마나 닮았나 */
+function csiCycleEcho(){
+  var sky=csiSky(), best=null;
+  for(var i=0;i<CSI_CYCLES.length;i++){
+    var C=CSI_CYCLES[i], ch=csiChart(C.d), hits=csiCross(ch, sky, ['mars','jupiter','saturn','uranus','pluto']);
+    var s=0; for(var j=0;j<hits.length;j++) s+=hits[j].a.asp.w*hits[j].a.tight;
+    s=s*(C.w/10);
+    if(!best||s>best.s) best={c:C, s:s, top:hits[0]||null};
+  }
+  return best;
+}
+/* 앞으로 30일 안에 각도가 딱 맞는 날 — 대전환점 후보 */
+function csiReversalDates(natal, days){
+  days=days||30; var out=[], base=new Date();
+  for(var k=1;k<=days;k++){
+    var dt=new Date(base.getTime()+k*86400000).toISOString().slice(0,10);
+    var sky=csiChart(dt), hits=csiCross(natal, sky, ['mars','jupiter','saturn','uranus','pluto']);
+    if(!hits.length) continue;
+    var h=hits[0]; if(h.a.tight<0.86) continue;   /* 아주 바싹 붙은 날만 */
+    out.push({d:dt, h:h, pow:h.a.asp.w*h.a.tight, pol:h.a.asp.pol});
+  }
+  out.sort(function(a,b){ return b.pow-a.pow; });
+  return out.slice(0,3);
+}
+/* 융합 점수 — 켠 갈래만 섞는다 */
+function csiFuse(item){
+  var lanes=window.csiLanes||{}, on=[], parts=[];
+  var flag=item.c||'', ex=CSI_EXCHANGE[flag]||null;
+
+  /* ② 종목의 개업일 × 지금 하늘 */
+  var natal=csiChart(item.f||'2000-01-01');
+  var hits=csiCross(natal, csiSky());
+  var raw=0; for(var i=0;i<hits.length;i++) raw+=hits[i].a.asp.pol*hits[i].a.asp.w*hits[i].a.tight;
+  var coScore=Math.max(0,Math.min(100, Math.round(50+raw*7)));
+  parts.push({k:'co', n:'종목 개업일 × 지금 하늘', v:coScore, d:(hits[0]?csiPlanetName(hits[0].t).e+csiPlanetName(hits[0].t).n+' '+hits[0].a.asp.sym+' '+csiPlanetName(hits[0].nk).n+' '+hits[0].a.deg.toFixed(1)+'° '+hits[0].a.asp.n:'걸리는 각도 없음')});
+
+  /* ① 거래소의 생일 × 지금 하늘 */
+  var exScore=null, exTop=null;
+  if(lanes.exch && ex){
+    var en=csiChart(ex.d), eh=csiCross(en, csiSky());
+    var er=0; for(var q=0;q<eh.length;q++) er+=eh[q].a.asp.pol*eh[q].a.asp.w*eh[q].a.tight;
+    exScore=Math.max(0,Math.min(100, Math.round(50+er*7))); exTop=eh[0]||null;
+    on.push('exch');
+    parts.push({k:'ex', n:ex.n+' 개업 '+ex.d, v:exScore, d:(exTop?csiPlanetName(exTop.t).e+csiPlanetName(exTop.t).n+' '+exTop.a.asp.sym+' '+csiPlanetName(exTop.nk).n+' '+exTop.a.deg.toFixed(1)+'° '+exTop.a.asp.n:'걸리는 각도 없음')});
+  }
+  /* ③ 나의 사주 */
+  var myScore=null;
+  if(lanes.yeok){
+    on.push('yeok');
+    var mb=(document.getElementById('prof-birth')||{}).value||'';
+    var me=(typeof stkGetElement==='function')?stkGetElement(mb||'1990-01-01'):null;
+    var cmp=(typeof stkCompat==='function')?stkCompat(me?me.idx:2, item.ei||3):{score:60,msg:''};
+    myScore=cmp.score;
+    parts.push({k:'me', n:'나의 사주 × 종목 오행', v:myScore, d:cmp.msg||''});
+  }
+  /* 생체 */
+  var bioScore=null;
+  if(lanes.bio){
+    on.push('bio');
+    var ili=(window.calcResult&&window.calcResult.ili)||null;
+    bioScore=ili?Math.round(ili):null;
+    parts.push({k:'bio', n:'지금 내 컨디션 (rPPG)', v:bioScore, d:bioScore?'컨디션이 좋을수록 판단이 흔들리지 않습니다':'대시보드에서 측정하면 들어옵니다'});
+  }
+  /* 위성·방위·날씨 — LIVE 에서 읽어 소폭 보정 */
+  function num(id){ var e=document.getElementById(id); if(!e) return null; var m=(e.textContent||'').match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+  var envAdj=0, envSay=[];
+  if(lanes.sat){ on.push('sat'); var alt=num('cgoSatAlt'); if(alt){ envAdj+=(alt>410?1.5:-1.5); envSay.push('위성 고도 '+alt+'km'); } }
+  if(lanes.dir){ on.push('dir'); var deg=num('cgoCompassDegBar'); if(deg!=null){ envAdj+=((deg>=315||deg<45)?2:(deg<135?1:(deg<225?-1:0))); envSay.push('방위 '+Math.round(deg)+'°'); } }
+  if(lanes.wea){ on.push('wea'); var t=num('cgoWeatherTempBar'); if(t!=null){ envAdj+=(t>=15&&t<=26?2:-1.5); envSay.push('기온 '+t+'°C'); } }
+  if(envSay.length) parts.push({k:'env', n:'실시간 환경 보정', v:null, d:envSay.join(' · ')+' → '+(envAdj>=0?'+':'')+envAdj.toFixed(1)+'점'});
+
+  /* 합치기 — 켠 만큼 나눈다 */
+  var vals=[coScore]; if(exScore!=null) vals.push(exScore); if(myScore!=null) vals.push(myScore); if(bioScore!=null) vals.push(bioScore);
+  var csi=Math.max(0,Math.min(100, Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length + envAdj)));
+
+  return {csi:csi, parts:parts, hits:hits, natal:natal, ex:ex, exTop:exTop,
+          echo:csiCycleEcho(), rev:csiReversalDates(natal,30), lanes:on.length};
+}
+
+</script>
+
+<script>
+
+/* ══ CSI 카드 그리기 ══ */
+function csiRender(){
+  var box=document.getElementById('csi-card'); if(!box) return;
+  var item=window.stkSelected;
+  if(!item){ box.style.display='none'; return; }
+  var R=csiFuse(item), tier=window.csiTier||'basic';
+  var grade = R.csi>=80?{n:'매우 강함',c:'#059669'} : R.csi>=65?{n:'강함',c:'#34d399'}
+            : R.csi>=50?{n:'보통',c:'#f59e0b'} : R.csi>=35?{n:'약함',c:'#f87171'} : {n:'매우 약함',c:'#dc2626'};
+
+  var h='';
+  /* 머리 */
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+   + '<div><div style="font-size:13px;font-weight:900;color:#0f1b2e;">🌌 CSI · 우주 종목 지수</div>'
+   + '<div style="font-size:10px;color:#4b6470;margin-top:2px;">거래소의 생일 × 종목의 개업일 × 지금 하늘 × 나</div></div>'
+   + '<div style="text-align:right;"><div style="font-size:30px;font-weight:900;color:'+grade.c+';line-height:1;">'+R.csi+'</div>'
+   + '<div style="font-size:10px;font-weight:800;color:'+grade.c+';">'+grade.n+'</div></div></div>';
+
+  /* 겹친 자리들 */
+  h+='<div style="display:flex;flex-direction:column;gap:6px;">';
+  R.parts.forEach(function(p){
+    h+='<div style="background:#fff;border:1px solid rgba(52,211,153,.24);border-radius:11px;padding:10px 12px;">'
+     + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+     + '<span style="font-size:11px;font-weight:800;color:#0f1b2e;">'+p.n+'</span>'
+     + (p.v!=null?'<span style="font-size:13px;font-weight:900;color:#059669;">'+p.v+'</span>':'')
+     + '</div>'
+     + (p.d?'<div style="font-size:10px;color:#4b6470;margin-top:4px;line-height:1.6;">'+p.d+'</div>':'')
+     + '</div>';
+  });
+  h+='</div>';
+
+  /* 고급 이상 — 걸린 각도를 모두 */
+  if(tier!=='basic' && R.hits.length){
+    h+='<div style="margin-top:12px;background:#fff;border:1px solid rgba(52,211,153,.24);border-radius:11px;padding:11px 12px;">'
+     + '<div style="font-size:11px;font-weight:800;color:#0f1b2e;margin-bottom:7px;">📐 지금 걸려 있는 각도</div>';
+    R.hits.slice(0,6).forEach(function(x){
+      var A=x.a.asp, t=csiPlanetName(x.t), k=csiPlanetName(x.nk);
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-top:1px solid #f0f4f5;">'
+       + '<span style="font-size:10.5px;color:#0f1b2e;">'+t.e+' '+t.n+' <b style="color:'+(A.pol>0?'#059669':'#dc2626')+'">'+A.sym+'</b> '+k.n+'</span>'
+       + '<span style="font-size:10px;color:#4b6470;">'+x.a.deg.toFixed(1)+'° · '+A.n+' · '+A.say+'</span></div>';
+    });
+    h+='</div>';
+  }
+
+  /* 역사 되울림 */
+  if(tier!=='basic' && R.echo && R.echo.c){
+    var E=R.echo, up=E.c.k==='up';
+    h+='<div style="margin-top:10px;background:'+(up?'rgba(52,211,153,.08)':'rgba(248,113,113,.08)')+';border:1px solid '+(up?'rgba(52,211,153,.32)':'rgba(248,113,113,.32)')+';border-radius:11px;padding:11px 12px;">'
+     + '<div style="font-size:11px;font-weight:800;color:'+(up?'#059669':'#dc2626')+';margin-bottom:5px;">🕰️ 역사 되울림</div>'
+     + '<div style="font-size:10.5px;color:#0f1b2e;line-height:1.7;">지금 하늘이 <b>'+E.c.d+' '+E.c.n+'</b> 때와 닮았습니다.'
+     + (E.top?'<br>그때도 '+csiPlanetName(E.top.t).n+' '+E.top.a.asp.sym+' '+csiPlanetName(E.top.nk).n+' 각도가 걸려 있었습니다.':'')
+     + '<br><span style="color:#4b6470;">닮은 정도 '+(E.s*10).toFixed(0)+'/100 · 같은 일이 되풀이된다는 뜻은 아닙니다.</span></div></div>';
+  }
+
+  /* 최고급 — 30일 대전환점 */
+  if(tier==='max'){
+    h+='<div style="margin-top:10px;background:#fff;border:1px solid rgba(52,211,153,.28);border-radius:11px;padding:11px 12px;">'
+     + '<div style="font-size:11px;font-weight:800;color:#0f1b2e;margin-bottom:7px;">🗓️ 앞으로 30일 · 대전환점 후보</div>';
+    if(R.rev.length){
+      R.rev.forEach(function(r){
+        var t=csiPlanetName(r.h.t), k=csiPlanetName(r.h.nk), A=r.h.a.asp;
+        h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid #f0f4f5;">'
+         + '<span style="font-size:11px;font-weight:800;color:'+(r.pol>0?'#059669':'#dc2626')+';">'+r.d+'</span>'
+         + '<span style="font-size:10px;color:#4b6470;">'+t.e+t.n+' '+A.sym+' '+k.n+' · '+A.n+' · '+(r.pol>0?'힘이 모입니다':'흔들립니다')+'</span></div>';
+      });
+    } else {
+      h+='<div style="font-size:10.5px;color:#4b6470;">30일 안에 바싹 맞물리는 각도가 없습니다 — 잔잔한 구간입니다.</div>';
+    }
+    h+='</div>';
+  }
+
+  /* 잠긴 안내 */
+  if(tier==='basic'){
+    h+='<div style="margin-top:10px;padding:10px 12px;background:rgba(52,211,153,.07);border:1px dashed rgba(52,211,153,.4);border-radius:11px;font-size:10.5px;color:#4b6470;line-height:1.7;">'
+     + '⭐ <b style="color:#0f1b2e;">고급</b>에서 걸린 각도와 역사 되울림을, 💎 <b style="color:#0f1b2e;">최고급</b>에서 30일 대전환점까지 봅니다.</div>';
+  }
+
+  h+='<div style="margin-top:10px;font-size:9.5px;color:#8a9aa3;line-height:1.7;">'
+   + '역학·천문 자료를 바탕으로 한 참고용입니다 · 매수·매도 시점을 제시하지 않으며 투자 판단과 책임은 본인에게 있습니다.</div>';
+
+  box.innerHTML=h; box.style.display='block';
+}
+try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRender; }catch(e){}
+
+/* ══ 기존 분석이 끝나면 CSI 도 함께 그린다 ══ */
+(function(){
+  function hook(){
+    if(typeof window.runStockAnalysis!=='function'){ return setTimeout(hook,600); }
+    if(window._csiHooked) return; window._csiHooked=1;
+    var orig=window.runStockAnalysis;
+    window.runStockAnalysis=function(){
+      var r=orig.apply(this,arguments);
+      setTimeout(function(){ try{ csiRender(); }catch(e){} }, 60);
+      return r;
+    };
+  }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',hook); else hook();
+})();
 
 </script>
 </body></html>
