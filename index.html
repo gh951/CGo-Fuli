@@ -39786,7 +39786,7 @@ list.innerHTML = scored.map(function(d){
         <!-- 배너 -->
         <div style="background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(96,165,250,0.07),rgba(139,92,246,0.08));border:1px solid rgba(52,211,153,0.28);border-radius:16px;padding:22px;position:relative;overflow:hidden;text-align:center;">
           <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa,#f87171,#fbbf24,#34d399);"></div>
-          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:#64748b;margin-bottom:6px;">📈 주식 에너지 흐름 <span style="font-family:'Noto Sans KR',sans-serif;font-size:10px;font-weight:700;color:rgba(167,139,250,.75);vertical-align:super;letter-spacing:.05em;">C-60</span></div>
+          <div style="font-family:'DM Serif Display',serif;font-size:22px;color:#64748b;margin-bottom:6px;">📈 주식 에너지 흐름</div>
           <div style="font-size:12px;color:#475569;line-height:1.9;">재무 상태, 성장 가능성, 경영진, 산업 환경의 분석 위에<br><span style="color:#7c3aed;font-weight:700;">+ 50대 역학 × NASA 실시간 행성 이동 × 오행 에너지 융합 분석</span><br>회사 개업일과 나의 운수, 오행 궁합으로 종목 에너지를 읽습니다</div>
           <div style="font-size:11px;color:#dc2626;margin-top:8px;padding:6px 12px;background:rgba(248,113,113,0.08);border-radius:8px;display:inline-block;">⚠️ 본 분석은 역학·천문학적 에너지 참고용이며 투자 권유가 아닙니다</div>
         </div>
@@ -89370,9 +89370,9 @@ function csiPlanetName(k){ for(var i=0;i<CSI_PLANETS.length;i++) if(CSI_PLANETS[
 window.csiTier='basic';
 window.csiLanes={yeok:true, sat:false, dir:false, wea:false, bio:false, exch:true};
 var CSI_LANES=[
-  {k:'yeok', ico:'🔮', n:'역학',            d:'사주·오행·50대 역학'},
+  {k:'yeok', ico:'🔮', n:'역학',            d:'주식에 듣는 12역학 · 배점제'},
   {k:'sat',  ico:'🛰️', n:'위성',            d:'NASA 실시간 궤도'},
-  {k:'dir',  ico:'🧭', n:'방위',            d:'기문둔갑·구성기학'},
+  {k:'dir',  ico:'🧭', n:'방위',            d:'지금 향한 실제 나침반 방위'},
   {k:'wea',  ico:'🌤️', n:'날씨',            d:'기온·습도·오행 기상'},
   {k:'bio',  ico:'💗', n:'생체 컨디션',      d:'rPPG 실측'},
   {k:'exch', ico:'🏛️', n:'국가별 증권시장',  d:'거래소 개업일 네이탈'}
@@ -89438,18 +89438,50 @@ function csiRenderLanes(){
   if(c) c.textContent=CSI_LANES.filter(function(L){return window.csiLanes[L.k];}).length+'개';
 }
 /* 역학을 켜면 — 순수역학처럼 주르륵 */
-var CSI_YEOK=['사주팔자','자미두수','구성기학','기문둔갑','매화역수','육임','토정비결','주역','성명학','풍수지리','서양점성','수비학'];
-window.csiYeokPick=window.csiYeokPick||{'사주팔자':1,'자미두수':1,'구성기학':1,'서양점성':1};
+/* ★ 주식 예측에 실제로 듣는 역학만 남긴다 — 50개를 다 얹으면 값이 묽어진다.
+   pt = 배점 · g = 계열 · r = 무엇을 읽는가 */
+var CSI_YEOK=[
+ {k:'사주명리',    pt:10, g:'동양', r:'내 일간 오행 ↔ 종목 업종 오행의 생·극'},
+ {k:'자미두수',    pt:8,  g:'동양', r:'재백궁·관록궁 — 기술주냐 배당주냐'},
+ {k:'주역',        pt:8,  g:'동양', r:'지수 등락 주기를 64괘로 — 상승·하강 판정'},
+ {k:'기문둔갑',    pt:7,  g:'동양', r:'8문 방향 — 자금 유입·유출 타이밍'},
+ {k:'육효',        pt:4,  g:'동양', r:'당일 괘 변동 — 매수·매도 진입 시점'},
+ {k:'베딕 점성술', pt:7,  g:'인도', r:'항성황도대 기준 행성 주기'},
+ {k:'나크샤트라',  pt:4,  g:'인도', r:'27수 — 종목과 나의 별자리 궁합'},
+ {k:'헬레니즘',    pt:6,  g:'서양', r:'회귀황도대 트랜짓 — 시장 대전환점'},
+ {k:'호라리',      pt:4,  g:'서양', r:'검색한 그 순간의 하늘 — 당일 단타 리스크'},
+ {k:'수비학',      pt:3,  g:'서양', r:'티커 코드의 숫자 진동 ↔ 내 생명수'},
+ {k:'러시아 수비학',pt:3, g:'서양', r:'날짜 진동 주기와의 공명'},
+ {k:'생체 리듬',   pt:4,  g:'서양', r:'지성 주기 저점 — 뇌동매매 제어'}
+];
+var CSI_YEOK_W={}; CSI_YEOK.forEach(function(y){ CSI_YEOK_W[y.k]=y.pt; });
+window.csiYeokPick=window.csiYeokPick||{'사주명리':1,'자미두수':1,'주역':1,'기문둔갑':1,'헬레니즘':1,'베딕 점성술':1};
+/* ★ 상충 상쇄 지수(CSI) — 베딕(항성)과 헬레니즘(회귀)을 같이 켜면
+   세차운동 때문에 좌표가 23° 어긋난다. 억지로 융합하지 않고 ×0.70 으로 눌러
+   가짜 운세를 걸러낸다. 이 자리가 우리 이름의 뜻이다. */
+window.csiConflict=function(){
+ var p=window.csiYeokPick||{};
+ return (p['베딕 점성술']&&p['헬레니즘']) ? {mul:0.70, why:'베딕(항성) ↔ 헬레니즘(회귀) 23° 상충 → ×0.70 감쇄'} : {mul:1, why:''};
+};
+window.csiYeokWeight=function(){
+ var p=window.csiYeokPick||{}, s=0;
+ CSI_YEOK.forEach(function(y){ if(p[y.k]) s+=y.pt; });
+ return s*window.csiConflict().mul;
+};
 function csiToggleYeok(k){ window.csiYeokPick[k]=!window.csiYeokPick[k]; csiRenderYeok(); }
 function csiRenderYeok(){
   var el=document.getElementById('csi-yeok-list'); if(!el) return;
-  el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:5px;">'+CSI_YEOK.map(function(k){
-    var on=!!window.csiYeokPick[k];
-    return '<span onclick="csiToggleYeok(\''+k+'\')" style="cursor:pointer;font-size:10px;padding:4px 9px;border-radius:8px;font-weight:700;'
-      +(on?'background:rgba(52,211,153,.16);color:#059669;border:1px solid rgba(52,211,153,.45);':'background:#f5f7f8;color:#8a9aa3;border:1px solid #e6eef0;')+'">'+k+'</span>';
-  }).join('')+'</div>';
+  var cf=window.csiConflict(), tot=window.csiYeokWeight();
+  el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:5px;">'+CSI_YEOK.map(function(y){
+    var on=!!window.csiYeokPick[y.k];
+    return '<span onclick="csiToggleYeok(\''+y.k+'\')" title="'+y.r+'" style="cursor:pointer;font-size:10px;padding:4px 9px;border-radius:8px;font-weight:700;'
+      +(on?'background:rgba(52,211,153,.16);color:#059669;border:1px solid rgba(52,211,153,.45);':'background:#f5f7f8;color:#8a9aa3;border:1px solid #e6eef0;')+'">'+y.k
+      +'<span style="font-size:8.5px;opacity:.72;margin-left:3px;">'+y.pt+'</span></span>';
+  }).join('')+'</div>'
+   +'<div style="font-size:9.5px;color:#4b6470;margin-top:6px;line-height:1.55;">배점 합 <b style="color:#059669;">'+tot.toFixed(1)+'pt</b>'
+   +(cf.why?' · <span style="color:#b45309;font-weight:700;">⚠ '+cf.why+'</span>':'')+'</div>';
 }
-try{ window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
+try{ window.CSI_YEOK=CSI_YEOK; window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
 /* 주식 페이지가 열릴 때 한 번 그린다 */
 (function(){ function boot(){ try{ if(document.getElementById('csi-lane-row')) csiRenderLanes(); }catch(e){} }
   if(document.readyState==='loading') addEventListener('DOMContentLoaded',boot); else boot();
