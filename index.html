@@ -14636,7 +14636,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-b';
+  var ver='CGO-FULI v2026.09.02-c';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25628,7 +25628,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-b';
+window.CGO_VER='2026.09.02-c';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -87455,7 +87455,7 @@ function stkRenderDropdown(list, fromAI) {
       + '<span style="font-size:13px;font-weight:600;color:#334155;flex:1;">'+c.n+'</span>'
       + '<span style="font-size:11px;color:#60a5fa;min-width:52px;">'+(c.t||'')+'</span>'
       + '<span style="font-size:13px;">'+eInfo.emoji+'</span>'
-      + '<span style="font-size:10px;color:var(--text-3);">'+(c.s||'')+'</span>'
+      + '<span'+((c.s==='기타')?' data-k="6772"':'')+' style="font-size:10px;color:var(--text-3);">'+(c.s||'')+'</span>'
       + '</div>';
   }).join('');
   dd.style.display = 'block';
@@ -89331,7 +89331,7 @@ function _runAnalysisCore() {
       +'<div style="flex:1;"><div style="display:flex;justify-content:space-between;">'
       +'<span style="font-size:12px;font-weight:600;color:var(--text-1);">'+t.date+' · '+t.planet+' '+t.type+'</span>'
       +'<span style="font-size:11px;color:'+t.color+';">'+t.effect+'</span></div>'
-      +'<div style="font-size:11px;color:var(--text-3);margin-top:2px;"><span data-k="21763">관련 섹터</span>: '+t.sector+'</div>'
+      +'<div style="font-size:11px;color:var(--text-3);margin-top:2px;"><span data-k="21759">관련 섹터</span>: '+t.sector+'</div>'
       +'</div></div>';
   });
 
@@ -90393,8 +90393,8 @@ function csiFuse(item){
   var envAdj=0, envSay=[];
   if(lanes.sat){ on.push('sat'); var alt=num('cgoSatAlt'); if(alt){ envAdj+=(alt>410?1.5:-1.5); envSay.push('위성 고도 '+alt+'km'); } }
   if(lanes.dir){ on.push('dir'); var deg=num('cgoCompassDegBar'); if(deg!=null){ envAdj+=((deg>=315||deg<45)?2:(deg<135?1:(deg<225?-1:0))); envSay.push('방위 '+Math.round(deg)+'°'); } }
-  if(lanes.wea){ on.push('wea'); var t=num('cgoWeatherTempBar'); if(t!=null){ envAdj+=(t>=15&&t<=26?2:-1.5); envSay.push('기온 '+t+'°C'); } }
-  if(envSay.length) parts.push({k:'env', n:'실시간 환경 보정', v:null, d:envSay.join(' · ')+' → '+(envAdj>=0?'+':'')+envAdj.toFixed(1)+'점'});
+  if(lanes.wea){ on.push('wea'); var t=num('cgoWeatherTempBar'); if(t!=null){ envAdj+=(t>=15&&t<=26?2:-1.5); envSay.push(((window._LANG||'ko')==='ko'?'기온 ':((window._cgoDash&&window._cgoDash[window._LANG]&&window._cgoDash[window._LANG]['21814'])||'temp')+' ')+t+'°C'); } }
+  if(envSay.length) parts.push({k:'env', n:'실시간 환경 보정', v:null, d:envSay.join(' · ')+' → '+(envAdj>=0?'+':'')+envAdj.toFixed(1)+((window._LANG||'ko')==='ko'?'점':'pt')});
 
   /* 합치기 — 켠 만큼 나눈다 */
   var vals=[coScore]; if(exScore!=null) vals.push(exScore); if(myScore!=null) vals.push(myScore); if(bioScore!=null) vals.push(bioScore);
@@ -90485,7 +90485,7 @@ function csiRender(){
   }
 
   h+='<div style="margin-top:10px;font-size:9.5px;color:#8a9aa3;line-height:1.7;">'
-   + '역학·천문 자료를 바탕으로 한 참고용입니다 · 매수·매도 시점을 제시하지 않으며 투자 판단과 책임은 본인에게 있습니다.</div>';
+   + '<span data-k="21825">역학·천문 자료를 바탕으로 한 참고용입니다</span> · <span data-k="21826">매수·매도 시점을 제시하지 않으며 투자 판단과 책임은 본인에게 있습니다</span>.</div>';
 
   box.innerHTML=h; box.style.display='block';
 }
