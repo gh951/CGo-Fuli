@@ -25637,6 +25637,25 @@ window.cgoVer=function(){
       return Object.keys(D.ko).filter(function(k){ return /^\d+$/.test(k) && +k>=21700; }).length+'자리'; }catch(e){ return '?'; } })()};
 };
 try{ console.log('%cCGO-FULI '+window.CGO_VER, 'color:#059669;font-weight:bold'); }catch(e){}
+(function(){
+  function show(){
+    try{
+      if(localStorage.getItem('cgo_ver_seen')===window.CGO_VER) return;
+      if(document.getElementById('cgo-ver-tag')) return;
+      var b=document.createElement('div');
+      b.id='cgo-ver-tag';
+      b.textContent='v'+window.CGO_VER;
+      b.style.cssText='position:fixed;left:6px;bottom:6px;z-index:99997;font-size:9px;font-weight:700;'
+        +'padding:3px 7px;border-radius:6px;background:rgba(5,150,105,.92);color:#fff;'
+        +'font-family:inherit;cursor:pointer;letter-spacing:.02em;';
+      b.title='눌러서 없애기';
+      b.onclick=function(){ try{ localStorage.setItem('cgo_ver_seen', window.CGO_VER); }catch(e){} b.remove(); };
+      (document.body||document.documentElement).appendChild(b);
+    }catch(e){}
+  }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',show); else show();
+  setTimeout(show,900);
+})();
 window.CGO_AI_ALLOW = [
   {k:'health',  re:/건강 밸런스|6부위|mb52|밸런스 분석/i,        n:'나의 건강 밸런스'},
   {k:'cog',     re:/인지 건강|인지 선별|치매|cognit/i,           n:'인지 건강 셀프 체크'},
