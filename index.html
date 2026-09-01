@@ -25135,6 +25135,203 @@ function _cgoSaveUserInfo(){ try{ if(typeof cgoSaveUserInfo==='function') cgoSav
 function _cgoRestoreUserInfo(){ try{ if(typeof cgoLoadUserInfo==='function') cgoLoadUserInfo(); }catch(e){} }
 function _cgoBindUserInfo(){ try{ ['ipName','ipBirthY','ipBirthM','ipBirthD','ipBirthPlace','ipCurPlace','ipGender','ipTime','ipCalType'].forEach(function(id){var el=document.getElementById(id); if(el && !el._cgoBnd){ el._cgoBnd=1; el.addEventListener('change',_cgoSaveUserInfo); el.addEventListener('input',_cgoSaveUserInfo); }}); }catch(e){} }
 function _cgoUpdateInfoGate(){ try{ var bn=document.getElementById('cgoInfoGateBanner'); if(!bn) return; var nm=(document.getElementById('ipName')||{}).value||''; var by=(document.getElementById('ipBirthY')||{}).value||''; var bm=(document.getElementById('ipBirthM')||{}).value||''; var bd=(document.getElementById('ipBirthD')||{}).value||''; var ok=nm.trim()&&by&&bm&&bd; try{ if(!ok && localStorage.getItem('cgo_saved_info')) ok=true; }catch(e){} if(ok){ bn.style.background='rgba(5,150,105,.1)'; bn.style.borderColor='rgba(5,150,105,.35)'; bn.style.color='#059669'; bn.textContent=_cgoT('✅ 정보 입력 완료 — 모든 분석 기능이 열렸어요'); } else { bn.style.background='rgba(220,38,38,.1)'; bn.style.borderColor='rgba(220,38,38,.3)'; bn.style.color='#dc2626'; bn.textContent=_cgoT('🔒 정보를 입력하세요 — 입력해야 분석 기능이 열립니다'); } }catch(e){} }
+/* ★ 정보 입력 관문 — 내 정보 없이는 분석이 돌지 않는다.
+   사주가 없으면 오행도 궁합도 없으니, 그 점수는 근거 없는 숫자였다. */
+window.cgoHasInfo=function(){
+  try{
+    var r=window.calcResult;
+    if(r && r.y && (r.domOh||r.name)) return true;
+    function v(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+    if(v('ipName') && v('ipBirthY') && v('ipBirthM') && v('ipBirthD')) return true;
+    var s=localStorage.getItem('cgo_saved_info');
+    if(s){ var o=JSON.parse(s); if(o && o.ipName && o.ipBirthY) return true; }
+  }catch(e){}
+  return false;
+};
+/* ★ 정보 입력란은 따로 페이지가 아니라 대시보드 안의 sec-ip 칸이다.
+   전에는 cgoGoPage('signup') 으로 보내 엉뚱한 데로 갔다. */
+window.cgoOpenInfoInput=function(){
+  try{ var b=document.getElementById('cgo-info-need'); if(b) b.style.display='none'; }catch(e){}
+  try{ if(typeof cgoGoPage==='function') cgoGoPage('dashboard'); }catch(e){}
+  setTimeout(function(){
+    try{
+      var s=document.getElementById('sec-ip');
+      if(s){
+        var y=s.getBoundingClientRect().top + (window.pageYOffset||0) - 64;
+        window.scrollTo({top:Math.max(0,y), behavior:'smooth'});
+        s.style.transition='box-shadow .4s';
+        s.style.boxShadow='0 0 0 3px rgba(52,211,153,.45)';
+        setTimeout(function(){ s.style.boxShadow=''; }, 1600);
+      }
+      var nm=document.getElementById('ipName');
+      if(nm) setTimeout(function(){ try{ nm.focus({preventScroll:true}); }catch(e){} }, 500);
+    }catch(e){}
+  }, 260);
+};
+/* ★ 시각(태어난 시간)은 막지 않는다 — 모르는 분이 많다.
+   비어 있으면 세 기둥으로 셈하고, 넣으면 더 정확해진다는 것만 알려 준다. */
+/* ★ 매니저 문 — c-go-fuli.com/lee 로 들어오면 모든 잠금이 열린다.
+   손님에게는 기본만 열리고 고급·최고급은 준비 중으로 잠근다.
+   한 번 /lee 로 들어오면 기억하므로 페이지를 옮겨도 계속 매니저다. (?lee=off 로 해제) */
+window.cgoIsManager=function(){
+  try{
+    var u=(location.pathname+location.search+location.hash).toLowerCase();
+    if(/(^|[\/?&#=])lee($|[\/?&#])/.test(u)){
+      try{ localStorage.setItem('cgo_mgr','1'); }catch(e){}
+      return true;
+    }
+    return localStorage.getItem('cgo_mgr')==='1';
+  }catch(e){ return false; }
+};
+(function(){ try{ if(/[?&]lee=off/i.test(location.search)) localStorage.removeItem('cgo_mgr'); }catch(e){} })();
+window.cgoMgrBadge=function(){
+  try{
+    if(!window.cgoIsManager() || document.getElementById('cgo-mgr-badge')) return;
+    var b=document.createElement('div');
+    b.id='cgo-mgr-badge'; b.textContent='MANAGER';
+    b.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99998;font-size:8.5px;font-weight:800;'
+      +'letter-spacing:.12em;padding:3px 7px;border-radius:6px;background:rgba(5,150,105,.9);'
+      +'color:#fff;pointer-events:none;font-family:inherit;';
+    (document.body||document.documentElement).appendChild(b);
+  }catch(e){}
+};
+(function(){ function b(){ try{ window.cgoMgrBadge(); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',b); else b();
+  setTimeout(b,700); })();
+window.cgoHasBirthTime=function(){
+  try{
+    var e=document.getElementById('ipTime');
+    if(e && String(e.value||'').trim()) return true;
+    var r=window.calcResult; if(r && r.h!=null && r.h!=='') return true;
+    var s=localStorage.getItem('cgo_saved_info');
+    if(s){ var o=JSON.parse(s); if(o && o.ipTime) return true; }
+  }catch(e){}
+  return false;
+};
+window.cgoTimeHint=function(){
+  try{
+    var sel=document.getElementById('ipTime'); if(!sel) return;
+    var box=document.getElementById('cgo-time-hint');
+    if(!box){
+      box=document.createElement('div');
+      box.id='cgo-time-hint';
+      box.style.cssText='font-size:10.5px;line-height:1.6;margin-top:5px;padding:7px 9px;'
+        +'border-radius:8px;background:#f0fdfa;border:1px solid rgba(52,211,153,.28);color:#4b6470;';
+      (sel.parentNode.parentNode||sel.parentNode).appendChild(box);
+    }
+    if(window.cgoHasBirthTime()){
+      box.style.display='none';
+    } else {
+      box.style.display='block';
+      box.innerHTML='🕰️ 태어난 시간을 모르셔도 됩니다 — <b style="color:#0f1b2e;">해·달·날 세 기둥으로 셈합니다.</b><br>'
+        +'<span style="color:#8a9aa3;">아시면 넣어 주세요. 네 기둥이 채워져 풀이가 한층 정밀해집니다.</span>';
+    }
+    if(!sel._cgoTimeBnd){ sel._cgoTimeBnd=1; sel.addEventListener('change', window.cgoTimeHint); }
+  }catch(e){}
+};
+(function(){ function h(){ try{ window.cgoTimeHint(); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',h); else h();
+  setTimeout(h,900); })();
+/* ★ 시각(태어난 시간)은 막지 않는다 — 모르는 분이 많다.
+   비어 있으면 세 기둥으로 셈하고, 넣으면 더 정확해진다는 것만 알려 준다. */
+window.cgoHasBirthTime=function(){
+  try{
+    var e=document.getElementById('ipTime');
+    if(e && String(e.value||'').trim()) return true;
+    var r=window.calcResult; if(r && r.h!=null && r.h!=='') return true;
+    var s=localStorage.getItem('cgo_saved_info');
+    if(s){ var o=JSON.parse(s); if(o && o.ipTime) return true; }
+  }catch(e){}
+  return false;
+};
+window.cgoTimeHint=function(){
+  try{
+    var sel=document.getElementById('ipTime'); if(!sel) return;
+    var box=document.getElementById('cgo-time-hint');
+    if(!box){
+      box=document.createElement('div');
+      box.id='cgo-time-hint';
+      box.style.cssText='font-size:10.5px;line-height:1.6;margin-top:5px;padding:7px 9px;'
+        +'border-radius:8px;background:#f0fdfa;border:1px solid rgba(52,211,153,.28);color:#4b6470;';
+      (sel.parentNode.parentNode||sel.parentNode).appendChild(box);
+    }
+    if(window.cgoHasBirthTime()){
+      box.style.display='none';
+    } else {
+      box.style.display='block';
+      box.innerHTML='🕰️ 태어난 시간을 모르셔도 됩니다 — <b style="color:#0f1b2e;">해·달·날 세 기둥으로 셈합니다.</b><br>'
+        +'<span style="color:#8a9aa3;">아시면 넣어 주세요. 네 기둥이 채워져 풀이가 한층 정밀해집니다.</span>';
+    }
+    if(!sel._cgoTimeBnd){ sel._cgoTimeBnd=1; sel.addEventListener('change', window.cgoTimeHint); }
+  }catch(e){}
+};
+(function(){ function h(){ try{ window.cgoTimeHint(); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',h); else h();
+  setTimeout(h,900); })();
+window.cgoRequireInfo=function(what){
+  if(window.cgoIsManager()) return true;      /* ★ 매니저는 모두 통과 */
+  if(window.cgoHasInfo()) return true;
+  try{ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 먼저 내 정보를 입력해 주세요'); }catch(e){}
+  try{
+    var box=document.getElementById('cgo-info-need');
+    if(!box){
+      box=document.createElement('div');
+      box.id='cgo-info-need';
+      box.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:100000;'
+        +'background:#fff;border:1px solid rgba(52,211,153,.35);border-radius:16px;'
+        +'box-shadow:0 12px 40px rgba(15,27,46,.18);padding:22px 20px;width:min(320px,86vw);'
+        +'text-align:center;font-family:inherit;';
+      document.body.appendChild(box);
+    }
+    box.innerHTML=
+       '<div style="font-size:34px;line-height:1;margin-bottom:10px;">🔒</div>'
+      +'<div style="font-size:14px;font-weight:800;color:#0f1b2e;margin-bottom:6px;">내 정보가 필요합니다</div>'
+      +'<div style="font-size:11.5px;color:#4b6470;line-height:1.7;margin-bottom:16px;">'
+        +(what?'<b>'+what+'</b> 분석은 ':'')+'이름과 생년월일이 있어야 셈할 수 있습니다.<br>'
+        +'사주가 없으면 오행도 궁합도 나오지 않습니다.<br>'
+        +'<span style="color:#8a9aa3;">한 번 넣으시면 계속 쓰입니다.</span></div>'
+      +'<div style="display:flex;gap:8px;">'
+        +'<button type="button" onclick="this.parentNode.parentNode.style.display=\'none\'" '
+        +'style="flex:1;padding:11px;background:#f4f7f8;border:1px solid #e6eef0;border-radius:11px;'
+        +'font-size:12px;font-weight:700;color:#4b6470;cursor:pointer;font-family:inherit;">나중에</button>'
+        +'<button type="button" onclick="cgoOpenInfoInput()" '
+        +'style="flex:1.4;padding:11px;background:linear-gradient(135deg,#34d399,#059669);border:none;'
+        +'border-radius:11px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;">정보 입력하기</button>'
+      +'</div>';
+    box.style.display='block';
+  }catch(e){}
+  return false;
+};
+(function(){
+  var GATED={
+    runStockAnalysis:'주식 에너지', runAiAnalysis:'AI 역학', cgoDeepYeokRun:'순수 역학',
+    analyzeMyName:'이름 풀이', runNaming:'작명', bizNameAnalyze:'상호 작명',
+    f3Analyze:'3중 융합', fcRunAnalysis:'커플 궁합', cplStartAnalysis:'커플 궁합',
+    qtRunAnalysis:'성격 유형', bm2Analyze:'건강 밸런스', bm2Start:'건강 밸런스',
+    foodAnalyze:'오행 식단', tvyRunMatch:'숙소 매칭', cgoNaviStart:'오행 길방',
+    sviStartScan:'피부 분석', sviCalcSkinAge:'피부 나이', sviAnalyzeAsymmetry:'비대칭 분석',
+    cgoFaceVisionAnalysis:'관상', rmaiStartScan:'rPPG 생체', rmaiArStart:'rPPG AR',
+    _cgoVisionStartScan:'생체 스캔', cgoPhotoStart:'사진 판독',
+    c24Start:'24기류', c39StartTest:'39유형', iqStart:'지능 검사', scStart:'두피 분석',
+    _c24CompStart:'기류 궁합',
+    /* 주식 붙박이 AI — 내 사주가 없으면 궁합을 물을 수 없다 */
+    stkAiSend:'AI 주식 상담', stkAiQuick:'AI 주식 상담'
+  };
+  function wrap(){
+    Object.keys(GATED).forEach(function(fn){
+      var f=window[fn];
+      if(typeof f!=='function' || f._gated) return;
+      var g=function(){
+        if(!window.cgoRequireInfo(GATED[fn])) return;
+        return f.apply(this, arguments);
+      };
+      g._gated=1; g._orig=f;
+      window[fn]=g;
+    });
+  }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',wrap); else wrap();
+  setTimeout(wrap,1200); setTimeout(wrap,3000);
+})();
 function _cgoUserInfoInit(){ _cgoRestoreUserInfo(); _cgoBindUserInfo(); try{ if(typeof _cgoUpdateInfoGate==='function') setTimeout(_cgoUpdateInfoGate,100); }catch(e){} }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _cgoUserInfoInit); } else { _cgoUserInfoInit(); }
 try{ setTimeout(_cgoUserInfoInit,400); setTimeout(_cgoUserInfoInit,1500); }catch(e){}
@@ -87228,7 +87425,17 @@ function stkRenderCountryChips(){
   var _T2=(typeof _cgoT==='function')?_cgoT:function(x){return x;};var html='<button onclick="stkSetCountry(\'all\')" style="'+_stkChipStyle(cur==='all')+'"><span>🌍</span><span>'+_T2('전체')+'</span></button>';
   flags.forEach(function(f){
     var code=_stkFlagCode(f); var nm=(typeof _stkCName!=='undefined'&&_stkCName[code])||code;
-    var img='<img src="flags/'+code.toLowerCase()+'.png" alt="" style="width:19px;height:13px;border-radius:2px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+    /* ★ 국기를 똑같은 상자에 담는다.
+     전에는 object-fit:cover 라 3:2 가 아닌 국기(스위스 1:1, 네팔 삼각, 카타르 28:11)가
+     잘려 확대돼 「앞으로 나온」 것처럼 보이고, 흰 바탕 국기(일본·핀란드)는
+     흰 칸에 묻혀 「뒤로 밀린」 것처럼 보였다. contain 으로 다 보여주고 테두리를 준다. */
+    var img='<span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;'
+      +'width:20px;height:14px;border-radius:2px;background:#f4f7f8;'
+      +'box-shadow:inset 0 0 0 1px rgba(15,27,46,.14);overflow:hidden;">'
+      +'<img src="flags/'+code.toLowerCase()+'.png" alt="" loading="lazy" decoding="async"'
+      +' style="width:100%;height:100%;object-fit:contain;display:block;"'
+      +' onerror="this.parentNode.textContent=\''+f+'\';this.parentNode.style.fontSize=\'11px\';this.parentNode.style.background=\'transparent\';this.parentNode.style.boxShadow=\'none\'">'
+      +'</span>';
     html+='<button onclick="stkSetCountry(\''+f+'\')" style="'+_stkChipStyle(cur===f)+'">'+img+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+nm+'</span><span style="opacity:.5;font-size:10px;flex-shrink:0;">'+counts[f]+'</span></button>';
   });
   box.innerHTML=html;
@@ -88688,25 +88895,46 @@ function _runAnalysisCore() {
     +'<span style="font-size:12px;font-weight:800;color:'+_tot.color+';">'+_tot.grade+'</span></div>'
     +(_tot.cf.why?'<div style="font-size:9.5px;color:#b45309;font-weight:700;margin-top:6px;line-height:1.5;">⚠ '+_tot.cf.why+'</div>':'')
     +'</div>';
+    /* ★ 한 역학 = 한 줄. 이름·배점·추세·상세를 한 줄에 밀어넣으니
+     폰에서 「사주명리 undefinedpt중립」 처럼 붙어 뭉개졌다.
+     이름줄과 막대줄로 갈라, 속에 또 상자를 두지 않는다. */
   _rows.forEach(function(a){
-    var safeJson = JSON.stringify(a).replace(/'/g,"\\'");
-    algoList.innerHTML += '<div onclick="stkOpenModal(\''+a.name.replace(/'/g,"\\'")+"','"+a.score+"','"+a.trend.replace(/'/g,"\\'")+"','"+a.color+'\')"'
-      +' style="margin-bottom:2px;padding:7px 10px;border-radius:8px;cursor:pointer;'
-      +'background:rgba(139,92,246,0.04);border:1px solid rgba(139,92,246,0.0);'
-      +'transition:all .18s;"'
-      +' onmouseover="this.style.background=\'rgba(139,92,246,0.1)\';this.style.borderColor=\'rgba(139,92,246,0.25)\'"'
-      +' onmouseout="this.style.background=\'rgba(139,92,246,0.04)\';this.style.borderColor=\'rgba(139,92,246,0.0)\'">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
-      +'<span style="font-size:12px;color:var(--text-1);font-weight:500;">'+a.name
-      +'<span style="font-size:9px;color:#059669;font-weight:800;margin-left:5px;">'+a.pt+'pt</span></span>'
-      +'<div style="display:flex;align-items:center;gap:6px;">'
-      +'<span style="font-size:11px;color:'+a.color+';">'+a.trend+'</span>'
-      +'<span style="font-size:10px;color:rgba(139,92,246,0.5);">상세 ›</span>'
-      +'</div></div>'
-      +'<div style="background:var(--bg-panel);border-radius:3px;height:4px;overflow:hidden;">'
-      +'<div style="width:'+a.score+'%;height:100%;background:'+a.color+';border-radius:3px;transition:width .6s;"></div>'
+    var oc = 'stkOpenModal(\''+String(a.name).replace(/'/g,"\\'")+"','"+a.score+"','"+String(a.trend).replace(/'/g,"\\'")+"','"+a.color+'\')';
+    algoList.innerHTML +=
+       '<div onclick="'+oc+'" style="padding:9px 2px;cursor:pointer;border-bottom:1px solid #eef2f4;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        +'<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700;color:#0f1b2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+a.name+'</span>'
+        +'<span style="flex-shrink:0;font-size:9.5px;font-weight:800;color:#059669;">'+a.pt+'pt</span>'
+        +'<span style="flex-shrink:0;font-size:10.5px;color:'+a.color+';white-space:nowrap;">'+a.trend+'</span>'
+        +'<span style="flex-shrink:0;font-size:10px;color:#8a9aa3;">›</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<div style="flex:1;background:#eef2f4;border-radius:3px;height:5px;overflow:hidden;">'
+          +'<div style="width:'+a.score+'%;height:100%;background:'+a.color+';border-radius:3px;transition:width .6s;"></div>'
+        +'</div>'
+        +'<span style="flex-shrink:0;font-size:10.5px;font-weight:800;color:'+a.color+';width:22px;text-align:right;">'+a.score+'</span>'
       +'</div></div>';
   });
+  /* ★ 역학 아래 — ④ 메뉴얼에서 켠 다른 갈래도 한 줄씩.
+     역학만 보이고 위성·방위·날씨·생체·시장은 어디로 갔는지 알 수 없었다. */
+  (function(){
+    var LN = {sat:'🛰️ 위성 · NASA 궤도', dir:'🧭 방위 · 지금 향한 쪽',
+              wea:'🌤️ 날씨 · 오행 기상', bio:'💗 생체 컨디션 · rPPG',
+              exch:'🏛️ 국가별 증권시장'};
+    var on = Object.keys(LN).filter(function(k){ return (window.csiLanes||{})[k]; });
+    if(!on.length) return;
+    algoList.innerHTML +=
+       '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #dde7ea;">'
+      +'<div style="font-size:10px;font-weight:800;color:#4b6470;letter-spacing:.04em;margin-bottom:7px;">④ 메뉴얼에서 켠 갈래 '+on.length+'개</div>'
+      + on.map(function(k){
+          var live = (window.csiLaneLive?window.csiLaneLive(k):'') || '—';
+          return '<div style="display:flex;align-items:baseline;gap:8px;padding:6px 2px;border-bottom:1px solid #f2f6f7;">'
+            +'<span style="flex-shrink:0;font-size:11.5px;font-weight:700;color:#0f1b2e;">'+LN[k]+'</span>'
+            +'<span style="flex:1;min-width:0;font-size:10px;color:#059669;font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+live+'</span>'
+          +'</div>';
+        }).join('')
+      +'</div>';
+  })();
 
   // NASA 행성
   var planets = stkCalcPlanets();
@@ -88770,19 +88998,8 @@ function _runAnalysisCore() {
   }, 100);
 }
 
-function stkAlgoAnalysis(coIdx, myIdx) {
-  var now = new Date();
-  var sec = now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
-  var compat = stkCompat(myIdx, coIdx);
-  var algos = Object.keys(STK_ALGO_DATA);
-  return algos.map(function(name, i){
-    var score = 40+((sec+compat.score+i*17+coIdx*7)%50);
-    var ti = (Math.floor(sec/300+i+coIdx))%4;
-    var trends=['📈 상승','➡️ 중립','📉 조정','🔄 전환'];
-    var colors=['#34d399','#94a3b8','#f87171','#fbbf24'];
-    return {name:name, score:Math.min(95,score), trend:trends[ti], color:colors[ti]};
-  });
-}
+/* ★ 옛 stkAlgoAnalysis 를 지웠다 — 36개를 통째로 돌려주면서
+   새 함수보다 뒤에 있어 늘 이겼다. 폰에 「역학 18개 · NaN · undefinedpt」 가 뜬 까닭이다. */
 
 function stkOpenModal(name, score, trend, trendColor) {
   var d = STK_ALGO_DATA[name];
@@ -89445,15 +89662,49 @@ var CSI_LANES=[
   {k:'bio',  ico:'💗', n:'생체 컨디션',      d:'rPPG 실측'},
   {k:'exch', ico:'🏛️', n:'국가별 증권시장',  d:'거래소 개업일 네이탈'}
 ];
+/* ★ 고급·최고급은 손님에게 잠겨 있다 — 아직 만들고 있는 중이다.
+   /lee 로 들어온 매니저만 고를 수 있다. */
+function csiTierLocked(t){
+  if(t==='basic') return false;
+  return !(window.cgoIsManager && window.cgoIsManager());
+}
 function csiSetTier(t){
+  if(csiTierLocked(t)){
+    var nm=({pro:'고급', max:'최고급'})[t]||t;
+    try{ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 '+nm+' 등급은 준비 중입니다'); }catch(e){}
+    csiPaintTiers();
+    return;
+  }
   window.csiTier=t;
-  ['basic','pro','max'].forEach(function(x){
-    var e=document.getElementById('csi-tier-'+x);
-    if(e) e.style.border='2px solid '+(x===t?'#34d399':'#e6eef0');
-  });
+  csiPaintTiers();
   csiRenderLanes();
   try{ if(window.csiRender && window.stkSelected) csiRender(); }catch(e){}
+  try{ if(window.stkSelected && window._runAnalysisCore) window._runAnalysisCore(); }catch(e){}
 }
+function csiPaintTiers(){
+  var t=window.csiTier||'basic';
+  ['basic','pro','max'].forEach(function(x){
+    var e=document.getElementById('csi-tier-'+x); if(!e) return;
+    var lock=csiTierLocked(x);
+    e.style.border='2px solid '+(x===t?'#34d399':'#e6eef0');
+    e.style.opacity=lock?'.5':'1';
+    e.style.cursor=lock?'not-allowed':'pointer';
+    e.style.background=lock?'#f7f9fa':'#fff';
+    /* 자물쇠 딱지를 한 번만 붙인다 */
+    var b=e.querySelector('[data-tier-lock]');
+    if(lock && !b){
+      b=document.createElement('div');
+      b.setAttribute('data-tier-lock','1');
+      b.style.cssText='font-size:9px;font-weight:800;color:#8a9aa3;margin-top:5px;';
+      b.textContent='🔒 준비 중';
+      e.appendChild(b);
+    } else if(!lock && b){ b.remove(); }
+  });
+}
+try{ window.csiPaintTiers=csiPaintTiers; window.csiTierLocked=csiTierLocked; }catch(e){}
+(function(){ function p(){ try{ if(document.getElementById('csi-tier-basic')) csiPaintTiers(); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',p); else p();
+  setTimeout(p,700); })();
 function csiToggleLane(k){
   window.csiLanes[k]=!window.csiLanes[k];
   /* 날씨·시장은 고급 이상에서만 — 값이 드는 갈래 */
@@ -89562,7 +89813,7 @@ function csiRenderYeok(){
    +'<div style="font-size:9.5px;color:#4b6470;margin-top:6px;line-height:1.55;">배점 합 <b style="color:#059669;">'+tot.toFixed(1)+'pt</b>'
    +(cf.why?' · <span style="color:#b45309;font-weight:700;">⚠ '+cf.why+'</span>':'')+'</div>';
 }
-try{ window.CSI_YEOK=CSI_YEOK; window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
+try{ window.CSI_YEOK=CSI_YEOK; window.csiLaneLive=csiLaneLive; window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
 /* 주식 페이지가 열릴 때 한 번 그린다 */
 (function(){ function boot(){ try{ if(document.getElementById('csi-lane-row')) csiRenderLanes(); }catch(e){} }
   if(document.readyState==='loading') addEventListener('DOMContentLoaded',boot); else boot();
