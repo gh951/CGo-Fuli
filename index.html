@@ -25151,28 +25151,436 @@ window.cgoHasInfo=function(){
 /* ★ 정보 입력란은 따로 페이지가 아니라 대시보드 안의 sec-ip 칸이다.
    전에는 cgoGoPage('signup') 으로 보내 엉뚱한 데로 갔다. */
 window.cgoOpenInfoInput=function(){
+  /* ★ 정보 입력 팝업을 곧바로 띄운다.
+     전에는 대시보드로 보내고 스크롤했는데, 페이지 이동이 스크롤을 되돌려
+     맨 위에 떨어졌다. 앱에 이미 #sec-ip 를 팝업으로 옮겨 담는
+     전용 문(suOpen_info)이 있으니 그것을 쓴다. */
   try{ var b=document.getElementById('cgo-info-need'); if(b) b.style.display='none'; }catch(e){}
+  if(typeof window.suOpen_info==='function'){
+    try{ window.suOpen_info(); }catch(e){}
+    setTimeout(function(){ try{ var nm=document.getElementById('ipName');
+      if(nm) nm.focus({preventScroll:true}); }catch(e){} }, 320);
+    return;
+  }
+  /* 그 문이 아직 없으면 예전 길로 */
   try{ if(typeof cgoGoPage==='function') cgoGoPage('dashboard'); }catch(e){}
   setTimeout(function(){
     try{
-      var s=document.getElementById('sec-ip');
-      if(s){
-        var y=s.getBoundingClientRect().top + (window.pageYOffset||0) - 64;
-        window.scrollTo({top:Math.max(0,y), behavior:'smooth'});
-        s.style.transition='box-shadow .4s';
-        s.style.boxShadow='0 0 0 3px rgba(52,211,153,.45)';
-        setTimeout(function(){ s.style.boxShadow=''; }, 1600);
-      }
+      var s=document.getElementById('sec-ip'); if(!s) return;
+      s.style.display='block';
+      var y=s.getBoundingClientRect().top + (window.pageYOffset||0) - 64;
+      window.scrollTo({top:Math.max(0,y), behavior:'smooth'});
       var nm=document.getElementById('ipName');
-      if(nm) setTimeout(function(){ try{ nm.focus({preventScroll:true}); }catch(e){} }, 500);
+      if(nm) setTimeout(function(){ try{ nm.focus({preventScroll:true}); }catch(e){} }, 420);
     }catch(e){}
-  }, 260);
+  }, 300);
 };
 /* ★ 시각(태어난 시간)은 막지 않는다 — 모르는 분이 많다.
    비어 있으면 세 기둥으로 셈하고, 넣으면 더 정확해진다는 것만 알려 준다. */
 /* ★ 매니저 문 — c-go-fuli.com/lee 로 들어오면 모든 잠금이 열린다.
    손님에게는 기본만 열리고 고급·최고급은 준비 중으로 잠근다.
    한 번 /lee 로 들어오면 기억하므로 페이지를 옮겨도 계속 매니저다. (?lee=off 로 해제) */
+/* ★ AI 관문 하나 — 39군데가 각자 /api/groq 를 부르고 있었다.
+   그 자리를 손대지 않고 fetch 를 한 번 감싸 세 가지를 한다.
+   ① 등급 배분  기본→Groq · 고급→Haiku · 최고급→Sonnet
+   ② 하루 캐시  같은 사람·같은 날·같은 물음 = 같은 답 → 두 번째부터 0원
+   ③ 하루 한도  계정당 총 횟수로 묶는다 (기능별이 아니라) */
+/* ══════════════════════════════════════════════════════════════
+   ★ 「풀이」 — 우리 앱의 AI 상담사 이름.
+   CGO-FULI 의 소리를 담고, 하는 일이 곧 이름이다 (풀어 준다).
+
+   프롬프트의 공통 뼈대를 여기 한 곳에 둔다.
+   전에는 열 군데에 흩어져 있어, 언어 지시 하나 넣으려면 열 번 고쳐야 했다.
+   그래서 열 기능 전부에 언어 지시가 빠져 있었고 —
+   힌디어 손님이 한국어 풀이를 받고 있었다.
+   ══════════════════════════════════════════════════════════════ */
+window.CGO_AI_NAME = '풀이';
+
+/* 언어 이름 — AI 에게 「무슨 말로 답하라」를 분명히 준다 */
+window.CGO_LANG_NAME = {
+  ko:'Korean', en:'English', ja:'Japanese', zh:'Simplified Chinese', zh_HK:'Traditional Chinese',
+  ru:'Russian', ar:'Arabic', tr:'Turkish', hi:'Hindi', es:'Spanish', de:'German',
+  fr:'French', it:'Italian', pt:'Portuguese', nl:'Dutch', uk:'Ukrainian',
+  vi:'Vietnamese', th:'Thai', id:'Indonesian', ms:'Malay', tl:'Filipino'
+};
+
+/* 의료로 읽힐 수 있는 기능 — 여기는 선을 훨씬 세게 긋는다 */
+window.CGO_AI_MED = /건강 밸런스|6부위|mb52|두피|모발|scalp|눈 건강|시력|안구|눈 선명도|인지 건강|생각 컨디션|IQ|지능|rPPG|심박|HRV/i;
+
+/* 공통 뼈대를 짠다 — 말투 · 언어 · 안전 · 길이 */
+window.cgoAiFrame = function(body, tier){
+  var L    = (window._LANG || 'ko');
+  var LN   = (window.CGO_LANG_NAME[L] || 'English');
+  var med  = window.CGO_AI_MED.test(body);
+  var len  = ({basic:'300', pro:'700', max:'1200'})[tier] || '300';
+
+  var f =
+    '당신은 「' + window.CGO_AI_NAME + '」입니다. CGO-FULI 앱의 상담사입니다.\n' +
+    '\n## 말투\n' +
+    '- 항상 존댓말을 씁니다. 따뜻하되 넘치지 않습니다.\n' +
+    '- 전문 용어가 나오면 쉬운 말로 풀어 함께 적습니다 (예: 「일간(태어난 날의 기운)」).\n' +
+    '- 단정하지 않습니다. 「~인 편입니다」 「~로 읽습니다」 처럼 여지를 둡니다.\n' +
+    '- 겁을 주지 않습니다. 조심할 것은 알리되 불안을 남기지 않습니다.\n' +
+    '\n## 답할 말\n' +
+    '- 반드시 ' + LN + ' (IETF: ' + L + ') 로만 답하십시오. 다른 언어를 섞지 마십시오.\n' +
+    '- 사용자 이름·고유명사도 그 언어의 표기로 옮겨 적으십시오.\n' +
+    '\n## 길이\n' +
+    '- ' + len + '자 안쪽으로 맺습니다. 서론을 두지 말고 바로 본론에 들어가십시오.\n' +
+    (tier==='max'
+      ? '- 최고급 등급입니다. 값을 받는 만큼 근거를 하나하나 들어 촘촘하게 풀어내십시오.\n'
+        + '  두루뭉술한 말은 한 줄도 쓰지 마십시오. 수치·각도·오행 이름을 실제로 인용하십시오.\n'
+      : tier==='pro'
+      ? '- 고급 등급입니다. 근거를 들어 구체적으로 풀어내십시오.\n'
+      : '') +
+    '\n## 반드시 지킬 것\n' +
+    '- 「절대·100%·완벽·보장·확실·필승」 같은 단정 표현을 쓰지 마십시오.\n' +
+    '- 미래를 확정하지 마십시오. 선택은 늘 사용자의 것입니다.\n' +
+    '- 주어진 자료에 없는 수치를 만들어 내지 마십시오.\n';
+
+  if(med){
+    /* ★ 웰니스 선 — 여기가 가장 조심할 자리다.
+       한 줄이라도 진단으로 읽히면 법적으로 위험하다. */
+    f +=
+      '\n## ⚠ 여기는 웰니스 기능입니다 — 아래를 어기면 안 됩니다\n' +
+      '- 병명·질환명을 절대 말하지 마십시오 (치매·탈모증·녹내장·고혈압 등 일절 금지).\n' +
+      '- 진단·판정·치료·처방·예방 표현을 쓰지 마십시오. 「~일 수 있습니다」 조차 병명과는 쓰지 마십시오.\n' +
+      '- 「위험」 「이상」 「의심」 「정상」 같은 의학적 판정어를 쓰지 마십시오.\n' +
+      '- 오직 「관찰값」 「오늘의 컨디션 참고」 로만 말하십시오.\n' +
+      '- 사주·오행·역학을 몸 상태와 연결하지 마십시오. 사주로 몸을 보는 것이 아닙니다.\n' +
+      '- 생활 습관 이야기(잠·물·걷기·쉼)까지만 하십시오. 그 이상은 넘지 마십시오.\n' +
+      '- 끝에 반드시 한 줄: 「이 결과는 웰니스 참고용이며 의료 진단이 아닙니다. ' +
+      '걱정되는 점이 있으시면 전문의와 상담하십시오.」\n';
+  } else {
+    f +=
+      '\n## 맺음\n' +
+      '- 끝에 반드시 한 줄: 「참고용 풀이이며, 선택과 책임은 본인에게 있습니다.」\n';
+  }
+  return f;
+};
+
+/* ★ AI 를 쓸 기능을 명단으로 묶는다.
+   이 열 가지만 AI 가 필요하다 — 사진·측정값·상대방처럼
+   우리가 미리 써 둘 수 없는 것이 들어오는 기능들이다.
+   나머지는 생년월일만 있으면 답이 정해지므로 우리 글로 낸다 (값 0원 · 즉시).
+   strict 를 true 로 올리면 명단 밖은 망에 나가지 않는다. */
+/* ══════════════════════════════════════════════════════════════
+   ★ 기능별 알맹이 — 「무엇을 읽고 무엇을 말할지」만 적는다.
+   말투·언어·안전·길이는 공통 뼈대(cgoAiFrame)가 붙여 준다.
+
+   사주를 넣는 곳과 빼는 곳을 갈랐다.
+   의료로 읽힐 네 기능에는 사주를 넣지 않는다 —
+   사주로 몸을 보는 것으로 읽히면 그 순간 웰니스가 아니게 된다.
+   ══════════════════════════════════════════════════════════════ */
+window.CGO_AI_KERNEL = {
+  health: {
+    n:'나의 건강 밸런스', saju:false,
+    k:'6부위 관찰값(목·어깨·허리·무릎·발목·손목)의 균형을 읽습니다.\n'
+     +'어느 쪽이 더 눌려 있는지, 좌우가 어떻게 기울어 있는지만 말하십시오.\n'
+     +'그 다음 앉는 자세·걷기·스트레칭 같은 생활 습관 이야기로 맺으십시오.'
+  },
+  cog: {
+    n:'생각 컨디션 체크', saju:false,
+    k:'문항 답 조합으로 오늘의 집중·기억·판단의 결을 읽습니다.\n'
+     +'점수를 「좋다/나쁘다」로 가르지 말고, 「오늘은 이런 결」로만 말하십시오.\n'
+     +'잠·물·햇빛·쉼 같은 생활 습관 이야기로 맺으십시오.'
+  },
+  scalp: {
+    n:'두피 케어', saju:false,
+    k:'사진에서 보이는 두피의 빛깔·결·유분감만 말하십시오.\n'
+     +'모발 굵기나 밀도를 숫자로 단정하지 마십시오. 「보이는 결」로만 말하십시오.\n'
+     +'감는 물 온도·말리는 법·빗질 같은 손질 이야기로 맺으십시오.'
+  },
+  iq: {
+    n:'나의 IQ', saju:false,
+    k:'검사 점수 조합에서 어떤 갈래(언어·수리·공간·기억)가 도드라지는지 읽습니다.\n'
+     +'머리가 좋다/나쁘다로 말하지 마십시오. 「이런 방식으로 생각하는 결」로 말하십시오.\n'
+     +'그 결에 맞는 공부법·일하는 법을 하나 권하며 맺으십시오.'
+  },
+  eye: {
+    n:'나의 눈 건강', saju:false,
+    k:'눈 선명도 지수와 사진에서 보이는 눈의 결만 말하십시오.\n'
+     +'시력을 숫자로 판정하지 마십시오. 「오늘 눈이 피로한 정도」로만 말하십시오.\n'
+     +'화면 쉬는 간격·먼 곳 보기·조명 같은 생활 습관 이야기로 맺으십시오.'
+  },
+  food: {
+    n:'음식 궁합', saju:true,
+    k:'사용자의 오행과 그 음식의 오행이 상생인지 상극인지 읽습니다.\n'
+     +'먹지 마라고 하지 마십시오. 「많이 드실 날 / 조금 덜 드실 날」로 말하십시오.\n'
+     +'같이 먹으면 좋은 것, 조리법 하나를 권하며 맺으십시오.'
+  },
+  couple: {
+    n:'커플 궁합', saju:true,
+    k:'두 사람의 오행이 서로를 낳는지(상생) 누르는지(상극) 읽습니다.\n'
+     +'맞다/안 맞다로 가르지 마십시오. 「이런 점에서 통하고, 이런 점에서 조심할」로 말하십시오.\n'
+     +'실제로 해 볼 수 있는 것 하나를 권하며 맺으십시오.'
+  },
+  naming: {
+    n:'작명 서비스', saju:true,
+    k:'사주의 부족한 오행을 보충하는 글자를 고릅니다.\n'
+     +'획수의 수리(원형·이격·정격), 소리의 결, 뜻을 함께 살피십시오.\n'
+     +'이름마다 왜 그 글자인지 근거를 한 줄씩 붙이십시오. 근거 없는 이름은 내지 마십시오.'
+  },
+  travel: {
+    n:'숙소·여행지', saju:true,
+    k:'풍수 점수·오행 방위·행성 흐름으로 그 곳이 사용자에게 맞는지 읽습니다.\n'
+     +'배산임수·좌향·물길 같은 풍수 용어는 쉬운 말을 붙여 쓰십시오.\n'
+     +'좋은 체크인 시각, 방 방향, 챙길 빛깔 하나를 권하며 맺으십시오.'
+  },
+  stock: {
+    n:'주식 에너지', saju:true,
+    k:'사용자가 켠 역학만 씁니다. 켜지 않은 역학은 끌어오지 마십시오.\n'
+     +'거래소의 생일 · 종목의 개업일 · 지금 하늘의 각도 · 사용자의 사주, 이 네 겹을 겹쳐 읽습니다.\n'
+     +'매수·매도·목표가·손절가·비중을 절대 말하지 마십시오. 「에너지 관점」으로만 말하십시오.\n'
+     +'상승·하락을 단정하지 말고 「흐름」 「전환점」 으로만 서술하십시오.'
+  }
+};
+/* 알맹이를 뼈대에 이어 붙인다 — 어느 기능인지는 프롬프트 내용으로 알아낸다 */
+/* ★ 등급과 무관하게 Sonnet 을 써야 하는 기능들.
+   사진 판독을 Groq 으로 돌리면 색과 결을 못 읽어 답이 헛돈다.
+   여기만 값을 더 쓰고, 그만큼 값을 더 받는다. */
+window.CGO_AI_KIND = [
+  {k:'report', re:/16장|리포트|analysis-card|종합 리포트|전체 리포트/i, won:210, 받:7000},
+  {k:'naming', re:/명작명|작명|이름 짓|획수|원격|정격/i,                won:164, 받:10000},
+  {k:'photo',  re:/사진|이미지|base64|촬영|관상|두피|피부|눈 선명도/i,   won:63,  받:500},
+  {k:'med',    re:/건강 밸런스|6부위|mb52/i,                          won:63,  받:500}
+];
+window.cgoAiKind=function(body){
+  var K=window.CGO_AI_KIND;
+  for(var i=0;i<K.length;i++) if(K[i].re.test(body)) return K[i];
+  return null;
+};
+/* ★ 지갑 — 20불(약 28,000원)이 하루에 다 타지 않게 막는다.
+   무언가 잘못 돌면 하루에 다 쓸 수 있다. 그것만은 막아야 한다. */
+window.CGO_WALLET = window.CGO_WALLET || { dayCap: 900, monthCap: 26000, day:'', spent:0, mspent:0, month:'' };
+window.cgoWalletRoll=function(){
+  try{
+    var W=window.CGO_WALLET, d=new Date().toISOString().slice(0,10), m=d.slice(0,7);
+    if(W.day!==d){ W.day=d; W.spent=0;
+      var r=localStorage.getItem('cgo_wallet_d'); if(r){ var o=JSON.parse(r); if(o.d===d) W.spent=o.v||0; }
+    }
+    if(W.month!==m){ W.month=m; W.mspent=0;
+      var r2=localStorage.getItem('cgo_wallet_m'); if(r2){ var o2=JSON.parse(r2); if(o2.m===m) W.mspent=o2.v||0; }
+    }
+  }catch(e){}
+};
+window.cgoWalletSpend=function(won){
+  var W=window.CGO_WALLET; window.cgoWalletRoll();
+  W.spent+=won; W.mspent+=won;
+  try{ localStorage.setItem('cgo_wallet_d', JSON.stringify({d:W.day,v:W.spent}));
+       localStorage.setItem('cgo_wallet_m', JSON.stringify({m:W.month,v:W.mspent})); }catch(e){}
+};
+window.cgoWalletOk=function(won){
+  var W=window.CGO_WALLET; window.cgoWalletRoll();
+  return (W.spent+won <= W.dayCap) && (W.mspent+won <= W.monthCap);
+};
+window.cgoWallet=function(){
+  window.cgoWalletRoll(); var W=window.CGO_WALLET;
+  return {오늘쓴값:W.spent+'원/'+W.dayCap+'원', 이번달:W.mspent+'원/'+W.monthCap+'원',
+          남은달:(W.monthCap-W.mspent)+'원'};
+};
+window.cgoAiKernel = function(body){
+  var A=window.CGO_AI_ALLOW||[];
+  for(var i=0;i<A.length;i++){
+    if(A[i].re.test(body)){
+      var K=window.CGO_AI_KERNEL[A[i].k];
+      if(!K) return '';
+      return '\n## 이 기능 — ' + K.n + '\n' + K.k + '\n'
+        + (K.saju ? '' : '- 이 기능에서는 사주·오행·역학을 끌어오지 마십시오. 측정값만 읽으십시오.\n');
+    }
+  }
+  return '';
+};
+window.CGO_AI_ALLOW = [
+  {k:'health',  re:/건강 밸런스|6부위|mb52|밸런스 분석/i,        n:'나의 건강 밸런스'},
+  {k:'cog',     re:/인지 건강|인지 선별|치매|cognit/i,           n:'인지 건강 셀프 체크'},
+  {k:'scalp',   re:/두피|모발|scalp/i,                          n:'두피 케어'},
+  {k:'iq',      re:/IQ|지능|인지 능력/i,                        n:'나의 IQ'},
+  {k:'eye',     re:/눈 건강|눈 선명도|시력|안구/i,               n:'나의 눈 건강'},
+  {k:'food',    re:/음식 궁합|식단|먹|food/i,                   n:'음식 궁합'},
+  {k:'couple',  re:/커플 궁합|상대방|두 사람|fc360|궁합 분석/i,  n:'커플 궁합'},
+  {k:'naming',  re:/작명|이름 짓|naming|획수/i,                 n:'작명 서비스'},
+  {k:'travel',  re:/숙소|여행|풍수 점수|호텔|trv/i,             n:'숙소·여행지'},
+  {k:'stock',   re:/주식|종목|티커|거래소|섹터/i,                n:'주식 에너지'}
+];
+/* ★ AI 를 쓸 기능을 명단으로 묶는다 — 이 열 가지만 AI 가 필요하다.
+   사진·측정값·상대방처럼 우리가 미리 써 둘 수 없는 것이 들어오는 기능들이다.
+   나머지는 생년월일만 있으면 답이 정해지므로 우리 글로 낸다 (값 0원 · 즉시). */
+window.CGO_AI_ALLOW = [
+  {k:'health',  re:/건강 밸런스|6부위|mb52|밸런스 분석/i,        n:'나의 건강 밸런스'},
+  {k:'cog',     re:/인지 건강|인지 선별|치매|cognit/i,           n:'인지 건강 셀프 체크'},
+  {k:'scalp',   re:/두피|모발|scalp/i,                          n:'두피 케어'},
+  {k:'iq',      re:/IQ|지능|인지 능력/i,                        n:'나의 IQ'},
+  {k:'eye',     re:/눈 건강|눈 선명도|시력|안구/i,               n:'나의 눈 건강'},
+  {k:'food',    re:/음식 궁합|식단|먹|food/i,                   n:'음식 궁합'},
+  {k:'couple',  re:/커플 궁합|상대방|두 사람|fc360|궁합 분석/i,  n:'커플 궁합'},
+  {k:'naming',  re:/작명|이름 짓|naming|획수/i,                 n:'작명 서비스'},
+  {k:'travel',  re:/숙소|여행|풍수 점수|호텔|trv/i,             n:'숙소·여행지'},
+  {k:'stock',   re:/주식|종목|티커|거래소|섹터/i,                n:'주식 에너지'}
+];
+window.CGO_AI = window.CGO_AI || {
+  tier:'basic',
+  freeCap: 25,     /* 본풀이 — 기능의 알맹이. 35개를 다 둘러봐도 닿는다 */
+  chatCap: 8,      /* 덧붙임 대화 — 여기만 조인다 */
+  used:0, chatUsed:0, day:'', cacheHit:0, netCall:0,
+  strict:false,    /* ★ 우리 글이 다 채워지면 true 로 올린다 */
+  blocked:0
+};
+(function(){
+  var A=window.CGO_AI, origFetch=window.fetch;
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function roll(){
+    try{
+      var d=today();
+      if(A.day===d) return;
+      A.day=d; A.used=0;
+      var raw=localStorage.getItem('cgo_ai_use');
+      A.chatUsed=0;
+      if(raw){ var o=JSON.parse(raw); if(o && o.d===d){ A.used=o.n||0; A.chatUsed=o.c||0; } }
+      localStorage.setItem('cgo_ai_use', JSON.stringify({d:d,n:A.used,c:A.chatUsed}));
+      for(var i=localStorage.length-1;i>=0;i--){
+        var k=localStorage.key(i);
+        /* 하루 캐시만 버린다 — 영구 캐시(cgo_ai_p:)는 건드리지 않는다 */
+        if(k && k.indexOf('cgo_ai_c:')===0 && k.indexOf(':'+d+':')<0) localStorage.removeItem(k);
+      }
+    }catch(e){}
+  }
+  function bump(isChat){
+    if(isChat) A.chatUsed++; else A.used++;
+    try{ localStorage.setItem('cgo_ai_use', JSON.stringify({d:A.day,n:A.used,c:A.chatUsed})); }catch(e){}
+  }
+  function keyOf(s){ var h=5381,i=s.length; while(i) h=(h*33)^s.charCodeAt(--i); return (h>>>0).toString(36)+'_'+s.length.toString(36); }
+  window.fetch=function(url, opt){
+    var u=(typeof url==='string')?url:((url&&url.url)||'');
+    if(!/\/api\/(groq|claude)\b/.test(u) || !opt || !opt.body) return origFetch.apply(this, arguments);
+    roll();
+    var body=String(opt.body), tier=(A.tier||'basic');
+    var mgr=!!(window.cgoIsManager && window.cgoIsManager());
+    /* ★ 캐시를 두 층으로 나눈다.
+       사주·오행·이름·손금은 평생 안 바뀐다 → 한 번 셈하면 영구 보관.
+       오늘의 운세·행성·날씨·주가는 날마다 바뀐다 → 하루만 보관.
+       호기심에 35개를 다 둘러보는 손님도, 두 번째 방문부터는 값이 0원이 된다.
+       이것이 「다 써 본다」를 감당하는 유일한 길이다. */
+    var daily = /오늘|today|행성|트랜짓|transit|날씨|기온|주가|시세|실시간|now|현재/i.test(body);
+    var ck = daily ? ('cgo_ai_c:'+A.day+':'+tier+':'+keyOf(body))
+                   : ('cgo_ai_p:'+tier+':'+keyOf(body));
+    try{ var hit=localStorage.getItem(ck);
+      if(hit){ A.cacheHit++; return Promise.resolve(new Response(hit,{status:200,headers:{'Content-Type':'application/json'}})); }
+    }catch(e){}
+    /* ★ 본풀이와 덧붙임 대화를 갈라 센다.
+       본풀이는 기능의 알맹이니 넉넉히 열고, 자유 대화만 조인다.
+       전에는 둘을 같이 세어 둘러보다 한도가 차 버렸다. */
+    var isChat = /\[사용자\]|history|상담|물어|질문/i.test(body) && !/본풀이|리딩|분석 지침/.test(body);
+    var cap = isChat ? A.chatCap : A.freeCap;
+    var used = isChat ? A.chatUsed : A.used;
+    if(!mgr && used>=cap){
+      var msg = isChat
+        ? ('오늘 무료 AI 대화 '+A.chatCap+'회를 다 쓰셨습니다.\n분석 결과와 점수는 그대로 다 보실 수 있어요.\n더 깊은 대화는 고급 등급에서 열립니다 🙏')
+        : ('오늘 무료 AI 풀이 '+A.freeCap+'회를 다 쓰셨습니다.\n계산으로 나오는 점수·오행·궁합은 그대로 보실 수 있어요.\n내일 다시 열립니다 🙏');
+      return Promise.resolve(new Response(JSON.stringify({text:msg,capped:true,choices:[{message:{content:msg}}]}),
+        {status:200,headers:{'Content-Type':'application/json'}}));
+    }
+    /* ★ 명단 검사 — strict 일 때 명단 밖은 망에 나가지 않는다 */
+    if(A.strict && !mgr){
+      var allowed=false, who='';
+      for(var ai=0; ai<window.CGO_AI_ALLOW.length; ai++){
+        if(window.CGO_AI_ALLOW[ai].re.test(body)){ allowed=true; who=window.CGO_AI_ALLOW[ai].n; break; }
+      }
+      if(!allowed){
+        A.blocked++;
+        var bm='이 기능은 계산으로 답이 정해집니다 — 아래 풀이를 그대로 보십시오.';
+        return Promise.resolve(new Response(JSON.stringify({text:bm, ourText:true,
+          choices:[{message:{content:bm}}]}), {status:200, headers:{'Content-Type':'application/json'}}));
+      }
+    }
+    /* ★ 명단 검사 — strict 일 때 명단 밖은 망에 나가지 않는다 */
+    if(A.strict && !mgr){
+      var allowed=false;
+      for(var ai=0; ai<window.CGO_AI_ALLOW.length; ai++){
+        if(window.CGO_AI_ALLOW[ai].re.test(body)){ allowed=true; break; }
+      }
+      if(!allowed){
+        A.blocked++;
+        var bm='이 기능은 계산으로 답이 정해집니다 — 아래 풀이를 그대로 보십시오.';
+        return Promise.resolve(new Response(JSON.stringify({text:bm, ourText:true,
+          choices:[{message:{content:bm}}]}), {status:200, headers:{'Content-Type':'application/json'}}));
+      }
+    }
+    /* ★ 공통 뼈대를 끼운다 — 열 기능 어디서 불러도 말투·언어·안전·길이가 같아진다.
+       각 기능의 코드는 한 줄도 고치지 않는다. */
+    var target=u, o2=opt;
+    try{
+      var jb=JSON.parse(body);
+      var fr=window.cgoAiFrame(body, tier) + (window.cgoAiKernel? window.cgoAiKernel(body) : '');
+      var cap=({basic:420, pro:1000, max:1800})[tier]||420;
+      if(jb.messages && jb.messages.length){
+        var si=-1;
+        for(var mi=0; mi<jb.messages.length; mi++){ if(jb.messages[mi].role==='system'){ si=mi; break; } }
+        if(si>=0) jb.messages[si].content = fr + '\n' + String(jb.messages[si].content||'');
+        else jb.messages.unshift({role:'system', content:fr});
+        /* 시스템 역할이 없이 user 하나만 보내던 자리들도 이제 뼈대를 받는다 */
+      } else if(jb.prompt!=null){
+        jb.system = fr + (jb.system ? '\n'+jb.system : '');
+      }
+      jb.max_tokens = Math.min(jb.max_tokens||cap, cap);
+      body = JSON.stringify(jb);
+      o2 = Object.assign({}, opt, {body: body});
+    }catch(e){}
+    if(tier!=='basic' && /\/api\/groq\b/.test(u)){
+      try{
+        var j=JSON.parse(body), sys='', pr='';
+        (j.messages||[]).forEach(function(m){
+          if(m.role==='system') sys+=(sys?'\n':'')+String(m.content||'');
+          else pr+=(pr?'\n\n':'')+(m.role==='user'?'[사용자] ':'[상담사] ')+String(m.content||'');
+        });
+        target='/api/claude';
+        o2=Object.assign({}, o2, {body:JSON.stringify({
+          tier: KD ? 'premium' : (tier==='pro'?'advanced':'premium'),
+          kind: KD ? KD.k : null,
+          system:sys, prompt:pr,
+          max_tokens: KD ? ({report:6000,naming:4200,photo:1600,med:1800})[KD.k]
+                         : Math.max(j.max_tokens||600, tier==='max'?2000:1100),
+          temperature:(typeof j.temperature==='number')?j.temperature:0.75, cacheable:true })});
+        if(KD) window.cgoWalletSpend(KD.won);
+        else window.cgoWalletSpend(tier==='pro'?10:63);
+      }catch(e){ target=u; }
+    }
+    A.netCall++; if(!mgr) bump(isChat);
+    return origFetch.call(this, target, o2).then(function(r){
+      return r.clone().text().then(function(t){
+        var out=t;
+        try{
+          var j=JSON.parse(t);
+          if(j && j.text!=null && !j.choices){ j.choices=[{message:{content:j.text}}]; out=JSON.stringify(j); }
+          if(out.length<24000) localStorage.setItem(ck, out);
+        }catch(e){}
+        return new Response(out,{status:r.status,headers:{'Content-Type':'application/json'}});
+      }).catch(function(){ return r; });
+    });
+  };
+  roll();
+  window.cgoSetAiTier=function(t){
+    if(t!=='basic' && !(window.cgoIsManager && window.cgoIsManager())){
+      try{ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 '+({pro:'고급',max:'최고급'})[t]+' 등급은 준비 중입니다'); }catch(e){}
+      return false;
+    }
+    A.tier=t; return true;
+  };
+  window.cgoAiStat=function(){
+    var tot=A.netCall+A.cacheHit;
+    var perm=0, day=0;
+    try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i);
+      if(k&&k.indexOf('cgo_ai_p:')===0) perm++; else if(k&&k.indexOf('cgo_ai_c:')===0) day++; } }catch(e){}
+    return {등급:A.tier,
+            본풀이:A.used+'/'+A.freeCap, 대화:A.chatUsed+'/'+A.chatCap,
+            캐시로막음:A.cacheHit, 실제망호출:A.netCall,
+            아낀비율: tot?Math.round(A.cacheHit/tot*100)+'%':'—',
+            영구캐시:perm+'건', 하루캐시:day+'건',
+            오늘든값: (A.netCall*0.4).toFixed(1)+'원',
+            명단제한: A.strict?'켜짐':'꺼짐', 명단밖막음: A.blocked,
+            AI쓰는기능: window.CGO_AI_ALLOW.length+'개',
+            지갑: window.cgoWallet()};
+  };
+})();
 window.cgoIsManager=function(){
   try{
     var u=(location.pathname+location.search+location.hash).toLowerCase();
@@ -89676,6 +90084,7 @@ function csiSetTier(t){
     return;
   }
   window.csiTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}   /* ★ 관문에도 알린다 */
   csiPaintTiers();
   csiRenderLanes();
   try{ if(window.csiRender && window.stkSelected) csiRender(); }catch(e){}

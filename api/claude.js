@@ -13,12 +13,30 @@
 // ══════════════════════════════════════════════════════════════════
 
 const MODEL = {
-  advanced: 'claude-haiku-4-5',    // 고급    1회 약 10원
-  premium : 'claude-sonnet-5'      // 최고급  1회 약 63원
+  advanced: 'claude-haiku-4-5-20251001',    // 고급    1회 약 10원
+  premium : 'claude-sonnet-4-5-20250929'    // 최고급  1회 약 63원
+  // ★ 날짜까지 붙인 이름을 쓴다 — 별칭은 어느 날 바뀌면 품질이 소리 없이 달라진다.
+  //   전에는 'claude-sonnet-5' 로 적혀 있었는데 그런 모델은 없어,
+  //   최고급을 받고도 조용히 Groq 으로 떨어지던 자리였다.
 };
 
+// ★ 등급과 무관하게 모델이 정해지는 기능들.
+//   앱이 kind 를 보내면 여기 표가 이긴다.
+//
+//   photo  사진 판독  — Haiku 는 미세한 색·결을 못 본다. 정밀도가 필요하다.
+//   report 리포트     — 16장을 한 번에 낸다. 길고 촘촘해야 한다.
+//   naming 명작명     — 글자를 만들어 내는 일이다. 근거가 흔들리면 안 된다.
+//   med    6부위 건강 — 의료 근사 판독. 조심할 자리라 가장 좋은 눈을 쓴다.
+const KIND = {
+  photo : { model:'claude-sonnet-4-5-20250929', max:1600, cost:63  },
+  report: { model:'claude-sonnet-4-5-20250929', max:6000, cost:210 },
+  naming: { model:'claude-sonnet-4-5-20250929', max:4200, cost:164 },
+  med   : { model:'claude-sonnet-4-5-20250929', max:1800, cost:63  }
+};
+// Opus 는 쓰지 않는다. 값이 6배인데 역학 풀이에서 손님이 느끼는 차이가 그만큼 나지 않는다.
+
 // 한 사람 하루 한도 — 열쇠가 새더라도 값이 새지 않게 막는다
-const LIMIT = { advanced: 20, premium: 5 };
+const LIMIT = { advanced: 20, premium: 5, photo: 6, report: 2, naming: 2, med: 6 };
 const seen = new Map();            // { 'ip|tier|날짜' : 센 수 }
 
 function overLimit(ip, tier) {
@@ -39,17 +57,20 @@ export default async function handler(req, res) {
 
   const b = req.body || {};
   const tier = b.tier || 'basic';
+  const kind = b.kind && KIND[b.kind] ? b.kind : null;
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
 
   // ── 기본 등급은 Groq 으로 ─────────────────────────────
-  if (tier === 'basic' || !MODEL[tier]) {
+  //    단, kind 가 지정된 기능은 기본에서도 Sonnet 을 쓴다.
+  //    사진 판독을 Groq 으로 하면 색과 결을 못 읽어 답이 헛돈다.
+  if (!kind && (tier === 'basic' || !MODEL[tier])) {
     return groq(b, res);
   }
 
   // ── 하루 한도 ─────────────────────────────────────────
-  if (overLimit(ip, tier)) {
+  if (overLimit(ip, kind || tier)) {
     return res.status(200).json({
-      text: '', limited: true, tier,
+      text: '', limited: true, tier, kind: kind || null,
       error: 'daily limit'
     });
   }
@@ -67,9 +88,10 @@ export default async function handler(req, res) {
   });
   parts.push({ type: 'text', text: String(b.prompt || '') });
 
+  const pick = kind ? KIND[kind] : { model: MODEL[tier], max: 1500 };
   const body = {
-    model: MODEL[tier],
-    max_tokens: Math.min(b.max_tokens || 1500, 8000),
+    model: pick.model,
+    max_tokens: Math.min(b.max_tokens || pick.max, pick.max),
     temperature: typeof b.temperature === 'number' ? b.temperature : 0.7,
     messages: [{ role: 'user', content: parts }]
   };
@@ -103,7 +125,7 @@ export default async function handler(req, res) {
       .map(c => c.text)
       .join('\n');
 
-    return res.status(200).json({ text, model: MODEL[tier], tier });
+    return res.status(200).json({ text, model: pick.model, tier, kind: kind || null });
   } catch (e) {
     console.warn('[claude] ' + e);
     return groq(b, res);
