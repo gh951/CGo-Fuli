@@ -12909,6 +12909,26 @@ try{
 var _cgCurrent = 'dashboard';
 
 function cgoGoPage(page){
+  /* ★ 풍수 카메라를 켠 채로 로고를 누르면 나가지지 않았다.
+     카메라 트랙과 나침반 갈고리가 살아 있어, 페이지를 바꾸는 길에서 걸렸다.
+     떠날 때 먼저 안전하게 끈다 — 값도 아끼고 사생활도 지킨다. */
+  try{
+    if(page!=='travel-yeogi' && window.TVY_CAM){
+      try{ if(window.TVY_CAM.orientHandler){
+        window.removeEventListener('deviceorientationabsolute', window.TVY_CAM.orientHandler, true);
+        window.removeEventListener('deviceorientation', window.TVY_CAM.orientHandler, true);
+        window.TVY_CAM.orientHandler=null;
+      } }catch(e){}
+      try{ if(window.TVY_CAM.autoTimer) clearTimeout(window.TVY_CAM.autoTimer); }catch(e){}
+      try{ if(window.TVY_CAM.stream){
+        window.TVY_CAM.stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
+        window.TVY_CAM.stream=null;
+      } }catch(e){}
+      try{ var _tv=document.getElementById('tvyCamVideo');
+        if(_tv && _tv.srcObject){ _tv.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); _tv.srcObject=null; }
+      }catch(e){}
+    }
+  }catch(e){}
   /* ★ C-62: 눈건강(page-c44-eye)이 fixed 오버레이라 다른 페이지로 가도 안 닫혀 상단 바가 남던 문제 fix */
   /* ★특허 — 눈 검사가 열려 있지 않으면 아무것도 훑지 않는다.
      전에는 페이지를 바꿀 때마다 카메라 트랙을 훑어 기기 응답을 기다렸다 */
@@ -12951,7 +12971,7 @@ function cgoGoPage(page){
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
-    if(typeof _cgoStockIntroPopup==='function') _cgoStockIntroPopup();
+    _cgoLater(function(){ if(typeof _cgoStockIntroPopup==='function') _cgoStockIntroPopup(); });
     setTimeout(function(){ try{ if(typeof stkStartLive==='function') stkStartLive(); }catch(e){} }, 400);
     setTimeout(function(){ try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){} }, 200);
   }
@@ -12986,7 +13006,14 @@ function cgoGoPage(page){
       var _rpg = document.getElementById('page-'+page);
       if(_rpg){
         if(!window._cgoPageSnap){ window._cgoPageSnap = {}; }
-        if(window._cgoPageSnap[page] === undefined){
+        /* ★ 큰 페이지는 사본을 두지 않는다.
+           작명 283KB · 리포트 3.6MB 를 통째로 읽어 두었다가 재진입 때 다시 심었다.
+           읽는 값과 심는 값을 두 번 내고 있었고, 그것이 작명 0.443초의 몸통이다.
+           카메라를 쓰는 페이지만 되돌릴 이유가 있으니, 큰 페이지는 카메라만 끈다. */
+        var _snapBig = (_rpg.innerHTML && _rpg.innerHTML.length > 120000);
+        if(_snapBig){
+          try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject=null; } }); }catch(e){}
+        } else if(window._cgoPageSnap[page] === undefined){
           window._cgoPageSnap[page] = _rpg.innerHTML;
         } else {
           try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
@@ -13053,10 +13080,10 @@ function cgoGoPage(page){
   if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
     if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
-  if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
-  if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
-  if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
-  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
+  if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoLater(_cgoShopIntroPopup);
+  if(page==='couple'){ _cgoLater(_cgoCoupleIntroPopup); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
+  if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoLater(_cgoHealthIntroPopup); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
+  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoLater(_cgoGmdIntroPopup);
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   if(page==='report'){
     _cgoReportIntroPopup();
@@ -25674,6 +25701,16 @@ window.CGO_AI = window.CGO_AI || {
             지갑: window.cgoWallet()};
   };
 })();
+/* ★ 진입 팝업을 화면 그린 뒤로 미룬다.
+   전에는 cgoGoPage 안에서 팝업을 다 짓고 나서야 브라우저가 화면을 그렸다.
+   주식은 33KB짜리 가벼운 페이지인데 0.528초가 걸렸다 — 마크업이 아니라
+   팝업을 짓는 값을 손님이 기다린 것이다.
+   건강 밸런스가 0.030초였던 것은 그 페이지 팝업이 작았을 뿐이다. */
+window._cgoLater=function(fn){
+  if(typeof fn!=='function') return;
+  var raf=window.requestAnimationFrame||function(f){ return setTimeout(f,16); };
+  raf(function(){ raf(function(){ try{ fn(); }catch(e){} }); });
+};
 window.cgoIsManager=function(){
   try{
     var u=(location.pathname+location.search+location.hash).toLowerCase();
