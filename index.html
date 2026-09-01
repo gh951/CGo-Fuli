@@ -12971,7 +12971,7 @@ function cgoGoPage(page){
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
-    _cgoLater(function(){ if(typeof _cgoStockIntroPopup==='function') _cgoStockIntroPopup(); });
+    if(typeof _cgoStockIntroPopup==='function') _cgoStockIntroPopup();
     setTimeout(function(){ try{ if(typeof stkStartLive==='function') stkStartLive(); }catch(e){} }, 400);
     setTimeout(function(){ try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){} }, 200);
   }
@@ -13080,10 +13080,10 @@ function cgoGoPage(page){
   if(page==='scan' && typeof drawRPPG==='function') drawRPPG();
     if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
-  if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoLater(_cgoShopIntroPopup);
-  if(page==='couple'){ _cgoLater(_cgoCoupleIntroPopup); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
-  if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoLater(_cgoHealthIntroPopup); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
-  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoLater(_cgoGmdIntroPopup);
+  if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
+  if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
+  if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
+  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   if(page==='report'){
     _cgoReportIntroPopup();
@@ -19943,14 +19943,23 @@ function _cgoFDIntro(cfg){
         el.removeAttribute('data-k');
       });
     }
-    paint(); [120,400,900].forEach(function(ms){ setTimeout(paint,ms); });
+      /* ★ 한국어면 훑을 것이 없다.
+       네 번(0·120·400·900ms) 훑고 있었고, 그것이 팝업 여는 값의 몸통이었다. */
+    var _pl=(window._LANG||window.CGO_LANG||'ko');
+    var _seen=(window._cgoSeenLangs||[]).length;
+    if(_pl==='ko' && !_seen){ /* 아무것도 하지 않는다 */ }
+    else { paint(); [120,400,900].forEach(function(ms){ setTimeout(paint,ms); }); }
     try{ if(window.cgoRepaintOn) cgoRepaintOn(function(){ if(document.getElementById(id)) paint(); }); }catch(e){}
   })();
   /* ★C-67 팝업 잔상 근본 수정 — 원래 '삽입 전 번역'이 여기 있었으나
      전역명 오타(window._cgoTNode)로 항상 false → 단 한 번도 실행되지 않았다.
      실제 전역은 window._cgoTranslateNode.  화면에 붙이기 전(아직 안 그려진 상태)에
      번역하므로 한글이 화면에 뜰 기회 자체가 없어진다. */
-  try{ if(window._cgoTranslateNode) window._cgoTranslateNode(pop); }catch(e){}
+  /* ★ 한국어에서는 이 훑기도 뜻이 없다 — 붙이기 전 번역은 다른 언어일 때만 */
+  try{
+    var _tl=(window._LANG||window.CGO_LANG||'ko');
+    if(_tl!=='ko' && window._cgoTranslateNode) window._cgoTranslateNode(pop);
+  }catch(e){}
   /* ★ 공용 틀 표시 + 원문 설정을 안고 있는다 —
      언어를 바꾸면 번역된 글자를 또 번역할 수 없으므로 원문에서 다시 짓는다.
      로고로 나갈 때 닫을 대상도 이 표시로 찾는다. */
