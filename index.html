@@ -90436,14 +90436,14 @@ function csiPlanetName(k){ for(var i=0;i<CSI_PLANETS.length;i++) if(CSI_PLANETS[
 window.csiTier='basic';
 window.csiLanes={yeok:true, sat:false, dir:false, wea:false, bio:false, exch:true};
 var CSI_LANES=[
-  {k:'yeok', kn:21400, ico:'🔮', n:'역학',            d:'주식에 듣는 12역학 · 배점제'},
-  {k:'sat', kn:21401,  ico:'🛰️', n:'위성',            d:'NASA 실시간 궤도'},
-  {k:'dir', kn:19250,  ico:'🧭', n:'방위',            d:'지금 향한 실제 나침반 방위'},
-  {k:'wea', kn:17174,  ico:'🌤️', n:'날씨',            d:'기온·습도·오행 기상'},
-  {k:'bio', kn:21404,  ico:'💗', n:'생체 컨디션',      d:'rPPG 실측'},
-  {k:'exch', kn:21405, ico:'🏛️', n:'국가별 증권시장',  d:'거래소 개업일 네이탈'},
-{k:'econ', kn:21406, ico:'📰', n:'글로벌 경제 동향',  d:'실제 기사 제목 · 출처 표기'},
-{k:'geo', kn:21407,  ico:'🌐', n:'글로벌 세계 정세',  d:'실제 기사 제목 · 출처 표기'}
+  {k:'yeok', kn:21400, dn:21408, ico:'🔮', n:'역학',            d:'주식에 듣는 12역학 · 배점제'},
+  {k:'sat', kn:21401, dn:21409,  ico:'🛰️', n:'위성',            d:'NASA 실시간 궤도'},
+  {k:'dir', kn:19250, dn:21410,  ico:'🧭', n:'방위',            d:'지금 향한 실제 나침반 방위'},
+  {k:'wea', kn:17174, dn:21411,  ico:'🌤️', n:'날씨',            d:'기온·습도·오행 기상'},
+  {k:'bio', kn:21404, dn:21429,  ico:'💗', n:'생체 컨디션',      d:'rPPG 실측'},
+  {k:'exch', kn:21405, dn:21413, ico:'🏛️', n:'국가별 증권시장',  d:'거래소 개업일 네이탈'},
+{k:'econ', kn:21406, dn:21414, ico:'📰', n:'글로벌 경제 동향',  d:'실제 기사 제목 · 출처 표기'},
+{k:'geo', kn:21407, dn:21414,  ico:'🌐', n:'글로벌 세계 정세',  d:'실제 기사 제목 · 출처 표기'}
 ];
 /* ★ 고급·최고급은 손님에게 잠겨 있다 — 아직 만들고 있는 중이다.
    /lee 로 들어온 매니저만 고를 수 있다. */
@@ -90523,9 +90523,9 @@ function csiRenderLanes(){
     if(lock) on=false;
     return '<div onclick="'+(lock?'':'csiToggleLane(\''+L.k+'\')')+'" style="cursor:'+(lock?'not-allowed':'pointer')+';opacity:'+(lock?'.45':'1')+';background:'+(on?'rgba(52,211,153,.12)':'#fff')+';border:2px solid '+(on?'#34d399':'#e6eef0')+';border-radius:12px;padding:11px 7px;text-align:center;transition:all .15s;">'
       +'<div style="font-size:17px;">'+L.ico+'</div>'
-      +'<div style="font-size:11px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+L.n+'</div>'
-      +'<div style="font-size:9px;color:#4b6470;margin-top:2px;line-height:1.4;">'+(lock?'고급 이상':L.d)+'</div>'
-      +(on?'<div style="font-size:9px;color:#059669;font-weight:800;margin-top:3px;">● 켬</div>':'')
+      +'<div'+(L.kn?' data-k="'+L.kn+'"':'')+' style="font-size:11px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+L.n+'</div>'
+      +'<div'+(L.dn?' data-k="'+L.dn+'"':'')+' style="font-size:9px;color:#4b6470;margin-top:2px;line-height:1.4;">'+(lock?'고급 이상':L.d)+'</div>'
+      +(on?'<div data-k="21415" style="font-size:9px;color:#059669;font-weight:800;margin-top:3px;">● 켬</div>':'')
       +'</div>';
   }).join('');
   /* 켠 갈래의 세부 */
@@ -90546,6 +90546,16 @@ function csiRenderLanes(){
   var c=document.getElementById('csi-lane-count');
   /* ★ 숫자에 「개」를 붙여 사전에 넣었더니, 되짚기가 화면의 숫자까지 「개」로 바꿨다
      (사주명리10 → 사주명리10개). 사전에 맡기지 않고 여기서 언어를 본다. */
+  /* ★ JS 가 한국어로 다시 그렸으니, 다른 언어일 때는 이 칸만 칠해 준다.
+     전에는 갈래를 켜고 끌 때마다 번역이 풀려 한국어로 되돌아갔다. */
+  try{
+    if((window._LANG||'ko')!=='ko'){
+      var _lr=document.getElementById('csi-lane-row');
+      if(_lr && window.CGO_T && CGO_T.paint) CGO_T.paint(_lr);
+      var _ld=document.getElementById('csi-lane-detail');
+      if(_ld && window.CGO_T && CGO_T.paint) CGO_T.paint(_ld);
+    }
+  }catch(e){}
   if(c){ var _cn=CSI_LANES.filter(function(L){return window.csiLanes[L.k];}).length;
          var _cl=(window._LANG||'ko');
          c.textContent=_cn+({ko:'개',ja:'件',zh:'个',zh_HK:'個'}[_cl]||''); }
@@ -90597,6 +90607,10 @@ function csiToggleYeok(k){
 }
 function csiRenderYeok(){
   var el=document.getElementById('csi-yeok-list'); if(!el) return;
+  /* 다시 그린 뒤 칠해 주어야 한국어로 되돌아가지 않는다 */
+  setTimeout(function(){ try{
+    if((window._LANG||'ko')!=='ko' && window.CGO_T && CGO_T.paint) CGO_T.paint(el);
+  }catch(e){} }, 0);
   var cf=window.csiConflict(), tot=window.csiYeokWeight();
   el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:5px;">'+CSI_YEOK.map(function(y){
     var on=!!window.csiYeokPick[y.k];
@@ -90605,7 +90619,7 @@ function csiRenderYeok(){
       +(y.kn?'<span data-k="'+y.kn+'">'+y.k+'</span>':y.k)
       +'<span data-notr style="font-size:8.5px;opacity:.72;margin-left:3px;">'+y.pt+'</span></span>';
   }).join('')+'</div>'
-   +'<div style="font-size:9.5px;color:#4b6470;margin-top:6px;line-height:1.55;">배점 합 <b style="color:#059669;">'+tot.toFixed(1)+'pt</b>'
+   +'<div style="font-size:9.5px;color:#4b6470;margin-top:6px;line-height:1.55;"><span data-k="21434">배점 합</span> <b data-notr style="color:#059669;">'+tot.toFixed(1)+'pt</b>'
    +(cf.why?' · <span style="color:#b45309;font-weight:700;">⚠ '+cf.why+'</span>':'')+'</div>';
 }
 try{ window.csiRenderLanes=csiRenderLanes; window.csiRenderYeok=csiRenderYeok;
