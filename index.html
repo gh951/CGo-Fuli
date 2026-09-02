@@ -13378,13 +13378,6 @@ window.cgoPaintKo=function(root){
    var _SEEN = (window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==L; });
    var _src = L + '|ko|' + _SEEN.join(',');
    if(!window._cgoRevKo || window._cgoRevSrc !== _src){
-     /* ★ 되짚기 표도 언어별로 기억한다 — 되돌아올 때 8천 개를 다시 짓지 않는다 */
-     var _hit=(window._cgoRevCache && window._cgoRevCache[_src]);
-     if(_hit){
-       window._cgoRevKo=_hit;
-       window._cgoRevSrc=_src;
-       window._cgoPre4=(window._cgoPre4Cache && window._cgoPre4Cache[_src]) || null;
-     } else {
      window._cgoRevKo={};
      for(var n in D.ko){ var _k=String(D.ko[n]).trim(); if(_k && !(_k in window._cgoRevKo)) window._cgoRevKo[_k]=n; }
      /* ★ 지나온 언어의 글자도 번호로 되돌린다 — 짧은 낱말(꿈 키워드 등)이 옛 언어로 굳던 자리다.
@@ -13400,11 +13393,6 @@ window.cgoPaintKo=function(root){
          } else if(!/^[\d.,\s%개]+$/.test(_p)) window._cgoRevKo[_p]=n2; }
      }
      window._cgoRevSrc=_src;
-     /* 지은 표를 그 이름으로 넣어 둔다 */
-     try{ (window._cgoRevCache||(window._cgoRevCache={}))[_src]=window._cgoRevKo; }catch(_){}
-     /* 앞머리 표도 짝으로 기억한다 — 매번 버리면 8천 개를 다시 짓고 정렬까지 한다 */
-     window._cgoPre4 = (window._cgoPre4Cache && window._cgoPre4Cache[_src]) || null;
-     }
    }
    var tgt=D[L]||D.en, rev=window._cgoRevKo;
    /* ★ 같은 글자를 매번 처음부터 다시 찾고 있었다.
@@ -13502,8 +13490,6 @@ window.cgoPaintKo=function(root){
            (window._cgoPre4[_h4]||(window._cgoPre4[_h4]=[])).push(kk); }
          for(var _hk in window._cgoPre4)
            window._cgoPre4[_hk].sort(function(a,b){ return b.length-a.length; });
-         /* 지은 표를 그 언어 이름으로 넣어 둔다 — 다음에 돌아오면 그대로 쓴다 */
-         try{ (window._cgoPre4Cache||(window._cgoPre4Cache={}))[window._cgoRevSrc||'?']=window._cgoPre4; }catch(_){}
        }
        var P=window._cgoPre4[k.slice(0,4)];
        if(P) for(var pi=0;pi<P.length;pi++){
@@ -14736,7 +14722,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-p';
+  var ver='CGO-FULI v2026.09.03-q';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25734,7 +25720,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-p';
+window.CGO_VER='2026.09.03-q';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
