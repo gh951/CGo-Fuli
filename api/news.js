@@ -117,6 +117,7 @@ function moodOf(items) {
   const f = MOOD_FACE[best];
   return {
     weather: f.emoji, weatherLabel: f.label, element: f.el,
+    el5: best,                    // ★ 목·화·토·금·수 한 자 — 앱이 이것으로 그 언어 문장을 짓는다
     color: f.color, message: f.msg,
     disclaimer: '뉴스 기운은 헤드라인 키워드 기반 참고용이며, 투자 권유가 아닙니다.'
   };
