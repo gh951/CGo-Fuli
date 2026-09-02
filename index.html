@@ -14665,7 +14665,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-ad';
+  var ver='CGO-FULI v2026.09.03-ae';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25657,7 +25657,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-ad';
+window.CGO_VER='2026.09.03-ae';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36877,6 +36877,28 @@ function runCheckNums() {
   var _M = window._CGO_MASTER || null;
   var domOh = (calcResult && calcResult.domOh) || (_M && _M.domOh) || null;
   var lifeNum = Number((calcResult && calcResult.lifeNum) || (_M && _M.lifeNum) || 0) || null;
+  /* ★ 셈해 둔 결과가 없어도 생년월일이 있으면 그 자리에서 셈한다.
+     정보를 넣었는데 「정보 입력하기」가 뜨던 자리다. */
+  if(!(domOh && lifeNum)){
+    try{
+      var _v=function(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; };
+      var _y=+(_v('ipBirthY')||0), _mo=+(_v('ipBirthM')||0), _dy=+(_v('ipBirthD')||0);
+      if(!(_y&&_mo&&_dy)){
+        var _o=JSON.parse(localStorage.getItem('cgo_info')||'{}');
+        if(_o.birth){ var _p=String(_o.birth).split('-'); _y=+_p[0]; _mo=+_p[1]; _dy=+_p[2]; }
+      }
+      if(_y&&_mo&&_dy && typeof parseGanJi==='function' && typeof getOhFromGan==='function'){
+        var _gj=parseGanJi(_y,_mo,_dy,12);
+        var _oh=getOhFromGan(_gj && (_gj.dGan||_gj.dayGan||(_gj.d&&_gj.d.gan)));
+        if(_oh) domOh=_oh;
+        if(!lifeNum && typeof calcLifeNum2==='function') lifeNum=calcLifeNum2(_y,_mo,_dy);
+        /* 다음에 또 셈하지 않게 남겨 둔다 */
+        try{ window.calcResult=window.calcResult||{};
+             if(domOh) window.calcResult.domOh=domOh;
+             if(lifeNum) window.calcResult.lifeNum=lifeNum; }catch(_){}
+      }
+    }catch(e){}
+  }
   var _hasSaju = !!(domOh && lifeNum);
   if(!_hasSaju){
     document.getElementById('checkResult').innerHTML=
@@ -37041,7 +37063,10 @@ function runCheckNums() {
   '<div style="font-family:Orbitron,sans-serif;font-size:24px;font-weight:700;color:var(--red)">'+curScore+'<span style="font-size:10px">점</span></div>'+
   '</div>'+
   '<div style="font-size:11px;color:var(--text-3);padding:7px 10px;background:rgba(248,113,113,.05);border-radius:7px">'+
-  '현재 번호의 역학 기운은 <strong style="color:var(--red)">'+curScore+'점</strong>입니다. 아래는 내 사주에 더 맞물리는 숫자로 짜 본 것입니다.'+
+  '현재 번호의 역학 기운은 <strong style="color:var(--red)">'+curScore+'점</strong>입니다.'
+      +((_six&&_six.why)?('<div style="margin-top:7px;font-size:10.5px;color:#4b6470;line-height:1.7;">'+_six.why+'</div>'):'')
+      +((_six&&_six.worst)?('<div style="margin-top:5px;font-size:10.5px;color:#334155;line-height:1.7;">가장 약한 자리는 <b>'+_six.worst.n+'</b>입니다. '+_six.worst.why+'</div>'):'')
+      +'<div style="margin-top:7px;font-size:10.5px;color:#8a9aa3;">아래는 내 사주에 더 맞물리는 숫자로 짜 본 것입니다.</div>'+
   '</div></div>'+
 
   /* 추천 번호 */
@@ -37244,7 +37269,18 @@ function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay, calcOnly)
   var g = tot>=78?{t:'잘 맞물립니다',c:'#059669'} : tot>=64?{t:'무난합니다',c:'#34d399'}
         : tot>=50?{t:'보통입니다',c:'#94a3b8'} : {t:'어긋나는 편입니다',c:'#f59e0b'};
 
-  if(calcOnly) return {tot:tot, w:w, grade:g.t};
+  if(calcOnly){
+    /* ★ 「56점」의 이유 — 어느 역학이 받쳐 주고 어느 역학이 깎았는지 */
+    var srt=S.slice().sort(function(a,b){ return b.score-a.score; });
+    var up=srt.filter(function(x){ return x.score>=66; });
+    var dn=srt.filter(function(x){ return x.score<56; });
+    return {tot:tot, w:w, grade:g.t,
+      up:up.map(function(x){ return x.n+' '+x.score; }),
+      dn:dn.map(function(x){ return x.n+' '+x.score; }),
+      worst:srt[srt.length-1], best:srt[0],
+      why:(up.length?('받쳐 주는 것 — '+up.map(function(x){return x.n+'('+x.score+')';}).join(' · ')):'받쳐 주는 역학이 없습니다')
+         +(dn.length?(' / 깎는 것 — '+dn.map(function(x){return x.n+'('+x.score+')';}).join(' · ')):'')};
+  }
   var h='<div style="background:#fff;border:1px solid #d7eee8;border-radius:16px;padding:18px 16px;margin-top:16px;">'
    +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;">'
    +'<span style="font-size:14px;font-weight:900;color:#0f172a;">📱 숫자 역학 여섯으로 읽기</span>'
