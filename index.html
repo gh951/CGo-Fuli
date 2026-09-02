@@ -13095,6 +13095,7 @@ function cgoGoPage(page){
   if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
   if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
+  if(page==='lotto' && typeof _cgoLottoIntroPopup==='function') _cgoLottoIntroPopup();
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   if(page==='report'){
     _cgoReportIntroPopup();
@@ -14640,7 +14641,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-t';
+  var ver='CGO-FULI v2026.09.03-u';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25632,7 +25633,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-t';
+window.CGO_VER='2026.09.03-u';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -41969,13 +41970,9 @@ list.innerHTML = scored.map(function(d){
       btnLabel:'🎰 행운 번호 추출 시작하기'
     });
   }
-  (function(){
-    var _pg=document.getElementById('page-lotto');
-    if(!_pg) return;
-    new MutationObserver(function(){
-      if(_pg.classList.contains('active')){ _cgoLottoIntroPopup(); }
-    }).observe(_pg,{attributes:true,attributeFilter:['class']});
-  })();
+  /* ★ 여기 있던 MutationObserver 를 지웠다 — class 가 바뀔 때마다 팝업이 다시 떠
+     닫아도 곧 되살아났다. 신앱의 다른 팝업들처럼 cgoGoPage 안에서 한 번만 부른다. */
+  try{ window._cgoLottoIntroPopup=_cgoLottoIntroPopup; }catch(e){}
   </script>
 
       <div class="cgop-top"><div class="cgop-logo"><span>🎰 행운 번호</span> <span style="font-size:.62em;font-weight:800;letter-spacing:.12em;opacity:.72;padding:1px 6px;border:1px solid currentColor;border-radius:6px;vertical-align:middle;">C-67</span></div></div>
