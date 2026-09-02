@@ -12979,11 +12979,7 @@ function cgoGoPage(page){
     } catch(e){}
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
-  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){}
-    /* 뉴스 갈래가 켜져 있으면 들어올 때 받아온다 */
-    try{ ['econ','geo'].forEach(function(k){
-      if(window.csiLanes && window.csiLanes[k] && window.cgoLoadNews) cgoLoadNews(k); }); }catch(e){}
-  }
+  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
@@ -14645,7 +14641,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-m';
+  var ver='CGO-FULI v2026.09.02-n';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25588,28 +25584,17 @@ window.CGO_NEWS = window.CGO_NEWS || { econ:null, geo:null, at:{} };
 window.cgoLoadNews=function(kind){
   var K=(kind==='geo')?'geo':'econ';
   var N=window.CGO_NEWS;
-  var _ttl=(N[K] && N[K].length) ? 900000 : 60000;   /* 받았으면 15분 · 빈 손이면 1분 */
-  if(N[K] && Date.now()-(N.at[K]||0) < _ttl) return Promise.resolve(N[K]);
+  if(N[K] && Date.now()-(N.at[K]||0) < 900000) return Promise.resolve(N[K]);   /* 15분 */
   var L=(window._LANG||'ko');
   return fetch('/api/news?lang='+encodeURIComponent(L)+'&topic='+(K==='geo'?'world':'business')+'&n=8')
     .then(function(r){ return r.json(); })
     .then(function(j){
       var it=(j&&j.items)||[];
       N[K]=it; N.at[K]=Date.now();
-      N.why=N.why||{};
-      N.why[K]= it.length ? '' :
-        (!j ? '응답 없음'
-         : (j.error ? ('서버: '+String(j.error).slice(0,40))
-         : (j.choices ? '/api/news 가 없습니다 (다른 문이 답했습니다)'
-         : '기사 0건')));
       try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){}
       return it;
     })
-    .catch(function(e){
-      N[K]=[]; N.at[K]=Date.now();
-      N.why=N.why||{}; N.why[K]='연결 실패: '+String((e&&e.message)||e).slice(0,40);
-      return [];
-    });
+    .catch(function(){ N[K]=[]; N.at[K]=Date.now(); return []; });
 };
 /* AI 에게 넘길 덩이 — 받아 온 제목과 출처만 */
 window.cgoNewsBlock=function(){
@@ -25648,7 +25633,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-m';
+window.CGO_VER='2026.09.02-n';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -90358,10 +90343,7 @@ function csiLaneLive(k){
   if(k==='econ'||k==='geo'){
     var it=(window.CGO_NEWS&&window.CGO_NEWS[k])||null;
     if(!it) return '기사를 받아옵니다…';
-    if(!it.length){
-      var w=(window.CGO_NEWS&&window.CGO_NEWS.why&&window.CGO_NEWS.why[k])||'';
-      return w ? ('받아오지 못했습니다 — '+w) : '지금은 받아온 기사가 없습니다';
-    }
+    if(!it.length) return '지금은 받아온 기사가 없습니다';
     return it.length+'건 · '+(it[0].source||'')+' 등';
   }
   if(k==='exch'){ var f=window._stkCountryFilter; var x=f&&CSI_EXCHANGE[f];
@@ -90491,13 +90473,7 @@ try{ window.csiRenderLanes=csiRenderLanes; window.csiRenderYeok=csiRenderYeok;
            var det=document.getElementById('csi-lane-detail');
            if(!det || !det.offsetParent){ return; }
            [].forEach.call(det.querySelectorAll('[data-lane]'), function(el){
-             var k=el.getAttribute('data-lane');
-             /* 뉴스가 비어 있으면 조용히 다시 받아 본다 (1분 문턱은 위에서 지킨다) */
-             if((k==='econ'||k==='geo') && window.cgoLoadNews){
-               var N=window.CGO_NEWS||{};
-               if(!N[k] || !N[k].length) cgoLoadNews(k);
-             }
-             var v=csiLaneLive(k);
+             var v=csiLaneLive(el.getAttribute('data-lane'));
              if(v && el.textContent!==v) el.textContent=v;
            });
          }catch(e){}
