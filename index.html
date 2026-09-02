@@ -433,6 +433,9 @@ window.setLang=window.cgoSwitchLang=function(L){
    setTimeout(function(){
      try{ if(window.stkSelected && window.runStockAnalysis) window.runStockAnalysis();
            else if(window.stkSelected && window._runAnalysisCore) window._runAnalysisCore(); }catch(e){}
+     try{ if(window.stkAutoCountry){ window.stkAutoCountry();
+             if(window.stkRenderCountryChips) stkRenderCountryChips();
+             if(window.stkRenderLive) stkRenderLive(); } }catch(e){}
      try{ if(document.getElementById('csi-lane-row') && window.csiRenderLanes) csiRenderLanes(); }catch(e){}
      try{ var _cc=document.getElementById('stk-country-chips');
        if(_cc){ delete _cc.dataset.init; if(window.stkRenderCountryChips) stkRenderCountryChips(); } }catch(e){}
@@ -14638,7 +14641,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-e';
+  var ver='CGO-FULI v2026.09.02-f';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25630,7 +25633,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-e';
+window.CGO_VER='2026.09.02-f';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -87597,7 +87600,7 @@ function stkFetchPrice(obj){
   fetch('/api/stock?symbol='+encodeURIComponent(sym.symbol)+'&cc='+encodeURIComponent(_cc))
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d||!d.ok||d.price==null){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; return; }
+      if(!d||!d.ok||d.price==null){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 '+((window._LANG||'ko')==='ko'?'실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)':((window._cgoDash&&window._cgoDash[window._LANG]&&window._cgoDash[window._LANG]['22022'])||'Live price could not be fetched'))+'</span>'; return; }
       var _cur=(d.currency||'USD').toUpperCase();
       var _noDec={KRW:1,JPY:1,IDR:1,CLP:1,HUF:1,TWD:1};
       var _sufCur={KRW:'원',SEK:' kr',NOK:' kr',DKK:' kr',CZK:' Kč',PLN:' zł'};
@@ -87615,7 +87618,7 @@ function stkFetchPrice(obj){
         +'</div>'
         +'<div style="font-size:9px;color:#64748b;margin-top:3px;">⚠️ 시세는 정보 제공용(지연 가능)이며, 실제 투자 판단은 본인 책임입니다.</div>';
     })
-    .catch(function(){ if(box){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; } });
+    .catch(function(){ if(box){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 '+((window._LANG||'ko')==='ko'?'실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)':((window._cgoDash&&window._cgoDash[window._LANG]&&window._cgoDash[window._LANG]['22022'])||'Live price could not be fetched'))+'</span>'; } });
 }
 function stkResetPage(){
   try{ window.stkSelected=null; }catch(e){}
@@ -87828,7 +87831,20 @@ function stkLiveSectorScores(myIdx) {
 
 // ── TOP5 종목 실시간 랭킹 ────────────────────────────────
 // 🌐 글로벌 국기 필터 (C-build) ──
+window.STK_LANG_FLAG={ko:'🇰🇷',ja:'🇯🇵',zh:'🇨🇳',zh_HK:'🇭🇰',en:'🇺🇸',ru:'🇷🇺',
+  hi:'🇮🇳',th:'🇹🇭',vi:'🇻🇳',id:'🇮🇩',ms:'🇲🇾',tl:'🇵🇭',tr:'🇹🇷',es:'🇪🇸',fr:'🇫🇷',
+  de:'🇩🇪',pt:'🇵🇹',it:'🇮🇹',nl:'🇳🇱',ar:'🇦🇪'};
+window.stkAutoCountry=function(){
+  try{
+    if(window._stkCountryUserSet) return;              /* 손님이 직접 고른 뒤에는 건드리지 않는다 */
+    var f=window.STK_LANG_FLAG[(window._LANG||'ko')];
+    if(!f) return;
+    var has=(typeof STK_DB!=='undefined') && STK_DB.some(function(c){ return c && c.c===f; });
+    window._stkCountryFilter = has ? f : 'all';        /* 그 나라 종목이 없으면 전체로 */
+  }catch(e){}
+};
 window._stkCountryFilter = window._stkCountryFilter || 'all';
+window.stkAutoCountry();
 function _stkChipStyle(active){
   return 'display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;width:100%;box-sizing:border-box;overflow:hidden;border:1.5px solid '+(active?'rgba(212,168,67,.7)':'#e2e8f0')+';background:'+(active?'rgba(212,168,67,.2)':'#ffffff')+';color:'+(active?'#b8860b':'#334155')+';';
 }
@@ -87892,6 +87908,7 @@ function stkRenderCountryChips(){
 }
 
 function stkSetCountry(f){
+  window._stkCountryUserSet=1;   /* 손님이 직접 골랐다 — 이후 자동 선택은 하지 않는다 */
   window._stkCountryFilter=f;
   stkRenderCountryChips();
   try{ stkRenderLive(); }catch(e){}
@@ -88223,7 +88240,7 @@ function stkFetchPrice(obj){
   fetch('/api/stock?symbol='+encodeURIComponent(sym.symbol)+'&cc='+encodeURIComponent(_cc))
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d||!d.ok||d.price==null){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; return; }
+      if(!d||!d.ok||d.price==null){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 '+((window._LANG||'ko')==='ko'?'실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)':((window._cgoDash&&window._cgoDash[window._LANG]&&window._cgoDash[window._LANG]['22022'])||'Live price could not be fetched'))+'</span>'; return; }
       var _cur=(d.currency||'USD').toUpperCase();
       var _noDec={KRW:1,JPY:1,IDR:1,CLP:1,HUF:1,TWD:1};
       var _sufCur={KRW:'원',SEK:' kr',NOK:' kr',DKK:' kr',CZK:' Kč',PLN:' zł'};
@@ -88241,7 +88258,7 @@ function stkFetchPrice(obj){
         +'</div>'
         +'<div style="font-size:9px;color:#64748b;margin-top:3px;">⚠️ 시세는 정보 제공용(지연 가능)이며, 실제 투자 판단은 본인 책임입니다.</div>';
     })
-    .catch(function(){ if(box){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)</span>'; } });
+    .catch(function(){ if(box){ box.style.display='block'; box.innerHTML='<span style=\"font-size:10.5px;color:#64748b;\">💰 '+((window._LANG||'ko')==='ko'?'실시간 시세를 불러오지 못했습니다 (네트워크 또는 /api/stock 응답 없음)':((window._cgoDash&&window._cgoDash[window._LANG]&&window._cgoDash[window._LANG]['22022'])||'Live price could not be fetched'))+'</span>'; } });
 }
 
 function stkResetPage(){
@@ -88478,6 +88495,7 @@ function stkRenderCountryChips(){
 }
 
 function stkSetCountry(f){
+  window._stkCountryUserSet=1;   /* 손님이 직접 골랐다 — 이후 자동 선택은 하지 않는다 */
   window._stkCountryFilter=f;
   stkRenderCountryChips();
   try{ stkRenderLive(); }catch(e){}
