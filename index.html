@@ -14640,7 +14640,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-s';
+  var ver='CGO-FULI v2026.09.03-t';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25632,7 +25632,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-s';
+window.CGO_VER='2026.09.03-t';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36192,6 +36192,850 @@ function makeCard(sys, isWest) {
       +'</div>';
   }
 
+/* 🍀 행운 번호 — 구앱에서 그대로 이식 (핀셋)
+   ballClass · makeBall · makeSmallBall · ltRng · ltSeed · pickFromPool
+   calcLottoEnergy · makeBasisTags · lottoUpdateSysMethods · runLotto(+buildPool)
+   syncLtBirth · switchLottoTab · runCheckNums
+   뒤의 toggle18Expert 이하 여덟 함수는 신앱에 이미 있었다. */
+function ballClass(n) {
+  if(n<=10) return 'ball-1-10';
+  if(n<=20) return 'ball-11-20';
+  if(n<=30) return 'ball-21-30';
+  if(n<=40) return 'ball-31-40';
+  return 'ball-41-45';
+}
+
+// 볼 HTML 생성
+function makeBall(n, isBonus, energy) {
+  // 황금 오라: 에너지 90점 이상 최고 에너지 번호
+  var aura = (!isBonus && energy && energy >= 90) ? ' gold-aura' : '';
+  return '<div class="lotto-ball '+(isBonus?'bonus':ballClass(n))+aura+'"'+(isBonus?' title="보너스"':' title="에너지 '+( energy||'')+' "')+'>'+n+'</div>';
+}
+
+// 작은 볼 (히스토리용)
+function makeSmallBall(n) {
+  var colors={'1-10':'#d97706','11-20':'#2563eb','21-30':'#dc2626','31-40':'#a0afc0','41-45':'#059669'};
+  var c=n<=10?'1-10':n<=20?'11-20':n<=30?'21-30':n<=40?'31-40':'41-45';
+  return '<div class="lh-ball" style="background:'+colors[c]+'">'+n+'</div>';
+}
+
+// 시드 기반 난수 (재현 가능)
+function ltRng(s){ return ((s*1103515245+12345)&0x7fffffff); }
+
+function ltSeed(y,m,d,ln,week) {
+  var now = new Date();
+  // 시간 요소: 시 단위로 번호가 달라짐
+  var hourFactor = now.getHours() * 53 + Math.floor(now.getMinutes()/10) * 7;
+  // 생체 요소
+  var bioFactor = 0;
+  if(window._baiScanned && window.appState && window.appState.bio){
+    var b = window.appState.bio;
+    bioFactor = Math.round((b.hrv||0)*11 + (b.fci||0)*7 + (b.bli||0)*5);
+  }
+  if(window.BS && window.BS.tongueData){
+    bioFactor += (window.BS.tongueData.tliScore||0) * 13;
+  }
+  // NASA 행성 (목성·태양 위주 — 행운 관련)
+  var nasaFactor = 0;
+  if(window._nasaPlanets){
+    var p = window._nasaPlanets;
+    if(p.jupiter) nasaFactor += Math.round(p.jupiter.lon * 7);
+    if(p.sun)     nasaFactor += Math.round(p.sun.lon * 3);
+    if(p.moon)    nasaFactor += Math.round(p.moon.lon * 5);
+  }
+  var s = (y*397 + m*41 + d*13 + (ln||5)*17 + hourFactor + bioFactor + nasaFactor);
+  s=(s*1103515245+12345)&0x7fffffff;
+  return s;
+}
+
+// 번호 풀에서 중복없이 N개 선택
+function pickFromPool(pool, n, seed) {
+  var arr=[].concat(pool);
+  var result=[];
+  while(result.length < n && arr.length > 0) {
+    seed=ltRng(seed);
+    var idx=seed%arr.length;
+    var num=arr.splice(idx,1)[0];
+    if(num>=1 && num<=45 && result.indexOf(num)<0) result.push(num);
+  }
+  return {nums:result, seed:seed};
+}
+
+// 에너지 점수 계산
+function calcLottoEnergy(nums, domOh, lifeNum) {
+  var score=55;
+  var ohRange=OH_LUCKY_RANGES[domOh]||{primary:[],secondary:[]};
+  nums.forEach(function(n){
+    if(ohRange.primary.indexOf(n)>=0) score+=4;
+    else if(ohRange.secondary.indexOf(n)>=0) score+=2;
+    var lifeArr=LIFE_LUCKY[lifeNum]||[];
+    if(lifeArr.indexOf(n)>=0) score+=3;
+  });
+  return Math.min(98, score);
+}
+
+// 번호 근거 태그 생성
+function makeBasisTags(nums, domOh, lifeNum, method) {
+  var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[domOh]||domOh;
+  var tags=[];
+  var ohRange=OH_LUCKY_RANGES[domOh]||{primary:[],secondary:[]};
+  var lifeArr=LIFE_LUCKY[lifeNum]||[];
+  var ohCount=nums.filter(function(n){return ohRange.primary.indexOf(n)>=0;}).length;
+  var lifeCount=nums.filter(function(n){return lifeArr.indexOf(n)>=0;}).length;
+  if(ohCount>0) tags.push((window._LANG&&window._LANG!=='ko')?(ohCount+' '+domOhEn+' element'+(ohCount>1?'s':'')):(domOh+'오행 '+ohCount+'개'));
+  if(lifeCount>0) tags.push((typeof _cgoT==='function'?_cgoT((typeof _cgoT==='function'?_cgoT('생명수'):'생명수')):(typeof _cgoT==='function'?_cgoT('생명수'):'생명수'))+lifeNum+(typeof _cgoT==='function'?_cgoT(' 연동'):' 연동'));
+  var methodTags=(function(){var _T=(typeof _cgoT==='function')?_cgoT:function(x){return x;};return{
+    all18:_T('18대역학 통합'), all:_T('18대역학 통합'),
+    jami:_T('자미두수 반영'), astro:_T('달자리 반영'),
+    nasa18:'NASA Real-time', kabala:_T('세피로트 연동'),
+    tarot:_T('달위상×타로'), taeul:_T('태을신수 시진'),
+    gmd:_T('기문방위 연동')
+  };})();
+  if(methodTags[method]) tags.push(methodTags[method]);
+  tags.push((window._LANG&&window._LANG!=='ko'?'Total ':'합계 ')+(nums.reduce(function(a,b){return a+b;},0)));
+  return tags.map(function(t){return '<span class="ball-tag">'+t+'</span>';}).join('');
+}
+
+// ══════════════════════════════════════════
+// ✦ 추출 체계(순수/NASA/생체+통합)별 역학 옵션 동적 생성
+// ══════════════════════════════════════════
+function lottoUpdateSysMethods() {
+  var sys = document.getElementById('ltSystem');
+  var mth = document.getElementById('ltMethod');
+  if (!sys || !mth) return;
+  var sysVal = sys.value || 'bio';
+
+  // 9개 진짜 사용 가능 역학 (정직 원칙)
+  var methods = {
+    pure: [
+      // 1단계: 순수 역학 — 한 가지만
+      {v:'saju',   t:(typeof _cgoT==='function'?_cgoT('☯️ 사주명리'):'☯️ 사주명리')},
+      {v:'jami',   t:(typeof _cgoT==='function'?_cgoT('🌟 자미두수'):'🌟 자미두수')},
+      {v:'astro',  t:(typeof _cgoT==='function'?_cgoT('♈ 서양 점성술'):'♈ 서양 점성술')},
+      {v:'num',    t:(typeof _cgoT==='function'?_cgoT('🔢 수비학'):'🔢 수비학')},
+      {v:'gmd',    t:(typeof _cgoT==='function'?_cgoT('🧭 기문둔갑'):'🧭 기문둔갑')},
+      {v:'kusei',  t:(typeof _cgoT==='function'?_cgoT('🌟 구성기학'):'🌟 구성기학')},
+      {v:'tarot',  t:(typeof _cgoT==='function'?_cgoT('🎴 타로'):'🎴 타로')},
+      {v:'taeul',  t:(typeof _cgoT==='function'?_cgoT('🌀 태을신수'):'🌀 태을신수')}
+    ],
+    nasa: [
+      // 2단계: NASA 통합
+      {v:'saju+nasa',   t:(typeof _cgoT==='function'?_cgoT('☯️ 사주 + 🛰️ NASA'):'☯️ 사주 + 🛰️ NASA')},
+      {v:'jami+nasa',   t:(typeof _cgoT==='function'?_cgoT('🌟 자미두수 + 🛰️ NASA'):'🌟 자미두수 + 🛰️ NASA')},
+      {v:'astro+nasa',  t:(typeof _cgoT==='function'?_cgoT('♈ 점성술 + 🛰️ NASA'):'♈ 점성술 + 🛰️ NASA')},
+      {v:'num+nasa',    t:(typeof _cgoT==='function'?_cgoT('🔢 수비학 + 🛰️ NASA'):'🔢 수비학 + 🛰️ NASA')},
+      {v:'gmd+nasa',    t:(typeof _cgoT==='function'?_cgoT('🧭 기문둔갑 + 🛰️ NASA'):'🧭 기문둔갑 + 🛰️ NASA')},
+      {v:'kusei+nasa',  t:(typeof _cgoT==='function'?_cgoT('🌟 구성기학 + 🛰️ NASA'):'🌟 구성기학 + 🛰️ NASA')},
+      {v:'tarot+nasa',  t:(typeof _cgoT==='function'?_cgoT('🎴 타로 + 🛰️ NASA'):'🎴 타로 + 🛰️ NASA')},
+      {v:'taeul+nasa',  t:(typeof _cgoT==='function'?_cgoT('🌀 태을신수 + 🛰️ NASA'):'🌀 태을신수 + 🛰️ NASA')}
+    ],
+    bio: [
+      // 3단계: 생체+통합
+      {v:'all18',       t:(typeof _cgoT==='function'?_cgoT('✨ 9대 + NASA + 생체 통합'):'✨ 9대 + NASA + 생체 통합')},
+      {v:'saju+bio',    t:(typeof _cgoT==='function'?_cgoT('☯️ 사주 + 🛰️ + 🧬'):'☯️ 사주 + 🛰️ + 🧬')},
+      {v:'jami+bio',    t:(typeof _cgoT==='function'?_cgoT('🌟 자미두수 + 🛰️ + 🧬'):'🌟 자미두수 + 🛰️ + 🧬')},
+      {v:'astro+bio',   t:(typeof _cgoT==='function'?_cgoT('♈ 점성술 + 🛰️ + 🧬'):'♈ 점성술 + 🛰️ + 🧬')},
+      {v:'num+bio',     t:(typeof _cgoT==='function'?_cgoT('🔢 수비학 + 🛰️ + 🧬'):'🔢 수비학 + 🛰️ + 🧬')},
+      {v:'gmd+bio',     t:(typeof _cgoT==='function'?_cgoT('🧭 기문둔갑 + 🛰️ + 🧬'):'🧭 기문둔갑 + 🛰️ + 🧬')},
+      {v:'kusei+bio',   t:(typeof _cgoT==='function'?_cgoT('🌟 구성기학 + 🛰️ + 🧬'):'🌟 구성기학 + 🛰️ + 🧬')},
+      {v:'tarot+bio',   t:(typeof _cgoT==='function'?_cgoT('🎴 타로 + 🛰️ + 🧬'):'🎴 타로 + 🛰️ + 🧬')},
+      {v:'taeul+bio',   t:(typeof _cgoT==='function'?_cgoT('🌀 태을신수 + 🛰️ + 🧬'):'🌀 태을신수 + 🛰️ + 🧬')}
+    ]
+  };
+
+  var list = methods[sysVal] || methods['bio'];
+  mth.innerHTML = list.map(function(m){
+    return '<option value="'+m.v+'">'+m.t+'</option>';
+  }).join('');
+}
+
+// 페이지 로드 시 초기화
+(function(){
+  if (document.readyState !== 'loading') {
+    setTimeout(lottoUpdateSysMethods, 100);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(lottoUpdateSysMethods, 100);
+    });
+  }
+})();
+
+function runLotto() {
+  var birthVal = document.getElementById('ltBirth').value;
+  var method   = document.getElementById('ltMethod').value;
+  var setsNum  = parseInt(document.getElementById('ltSets').value)||5;
+
+  // ── CGO-MASTER 우선 → calcResult → 입력값 순 ──
+  var M = window._CGO_MASTER;
+  var bYear, bMonth, bDay, domOh, lifeNum, kujusei, lifeNumVal;
+  if(calcResult) {
+    bYear=calcResult.y; bMonth=calcResult.m; bDay=calcResult.d;
+    domOh=calcResult.domOh||'목'; var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[domOh]||domOh;
+    lifeNumVal=calcResult.lifeNum||5;
+    kujusei=calcResult.kujusei||5;
+  } else if(birthVal) {
+    var bp=birthVal.split('-');
+    bYear=parseInt(bp[0]); bMonth=parseInt(bp[1]); bDay=parseInt(bp[2]);
+    domOh='목'; lifeNumVal=5; kujusei=5; domOhEn='Wood';
+  } else {
+    alert('대시보드에서 자동 계산하거나 생년월일을 입력하세요');
+    return;
+  }
+
+  // CGO-MASTER 에너지 지수 (CEI 우선)
+  var masterILI = M ? M.ili : (calcResult ? calcResult.ili : 70);
+  var masterCEI = M ? M.cei : masterILI;
+  var masterBio = M ? M.bio : {};
+  var bioScanned = masterBio.scanned || window._baiScanned || false;
+
+  var today=new Date();
+  var dayOfYear=Math.floor((today-new Date(today.getFullYear(),0,1))/86400000);
+  var hourFactor=today.getHours();
+  // ── seed에 CEI + 생체값 반영 → 더 정밀한 번호 ──
+  var bioSeedAdj = bioScanned ? (masterBio.hrv||0)*3 + (masterBio.fci||0)*2 : 0;
+  var seed=ltSeed(bYear,bMonth,bDay,lifeNumVal,dayOfYear*24+hourFactor) + masterCEI*7 + bioSeedAdj;
+
+  // 방위별 행운수 풀 결정
+  var dirKeys=Object.keys(GMD_DIR_NUMS);
+  seed=ltRng(seed);
+  var bestDir=dirKeys[seed%dirKeys.length]; var bestDirEn={북:'North',북동:'NE',동:'East',동남:'SE',남:'South',남서:'SW',서:'West',서북:'NW'}[bestDir]||bestDir;
+  var dirPool=GMD_DIR_NUMS[bestDir]||[];
+
+  // 본명성 행운수
+  var kjName=KJ_KR ? (KJ_KR[kujusei]||'五黃土星') : '五黃土星'; var KJSTAR_EN={1:'1 White',2:'2 Black',3:'3 Emerald',4:'4 Green',5:'5 Yellow',6:'6 White',7:'7 Red',8:'8 White',9:'9 Purple'}; var kjNameEn=KJSTAR_EN[kujusei]||kjName.slice(0,2);
+  var kjPool=KJ_LUCKY_NUMS[kjName]||KJ_LUCKY_NUMS['五黃土星'];
+
+  // 오행 풀
+  var ohPool=(OH_LUCKY_RANGES[domOh]||{primary:[],secondary:[]});
+  var primaryPool=ohPool.primary||[];
+  var fullPool=primaryPool.concat(ohPool.secondary||[]);
+
+  // 생명수 풀
+  var lifePool=LIFE_LUCKY[lifeNumVal]||LIFE_LUCKY[5];
+
+  // 메서드별 풀 조합
+  function buildPool(method) {
+    var _bpOh=(window.calcResult&&window.calcResult.domOh)||'목';
+    var domOhEn={목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}[_bpOh]||_bpOh;
+    var base=[];
+    var p18=window._nasaPlanets||{};
+    // NASA 파생 숫자 공통 생성
+    var nasaNums=[];
+    if(p18.jupiter){[p18.jupiter,p18.sun,p18.moon,p18.mars,p18.venus].forEach(function(pl){
+      if(!pl) return;
+      var n=Math.round(pl.lon)%45+1; if(n>=1&&n<=45&&nasaNums.indexOf(n)<0) nasaNums.push(n);
+      var n2=Math.round(pl.lon/2)%45+1; if(n2>=1&&n2<=45&&nasaNums.indexOf(n2)<0) nasaNums.push(n2);
+    });}
+    // 달위상 파생 숫자
+    var nowD=new Date();
+    var phIdx=Math.floor((Math.floor((nowD-(new Date(nowD.getFullYear(),0,0)))/86400000)%30)/3.75)%8;
+    var moonNums=[[1,9,17,25,33],[2,10,18,26,34],[3,11,19,27,35],[4,12,20,28,36],[5,13,21,29,37],[6,14,22,30,38],[7,15,23,31,39],[8,16,24,32,40]][phIdx]||[];
+    // 카발라 세피로트 파생 (생명수 기반)
+    var sephNums=[[1,11,21,31,41],[2,12,22,32,42],[3,13,23,33,43],[4,14,24,34,44],[5,15,25,35,45],[6,16,26,36,44],[7,17,27,37,43],[8,18,28,38,42],[9,19,29,39,41],[10,20,30,40,45]][lifeNumVal%10]||[];
+    // 태을신수 시진 파생
+    var sj=Math.floor((nowD.getHours()+1)/2)%12;
+    var taeulNums=[[1,13,25,37],[2,14,26,38],[3,15,27,39],[4,16,28,40],[5,17,29,41],[6,18,30,42],[7,19,31,43],[8,20,32,44],[9,21,33,45],[10,22,34,43],[11,23,35,42],[12,24,36,41]][sj]||[];
+    // 자미두수 파생 (시드 기반)
+    var jamiNums=[]; var jseed=seed;
+    for(var ji=0;ji<6;ji++){jseed=ltRng(jseed);var jn=jseed%45+1;if(jamiNums.indexOf(jn)<0)jamiNums.push(jn);}
+    // 점성술 달자리 파생
+    var moonSign=p18.moon?Math.floor(p18.moon.lon/30)%12:_hvr(seed+13)%12;
+    var astroNums=[[1,12,23,34,45],[2,11,20,31,42],[3,10,21,32,43],[4,9,22,33,44],[5,8,17,28,39],[6,7,18,27,38],[1,6,15,24,33],[2,5,14,25,36],[3,8,19,30,41],[4,9,18,27,40],[5,10,21,32,43],[6,11,22,33,44]][moonSign]||[];
+
+    // ✦ method 정규화 — 새 3체계(순수/NASA/생체) 처리 ✦
+    var baseMethod = method;
+    var hasNasa = false;
+    var hasBio = false;
+    if (typeof method === 'string') {
+      if (method.indexOf('+bio') >= 0) {
+        baseMethod = method.replace('+bio','');
+        hasNasa = true; hasBio = true;
+      } else if (method.indexOf('+nasa') >= 0) {
+        baseMethod = method.replace('+nasa','');
+        hasNasa = true;
+      }
+    }
+    // 기존 호환: nasa18, all18은 자동으로 nasa+bio 적용
+    if (baseMethod === 'nasa18') hasNasa = true;
+    if (baseMethod === 'all18')  { hasNasa = true; hasBio = true; }
+
+    // 베이스 역학별 풀 결정 (기존 분기 + kusei 추가)
+    if(baseMethod==='saju')    base=fullPool.concat(lifePool);
+    else if(baseMethod==='jami') base=jamiNums.concat(fullPool).concat(kjPool);
+    else if(baseMethod==='num')  base=lifePool.concat(kjPool);
+    else if(baseMethod==='gmd')  base=dirPool.concat(kjPool).concat(fullPool);
+    else if(baseMethod==='kusei') base=kjPool.concat(dirPool).concat(fullPool);
+    else if(baseMethod==='astro') base=astroNums.concat(moonNums).concat(fullPool);
+    else if(baseMethod==='nasa18') base=nasaNums.concat(fullPool).concat(lifePool).concat(dirPool).concat(kjPool);
+    else if(baseMethod==='kabala') base=sephNums.concat(lifePool).concat(fullPool);
+    else if(baseMethod==='tarot')  base=moonNums.concat(astroNums).concat(fullPool);
+    else if(baseMethod==='taeul')  base=taeulNums.concat(dirPool).concat(fullPool);
+    else base=fullPool.concat(lifePool).concat(dirPool).concat(kjPool)  // all18: 모든 역학 통합
+           .concat(nasaNums).concat(moonNums).concat(sephNums).concat(taeulNums);
+
+    // ✦ NASA 통합 후처리: NASA 행성 데이터 추가 가중 ✦
+    if (hasNasa && baseMethod !== 'nasa18' && baseMethod !== 'all18') {
+      base = base.concat(nasaNums).concat(astroNums);
+    }
+
+    // ✦ 생체 통합 후처리: 추가 가중 (시드에 이미 생체 반영됨) ✦
+    if (hasBio && baseMethod !== 'all18') {
+      base = base.concat(lifePool).concat(moonNums);
+    }
+
+    // 1~45 범위 필터 + 중복 제거
+    var seen={};
+    base=base.filter(function(n){
+      if(n<1||n>45||seen[n]) return false;
+      seen[n]=true; return true;
+    });
+    // 부족하면 나머지 번호로 보충
+    for(var i=1;i<=45;i++){if(!seen[i]){base.push(i);seen[i]=true;}}
+    return base;
+  }
+
+  var methodLabels={
+    all18:'✨ 9대 통합',
+    all:'✨ 9대 통합',
+    saju:'☯️ 사주명리',
+    jami:'🌟 자미두수',
+    num:'🔢 수비학',
+    gmd:'🧭 기문둔갑',
+    kusei:'🌟 구성기학',
+    astro:'♈ 서양 점성술',
+    nasa18:'🛰️ NASA 통합',
+    kabala:'✡️ 카발라',
+    tarot:'🎴 타로',
+    taeul:'🌀 태을신수',
+    // ✦ 2단계 — NASA 통합 ✦
+    'saju+nasa':'☯️ 사주 + 🛰️',
+    'jami+nasa':'🌟 자미두수 + 🛰️',
+    'astro+nasa':'♈ 점성술 + 🛰️',
+    'num+nasa':'🔢 수비학 + 🛰️',
+    'gmd+nasa':'🧭 기문둔갑 + 🛰️',
+    'kusei+nasa':'🌟 구성기학 + 🛰️',
+    'tarot+nasa':'🎴 타로 + 🛰️',
+    'kabala+nasa':'✡️ 카발라 + 🛰️',
+    'taeul+nasa':'🌀 태을 + 🛰️',
+    // ✦ 3단계 — 생체+통합 ✦
+    'saju+bio':'☯️ 사주 + 🛰️ + 🧬',
+    'jami+bio':'🌟 자미 + 🛰️ + 🧬',
+    'astro+bio':'♈ 점성 + 🛰️ + 🧬',
+    'num+bio':'🔢 수비 + 🛰️ + 🧬',
+    'gmd+bio':'🧭 기문 + 🛰️ + 🧬',
+    'kusei+bio':'🌟 구성 + 🛰️ + 🧬',
+    'tarot+bio':'🎴 타로 + 🛰️ + 🧬',
+    'kabala+bio':'✡️ 카발라 + 🛰️ + 🧬',
+    'taeul+bio':'🌀 태을 + 🛰️ + 🧬'
+  };
+
+  var sets=[];
+  for(var si=0;si<setsNum;si++){
+    seed=ltRng(seed);
+    var pool=buildPool(method);
+    // 풀 셔플
+    for(var pi=pool.length-1;pi>0;pi--){
+      seed=ltRng(seed);
+      var ri=seed%(pi+1);
+      var tmp=pool[pi];pool[pi]=pool[ri];pool[ri]=tmp;
+    }
+    // 6개 선택
+    var main=pool.slice(0,6).sort(function(a,b){return a-b;});
+    seed=ltRng(seed);
+    var bonusPool=[];
+    for(var bi=1;bi<=45;bi++){if(main.indexOf(bi)<0)bonusPool.push(bi);}
+    seed=ltRng(seed);
+    var bonus=bonusPool[seed%bonusPool.length];
+    var energy=calcLottoEnergy(main,domOh,lifeNumVal);
+    sets.push({nums:main,bonus:bonus,energy:energy,set:si+1});
+  }
+
+  // 에너지 순 정렬
+  sets.sort(function(a,b){return b.energy-a.energy;});
+
+  // 히스토리 저장
+  lottoHistory.unshift({
+    date:((window._LANG&&window._LANG!=='ko')?((today.getMonth()+1)+'/'+today.getDate()):(today.getMonth()+1+'월'+today.getDate()+'일')),
+    nums:sets[0].nums, bonus:sets[0].bonus
+  });
+  if(lottoHistory.length>5) lottoHistory=lottoHistory.slice(0,5);
+
+  // 평균 에너지
+  var avgEnergy=Math.round(sets.reduce(function(a,b){return a+b.energy;},0)/sets.length);
+
+  var html =
+  // CGO-MASTER 상태 배지
+  (M ? '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;font-size:10px;color:rgba(56,189,248,.8);display:flex;align-items:center;gap:8px"><span style="width:6px;height:6px;border-radius:50%;background:#38bdf8;animation:pulse 2s infinite;display:inline-block"></span>CGO-MASTER Sync · ILI '+masterILI+(bioScanned?' · CEI '+masterCEI+((window._LANG&&window._LANG!=='ko')?' measured':' ★실측'):'')+'</div>' : '')+
+  // 통계 카드 3개
+  '<div class="lotto-stats">'+
+  '<div class="lstat-card">'+
+  '<div class="lstat-icon">☯</div>'+
+  '<div class="lstat-title">일간 오행</div>'+
+  '<div class="lstat-val" style="font-size:14px;color:var(--gold)">'+((window._LANG&&window._LANG!=='ko')?(domOhEn||domOh):(calcResult?calcResult.dGJ.gan+'('+domOh+')':domOh))+'</div>'+
+  '<div class="lstat-sub">핵심 에너지</div>'+
+  '</div>'+
+  '<div class="lstat-card">'+
+  '<div class="lstat-icon">🔢</div>'+
+  '<div class="lstat-title">생명수</div>'+
+  '<div class="lstat-val">'+lifeNumVal+'</div>'+
+  '<div class="lstat-sub">'+(calcResult&&calcResult.isM?(typeof _cgoT==='function'?_cgoT('마스터 넘버'):'마스터 넘버'):(typeof _cgoT==='function'?_cgoT('수비학 기반'):'수비학 기반'))+'</div>'+
+  '</div>'+
+  '<div class="lstat-card">'+
+  '<div class="lstat-icon">⚡</div>'+
+  '<div class="lstat-title">'+(bioScanned?(typeof _cgoT==='function'?_cgoT('CEI 융합'):'CEI 융합'):(typeof _cgoT==='function'?_cgoT('평균 에너지'):'평균 에너지'))+'</div>'+
+  '<div class="lstat-val">'+(bioScanned?masterCEI:avgEnergy)+'</div>'+
+  '<div class="lstat-sub">'+(bioScanned?(typeof _cgoT==='function'?_cgoT('역학+생체 융합'):'역학+생체 융합'):setsNum+(typeof _cgoT==='function'?_cgoT('세트 평균'):'세트 평균'))+'</div>'+
+  '</div>'+
+  '</div>'+
+
+  // 번호 세트 카드들
+  '<div class="lotto-sets">';
+
+  sets.forEach(function(s,idx){
+    var isMain=(idx===0);
+    var energyColor=s.energy>=85?'var(--gold)':s.energy>=70?'var(--green)':'var(--cyan)';
+
+    html +=
+    '<div class="lotto-set-card'+(isMain?' main-set':'')+'">'+
+    '<div class="lsc-header">'+
+    '<div class="lsc-rank" style="background:'+(isMain?'rgba(212,168,67,.15)':'var(--bg-panel)')+';color:'+(isMain?'var(--gold)':'var(--text-2)')+'">'+
+    (isMain?'🥇 최고 에너지':'SET '+(idx+1))+
+    '</div>'+
+    '<div class="lsc-basis">'+(typeof _cgoT==='function'?_cgoT(methodLabels[method]):methodLabels[method])+'</div>'+
+    '<div class="lsc-energy" style="color:'+energyColor+'">'+(typeof _cgoT==='function'?_cgoT('에너지'):'에너지')+' '+s.energy+'</div>'+
+    '</div>'+
+    '<div class="lsc-body">'+
+    '<div class="lotto-balls">'+
+    s.nums.map(function(n){return makeBall(n,false,s.energy);}).join('')+
+    '<div style="display:flex;align-items:center;padding:0 4px;font-size:10px;color:var(--text-3)">+</div>'+
+    makeBall(s.bonus,true,0)+
+    '</div>'+
+    (s.energy>=90?'<div style="text-align:center;margin:-4px 0 8px;font-size:10px;color:var(--gold);font-weight:700;letter-spacing:.06em">'+((window._LANG&&window._LANG!=='ko')?'✨ Golden aura active — highest-energy numbers':'✨ 황금 오라 활성 — 최고 에너지 번호')+'</div>':'')+
+    '<div class="ball-tags">'+makeBasisTags(s.nums,domOh,lifeNumVal,method)+'</div>'+
+    '<div class="lotto-analysis">'+
+    '<div class="la-item"><span class="la-label">☯ 오행 에너지</span><span class="la-val" style="color:var(--gold)">'+(window._LANG&&window._LANG!=='ko'?domOhEn+'-based':domOh+' 기반')+'</span></div>'+
+    '<div class="la-item"><span class="la-label">🔢 수비 에너지</span><span class="la-val" style="color:var(--cyan)">'+((window._LANG&&window._LANG!=='ko')?'Life number ':'생명수 ')+lifeNumVal+'</span></div>'+
+    '<div class="la-item"><span class="la-label">🧭 방위 에너지</span><span class="la-val" style="color:var(--green)">'+(window._LANG&&window._LANG!=='ko'?bestDirEn:bestDir)+'</span></div>'+
+    '<div class="la-item"><span class="la-label">🌟 구성 에너지</span><span class="la-val" style="color:var(--amber)">'+(window._LANG&&window._LANG!=='ko'?kjNameEn:kjName.slice(0,2))+'</span></div>'+
+    '</div>'+
+    '</div></div>';
+  });
+
+  html += '</div>';
+
+  // 번호 색상 범례
+  html +=
+  '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px">'+
+  '<div style="font-size:11px;color:var(--text-3);margin-bottom:10px;letter-spacing:.06em">🎨 번호 색상 범례</div>'+
+  '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball ball-1-10" style="width:30px;height:30px;font-size:9px">1-10</div><span style="font-size:11px;color:var(--text-2)">노랑 (1~10)</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball ball-11-20" style="width:30px;height:30px;font-size:9px">11-20</div><span style="font-size:11px;color:var(--text-2)">파랑 (11~20)</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball ball-21-30" style="width:30px;height:30px;font-size:9px">21-30</div><span style="font-size:11px;color:var(--text-2)">빨강 (21~30)</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball ball-31-40" style="width:30px;height:30px;font-size:9px">31-40</div><span style="font-size:11px;color:var(--text-2)">회색 (31~40)</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball ball-41-45" style="width:30px;height:30px;font-size:9px">41-45</div><span style="font-size:11px;color:var(--text-2)">초록 (41~45)</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div class="lotto-ball bonus" style="width:30px;height:30px;font-size:9px">+</div><span style="font-size:11px;color:var(--text-2)">보너스</span></div>'+
+  '</div></div>';
+
+  // ── 행성 역행 장기 경고 인디케이터 ──
+  var _rp = window._nasaPlanets;
+  if (_rp) {
+    var _retroWarns = [];
+    // 행성별 역행 → 영향 장기 매핑
+    var _retroMap = {
+      mercury: { icon:'☿', name:'수성', organ:'신경계·폐', orgIco:'🧠', color:'#a78bfa', nameEn:'Mercury', organEn:'nervous system·lungs',
+        desc:'수성 역행 중 — 신경계 과부하·호흡기 민감도 상승. 중요 계약·서명·전자기기 결정 연기 권고.', descEn:'Mercury retrograde — nervous-system overload and heightened respiratory sensitivity. Postpone important contracts, signatures and electronics decisions.' },
+      venus:   { icon:'♀', name:'금성', organ:'신장·심장', orgIco:'💚', color:'#f472b6', nameEn:'Venus', organEn:'kidneys·heart',
+        desc:'금성 역행 중 — 신장·방광 기운 저하 가능. 관계·금전 스트레스가 심장 활력에 영향. 감정 관리 필요.', descEn:'Venus retrograde — kidney and bladder energy may dip. Relationship and money stress can affect heart vitality; mind your emotions.' },
+      mars:    { icon:'♂', name:'화성', organ:'열정 에너지', orgIco:'❤️', color:'#f87171', nameEn:'Mars', organEn:'passion energy',
+        desc:'화성 역행 중 — 심장 활력·소화기 과부하 주의. 무리한 운동·충동적 행동이 심장 에너지를 소모시킴.', descEn:'Mars retrograde — watch heart vitality and digestive overload. Overexertion and impulsive action drain heart energy.' },
+      jupiter: { icon:'♃', name:'목성', organ:'성장 에너지', orgIco:'🌿', color:'#34d399', nameEn:'Jupiter', organEn:'growth energy',
+        desc:'목성 역행 중 — 간담 기운 정체. 과음·과식을 피하고 간 해독 주기에 주의. 내면 성장에 집중.', descEn:'Jupiter retrograde — liver and gallbladder energy stagnates. Avoid overeating and drinking; focus on inner growth.' },
+      saturn:  { icon:'♄', name:'토성', organ:'그라운딩 에너지·뼈', orgIco:'🦴', color:'#fbbf24', nameEn:'Saturn', organEn:'grounding energy·bones',
+        desc:'토성 역행 중 — 소화·면역·골격 집중 케어. 규칙적 식사와 수면이 토성 역행 에너지를 안정시킴.', descEn:'Saturn retrograde — focus on digestion, immunity and skeletal care. Regular meals and sleep stabilize Saturn retrograde energy.' }
+    };
+    ['mercury','venus','mars','jupiter','saturn'].forEach(function(pk){
+      if (_rp[pk] && _rp[pk].retro) {
+        _retroWarns.push(_retroMap[pk]);
+      }
+    });
+    if (_retroWarns.length > 0) {
+      html += '<div style="background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.2);border-radius:14px;padding:14px 16px;margin-bottom:14px">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+      html += '<span style="font-size:14px">🪐</span>';
+      html += '<span style="font-size:12px;font-weight:700;color:#f87171;letter-spacing:.06em">행성 역행 장기 경고</span>';
+      html += '<span class="retro-warn-badge">⟳ 역행 중</span>';
+      html += '</div>';
+      html += '<div style="font-size:10px;color:rgba(240,230,200,.5);margin-bottom:10px">'+((window._LANG&&window._LANG!=='ko')?'Retrograde planets weaken the energy flow of the related organ. Analysis based on NASA real-time data.':'역행 행성은 해당 장기의 에너지 흐름을 약화시킵니다. NASA 실시간 데이터 기반 분석.')+'</div>';
+      _retroWarns.forEach(function(w){
+        html += '<div class="retro-organ-card">';
+        html += '<div class="retro-organ-icon">'+w.orgIco+'</div>';
+        html += '<div class="retro-organ-body">';
+        html += '<div class="retro-organ-title"><span style="color:'+w.color+'">'+w.icon+' '+((window._LANG&&window._LANG!=='ko')?(w.nameEn||w.name)+' retrograde':w.name+' 역행')+'</span> → <span style="color:#f87171">'+((window._LANG&&window._LANG!=='ko')?(w.organEn||w.organ):w.organ)+'</span>'+((window._LANG&&window._LANG!=='ko')?' caution':' 주의')+'</div>';
+        html += '<div class="retro-organ-desc">'+((window._LANG&&window._LANG!=='ko')?(w.descEn||w.desc):w.desc)+'</div>';
+        html += '</div>';
+        html += '<span class="retro-warn-badge">⟳ Rx</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  // ── 🛰️ 지금의 우주 (NASA 실시간) — 3단계 융합의 [2] 우주 축 (C-67) ──
+  var _uSysV = (document.getElementById('ltSystem') && document.getElementById('ltSystem').value) || 'bio';
+  var _uHasBio = (_uSysV === 'bio');
+  var _uHasNasa = (_uSysV === 'nasa' || _uSysV === 'bio');
+  if (_uHasNasa && window._nasaPlanets) {
+    var _uEN = (window._LANG && window._LANG !== 'ko');
+    var _up = window._nasaPlanets;
+    var _uKp = (window._cgoEnvData && window._cgoEnvData.kp && window._cgoEnvData.kp.value);
+    var _uWx = (window._cgoEnvData && typeof window._cgoEnvData.weather === 'string') ? window._cgoEnvData.weather : '';
+    var _plN = {mercury:'☿ '+(_uEN?'Mercury':'수성'), venus:'♀ '+(_uEN?'Venus':'금성'), mars:'♂ '+(_uEN?'Mars':'화성'), jupiter:'♃ '+(_uEN?'Jupiter':'목성'), saturn:'♄ '+(_uEN?'Saturn':'토성')};
+    var _uChips = '';
+    ['jupiter','mars','venus','mercury','saturn'].forEach(function(pk){
+      if (_up[pk]) {
+        var _r = _up[pk].retro;
+        _uChips += '<span style="font-size:9.5px;padding:2px 7px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:5px;color:rgba(51,65,85,.8)">'+_plN[pk]+' '+(_r?'<b style="color:#ef4444">'+(_uEN?'Rx':'역행')+'</b>':'<b style="color:#10b981">'+(_uEN?'direct':'순행')+'</b>')+'</span>';
+      }
+    });
+    var _uMeta = [];
+    if (_uKp || _uKp === 0) _uMeta.push('🌍 '+(_uEN?'Geomag Kp ':'지자기 Kp ')+_uKp);
+    if (_uWx) _uMeta.push('🌤️ '+_uWx);
+    _uMeta.push('🧭 '+(_uEN?'direction of the day reflected':'오늘의 길방·흉방 반영'));
+    html += '<div style="background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(59,130,246,.03));border:1px solid rgba(56,189,248,.25);border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap">'
+        + '<span style="font-size:14px">🛰️</span>'
+        + '<span style="font-size:12px;font-weight:800;color:#0284c7;letter-spacing:.05em">'+(_uEN?'The universe now — NASA live':'지금의 우주 — NASA 실시간')+'</span>'
+        + '<span style="font-size:8px;padding:1px 6px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);border-radius:4px;color:#0284c7;font-weight:700">'+(_uHasBio?(_uEN?'Tier 3 · axis 2':'3단계 · 우주 축'):(_uEN?'Tier 2':'2단계'))+'</span>'
+      + '</div>'
+      + (_uChips?'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'+_uChips+'</div>':'')
+      + '<div style="font-size:10px;color:rgba(51,65,85,.6);line-height:1.7">'+_uMeta.join('  ·  ')+'</div>'
+      + '<div style="font-size:9px;color:rgba(2,132,199,.7);margin-top:7px;padding-top:7px;border-top:1px solid rgba(56,189,248,.12)">→ '+(_uEN?'Fusion axis 2 — your metaphysics (1) × the universe now (2) × your condition (3)':'융합의 2번째 축 — 타고난 역학(1) × 지금의 우주(2) × 지금의 컨디션(3)')+'</div>'
+    + '</div>';
+  }
+
+  // 18개 역학 카드
+  var scores18 = calc18ForLotto(domOh, lifeNumVal, kujusei, bYear, bMonth, bDay, sets[0].nums);
+  html += build18Cards(scores18, 'lotto', method);
+
+  // ✦ 정당성 막대 그래프 — 단일 순수역학 선택 시 숨김 ✦
+  var _isPureOne = method && !method.match(/[+]|all18|nasa18/) && method !== 'lotto';
+  if (!_isPureOne && typeof _lottoBuildSysFitness === 'function') {
+    html += _lottoBuildSysFitness(method, domOh, lifeNumVal, sets[0].nums);
+  }
+
+  // 히스토리
+  if(lottoHistory.length>0){
+    html +=
+    '<div class="lotto-history">'+
+    '<div class="lotto-history-title">📋 최근 추출 히스토리</div>'+
+    lottoHistory.map(function(h){
+      return '<div class="lh-row">'+
+        '<div class="lh-date">'+h.date+'</div>'+
+        '<div class="lh-balls">'+h.nums.map(makeSmallBall).join('')+'</div>'+
+        '<div style="font-size:10px;color:var(--text-3);margin-left:4px">+'+h.bonus+'</div>'+
+        '</div>';
+    }).join('')+
+    '</div>';
+  }
+
+  // ✦ AI 채팅 영역 (음식·융합과 동일 패턴) ✦
+  if (typeof _lottoBuildAIChat === 'function') {
+    html += _lottoBuildAIChat(sets[0].nums, sets[0].bonus, method, domOh, lifeNumVal);
+  }
+
+  var rc=document.getElementById('lottoResult');
+  if(rc) {
+    rc.innerHTML=html;
+    window._lottoDone = true;
+  }
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){var _pg=document.getElementById('page-lotto');if(_pg)_cgoAiTranslatePage(window._LANG,CGO_I18N[window._LANG]||{},_pg);},700);}}
+
+function syncLtBirth() {
+  var y=document.getElementById('ltBirthY'), m=document.getElementById('ltBirthM'), d=document.getElementById('ltBirthD');
+  var hid=document.getElementById('ltBirth');
+  if(y&&m&&d&&hid&&y.value&&m.value&&d.value){
+    var mm=('0'+m.value).slice(-2), dd=('0'+d.value).slice(-2);
+    hid.value=y.value+'-'+mm+'-'+dd;
+  }
+}
+function switchLottoTab(tab) {
+  ['lotto','check'].forEach(function(t){
+    document.getElementById('tabPane'+t.charAt(0).toUpperCase()+t.slice(1)).style.display=(t===tab?'flex':'none');
+    var btn=document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(btn) btn.classList.toggle('active',t===tab);
+  });
+  // flex → column
+  var pane=document.getElementById('tabPane'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(pane) pane.style.flexDirection='column';
+}
+function runCheckNums() {
+  var prefix = (document.getElementById('phonePrefix')||{value:'010'}).value || '010';
+  var mid    = (document.getElementById('phoneMid')||{value:''}).value.replace(/\D/g,'') || '';
+  var last   = (document.getElementById('phoneLast')||{value:''}).value.replace(/\D/g,'') || '';
+
+  if(!mid && !last) {
+    document.getElementById('checkResult').innerHTML=
+      '<div style="padding:20px;text-align:center;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px">'+
+      '<div style="font-size:28px;margin-bottom:8px">📱</div>'+
+      '<div style="font-size:13px;color:var(--text-2)">가운데 4자리, 끝 4자리를 입력해주세요</div></div>';
+    return;
+  }
+
+  var phoneStr     = prefix + mid + last;
+  var phoneDisplay = prefix + '-' + mid + '-' + last;
+  var domOh   = calcResult ? calcResult.domOh  : '목';
+  var lifeNum = calcResult ? calcResult.lifeNum : 5;
+  var ohRange = OH_LUCKY_RANGES[domOh] || {primary:[],secondary:[]};
+  var lifeArr = LIFE_LUCKY[lifeNum] || [];
+
+  /* ── 숫자 하나의 역학 점수 ── */
+  function scoreNum(n) {
+    var s = 50;
+    if      (ohRange.primary.indexOf(n)   >= 0) s += 28;
+    else if (ohRange.secondary.indexOf(n) >= 0) s += 14;
+    if (lifeArr.indexOf(n) >= 0) s += 20;
+    var inDir = Object.keys(GMD_DIR_NUMS).some(function(d){ return GMD_DIR_NUMS[d].indexOf(n) >= 0; });
+    if (inDir) s += 10;
+    return Math.min(99, Math.max(30, s));
+  }
+
+  /* ── 현재 번호 분석 ── */
+  function extractNums(str) {
+    var ns = [];
+    for (var i = 0; i < str.length - 1; i++) {
+      var v = parseInt(str.slice(i, i+2));
+      if (v >= 1 && v <= 45 && ns.indexOf(v) < 0) ns.push(v);
+    }
+    for (var i = 0; i < str.length; i++) {
+      var v = parseInt(str[i]);
+      if (v >= 1 && v <= 9 && ns.indexOf(v) < 0) ns.push(v);
+    }
+    return ns.sort(function(a,b){ return a-b; });
+  }
+  function avgScore(ns) {
+    if (!ns.length) return 40;
+    return Math.round(ns.reduce(function(a,n){ return a+scoreNum(n); }, 0) / ns.length);
+  }
+
+  var curNums  = extractNums(phoneStr).slice(0, 6);
+  var curScore = Math.min(95, avgScore(curNums));
+
+  /* ══════════════════════════════════════════════
+     핵심 로직: 90점+ 역산
+     전략:
+       1) 전체 1~45 점수 계산 → 상위 숫자 풀 확보
+       2) 그 숫자 2개를 골라 4자리 번호 문자열 생성
+       3) 생성된 4자리에서 다시 숫자 추출해 재점수
+       4) 재점수가 90+ 되도록 조합 보정
+  ══════════════════════════════════════════════ */
+
+  /* 전체 점수표 */
+  var scored = [];
+  for (var n = 1; n <= 45; n++) scored.push({ n: n, s: scoreNum(n) });
+  scored.sort(function(a,b){ return b.s - a.s; });
+
+  /* 상위 풀 (90점 이상 우선, 부족하면 85점으로 확장) */
+  var topPool = scored.filter(function(x){ return x.s >= 90; }).map(function(x){ return x.n; });
+  if (topPool.length < 6) topPool = scored.filter(function(x){ return x.s >= 80; }).map(function(x){ return x.n; });
+  if (topPool.length < 6) topPool = scored.slice(0, 10).map(function(x){ return x.n; });
+
+  /* 두 숫자 → 4자리 문자열 (예: 8, 26 → "0826") */
+  function to4(a, b) {
+    var sa = (a < 10 ? '0'+a : ''+a);
+    var sb = (b < 10 ? '0'+b : ''+b);
+    return sa + sb; /* 4글자 보장 */
+  }
+
+  /* 4자리 → 역학 점수 (추출된 숫자들의 평균) */
+  function score4(str4) {
+    var ns = extractNums(str4);
+    return ns.length ? avgScore(ns) : 40;
+  }
+
+  var OH_C = {목:'var(--green)',화:'var(--red)',토:'var(--amber)',금:'#94a3b8',수:'var(--cyan)'};
+  var OH_E = {목:'🌳',화:'🔥',토:'⛰',금:'⚔',수:'💧'};
+  var ohList = ['목','화','토','금','수'];
+
+  /* 3세트 생성 ── 서로 다른 오행 조합, 재점수로 보정 */
+  var sets = [];
+  for (var si = 0; si < 5 && sets.length < 3; si++) {
+    var oh1 = ohList[si % 5];
+    var oh2 = ohList[(si + 2) % 5];
+
+    /* oh1 풀에서 최고 점수 2개 */
+    var p1 = topPool.filter(function(n){
+      return (OH_LUCKY_RANGES[oh1]||{primary:[]}).primary.indexOf(n)>=0 ||
+             (OH_LUCKY_RANGES[oh1]||{secondary:[]}).secondary.indexOf(n)>=0;
+    });
+    if (p1.length < 2) p1 = topPool.slice(0, 6);
+
+    var p2 = topPool.filter(function(n){
+      return (OH_LUCKY_RANGES[oh2]||{primary:[]}).primary.indexOf(n)>=0 ||
+             (OH_LUCKY_RANGES[oh2]||{secondary:[]}).secondary.indexOf(n)>=0;
+    });
+    if (p2.length < 2) p2 = topPool.slice(0, 6);
+
+    /* si마다 다른 인덱스로 중복 방지 */
+    var ia = si % p1.length;
+    var ib = (si + 1) % p1.length; if (ib === ia) ib = (ia+1) % p1.length;
+    var ic = si % p2.length;
+    var id = (si + 2) % p2.length; if (id === ic) id = (ic+1) % p2.length;
+
+    var midStr  = to4(Math.min(p1[ia],p1[ib]), Math.max(p1[ia],p1[ib]));
+    var lastStr = to4(Math.min(p2[ic],p2[id]), Math.max(p2[ic],p2[id]));
+
+    var ms = score4(midStr);
+    var ls = score4(lastStr);
+
+    /* 90점 미달이면 topPool 상위 직접 사용 */
+    if (ms < 88) {
+      midStr = to4(topPool[0]||6, topPool[si<topPool.length?si+1:1]||16);
+      ms = score4(midStr);
+    }
+    if (ls < 88) {
+      lastStr = to4(topPool[si<topPool.length?si+1:1]||8, topPool[si+2<topPool.length?si+2:2]||18);
+      ls = score4(lastStr);
+    }
+
+    var ts = Math.round((ms + ls) / 2);
+
+    /* 중복 세트 제거 */
+    var dup = sets.some(function(s){ return s.mid===midStr && s.last===lastStr; });
+    if (!dup) sets.push({ mid:midStr, last:lastStr, oh1:oh1, oh2:oh2, midScore:ms, lastScore:ls, score:ts });
+  }
+  sets.sort(function(a,b){ return b.score - a.score; });
+
+  /* ── HTML 렌더링 ── */
+  var html =
+
+  /* 현재 번호 */
+  '<div style="background:var(--bg-card);border:1px solid rgba(248,113,113,.3);border-radius:14px;padding:16px;margin-bottom:12px">'+
+  '<div style="font-size:11px;color:var(--text-3);margin-bottom:8px;letter-spacing:.06em">📊 현재 번호 역학 에너지</div>'+
+  '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:15px;color:var(--red);padding:7px 12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:8px">'+phoneDisplay+'</div>'+
+  '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+  curNums.map(function(n){
+    var sc=scoreNum(n);
+    return '<div class="lotto-ball '+ballClass(n)+'" style="width:30px;height:30px;font-size:10px;opacity:'+(sc>=75?1:.45)+'" title="'+sc+'점">'+n+'</div>';
+  }).join('')+
+  '</div>'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:24px;font-weight:700;color:var(--red)">'+curScore+'<span style="font-size:10px">점</span></div>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--text-3);padding:7px 10px;background:rgba(248,113,113,.05);border-radius:7px">'+
+  '⚠️ 현재 에너지 <strong style="color:var(--red)">'+curScore+'점</strong> — 아래 추천 번호로 교체 시 <strong style="color:var(--gold)">90점 이상</strong> 보장'+
+  '</div></div>'+
+
+  /* 추천 번호 */
+  '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(52,211,153,.05));border:2px solid rgba(212,168,67,.4);border-radius:16px;overflow:hidden;margin-bottom:12px">'+
+  '<div style="padding:13px 16px;border-bottom:1px solid rgba(212,168,67,.2);display:flex;align-items:center;justify-content:space-between">'+
+  '<div>'+
+  '<div style="font-size:14px;font-weight:700;color:var(--gold)">🏆 역학 에너지 90점+ 행운 전화번호</div>'+
+  '<div style="font-size:10px;color:var(--text-3);margin-top:2px">010 고정 · 가운데+끝 교체 추천</div>'+
+  '</div>'+
+  '<div style="font-size:10px;padding:3px 10px;border-radius:8px;background:rgba(212,168,67,.15);color:var(--gold)">역학 역산 보장</div>'+
+  '</div>'+
+  '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">'+
+
+  sets.map(function(s, idx){
+    var isTop = (idx===0);
+    var rankLabel = ['🥇 최고 추천','🥈 차선 추천','🥉 참고 추천'][idx];
+    var scoreColor = s.score>=90 ? 'var(--gold)' : s.score>=80 ? 'var(--green)' : 'var(--cyan)';
+    var midNums  = extractNums(s.mid);
+    var lastNums = extractNums(s.last);
+    var allNums  = midNums.concat(lastNums)
+                          .filter(function(n,i,a){ return a.indexOf(n)===i; })
+                          .sort(function(a,b){ return a-b; })
+                          .slice(0,6);
+
+    return (
+      '<div style="background:'+(isTop?'rgba(212,168,67,.08)':'rgba(255,255,255,.02)')+';border:1px solid '+(isTop?'rgba(212,168,67,.45)':'rgba(255,255,255,.07)')+';border-radius:12px;padding:14px">'+
+
+      /* 헤더 */
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<span style="font-size:12px;font-weight:700;color:'+(isTop?'var(--gold)':'var(--text-2)')+'">'+rankLabel+'</span>'+
+      '<div style="width:46px;height:46px;border-radius:50%;border:3px solid '+scoreColor+';display:flex;align-items:center;justify-content:center;text-align:center">'+
+      '<div><div style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:'+scoreColor+'">'+s.score+'</div>'+
+      '<div style="font-size:8px;color:var(--text-3)">점</div></div>'+
+      '</div>'+
+      '</div>'+
+
+      /* 번호 크게 */
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<span style="font-size:14px;color:var(--text-3);font-weight:700">010</span>'+
+      '<span style="font-size:14px;color:var(--text-3)">—</span>'+
+      '<div style="font-family:Orbitron,sans-serif;font-size:30px;font-weight:700;letter-spacing:.06em;color:'+(isTop?'var(--gold)':'var(--green)')+';padding:8px 18px;background:rgba(212,168,67,.12);border:2px solid rgba(212,168,67,.3);border-radius:10px">'+s.mid+'</div>'+
+      '<span style="font-size:14px;color:var(--text-3)">—</span>'+
+      '<div style="font-family:Orbitron,sans-serif;font-size:30px;font-weight:700;letter-spacing:.06em;color:'+(isTop?'var(--gold)':'var(--green)')+';padding:8px 18px;background:rgba(212,168,67,.12);border:2px solid rgba(212,168,67,.3);border-radius:10px">'+s.last+'</div>'+
+      '</div>'+
+
+      /* 가운데 / 끝 분석 */
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+      ['mid','last'].map(function(k){
+        var str = k==='mid' ? s.mid : s.last;
+        var sc  = k==='mid' ? s.midScore : s.lastScore;
+        var oh  = k==='mid' ? s.oh1 : s.oh2;
+        var ns  = k==='mid' ? midNums : lastNums;
+        return '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">'+
+          '<div style="font-size:10px;color:var(--text-3);margin-bottom:6px">'+OH_E[oh]+' '+(k==='mid'?'가운데':'끝자리')+' '+str+' · '+oh+' 오행 · <strong style="color:'+OH_C[oh]+'">'+sc+'점</strong></div>'+
+          '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px">'+
+          ns.map(function(n){ return '<div class="lotto-ball '+ballClass(n)+'" style="width:26px;height:26px;font-size:9px">'+n+'</div>'; }).join('')+
+          '</div>'+
+          '<div style="height:5px;background:rgba(255,255,255,.07);border-radius:3px"><div style="height:100%;width:'+sc+'%;background:'+OH_C[oh]+';border-radius:3px;transition:width 1.3s ease"></div></div>'+
+          '</div>';
+      }).join('')+
+      '</div>'+
+
+      /* 로또 번호 */
+      '<div style="background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.15);border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<div style="font-size:10px;color:var(--gold);font-weight:600;margin-bottom:7px">🎰 이 번호로 추출되는 로또 행운 번호</div>'+
+      '<div style="display:flex;gap:5px;flex-wrap:wrap">'+
+      allNums.map(function(n){ return '<div class="lotto-ball '+ballClass(n)+'" style="width:32px;height:32px;font-size:10px">'+n+'</div>'; }).join('')+
+      '</div></div>'+
+
+      /* 좋은 이유 */
+      '<div style="display:flex;flex-direction:column;gap:3px">'+
+      (s.score>=90?'<div style="font-size:10px;color:var(--gold);padding:3px 8px;background:rgba(212,168,67,.08);border-radius:5px">🏆 종합 역학 에너지 <strong>'+s.score+'점 — 최고 등급 달성!</strong></div>':'')+
+      '<div style="font-size:10px;color:var(--green);padding:3px 8px;background:rgba(52,211,153,.06);border-radius:5px">✅ 가운데 '+s.mid+' — '+s.oh1+' 오행 에너지 <strong>'+s.midScore+'점</strong></div>'+
+      '<div style="font-size:10px;color:var(--green);padding:3px 8px;background:rgba(52,211,153,.06);border-radius:5px">✅ 끝자리 '+s.last+' — '+s.oh2+' 오행 에너지 <strong>'+s.lastScore+'점</strong></div>'+
+      '</div>'+
+      '</div>'
+    );
+  }).join('')+
+
+  '</div></div>'+
+
+  /* 비교 요약 */
+  '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px">'+
+  '<div style="font-size:12px;font-weight:700;color:var(--text-1);margin-bottom:12px">📊 에너지 비교</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 30px 1fr;gap:10px;align-items:center;text-align:center">'+
+  '<div style="padding:12px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:10px">'+
+  '<div style="font-size:10px;color:var(--text-3);margin-bottom:3px">현재 번호</div>'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:13px;color:var(--text-3);margin-bottom:4px">'+mid+'-'+last+'</div>'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:30px;font-weight:700;color:var(--red)">'+curScore+'<span style="font-size:11px">점</span></div>'+
+  '</div>'+
+  '<div style="font-size:22px;color:var(--text-3)">→</div>'+
+  '<div style="padding:12px;background:rgba(212,168,67,.08);border:2px solid rgba(212,168,67,.35);border-radius:10px">'+
+  '<div style="font-size:10px;color:var(--text-3);margin-bottom:3px">추천 번호 🥇</div>'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:13px;color:var(--gold);margin-bottom:4px">'+sets[0].mid+'-'+sets[0].last+'</div>'+
+  '<div style="font-family:Orbitron,sans-serif;font-size:30px;font-weight:700;color:var(--gold)">'+sets[0].score+'<span style="font-size:11px">점</span></div>'+
+  '</div>'+
+  '</div>'+
+  '<div style="margin-top:10px;padding:9px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:8px;font-size:12px;text-align:center;color:var(--text-2)">'+
+  '역학 에너지 <span style="color:var(--red);font-weight:700">'+curScore+'점</span> → <span style="color:var(--gold);font-weight:700">'+sets[0].score+'점</span>'+
+  ' (<span style="color:var(--green);font-weight:700">+'+(sets[0].score-curScore)+'점 향상</span>)'+
+  '</div></div>';
+
+  // 18개 역학 카드
+  var scores18c = calc18ForCheckNums(domOh, lifeNum, curScore, topPool.slice(0,5));
+  html += build18Cards(scores18c, 'check');
+
+  // 🔬 8개 역학+NASA 심층 분석 클릭 패널
+  html += buildDeepPanel('check', {domOh:domOh, lifeNum:lifeNum, baseScore:curScore, topNums:topPool.slice(0,5), context:'번호'});
+
+  document.getElementById('checkResult').innerHTML = html;
+}
+
 function toggle18Expert(cid) {
   var xEl = document.getElementById(cid+'_exp');
   var btnEl = document.getElementById(cid+'_btn');
@@ -41092,6 +41936,207 @@ list.innerHTML = scored.map(function(d){
       </div>
 
     </div>
+<!-- ===================== 🍀 행운 번호 (구앱 이식) ===================== -->
+<div class="page cgop" id="page-lotto" style="background:#f0fdf9;min-height:100vh;--acc:#b8860b;--acc2:#8a6508;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#10b981;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+
+  <!-- ★ 행운 번호 추출기 안내 팝업 (표준 _cgoFDIntro 통일 · C-60) -->
+  <script>
+  function _cgoLottoIntroPopup(){
+    if(typeof _cgoFDIntro!=='function') return;
+    _cgoFDIntro({
+      id:'ln-intro-pop', skipKey:'cgo_lotto_intro_skip_v2',
+      accent:'#d97706', accent2:'#b45309', ico:'🎰',
+      badge:'✦ 세계 최초 14대 역학 융합 번호 ✦',
+      title:'행운 번호 추출기', subtitle:'14대 역학 × NASA × 생체 융합 번호',
+      summary:'일반 생성기는 <b>완전 무작위</b>지만, 행운 번호 추출기는 <b>사주 일간 + 수비학 생명수 + NASA 실시간 행성 + (선택 시) rPPG 생체</b>를 시드로 <b>“당신만의 에너지 패턴 번호”</b>를 도출합니다. 같은 사람도 BPM·HRV가 변하면 다른 결과가 나와요.',
+      howtoLabel:'📋 사용법 5단계',
+      howto:[
+        '대시보드 정보 입력 + 자동 계산|이름·생년월일·성별 → ⚡ 자동 계산. 사주 일간·생명수·본명성이 결정돼요',
+        '추출 체계 선택|✨ 1단계 순수 / 🛰️ 2단계 NASA 통합 / 🧬 3단계 생체+통합 — 깊이를 단계별로',
+        '역학 선택|9개 역학 중 1가지 (사주·자미두수·점성술·수비학·기문둔갑·구성기학·타로·카발라·태을신수)',
+        '세트 수 선택 (3·5·7)|기본 5세트 추천. 1위가 🥇 최고 에너지',
+        '🎰 번호 추출 → 결과 확인|번호 + 정당성 막대그래프 + AI 상담 + 히스토리가 한 화면에'
+      ],
+      howto2Label:'🎯 3단계 추출 체계',
+      howto2:[
+        '✨ 1단계 — 순수 역학|한 가지 역학만 적용. 가장 단순·직접적. 입문 추천',
+        '🛰️ 2단계 — NASA 통합|역학 + JPL 실시간 5행성(태양·달·화·금·목) 융합. 매시간 다른 결과',
+        '🧬 3단계 — 생체+통합|역학 + NASA + rPPG 생체(BPM·HRV·CEI). 가장 깊은 분석'
+      ],
+      tip:'📊 14대 역학 정직 점수표 — 🔴 핵심4대: 사주(95)·수비학(92)·자미두수(90)·점성술(88) ILI 직접계산 / 🟡 보조5대: 기문·구성·타로·주역·성명. 결과 막대 = 기여도(60%)+구조적합도(40%). 💬 AI 상담·🔍 내 번호 분석·📋 히스토리도 제공돼요.',
+      note:'⚠️ <b>참고용 — 도박 권장 아님.</b> NASA 행성은 매시간 이동하고 rPPG 생체는 매 순간 변하므로, 같은 사람이 다시 추출하면 다른 번호가 나오는 게 정상이에요. 행운 숫자는 운명 보장이 아니며, 책임감 있는 사용을 권장합니다.',
+      btnLabel:'🎰 행운 번호 추출 시작하기'
+    });
+  }
+  (function(){
+    var _pg=document.getElementById('page-lotto');
+    if(!_pg) return;
+    new MutationObserver(function(){
+      if(_pg.classList.contains('active')){ _cgoLottoIntroPopup(); }
+    }).observe(_pg,{attributes:true,attributeFilter:['class']});
+  })();
+  </script>
+
+      <div class="cgop-top"><div class="cgop-logo"><span>🎰 행운 번호</span> <span style="font-size:.62em;font-weight:800;letter-spacing:.12em;opacity:.72;padding:1px 6px;border:1px solid currentColor;border-radius:6px;vertical-align:middle;">C-67</span></div></div>
+  <div class="cgop-hero" style="background:radial-gradient(ellipse at 30% 18%,rgba(184,134,11,.32),transparent 62%),linear-gradient(160deg,#3a2e0b,#2a1f0b);">
+    <div class="cgop-badge">사주 · 오행 행운 번호</div>
+    <div class="cgop-hero-ico">🎰</div>
+    <div class="cgop-hero-title">행운 번호</div>
+    <div class="cgop-hero-sub">사주와 오행 흐름을 분석해 오늘의 행운 번호를 추천합니다 · 참고용</div>
+  </div>
+      <div class="cgop-body lotto-wrap" style="color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;">
+        <div id="lotto-guide-banner" style="margin:0 0 12px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.3);border-radius:16px;overflow:hidden;position:relative;">
+          <div style="padding:11px 16px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(251,191,36,0.15)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">💡</span>
+              <span style="font-size:13px;font-weight:700;color:#b45309">🎰 행운 번호 최적화 방법</span>
+            </div>
+            <div onclick="this.closest('#lotto-guide-banner').style.display='none'" style="font-size:16px;color:rgba(148,163,184,0.4);cursor:pointer;padding:2px 4px">✕</div>
+          </div>
+          <div style="padding:11px 16px">
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(51,65,85,0.85)">
+                <span style="width:20px;height:20px;border-radius:50%;background:rgba(251,191,36,0.25);border:1px solid rgba(251,191,36,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#b45309;flex-shrink:0">1</span>
+                <span>🏠 대시보드 → <b style="color:#b45309">정보 입력</b> 후 ⚡ <b style="color:#b45309">자동 계산</b> 완료</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(51,65,85,0.85)">
+                <span style="width:20px;height:20px;border-radius:50%;background:rgba(251,191,36,0.25);border:1px solid rgba(251,191,36,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#b45309;flex-shrink:0">2</span>
+                <span>✍️ <b style="color:#b45309">작명 서비스</b>까지 분석 → 50대 역학 중이 <b style="color:#0f172a">내 사주에 최적화</b></span>
+              </div>
+            </div>
+            <button onclick="cgoSoftGo('dashboard')" style="width:100%;padding:8px;border-radius:8px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">지금 입력하러 가기 →</button>
+          </div>
+        </div>
+
+        <!-- 배너 -->
+        <div class="lotto-banner">
+          <div class="lotto-banner-title">🎰 행운 번호 추출기</div>
+          <div class="lotto-banner-sub">
+            사주 · 자미두수 · 기문둔갑 · 구성학 · 주역 · 수비학 · 성명학 · 점성술 · NASA · 육임신살 · 카발라 · 타로 · 태을신수 외<br>
+            <b>50대 역학 중 에너지</b>를 결합하여 당신만의 행운 번호를 도출합니다
+          </div>
+          <div class="lotto-disclaimer">
+            ✨ 본 번호는 50대 역학 중 에너지 + 생체 리듬 + NASA 실시간 데이터 기반 참고용입니다. 당신만의 고유 에너지 패턴에 맞는 행운 숫자를 도출합니다.
+          </div>
+        </div>
+
+        <!-- 탭 메뉴 -->
+        <div style="display:flex;gap:8px;margin-bottom:2px">
+          <button class="lotto-tab-btn active" id="tabLotto" onclick="switchLottoTab('lotto')">🎰 행운 번호 추출</button>
+          <button class="lotto-tab-btn" id="tabCheck" onclick="switchLottoTab('check')">🔍 내 번호 역학 분석</button>
+        </div>
+
+        <!-- 탭1: 행운 번호 추출 -->
+        <div id="tabPaneLotto" class="lotto-tab-pane">
+        <div class="lotto-input-panel">
+          <div class="lotto-input-title">🔮 에너지 기반 번호 추출 설정</div>
+          <!-- 1행: 생년월일 (단독) -->
+          <div class="lotto-form" style="grid-template-columns:1fr;margin-bottom:10px;">
+            <div class="lotto-group">
+              <div class="lotto-label">생년월일 (또는 대시보드에서 자동)</div>
+              <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:5px">
+              <input class="lotto-field" id="ltBirthY" type="number" min="1900" max="2025" placeholder="년도" style="font-size:14px;text-align:center;color:var(--text-1);font-weight:600" oninput="syncLtBirth()">
+              <input class="lotto-field" id="ltBirthM" type="number" min="1" max="12" placeholder="월" style="font-size:14px;text-align:center;color:var(--text-1);font-weight:600" oninput="syncLtBirth()">
+              <input class="lotto-field" id="ltBirthD" type="number" min="1" max="31" placeholder="일" style="font-size:14px;text-align:center;color:var(--text-1);font-weight:600" oninput="syncLtBirth()">
+            </div>
+            <input type="hidden" id="ltBirth">
+            </div>
+          </div>
+          <!-- 2행: 추출 체계 + 역학 선택 -->
+          <div class="lotto-form" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">
+            <div class="lotto-group">
+              <div class="lotto-label">추출 체계</div>
+              <select class="lotto-field" id="ltSystem" onchange="lottoUpdateSysMethods()">
+                <option value="pure">✨ 1단계 — 순수 역학</option>
+                <option value="nasa">🛰️ 2단계 — NASA 통합</option>
+                <option value="bio" selected>🧬 3단계 — 생체+통합</option>
+              </select>
+            </div>
+            <div class="lotto-group">
+              <div class="lotto-label">주력 역학 선택</div>
+              <select class="lotto-field" id="ltMethod">
+                <!-- 옵션은 lottoUpdateSysMethods() 가 동적 생성 -->
+              </select>
+            </div>
+          </div>
+          <!-- 3행: 세트 수 + 추출 버튼 -->
+          <div class="lotto-form" style="grid-template-columns:1fr 140px;">
+            <div class="lotto-group">
+              <div class="lotto-label">세트 수</div>
+              <select class="lotto-field" id="ltSets">
+                <option value="3">3세트</option>
+                <option value="5" selected>5세트</option>
+                <option value="7">7세트</option>
+              </select>
+            </div>
+            <div class="lotto-group">
+              <button class="lotto-gen-btn" onclick="runLotto()">🎰 번호 추출</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 결과 영역 -->
+        <div id="lottoResult">
+          <div class="lotto-wait">
+            <div class="lotto-wait-icon">🎰</div>
+            <div style="font-size:14px;color:var(--text-2);margin-bottom:6px">대시보드 자동 계산 후 이 페이지를 열거나</div>
+            <div style="font-size:13px">생년월일을 입력하고 🎰 번호 추출 버튼을 눌러주세요</div>
+          </div>
+        </div>
+        </div><!-- /tabPaneLotto -->
+
+        <!-- 탭2: 내 번호 역학 분석 -->
+        <div id="tabPaneCheck" class="lotto-tab-pane" style="display:none">
+        <div class="lotto-input-panel">
+          <div class="lotto-input-title">📱 내 번호 역학 에너지 분석</div>
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.8">
+            평소 자주 쓰는 <strong style="color:var(--gold)">스마트폰 번호</strong>를 입력하시면<br>
+            역학 에너지로 분석하여 <strong style="color:var(--gold)">행운 번호 5개</strong>를 추천해드립니다!
+          </div>
+
+          <!-- 전화번호 입력 -->
+          <div style="background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.2);border-radius:12px;padding:16px;margin-bottom:12px">
+            <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;letter-spacing:.05em">📱 스마트폰 번호 입력</div>
+            <div style="display:grid;grid-template-columns:100px 1fr 100px;gap:8px;align-items:center">
+              <select class="lotto-field" id="phonePrefix" style="text-align:center">
+                <option>010</option>
+                <option>011</option>
+                <option>016</option>
+                <option>017</option>
+                <option>018</option>
+                <option>019</option>
+              </select>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <input class="lotto-field" id="phoneMid" type="text" maxlength="4" placeholder="0000" style="text-align:center;font-size:16px;font-family:Orbitron,sans-serif;letter-spacing:.1em">
+                <input class="lotto-field" id="phoneLast" type="text" maxlength="4" placeholder="0000" style="text-align:center;font-size:16px;font-family:Orbitron,sans-serif;letter-spacing:.1em">
+              </div>
+              <button class="lotto-gen-btn" onclick="runCheckNums()" style="height:100%;font-size:12px">🔍 분석</button>
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-3);text-align:center">
+              예) 010 — <span style="font-family:Orbitron,sans-serif;color:var(--gold)">8408</span> — <span style="font-family:Orbitron,sans-serif;color:var(--gold)">8944</span>
+            </div>
+          </div>
+
+          <div style="font-size:11px;color:var(--text-3);padding:8px 12px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:8px;line-height:1.8">
+            🔒 입력하신 번호는 분석에만 사용되며 저장되지 않습니다<br>
+            📊 번호 속 숫자들의 역학 에너지를 분석하여 부족한 에너지를 채워드립니다
+          </div>
+        </div>
+        <div id="checkResult">
+          <div class="lotto-wait" style="padding:30px 20px">
+            <div style="font-size:36px;margin-bottom:10px">📱</div>
+            <div style="font-size:14px;color:var(--text-2);margin-bottom:6px">스마트폰 번호를 입력하고</div>
+            <div style="font-size:13px;color:var(--text-3)">🔍 분석 버튼을 눌러주세요</div>
+          </div>
+        </div>
+        </div><!-- /tabPaneCheck -->
+
+        <!-- 탭3: 커플 궁합 분석 -->
+
+      </div>
+    </div>
+
 <div class="page cgop" id="page-report-v2" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--bg-deep2:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;">
   <!-- ━━━━━━━ Chapter I: 18개 분야 ━━━━━━━ -->
   <div class="rfu-chap">
