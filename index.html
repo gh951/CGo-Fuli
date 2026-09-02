@@ -12924,8 +12924,7 @@ function cgoGoPage(page){
   /* 공유받은 화면에서 대시보드로 나가면 그 상태를 버린다 — 자기 정보로 시작한다 */
   try{
     if(page==='dashboard' && window._cgoShareMode){
-      window._cgoShareMode=null;
-      var _sb=document.getElementById('cgo-share-band'); if(_sb) _sb.remove();
+      if(window.cgoShareReset) window.cgoShareReset();
     }
   }catch(e){}
   try{
@@ -12993,7 +12992,9 @@ function cgoGoPage(page){
     } catch(e){}
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
-  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
+  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){}
+    try{ if(window.cgoShareBtn) setTimeout(function(){ cgoShareBtn('stock','stk-share-slot'); }, 80); }catch(e){}
+  }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
@@ -14655,7 +14656,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-q';
+  var ver='CGO-FULI v2026.09.02-s';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25647,7 +25648,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-q';
+window.CGO_VER='2026.09.02-s';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -25892,11 +25893,17 @@ window._cgoLater=function(fn){
       if(typeof cgoGoPage==='function') cgoGoPage(h);
       try{
         var sh=window.cgoShareIncoming&&window.cgoShareIncoming();
-        if(sh && sh.feat==='stock' && window.stkShareRestore){
+        if(sh && sh.data){
           setTimeout(function(){
-            window._cgoShareMode='stock';
-            stkShareRestore(sh.data);
-            if(window.cgoShareBanner) cgoShareBanner('stock', sh.data&&sh.data.nm);
+            /* 공통 길 — 페이지가 스스로 전체를 그린다 */
+            if(sh.data.cr && window.cgoSharePageRestore){
+              cgoSharePageRestore(sh.feat, sh.data);
+              if(window.cgoShareBanner) cgoShareBanner(sh.feat, (sh.data.cr||{}).name);
+            } else if(sh.feat==='stock' && window.stkShareRestore){
+              window._cgoShareMode='stock';
+              stkShareRestore(sh.data);
+              if(window.cgoShareBanner) cgoShareBanner('stock', sh.data&&sh.data.nm);
+            }
           }, 220);
         }
       }catch(e){}
@@ -26015,11 +26022,106 @@ window.cgoShareBanner=function(feat, nm){
 /* 공유 상태를 버리고 내 것으로 — 로고를 눌러 나가도 같은 길을 탄다 */
 window.cgoShareExit=function(){
   try{
-    window._cgoShareMode=null;
-    var b=document.getElementById('cgo-share-band'); if(b) b.remove();
-    history.replaceState(null,'',location.pathname+location.search);
+    if(window.cgoShareReset) window.cgoShareReset();
     if(window.cgoOpenInfoInput) cgoOpenInfoInput();
     else if(window.cgoGoPage) cgoGoPage('dashboard');
+  }catch(e){}
+};
+/* ══════════════════════════════════════════════════════════════
+   ★ 모든 페이지에 쓰는 공통 링크 공유
+
+   페이지별로 되살리는 코드를 쓰지 않는다.
+   페이지는 calcResult(셈해 둔 사주 결과)만 있으면 스스로 전체를 그린다.
+   그러니 그 결과에서 「생년월일·이름」만 떼고 담으면 된다.
+
+   담는 것    일간·오행·점수·ILI 같은 셈해 둔 결과
+   안 담는 것 y·m·d(생년월일) · birth · 이름 원본 · 성별
+
+   「금(金) 일간」에서 생년월일을 되짚을 수는 없다 — 그 해에 태어난 사람이 수백만이다.
+
+   대시보드로 나가면 그 결과를 버린다 → 그 페이지도 다시 못 들어간다.
+   자기 정보를 넣어야 열린다. 그것이 이 구조의 뜻이다.
+   ══════════════════════════════════════════════════════════════ */
+window.CGO_SHARE_DROP = ['y','m','d','birth','gender','wz'];   /* 링크에 담지 않는다 */
+window.cgoSharePagePack=function(pageId){
+  try{
+    var r=window.calcResult||{};
+    var out={};
+    Object.keys(r).forEach(function(k){
+      if(window.CGO_SHARE_DROP.indexOf(k)>=0) return;
+      if(k==='name'){ out.name=window.cgoMaskName(r[k]); return; }
+      out[k]=r[k];
+    });
+    /* 그 페이지가 따로 쥐고 있는 것 */
+    var extra={};
+    if(pageId==='stock' && window.stkSelected){
+      extra.stk={n:window.stkSelected.n, t:window.stkSelected.t, c:window.stkSelected.c,
+                 s:window.stkSelected.s, e:window.stkSelected.e, ei:window.stkSelected.ei,
+                 f:window.stkSelected.f};
+      extra.lanes=Object.keys(window.csiLanes||{}).filter(function(k){ return window.csiLanes[k]; });
+      extra.yeok=Object.keys(window.csiYeokPick||{}).filter(function(k){ return window.csiYeokPick[k]; });
+      extra.co=window._stkCountryFilter||'all';
+    }
+    return {cr:out, ex:extra, at:new Date().toISOString().slice(0,16).replace('T',' ')};
+  }catch(e){ return null; }
+};
+/* 어느 페이지에서든 부를 수 있는 공유 주소 */
+window.cgoSharePageUrl=function(pageId){
+  var d=window.cgoSharePagePack(pageId);
+  if(!d) return '';
+  return window.cgoShareMake(pageId, d, pageId);
+};
+/* 받은 것을 얹는다 — 페이지가 스스로 그린다 */
+window.cgoSharePageRestore=function(pageId, d){
+  try{
+    if(!d) return;
+    window._cgoShareMode=pageId;
+    window._cgoShareBackup=window.calcResult||null;
+    window.calcResult=Object.assign({}, d.cr||{});
+    var ex=d.ex||{};
+    if(pageId==='stock'){
+      if(ex.stk){ window.stkSelected=ex.stk; try{ stkSelected=ex.stk; }catch(e){} }
+      if(ex.lanes && window.csiLanes){
+        Object.keys(window.csiLanes).forEach(function(k){ window.csiLanes[k]=(ex.lanes.indexOf(k)>=0); });
+      }
+      if(ex.yeok && window.csiYeokPick){
+        Object.keys(window.csiYeokPick).forEach(function(k){ delete window.csiYeokPick[k]; });
+        ex.yeok.forEach(function(k){ window.csiYeokPick[k]=1; });
+      }
+      if(ex.co) window._stkCountryFilter=ex.co;
+      try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){}
+      try{ if(window.csiRenderYeok) csiRenderYeok(); }catch(e){}
+      try{ if(window.stkShowSelectedChip && ex.stk) stkShowSelectedChip(ex.stk); }catch(e){}
+      try{ if(window.runStockAnalysis) runStockAnalysis(); }catch(e){}
+    }
+    try{ if(window._stkRepaint) _stkRepaint(); }catch(e){}
+  }catch(e){}
+};
+/* 공유 상태를 버린다 — 대시보드로 나가면 그 페이지도 다시 못 들어간다 */
+window.cgoShareReset=function(){
+  try{
+    window._cgoShareMode=null;
+    window.calcResult=null;                       /* 남의 결과를 지운다 */
+    window._cgoShareBackup=null;
+    var b=document.getElementById('cgo-share-band'); if(b) b.remove();
+    history.replaceState(null,'',location.pathname+location.search);
+  }catch(e){}
+};
+/* 어느 페이지에나 붙는 공유 단추 — 자리를 주면 그 안에 넣는다 */
+window.cgoShareBtn=function(pageId, hostId){
+  try{
+    if(window._cgoShareMode) return;              /* 공유받은 화면에는 안 붙인다 */
+    var host=document.getElementById(hostId);
+    if(!host || document.getElementById('cgo-share-btn-'+pageId)) return;
+    var b=document.createElement('button');
+    b.type='button';
+    b.id='cgo-share-btn-'+pageId;
+    b.setAttribute('onclick', "cgoShareCopy(cgoSharePageUrl('"+pageId+"'),this)");
+    b.style.cssText='padding:7px 11px;background:#fff;border:1px solid rgba(52,211,153,.45);'
+      +'border-radius:9px;font-size:10.5px;font-weight:800;color:#059669;cursor:pointer;'
+      +'font-family:inherit;white-space:nowrap;';
+    b.innerHTML='<span data-k="22503">🔗 이 분석 공유하기</span>';
+    host.appendChild(b);
   }catch(e){}
 };
 /* ★ 주식 결과를 공유 꼴로 — 숫자만 담는다. 생년월일은 담지 않는다. */
@@ -40953,7 +41055,8 @@ list.innerHTML = scored.map(function(d){
 
         <!-- 🌍 국가별 국기 필터 (펼침 · 그리드 · C-60) -->
         <div style="background:var(--bg-card);border:1px solid rgba(167,139,250,0.22);border-radius:14px;padding:14px 16px;">
-          <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span data-k="21157">🌍 국가별 보기</span></div>
+          <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span data-k="21157">🌍 국가별 보기</span>
+            <span id="stk-share-slot" style="margin-left:auto;display:flex;gap:6px;"></span></div>
           <div id="stk-country-chips" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:7px;"></div>
         </div>
 
@@ -87679,6 +87782,18 @@ function stkDBSearch(q) {
   }).slice(0, 8);
 }
 
+/* 검색창 밖을 누르면 목록을 닫는다 */
+(function(){
+  if(window._stkBlurBind) return; window._stkBlurBind=1;
+  document.addEventListener('click', function(ev){
+    try{
+      var s=document.getElementById('stk-search'), d=document.getElementById('stk-dropdown');
+      if(!s||!d||d.style.display==='none') return;
+      if(ev.target===s || d.contains(ev.target)) return;
+      d.style.display='none';
+    }catch(e){}
+  }, true);
+})();
 function stkSearchInput(val) {
   var dd = document.getElementById('stk-dropdown');
   if (!val || val.length < 1) { dd.style.display = 'none'; return; }
@@ -89489,6 +89604,17 @@ function stkTimeline() {
 function runStockAnalysis() {
   var searchVal = (document.getElementById('stk-search')||{value:''}).value.trim();
   if (!searchVal) { alert('회사명을 입력해주세요.'); return; }
+  try{
+    var _dd=document.getElementById('stk-dropdown');
+    if(_dd && _dd.style.display!=='none'){
+      /* 아직 고르지 않았으면 목록의 첫 항목을 대신 고른다 */
+      if(!window.stkSelected || String(window.stkSelected.n||'').toLowerCase()!==searchVal.toLowerCase()){
+        var _first=_dd.querySelector('[onclick]');
+        if(_first){ _first.click(); }
+      }
+      _dd.style.display='none';
+    }
+  }catch(e){}
   var _st0=document.getElementById('stk-ai-status'); if(_st0){ _st0.style.display='none'; _st0.innerHTML=''; }
 
   // 1) stkSelected 없거나 이름이 다르면 DB 재검색
