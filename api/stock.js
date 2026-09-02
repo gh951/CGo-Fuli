@@ -1,126 +1,186 @@
-// ─────────────────────────────────────────────────────────────
-// api/stock.js · CGO-FULI 글로벌 시세 프록시 (멀티소스 폴백 + 캐싱)
-// ─────────────────────────────────────────────────────────────
-// 구조(정직): 무료 우선 → 무료 → 유료(폴백) 순서로 시도.
-//   1) Yahoo Finance (무료, 다국적, 지연시세)   ← 메인
-//   2) stooq.com    (무료, CSV, 미국·유럽 일부)  ← 백업
-//   3) Twelve Data  (유료 키, 위 둘 다 실패 시)   ← 최후 폴백
-// + 메모리 캐싱(30분): 같은 종목 반복 호출을 줄여 비용/한도 절약.
-//   (주의: 서버리스 인스턴스 단위 캐시라 완전 공유는 아님.
-//    더 강한 공유 캐시는 추후 Vercel KV로 업그레이드 가능.)
-// 프론트 호출: /api/stock?symbol=AAPL&cc=US  /  ?symbol=005930&cc=KR
-// 환경변수(선택): TWELVE_DATA_KEY  (없어도 무료 소스로 동작)
-// ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  /api/stock  —  실시간 시세 한 자리
+//
+//  앱이 부르는 모양      /api/stock?symbol=005930&cc=KR
+//  앱이 기다리는 답      { ok:true, price:71800, percent:1.24, currency:'KRW' }
+//
+//  ★ 값이 들지 않는다. 열쇠도 필요 없다.
+//    Yahoo 의 공개 시세 자리를 쓰고, 같은 종목은 60초 동안 기억해
+//    손님이 여러 번 눌러도 밖으로는 한 번만 나간다.
+//
+//  ★ 종목코드에 나라 꼬리를 붙인다.
+//    삼성전자는 005930 이지만 Yahoo 에서는 005930.KS 다.
+//    코스닥이면 .KQ 이므로 둘을 차례로 두드린다.
+// ══════════════════════════════════════════════════════════════
 
-var _cache = global.__stkCache || (global.__stkCache = new Map());
-var TTL = 30 * 60 * 1000; // 30분 캐싱
+// 나라 → 꼬리. 앞의 것부터 두드리고, 값이 나오면 그것으로 끝낸다.
+const SUFFIX = {
+  KR: ['.KS', '.KQ'],          // 코스피 · 코스닥
+  US: [''],                    // 뉴욕·나스닥은 꼬리가 없다
+  JP: ['.T'],
+  CN: ['.SS', '.SZ'],          // 상하이 · 선전
+  HK: ['.HK'],
+  TW: ['.TW', '.TWO'],
+  GB: ['.L'],  UK: ['.L'],
+  DE: ['.DE', '.F'],
+  FR: ['.PA'],
+  NL: ['.AS'],
+  BE: ['.BR'],
+  IT: ['.MI'],
+  ES: ['.MC'],
+  PT: ['.LS'],
+  IE: ['.IR'],
+  AT: ['.VI'],
+  CH: ['.SW'],
+  SE: ['.ST'],
+  NO: ['.OL'],
+  DK: ['.CO'],
+  FI: ['.HE'],
+  IS: ['.IC'],
+  PL: ['.WA'],
+  HU: ['.BD'],
+  CZ: ['.PR'],
+  GR: ['.AT'],
+  TR: ['.IS'],
+  RU: ['.ME'],
+  IL: ['.TA'],
+  SA: ['.SR'],
+  AE: ['.AE'],
+  IN: ['.NS', '.BO'],          // NSE · BSE
+  ID: ['.JK'],
+  MY: ['.KL'],
+  TH: ['.BK'],
+  PH: ['.PS'],
+  SG: ['.SI'],
+  VN: ['.VN'],
+  AU: ['.AX'],
+  NZ: ['.NZ'],
+  CA: ['.TO', '.V'],
+  BR: ['.SA'],
+  MX: ['.MX'],
+  CL: ['.SN'],
+  AR: ['.BA'],
+  ZA: ['.JO']
+};
 
-// 국가코드 → 야후 거래소 접미사
-function yahooSuffix(cc){
-  var M = {US:'',KR:'.KS',JP:'.T',HK:'.HK',GB:'.L',DE:'.DE',FR:'.PA',IT:'.MI',
-    NL:'.AS',BE:'.BR',ES:'.MC',SE:'.ST',NO:'.OL',FI:'.HE',DK:'.CO',PT:'.LS',
-    IE:'.IR',CH:'.SW',AT:'.VI',IN:'.NS',ID:'.JK',BR:'.SA',CA:'.TO',AU:'.AX',
-    PL:'.WA',GR:'.AT',TW:'.TW',SG:'.SI',MY:'.KL',NZ:'.NZ',ZA:'.JO'};
-  return M.hasOwnProperty(cc) ? M[cc] : null;
+// 60초 기억 — 같은 종목을 여러 번 눌러도 밖으로는 한 번만 나간다
+const CACHE = new Map();
+const TTL = 60 * 1000;
+
+function cacheGet(k) {
+  const hit = CACHE.get(k);
+  if (!hit) return null;
+  if (Date.now() - hit.at > TTL) { CACHE.delete(k); return null; }
+  return hit.v;
 }
-function yahooSymbol(symbol, cc){
-  if(symbol.indexOf('.') >= 0) return symbol;        // 이미 접미사 있음
-  if(cc === 'CN'){                                    // 중국: 상하이6→.SS, 선전0/3→.SZ
-    if(/^6/.test(symbol)) return symbol + '.SS';
-    if(/^[03]/.test(symbol)) return symbol + '.SZ';
-    return symbol + '.SS';
+function cacheSet(k, v) {
+  CACHE.set(k, { v, at: Date.now() });
+  // 너무 커지지 않게 — 오래된 것부터 버린다
+  if (CACHE.size > 400) {
+    const first = CACHE.keys().next().value;
+    CACHE.delete(first);
   }
-  var sfx = yahooSuffix(cc);
-  return (sfx != null) ? (symbol + sfx) : symbol;
 }
 
-// ① Yahoo Finance (무료)
-async function fromYahoo(symbol, cc){
-  var ysym = yahooSymbol(symbol, cc);
-  var url = 'https://query1.finance.yahoo.com/v8/finance/chart/'
-    + encodeURIComponent(ysym) + '?range=1d&interval=1d';
-  var r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if(!r.ok) throw new Error('yahoo http ' + r.status);
-  var d = await r.json();
-  var res = d && d.chart && d.chart.result && d.chart.result[0];
-  if(!res || !res.meta) throw new Error('yahoo nodata');
-  var m = res.meta;
-  var price = m.regularMarketPrice;
-  var prev = m.chartPreviousClose != null ? m.chartPreviousClose : m.previousClose;
-  if(price == null) throw new Error('yahoo noprice');
-  var pct = (prev && prev !== 0) ? ((price - prev) / prev * 100) : null;
-  return { ok:true, symbol:ysym, price:price, percent:pct,
-    currency:m.currency || '', exchange:m.exchangeName || '', source:'yahoo' };
-}
+// Yahoo 한 자리를 두드린다. 값이 없으면 null 을 돌려 다음 꼬리로 넘긴다.
+async function ask(sym) {
+  const url = 'https://query1.finance.yahoo.com/v8/finance/chart/'
+    + encodeURIComponent(sym) + '?interval=1d&range=5d';
+  const r = await fetch(url, {
+    headers: {
+      // 이 머리글이 없으면 막는 일이 있다
+      'User-Agent': 'Mozilla/5.0 (compatible; CGO-FULI/1.0)',
+      'Accept': 'application/json'
+    }
+  });
+  if (!r.ok) return null;
 
-// ② stooq.com (무료 CSV)
-async function fromStooq(symbol, cc){
-  var ssym = symbol.toLowerCase();
-  if(cc === 'US' && ssym.indexOf('.') < 0) ssym += '.us';
-  var url = 'https://stooq.com/q/l/?s=' + encodeURIComponent(ssym) + '&f=sd2t2ohlcv&h&e=csv';
-  var r = await fetch(url);
-  if(!r.ok) throw new Error('stooq http');
-  var txt = await r.text();
-  var lines = txt.trim().split('\n');
-  if(lines.length < 2) throw new Error('stooq nodata');
-  var cols = lines[1].split(',');           // Symbol,Date,Time,Open,High,Low,Close,Volume
-  var close = parseFloat(cols[6]);
-  var open = parseFloat(cols[3]);
-  if(!isFinite(close) || close === 0) throw new Error('stooq noprice');
-  var pct = (isFinite(open) && open !== 0) ? ((close - open) / open * 100) : null;
-  return { ok:true, symbol:symbol, price:close, percent:pct,
-    currency:'', exchange:'stooq', source:'stooq' };
-}
+  const j = await r.json();
+  const res = j && j.chart && j.chart.result && j.chart.result[0];
+  const m = res && res.meta;
+  if (!m) return null;
 
-// ③ Twelve Data (유료 키 · 최후 폴백)
-async function fromTwelve(symbol, cc, key){
-  var isKR = (cc === 'KR');
-  var url = 'https://api.twelvedata.com/quote?symbol=' + encodeURIComponent(symbol)
-    + (isKR ? '&exchange=KRX' : '') + '&apikey=' + encodeURIComponent(key);
-  var r = await fetch(url);
-  var d = await r.json();
-  if(!d || d.status === 'error' || d.code) throw new Error('twelve');
-  var price = parseFloat(d.close);
-  if(!isFinite(price)) throw new Error('twelve noprice');
-  return { ok:true, symbol:symbol, price:price,
-    percent:(d.percent_change != null ? parseFloat(d.percent_change) : null),
-    currency:d.currency || '', exchange:d.exchange || '', source:'twelvedata' };
-}
+  const price = (m.regularMarketPrice != null) ? m.regularMarketPrice : null;
+  if (price == null) return null;
 
-export default async function handler(req, res){
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  if(req.method === 'OPTIONS'){ res.status(200).end(); return; }
+  // 어제 종가 — 등락률을 셈하는 밑이다
+  let prev = (m.chartPreviousClose != null) ? m.chartPreviousClose
+           : (m.previousClose != null) ? m.previousClose : null;
 
-  var symbol = (req.query.symbol || '').toString().trim();
-  var cc = (req.query.cc || req.query.country || '').toString().trim().toUpperCase();
-  if(!symbol){ res.status(200).json({ ok:false, reason:'NO_SYMBOL', msg:'종목 심볼이 없습니다.' }); return; }
-
-  // 캐시 확인
-  var ckey = symbol + '|' + cc;
-  var hit = _cache.get(ckey);
-  if(hit && (Date.now() - hit.t) < TTL){
-    res.status(200).json(Object.assign({ cached:true }, hit.v));
-    return;
+  // meta 에 없으면 5일치 종가에서 직전 값을 찾는다
+  if (prev == null) {
+    try {
+      const closes = res.indicators.quote[0].close.filter(v => v != null);
+      if (closes.length >= 2) prev = closes[closes.length - 2];
+    } catch (_) {}
   }
 
-  var out = null;
-  // 1) Yahoo (무료)
-  try { out = await fromYahoo(symbol, cc); } catch(e){}
-  // 2) stooq (무료)
-  if(!out){ try { out = await fromStooq(symbol, cc); } catch(e){} }
-  // 3) Twelve Data (유료 폴백) — 키 있을 때만
-  if(!out){
-    var key = process.env.TWELVE_DATA_KEY;
-    if(key){ try { out = await fromTwelve(symbol, cc, key); } catch(e){} }
-  }
+  const percent = (prev != null && prev !== 0)
+    ? ((price - prev) / prev) * 100
+    : null;
 
-  if(!out){
-    res.status(200).json({ ok:false, reason:'NOT_FOUND', msg:'시세를 찾지 못했습니다.' });
-    return;
-  }
-  _cache.set(ckey, { t:Date.now(), v:out });
-  // 캐시 과대 방지(최대 2000종목 유지)
-  if(_cache.size > 2000){ var k0 = _cache.keys().next().value; _cache.delete(k0); }
-  res.status(200).json(out);
+  return {
+    ok: true,
+    price,
+    percent: (percent == null) ? null : Math.round(percent * 100) / 100,
+    currency: (m.currency || 'USD').toUpperCase(),
+    symbol: sym,
+    exchange: m.exchangeName || m.fullExchangeName || null
+  };
 }
+
+module.exports = async (req, res) => {
+  // 앱과 같은 곳에서 부르므로 넓게 열 필요가 없다
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  // 서버 앞단에서도 60초 기억 — 손님이 몰려도 밖으로는 한 번만 나간다
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+
+  try {
+    const q = req.query || {};
+    const raw = String(q.symbol || '').trim();
+    const cc = String(q.cc || '').trim().toUpperCase();
+
+    if (!raw) {
+      return res.status(200).json({ ok: false, error: 'no symbol' });
+    }
+    // 이상한 글자는 받지 않는다
+    if (!/^[A-Za-z0-9][A-Za-z0-9.\-]{0,15}$/.test(raw)) {
+      return res.status(200).json({ ok: false, error: 'bad symbol' });
+    }
+
+    const key = cc + '|' + raw.toUpperCase();
+    const hit = cacheGet(key);
+    if (hit) return res.status(200).json(hit);
+
+    // 두드릴 이름들을 짓는다
+    const list = [];
+    if (raw.includes('.')) {
+      // 이미 꼬리가 붙어 있으면 그대로
+      list.push(raw);
+    } else {
+      const sufs = SUFFIX[cc] || [''];
+      for (const s of sufs) list.push(raw + s);
+      // 나라를 모르면 여섯 자리 숫자는 한국으로 본다
+      if (!SUFFIX[cc] && /^\d{6}$/.test(raw)) { list.push(raw + '.KS', raw + '.KQ'); }
+      // 꼬리 없이도 한 번 (미국 종목이 cc 없이 올 때)
+      if (list.indexOf(raw) < 0) list.push(raw);
+    }
+
+    for (const sym of list) {
+      let out = null;
+      try { out = await ask(sym); } catch (_) {}
+      if (out) {
+        cacheSet(key, out);
+        return res.status(200).json(out);
+      }
+    }
+
+    // 못 찾았다 — 앱은 「미지원」으로 안내하고 사주 분석은 그대로 보여 준다
+    const miss = { ok: false, error: 'not found', tried: list };
+    cacheSet(key, miss);
+    return res.status(200).json(miss);
+
+  } catch (e) {
+    return res.status(200).json({ ok: false, error: String((e && e.message) || e) });
+  }
+};
