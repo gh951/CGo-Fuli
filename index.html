@@ -12979,7 +12979,11 @@ function cgoGoPage(page){
     } catch(e){}
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
-  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
+  if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){}
+    /* 뉴스 갈래가 켜져 있으면 들어올 때 받아온다 */
+    try{ ['econ','geo'].forEach(function(k){
+      if(window.csiLanes && window.csiLanes[k] && window.cgoLoadNews) cgoLoadNews(k); }); }catch(e){}
+  }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
@@ -14641,7 +14645,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-l';
+  var ver='CGO-FULI v2026.09.02-m';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25592,10 +25596,20 @@ window.cgoLoadNews=function(kind){
     .then(function(j){
       var it=(j&&j.items)||[];
       N[K]=it; N.at[K]=Date.now();
+      N.why=N.why||{};
+      N.why[K]= it.length ? '' :
+        (!j ? '응답 없음'
+         : (j.error ? ('서버: '+String(j.error).slice(0,40))
+         : (j.choices ? '/api/news 가 없습니다 (다른 문이 답했습니다)'
+         : '기사 0건')));
       try{ if(window.csiRenderLanes) csiRenderLanes(); }catch(e){}
       return it;
     })
-    .catch(function(){ N[K]=[]; N.at[K]=Date.now(); return []; });
+    .catch(function(e){
+      N[K]=[]; N.at[K]=Date.now();
+      N.why=N.why||{}; N.why[K]='연결 실패: '+String((e&&e.message)||e).slice(0,40);
+      return [];
+    });
 };
 /* AI 에게 넘길 덩이 — 받아 온 제목과 출처만 */
 window.cgoNewsBlock=function(){
@@ -25634,7 +25648,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-l';
+window.CGO_VER='2026.09.02-m';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -88917,15 +88931,61 @@ function stkAlgoAnalysis(coIdx, myIdx) {
             score:score, trend:trends[ti], color:colors[ti]};
   });
 }
+function stkEnvAdj(){
+  var out={sum:0, parts:[]};
+  var LN=(window.csiLanes||{});
+  function tx(id){ var e=document.getElementById(id); return e?(e.textContent||'').trim():''; }
+  function num(s){ var m=String(s).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+
+  /* 위성 — 궤도가 높으면 시야가 넓다. 408km 를 기준으로 ±1pt */
+  if(LN.sat){
+    var alt=num(tx('cgoSatAlt'));
+    var v=(alt==null)?0:Math.max(-1, Math.min(1, (alt-408)/20));
+    out.sum+=v; out.parts.push({k:'sat', v:v});
+  }
+  /* 날씨 — 사람이 견디기 좋은 20~24°C 를 가운데로 ±1pt */
+  if(LN.wea){
+    var t=num(tx('cgoWeatherTempBar'));
+    var v2=(t==null)?0:Math.max(-1, Math.min(1, (22-Math.abs(t-22))/10));
+    out.sum+=v2; out.parts.push({k:'wea', v:v2});
+  }
+  /* 방위 — 오늘의 길방과 지금 향한 쪽이 가까울수록 ±1pt */
+  if(LN.dir){
+    var d=num(tx('cgoCompassDegBar'));
+    var g=(window.cgoNaviGood!=null)?window.cgoNaviGood:null;
+    var v3=0;
+    if(d!=null && g!=null){
+      var gap=Math.abs(((d-g+540)%360)-180);      /* 0=정면 · 180=등짐 */
+      v3=Math.max(-1, Math.min(1, (90-gap)/90));
+    }
+    out.sum+=v3; out.parts.push({k:'dir', v:v3});
+  }
+  /* 생체 — rPPG 로 실측한 오늘의 결. 어디에도 없는 겹이라 ±2pt 로 가장 무겁다 */
+  if(LN.bio){
+    var ili=(window.calcResult&&window.calcResult.ili)||null;
+    var v4=(ili==null)?0:Math.max(-2, Math.min(2, (ili-50)/25));
+    out.sum+=v4; out.parts.push({k:'bio', v:v4});
+  }
+  /* 거래소 — 그 거래소의 개업일을 보고 있으면 근거가 한 겹 늘어난다 */
+  if(LN.exch){
+    var f=window._stkCountryFilter;
+    var v5=(f && f!=='all')?0.5:0;
+    out.sum+=v5; out.parts.push({k:'exch', v:v5});
+  }
+  out.sum=Math.round(out.sum*10)/10;
+  return out;
+}
+try{ window.stkEnvAdj=stkEnvAdj; }catch(e){}
 function stkAlgoTotal(rows){
-  if(!rows||!rows.length) return {score:0, grade:'—', color:'#94a3b8', cf:{mul:1,why:''}, w:0, n:0};
+  if(!rows||!rows.length) return {score:0, grade:'—', color:'#94a3b8', cf:{mul:1,why:''}, w:0, n:0, env:0};
   var s=0, w=0;
   rows.forEach(function(r){ s+=r.score*r.pt; w+=r.pt; });
   var cf=(window.csiConflict?window.csiConflict():{mul:1,why:''});
-  var v=Math.round((s/w)*cf.mul);
+  var env=stkEnvAdj();
+  var v=Math.round((s/w)*cf.mul + env.sum);
   var g = v>=80?{t:'大吉 매우 좋음',c:'#059669'} : v>=66?{t:'吉 좋음',c:'#34d399'}
         : v>=50?{t:'平 보통',c:'#94a3b8'} : v>=36?{t:'注意 조심',c:'#fbbf24'} : {t:'凶 나쁨',c:'#f87171'};
-  return {score:v, grade:g.t, color:g.c, cf:cf, w:w, n:rows.length};
+  return {score:v, grade:g.t, color:g.c, cf:cf, w:w, n:rows.length, env:env.sum, envParts:env.parts};
 }
 try{ window.stkAlgoTotal=stkAlgoTotal; }catch(e){}
 
@@ -89317,7 +89377,8 @@ function _runAnalysisCore() {
     +'<span style="font-size:11px;font-weight:800;color:#0f1b2e;">총 분석 점수</span>'
     +'<span style="font-size:26px;font-weight:800;color:'+_tot.color+';line-height:1;">'+_tot.score+'</span></div>'
     +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px;">'
-    +'<span style="font-size:10px;color:#4b6470;"><span data-k="13239">역학</span> <span data-notr>'+_tot.n+'</span> · <span data-k="21434">배점 합</span> <span data-notr>'+_tot.w+'pt</span> <span data-k="21437">가중평균</span></span>'
+    +'<span style="font-size:10px;color:#4b6470;"><span data-k="13239">역학</span> <span data-notr>'+_tot.n+'</span> · <span data-k="21434">배점 합</span> <span data-notr>'+_tot.w+'pt</span> <span data-k="21437">가중평균</span>'
+      +((_tot.env&&_tot.env!==0)?' <span data-notr style="color:#059669;font-weight:800;">'+(_tot.env>0?'+':'')+_tot.env+'pt</span> <span data-k="21742">실시간 환경 보정</span>':'')+'</span>'
     +'<span style="font-size:12px;font-weight:800;color:'+_tot.color+';">'+_tot.grade+'</span></div>'
     +(_tot.cf.why?'<div style="font-size:9.5px;color:#b45309;font-weight:700;margin-top:6px;line-height:1.5;">⚠ '+_tot.cf.why+'</div>':'')
     +'</div>';
@@ -90297,7 +90358,10 @@ function csiLaneLive(k){
   if(k==='econ'||k==='geo'){
     var it=(window.CGO_NEWS&&window.CGO_NEWS[k])||null;
     if(!it) return '기사를 받아옵니다…';
-    if(!it.length) return '지금은 받아온 기사가 없습니다';
+    if(!it.length){
+      var w=(window.CGO_NEWS&&window.CGO_NEWS.why&&window.CGO_NEWS.why[k])||'';
+      return w ? ('받아오지 못했습니다 — '+w) : '지금은 받아온 기사가 없습니다';
+    }
     return it.length+'건 · '+(it[0].source||'')+' 등';
   }
   if(k==='exch'){ var f=window._stkCountryFilter; var x=f&&CSI_EXCHANGE[f];
