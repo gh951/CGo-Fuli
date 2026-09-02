@@ -431,15 +431,14 @@ window.setLang=window.cgoSwitchLang=function(L){
       갈래 이름·개수(2개 ↔ 2)·역학 칩·나라 칩이 그리는 순간의 언어로 굳기 때문이다.
       전에 넣은 것이 실수로 cgoGoPage 안에 들어가 있어, 언어를 바꿔도 돌지 않았다. */
    setTimeout(function(){
-     try{ if(window.stkSelected && window.runStockAnalysis) window.runStockAnalysis();
-           else if(window.stkSelected && window._runAnalysisCore) window._runAnalysisCore(); }catch(e){}
-     try{ if(window.stkAutoCountry){ window.stkAutoCountry();
-             if(window.stkRenderCountryChips) stkRenderCountryChips();
-             if(window.stkRenderLive) stkRenderLive(); } }catch(e){}
-     try{ if(document.getElementById('csi-lane-row') && window.csiRenderLanes) csiRenderLanes(); }catch(e){}
-     try{ var _cc=document.getElementById('stk-country-chips');
-       if(_cc){ delete _cc.dataset.init; if(window.stkRenderCountryChips) stkRenderCountryChips(); } }catch(e){}
-     try{ if(document.getElementById('stk-ai-ctx-energy') && window.stkAiUpdateCtx) stkAiUpdateCtx(); }catch(e){}
+     try{
+       var _pg=document.getElementById('page-stock');
+       if(!_pg || !_pg.offsetParent) return;      /* 보이지 않으면 아무것도 하지 않는다 */
+       if(window.stkSelected && window._runAnalysisCore) window._runAnalysisCore();
+       if(document.getElementById('csi-lane-row') && window.csiRenderLanes) csiRenderLanes();
+       if(document.getElementById('stk-ai-ctx-energy') && window.stkAiUpdateCtx) stkAiUpdateCtx();
+       if(window._stkRepaint) _stkRepaint();
+     }catch(e){}
    }, 60);
    /* 파일 사전을 함께 싣는다 */
    try{ if(window.cgoLoadDict) cgoLoadDict(L); }catch(e){}
@@ -14641,7 +14640,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-r';
+  var ver='CGO-FULI v2026.09.03-s';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25633,7 +25632,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-r';
+window.CGO_VER='2026.09.03-s';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
