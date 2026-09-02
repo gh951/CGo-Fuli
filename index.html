@@ -7335,8 +7335,13 @@ function refreshData(){
   try{ sessionStorage.setItem('cgo_ent','1'); localStorage.setItem('cgo_ent_day', new Date().toDateString()); }catch(_){}
   try{ if(window._p0Entered) sessionStorage.setItem('cgo_lang_ok','1'); }catch(_){}
   try{ if(window._cgoStopAllCams) window._cgoStopAllCams(); }catch(_){}
-  /* ★ 캐시가 줄 수 없는 주소로 — 그냥 reload 는 옛 파일을 또 꺼내 온다 */
-  try{ location.replace(location.pathname + '?v=' + Date.now()); }
+  /* ★ 있던 자리에서 새로고침한다 — 대시보드로 튕기지 않는다.
+     보고 있던 페이지를 주소에 그대로 실어 보내고, 안내 팝업은 한 번만 건너뛴다. */
+  var _keep='';
+  try{ _keep=location.hash||''; }catch(_){}
+  try{ if(_keep) sessionStorage.setItem('cgo_skip_intro_once','1'); }catch(_){}
+  /* 캐시가 줄 수 없는 주소로 — 그냥 reload 는 옛 파일을 또 꺼내 온다 */
+  try{ location.replace(location.pathname + '?v=' + Date.now() + _keep); }
   catch(e){ location.reload(); }
 }
 window.refreshData=refreshData;
@@ -14681,7 +14686,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-b';
+  var ver='CGO-FULI v2026.09.03-d';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -20009,6 +20014,15 @@ function _cgoGetScore() {
 }
 
 function _cgoFDIntro(cfg){
+  /* ★ 공유 링크로 왔으면 안내 팝업을 건너뛴다 — 보러 온 것은 분석 화면이다 */
+  try{ if(window._cgoCameByShare || window._cgoShareMode) return; }catch(e){}
+  /* ★ 새로고침으로 돌아온 그 한 번만 건너뛴다 — 보고 있던 자리를 그대로 잇는다 */
+  try{
+    if(sessionStorage.getItem('cgo_skip_intro_once')==='1'){
+      sessionStorage.removeItem('cgo_skip_intro_once');
+      return;
+    }
+  }catch(e){}
   cfg=cfg||{};
   var _N=cfg.nums||{};
   function _t(key, f){ var n=_N[key]; if(!n) return f;
@@ -25676,7 +25690,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-b';
+window.CGO_VER='2026.09.03-d';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
