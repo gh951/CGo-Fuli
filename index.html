@@ -14681,7 +14681,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-v';
+  var ver='CGO-FULI v2026.09.02-y';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25673,7 +25673,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-v';
+window.CGO_VER='2026.09.02-y';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26144,6 +26144,44 @@ window.cgoShareReset=function(){
    상단 바는 손대지 않는다 (로고·선택언어·새로고침·물음표·이름 입력만 있어야 한다).
    공유받은 화면과 대시보드·정보 입력에는 붙이지 않는다. */
 window.CGO_SHARE_SKIP = ['dashboard','signup','mypage','guide','info'];
+/* ★ 검색창 밖을 누르면 자동완성 칸을 닫는다 */
+(function(){
+  function shut(e){
+    try{
+      var dd=document.getElementById('stk-dropdown');
+      if(!dd || dd.style.display==='none') return;
+      var sc=document.getElementById('stk-search');
+      if(e && (dd.contains(e.target) || (sc&&sc.contains(e.target)))) return;
+      dd.style.display='none';
+    }catch(_){}
+  }
+  document.addEventListener('click', shut, true);
+  document.addEventListener('touchstart', shut, true);
+})();
+/* ★ 자동완성 칸 문지기 — 손이 글자를 칠 때만 열린다 */
+(function(){
+  var typing=false, t=null;
+  function mark(){ typing=true; clearTimeout(t); t=setTimeout(function(){ typing=false; }, 1800); }
+  function guard(){
+    var dd=document.getElementById('stk-dropdown');
+    if(!dd || dd._cgoGuard) return;
+    dd._cgoGuard=1;
+    var sc=document.getElementById('stk-search');
+    if(sc){
+      sc.addEventListener('keydown', mark, true);
+      sc.addEventListener('input', mark, true);
+    }
+    /* 열리려 할 때 손이 치고 있지 않으면 되돌린다 */
+    var mo=new MutationObserver(function(){
+      try{
+        if(dd.style.display!=='none' && !typing) dd.style.display='none';
+      }catch(_){}
+    });
+    mo.observe(dd, {attributes:true, attributeFilter:['style']});
+  }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',guard); else guard();
+  setTimeout(guard,900); setTimeout(guard,2500);
+})();
 window.cgoShareAuto=function(pageId){
   try{
     if(!pageId || window._cgoShareMode) return;
@@ -26162,7 +26200,15 @@ window.cgoShareAuto=function(pageId){
       +'border:1px solid rgba(52,211,153,.45);border-radius:999px;font-size:11px;font-weight:800;'
       +'color:#059669;cursor:pointer;font-family:inherit;box-shadow:0 1px 6px rgba(15,27,46,.06);">'
       +'<span data-k="22503">🔗 이 분석 공유하기</span></button>';
-    pg.appendChild(box);
+    /* ★ 주식은 국가별 보기 줄 오른쪽이 원래 자리다 */
+    var slot=(pageId==='stock')?document.getElementById('stk-share-slot'):null;
+    if(slot){
+      box.style.cssText='display:flex;';
+      slot.innerHTML='';
+      slot.appendChild(box);
+    } else {
+      pg.appendChild(box);
+    }
     try{ if(window.CGO_T&&CGO_T.paint) CGO_T.paint(box); }catch(e){}
     try{ if(window.cgoPaintKo) cgoPaintKo(box); }catch(e){}
   }catch(e){}
@@ -87967,6 +88013,8 @@ function stkAISearch(companyName) {
 function stkPickItem(obj) {
   stkSelected = obj;
   try{ window.stkSelected = obj; }catch(e){}   /* 언어 전환 때 다시 그리기 위해 */
+  /* ★ 검은 자동완성 칸을 닫는다 — 골랐는데도 남아 화면을 덮고 있었다 */
+  try{ var _dd=document.getElementById('stk-dropdown'); if(_dd) _dd.style.display='none'; }catch(e){}
   document.getElementById('stk-search').value = obj.n;
   document.getElementById('stk-dropdown').style.display = 'none';
   stkShowSelectedChip(obj);
@@ -88102,6 +88150,10 @@ function stkSearchKey(e) {
 // ── CSI 신버전: 5클러스터 상충·상쇄 지수 (txt 설계 v2.0) ──
 // CGO-FULI 이주원 대장님 × Claude × Gemini 3인 합의 알고리즘
 function stkCompat(e1, e2) {
+  /* ★ 오행 번호가 없거나 범위를 벗어나면 이 함수가 죽어 분석 전체가 멈췄다.
+     화면에는 아무 일도 안 일어나 손님은 「또 검색해야 하나」 하게 된다. */
+  e1=(typeof e1==='number' && e1>=0 && e1<5)?e1:0;
+  e2=(typeof e2==='number' && e2>=0 && e2<5)?e2:0;
   var ss = [[2,3],[3,4],[4,0],[0,1],[1,2]]; // 상생
   var sg = [[2,4],[4,1],[1,3],[3,0],[0,2]]; // 상극
   var now = new Date();
@@ -88611,6 +88663,8 @@ function stkAISearch(companyName) {
 function stkPickItem(obj) {
   stkSelected = obj;
   try{ window.stkSelected = obj; }catch(e){}   /* 언어 전환 때 다시 그리기 위해 */
+  /* ★ 검은 자동완성 칸을 닫는다 — 골랐는데도 남아 화면을 덮고 있었다 */
+  try{ var _dd=document.getElementById('stk-dropdown'); if(_dd) _dd.style.display='none'; }catch(e){}
   document.getElementById('stk-search').value = obj.n;
   document.getElementById('stk-dropdown').style.display = 'none';
   stkShowSelectedChip(obj);
@@ -88742,6 +88796,10 @@ function stkSearchKey(e) {
 }
 
 function stkCompat(e1, e2) {
+  /* ★ 오행 번호가 없거나 범위를 벗어나면 이 함수가 죽어 분석 전체가 멈췄다.
+     화면에는 아무 일도 안 일어나 손님은 「또 검색해야 하나」 하게 된다. */
+  e1=(typeof e1==='number' && e1>=0 && e1<5)?e1:0;
+  e2=(typeof e2==='number' && e2>=0 && e2<5)?e2:0;
   var ss = [[2,3],[3,4],[4,0],[0,1],[1,2]]; // 상생
   var sg = [[2,4],[4,1],[1,3],[3,0],[0,2]]; // 상극
   var now = new Date();
