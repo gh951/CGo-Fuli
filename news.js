@@ -84,36 +84,50 @@ export default async function handler(req, res) {
   const topic = TOPIC[q.topic] ? q.topic : 'business';
   const n = Math.max(3, Math.min(parseInt(q.n, 10) || 8, 12));
 
-  const key = lang + '|' + topic;
+  const qq = String(q.q || '').trim().slice(0, 80);      // 종목 뉴스용 검색말
+  const key = qq ? ('q|' + lang + '|' + qq) : (lang + '|' + topic);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) {
     return res.status(200).json({
-      items: hit.items.slice(0, n), topic, lang, cachedAt: hit.at, cached: true
+      ok: true, items: hit.items.slice(0, n), topic, lang, cachedAt: hit.at, cached: true
     });
   }
 
-  const [hl, gl, ceid] = LOCALE[lang];
-  const url = 'https://news.google.com/rss/headlines/section/topic/' + TOPIC[topic]
-            + '?hl=' + hl + '&gl=' + gl + '&ceid=' + encodeURIComponent(ceid);
+  const [hl, gl0, ceid] = LOCALE[lang];
+  const gl = String(q.gl || gl0).toUpperCase().slice(0, 2) || gl0;
+  const tail = '&hl=' + hl + '&gl=' + gl + '&ceid=' + encodeURIComponent(ceid);
+
+  /* ★ 두 갈래로 나가 본다 — 주제 섹션이 막히면 검색 RSS 로 대체한다.
+     구글이 섹션 주소를 조이는 때가 있어, 한 갈래만 두면 통째로 빈 손이 된다. */
+  const urls = qq
+    ? ['https://news.google.com/rss/search?q=' + encodeURIComponent(qq) + tail]
+    : ['https://news.google.com/rss/headlines/section/topic/' + TOPIC[topic] + '?' + tail.slice(1),
+       'https://news.google.com/rss/search?q=' + encodeURIComponent(topic === 'world' ? 'world news' : 'business economy') + tail];
 
   try {
-    const r = await fetch(url, {
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; CGO-FULI/1.0)' }
-    });
-    if (!r.ok) throw new Error('rss ' + r.status);
-    const items = parseRss(await r.text(), 12);
-
-    if (!items.length) throw new Error('empty');
+    let items = [], last = '';
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, {
+          headers: { 'user-agent': 'Mozilla/5.0 (compatible; CGO-FULI/1.0)' }
+        });
+        if (!r.ok) { last = 'rss ' + r.status; continue; }
+        items = parseRss(await r.text(), 12);
+        if (items.length) break;
+        last = 'empty';
+      } catch (e2) { last = String(e2 && e2.message || e2); }
+    }
+    if (!items.length) throw new Error(last || 'empty');
 
     cache.set(key, { at: Date.now(), items });
     if (cache.size > 80) cache.clear();
 
     // 앱이 화면에 그대로 띄울 수 있도록 제목·언론사·링크를 있는 그대로 돌려준다.
     // 요약하지 않는다 — 요약하면 그 말의 책임이 우리에게 온다.
-    return res.status(200).json({ items: items.slice(0, n), topic, lang, cachedAt: Date.now() });
+    return res.status(200).json({ ok: true, items: items.slice(0, n), topic, lang, cachedAt: Date.now() });
   } catch (e) {
     // 못 받아 오면 빈 손으로 돌려준다. 지어내지 않는다.
     // 앱은 빈 손이면 그 갈래를 조용히 끈다.
-    return res.status(200).json({ items: [], topic, lang, error: String(e && e.message || e) });
+    return res.status(200).json({ ok: false, items: [], topic, lang, error: String(e && e.message || e) });
   }
 }
