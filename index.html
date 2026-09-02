@@ -13095,7 +13095,31 @@ function cgoGoPage(page){
   if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
   if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
-  if(page==='lotto' && typeof _cgoLottoIntroPopup==='function') _cgoLottoIntroPopup();
+  if(page==='lotto'){
+    if(typeof _cgoLottoIntroPopup==='function') _cgoLottoIntroPopup();
+    /* ★ 연동 — 대시보드에 넣은 생년월일을 이 페이지 칸에 옮겨 담는다.
+       구앱은 _cgoAutoFillAll 이 해 주었는데 그 묶음에서 이 페이지가 빠져 있었다. */
+    setTimeout(function(){
+      try{
+        var g=function(id){ return document.getElementById(id); };
+        var v=function(id){ var e=g(id); return e?String(e.value||'').trim():''; };
+        var r=window.calcResult||{};
+        /* 대시보드 칸이 먼저, 없으면 셈해 둔 결과에서 */
+        var by=v('ipBirthY')||r.y||'', bm=v('ipBirthM')||r.m||'', bd=v('ipBirthD')||r.d||'';
+        /* 저장해 둔 정보에서도 (cgo_info 의 birth = YYYY-MM-DD) */
+        if(!by){ try{ var o=JSON.parse(localStorage.getItem('cgo_info')||'{}');
+          if(o.birth){ var p=String(o.birth).split('-'); by=by||p[0]; bm=bm||+p[1]; bd=bd||+p[2]; } }catch(_){} }
+        [['ltBirthY',by],['ltBirthM',bm],['ltBirthD',bd]].forEach(function(a){
+          var e=g(a[0]); if(e && a[1] && !String(e.value||'').trim()){
+            e.value=a[1];
+            try{ e.dispatchEvent(new Event('change',{bubbles:true})); }catch(_){}
+          }
+        });
+        if(typeof syncLtBirth==='function') syncLtBirth();
+        if(typeof lottoUpdateSysMethods==='function') lottoUpdateSysMethods();
+      }catch(e){}
+    }, 260);
+  }
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   if(page==='report'){
     _cgoReportIntroPopup();
@@ -14641,7 +14665,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-u';
+  var ver='CGO-FULI v2026.09.03-v';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25633,7 +25657,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-u';
+window.CGO_VER='2026.09.03-v';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -41975,7 +41999,8 @@ list.innerHTML = scored.map(function(d){
   try{ window._cgoLottoIntroPopup=_cgoLottoIntroPopup; }catch(e){}
   </script>
 
-      <div class="cgop-top"><div class="cgop-logo"><span>🎰 행운 번호</span> <span style="font-size:.62em;font-weight:800;letter-spacing:.12em;opacity:.72;padding:1px 6px;border:1px solid currentColor;border-radius:6px;vertical-align:middle;">C-67</span></div></div>
+      <!-- ★ 구앱의 페이지별 상단 바(🎰 행운 번호 · C-67)를 지웠다 —
+           신앱은 상단에 로고·선택언어·새로고침·물음표·이름 입력만 둔다. -->
   <div class="cgop-hero" style="background:radial-gradient(ellipse at 30% 18%,rgba(184,134,11,.32),transparent 62%),linear-gradient(160deg,#3a2e0b,#2a1f0b);">
     <div class="cgop-badge">사주 · 오행 행운 번호</div>
     <div class="cgop-hero-ico">🎰</div>
