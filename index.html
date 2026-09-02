@@ -14665,7 +14665,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-v';
+  var ver='CGO-FULI v2026.09.03-w';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25657,7 +25657,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-v';
+window.CGO_VER='2026.09.03-w';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36216,6 +36216,66 @@ function makeCard(sys, isWest) {
       +(sc.advice && !needsCheck?'<div style="font-size:9px;color:'+col+';margin-top:4px;opacity:.8">→ '+sc.advice+'</div>':'')
       +'</div>';
   }
+
+/* ★ 씨앗 흔들기 — 구앱 유틸 한 줄. 없으면 runLotto 가 죽는다. */
+if(typeof _hvr!=='function'){ var _hvr=function(s){ return (s*1103515245+12345)&0x7fffffff; }; }
+
+/* ★ 행운 번호가 읽는 DB 표 다섯 — 이것이 빠져 연동이 안 됐다.
+   오행별 행운 수 · 생명수별 · 기문 방위별 · 구성기학별 · 구성 별 이름 */
+var OH_LUCKY_RANGES = {
+  목: {primary:[6,7,8,16,17,18,26,27,28], secondary:[3,4,5,13,14,15,33,34,35]},
+  화: {primary:[1,2,9,10,19,20,29,30,39,40], secondary:[11,12,21,22,31,32,41,42]},
+  토: {primary:[5,14,15,23,24,32,33,41,42], secondary:[4,13,22,31,40]},
+  금: {primary:[4,13,22,31,40,44,45], secondary:[3,12,21,30,39,43]},
+  수: {primary:[1,10,11,20,21,30,38,39,45], secondary:[2,9,19,28,29,37]}
+};
+
+
+var LIFE_LUCKY = {
+  1:[1,10,19,28,37,46],
+  2:[2,11,20,29,38],
+  3:[3,12,21,30,39],
+  4:[4,13,22,31,40],
+  5:[5,14,23,32,41],
+  6:[6,15,24,33,42],
+  7:[7,16,25,34,43],
+  8:[8,17,26,35,44],
+  9:[9,18,27,36,45],
+  11:[11,22,33,44],
+  22:[4,8,22,26,40,44],
+  33:[3,6,15,24,33,42],
+  44:[4,8,17,26,35,44]
+};
+
+
+var GMD_DIR_NUMS = {
+  북:[1,10,19,28,37],
+  북동:[8,17,26,35,44],
+  동:[3,12,21,30,39],
+  동남:[4,13,22,31,40],
+  남:[9,18,27,36,45],
+  남서:[2,11,20,29,38],
+  서:[7,16,25,34,43],
+  북서:[6,15,24,33,42]
+};
+
+
+var KJ_LUCKY_NUMS = {
+  '一白水星':[1,6,15,24,33,42],
+  '二黑土星':[2,11,20,29,38],
+  '三碧木星':[3,8,17,26,35,44],
+  '四綠木星':[4,9,18,27,36,45],
+  '五黃土星':[5,14,23,32,41],
+  '六白金星':[6,15,24,33,42],
+  '七赤金星':[7,16,25,34,43],
+  '八白土星':[8,17,26,35,44],
+  '九紫火星':[9,18,27,36,45]
+};
+
+
+var KJ_KR = ['','1백수성','2흑토성','3벽목성','4녹목성','5황토성','6백금성','7적금성','8백토성','9자화성'];
+
+
 
 /* 🍀 행운 번호 — 구앱에서 그대로 이식 (핀셋)
    ballClass · makeBall · makeSmallBall · ltRng · ltSeed · pickFromPool
