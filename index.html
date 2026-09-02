@@ -14665,7 +14665,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-ac';
+  var ver='CGO-FULI v2026.09.03-ad';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25657,7 +25657,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-ac';
+window.CGO_VER='2026.09.03-ad';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36891,6 +36891,10 @@ function runCheckNums() {
     return;
   }
   domOh = String(domOh).replace(/[()a-zA-Z가-힣]*([목화토금수])[()a-zA-Z가-힣]*/, '$1');
+  /* ★ 생명수는 1~9 다. 11·22 가 그대로 들어와 「생명수 11」 「궁 11·6」 이 나왔다.
+     수비학의 마스터수(11·22·33)는 표시만 남기고 셈은 한 자리로 줄인다. */
+  var lifeMaster = (lifeNum===11||lifeNum===22||lifeNum===33) ? lifeNum : 0;
+  while(lifeNum>9) lifeNum = String(lifeNum).split('').reduce(function(a,b){ return a + (+b); }, 0);
   var ohRange = OH_LUCKY_RANGES[domOh] || {primary:[],secondary:[]};
   var lifeArr = LIFE_LUCKY[lifeNum] || [];
 
@@ -36924,7 +36928,11 @@ function runCheckNums() {
   }
 
   var curNums  = extractNums(phoneStr).slice(0, 6);
+  /* ★ 그 번호의 점수는 여섯 역학의 배점 가중평균 하나다.
+     전에는 숫자 평균(avgScore)으로 따로 셈해 상단 79점 · 카드 총점 62점이 갈렸다. */
   var curScore = Math.min(95, avgScore(curNums));
+  try{ var _six=_numSixCalc(domOh, lifeNum, curNums, phoneDisplay);
+       if(_six && _six.tot) curScore=_six.tot; }catch(e){}
 
   /* ══════════════════════════════════════════════
      핵심 로직: 90점+ 역산
@@ -37007,7 +37015,12 @@ function runCheckNums() {
 
     /* 중복 세트 제거 */
     var dup = sets.some(function(s){ return s.mid===midStr && s.last===lastStr; });
-    if (!dup) sets.push({ mid:midStr, last:lastStr, oh1:oh1, oh2:oh2, midScore:ms, lastScore:ls, score:ts });
+    if (!dup) {
+      var _ts=ts;
+      try{ var _s6=_numSixCalc(domOh, lifeNum, extractNums(prefix+midStr+lastStr).slice(0,6), prefix+'-'+midStr+'-'+lastStr);
+           if(_s6 && _s6.tot) _ts=_s6.tot; }catch(e){}
+      sets.push({ mid:midStr, last:lastStr, oh1:oh1, oh2:oh2, midScore:ms, lastScore:ls, score:_ts });
+    }
   }
   sets.sort(function(a,b){ return b.score - a.score; });
 
@@ -37142,7 +37155,11 @@ function runCheckNums() {
    각 카드는 「내 사주에서 나온 값」과 「번호의 숫자」를 나란히 보여
    왜 맞물리는지 · 왜 어긋나는지를 손님이 스스로 알게 한다.
    ══════════════════════════════════════════════════════════════ */
-function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay){
+function _numSixCalc(domOh, lifeNum, curNums, phoneDisplay){
+  var _r=_numSixCards(domOh, lifeNum, curNums, 0, phoneDisplay, true);
+  return _r;
+}
+function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay, calcOnly){
   var OHN={목:'목(木)',화:'화(火)',토:'토(土)',금:'금(金)',수:'수(水)'};
   var OHI={목:'🌳',화:'🔥',토:'⛰️',금:'⚔️',수:'💧'};
   var GEN={목:'수',화:'목',토:'화',금:'토',수:'금'};      /* 나를 낳는 것 */
@@ -37227,6 +37244,7 @@ function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay){
   var g = tot>=78?{t:'잘 맞물립니다',c:'#059669'} : tot>=64?{t:'무난합니다',c:'#34d399'}
         : tot>=50?{t:'보통입니다',c:'#94a3b8'} : {t:'어긋나는 편입니다',c:'#f59e0b'};
 
+  if(calcOnly) return {tot:tot, w:w, grade:g.t};
   var h='<div style="background:#fff;border:1px solid #d7eee8;border-radius:16px;padding:18px 16px;margin-top:16px;">'
    +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;">'
    +'<span style="font-size:14px;font-weight:900;color:#0f172a;">📱 숫자 역학 여섯으로 읽기</span>'
@@ -42194,7 +42212,7 @@ list.innerHTML = scored.map(function(d){
 
       <!-- ★ 구앱의 페이지별 상단 바(🍀 행운 번호 · C-67)를 지웠다 —
            신앱은 상단에 로고·선택언어·새로고침·물음표·이름 입력만 둔다. -->
-  <div style="position:sticky;top:0;z-index:60;background:linear-gradient(160deg,#0d9488,#059669);padding:16px 16px 22px;">
+  <div style="background:linear-gradient(160deg,#0d9488,#059669);padding:16px 16px 22px;">
    <div style="font-size:12px;font-weight:800;color:#d1fae5;"><span data-k="1522"></span></div>
    <div style="background:#fff;border-radius:16px;padding:14px;margin-top:13px;">
     <div style="display:flex;align-items:center;gap:9px;">
