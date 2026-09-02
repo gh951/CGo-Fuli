@@ -13,10 +13,20 @@ body.gate-open #stars,body.gate-open #fog{visibility:hidden!important}
 <script>
 /* 이미 들어와 본 사람은 가림막을 바로 걷는다 — 흰 화면이 스치지 않게 */
 try{
-  if(sessionStorage.getItem('cgo_ent')==='1' && sessionStorage.getItem('cgo_lang_ok')==='1'){
+  var _sh=/[#&]s=/.test(location.hash||'');
+  if(_sh){
+    try{ sessionStorage.setItem('cgo_ent','1'); sessionStorage.setItem('cgo_lang_ok','1'); }catch(_){}
+    window._cgoCameByShare=true; window._p0Entered=true; window._entPassed=true;
+  }
+  if(_sh || (sessionStorage.getItem('cgo_ent')==='1' && sessionStorage.getItem('cgo_lang_ok')==='1')){
     document.documentElement.classList.remove('gate-open');
     document.addEventListener('DOMContentLoaded',function(){
-      document.body && document.body.classList.remove('gate-open'); });
+      document.body && document.body.classList.remove('gate-open');
+      if(_sh){
+        var _sp=document.getElementById('entSplash'); if(_sp) _sp.style.display='none';
+        var _p0=document.getElementById('phase0'); if(_p0) _p0.style.display='none';
+      }
+    });
   }
 }catch(e){}
 </script>
@@ -94,6 +104,21 @@ html:not(.cgo-ready) #phase0{z-index:100005!important}
 })();
 </script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="세계 36,404개 종목과 57개 거래소의 개업일을 만세력으로 세우고, 지금 하늘의 행성 각도와 내 사주·생체를 겹쳐 셈합니다. 20개 언어.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CGO-FULI">
+<meta property="og:title" content="CGO-FULI · 사주 × NASA × rPPG 생체">
+<meta property="og:description" content="만세력·오행·행성 각도·실측 생체를 한 평면에 겹쳐 셈합니다. 주식 에너지 · 작명 · 궁합 · 꿈 해몽 · 오행 길방 — 20개 언어.">
+<meta property="og:image" content="https://c-go-fuli.com/logo.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:url" content="https://c-go-fuli.com/">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CGO-FULI · 사주 × NASA × rPPG 생체">
+<meta name="twitter:description" content="만세력·오행·행성 각도·실측 생체를 한 평면에 겹쳐 셈합니다. 20개 언어.">
+<meta name="twitter:image" content="https://c-go-fuli.com/logo.png">
+<meta name="theme-color" content="#0f1b2e">
 <style id="cgo-first-frame">
 /* 첫 페인트부터 자리를 확정한다 — 이 규칙이 문서 끝에 있어 12ms 시점에 슬라이드가 헤더를 14px 덮었다 */
 /* ★ 구르는 상자를 하나로 — 창(html)은 구르지 않고 .content 만 구른다.
@@ -12927,6 +12952,7 @@ function cgoGoPage(page){
       if(window.cgoShareReset) window.cgoShareReset();
     }
   }catch(e){}
+  try{ if(window.cgoShareAuto) setTimeout(function(){ cgoShareAuto(page); }, 140); }catch(e){}
   try{
     if(page && page!=='dashboard'){
       if(location.hash!=='#'+page) history.replaceState(null,'','#'+page);
@@ -12993,7 +13019,6 @@ function cgoGoPage(page){
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
   if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){}
-    try{ if(window.cgoShareBtn) setTimeout(function(){ cgoShareBtn('stock','stk-share-slot'); }, 80); }catch(e){}
   }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
@@ -14656,7 +14681,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-s';
+  var ver='CGO-FULI v2026.09.02-v';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25648,7 +25673,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-s';
+window.CGO_VER='2026.09.02-v';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -25909,8 +25934,16 @@ window._cgoLater=function(fn){
       }catch(e){}
     }catch(e){}
   }
-  if(document.readyState==='loading') addEventListener('DOMContentLoaded',function(){ setTimeout(go,120); });
-  else setTimeout(go,120);
+  var _tries=0;
+  function tryGo(){
+    _tries++;
+    go();
+    if(window._cgoShareMode) return;                       /* 되살아났으면 그만 */
+    if(_tries<8) setTimeout(tryGo, 260);
+  }
+  function boot(){ if(/[#&]s=/.test(location.hash||'')) setTimeout(tryGo,120); else setTimeout(go,120); }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',boot);
+  else boot();
   addEventListener('hashchange', go);
 })();
 /* ══════════════════════════════════════════════════════════════
@@ -26105,6 +26138,33 @@ window.cgoShareReset=function(){
     window._cgoShareBackup=null;
     var b=document.getElementById('cgo-share-band'); if(b) b.remove();
     history.replaceState(null,'',location.pathname+location.search);
+  }catch(e){}
+};
+/* ★ 전 페이지 공통 — 페이지가 열릴 때 맨 끝에 🔗 한 개를 자동으로 얹는다.
+   상단 바는 손대지 않는다 (로고·선택언어·새로고침·물음표·이름 입력만 있어야 한다).
+   공유받은 화면과 대시보드·정보 입력에는 붙이지 않는다. */
+window.CGO_SHARE_SKIP = ['dashboard','signup','mypage','guide','info'];
+window.cgoShareAuto=function(pageId){
+  try{
+    if(!pageId || window._cgoShareMode) return;
+    if(window.CGO_SHARE_SKIP.indexOf(pageId)>=0) return;
+    var pg=document.getElementById('page-'+pageId);
+    if(!pg) return;
+    var id='cgo-share-auto-'+pageId;
+    var old=document.getElementById(id);
+    if(old) old.remove();
+    var box=document.createElement('div');
+    box.id=id;
+    box.style.cssText='display:flex;justify-content:center;padding:14px 12px 22px;';
+    box.innerHTML=
+       '<button type="button" onclick="cgoShareCopy(cgoSharePageUrl(\''+pageId+'\'),this)" '
+      +'style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:#fff;'
+      +'border:1px solid rgba(52,211,153,.45);border-radius:999px;font-size:11px;font-weight:800;'
+      +'color:#059669;cursor:pointer;font-family:inherit;box-shadow:0 1px 6px rgba(15,27,46,.06);">'
+      +'<span data-k="22503">🔗 이 분석 공유하기</span></button>';
+    pg.appendChild(box);
+    try{ if(window.CGO_T&&CGO_T.paint) CGO_T.paint(box); }catch(e){}
+    try{ if(window.cgoPaintKo) cgoPaintKo(box); }catch(e){}
   }catch(e){}
 };
 /* 어느 페이지에나 붙는 공유 단추 — 자리를 주면 그 안에 넣는다 */
@@ -89745,11 +89805,6 @@ function _runAnalysisCore() {
       +((_tot.env&&_tot.env!==0)?' <span data-notr style="color:#059669;font-weight:800;">'+(_tot.env>0?'+':'')+_tot.env+'pt</span> <span data-k="21742">실시간 환경 보정</span>':'')+'</span>'
     +'<span style="font-size:12px;font-weight:800;color:'+_tot.color+';">'+_tot.grade+'</span></div>'
     +(_tot.cf.why?'<div style="font-size:9.5px;color:#b45309;font-weight:700;margin-top:6px;line-height:1.5;">⚠ '+_tot.cf.why+'</div>':'')
-    /* ★ 공유 — 화면 전체를 보여주고 생년월일은 담지 않는다 */
-    +(window._cgoShareMode?'':'<button type="button" onclick="cgoShareCopy(stkShareUrl(),this)" '
-      +'style="width:100%;margin-top:9px;padding:9px;background:#fff;border:1px solid rgba(52,211,153,.45);'
-      +'border-radius:10px;font-size:10.5px;font-weight:800;color:#059669;cursor:pointer;font-family:inherit;">'
-      +'<span data-k="22503">🔗 이 분석 공유하기</span></button>')
     +'</div>';
     /* ★ 한 역학 = 한 줄. 이름·배점·추세·상세를 한 줄에 밀어넣으니
      폰에서 「사주명리 undefinedpt중립」 처럼 붙어 뭉개졌다.
