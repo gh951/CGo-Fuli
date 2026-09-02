@@ -36,6 +36,8 @@ try{
   }catch(_){}
   window._cgoDirectLand=_dl;
   window._cgoNavType=_nav;
+  /* ★ 이 표시는 「그 한 번」만 쓴다 — 세션에 남겨 두면 두 번째부터 안내 팝업이 영영 안 뜬다 */
+  if(_dl){ setTimeout(function(){ window._cgoDirectLand=false; }, 2500); }
   if(_sh || _dl){
     try{ sessionStorage.setItem('cgo_ent','1'); sessionStorage.setItem('cgo_lang_ok','1'); }catch(_){}
     window._cgoCameByShare=true; window._p0Entered=true; window._entPassed=true;
@@ -13175,7 +13177,7 @@ function cgoGoPage(page){
   if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
   if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
-  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup();
+  if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } 
   if(page==='travel') setTimeout(function(){ if(typeof trvAnalyzeDNA==='function') trvAnalyzeDNA(); },300);
   if(page==='report'){
     _cgoReportIntroPopup();
@@ -14730,7 +14732,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-m';
+  var ver='CGO-FULI v2026.09.03-o';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -21443,7 +21445,7 @@ function cgoSoftGo(pageId) {
   if (pageId === 'couple') {
     setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); }, 200);
   }
-  if (pageId === 'gmd') setTimeout(function(){ if(typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup(); },100);
+  
   window._cgoLastPage = pageId;
   // 페이지 이동 후 번역
   if (window._LANG && window._LANG !== 'ko') {
@@ -25728,7 +25730,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-m';
+window.CGO_VER='2026.09.03-o';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26731,54 +26733,10 @@ function _cgoGmdFullReset(){
     var ab=document.getElementById('fcAnalyzeBtn'); if(ab){ ab.disabled=false; }
   }catch(e){}
 }
-function _cgoGmdIntroPopup(){
-  try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){}
-  var old=document.getElementById('cgo-gmd-pop'); if(old) old.remove();
-  var pop=document.createElement('div');
-  pop.id='cgo-gmd-pop';
-  /* ★ contain 을 걸지 않는다 — 팝업 높이를 가정해 아래가 잘려
-   「밑으로 안 내려간다」가 되풀이됐다. (조립 팝업 15개 모두 이 틀을 쓴다) */
-  pop.style.cssText='position:fixed;left:0;right:0;bottom:0;top:var(--hdrH,56px);z-index:30600;background:#f0fdf9;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;';
-  var h='<div style="max-width:600px;margin:0 auto;background:#f0fdf9;border-top:3px solid #d4a843;padding:22px 18px 40px;">';
-  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><span style="font-size:32px;">📸</span><div><div style="font-size:17px;font-weight:900;color:#b8860b;">풍수 카메라</div><div style="font-size:11px;color:#b8860b;margin-top:2px;">전 세계 7대 공간 에너지 AI 분석 시스템</div></div></div>';
-  h+='<div style="font-size:12px;color:#334155;line-height:1.9;margin-bottom:14px;padding:12px 14px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:12px;">공간을 <b style="color:#b8860b;">10방향으로 촬영</b>하면 AI가 <b style="color:#b8860b;">세계 7대 공간 에너지 시스템</b>으로 종합 분석합니다.</div>';
-  h+='<div style="background:#ffffff;border:1px solid rgba(212,168,67,.15);border-radius:12px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#b8860b;margin-bottom:10px;">🌍 7대 공간 에너지 시스템</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;"><div style="font-size:11px;padding:6px 8px;background:rgba(248,113,113,.05);border-radius:6px;color:#334155;">🏯 풍수지리 (중국)</div><div style="font-size:11px;padding:6px 8px;background:rgba(56,189,248,.05);border-radius:6px;color:#334155;">🕌 바스투 (인도)</div><div style="font-size:11px;padding:6px 8px;background:rgba(52,211,153,.05);border-radius:6px;color:#334155;">⛩️ 칸소 (일본)</div><div style="font-size:11px;padding:6px 8px;background:rgba(212,168,67,.05);border-radius:6px;color:#334155;">🏡 양택가상학</div><div style="font-size:11px;padding:6px 8px;background:rgba(167,139,250,.05);border-radius:6px;color:#334155;">🧠 공간심리학</div><div style="font-size:11px;padding:6px 8px;background:rgba(244,114,182,.05);border-radius:6px;color:#334155;">🌿 테루아</div><div style="font-size:11px;padding:6px 8px;background:rgba(99,130,201,.05);border-radius:6px;color:#334155;">🪶 네이티브 아메리칸</div></div></div>';
-  window._gmdPopType='home'; window._gmdPopSystems=['all'];
-  // STEP1
-  h+='<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#d97706;margin-bottom:8px;">STEP 1 · 공간 타입 선택</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
-  h+='<div onclick="gmdPopSelectType(\'home\')" id="gmdPopType_home" style="padding:10px 6px;border:2px solid #d4a843;border-radius:10px;background:rgba(212,168,67,.12);cursor:pointer;text-align:center;"><div style="font-size:20px;">🏠</div><div style="font-size:10px;font-weight:700;color:#b8860b;">집·아파트</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'store\')" id="gmdPopType_store" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:#ffffff;cursor:pointer;text-align:center;"><div style="font-size:20px;">🏪</div><div style="font-size:10px;font-weight:700;color:#475569;">가게·사무실</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'grave\')" id="gmdPopType_grave" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:#ffffff;cursor:pointer;text-align:center;"><div style="font-size:20px;">⛪</div><div style="font-size:10px;font-weight:700;color:#475569;">묘지·집터</div></div>';
-  h+='<div onclick="gmdPopSelectType(\'interior\')" id="gmdPopType_interior" style="padding:10px 6px;border:2px solid rgba(255,255,255,.1);border-radius:10px;background:#ffffff;cursor:pointer;text-align:center;"><div style="font-size:20px;">🛋️</div><div style="font-size:10px;font-weight:700;color:#475569;">가구배치</div></div>';
-  h+='</div></div>';
-  // STEP2
-  h+='<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:800;color:#d97706;margin-bottom:4px;">STEP 2 · 분석 역학 선택</div><div style="font-size:10px;color:#0284c7;margin-bottom:6px;">복수 선택 가능</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:5px;">';
-  h+='<div onclick="gmdPopToggleSys(\'fengshui\')" id="gmdPopSys_fengshui" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:#ffffff;cursor:pointer;"><span>🏯</span><div style="flex:1;font-size:11px;font-weight:700;color:#334155;">풍수지리</div><div id="gmdPopChk_fengshui" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'vastu\')" id="gmdPopSys_vastu" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:#ffffff;cursor:pointer;"><span>🕌</span><div style="flex:1;font-size:11px;font-weight:700;color:#334155;">바스투</div><div id="gmdPopChk_vastu" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'kanso\')" id="gmdPopSys_kanso" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:#ffffff;cursor:pointer;"><span>⛩️</span><div style="flex:1;font-size:11px;font-weight:700;color:#334155;">칸소</div><div id="gmdPopChk_kanso" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'yangzhai\')" id="gmdPopSys_yangzhai" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(255,255,255,.08);border-radius:8px;background:#ffffff;cursor:pointer;"><span>🏡</span><div style="flex:1;font-size:11px;font-weight:700;color:#334155;">양택가상학</div><div id="gmdPopChk_yangzhai" style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);font-size:11px;display:flex;align-items:center;justify-content:center;"></div></div>';
-  h+='<div onclick="gmdPopToggleSys(\'all\')" id="gmdPopSys_all" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid rgba(212,168,67,.4);border-radius:8px;background:rgba(212,168,67,.06);cursor:pointer;"><span>🌍</span><div style="flex:1;font-size:11px;font-weight:700;color:#b8860b;">전체 종합 분석</div><div id="gmdPopChk_all" style="width:18px;height:18px;border-radius:50%;background:#d4a843;font-size:11px;display:flex;align-items:center;justify-content:center;">✓</div></div>';
-  h+='</div></div>';
-  h+='<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:12px;padding:12px 14px;margin-bottom:10px;">'+
-    '<div style="font-size:11.5px;font-weight:800;color:#d97706;margin-bottom:9px;">📖 자세한 사용법</div>'+
-    '<div style="display:flex;flex-direction:column;gap:8px;">'+
-      '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="flex-shrink:0;font-size:14px;">1️⃣</span><div style="font-size:11px;color:#334155;line-height:1.55;"><b style="color:#0f172a;">준비</b> — 분석할 공간(방·집·가게)의 <b>한가운데</b>에 섭니다. 나침반·카메라 <b>권한을 허용</b>해주세요.</div></div>'+
-      '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="flex-shrink:0;font-size:14px;">2️⃣</span><div style="font-size:11px;color:#334155;line-height:1.55;"><b style="color:#0f172a;">방향 정렬</b> — 화면 나침반이 가리키는 방향(북·동·남·서…)으로 몸을 <b>천천히</b> 돌립니다.</div></div>'+
-      '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="flex-shrink:0;font-size:14px;">3️⃣</span><div style="font-size:11px;color:#334155;line-height:1.55;"><b style="color:#0f172a;">10방향 촬영</b> — 화살표가 <b style="color:#059669;">초록색</b>'+((window._LANG&&window._LANG!=='ko')?' turns, it captures. 8 directions + ceiling \u0026 floor, ':'이 되면 촬영됩니다. 8방위 + 천장·바닥, 총 ')+'<b>10컷</b>.</div></div>'+
-      '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="flex-shrink:0;font-size:14px;">4️⃣</span><div style="font-size:11px;color:#334155;line-height:1.55;"><b style="color:#0f172a;">AI 분석</b> — '+((window._LANG&&window._LANG!=='ko')?'once all 10 shots are filled, the selected ':'10컷이 다 차면 선택한 ')+'<b>7대 시스템</b>'+((window._LANG&&window._LANG!=='ko')?' begin the comprehensive analysis.':'으로 종합 분석이 시작됩니다.')+'</div></div>'+
-      '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="flex-shrink:0;font-size:14px;">5️⃣</span><div style="font-size:11px;color:#334155;line-height:1.55;"><b style="color:#0f172a;">결과 확인</b> — '+((window._LANG&&window._LANG!=='ko')?'overall space-energy score + fortune by direction + improvement tips.':'종합 공간 에너지 점수 + 방위별 길흉 + 개선 팁이 나옵니다.')+'</div></div>'+
-    '</div>'+
-    '<div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(251,191,36,.25);font-size:10.5px;color:#475569;line-height:1.7;">'+
-      '💡 '+((window._LANG&&window._LANG!=='ko')?'In a bright spot, hold the phone ':'밝은 곳에서 휴대폰을 ')+'<b>수평</b>'+((window._LANG&&window._LANG!=='ko')?' and rotate slowly for accuracy.':'으로 들고 천천히 회전하면 정확해요.')+'<br>'+
-      '⚠️ '+((window._LANG&&window._LANG!=='ko')?'If compass·camera ':'나침반·카메라 ')+'<b>권한이 꺼져</b>'+((window._LANG&&window._LANG!=='ko')?' are off, measurement won\u2019t work.':' 있으면 측정되지 않습니다.')+''+
-    '</div></div>';
-  h+='<button onclick="gmdPopConfirm()" style="width:100%;padding:16px;background:linear-gradient(135deg,#d4a843,#b8922f);border:none;border-radius:14px;color:#020817;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.03em;">📸 설정 완료 — 촬영 시작</button>';
-  h+='</div>';
-  pop.innerHTML=h;
-  document.body.appendChild(pop);
-}
+/* ★ 옛 풍수 카메라 안내 팝업(_cgoGmdIntroPopup)을 지웠다.
+   새 안내(19300번대 통일 틀)와 둘이 겹쳐 떠서 손님이 두 번 닫아야 했다.
+   STEP 1·2 의 공간 타입·역학 고르기는 페이지 안에 이미 있으므로 잃는 것이 없다. */
+
 
 function gmdPopSelectType(type){
   window._gmdPopType=type;
@@ -88646,7 +88604,9 @@ function stkRenderLive() {
     else if (prevRank < i)     rankArrow = '<span style="font-size:11px;color:#dc2626;">▼'+(i-prevRank)+'</span>';
     else                       rankArrow = '<span style="font-size:11px;color:var(--text-3);">━</span>';
     var isTop = i === 0;
-    var clickFn = "var inp=document.getElementById('stk-search');if(inp){inp.value='"+s.name.replace(/'/g,"\'")+"';inp.dispatchEvent(new Event('input'));inp.focus();inp.scrollIntoView({behavior:'smooth',block:'center'});}";
+    /* ★ 줄을 누르면 바로 고르고 분석한다 — 시세·뉴스도 이 길로 함께 온다.
+       전에는 검색창에 글자만 넣어, 검은 칸을 끈 뒤로는 아무 일도 일어나지 않았다. */
+    var clickFn = "stkSelectAndRun('"+s.name.replace(/'/g,"\\'")+"')";
     return '<div onclick="'+clickFn+'" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;'
       + 'background:'+(isTop?'rgba(52,211,153,0.08)':'var(--bg-panel)')+';'
       + 'border:1px solid '+(isTop?'rgba(52,211,153,0.25)':'transparent')+';'
@@ -90561,7 +90521,9 @@ function stkRenderLive() {
     else if (prevRank < i)     rankArrow = '<span style="font-size:11px;color:#dc2626;">▼'+(i-prevRank)+'</span>';
     else                       rankArrow = '<span style="font-size:11px;color:var(--text-3);">━</span>';
     var isTop = i === 0;
-    var clickFn = "var inp=document.getElementById('stk-search');if(inp){inp.value='"+s.name.replace(/'/g,"\'")+"';inp.dispatchEvent(new Event('input'));inp.focus();inp.scrollIntoView({behavior:'smooth',block:'center'});}";
+    /* ★ 줄을 누르면 바로 고르고 분석한다 — 시세·뉴스도 이 길로 함께 온다.
+       전에는 검색창에 글자만 넣어, 검은 칸을 끈 뒤로는 아무 일도 일어나지 않았다. */
+    var clickFn = "stkSelectAndRun('"+s.name.replace(/'/g,"\\'")+"')";
     return '<div onclick="'+clickFn+'" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;'
       + 'background:'+(isTop?'rgba(52,211,153,0.08)':'var(--bg-panel)')+';'
       + 'border:1px solid '+(isTop?'rgba(52,211,153,0.25)':'transparent')+';'
