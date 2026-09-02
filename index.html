@@ -13061,6 +13061,10 @@ function cgoGoPage(page){
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
   if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){}
+    try{ if(window.csiLaneStart) csiLaneStart(); }catch(e){}
+  } else {
+    /* ★ 주식을 나가면 갈래값 고리를 멈춘다 — 다른 페이지에서 2초마다 손을 뺏을 이유가 없다 */
+    try{ if(window.csiLaneStop) csiLaneStop(); }catch(e){}
   }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
@@ -14732,7 +14736,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-o';
+  var ver='CGO-FULI v2026.09.03-p';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25730,7 +25734,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-o';
+window.CGO_VER='2026.09.03-p';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26223,45 +26227,10 @@ window.cgoShareReset=function(){
    상단 바는 손대지 않는다 (로고·선택언어·새로고침·물음표·이름 입력만 있어야 한다).
    공유받은 화면과 대시보드·정보 입력에는 붙이지 않는다. */
 window.CGO_SHARE_SKIP = ['dashboard','signup','mypage','guide','info'];
-/* ★ 검색창 밖을 누르면 자동완성 칸을 닫는다 */
-(function(){
-  function shut(e){
-    try{
-      var dd=document.getElementById('stk-dropdown');
-      if(!dd || dd.style.display==='none') return;
-      var sc=document.getElementById('stk-search');
-      if(e && (dd.contains(e.target) || (sc&&sc.contains(e.target)))) return;
-      dd.style.display='none';
-    }catch(_){}
-  }
-  document.addEventListener('click', shut, true);
-  document.addEventListener('touchstart', shut, true);
-})();
-/* ★ 자동완성 칸 문지기 — 손이 글자를 칠 때만 열린다 */
-(function(){
-  var typing=false, t=null;
-  function mark(){ typing=true; clearTimeout(t); t=setTimeout(function(){ typing=false; }, 1800); }
-  function guard(){
-    var dd=document.getElementById('stk-dropdown');
-    if(!dd || dd._cgoGuard) return;
-    dd._cgoGuard=1;
-    var sc=document.getElementById('stk-search');
-    if(sc){
-      sc.addEventListener('keydown', mark, true);
-      sc.addEventListener('input', mark, true);
-    }
-    /* 열리려 할 때 손이 치고 있지 않으면 되돌린다 */
-    var mo=new MutationObserver(function(){
-      try{
-        /* ★ 언제든 닫는다 — 검은 칸은 쓰지 않는다 */
-        if(dd.style.display!=='none') dd.style.display='none';
-      }catch(_){}
-    });
-    mo.observe(dd, {attributes:true, attributeFilter:['style']});
-  }
-  if(document.readyState==='loading') addEventListener('DOMContentLoaded',guard); else guard();
-  setTimeout(guard,900); setTimeout(guard,2500);
-})();
+/* ★ 여기 있던 문서 전체 click·touchstart 감시자를 지웠다 —
+   모든 탭이 그걸 거쳐 X 단추와 이동이 무거워졌다.
+   검은 칸은 이미 display:none!important 로 꺼져 있어 감시할 것이 없다. */
+/* ★ 자동완성 칸 감시자(MutationObserver)도 지웠다 — 꺼진 칸을 지킬 이유가 없다. */
 window.cgoShareAuto=function(pageId){
   try{
     if(!pageId || window._cgoShareMode) return;
@@ -91011,12 +90980,15 @@ try{ window.csiRenderLanes=csiRenderLanes; window.csiRenderYeok=csiRenderYeok;
          }catch(e){}
        }
        /* ★ 주식 화면을 보고 있을 때만 돈다 — 다른 페이지에서 2초마다 헛돌 이유가 없다 */
-       if(!window._csiLaneT){
-         window._csiLaneT=setInterval(function(){
-           try{ var pg=document.getElementById('page-stock');
-                if(pg && pg.offsetParent) tick(); }catch(_){}
-         }, 2000);
-       }
+       /* ★ 주식 화면에 들어올 때만 고리를 만들고, 나가면 멈춘다 —
+          늘 돌게 두면 다른 페이지에서도 2초마다 손을 뺏는다. */
+       window.csiLaneStart=function(){
+         if(window._csiLaneT) return;
+         window._csiLaneT=setInterval(tick, 2000);
+       };
+       window.csiLaneStop=function(){
+         if(window._csiLaneT){ clearInterval(window._csiLaneT); window._csiLaneT=null; }
+       };
        window.csiLaneTick=tick;
      })(); window.csiSetTier=csiSetTier; window.csiToggleLane=csiToggleLane; window.csiToggleYeok=csiToggleYeok; window.csiRenderLanes=csiRenderLanes; }catch(e){}
 /* 주식 페이지가 열릴 때 한 번 그린다 */
