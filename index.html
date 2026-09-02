@@ -14681,7 +14681,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.02-y';
+  var ver='CGO-FULI v2026.09.03-a';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25379,8 +25379,11 @@ window.cgoHasInfo=function(){
     if(r && r.y && (r.domOh||r.name)) return true;
     function v(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
     if(v('ipName') && v('ipBirthY') && v('ipBirthM') && v('ipBirthD')) return true;
-    var s=localStorage.getItem('cgo_saved_info');
-    if(s){ var o=JSON.parse(s); if(o && o.ipName && o.ipBirthY) return true; }
+    var s=localStorage.getItem('cgo_info')||localStorage.getItem('cgo_saved_info');
+    if(s){
+      var o=JSON.parse(s);
+      if(o && (o.name||o.ipName) && (o.birth||o.ipBirthY)) return true;
+    }
   }catch(e){}
   return false;
 };
@@ -25673,7 +25676,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.02-y';
+window.CGO_VER='2026.09.03-a';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26174,7 +26177,8 @@ window.CGO_SHARE_SKIP = ['dashboard','signup','mypage','guide','info'];
     /* 열리려 할 때 손이 치고 있지 않으면 되돌린다 */
     var mo=new MutationObserver(function(){
       try{
-        if(dd.style.display!=='none' && !typing) dd.style.display='none';
+        /* ★ 언제든 닫는다 — 검은 칸은 쓰지 않는다 */
+        if(dd.style.display!=='none') dd.style.display='none';
       }catch(_){}
     });
     mo.observe(dd, {attributes:true, attributeFilter:['style']});
@@ -41230,7 +41234,7 @@ list.innerHTML = scored.map(function(d){
               <!-- 로딩 스피너 -->
               <div id="stk-search-spin" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;border:2px solid rgba(139,92,246,0.3);border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
               <!-- 자동완성 드롭다운 -->
-              <div id="stk-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1040;border:1px solid rgba(139,92,246,0.35);border-radius:10px;z-index:999;max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);"></div>
+              <div id="stk-dropdown" style="display:none!important;visibility:hidden;pointer-events:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1040;border:1px solid rgba(139,92,246,0.35);border-radius:10px;z-index:999;max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);"></div>
             </div>
             <button id="stk-analyze-btn" onclick="runStockAnalysis()"
               style="padding:12px 20px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;transition:all .2s;letter-spacing:.04em;flex-shrink:0;">
