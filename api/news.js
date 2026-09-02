@@ -78,6 +78,50 @@ function parseRss(xml, limit) {
   return out;
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+//  종목 뉴스의 「기운」 — 받아온 제목의 낱말로 오행을 셈한다.
+//  AI 를 부르지 않는다. 값 0원이고, 지어낼 여지도 없다.
+// ══════════════════════════════════════════════════════════════════
+const MOOD_KW = {
+  // 오행    올림 낱말                                          내림 낱말
+  화: { up:['급등','상승','신고가','호재','수주','흑자','최대','돌파','surge','soar','jump','record','beat','rally'],
+        dn:['급락','하락','악재','적자','손실','plunge','slump','drop','miss','loss'] },
+  목: { up:['성장','확장','신제품','투자','증설','진출','launch','expand','growth','invest','partnership'],
+        dn:['철수','중단','지연','delay','halt','withdraw'] },
+  금: { up:['배당','자사주','인수','합병','계약','수출','dividend','buyback','acquire','merger','contract'],
+        dn:['매각','감자','규제','제재','sell-off','fine','sanction','probe'] },
+  수: { up:['자금','유동','증자','상장','조달','funding','raise','ipo','liquidity'],
+        dn:['부채','자금난','유출','debt','outflow','default'] },
+  토: { up:['안정','유지','견조','steady','stable','hold','maintain'],
+        dn:['부진','정체','약세','weak','stagnant','flat'] }
+};
+const MOOD_FACE = {
+  화: { emoji:'🔥', label:'뜨거움',  color:'#f87171', el:'화(火) 기운', msg:'열기가 있는 화(火) 기운입니다. 오르내림이 클 수 있습니다.' },
+  목: { emoji:'🌤️', label:'갬',      color:'#34d399', el:'목(木) 기운', msg:'완만한 긍정 흐름의 목(木) 기운입니다.' },
+  금: { emoji:'⚔️', label:'맑음',    color:'#60a5fa', el:'금(金) 기운', msg:'다져지는 금(金) 기운입니다. 형태가 잡히는 흐름입니다.' },
+  수: { emoji:'💧', label:'흐림',    color:'#38bdf8', el:'수(水) 기운', msg:'자금이 도는 수(水) 기운입니다. 흐름을 살피십시오.' },
+  토: { emoji:'⛅', label:'잔잔함',  color:'#a3a3a3', el:'토(土) 기운', msg:'뚜렷한 뉴스 기운이 잡히지 않습니다. 관망의 토(土) 기운입니다.' }
+};
+
+function moodOf(items) {
+  const text = items.map(function(x){ return x.title; }).join(' ').toLowerCase();
+  let best = '토', bestScore = 0;
+  for (const oh of Object.keys(MOOD_KW)) {
+    let s = 0;
+    for (const w of MOOD_KW[oh].up) if (text.includes(w.toLowerCase())) s += 1;
+    for (const w of MOOD_KW[oh].dn) if (text.includes(w.toLowerCase())) s -= 1;
+    if (Math.abs(s) > Math.abs(bestScore)) { bestScore = s; best = oh; }
+  }
+  if (bestScore === 0) best = '토';
+  const f = MOOD_FACE[best];
+  return {
+    weather: f.emoji, weatherLabel: f.label, element: f.el,
+    color: f.color, message: f.msg,
+    disclaimer: '뉴스 기운은 헤드라인 키워드 기반 참고용이며, 투자 권유가 아닙니다.'
+  };
+}
+
 export default async function handler(req, res) {
   const q = req.method === 'POST' ? (req.body || {}) : (req.query || {});
   const lang = LOCALE[q.lang] ? q.lang : 'en';
@@ -88,9 +132,10 @@ export default async function handler(req, res) {
   const key = qq ? ('q|' + lang + '|' + qq) : (lang + '|' + topic);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) {
-    return res.status(200).json({
-      ok: true, items: hit.items.slice(0, n), topic, lang, cachedAt: hit.at, cached: true
-    });
+    const _i = hit.items.slice(0, n);
+    return res.status(200).json(Object.assign({
+      ok: true, items: _i, headlines: _i.slice(0, 3), topic, lang, cachedAt: hit.at, cached: true
+    }, moodOf(_i)));
   }
 
   const [hl, gl0, ceid] = LOCALE[lang];
@@ -124,7 +169,10 @@ export default async function handler(req, res) {
 
     // 앱이 화면에 그대로 띄울 수 있도록 제목·언론사·링크를 있는 그대로 돌려준다.
     // 요약하지 않는다 — 요약하면 그 말의 책임이 우리에게 온다.
-    return res.status(200).json({ ok: true, items: items.slice(0, n), topic, lang, cachedAt: Date.now() });
+    const out = items.slice(0, n);
+    return res.status(200).json(Object.assign({
+      ok: true, items: out, headlines: out.slice(0, 3), topic, lang, cachedAt: Date.now()
+    }, moodOf(out)));
   } catch (e) {
     // 못 받아 오면 빈 손으로 돌려준다. 지어내지 않는다.
     // 앱은 빈 손이면 그 갈래를 조용히 끈다.
