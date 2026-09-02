@@ -14665,7 +14665,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-ab';
+  var ver='CGO-FULI v2026.09.03-ac';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25657,7 +25657,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-ab';
+window.CGO_VER='2026.09.03-ac';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36872,8 +36872,25 @@ function runCheckNums() {
 
   var phoneStr     = prefix + mid + last;
   var phoneDisplay = prefix + '-' + mid + '-' + last;
-  var domOh   = calcResult ? calcResult.domOh  : '목';
-  var lifeNum = calcResult ? calcResult.lifeNum : 5;
+  /* ★ calcResult 는 있는데 domOh·lifeNum 이 비어 undefined·NaN 이 새던 자리.
+     여러 곳에서 찾고, 그래도 없으면 「아직 없음」을 손님에게 알린다. */
+  var _M = window._CGO_MASTER || null;
+  var domOh = (calcResult && calcResult.domOh) || (_M && _M.domOh) || null;
+  var lifeNum = Number((calcResult && calcResult.lifeNum) || (_M && _M.lifeNum) || 0) || null;
+  var _hasSaju = !!(domOh && lifeNum);
+  if(!_hasSaju){
+    document.getElementById('checkResult').innerHTML=
+      '<div style="padding:22px 18px;text-align:center;background:#f0fdfa;border:1px solid rgba(52,211,153,.3);border-radius:14px">'+
+      '<div style="font-size:32px;margin-bottom:10px">🔒</div>'+
+      '<div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:6px">내 정보가 먼저 필요합니다</div>'+
+      '<div style="font-size:11.5px;color:#4b6470;line-height:1.75;margin-bottom:15px">'+
+      '번호를 읽으려면 <b>내 사주 일간과 생명수</b>가 있어야 합니다.<br>'+
+      '그 둘이 없으면 번호의 숫자와 무엇을 견줄지가 없습니다.</div>'+
+      '<button type="button" onclick="cgoOpenInfoInput&&cgoOpenInfoInput()" style="padding:11px 20px;background:linear-gradient(135deg,#34d399,#059669);border:none;border-radius:11px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;">정보 입력하기</button>'+
+      '</div>';
+    return;
+  }
+  domOh = String(domOh).replace(/[()a-zA-Z가-힣]*([목화토금수])[()a-zA-Z가-힣]*/, '$1');
   var ohRange = OH_LUCKY_RANGES[domOh] || {primary:[],secondary:[]};
   var lifeArr = LIFE_LUCKY[lifeNum] || [];
 
@@ -37011,17 +37028,17 @@ function runCheckNums() {
   '<div style="font-family:Orbitron,sans-serif;font-size:24px;font-weight:700;color:var(--red)">'+curScore+'<span style="font-size:10px">점</span></div>'+
   '</div>'+
   '<div style="font-size:11px;color:var(--text-3);padding:7px 10px;background:rgba(248,113,113,.05);border-radius:7px">'+
-  '⚠️ 현재 에너지 <strong style="color:var(--red)">'+curScore+'점</strong> — 아래 추천 번호로 교체 시 <strong style="color:var(--gold)">90점 이상</strong> 보장'+
+  '현재 번호의 역학 기운은 <strong style="color:var(--red)">'+curScore+'점</strong>입니다. 아래는 내 사주에 더 맞물리는 숫자로 짜 본 것입니다.'+
   '</div></div>'+
 
   /* 추천 번호 */
   '<div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(52,211,153,.05));border:2px solid rgba(212,168,67,.4);border-radius:16px;overflow:hidden;margin-bottom:12px">'+
   '<div style="padding:13px 16px;border-bottom:1px solid rgba(212,168,67,.2);display:flex;align-items:center;justify-content:space-between">'+
   '<div>'+
-  '<div style="font-size:14px;font-weight:700;color:var(--gold)">🏆 역학 에너지 90점+ 행운 전화번호</div>'+
+  '<div style="font-size:14px;font-weight:700;color:var(--gold)">🏆 내 사주에 맞물리는 번호</div>'+
   '<div style="font-size:10px;color:var(--text-3);margin-top:2px">010 고정 · 가운데+끝 교체 추천</div>'+
   '</div>'+
-  '<div style="font-size:10px;padding:3px 10px;border-radius:8px;background:rgba(212,168,67,.15);color:var(--gold)">역학 역산 보장</div>'+
+  '<div style="font-size:10px;padding:3px 10px;border-radius:8px;background:rgba(212,168,67,.15);color:var(--gold)">역학 역산 · 참고용</div>'+
   '</div>'+
   '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">'+
 
@@ -37114,16 +37131,129 @@ function runCheckNums() {
   ' (<span style="color:var(--green);font-weight:700">+'+(sets[0].score-curScore)+'점 향상</span>)'+
   '</div></div>';
 
-  // 18개 역학 카드
-  var scores18c = calc18ForCheckNums(domOh, lifeNum, curScore, topPool.slice(0,5));
-  html += build18Cards(scores18c, 'check');
-
-  // 🔬 8개 역학+NASA 심층 분석 클릭 패널
-  html += buildDeepPanel('check', {domOh:domOh, lifeNum:lifeNum, baseScore:curScore, topNums:topPool.slice(0,5), context:'번호'});
+  html += _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay);
 
   document.getElementById('checkResult').innerHTML = html;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   📱 내 번호 역학 — 숫자를 직접 다루는 여섯만
+   전에는 스물여섯 개였다. 관상·손금·rPPG·행성은 번호와 관계가 없어 뺐다.
+   각 카드는 「내 사주에서 나온 값」과 「번호의 숫자」를 나란히 보여
+   왜 맞물리는지 · 왜 어긋나는지를 손님이 스스로 알게 한다.
+   ══════════════════════════════════════════════════════════════ */
+function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay){
+  var OHN={목:'목(木)',화:'화(火)',토:'토(土)',금:'금(金)',수:'수(水)'};
+  var OHI={목:'🌳',화:'🔥',토:'⛰️',금:'⚔️',수:'💧'};
+  var GEN={목:'수',화:'목',토:'화',금:'토',수:'금'};      /* 나를 낳는 것 */
+  var CTL={목:'금',화:'수',토:'목',금:'화',수:'토'};      /* 나를 누르는 것 */
+  var R=(typeof OH_LUCKY_RANGES!=='undefined'&&OH_LUCKY_RANGES[domOh])||{primary:[],secondary:[]};
+  var LA=(typeof LIFE_LUCKY!=='undefined'&&LIFE_LUCKY[lifeNum])||[];
+  var KJ=(typeof KJ_LUCKY_NUMS!=='undefined')?KJ_LUCKY_NUMS:{};
+  var uniq=[]; (curNums||[]).forEach(function(x){ if(uniq.indexOf(x)<0) uniq.push(x); });
+
+  /* 번호 속 숫자가 각 표에 몇 개 걸리는가 — 이것이 점수의 근거다 */
+  function hit(arr){ return uniq.filter(function(x){ return arr.indexOf(x)>=0; }); }
+  var hP=hit(R.primary||[]), hS=hit(R.secondary||[]), hL=hit(LA);
+  var sum=uniq.reduce(function(a,b){ return a+b; }, 0);
+  var gua=(sum%64)+1;
+  var digits=String(phoneDisplay).replace(/\D/g,'').split('').map(Number);
+  var dsum=digits.reduce(function(a,b){ return a+b; }, 0);
+  var root=dsum; while(root>9) root=String(root).split('').reduce(function(a,b){ return a+ +b; },0);
+  var kjKey=Object.keys(KJ)[(lifeNum-1+9)%9]||'';
+  var hK=hit(KJ[kjKey]||[]);
+  var nine=digits.filter(function(d){ return d>=1&&d<=9; });
+  var gungCount={}; nine.forEach(function(d){ gungCount[d]=(gungCount[d]||0)+1; });
+  var gungHit=Object.keys(gungCount).filter(function(d){ return +d===lifeNum||+d===((lifeNum+4)%9||9); }).length;
+
+  function sc(base, add, cap){ return Math.max(20, Math.min(cap||92, Math.round(base+add))); }
+  var S=[
+   { ico:'🔢', n:'수비학', pt:10,
+     score: sc(46, root===lifeNum?34:(Math.abs(root-lifeNum)<=1?18:hL.length*6), 92),
+     mine:'내 생명수 <b>'+lifeNum+'</b>',
+     yours:'번호 전체 합 '+dsum+' → 근원수 <b>'+root+'</b>',
+     why: root===lifeNum
+       ? '번호의 근원수가 내 생명수와 같습니다. 숫자가 나와 같은 결로 웁니다.'
+       : (Math.abs(root-lifeNum)<=1
+         ? '근원수 '+root+'이 내 생명수 '+lifeNum+' 바로 옆입니다. 큰 어긋남은 없습니다.'
+         : '근원수 '+root+'이 내 생명수 '+lifeNum+'과 떨어져 있습니다. 번호를 누를 때마다 다른 결의 숫자를 부르는 셈입니다.') },
+   { ico:OHI[domOh]||'☯️', n:'사주명리', pt:10,
+     score: sc(44, hP.length*13 + hS.length*6, 92),
+     mine:'내 일간 오행 <b>'+(OHN[domOh]||domOh)+'</b>',
+     yours:'번호 속 숫자 '+uniq.join('·')+' 중 내 오행 숫자 <b>'+hP.length+'개</b>',
+     why: hP.length>=2
+       ? (OHN[domOh]||domOh)+' 기운을 돕는 숫자가 '+hP.join('·')+' 로 들어 있습니다. 번호가 내 기운을 받쳐 줍니다.'
+       : (hP.length===1
+         ? (OHN[domOh]||domOh)+' 숫자가 '+hP[0]+' 하나뿐입니다. 받침이 얇습니다.'
+         : (OHN[domOh]||domOh)+' 기운을 돕는 숫자가 없습니다. 나를 낳는 '+(OHN[GEN[domOh]]||'')+' 계열 숫자를 넣으면 결이 풀립니다.') },
+   { ico:'☰', n:'주역 64괘', pt:8,
+     score: sc(48, [1,2,11,14,19,26,34,41,42,46,50,58].indexOf(gua)>=0?26:([6,12,23,29,36,39,47,54].indexOf(gua)>=0?-14:8), 90),
+     mine:'번호 숫자 합 <b>'+sum+'</b>',
+     yours:'64괘 중 <b>제'+gua+'괘</b>',
+     why: [1,2,11,14,19,26,34,41,42,46,50,58].indexOf(gua)>=0
+       ? '제'+gua+'괘는 통하는 괘입니다. 자금과 사람이 도는 결입니다.'
+       : ([6,12,23,29,36,39,47,54].indexOf(gua)>=0
+         ? '제'+gua+'괘는 막히는 괘입니다. 이 번호로는 말이 겉도는 일이 잦습니다.'
+         : '제'+gua+'괘는 평(平)입니다. 좋지도 나쁘지도 않은 결입니다.') },
+   { ico:'✍️', n:'성명학 수리', pt:7,
+     score: sc(45, ([1,3,5,6,7,8].indexOf(root)>=0?24:(root===9?12:-8)), 90),
+     mine:'수리오행 기준 길수 <b>1·3·5·6·7·8</b>',
+     yours:'번호 근원수 <b>'+root+'</b>',
+     why: [1,3,5,6,7,8].indexOf(root)>=0
+       ? '근원수 '+root+'은 수리오행에서 길수(吉數)입니다. 이름 획수와 같은 자리에 놓입니다.'
+       : (root===9
+         ? '근원수 9는 극(極)의 수입니다. 크게 오르거나 크게 내리는 결입니다.'
+         : '근원수 '+root+'은 수리오행에서 흉수(凶數)로 봅니다. 이 자리가 이 번호의 약한 곳입니다.') },
+   { ico:'🌟', n:'구성기학 9성', pt:6,
+     score: sc(46, hK.length*11, 90),
+     mine:'내 본명성 계열 숫자',
+     yours:'번호에 든 본명성 숫자 <b>'+(hK.length?hK.join('·'):'없음')+'</b>',
+     why: hK.length
+       ? '내 본명성과 같은 계열의 숫자 '+hK.join('·')+' 가 들어 있습니다. 아홉 별 중 내 별이 번호에 앉아 있습니다.'
+       : '내 본명성 계열 숫자가 없습니다. 아홉 별 어디에도 내 자리가 없는 번호입니다.' },
+   { ico:'☁️', n:'기문둔갑 9궁', pt:5,
+     score: sc(47, gungHit*13 + (nine.length>=6?6:0), 88),
+     mine:'생문·개문에 해당하는 궁 <b>'+lifeNum+'·'+((lifeNum+4)%9||9)+'</b>',
+     yours:'번호의 1~9 자릿수 '+nine.length+'개 중 그 궁 <b>'+gungHit+'개</b>',
+     why: gungHit>=2
+       ? '아홉 칸에서 열린 문(생문·개문) 자리에 번호 숫자가 앉습니다. 드는 기운이 순합니다.'
+       : (gungHit===1
+         ? '열린 문 자리에 숫자가 하나 앉습니다. 나가는 기운보다는 낫습니다.'
+         : '열린 문 자리에 앉는 숫자가 없습니다. 이 번호는 기운이 드나드는 길이 좁습니다.') }
+  ];
+  var w=0, ws=0;
+  S.forEach(function(x){ ws+=x.score*x.pt; w+=x.pt; });
+  var tot=Math.round(ws/w);
+  var g = tot>=78?{t:'잘 맞물립니다',c:'#059669'} : tot>=64?{t:'무난합니다',c:'#34d399'}
+        : tot>=50?{t:'보통입니다',c:'#94a3b8'} : {t:'어긋나는 편입니다',c:'#f59e0b'};
+
+  var h='<div style="background:#fff;border:1px solid #d7eee8;border-radius:16px;padding:18px 16px;margin-top:16px;">'
+   +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px;">'
+   +'<span style="font-size:14px;font-weight:900;color:#0f172a;">📱 숫자 역학 여섯으로 읽기</span>'
+   +'<span style="font-size:26px;font-weight:800;color:'+g.c+';line-height:1;">'+tot+'</span></div>'
+   +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px;">'
+   +'<span style="font-size:10.5px;color:#647a86;">배점 합 '+w+'pt 가중평균</span>'
+   +'<span style="font-size:12px;font-weight:800;color:'+g.c+';">'+g.t+'</span></div>'
+   +'<div style="font-size:10.5px;color:#8a9aa3;line-height:1.7;margin-bottom:14px;">'
+   +'숫자를 직접 다루는 역학만 셈합니다. 내 일간 '+(OHN[domOh]||domOh)+' · 생명수 '+lifeNum+' 이 기준입니다.</div>';
+  S.forEach(function(x){
+   h+='<div style="border-top:1px solid #eef2f4;padding:13px 0 3px;">'
+     +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">'
+     +'<span style="font-size:15px;">'+x.ico+'</span>'
+     +'<span style="flex:1;min-width:0;font-size:12.5px;font-weight:800;color:#0f172a;">'+x.n+'</span>'
+     +'<span style="font-size:9.5px;font-weight:800;color:#059669;">'+x.pt+'pt</span>'
+     +'<span style="font-size:13px;font-weight:800;color:'+(x.score>=72?'#059669':x.score>=56?'#34d399':'#f59e0b')+';">'+x.score+'</span></div>'
+     +'<div style="background:#eef2f4;border-radius:3px;height:5px;overflow:hidden;margin-bottom:9px;">'
+     +'<div style="width:'+x.score+'%;height:100%;background:'+(x.score>=72?'#059669':x.score>=56?'#34d399':'#f59e0b')+';border-radius:3px;"></div></div>'
+     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;">'
+     +'<div style="background:#f0fdfa;border-radius:9px;padding:8px 9px;font-size:10px;color:#4b6470;line-height:1.6;">'+x.mine+'</div>'
+     +'<div style="background:#f7f9fa;border-radius:9px;padding:8px 9px;font-size:10px;color:#4b6470;line-height:1.6;">'+x.yours+'</div></div>'
+     +'<div style="font-size:11px;color:#334155;line-height:1.75;">'+x.why+'</div></div>';
+  });
+  h+='<div style="font-size:9.5px;color:#8a9aa3;line-height:1.7;margin-top:14px;padding-top:12px;border-top:1px solid #eef2f4;">'
+   +'⚖️ 숫자와 사주를 견주어 낸 참고용 풀이입니다. 좋은 번호가 결과를 정해 주지는 않습니다.</div></div>';
+  return h;
+}
 function toggle18Expert(cid) {
   var xEl = document.getElementById(cid+'_exp');
   var btnEl = document.getElementById(cid+'_btn');
