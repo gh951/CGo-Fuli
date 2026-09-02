@@ -436,8 +436,13 @@ window.setLang=window.cgoSwitchLang=function(L){
      try{
        var _lp=document.getElementById('page-lotto');
        if(_lp && _lp.offsetParent){
-         if(document.getElementById('checkResult') && (document.getElementById('phoneMid')||{}).value && window.runCheckNums) runCheckNums();
-         if(window._lottoDone && window.runLotto) runLotto();
+         setTimeout(function(){
+           try{
+             if(window.lottoUpdateSysMethods) lottoUpdateSysMethods();
+             if(document.getElementById('checkResult') && (document.getElementById('phoneMid')||{}).value && window.runCheckNums) runCheckNums();
+             if(window._lottoDone && window.runLotto) runLotto();
+           }catch(_){}
+         }, 0);
        }
      }catch(e){}
      try{
@@ -14674,7 +14679,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-bb';
+  var ver='CGO-FULI v2026.09.03-bd';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25701,7 +25706,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-bb';
+window.CGO_VER='2026.09.03-bd';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -36493,6 +36498,7 @@ function lottoUpdateSysMethods() {
     return '<option value="'+m.v+'">'+m.t+'</option>';
   }).join('');
 }
+try{ window.lottoUpdateSysMethods=lottoUpdateSysMethods; }catch(e){}
 
 // 페이지 로드 시 초기화
 (function(){
@@ -45630,10 +45636,10 @@ function _lottoBuildSysFitness(method, domOh, lifeNumVal, nums) {
 
   // ── method 라벨 ──
   var sysLabel = ({
-    saju:'☯️ 사주명리', jami:'🌟 자미두수', astro:'♈ 서양 점성술',
-    num:'🔢 수비학', gmd:'🧭 기문둔갑', kusei:'🌟 구성기학',
-    tarot:'🎴 타로', kabala:'✡️ 카발라', taeul:'🌀 태을신수',
-    nasa18:_L8('22868','🛰️ NASA 통합'), all18:_L8('22869',_L8('22950','✨ 9대 + NASA + 생체'))
+    saju:_L8n('☯️ 사주명리'), jami:_L8n('🌟 자미두수'), astro:_L8n('♈ 서양 점성술'),
+    num:_L8n('🔢 수비학'), gmd:_L8n('🧭 기문둔갑'), kusei:_L8n('🌟 구성기학'),
+    tarot:_L8n('🎴 타로'), kabala:_L8n('✡️ 카발라'), taeul:_L8n('🌀 태을신수'),
+    nasa18:_L8('22868','🛰️ NASA 통합'), all18:_L8('22950','✨ 9대 + NASA + 생체')
   })[baseMethod] || baseMethod;
 
   var sysExtra = (hasBio ? ((window._LANG&&window._LANG!=='ko')?' + 🧬 Bio (rPPG)':_L8('22870',' + 🧬 생체 (rPPG)')) : (hasNasa ? ' + 🛰️ NASA' : ''));
