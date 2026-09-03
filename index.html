@@ -14816,7 +14816,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-cq';
+  var ver='CGO-FULI v2026.09.03-cs';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25843,7 +25843,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-cq';
+window.CGO_VER='2026.09.03-cs';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -38024,11 +38024,24 @@ function sptRenderMatches(tab) {
 
   var matches = [];
   if (tab === 'all') {
-    // 전체탭: 각 종목별 30개씩 → 합쳐서 표시
-    Object.keys(SPT_MATCH_DB).forEach(function(k) {
-      var limited = SPT_MATCH_DB[k].slice(0, MAX_PER_TAB);
-      limited.forEach(function(m) { matches.push(Object.assign({}, m, {type:k})); });
+    /* ★ 그 나라가 보는 종목만, 그 나라 순서대로.
+       전에는 모든 종목을 쏟아 놓아 인도 손님에게 KBO 야구가 먼저 나왔다. */
+    var _L=(window._LANG||'ko');
+    var _order=(window.SPT_COUNTRY_TABS && (SPT_COUNTRY_TABS[_L]||SPT_COUNTRY_TABS.en))
+               || ['soccer','baseball','basketball','volleyball'];
+    var _seen={};
+    _order.forEach(function(k){
+      _seen[k]=1;
+      (SPT_MATCH_DB[k]||[]).slice(0, MAX_PER_TAB).forEach(function(m){
+        matches.push(Object.assign({}, m, {type:k}));
+      });
     });
+    /* 그 나라 목록에 없지만 「기타」에 담긴 것은 끝에 붙인다 */
+    if(!_seen.etc){
+      (SPT_MATCH_DB.etc||[]).slice(0, MAX_PER_TAB).forEach(function(m){
+        matches.push(Object.assign({}, m, {type:'etc'}));
+      });
+    }
   } else {
     // 개별탭: 해당 종목 최대 30개만
     matches = (SPT_MATCH_DB[tab] || []).slice(0, MAX_PER_TAB).map(function(m){
@@ -39058,27 +39071,37 @@ function sptRenderTabs(){
 try{ window.sptRenderTabs=sptRenderTabs; window.SPT_COUNTRY_TABS=SPT_COUNTRY_TABS; }catch(e){}
 
 var SPT_NEWS_Q = {
-  ko:    {q:'맞대결 전력 비교 선발 라인업 -날씨 -비',                    flag:'🇰🇷'},
-  en:    {q:'"head to head" matchup lineup form guide -weather -rain',  flag:'🇺🇸'},
-  ja:    {q:'対戦 スタメン 戦力 比較 -天気 -雨',                          flag:'🇯🇵'},
-  zh:    {q:'对阵 首发 战力 比较 -天气 -降雨',                            flag:'🇨🇳'},
-  zh_HK: {q:'對陣 首發 戰力 比較 -天氣 -降雨',                            flag:'🇭🇰'},
-  ru:    {q:'"личные встречи" составы кто фаворит -погода -дождь',      flag:'🇷🇺'},
-  es:    {q:'"cara a cara" alineaciones favorito -tiempo -lluvia',      flag:'🇪🇸'},
-  fr:    {q:'"face à face" compositions favori -météo -pluie',          flag:'🇫🇷'},
-  de:    {q:'Duell Aufstellungen Favorit Bilanz -Wetter -Regen',        flag:'🇩🇪'},
-  pt:    {q:'confronto direto escalações favorito -tempo -chuva',       flag:'🇧🇷'},
-  it:    {q:'"testa a testa" formazioni favorita -meteo -pioggia',      flag:'🇮🇹'},
-  nl:    {q:'onderling duel opstellingen favoriet -weer -regen',        flag:'🇳🇱'},
-  vi:    {q:'đối đầu đội hình phong độ -thời tiết -mưa',                flag:'🇻🇳'},
-  th:    {q:'สถิติการพบกัน ตัวจริง ฟอร์ม -อากาศ -ฝน',                    flag:'🇹🇭'},
-  id:    {q:'"head to head" susunan pemain performa -cuaca -hujan',     flag:'🇮🇩'},
-  ms:    {q:'"head to head" senarai pemain prestasi -cuaca -hujan',     flag:'🇲🇾'},
-  tl:    {q:'"head to head" lineup form matchup -weather -rain',        flag:'🇵🇭'},
-  tr:    {q:'"kafa kafaya" ilk 11 form karşılaşma -hava -yağmur',       flag:'🇹🇷'},
-  hi:    {q:'"पलड़ा भारी" प्लेइंग इलेवन आमना-सामना -मौसम -बारिश',           flag:'🇮🇳'},
-  ar:    {q:'"مواجهات مباشرة" التشكيلة الأقرب -الطقس -المطر',            flag:'🇸🇦'}
+  ko:    {q:'맞대결 전적 선발 라인업 전력 -배당 -토토',                     flag:'🇰🇷'},
+  en:    {q:'"head to head" lineup team news form -odds -betting -bookmaker', flag:'🇺🇸'},
+  ja:    {q:'対戦成績 スタメン 戦力 -オッズ -ブックメーカー',                  flag:'🇯🇵'},
+  zh:    {q:'交锋战绩 首发 阵容 -赔率 -博彩',                                flag:'🇨🇳'},
+  zh_HK: {q:'交鋒戰績 首發 陣容 -賠率 -博彩',                                flag:'🇭🇰'},
+  ru:    {q:'обзор матча составы статистика встреч -ставка -прогноз -букмекер -коэффициент', flag:'🇷🇺'},
+  es:    {q:'previa alineaciones historial -cuotas -apuestas',            flag:'🇪🇸'},
+  fr:    {q:'avant-match compositions confrontations -cotes -paris',      flag:'🇫🇷'},
+  de:    {q:'Vorschau Aufstellungen Bilanz -Quoten -Wetten',              flag:'🇩🇪'},
+  pt:    {q:'prévia escalações retrospecto -odds -apostas',               flag:'🇧🇷'},
+  it:    {q:'presentazione formazioni precedenti -quote -scommesse',      flag:'🇮🇹'},
+  nl:    {q:'vooruitblik opstellingen onderling -quotering -wedden',      flag:'🇳🇱'},
+  vi:    {q:'đối đầu đội hình thành tích -tỷ lệ -cá cược',                flag:'🇻🇳'},
+  th:    {q:'สถิติการพบกัน ตัวจริง ฟอร์มทีม -ราคา -พนัน',                    flag:'🇹🇭'},
+  id:    {q:'"head to head" susunan pemain rekor -odds -taruhan',         flag:'🇮🇩'},
+  ms:    {q:'"head to head" senarai pemain rekod -odds -pertaruhan',      flag:'🇲🇾'},
+  tl:    {q:'"head to head" lineup team news -odds -betting',             flag:'🇵🇭'},
+  tr:    {q:'"kafa kafaya" ilk 11 form -oran -bahis -iddaa',              flag:'🇹🇷'},
+  hi:    {q:'"पलड़ा भारी" प्लेइंग इलेवन आमना-सामना -सट्टा -ऑड्स',              flag:'🇮🇳'},
+  ar:    {q:'"مواجهات مباشرة" التشكيلة سجل -مراهنات -احتمالات',            flag:'🇸🇦'}
 };
+/* ★ 베팅 업체 그물 — 검색어만 고치면 다음 주에 또 다른 업체가 온다.
+   출처와 제목을 보고 버린다. 새 업체도 낱말 규칙에 걸린다. */
+var SPT_NEWS_BLOCK = /ставк|букмекер|коэффициент|прогноз на матч|legalbet|winline|betcity|1xbet|bet365|marathonbet|fonbet|париматч|parimatch|odds|betting|bookmaker|sportsbook|wager|punter|tipster|apuesta|cuota|scommess|quote sportive|wett|paris sportifs|cote|aposta|taruhan|pertaruhan|bahis|iddaa|สล็อต|พนัน|แทงบอล|सट्टा|ऑड्स|मराहन|مراهن|احتمالات المباراة|토토|배당률|스포츠토토|먹튀/i;
+function sptNewsClean(items){
+  return (items||[]).filter(function(x){
+    var t=String((x&&x.title)||'')+' '+String((x&&x.source)||'')+' '+String((x&&x.link)||'');
+    return !SPT_NEWS_BLOCK.test(t);
+  });
+}
+try{ window.sptNewsClean=sptNewsClean; window.SPT_NEWS_BLOCK=SPT_NEWS_BLOCK; }catch(e){}
 /* ★ 크리켓·아이스하키·격투기 — 인도·러시아·태국 손님에게 필수다.
    구독에 없으면 응답이 비어 오므로 그 탭은 스스로 감춰진다 (값도 안 든다). */
 function sptLoadExtraSports(cb){
@@ -39144,22 +39167,23 @@ function sptLoadNews(){
   window._sptNewsLang=L; window._sptNewsAt=0;   /* 옛 나라 소식을 버린다 */
   box.innerHTML='<div style="font-size:10.5px;color:#94a3b8;">'
     +_L8('23221','소식을 받아오는 중…')+'</div>';
-  fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(C.q)+'&n=5')
+  fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(C.q)+'&n=12')
     .then(function(r){ return r.json(); })
     .then(function(d){
       /* 응답이 늦게 왔을 때 그 사이 언어가 또 바뀌었으면 버린다 */
       if((window._LANG||'ko')!==L) return;
-      var it=(d&&d.items)||[];
+      /* 베팅 업체 기사를 걸러낸다 — 우리는 사실 자료만 쓴다 */
+      var it=sptNewsClean((d&&d.items)||[]);
       if(!it.length){
         /* 좁아서 빈 손이면 따옴표·제외어를 떼고 한 번 더 두드린다 */
         if(!window._sptNewsRetry){
           window._sptNewsRetry=1;
           var wide=String(C.q).replace(/"/g,'').replace(/\s-\S+/g,'').trim();
-          fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(wide)+'&n=5')
+          fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(wide)+'&n=12')
             .then(function(r){ return r.json(); })
             .then(function(d2){
               window._sptNewsRetry=0;
-              var i2=(d2&&d2.items)||[];
+              var i2=sptNewsClean((d2&&d2.items)||[]);
               if(!i2.length){
                 box.innerHTML='<div style="font-size:10.5px;color:#94a3b8;">'
                   +_L8('23222','지금은 받아온 소식이 없습니다')+'</div>';
