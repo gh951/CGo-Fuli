@@ -13,7 +13,9 @@ body.gate-open #stars,body.gate-open #fog{visibility:hidden!important}
 <script>
 window._L8 = window._L8 || function(num, ko){
   try{ var L=(window._LANG||'ko'); if(L==='ko'||!num) return ko;
-    var d=window._cgoDash; return (d&&d[L]&&d[L][num])||ko; }catch(e){ return ko; }
+    var d=window._cgoDash; if(!d) return ko;
+    return (d[L]&&d[L][num]) || (d.en&&d.en[num]) || ko;   /* 없으면 영어로 */
+  }catch(e){ return ko; }
 };
 window._L8NM = window._L8NM || {'사주':'22840','사주명리':'22871','자미두수':'22872','점성술':'22842',
   '서양 점성술':'22873','수비학':'22843','기문둔갑':'22874','구성기학':'22875',
@@ -40,7 +42,7 @@ window._tp = window._tp || function(num, ko, en){
   var a=Array.prototype.slice.call(arguments,3), t=null;
   try{ var L=(window._LANG||'ko');
     if(L==='ko') t=ko;
-    else { var d=window._cgoDash; t=(d&&d[L]&&d[L][num])||en||ko; }
+    else { var d=window._cgoDash; t=(d&&d[L]&&d[L][num])||(d&&d.en&&d.en[num])||en||ko; }
   }catch(e){}
   if(!t) t=ko;
   return String(t).replace(/\{(\d)\}/g, function(m,i){ return (a[+i]!=null)?a[+i]:''; });
@@ -14715,7 +14717,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-bx';
+  var ver='CGO-FULI v2026.09.03-by';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25742,7 +25744,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-bx';
+window.CGO_VER='2026.09.03-by';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -35944,8 +35946,8 @@ function build18Cards(scores, context, _lottoMethod) {
     function _l9pick(kind, fallback){
       try{
         var L=(window._LANG||'ko'); if(L==='ko'||!_l9||!_l9[kind]) return fallback;
-        var d=window._cgoDash; var v=d&&d[L]&&d[L][_l9[kind]];
-        return v || fallback;
+        var d=window._cgoDash; var k9=_l9[kind];
+        return (d&&d[L]&&d[L][k9]) || (d&&d.en&&d.en[k9]) || fallback;
       }catch(e){ return fallback; }
     }
     var easyTxt = needsCheck
@@ -36560,7 +36562,8 @@ try{ window._L8n=_L8n; window._L8=_L8; }catch(e){}
 function runLotto() {
   /* ★ 코드가 짓는 낱말도 그 언어로 */
   function _L7(num,ko){ try{ var d=window._cgoDash,L=window._LANG||'ko';
-    if(L==='ko'||!num) return ko; return (d&&d[L]&&d[L][num])||ko; }catch(e){ return ko; } }
+    if(L==='ko'||!num) return ko;
+    return (d&&d[L]&&d[L][num])||(d&&d.en&&d.en[num])||ko; }catch(e){ return ko; } }
   var _EN7=(window._LANG&&window._LANG!=='ko');
   var birthVal = document.getElementById('ltBirth').value;
   var method   = document.getElementById('ltMethod').value;
@@ -37390,7 +37393,8 @@ function _numSixCards(domOh, lifeNum, curNums, curScore, phoneDisplay, calcOnly)
     return String(t).replace(/\{(\d)\}/g, function(m,i){ return (a[+i]!=null)?a[+i]:''; });
   }
   function _dk(num,ko){ try{ var d=window._cgoDash,L=window._LANG||'ko';
-    if(L==='ko'||!num) return ko; return (d&&d[L]&&d[L][num])||ko; }catch(e){ return ko; } }
+    if(L==='ko'||!num) return ko;
+    return (d&&d[L]&&d[L][num])||(d&&d.en&&d.en[num])||ko; }catch(e){ return ko; } }
   var OHN=_EN
     ? {목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'}
     : {목:'목(木)',화:'화(火)',토:'토(土)',금:'금(金)',수:'수(水)'};
