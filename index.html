@@ -11,6 +11,49 @@ body.gate-open header,body.gate-open .content,body.gate-open #app,
 body.gate-open #stars,body.gate-open #fog{visibility:hidden!important}
 </style>
 <script>
+window.CGO_TIER_COST = window.CGO_TIER_COST || {
+  /* 기능마다 값이 다르다 — 화면에 적힌 값과 똑같이 둔다 */
+  lotto: {pro:100,  max:500},    /* 행운 번호  · 화면 100원 · 500원 */
+  stock: {pro:2000, max:5000},   /* 주식 에너지 · 화면 2,000원 · 5,000원 */
+  def:   {pro:100,  max:500}
+};
+/* 별을 깎는다. 부족하면 false — 문구는 사전 16796 을 쓴다 (20개 언어) */
+window.cgoTierBuy = function(feat, tier){
+  if(tier==='basic') return true;
+  if(window.cgoIsManager && window.cgoIsManager()) return true;   /* 매니저는 값이 안 든다 */
+  var C = (window.CGO_TIER_COST[feat] || window.CGO_TIER_COST.def);
+  var need = (tier==='max') ? C.max : C.pro;
+  var ok = true;
+  try{ ok = window.chargeStars(need); }catch(e){ ok = true; }
+  return ok !== false;
+};
+window.cgoTierNote = function(boxId, need){
+  try{
+    var b=document.getElementById(boxId); if(!b) return;
+    var msg=(window._L8 ? window._L8('16796','별이 부족합니다. 충전해 주세요. ⭐')
+                        : '별이 부족합니다. 충전해 주세요. ⭐');
+    b.textContent='⭐ '+msg+(need?' ('+need+')':'');
+    b.style.display='block';
+    setTimeout(function(){ try{ b.style.display='none'; }catch(e){} }, 4000);
+  }catch(e){}
+};
+/* 행운 번호 등급 */
+window.lnTier = window.lnTier || 'basic';
+window.lnSetTier = function(t){
+  if(!window.cgoTierBuy('lotto', t)){
+    var C=window.CGO_TIER_COST.lotto;
+    window.cgoTierNote('ln-tier-note', (t==='max'?C.max:C.pro)+'⭐');
+    return;
+  }
+  window.lnTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
+  ['basic','pro','max'].forEach(function(x){
+    var el=document.getElementById('ln-tier-'+x);
+    if(el) el.style.borderColor=(x===t)?'#34d399':'#e6eef0';
+  });
+  /* 등급이 바뀌면 풀이를 다시 낸다 — 깊이가 달라진다 */
+  try{ if(window._lottoLast && window.runLotto) runLotto(); }catch(e){}
+};
 window._L8 = window._L8 || function(num, ko){
   try{ var L=(window._LANG||'ko'); if(L==='ko'||!num) return ko;
     var d=window._cgoDash; if(!d) return ko;
@@ -13031,6 +13074,19 @@ function cgoGoPage(page){
   }
   // 주식 페이지 진입 시 이전 분석 잔상 초기화 (C-60)
   if(page === 'stock'){ try{ if(typeof stkResetPage==='function') stkResetPage(); }catch(e){} }
+  /* ⚽ 스포츠 에너지 — 들어올 때 내 기운·인기 팀·오늘 경기를 채운다 */
+  if(page === 'sports'){
+    try{ if(typeof sptUpdateMyEnergy==='function') sptUpdateMyEnergy(); }catch(e){}
+    setTimeout(function(){
+      try{ if(typeof sptUpdatePopularTeams==='function') sptUpdatePopularTeams(); }catch(e){}
+      try{ if(typeof sptRenderTotoBanner==='function') sptRenderTotoBanner(); }catch(e){}
+      try{ if(typeof sptLoadTodayMatches==='function') sptLoadTodayMatches(); }catch(e){}
+      try{ if(typeof sptStartLiveUpdate==='function') sptStartLiveUpdate(); }catch(e){}
+    }, 90);
+  } else {
+    /* 나가면 실시간 고리를 멈춘다 — 보이지 않는 것은 죽인다 */
+    try{ if(window._sptLiveTimer){ clearInterval(window._sptLiveTimer); window._sptLiveTimer=null; } }catch(e){}
+  }
   /* ★ 구앱에는 있던 두 줄이 빠져 있었다 — 안내 팝업과 실시간 갱신 시작.
      그래서 국가 목록·오늘의 픽·실시간 순환이 비어 있었다. */
   if(page==='stock'){
@@ -14717,7 +14773,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-ca';
+  var ver='CGO-FULI v2026.09.03-ce';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25744,7 +25800,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-ca';
+window.CGO_VER='2026.09.03-ce';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -25805,7 +25861,7 @@ window.CGO_AI_ALLOW = [
 window.CGO_AI = window.CGO_AI || {
   tier:'basic',
   freeCap: 25,     /* 본풀이 — 기능의 알맹이. 35개를 다 둘러봐도 닿는다 */
-  chatCap: 8,      /* 덧붙임 대화 — 여기만 조인다 */
+  chatCap: 10,     /* 덧붙임 대화 — 별 플랜의 「AI 상담 10회 포함」과 맞춘다 */
   used:0, chatUsed:0, day:'', cacheHit:0, netCall:0,
   strict:false,    /* ★ 우리 글이 다 채워지면 true 로 올린다 */
   blocked:0
@@ -25890,6 +25946,43 @@ window.CGO_AI = window.CGO_AI || {
           choices:[{message:{content:bm}}]}), {status:200, headers:{'Content-Type':'application/json'}}));
       }
     }
+    /* ★ 사진 장수를 등급으로 가른다 — 사진이 값의 대부분이다.
+       Sonnet 사진 1장 ≈ 6원, 우리가 셈한 수치는 글로 ≈ 1원.
+       기본 0장 · 고급 1장 · 최고급 전부. 뺀 자리는 셈한 수치가 이미 프롬프트에 있다. */
+    try{
+      var _imgCap = ({basic:0, pro:1, max:99})[tier];
+      if(_imgCap===undefined) _imgCap=1;
+      if(window.cgoIsManager && window.cgoIsManager()) _imgCap=99;
+      if(_imgCap<99 && /data:image|base64|"image"/.test(body)){
+        var _jb=JSON.parse(body), _cut=0;
+        function trimImgs(arr){
+          if(!Array.isArray(arr)) return;
+          for(var q=arr.length-1;q>=0;q--){
+            var it=arr[q];
+            if(it && (it.type==='image' || it.type==='image_url' || it.inline_data)){
+              if(_imgCap<=0){ arr.splice(q,1); _cut++; }
+              else _imgCap--;
+            }
+          }
+        }
+        (_jb.messages||[]).forEach(function(m){ trimImgs(m.content); });
+        if(_jb.content) trimImgs(_jb.content);
+        if(_cut>0){
+          /* 뺀 사진 자리를 말로 알려 준다 — AI 가 없는 사진을 지어내지 않게 */
+          var _note = '\n[사진 '+_cut+'장은 이 등급에서 보내지 않습니다. '
+            + '아래에 적힌 측정 수치만으로 판단하고, 보지 않은 부위를 짐작해 말하지 마십시오.]';
+          if(_jb.messages && _jb.messages.length){
+            for(var mi=0; mi<_jb.messages.length; mi++){
+              if(_jb.messages[mi].role==='system'){
+                _jb.messages[mi].content=String(_jb.messages[mi].content||'')+_note; break;
+              }
+            }
+          } else if(_jb.system!=null){ _jb.system=String(_jb.system)+_note; }
+          body=JSON.stringify(_jb);
+          opt=Object.assign({}, opt, {body:body});
+        }
+      }
+    }catch(e){}
     /* ★ 공통 뼈대를 끼운다 — 열 기능 어디서 불러도 말투·언어·안전·길이가 같아진다.
        각 기능의 코드는 한 줄도 고치지 않는다. */
     var target=u, o2=opt;
@@ -25946,11 +26039,7 @@ window.CGO_AI = window.CGO_AI || {
   };
   roll();
   window.cgoSetAiTier=function(t){
-    if(t!=='basic' && !(window.cgoIsManager && window.cgoIsManager())){
-      try{ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 '+({pro:'고급',max:'최고급'})[t]+' 등급은 준비 중입니다'); }catch(e){}
-      return false;
-    }
-    A.tier=t; return true;
+    A.tier=t; return true;   /* 별은 부르는 쪽(cgoTierBuy)에서 이미 깎았다 */
   };
   window.cgoAiStat=function(){
     var tot=A.netCall+A.cacheHit;
@@ -36549,6 +36638,2283 @@ function lottoUpdateSysMethods() {
   }).join('');
 }
 try{ window.lottoUpdateSysMethods=lottoUpdateSysMethods; }catch(e){}
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ⚽ 스포츠 에너지 궁합 — 구앱에서 그대로 옮겨 왔다 (2026-09-03)
+   DB 7표 + 함수 37개. 페이지·CSS·안내 팝업은 page-sports 안에 함께 있다.
+   ══════════════════════════════════════════════════════════════ */
+var SPT_OH = {
+  목: {color:'#4ade80', bg:'rgba(74,222,128,0.12)', sport:'축구·테니스', planet:'목성', en:'Wood', sportEn:'Soccer·Tennis', planetEn:'Jupiter'},
+  화: {color:'#f87171', bg:'rgba(248,113,113,0.12)', sport:'농구·배구', planet:'화성', en:'Fire', sportEn:'Basketball·Volleyball', planetEn:'Mars'},
+  토: {color:'#fbbf24', bg:'rgba(251,191,36,0.12)', sport:'야구·골프', planet:'토성', en:'Earth', sportEn:'Baseball·Golf', planetEn:'Saturn'},
+  금: {color:'#e2e8f0', bg:'rgba(226,232,240,0.12)', sport:'수영·격투기', planet:'금성', en:'Metal', sportEn:'Swimming·Martial arts', planetEn:'Venus'},
+  수: {color:'#60a5fa', bg:'rgba(96,165,250,0.12)', sport:'수영·조정', planet:'수성', en:'Water', sportEn:'Swimming·Rowing', planetEn:'Mercury'}
+};
+
+
+
+var SPT_MATCH_DB = {
+  soccer: [], baseball: [], basketball: [], volleyball: [], tennis: [], etc: []
+};
+
+
+var SPT_LEAGUE_COUNTRY = {
+  // 축구
+  'Premier League':'🏴󠁧󠁢󠁥󠁮󠁧󠁿 EPL','La Liga':'🇪🇸 LaLiga','Bundesliga':'🇩🇪 분데스',
+  'Serie A':'🇮🇹 세리에A','Ligue 1':'🇫🇷 리그1','UEFA Champions League':'🇪🇺 UCL',
+  'UEFA Europa League':'🇪🇺 UEL','K League 1':'🇰🇷 K리그1','K League 2':'🇰🇷 K리그2',
+  'J1 League':'🇯🇵 J1','MLS':'🇺🇸 MLS','Eredivisie':'🇳🇱 에레',
+  'Primeira Liga':'🇵🇹 포르투갈','Scottish Premiership':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Northern NSW NPL':'🇦🇺 NSW NPL','NNSW League 1':'🇦🇺 NNSW','Victoria NPL':'🇦🇺 VIC NPL',
+  'NPFL':'🇳🇬 나이지리아','NPL':'🇦🇺 NPL',
+  // 야구
+  'KBO League':'🇰🇷 KBO','MLB':'🇺🇸 MLB','NPB':'🇯🇵 NPB',
+  // 농구
+  'NBA':'🇺🇸 NBA','KBL':'🇰🇷 KBL','EuroLeague':'🇪🇺 유로리그',
+  // 배구
+  'V-League Men':'🇰🇷 V리그','V-League Women':'🇰🇷 V리그W',
+  'Serie A1 Women':'🇮🇹 이탈리아','CEV Champions League':'🇪🇺 배구UCL',
+};
+
+
+var SPT_TEAM_KO = {
+  // EPL
+  'Manchester City':'맨체스터 시티','Man City':'맨체스터 시티',
+  'Arsenal':'아스널','Liverpool':'리버풀','Chelsea':'첼시',
+  'Tottenham':'토트넘','Tottenham Hotspur':'토트넘 홋스퍼',
+  'Manchester United':'맨체스터 유나이티드','Man Utd':'맨체스터 유나이티드',
+  'Newcastle':'뉴캐슬','West Ham':'웨스트햄','Aston Villa':'아스톤 빌라',
+  'Brighton':'브라이턴','Fulham':'풀럼','Wolves':'울버햄튼',
+  'Crystal Palace':'크리스탈 팰리스','Everton':'에버튼','Brentford':'브렌트퍼드',
+  'Nottingham Forest':'노팅엄 포레스트','Bournemouth':'본머스',
+  'Leicester':'레스터','Southampton':'사우샘프턴','Ipswich':'입스위치',
+  // 라리가
+  'Real Madrid':'레알 마드리드','Barcelona':'바르셀로나','FC Barcelona':'바르셀로나',
+  'Atletico Madrid':'아틀레티코 마드리드','Atletico':'아틀레티코',
+  'Sevilla':'세비야','Real Betis':'레알 베티스','Villarreal':'비야레알',
+  'Athletic Bilbao':'아틀레틱 빌바오','Real Sociedad':'레알 소시에다드',
+  'Valencia':'발렌시아','Osasuna':'오사수나','Getafe':'헤타페',
+  'Girona':'지로나','Mallorca':'마요르카',
+  // 분데스리가
+  'Bayern Munich':'바이에른 뮌헨','Bayern':'바이에른 뮌헨',
+  'Borussia Dortmund':'보루시아 도르트문트','Dortmund':'도르트문트',
+  'Bayer Leverkusen':'바이에르 레버쿠젠','Leverkusen':'레버쿠젠',
+  'RB Leipzig':'RB 라이프치히','Leipzig':'라이프치히',
+  'Borussia Monchengladbach':'보루시아 묀헨글라트바흐',
+  'Eintracht Frankfurt':'아인트라흐트 프랑크푸르트','Frankfurt':'프랑크푸르트',
+  'Wolfsburg':'볼프스부르크','Freiburg':'프라이부르크',
+  'Stuttgart':'슈투트가르트','Hoffenheim':'호펜하임',
+  // 세리에A
+  'Inter Milan':'인테르 밀란','Inter':'인테르',
+  'AC Milan':'AC 밀란','Juventus':'유벤투스',
+  'Napoli':'나폴리','Roma':'AS 로마','AS Roma':'AS 로마',
+  'Lazio':'라치오','Atalanta':'아탈란타','Fiorentina':'피오렌티나',
+  'Torino':'토리노','Bologna':'볼로냐','Udinese':'우디네세',
+  // 리그앙
+  'Paris Saint-Germain':'파리 생제르맹','Paris SG':'파리 생제르맹','PSG':'파리 생제르맹',
+  'Marseille':'마르세유','Monaco':'AS 모나코','Lyon':'올랭피크 리옹',
+  'Lille':'릴 OSC','Nice':'OGC 니스','Rennes':'스타드 렌',
+  // 챔피언스리그 기타
+  'Ajax':'아약스','Celtic':'셀틱','Porto':'FC 포르투','FC Porto':'FC 포르투',
+  'Sporting CP':'스포르팅 CP','Benfica':'SL 벤피카',
+  'Shakhtar':'샤흐타르','Dynamo Kyiv':'디나모 키예프',
+  // NBA
+  'LA Lakers':'LA 레이커스','Los Angeles Lakers':'LA 레이커스',
+  'Golden State Warriors':'골든스테이트 워리어스','Warriors':'워리어스',
+  'Boston Celtics':'보스턴 셀틱스','Celtics':'셀틱스',
+  'Miami Heat':'마이애미 히트','Chicago Bulls':'시카고 불스',
+  'New York Knicks':'뉴욕 닉스','Brooklyn Nets':'브루클린 네츠',
+  'Milwaukee Bucks':'밀워키 벅스','Philadelphia 76ers':'필라델피아 76ers',
+  'Denver Nuggets':'덴버 너기츠','Phoenix Suns':'피닉스 선즈',
+  'Dallas Mavericks':'댈러스 매버릭스','Oklahoma City Thunder':'OKC 썬더',
+  'Minnesota Timberwolves':'미네소타 팀버울브스',
+  // MLB
+  'New York Yankees':'뉴욕 양키스','Los Angeles Dodgers':'LA 다저스',
+  'Boston Red Sox':'보스턴 레드삭스','Chicago Cubs':'시카고 컵스',
+  'Houston Astros':'휴스턴 애스트로스','San Francisco Giants':'SF 자이언츠',
+  'Toronto Blue Jays':'토론토 블루제이스','Atlanta Braves':'애틀랜타 브레이브스',
+  // ── 🇰🇷 KBO 전팀 ──
+  'LG Twins':'LG 트윈스','LG':'LG 트윈스',
+  'Doosan Bears':'두산 베어스','Doosan':'두산 베어스',
+  'Samsung Lions':'삼성 라이온즈','Samsung':'삼성 라이온즈',
+  'KT Wiz':'KT 위즈','KT':'KT 위즈',
+  'SSG Landers':'SSG 랜더스','SSG':'SSG 랜더스',
+  'Hanwha Eagles':'한화 이글스','Hanwha':'한화 이글스',
+  'Kia Tigers':'KIA 타이거즈','KIA Tigers':'KIA 타이거즈','KIA':'KIA 타이거즈',
+  'Lotte Giants':'롯데 자이언츠','Lotte':'롯데 자이언츠',
+  'NC Dinos':'NC 다이노스','NC':'NC 다이노스',
+  'Kiwoom Heroes':'키움 히어로즈','Kiwoom':'키움 히어로즈',
+  // ── 🇰🇷 K리그1 전팀 ──
+  'Jeonbuk Hyundai':'전북 현대 모터스','Jeonbuk':'전북 현대',
+  'Ulsan HD':'울산 HD FC','Ulsan':'울산 HD',
+  'Suwon Samsung':'수원 삼성 블루윙즈','Suwon':'수원 삼성',
+  'Incheon United':'인천 유나이티드','Incheon':'인천 유나이티드',
+  'FC Seoul':'FC 서울','Seoul E-Land':'서울 이랜드',
+  'Daegu FC':'대구 FC','Daegu':'대구 FC',
+  'Gwangju FC':'광주 FC','Gwangju':'광주 FC',
+  'Jeju United':'제주 유나이티드','Jeju':'제주 유나이티드',
+  'Seongnam FC':'성남 FC','Seongnam':'성남 FC',
+  'Pohang Steelers':'포항 스틸러스','Pohang':'포항 스틸러스',
+  'Gangwon FC':'강원 FC','Gangwon':'강원 FC',
+  'Gimcheon Sangmu':'김천 상무','Gimcheon':'김천 상무',
+  // ── 🇰🇷 K리그 추가 매핑 (K리그2 포함) ──
+  'FC Anyang':'FC 안양','Anyang':'FC 안양',
+  'Bucheon FC 1995':'부천 FC 1995','Bucheon FC':'부천 FC 1995','Bucheon':'부천 FC',
+  'Suwon FC':'수원 FC',
+  'Busan IPark':'부산 아이파크','Busan I Park':'부산 아이파크','Busan':'부산 아이파크',
+  'Daejeon Hana Citizen':'대전 하나 시티즌','Daejeon Hana':'대전 하나 시티즌','Daejeon':'대전 하나',
+  'Asan Mugunghwa':'아산 무궁화','Asan':'아산 무궁화',
+  'Cheonan City':'천안 시티 FC','Cheonan FC':'천안 시티 FC',
+  'Chungbuk Cheongju':'충북 청주 FC','Cheongju':'충북 청주',
+  'Ansan Greeners':'안산 그리너스','Ansan':'안산 그리너스',
+  'Gyeongnam FC':'경남 FC','Gyeongnam':'경남 FC',
+  'Jeonnam Dragons':'전남 드래곤즈','Jeonnam':'전남 드래곤즈',
+  'Hwaseong FC':'화성 FC','Hwaseong':'화성 FC',
+  // ── 🇰🇷 KBO 추가 매핑 (혹시 빠진 팀) ──
+  'KIA Tigers':'KIA 타이거즈','KIA':'KIA 타이거즈','Kia Tigers':'KIA 타이거즈',
+  'LG Twins':'LG 트윈스','LG':'LG 트윈스',
+  'SSG Landers':'SSG 랜더스','SSG':'SSG 랜더스',
+  'KT Wiz':'KT 위즈','kt wiz':'KT 위즈',
+  'NC Dinos':'NC 다이노스','NC':'NC 다이노스',
+  'Lotte Giants':'롯데 자이언츠','Lotte':'롯데 자이언츠',
+  // ── ⚾ MLB 추가 매핑 (혹시 빠진 팀) ──
+  'St.Louis Cardinals':'세인트루이스 카디널스','St. Louis Cardinals':'세인트루이스 카디널스','Cardinals':'세인트루이스 카디널스',
+  // ── 🇰🇷 KBL 전팀 ──
+  'Wonju DB':'원주 DB 프로미','Wonju':'원주 DB',
+  'Seoul SK':'서울 SK 나이츠','SK Knights':'서울 SK',
+  'Anyang KGC':'안양 KGC','KGC':'안양 KGC',
+  'Busan KCC':'부산 KCC 이지스','KCC':'부산 KCC',
+  'Seoul Samsung':'서울 삼성 썬더스',
+  'Ulsan Hyundai Mobis':'울산 현대모비스 피버스','Hyundai Mobis':'현대모비스',
+  'Jeonju KCC':'전주 KCC','Changwon LG':'창원 LG 세이커스',
+  'Incheon Electroland':'인천 전자랜드 엘리펀츠','Electroland':'전자랜드',
+  'Goyang Orion':'고양 오리온 오리온스','Orion':'고양 오리온',
+  // ── 🇰🇷 V리그 남자 전팀 ──
+  'Incheon Korean Air':'인천 한국도로공사 하이패스',
+  'Korean Air Jumbos':'인천 한국도로공사','Korean Air':'대한항공 점보스',
+  'Suwon KEPCO':'수원 한국전력 빅스톰','KEPCO':'한국전력',
+  'Ansan OK Financial':'안산 OK 금융그룹 읏맨','OK Financial':'OK금융그룹',
+  'Seoul Woori Card':'서울 우리카드 우리WON','Woori Card':'우리카드',
+  'Jeonju Samsung Bluefangs':'전주 삼성화재 블루팡스','Samsung Bluefangs':'삼성화재',
+  'Cheonan Hyundai Capital':'천안 현대캐피탈 스카이워커스','Hyundai Capital':'현대캐피탈',
+  'Daejeon Samsung Fire':'대전 삼성화재','KB Insurance':'대전 KB손해보험',
+  // ── 🇰🇷 V리그 여자 전팀 ──
+  'Gimcheon Korea Expressway':'김천 한국도로공사',
+  'Hwaseong IBK Altos':'화성 IBK기업은행 알토스','IBK Altos':'IBK기업은행',
+  'Incheon Heungkuk Life':'인천 흥국생명 핑크스파이더스','Heungkuk Life':'흥국생명',
+  'Suwon Hyundai E&C':'수원 현대건설 힐스테이트','Hyundai E&C':'현대건설',
+  'Daejeon GS Caltex':'대전 GS칼텍스 서울 KIXX','GS Caltex':'GS칼텍스',
+  'Seoul KGC':'서울 KGC인삼공사','KGC인삼공사':'KGC인삼공사',
+  'Peppers':'페퍼저축은행 AI페퍼스',
+};
+
+
+var SPT_TEAM_EN_EXTRA = {
+  '맨체스터 시티':'Manchester City','리버풀':'Liverpool','아스널':'Arsenal','첼시':'Chelsea',
+  '레알마드리드':'Real Madrid','레알 마드리드':'Real Madrid','바르셀로나':'Barcelona','바이에른 뮌헨':'Bayern Munich','파리 생제르맹':'Paris Saint-Germain',
+  '두산 베어스':'Doosan Bears','LG 트윈스':'LG Twins','SSG 랜더스':'SSG Landers','삼성 라이온즈':'Samsung Lions','KIA 타이거즈':'KIA Tigers','롯데 자이언츠':'Lotte Giants','한화 이글스':'Hanwha Eagles','NC 다이노스':'NC Dinos',
+  '현대캐피탈':'Hyundai Capital','대한항공':'Korean Air','삼성화재':'Samsung Fire','우리카드':'Woori Card','OK금융그룹':'OK Financial','KB손해보험':'KB Insurance','한국전력':'KEPCO',
+  '서울 SK':'Seoul SK','안양 정관장':'Anyang KGC'
+};
+
+var SPT_TEAM_OH = {
+  // EPL
+  '맨체스터 시티':'수','Manchester City':'수','Man City':'수',
+  '아스널':'목','Arsenal':'목','리버풀':'화','Liverpool':'화',
+  '첼시':'금','Chelsea':'금','토트넘':'수','Tottenham':'수',
+  '맨체스터 유나이티드':'토','Manchester United':'토','Man Utd':'토',
+  '뉴캐슬':'목','Newcastle':'목','아스톤 빌라':'화','Aston Villa':'화',
+  // 라리가
+  '레알 마드리드':'금','Real Madrid':'금','바르셀로나':'화','Barcelona':'화',
+  '아틀레티코':'토','Atletico Madrid':'토','세비야':'화','Sevilla':'화',
+  // 분데스리가
+  '바이에른 뮌헨':'금','Bayern Munich':'금','Bayern':'금',
+  '도르트문트':'화','Borussia Dortmund':'화','Dortmund':'화',
+  '레버쿠젠':'목','Bayer Leverkusen':'목','Leverkusen':'목',
+  'RB Leipzig':'수','Leipzig':'수',
+  // 세리에A
+  '인테르':'수','Inter Milan':'수','Inter':'수',
+  'AC 밀란':'화','AC Milan':'화','유벤투스':'금','Juventus':'금',
+  '나폴리':'화','Napoli':'화','아탈란타':'목','Atalanta':'목',
+  // 리그앙
+  '파리 생제르맹':'화','PSG':'화','Paris Saint-Germain':'화','Paris SG':'화',
+  '마르세유':'수','Marseille':'수','모나코':'금','Monaco':'금',
+  // ── 🇰🇷 KBO 오행 ──
+  'LG 트윈스':'화','LG Twins':'화','LG':'화',
+  '두산 베어스':'목','Doosan Bears':'목','Doosan':'목',
+  '삼성 라이온즈':'금','Samsung Lions':'금',
+  'KT 위즈':'수','KT Wiz':'수','KT':'수',
+  'SSG 랜더스':'토','SSG Landers':'토','SSG':'토',
+  '한화 이글스':'화','Hanwha Eagles':'화','Hanwha':'화',
+  'KIA 타이거즈':'화','Kia Tigers':'화','KIA Tigers':'화','KIA':'화',
+  '롯데 자이언츠':'수','Lotte Giants':'수','Lotte':'수',
+  'NC 다이노스':'목','NC Dinos':'목','NC':'목',
+  '키움 히어로즈':'금','Kiwoom Heroes':'금','Kiwoom':'금',
+  // ── 🇰🇷 K리그 오행 ──
+  '전북 현대':'목','Jeonbuk Hyundai':'목','Jeonbuk':'목',
+  '울산 HD':'화','Ulsan HD':'화','Ulsan':'화',
+  '수원 삼성':'금','Suwon Samsung':'금',
+  '인천 유나이티드':'수','Incheon United':'수','Incheon':'수',
+  'FC 서울':'화','FC Seoul':'화',
+  '서울 이랜드':'목','Seoul E-Land':'목',
+  '대구 FC':'토','Daegu FC':'토','Daegu':'토',
+  '광주 FC':'목','Gwangju FC':'목','Gwangju':'목',
+  '제주 유나이티드':'수','Jeju United':'수','Jeju':'수',
+  '포항 스틸러스':'금','Pohang Steelers':'금','Pohang':'금',
+  '강원 FC':'목','Gangwon FC':'목','Gangwon':'목',
+  '김천 상무':'토','Gimcheon Sangmu':'토',
+  // ── 🇰🇷 KBL 오행 ──
+  '원주 DB':'수','Wonju DB':'수',
+  '서울 SK':'금','Seoul SK':'금',
+  '안양 KGC':'토','Anyang KGC':'토',
+  '부산 KCC':'화','Busan KCC':'화',
+  '서울 삼성':'금','Seoul Samsung':'금',
+  '울산 현대모비스':'화','Ulsan Hyundai Mobis':'화',
+  '창원 LG':'화','Changwon LG':'화',
+  '인천 전자랜드':'수','Electroland':'수',
+  '고양 오리온':'목','Goyang Orion':'목',
+  // ── 🇰🇷 V리그 오행 ──
+  '대한항공 점보스':'금','Korean Air':'금',
+  '한국전력 빅스톰':'화','KEPCO':'화',
+  'OK금융그룹':'목','OK Financial':'목',
+  '우리카드':'수','Woori Card':'수',
+  '삼성화재 블루팡스':'금','Samsung Bluefangs':'금',
+  '현대캐피탈':'화','Hyundai Capital':'화',
+  '흥국생명':'화','Heungkuk Life':'화',
+  'IBK기업은행':'수','IBK Altos':'수',
+  '현대건설':'화','Hyundai E&C':'화',
+  'GS칼텍스':'금','GS Caltex':'금',
+  '도로공사':'토','Korean Air Jumbos':'금',
+};
+
+
+var SPT_POPULAR_TEAMS = {
+  soccer: ['맨체스터 시티','리버풀','아스널','첼시','레알마드리드','바르셀로나','바이에른 뮌헨','파리 생제르맹'],
+  baseball: ['두산 베어스','LG 트윈스','SSG 랜더스','삼성 라이온즈','KIA 타이거즈','롯데 자이언츠','한화 이글스','NC 다이노스'],
+  basketball: ['Los Angeles Lakers','Boston Celtics','Golden State Warriors','Chicago Bulls','Miami Heat','Brooklyn Nets','서울 SK','안양 정관장'],
+  volleyball: ['현대캐피탈','대한항공','삼성화재','우리카드','OK금융그룹','KB손해보험','한국전력','KEPCO'],
+  etc: ['Federer','Nadal','Djokovic','Tiger Woods','McIlroy','Rahm','Verstappen','Hamilton']
+};
+
+var _sptLogoCache = {};
+var _sptLiveTimer = null;
+
+function sptRenderTotoBanner() {
+  var myBirth = (window.calcResult && window.calcResult.birth) || '1990-01-01';
+  var myOh = (window.calcResult && window.calcResult.domOh) || '목';
+  var myEl = stkGetElement ? stkGetElement(myBirth) : null;
+  var myIdx = myEl ? myEl.idx : 2;
+
+  var ohEl = document.getElementById('spt-toto-myoh');
+  if (ohEl) ohEl.textContent = myOh + '(木火土金水'['목화토금수'.indexOf(myOh)]||myOh;
+
+  // 오행 기반 종목 공명 점수 (간단 계산)
+  var now = new Date();
+  var seed = now.getHours() * 60 + now.getMinutes();
+  function rng(s){ return ((s*1103515245+12345)&0x7fffffff)%100; }
+
+  var scores = {
+    epl: Math.min(92, Math.max(55, 65 + rng(seed+1+myIdx*7) % 28)),
+    nba: Math.min(92, Math.max(55, 62 + rng(seed+2+myIdx*11) % 28)),
+    kbo: Math.min(92, Math.max(55, 60 + rng(seed+3+myIdx*13) % 28)),
+    ucl: Math.min(92, Math.max(55, 58 + rng(seed+4+myIdx*17) % 28)),
+  };
+
+  var eplEl = document.getElementById('spt-toto-epl');
+  var nbaEl = document.getElementById('spt-toto-nba');
+  var kboEl = document.getElementById('spt-toto-kbo');
+  var uclEl = document.getElementById('spt-toto-ucl');
+
+  if (eplEl) eplEl.textContent = 'SRI ' + scores.epl;
+  if (nbaEl) nbaEl.textContent = 'SRI ' + scores.nba;
+  if (kboEl) kboEl.textContent = 'SRI ' + scores.kbo;
+  if (uclEl) uclEl.textContent = 'SRI ' + scores.ucl;
+  var ucl2El = document.getElementById('spt-toto-ucl2');
+  if (ucl2El) ucl2El.textContent = 'SRI ' + Math.min(92, Math.max(55, scores.ucl - 3 + rng(seed+5+myIdx*19) % 8));
+
+  // 가장 높은 종목 배너 하이라이트
+  var maxKey = Object.keys(scores).reduce(function(a,b){ return scores[a]>scores[b]?a:b; });
+  var idMap = {epl:'spt-toto-epl',nba:'spt-toto-nba',kbo:'spt-toto-kbo',ucl:'spt-toto-ucl'};
+  Object.keys(idMap).forEach(function(k){
+    var el = document.getElementById(idMap[k]);
+    if (el) el.style.fontSize = (k===maxKey) ? '13px' : '11px';
+  });
+}
+
+function sptGetCachedLogo(teamName) {
+  return _sptLogoCache[teamName] || '';
+}
+
+function sptPreloadLogos(matches) {
+  matches.forEach(function(m) {
+    [m.a, m.b].forEach(function(name) {
+      if (name && !_sptLogoCache[name] && !m.aLogo && !m.bLogo) {
+        fetch('https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=' + encodeURIComponent(name))
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+            var team = d.teams && d.teams[0];
+            if (team && team.strTeamBadge) {
+              _sptLogoCache[name] = team.strTeamBadge;
+            }
+          }).catch(function(){});
+      }
+    });
+  });
+}
+
+function sptLeagueDisplay(league) {
+  if (!league) return '';
+  var mapped = SPT_LEAGUE_COUNTRY[league];
+  if (mapped) return mapped;
+  // 국가 키워드 자동 감지
+  if (/korea|한국|KBO|K리그|KBL|V-League/i.test(league)) return '🇰🇷 ' + league;
+  if (/japan|일본|NPB|J\d/i.test(league)) return '🇯🇵 ' + league;
+  if (/china|중국|CBA/i.test(league)) return '🇨🇳 ' + league;
+  if (/usa|미국|MLB|NBA|NFL|MLS/i.test(league)) return '🇺🇸 ' + league;
+  if (/england|english|premier|EPL/i.test(league)) return '🏴󠁧󠁢󠁥󠁮󠁧󠁿 ' + league;
+  if (/spain|española|laliga/i.test(league)) return '🇪🇸 ' + league;
+  if (/germany|german|bundesliga/i.test(league)) return '🇩🇪 ' + league;
+  if (/france|french|ligue/i.test(league)) return '🇫🇷 ' + league;
+  if (/italy|italian|serie/i.test(league)) return '🇮🇹 ' + league;
+  if (/australia|australian/i.test(league)) return '🇦🇺 ' + league;
+  if (/nigeria|nigerian/i.test(league)) return '🇳🇬 ' + league;
+  if (/UEFA|Champions|Europa/i.test(league)) return '🇪🇺 ' + league;
+  return league;
+}
+
+function sptKoName(name) {
+  if (!name) return name;
+  if (SPT_TEAM_KO[name]) return SPT_TEAM_KO[name];
+  // 부분 매칭
+  var keys = Object.keys(SPT_TEAM_KO);
+  for (var i=0; i<keys.length; i++) {
+    if (name.indexOf(keys[i]) !== -1) return SPT_TEAM_KO[keys[i]];
+  }
+  return name; // 매핑 없으면 원본 유지
+}
+
+function sptTeamDisplay(name) {
+  if (!name) return name;
+  // 현재 언어 확인 (전역 _LANG 또는 html lang 속성)
+  var lang = (window._LANG || document.documentElement.lang || 'ko').toLowerCase();
+  var ko = sptKoName(name);
+
+  // 한국어 환경: 한글 매핑 있으면 한글만, 없으면 원본
+  if (lang.indexOf('ko') === 0 || lang === 'kr') {
+    return (ko && ko !== name) ? ko : name;
+  }
+  // 그 외 환경: 한글이면 영문으로 역변환, 이미 영문이면 원본
+  if (/[\uac00-\ud7a3]/.test(name)) {
+    if (typeof SPT_TEAM_EN_EXTRA === 'object' && SPT_TEAM_EN_EXTRA[name]) return SPT_TEAM_EN_EXTRA[name];
+    if (typeof SPT_TEAM_KO === 'object') {
+      for (var k in SPT_TEAM_KO) { if (SPT_TEAM_KO[k] === name) return k; }
+      for (var k2 in SPT_TEAM_KO) { if (SPT_TEAM_KO[k2] && name.indexOf(SPT_TEAM_KO[k2]) !== -1) return k2; }
+    }
+    return name; // 매핑 없으면 원본 유지
+  }
+  return name;
+}
+
+function sptGetOh(teamName) {
+  if (!teamName) return '토';
+  // 직접 매핑
+  if (SPT_TEAM_OH[teamName]) return SPT_TEAM_OH[teamName];
+  // 부분 매핑
+  var keys = Object.keys(SPT_TEAM_OH);
+  for (var i=0; i<keys.length; i++) {
+    if (teamName.indexOf(keys[i]) !== -1 || keys[i].indexOf(teamName) !== -1) {
+      return SPT_TEAM_OH[keys[i]];
+    }
+  }
+  // 팀명 첫 글자 기반 기본값
+  var code = teamName.charCodeAt(0) % 5;
+  return ['목','화','토','금','수'][code];
+}
+
+function sptLeagueToType(league) {
+  if (!league) return 'soccer';
+  var l = league.toLowerCase();
+  if (l.indexOf('baseball') !== -1 || l.indexOf('kbo') !== -1 || l.indexOf('mlb') !== -1) return 'baseball';
+  if (l.indexOf('basketball') !== -1 || l.indexOf('nba') !== -1 || l.indexOf('kbl') !== -1) return 'basketball';
+  if (l.indexOf('volleyball') !== -1 || l.indexOf('배구') !== -1) return 'volleyball';
+  if (l.indexOf('tennis') !== -1 || l.indexOf('atp') !== -1 || l.indexOf('wta') !== -1) return 'tennis';
+  return 'soccer';
+}
+
+function sptLoadTodayMatches(callback) {
+  var _tzParam = encodeURIComponent(CGO_TZ.name || 'Asia/Seoul');
+  // API-Sports 실시간 키
+  var _apiSportKey = 'd687daf8d309411965927954eb397e7f';
+
+  // ✦ 한국 리그 ID 동적 발견 백그라운드 트리거 (24시간 캐시) ✦
+  if (typeof _sptDiscoverKoreaLeagues === 'function') {
+    try { _sptDiscoverKoreaLeagues(_apiSportKey, null); } catch(e) {}
+  }
+
+  var PROXY = 'https://c-go-fuli.vercel.app/api/matches?tz=' + _tzParam + '&apikey=' + _apiSportKey;
+  // API-Sports 직접 호출 (프록시 실패 시 백업)
+  var DIRECT_URL = 'https://v3.football.api-sports.io/fixtures?date=' + new Date().toISOString().slice(0,10) + '&timezone=' + _tzParam;
+
+  // 관리자 직접 입력 경기 확인
+  function getAdminMatches() {
+    try {
+      var saved = localStorage.getItem('cgo_admin_matches');
+      if (!saved) return null;
+      var parsed = JSON.parse(saved);
+      var today = new Date().toISOString().slice(0,10);
+      if (parsed.date !== today) return null;
+      return parsed.matches || null;
+    } catch(e) { return null; }
+  }
+
+  var adminMatches = getAdminMatches();
+  if (adminMatches && adminMatches.length > 0) {
+    SPT_MATCH_DB.soccer = adminMatches.map(function(m) {
+      return {a:m.a, b:m.b, league:m.league||'', time:m.time||'—',
+              aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
+    });
+    sptPreloadLogos(SPT_MATCH_DB.soccer);
+    if (callback) callback(true, '관리자입력');
+    return;
+  }
+
+  // 날짜 시드 폴백
+  // 폴백: API 완전 실패 시 — 빈 배열로 "경기 없음" 표시
+  var FALLBACK_POOL = [];
+
+  var today = new Date();
+  var seed = today.getFullYear()*10000 + (today.getMonth()+1)*100 + today.getDate();
+
+  function applyFallback() {
+    // API 완전 실패 — 빈 상태로 두고 "오늘 경기 없음" 표시
+    SPT_MATCH_DB.soccer = [];
+    sptSetApiStatus(false, '❌ 연결 실패');
+    if (callback) callback(false);
+  }
+
+  // ── API-Sports 직접 호출 함수 ──
+  // API-Sports 날짜 → 로컬 시간 변환
+  function _apiTimeStr(isoDate) {
+    if (!isoDate) return '—';
+    try {
+      return new Date(isoDate).toLocaleTimeString((window._LANG&&window._LANG!=='ko')?'en-US':'ko-KR',{hour:'2-digit',minute:'2-digit'});
+    } catch(e) { return isoDate.slice(11,16); }
+  }
+
+  // 1부리그 판별 함수
+  function _isTopFlight(fixture) {
+    var lg = fixture.league || {};
+    var lgName = (lg.name || '').toLowerCase();
+    // 명확한 2부리그 키워드
+    var secondDiv = ['championship','segunda','serie b','2. bundesliga','ligue 2',
+      'segunda division','serie c','3. liga','league one','league two',
+      'division 2','2nd','2부','b리그','챌린지','퍼스트','내셔널리그',
+      'regionalliga','oberliga','lower','amateur','youth','reserve','u23','u21','u20','u19'];
+    for (var i=0; i<secondDiv.length; i++) {
+      if (lgName.indexOf(secondDiv[i]) !== -1) return false;
+    }
+    return true;
+  }
+
+  // 공통 fixtures → match 변환
+  function _parseFixtures(fixtures, sport) {
+    return fixtures.map(function(f) {
+      var fix = f.fixture || f.game || {};
+      var teams = f.teams || {};
+      var goals = f.goals || f.scores || {};
+      var league = f.league || {};
+      var statusShort = (fix.status && fix.status.short) || 'NS';
+      var home = teams.home || {};
+      var away = teams.away || {};
+      return {
+        a: home.name || '', b: away.name || '',
+        league: league.name || sport || '',
+        time: _apiTimeStr(fix.date || fix.time),
+        aOh: sptGetOh(home.name||''), bOh: sptGetOh(away.name||''),
+        aLogo: home.logo||'', bLogo: away.logo||'',
+        aGoals: goals.home !== undefined ? goals.home : null,
+        bGoals: goals.away !== undefined ? goals.away : null,
+        status: statusShort,
+        fixtureId: fix.id || fix.id
+      };
+    });
+  }
+
+  function fetchFromApiSports() {
+    var today = new Date().toISOString().slice(0,10);
+    var tz = encodeURIComponent(CGO_TZ.name || 'Asia/Seoul');
+    var h = {'x-apisports-key': _apiSportKey};
+
+    // ── 국내 리그 ID 정의 ──
+    var KOREA_LEAGUES = {
+      soccer:     [292, 293, 294],   // K리그1, K리그2, FA컵
+      baseball:   [2],               // KBO
+      basketball: [11, 12],          // KBL, WKBL
+      volleyball: [11, 12]           // V리그 남/여
+    };
+
+    // 국내 경기 필터 함수
+    function _isKorea(f) {
+      var lg = f.league || {};
+      var country = (lg.country || '').toLowerCase();
+      var lgName = (lg.name || '').toLowerCase();
+      return country === 'south korea' || country === 'korea'
+        || lgName.indexOf('kbo') !== -1
+        || lgName.indexOf('kbl') !== -1
+        || lgName.indexOf('k league') !== -1
+        || lgName.indexOf('v-league') !== -1
+        || lgName.indexOf('wkbl') !== -1;
+    }
+
+    // ── 축구 (K리그 우선) ──
+    var footballP = fetch('https://v3.football.api-sports.io/fixtures?date='+today+'&timezone='+tz+'&league=292&season=2025',
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d1){
+        // K리그1 결과
+        var kLeague = (d1.response||[]).map(function(f){
+          var fix=f.fixture||{}, t=f.teams||{}, g=f.goals||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:'🇰🇷 '+lg.name||'K리그1',
+            time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:g.home!==undefined?g.home:null,
+            bGoals:g.away!==undefined?g.away:null,
+            status:st, type:'soccer', fixtureId:fix.id, isKorea:true
+          };
+        });
+        // K리그 없으면 전체 국제 경기 가져오기
+        if (kLeague.length > 0) return kLeague;
+        return fetch('https://v3.football.api-sports.io/fixtures?date='+today+'&timezone='+tz, {method:'GET', headers:h})
+          .then(function(r){return r.json();})
+          .then(function(d2){
+            var all = (d2.response||[]).map(function(f){
+              var fix=f.fixture||{}, t=f.teams||{}, g=f.goals||{}, lg=f.league||{};
+              var st=(fix.status&&fix.status.short)||'NS';
+              var home=t.home||{}, away=t.away||{};
+              return {
+                a:home.name||'', b:away.name||'',
+                league:(lg.country==='South Korea'?'🇰🇷 ':'')+lg.name||'⚽',
+                time:_apiTimeStr(fix.date),
+                aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+                aLogo:home.logo||'', bLogo:away.logo||'',
+                aGoals:g.home!==undefined?g.home:null,
+                bGoals:g.away!==undefined?g.away:null,
+                status:st, type:'soccer', fixtureId:fix.id,
+                isKorea:_isKorea(f), _raw:f
+              };
+            });
+            // 국내 경기 먼저, 그 다음 1부리그
+            var korea = all.filter(function(m){ return m.isKorea; });
+            var intl  = all.filter(function(m){ return !m.isKorea && _isTopFlight(m._raw||{}); });
+            return korea.concat(intl).map(function(m){ delete m._raw; return m; });
+          })
+          .catch(function(){ return kLeague; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 야구 (KBO 우선) ──
+    var baseballP = fetch('https://v1.baseball.api-sports.io/games?date='+today+'&league=2&season=2025',
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var kbo = (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          return {
+            a:home.name||'', b:away.name||'',
+            league:'🇰🇷 KBO',
+            time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'baseball', isKorea:true
+          };
+        });
+        if (kbo.length > 0) return kbo;
+        // KBO 없으면 전체
+        return fetch('https://v1.baseball.api-sports.io/games?date='+today, {method:'GET', headers:h})
+          .then(function(r){return r.json();})
+          .then(function(d2){
+            var all = (d2.response||[]).map(function(f){
+              var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+              var st=(fix.status&&fix.status.short)||'NS';
+              var home=t.home||{}, away=t.away||{};
+              var isK=_isKorea(f);
+              return {
+                a:home.name||'', b:away.name||'',
+                league:(isK?'🇰🇷 ':'')+lg.name||'⚾',
+                time:_apiTimeStr(fix.date),
+                aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+                aLogo:home.logo||'', bLogo:away.logo||'',
+                aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+                bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+                status:st, type:'baseball', isKorea:isK
+              };
+            });
+            var korea = all.filter(function(m){ return m.isKorea; });
+            var intl  = all.filter(function(m){ return !m.isKorea; });
+            return korea.concat(intl);
+          })
+          .catch(function(){ return kbo; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 농구 (KBL 동적 발견 우선) ──
+    var _korBkb = (typeof _sptGetCachedKoreaLeagues === 'function') ? (_sptGetCachedKoreaLeagues().basketball || {}) : {};
+    var _bkbId = _korBkb.id || 11;
+    var _bkbSeason = _korBkb.season || '2024-2025';
+    var basketballP = fetch('https://v1.basketball.api-sports.io/games?date='+today+'&league='+_bkbId+'&season='+_bkbSeason,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var kbl = (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          // 정직 라벨 — 발견된 리그명 우선, 없으면 API 응답명, 없으면 fallback
+          var _bkbLabel = (_korBkb && _korBkb.name) ? '🇰🇷 ' + _korBkb.name : (lg.name || '🏀 농구');
+          return {
+            a:home.name||'', b:away.name||'',
+            league: _bkbLabel,
+            time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'basketball', isKorea:true
+          };
+        });
+        if (kbl.length > 0) return kbl;
+        return fetch('https://v1.basketball.api-sports.io/games?date='+today, {method:'GET', headers:h})
+          .then(function(r){return r.json();})
+          .then(function(d2){
+            var all = (d2.response||[]).map(function(f){
+              var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+              var st=(fix.status&&fix.status.short)||'NS';
+              var home=t.home||{}, away=t.away||{};
+              var isK=_isKorea(f);
+              return {
+                a:home.name||'', b:away.name||'',
+                league:(isK?'🇰🇷 ':'')+lg.name||'🏀',
+                time:_apiTimeStr(fix.date),
+                aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+                aLogo:home.logo||'', bLogo:away.logo||'',
+                aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+                bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+                status:st, type:'basketball', isKorea:isK
+              };
+            });
+            var korea = all.filter(function(m){ return m.isKorea; });
+            var intl  = all.filter(function(m){ return !m.isKorea; });
+            return korea.concat(intl);
+          })
+          .catch(function(){ return kbl; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 배구 (V리그/KOVO 동적 발견 우선) ──
+    var _korVol = (typeof _sptGetCachedKoreaLeagues === 'function') ? (_sptGetCachedKoreaLeagues().volleyball || {}) : {};
+    var _volId = _korVol.id || 11;
+    var _volSeason = _korVol.season || '2024-2025';
+    var volleyballP = fetch('https://v1.volleyball.api-sports.io/games?date='+today+'&league='+_volId+'&season='+_volSeason,
+      {method:'GET', headers:h})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var vleague = (d.response||[]).map(function(f){
+          var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+          var st=(fix.status&&fix.status.short)||'NS';
+          var home=t.home||{}, away=t.away||{};
+          // 정직 라벨 — 발견된 리그명 우선, 없으면 API 응답명, 없으면 fallback
+          var _volLabel = (_korVol && _korVol.name) ? '🇰🇷 ' + _korVol.name : (lg.name || '🏐 배구');
+          return {
+            a:home.name||'', b:away.name||'',
+            league: _volLabel,
+            time:_apiTimeStr(fix.date),
+            aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+            aLogo:home.logo||'', bLogo:away.logo||'',
+            aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+            bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+            status:st, type:'volleyball', isKorea:true
+          };
+        });
+        // 한국 V리그 결과 있으면 그대로 반환, 없으면 국제 배구 fallback
+        if (vleague.length > 0) return vleague;
+        return fetch('https://v1.volleyball.api-sports.io/games?date='+today, {method:'GET', headers:h})
+          .then(function(r){return r.json();})
+          .then(function(d2){
+            var all = (d2.response||[]).map(function(f){
+              var fix=f.game||{}, t=f.teams||{}, sc=f.scores||{}, lg=f.league||{};
+              var st=(fix.status&&fix.status.short)||'NS';
+              var home=t.home||{}, away=t.away||{};
+              var isK=_isKorea(f);
+              return {
+                a:home.name||'', b:away.name||'',
+                league:(isK?'🇰🇷 ':'')+(lg.name||'🏐 배구'),
+                time:_apiTimeStr(fix.date),
+                aOh:sptGetOh(home.name||''), bOh:sptGetOh(away.name||''),
+                aLogo:home.logo||'', bLogo:away.logo||'',
+                aGoals:sc.home&&sc.home.total!==undefined?sc.home.total:null,
+                bGoals:sc.away&&sc.away.total!==undefined?sc.away.total:null,
+                status:st, type:'volleyball', isKorea:isK
+              };
+            });
+            // 한국 우선 정렬
+            var korea = all.filter(function(m){ return m.isKorea; });
+            var intl  = all.filter(function(m){ return !m.isKorea; });
+            return korea.concat(intl);
+          })
+          .catch(function(){ return vleague; });
+      })
+      .catch(function(){ return []; });
+
+    // ── 4종목 병렬 호출 ──
+    return Promise.all([footballP, baseballP, basketballP, volleyballP]).then(function(res) {
+      var soccer=res[0]||[], baseball=res[1]||[], basketball=res[2]||[], volleyball=res[3]||[];
+      if (soccer.length)     SPT_MATCH_DB.soccer     = soccer;
+      if (baseball.length)   SPT_MATCH_DB.baseball   = baseball;
+      if (basketball.length) SPT_MATCH_DB.basketball = basketball;
+      if (volleyball.length) SPT_MATCH_DB.volleyball = volleyball;
+
+      // 국내 경기 수 카운트
+      var koreaCount = [soccer,baseball,basketball,volleyball].reduce(function(cnt, arr){
+        return cnt + arr.filter(function(m){ return m.isKorea; }).length;
+      }, 0);
+
+      var all = [].concat(soccer, baseball, basketball, volleyball);
+      var src = all.length > 0
+        ? ((window._LANG&&window._LANG!=='ko') ? ('🟢 API-Sports (' + all.length + ' matches' + (koreaCount > 0 ? ' · 🇰🇷 KR '+koreaCount : '') + ')') : ('🟢 API-Sports (' + all.length + '경기' + (koreaCount > 0 ? ' · 🇰🇷 국내 '+koreaCount+'경기' : '') + ')'))
+        : null;
+      return all.length > 0 ? {matches: all, src: src} : null;
+    });
+  }
+
+  // ── API-Sports 직접 호출 우선 (실시간 보장) ──
+  fetchFromApiSports()
+    .then(function(result) {
+      var direct = result ? result.matches : null;
+      var src    = result ? result.src     : null;
+      if (direct && direct.length > 0) {
+        direct.forEach(function(m){
+          if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+          if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+        });
+        sptPreloadLogos(direct);
+        sptSetApiStatus(true, src || '🟢 API-Sports 실시간');
+        if (callback) callback(true, src || '🟢 API-Sports 실시간');
+      } else {
+        // 결과 없으면 Vercel 프록시 시도
+        fetch(PROXY)
+          .then(function(r){ return r.json(); })
+          .then(function(data){
+            var m2 = data.matches || [];
+            if (m2.length > 0) {
+              SPT_MATCH_DB.soccer = m2.map(function(m){
+                if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+                if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+                return {a:m.a,b:m.b,league:m.league||'',time:m.time||'—',
+                  aOh:sptGetOh(m.a),bOh:sptGetOh(m.b),dateStr:m.date||'',
+                  aLogo:m.aLogo||'',bLogo:m.bLogo||'',
+                  aGoals:m.aGoals,bGoals:m.bGoals,status:m.status||'NS'};
+              });
+              sptPreloadLogos(SPT_MATCH_DB.soccer);
+              sptSetApiStatus(true, '🟡 프록시');
+              if (callback) callback(true, '🟡 프록시');
+            } else { applyFallback(); }
+          })
+          .catch(function(){ applyFallback(); });
+      }
+    })
+    .catch(function() {
+      // API-Sports 실패 → Vercel 프록시 시도
+      fetch(PROXY)
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          var m2 = data.matches || [];
+          if (m2.length > 0) {
+            SPT_MATCH_DB.soccer = m2.map(function(m){
+              if(m.aLogo) _sptLogoCache[m.a]=m.aLogo;
+              if(m.bLogo) _sptLogoCache[m.b]=m.bLogo;
+              return {a:m.a,b:m.b,league:m.league||'',time:m.time||'—',
+                aOh:sptGetOh(m.a),bOh:sptGetOh(m.b),dateStr:m.date||'',
+                aLogo:m.aLogo||'',bLogo:m.bLogo||'',
+                aGoals:m.aGoals,bGoals:m.bGoals,status:m.status||'NS'};
+            });
+            sptPreloadLogos(SPT_MATCH_DB.soccer);
+            sptSetApiStatus(true, '🟡 프록시');
+            if (callback) callback(true, '🟡 프록시');
+          } else { applyFallback(); }
+        })
+        .catch(function(){ applyFallback(); });
+    });
+}
+
+function sptSetApiStatus(ok, source) {
+  var el = document.getElementById('spt-api-status');
+  if (!el) return;
+  if (ok) {
+    el.style.background = 'rgba(52,211,153,.12)';
+    el.style.borderColor = 'rgba(52,211,153,.3)';
+    el.style.color = '#34d399';
+    el.textContent = '🟢 ' + (source || 'API-Sports Live');
+  } else {
+    el.style.background = 'rgba(251,191,36,.1)';
+    el.style.borderColor = 'rgba(251,191,36,.3)';
+    el.style.color = '#fbbf24';
+    el.textContent = _cgoT('🟡 샘플 데이터');
+  }
+}
+
+function sptForceReload() {
+  var el = document.getElementById('spt-api-status');
+  if (el) { el.textContent = _cgoT('⏳ 로딩 중...'); el.style.color = '#94a3b8'; }
+  // 캐시 초기화
+  window._sportCache = {};
+  sptLoadTodayMatches(function(ok, src) {
+    sptSetApiStatus(ok, src);
+    sptRenderMatches(_sptCurrentTab || 'all');
+  });
+}
+
+function sptStartLiveUpdate() {
+  if (_sptLiveTimer) clearInterval(_sptLiveTimer);
+  _sptLiveTimer = setInterval(function() {
+    // 라이브 경기 있을 때만 갱신
+    var hasLive = SPT_MATCH_DB.soccer.some(function(m){
+      return m.status === '1H' || m.status === '2H' || m.status === 'HT' || m.status === 'ET';
+    });
+    if (hasLive) {
+      sptLoadTodayMatches(function(ok) {
+        if (ok) sptRenderMatches(_sptCurrentTab);
+      });
+    }
+  }, 300000); // 5분 = 300,000ms
+}
+
+function sptAdminAddMatch(a, b, league, time) {
+  if (!a || !b) return false;
+  var today = new Date().toISOString().slice(0,10);
+  var existing = [];
+  try {
+    var saved = localStorage.getItem('cgo_admin_matches');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed.date === today) existing = parsed.matches || [];
+    }
+  } catch(e) {}
+  existing.push({a:a, b:b, league:league||'기타', time:time||'—'});
+  localStorage.setItem('cgo_admin_matches', JSON.stringify({date:today, matches:existing}));
+  // DB 즉시 반영
+  SPT_MATCH_DB.soccer = existing.map(function(m) {
+    return {a:m.a, b:m.b, league:m.league, time:m.time,
+            aOh:sptGetOh(m.a), bOh:sptGetOh(m.b)};
+  });
+  sptRenderMatches(_sptCurrentTab);
+  sptUpdateMyEnergy();
+  return true;
+}
+
+function sptAdminAddMatchUI() {
+  var a = (document.getElementById('spt-add-a')||{}).value || '';
+  var b = (document.getElementById('spt-add-b')||{}).value || '';
+  var league = (document.getElementById('spt-add-league')||{}).value || '기타';
+  var timeEl = document.getElementById('spt-add-time');
+  var time = timeEl ? timeEl.value : '—';
+  if (!a.trim() || !b.trim()) { alert('홈팀과 원정팀을 입력해 주세요!'); return; }
+  sptAdminAddMatch(a.trim(), b.trim(), league.trim()||'기타', time||'—');
+  // 입력 초기화
+  ['spt-add-a','spt-add-b','spt-add-league'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value='';
+  });
+  if(timeEl) timeEl.value='';
+  // 알림
+  sptAddBubble('ai', '✅ ' + a + ' vs ' + b + ' (' + league + ' ' + time + ') 추가됐습니다! 공명 점수가 업데이트됐어요 ⚡');
+}
+
+function sptAdminClearMatches() {
+  localStorage.removeItem('cgo_admin_matches');
+  sptLoadTodayMatches(function(){ sptRenderMatches(_sptCurrentTab); sptUpdateMyEnergy(); });
+}
+
+function sptCalcResonance(myOh, teamOh, ili, matchHour) {
+  // ══════════════════════════════════════════════════════
+  // CGO-FULI SRI(스포츠 공명 지수) 엔진 v3.0
+  // 제미나이 설계 × 7대 핵심 엔진 가중치 (100점 만점)
+  // NASA 행성 흐름25 + 기문둔갑18 + 자미두수15 + 구성학14 + 주역12 + 사주8 + 태을신수8 = 100
+  // ══════════════════════════════════════════════════════
+
+  // ── 오행 상생/상극 기반 (기초 베이스) ──
+  var ohRel = {
+    목:{생:['수'],극:['금'],피:['화'],설:['토']},
+    화:{생:['목'],극:['수'],피:['토'],설:['금']},
+    토:{생:['화'],극:['목'],피:['금'],설:['수']},
+    금:{생:['토'],극:['화'],피:['수'],설:['목']},
+    수:{생:['금'],극:['토'],피:['목'],설:['화']}
+  };
+  var rel = ohRel[myOh] || {생:[],극:[],피:[],설:[]};
+  var base = 50;
+  if (rel['생'].indexOf(teamOh) >= 0) base += 18;
+  else if (rel['극'].indexOf(teamOh) >= 0) base += 9;
+  else if (rel['피'].indexOf(teamOh) >= 0) base -= 8;
+  else if (rel['설'].indexOf(teamOh) >= 0) base += 4;
+  else if (teamOh === myOh) base += 12;
+
+  var scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
+  var np = window._nasaPlanets || {};
+  var h = parseInt(matchHour) || 12;
+
+  // ══ 7대 핵심 엔진 가중치 적용 (총 100점 기준) ══
+
+  // 1위. 행성 트랜짓 (NASA 직결) — 가중치 25%
+  // 실시간 행성 좌표 기반 경기 타이밍 결정
+  var w1_transit = 0;
+  if (np.mars) {
+    var marsSync = Math.cos((( np.mars.lon||0) - h * 15) * Math.PI / 180);
+    w1_transit += marsSync * 8;  // 화성: 활동/승부 에너지 ±8
+  }
+  if (np.jupiter) w1_transit += np.jupiter.retro ? -5 : 6;  // 목성: 행운 에너지
+  if (np.mercury) w1_transit += np.mercury.retro ? -5 : 3;  // 수성: 판단력
+  if (np.venus)   w1_transit += np.venus.retro   ? -3 : 2;  // 금성: 조화
+  if (np.saturn)  w1_transit += np.saturn.retro  ? -4 : 1;  // 토성: 구조
+  if (np.moon) {
+    var mPhase = (np.moon.lon||0) % 30;
+    w1_transit += mPhase < 15 ? 3 : -2; // 달 상현↑ / 하현↓
+  }
+  if (np.sun) {
+    // 태양 황경 × 경기 시간 공명
+    var sunSync = Math.sin(((np.sun.lon||0) + h * 15) * Math.PI / 180);
+    w1_transit += sunSync * 3;
+  }
+  w1_transit = Math.round(w1_transit * 0.25); // 25% 가중
+
+  // 2위. 기문둔갑 — 가중치 18%
+  // 경기 시간/방위 에너지 × 사용자 에너지
+  var w2_gimon = 0;
+  if (scores[7]) w2_gimon += (scores[7] - 65) * 0.18; // 기문둔갑 엔진 직접 반영
+  var shiOh2 = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+  var shiIdx2 = Math.floor(((h + 1) % 24) / 2) % 12;
+  var shiV = shiOh2[shiIdx2];
+  if (shiV === myOh) w2_gimon += 6;
+  else if (rel['생'].indexOf(shiV) >= 0) w2_gimon += 4;
+  else if (rel['피'].indexOf(shiV) >= 0) w2_gimon -= 4;
+  w2_gimon = Math.round(w2_gimon * 0.18);
+
+  // 3위. 자미두수 — 가중치 15%
+  // 개인 명반 × 오늘 에너지
+  var w3_ziwei = 0;
+  if (scores[6])  w3_ziwei += (scores[6] - 65)  * 0.15; // 자미두수
+  if (scores[17]) w3_ziwei += (scores[17] - 65) * 0.08; // 자미두수 궁위
+  w3_ziwei = Math.round(w3_ziwei * 0.15);
+
+  // 4위. 구성학 — 가중치 14%
+  // 태양 고도각 × 초단위 타이밍
+  var w4_kusei = 0;
+  if (scores[8]) w4_kusei += (scores[8] - 65) * 0.14; // 구성학
+  if (np.sun) {
+    // 태양 고도 기반 시간 에너지
+    var sunH = Math.sin((h / 24) * Math.PI * 2);
+    w4_kusei += sunH * 3;
+  }
+  w4_kusei = Math.round(w4_kusei * 0.14);
+
+  // 5위. 주역 — 가중치 12%
+  // 변화 패턴 × 현재 상황 길흉
+  var w5_juyeok = 0;
+  if (scores[9])  w5_juyeok += (scores[9] - 65)  * 0.12; // 주역
+  if (scores[14]) w5_juyeok += (scores[14] - 65) * 0.06;
+  w5_juyeok = Math.round(w5_juyeok * 0.12);
+
+  // 6위. 사주명리(오행) — 가중치 8%
+  // 기본 오행 에너지 균형
+  var w6_saju = 0;
+  if (scores[5]) w6_saju += (scores[5] - 65) * 0.08; // 오행 엔진
+  if (scores[0]) w6_saju += (scores[0] - 65) * 0.04; // HRV(생체)
+  if (scores[1]) w6_saju += (scores[1] - 65) * 0.04; // 오장육부
+  w6_saju = Math.round(w6_saju * 0.08);
+
+  // 7위. 태을신수 — 가중치 8%
+  // 거대 행성 주기 × 거시적 흐름
+  var w7_taeul = 0;
+  if (np.jupiter && np.saturn) {
+    // 목성-토성 각도 (대합/삼합 확인)
+    var jsDiff = Math.abs((np.jupiter.lon||0) - (np.saturn.lon||0)) % 360;
+    if (jsDiff > 180) jsDiff = 360 - jsDiff;
+    if (jsDiff < 30) w7_taeul += 6;       // 합: 강한 에너지
+    else if (jsDiff > 150) w7_taeul -= 4; // 충: 불안정
+    else if (Math.abs(jsDiff - 120) < 20) w7_taeul += 4; // 삼합: 조화
+  }
+  if (scores[12]) w7_taeul += (scores[12] - 65) * 0.05; // 달자리
+  w7_taeul = Math.round(w7_taeul * 0.08);
+
+  // ══ cosmoSyncWarning 반영 ══
+  var cosmoAdj = 0;
+  if (typeof cosmoSyncWarning === 'function') {
+    try { cosmoAdj = cosmoSyncWarning().adj || 0; } catch(e) {}
+  }
+
+  // ══ 최종 SRI 합산 ══
+  // 오행 베이스(50%) + 7대 엔진(50%) 가중 평균
+  var engineTotal = w1_transit + w2_gimon + w3_ziwei + w4_kusei + w5_juyeok + w6_saju + w7_taeul;
+  var total = base + engineTotal + Math.round(cosmoAdj * 0.3);
+
+  // ── MSP 보정 (20번째 역학) — 입력 시에만 적용 ──
+  var mspSptAdj = 0;
+  if (window._mspResult) {
+    var _mm = window._mspResult;
+    // MSP 외향/내향 → 경기 공명 영향
+    var _isE = _mm.type && _mm.type.charAt(0) === 'E';
+    // 외향형(E)은 팀 스포츠 공명 +2, 내향형(I)은 개인 집중 +1
+    mspSptAdj = _isE ? 2 : 1;
+    // MSP 오행과 내 오행 궁합 보정
+    var _mspOhBoost = (MSP_OH_BOOST[_mm.oh] && MSP_OH_BOOST[_mm.oh][myOh]) ? MSP_OH_BOOST[_mm.oh][myOh] : 1.0;
+    mspSptAdj += Math.round((_mspOhBoost - 1.0) * 15); // 최대 ±1~2
+    mspSptAdj = Math.min(3, Math.max(-2, mspSptAdj));
+  }
+
+  return Math.min(95, Math.max(30, total + mspSptAdj));
+}
+
+function sptCalcBreakdown(myOh, teamOh, ili, matchHour) {
+  var ohRel = {
+    목:{생:['수'],극:['금'],피:['화'],설:['토']},
+    화:{생:['목'],극:['수'],피:['토'],설:['금']},
+    토:{생:['화'],극:['목'],피:['금'],설:['수']},
+    금:{생:['토'],극:['화'],피:['수'],설:['목']},
+    수:{생:['금'],극:['토'],피:['목'],설:['화']}
+  };
+  var rel = ohRel[myOh] || {생:[],극:[],피:[],설:[]};
+  var base = 50;
+  var baseReason = ((window._LANG&&window._LANG!=='ko')?'Same element':'동일 오행');
+  if (rel['생'].indexOf(teamOh) >= 0) { base += 18; baseReason = ((window._LANG&&window._LANG!=='ko')?'Generating (+18) — strong resonance':'상생(生) +18 — 강력한 공명'); }
+  else if (rel['극'].indexOf(teamOh) >= 0) { base += 9; baseReason = ((window._LANG&&window._LANG!=='ko')?'Controlling (+9) — challenging resonance':'상극(剋) +9 — 도전적 공명'); }
+  else if (rel['피'].indexOf(teamOh) >= 0) { base -= 8; baseReason = ((window._LANG&&window._LANG!=='ko')?'Weakened (-8) — energy loss':'피해(被) -8 — 에너지 유실'); }
+  else if (rel['설'].indexOf(teamOh) >= 0) { base += 4; baseReason = ((window._LANG&&window._LANG!=='ko')?'Draining (+4) — weak support':'설(洩) +4 — 약한 보조'); }
+  else if (teamOh === myOh) { base += 12; baseReason = ((window._LANG&&window._LANG!=='ko')?'Same element (+12) — natural resonance':'동일 오행 +12 — 자연스러운 공명'); }
+
+  var scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
+  var np = window._nasaPlanets || {};
+  var h = parseInt(matchHour) || 12;
+
+  // 1위. NASA 행성 트랜짓 (25%)
+  var w1 = 0; var w1Detail = [];
+  if (np.mars) {
+    var marsSync = Math.cos((( np.mars.lon||0) - h * 15) * Math.PI / 180);
+    var marsAdd = marsSync * 8;
+    w1 += marsAdd;
+    w1Detail.push('♂화성('+Math.round(np.mars.lon||0)+'°) sync '+(marsAdd>=0?'+':'')+marsAdd.toFixed(1));
+  }
+  if (np.jupiter) { var jv = np.jupiter.retro?-5:6; w1+=jv; w1Detail.push('♃목성 '+(np.jupiter.retro?'역행 -5':'순행 +6')); }
+  if (np.mercury) { var mv = np.mercury.retro?-5:3; w1+=mv; w1Detail.push('☿수성 '+(np.mercury.retro?'역행 -5':'순행 +3')); }
+  if (np.venus) { var vv = np.venus.retro?-3:2; w1+=vv; w1Detail.push('♀금성 '+(np.venus.retro?'역행 -3':'순행 +2')); }
+  if (np.saturn) { var sv = np.saturn.retro?-4:1; w1+=sv; w1Detail.push('♄토성 '+(np.saturn.retro?'역행 -4':'순행 +1')); }
+  if (np.moon) {
+    var mPhase = (np.moon.lon||0) % 30;
+    var moonAdd = mPhase < 15 ? 3 : -2;
+    w1 += moonAdd;
+    w1Detail.push('🌙달 '+(mPhase<15?'상현 +3':'하현 -2'));
+  }
+  if (np.sun) {
+    var sunSync = Math.sin(((np.sun.lon||0) + h * 15) * Math.PI / 180);
+    var sunAdd = sunSync * 3;
+    w1 += sunAdd;
+    w1Detail.push('☀️태양 sync '+(sunAdd>=0?'+':'')+sunAdd.toFixed(1));
+  }
+  w1 = Math.round(w1 * 0.25);
+
+  // 2위. 기문둔갑 (18%)
+  var w2 = 0; var w2Detail = [];
+  if (scores[7]) { var d = (scores[7] - 65) * 0.18; w2 += d; w2Detail.push('기문 엔진('+scores[7]+') '+(d>=0?'+':'')+d.toFixed(1)); }
+  var shiOh2 = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+  var shiName = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+  var shiIdx2 = Math.floor(((h + 1) % 24) / 2) % 12;
+  var shiV = shiOh2[shiIdx2];
+  if (shiV === myOh) { w2 += 6; w2Detail.push(shiName[shiIdx2]+'시('+shiV+') 동일 +6'); }
+  else if (rel['생'].indexOf(shiV) >= 0) { w2 += 4; w2Detail.push(shiName[shiIdx2]+'시('+shiV+') 상생 +4'); }
+  else if (rel['피'].indexOf(shiV) >= 0) { w2 -= 4; w2Detail.push(shiName[shiIdx2]+'시('+shiV+') 피해 -4'); }
+  else { w2Detail.push(shiName[shiIdx2]+'시('+shiV+') 중립 0'); }
+  w2 = Math.round(w2 * 0.18);
+
+  // 3위. 자미두수 (15%)
+  var w3 = 0; var w3Detail = [];
+  if (scores[6]) { var z1 = (scores[6] - 65) * 0.15; w3 += z1; w3Detail.push('자미두수('+scores[6]+') '+(z1>=0?'+':'')+z1.toFixed(1)); }
+  if (scores[17]) { var z2 = (scores[17] - 65) * 0.08; w3 += z2; w3Detail.push('궁위('+scores[17]+') '+(z2>=0?'+':'')+z2.toFixed(1)); }
+  w3 = Math.round(w3 * 0.15);
+
+  // 4위. 구성학 (14%)
+  var w4 = 0; var w4Detail = [];
+  if (scores[8]) { var k = (scores[8] - 65) * 0.14; w4 += k; w4Detail.push('구성학('+scores[8]+') '+(k>=0?'+':'')+k.toFixed(1)); }
+  if (np.sun) {
+    var sunH = Math.sin((h / 24) * Math.PI * 2);
+    var sunHAdd = sunH * 3;
+    w4 += sunHAdd;
+    w4Detail.push('태양 고도 '+(sunHAdd>=0?'+':'')+sunHAdd.toFixed(1));
+  }
+  w4 = Math.round(w4 * 0.14);
+
+  // 5위. 주역 (12%)
+  var w5 = 0; var w5Detail = [];
+  if (scores[9]) { var j1 = (scores[9] - 65) * 0.12; w5 += j1; w5Detail.push('주역('+scores[9]+') '+(j1>=0?'+':'')+j1.toFixed(1)); }
+  if (scores[14]) { var j2 = (scores[14] - 65) * 0.06; w5 += j2; w5Detail.push('변화('+scores[14]+') '+(j2>=0?'+':'')+j2.toFixed(1)); }
+  w5 = Math.round(w5 * 0.12);
+
+  // 6위. 사주명리 (8%)
+  var w6 = 0; var w6Detail = [];
+  if (scores[5]) { var s1 = (scores[5] - 65) * 0.08; w6 += s1; w6Detail.push('오행('+scores[5]+') '+(s1>=0?'+':'')+s1.toFixed(1)); }
+  if (scores[0]) { var s2 = (scores[0] - 65) * 0.04; w6 += s2; w6Detail.push('HRV('+scores[0]+') '+(s2>=0?'+':'')+s2.toFixed(1)); }
+  if (scores[1]) { var s3 = (scores[1] - 65) * 0.04; w6 += s3; w6Detail.push('오장('+scores[1]+') '+(s3>=0?'+':'')+s3.toFixed(1)); }
+  w6 = Math.round(w6 * 0.08);
+
+  // 7위. 태을신수 (8%)
+  var w7 = 0; var w7Detail = [];
+  if (np.jupiter && np.saturn) {
+    var jsDiff = Math.abs((np.jupiter.lon||0) - (np.saturn.lon||0)) % 360;
+    if (jsDiff > 180) jsDiff = 360 - jsDiff;
+    if (jsDiff < 30) { w7 += 6; w7Detail.push('목성-토성 합('+Math.round(jsDiff)+'°) +6'); }
+    else if (jsDiff > 150) { w7 -= 4; w7Detail.push('목성-토성 충('+Math.round(jsDiff)+'°) -4'); }
+    else if (Math.abs(jsDiff - 120) < 20) { w7 += 4; w7Detail.push('목성-토성 삼합('+Math.round(jsDiff)+'°) +4'); }
+    else { w7Detail.push('목성-토성 중립('+Math.round(jsDiff)+'°)'); }
+  }
+  if (scores[12]) { var t1 = (scores[12] - 65) * 0.05; w7 += t1; w7Detail.push('달자리('+scores[12]+') '+(t1>=0?'+':'')+t1.toFixed(1)); }
+  w7 = Math.round(w7 * 0.08);
+
+  // MSP 보정
+  var mspAdj = 0; var mspDetail = [];
+  if (window._mspResult) {
+    var _mm = window._mspResult;
+    var _isE = _mm.type && _mm.type.charAt(0) === 'E';
+    mspAdj = _isE ? 2 : 1;
+    mspDetail.push('MSP '+(_mm.type||'?')+' '+(_isE?'외향 +2':'내향 +1'));
+    if (typeof MSP_OH_BOOST !== 'undefined' && MSP_OH_BOOST[_mm.oh] && MSP_OH_BOOST[_mm.oh][myOh]) {
+      var boost = Math.round((MSP_OH_BOOST[_mm.oh][myOh] - 1.0) * 15);
+      mspAdj += boost;
+      mspDetail.push('오행 궁합 '+(boost>=0?'+':'')+boost);
+    }
+    mspAdj = Math.min(3, Math.max(-2, mspAdj));
+  }
+
+  var engineTotal = w1 + w2 + w3 + w4 + w5 + w6 + w7;
+  var total = Math.min(95, Math.max(30, base + engineTotal + mspAdj));
+
+  return {
+    total: total,
+    base: base,
+    baseReason: baseReason,
+    engines: [
+      {rank:1, name:((window._LANG&&window._LANG!=='ko')?'🛰️ NASA planetary transit':'🛰️ NASA 행성 트랜짓'), weight:25, score:w1, detail:w1Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading NASA data)':'(NASA 데이터 로딩 중)')},
+      {rank:2, name:((window._LANG&&window._LANG!=='ko')?'🧭 Qi Men Dun Jia':'🧭 기문둔갑'),        weight:18, score:w2, detail:w2Detail.join(', ')},
+      {rank:3, name:((window._LANG&&window._LANG!=='ko')?'⭐ Zi Wei Dou Shu':'⭐ 자미두수'),         weight:15, score:w3, detail:w3Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:4, name:((window._LANG&&window._LANG!=='ko')?'🌟 Nine Star Ki':'🌟 구성학'),           weight:14, score:w4, detail:w4Detail.join(', ')},
+      {rank:5, name:((window._LANG&&window._LANG!=='ko')?'☱ I Ching':'☱ 주역'),             weight:12, score:w5, detail:w5Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:6, name:((window._LANG&&window._LANG!=='ko')?'☯ Four Pillars (element)':'☯ 사주명리(오행)'),    weight:8,  score:w6, detail:w6Detail.join(', ') || ((window._LANG&&window._LANG!=='ko')?'(loading engine data)':'(엔진 데이터 로딩 중)')},
+      {rank:7, name:((window._LANG&&window._LANG!=='ko')?'🌌 Taeul':'🌌 태을신수'),         weight:8,  score:w7, detail:w7Detail.join(', ')}
+    ],
+    mspAdj: mspAdj,
+    mspDetail: mspDetail.join(', ')
+  };
+}
+
+function sptBuildBreakdownCard(myOh, aOh, bOh, ta, tb, ili, matchHour) {
+  var bdA = sptCalcBreakdown(myOh, aOh, ili, matchHour);
+
+  var html = '<div style="margin-top:10px;padding:14px;background:linear-gradient(180deg,rgba(15,15,25,.5),rgba(0,0,0,.25));border:1px solid rgba(212,168,67,0.25);border-radius:12px;">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer;" onclick="var x=document.getElementById(\'spt-bd-body\');x.style.display=x.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.bd-arrow\').textContent=x.style.display===\'none\'?\'▼\':\'▲\';">'+
+      '<div style="font-size:12px;font-weight:800;color:#d4a843;letter-spacing:.04em;">'+((window._LANG&&window._LANG!=='ko')?('🔬 7-engine score breakdown — '+ta):('🔬 7대 엔진 점수 분해 — '+ta+' 기준'))+'</div>'+
+      '<span class="bd-arrow" style="font-size:11px;color:#d4a843;">▼</span>'+
+    '</div>'+
+    '<div id="spt-bd-body" style="display:none;">'+
+      '<div style="padding:9px 11px;background:rgba(212,168,67,0.06);border-left:2px solid #d4a843;border-radius:0 6px 6px 0;margin-bottom:10px;font-size:11px;color:#334155;line-height:1.7;">'+
+        ((window._LANG&&window._LANG!=='ko')?('<b style="color:#d4a843;">⚡ Element base: '+bdA.base+'</b><br>'+'My element '+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+' × '+ta+' '+((SPT_OH[aOh]&&SPT_OH[aOh].en)||aOh)+' → '+bdA.baseReason):('<b style="color:#d4a843;">⚡ 오행 베이스: '+bdA.base+'점</b><br>'+'내 오행 '+myOh+' × '+ta+' '+aOh+' → '+bdA.baseReason))+
+      '</div>';
+
+  bdA.engines.forEach(function(e){
+    var col = e.score >= 5 ? '#34d399' : e.score >= 0 ? '#60a5fa' : '#f87171';
+    var sign = e.score >= 0 ? '+' : '';
+    html += '<div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);">'+
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px;">'+
+        '<div style="font-size:11px;color:#334155;font-weight:700;">'+e.name+' <span style="font-size:9px;color:#64748b;">('+e.weight+'%)</span></div>'+
+        '<div style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:900;color:'+col+';">'+sign+e.score+'</div>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#64748b;line-height:1.7;">'+e.detail+'</div>'+
+    '</div>';
+  });
+
+  if (bdA.mspAdj !== 0) {
+    var col = bdA.mspAdj >= 0 ? '#34d399' : '#f87171';
+    html += '<div style="padding:8px 10px;background:rgba(167,139,250,.06);border-radius:6px;margin-top:8px;">'+
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">'+
+        '<div style="font-size:11px;color:#2563eb;font-weight:700;">'+((window._LANG&&window._LANG!=='ko')?'🧠 16-type personality adjustment':'🧠 16가지 성격 유형 보정')+'</div>'+
+        '<div style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:900;color:'+col+';">'+(bdA.mspAdj>=0?'+':'')+bdA.mspAdj+'</div>'+
+      '</div>'+
+      '<div style="font-size:10px;color:#64748b;line-height:1.7;">'+bdA.mspDetail+'</div>'+
+    '</div>';
+  }
+
+  html += '<div style="margin-top:10px;padding:10px 12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.3);border-radius:8px;font-size:11px;color:#34d399;font-weight:700;text-align:center;">'+
+      ((window._LANG&&window._LANG!=='ko')?'✅ Final SRI = base(':'✅ 최종 SRI = 베이스(')+bdA.base+((window._LANG&&window._LANG!=='ko')?') + 7 engines(':') + 7대 엔진(')+(bdA.engines.reduce(function(s,e){return s+e.score;},0))+')'+(bdA.mspAdj!==0?' + MSP('+(bdA.mspAdj>=0?'+':'')+bdA.mspAdj+')':'')+' = '+bdA.total+((window._LANG&&window._LANG!=='ko')?'':'점')+
+    '</div>'+
+    '</div></div>';
+
+  return html;
+}
+
+function sptDataWinRate(teamA, teamB) {
+  // 캐시 확인
+  var cacheKey = teamA + '_vs_' + teamB;
+  if (_sptWinCache[cacheKey] !== undefined) return _sptWinCache[cacheKey];
+  // 기본값: 해시 기반 (나중에 AI로 업데이트)
+  var hash = 0, str = teamA + teamB;
+  for (var i=0; i<str.length; i++) hash = (hash*31+str.charCodeAt(i))&0xffffffff;
+  var base = 42 + (Math.abs(hash) % 17);
+  return base;
+}
+
+function sptFetchWinRate(teamA, teamB, callback) {
+  var cacheKey = teamA + '_vs_' + teamB;
+  if (_sptWinCache[cacheKey] !== undefined) {
+    if (callback) callback(_sptWinCache[cacheKey], 100 - _sptWinCache[cacheKey]);
+    return;
+  }
+  var apiKey = (window.CG_GEMINI_KEY||'').trim();
+  if (!apiKey) return;
+  var prompt = '스포츠 참고 통계: ' + teamA + ' vs ' + teamB + ' 최근 시즌 과거 전적 비율을 JSON으로만 답하세요. 미래 승패를 예측하지 말고 과거 기록만 쓰세요. {"homeWin":숫자,"awayWin":숫자,"draw":숫자,"source":"리그명"} 형식. 데이터 없으면 {"homeWin":50,"awayWin":50,"draw":0,"source":"추정"}';
+  fetch('/api/groq',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+      messages:[{role:'user',content:prompt}],
+      max_tokens:100, temperature:0.1
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&(data.choices[0].message.content||data.choices[0].message.reasoning))||'';
+    var m = txt.match(/[{][\s\S]*?[}]/);
+    if (!m) return;
+    var obj = JSON.parse(m[0]);
+    var hw = parseInt(obj.homeWin)||50;
+    _sptWinCache[cacheKey] = hw;
+    if (callback) callback(hw, 100-hw, obj.source||'');
+    // 화면 업데이트
+    var cardEl = document.querySelector('[data-teams="'+cacheKey+'"]');
+    if (cardEl) {
+      var barA = cardEl.querySelector('[data-bar="a"]');
+      var barB = cardEl.querySelector('[data-bar="b"]');
+      var pctA = cardEl.querySelector('[data-pct="a"]');
+      var pctB = cardEl.querySelector('[data-pct="b"]');
+      if(barA) barA.style.width = hw+'%';
+      if(barB) barB.style.width = (100-hw)+'%';
+      if(pctA) pctA.textContent = hw+'%';
+      if(pctB) pctB.textContent = (100-hw)+'%';
+    }
+  })
+  .catch(function(){});
+}
+
+function sptRenderMatches(tab) {
+  var myOh = (window.calcResult && window.calcResult.domOh) || '목';
+  var ili = 70;
+  var bsFEl = document.getElementById('bsFIli');
+  if (bsFEl) ili = parseInt(bsFEl.textContent) || 70;
+
+  var list = document.getElementById('spt-match-list');
+  if (!list) return;
+
+  // ✅ 핀셋 수정: 종목별 최대 30개 제한
+  var MAX_PER_TAB = 30;
+
+  var matches = [];
+  if (tab === 'all') {
+    // 전체탭: 각 종목별 30개씩 → 합쳐서 표시
+    Object.keys(SPT_MATCH_DB).forEach(function(k) {
+      var limited = SPT_MATCH_DB[k].slice(0, MAX_PER_TAB);
+      limited.forEach(function(m) { matches.push(Object.assign({}, m, {type:k})); });
+    });
+  } else {
+    // 개별탭: 해당 종목 최대 30개만
+    matches = (SPT_MATCH_DB[tab] || []).slice(0, MAX_PER_TAB).map(function(m){
+      return Object.assign({}, m, {type:tab});
+    });
+  }
+
+  // ✅ 핀셋 수정: 진행중·예정 경기 우선 정렬 (종료 경기는 뒤로)
+  matches.sort(function(a, b) {
+    var stA = a.status || 'NS';
+    var stB = b.status || 'NS';
+    var doneA = (stA==='FT'||stA==='AET'||stA==='PEN'||stA==='AWD'||stA==='WO') ? 1 : 0;
+    var doneB = (stB==='FT'||stB==='AET'||stB==='PEN'||stB==='AWD'||stB==='WO') ? 1 : 0;
+    return doneA - doneB;
+  });
+
+  var sportIcon = {soccer:'⚽', baseball:'⚾', basketball:'🏀', volleyball:'🏐', tennis:'🎾', etc:'🏅'};
+
+  var html = '';
+  var top3 = [];
+
+  matches.forEach(function(m, idx) {
+    var resA = sptCalcResonance(myOh, m.aOh, ili, m.time);
+    var dataA = sptDataWinRate(m.a, m.b);
+    var totalA = Math.round(dataA * 0.6 + resA * 0.4);
+    var totalB = 100 - totalA;
+    var stars = resA >= 80 ? '★★★★★' : resA >= 70 ? '★★★★☆' : resA >= 60 ? '★★★☆☆' : '★★☆☆☆';
+    var ohA = SPT_OH[m.aOh] || SPT_OH['목'];
+    var ohB = SPT_OH[m.bOh] || SPT_OH['화'];
+    var resonanceLabel = (window._LANG&&window._LANG!=='ko') ? (resA >= 80 ? '🔥 Strong resonance' : resA >= 70 ? '✨ Resonance edge' : resA >= 60 ? '〰️ Moderate resonance' : '❄️ Low resonance') : (resA >= 80 ? '🔥 강한 공명' : resA >= 70 ? '✨ 공명 우세' : resA >= 60 ? '〰️ 보통 공명' : '❄️ 낮은 공명');
+    // ── TOP3: 종료(FT)·부전승(AWD) 제외, 미시작(NS)/진행중만 포함 ──
+    var st = m.status || 'NS';
+    var isOver = (st === 'FT' || st === 'AET' || st === 'PEN' || st === 'AWD' || st === 'WO');
+    if (!isOver) {
+      top3.push({idx:idx, match:m, resA:resA, totalA:totalA, totalB:totalB, stars:stars, icon:sportIcon[m.type]||'🏅'});
+    }
+
+    // 종료 경기는 카드 반투명 처리
+    var isOverCard = (m.status === 'FT' || m.status === 'AET' || m.status === 'PEN');
+    var cardStyle = isOverCard ? ' style="opacity:0.5;"' : '';
+    var _ck = m.a+'_vs_'+m.b;
+    html += '<div class="spt-match-card" id="spt-card-'+idx+'" data-teams="'+_ck+'"'+cardStyle+' onclick="sptSelectMatch('+idx+')">';
+    // 백그라운드로 AI 승률 조회
+    setTimeout(function(_a,_b){ sptFetchWinRate(_a,_b,null); }(m.a,m.b), idx*300);
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">';
+    html += '<span style="font-size:14px;">'+(sportIcon[m.type]||'🏅')+'</span>';
+    html += '<span style="font-size:10px;color:#a0afc0;font-weight:600;" title="'+m.league+'">'+sptLeagueDisplay(m.league)+'</span>';
+    html += '<span style="font-size:10px;color:#6b7280;margin-left:auto;">⏰ '+m.time+'</span>';
+    html += '</div>';
+    // VS 행
+    html += '<div class="spt-vs">';
+    // 팀 로고 (API-Football + TheSportsDB)
+    var logoA = m.aLogo || sptGetCachedLogo(m.a);
+    var logoB = m.bLogo || sptGetCachedLogo(m.b);
+    var logoHtmlA = logoA ? ('<img src="'+logoA+'" width="32" height="32" style="object-fit:contain;margin-bottom:4px;display:block;margin:0 auto 4px;">') : ('<div style="width:32px;height:32px;border-radius:50%;background:'+ohA.bg+';display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto 4px;">⚽</div>');
+    var logoHtmlB = logoB ? ('<img src="'+logoB+'" width="32" height="32" style="object-fit:contain;margin-bottom:4px;display:block;margin:0 auto 4px;">') : ('<div style="width:32px;height:32px;border-radius:50%;background:'+ohB.bg+';display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto 4px;">⚽</div>');
+    // 실시간 스코어
+    var scoreHtml = '';
+    if (m.status && m.status !== 'NS' && m.aGoals !== null && m.bGoals !== null) {
+      var statusLabel = (window._LANG&&window._LANG!=='ko') ? (m.status === 'FT' ? 'Full time' : m.status === '1H' ? '1st half' : m.status === 'HT' ? 'Half time' : m.status === '2H' ? '2nd half' : m.status) : (m.status === 'FT' ? '종료' : m.status === '1H' ? '전반' : m.status === 'HT' ? '하프타임' : m.status === '2H' ? '후반' : m.status);
+      scoreHtml = '<div style="font-size:18px;font-weight:900;color:#34d399;margin:4px 0;">'+m.aGoals+' - '+m.bGoals+'</div><div style="font-size:9px;color:#059669;">'+statusLabel+'</div>';
+    }
+    html += '<div class="spt-team" style="text-align:center;">';
+    html += logoHtmlA;
+    html += '<div class="spt-team-name">'+sptTeamDisplay(m.a)+'</div>';
+    html += '<div class="spt-team-oh" style="background:'+ohA.bg+';color:'+ohA.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohA.en||m.aOh)+' element'):(m.aOh+' 오행'))+'</div>';
+    html += '<div class="spt-team-stat">'+((window._LANG&&window._LANG!=='ko')?'Data ':'데이터 ')+dataA+'%</div></div>';
+    html += '<div class="spt-vs-badge" style="display:flex;flex-direction:column;align-items:center;">';
+    html += scoreHtml || '<span>VS</span>';
+    html += '</div>';
+    html += '<div class="spt-team" style="text-align:center;">';
+    html += logoHtmlB;
+    html += '<div class="spt-team-name">'+sptTeamDisplay(m.b)+'</div>';
+    html += '<div class="spt-team-oh" style="background:'+ohB.bg+';color:'+ohB.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohB.en||m.bOh)+' element'):(m.bOh+' 오행'))+'</div>';
+    html += '<div class="spt-team-stat">'+((window._LANG&&window._LANG!=='ko')?'Data ':'데이터 ')+(100-dataA)+'%</div></div>';
+    html += '</div>';
+    // 종합 승률 바
+    html += '<div class="spt-bar-row"><span class="spt-bar-label">'+((window._LANG&&window._LANG!=='ko')?'Overall energy':'종합 에너지')+'</span>';
+    html += '<span class="spt-pct-a">'+totalA+'%</span>';
+    html += '<div class="spt-bar-track"><div class="spt-bar-a" style="width:0%;background:'+ohA.color+';opacity:.8;" data-w="'+totalA+'"></div>';
+    html += '<div class="spt-bar-b" style="width:0%;background:'+ohB.color+';opacity:.8;" data-w="'+totalB+'"></div></div>';
+    html += '<span class="spt-pct-b">'+totalB+'%</span></div>';
+    // 데이터 vs 에너지
+    html += '<div class="spt-bar-row"><span class="spt-bar-label">'+((window._LANG&&window._LANG!=='ko')?'Data-driven':'데이터 기반')+'</span>';
+    html += '<span class="spt-pct-a">'+dataA+'%</span>';
+    html += '<div class="spt-bar-track"><div class="spt-bar-a" style="width:0%;background:#60a5fa;opacity:.7;" data-w="'+dataA+'"></div>';
+    html += '<div class="spt-bar-b" style="width:0%;background:#f87171;opacity:.7;" data-w="'+(100-dataA)+'"></div></div>';
+    html += '<span class="spt-pct-b">'+(100-dataA)+'%</span></div>';
+    // 공명 지수
+    html += '<div class="spt-resonance"><span class="spt-res-stars">'+stars+'</span>';
+    html += '<span class="spt-res-label">'+resonanceLabel+'</span>';
+    html += '<span class="spt-res-desc">'+((window._LANG&&window._LANG!=='ko')?'Resonance ':'공명 ')+resA+'pts</span></div>';
+    html += '<div onclick="(function(){var c=document.getElementById(\'spt-chat-messages\');if(c){c.scrollIntoView({behavior:\'smooth\',block:\'center\'});setTimeout(function(){var i=document.getElementById(\'spt-chat-input\');if(i)i.focus();},500);}})()" style="margin-top:8px;font-size:10px;color:#059669;text-align:right;cursor:pointer;padding:4px 0;">'+((window._LANG&&window._LANG!=='ko')?'💬 Click for AI consultation →':'💬 클릭하여 AI 상담 →')+'</div>';
+    html += '</div>';
+  });
+
+  list.innerHTML = html || '<div style="font-size:12px;color:#a0afc0;text-align:center;padding:20px;">'+((window._LANG&&window._LANG!=='ko')?'No match info for this sport':'해당 종목 경기 정보가 없습니다')+'</div>';
+
+  // 바 애니메이션
+  setTimeout(function(){
+    list.querySelectorAll('[data-w]').forEach(function(el){ el.style.width = el.getAttribute('data-w') + '%'; });
+  }, 100);
+
+  // TOP3 업데이트
+  top3.sort(function(x,y){ return y.resA - x.resA; });
+  sptRenderTop3(top3.slice(0,3));
+}
+
+function sptRenderTop3(items) {
+  var el = document.getElementById('spt-top3-list');
+  if (!el) return;
+  var medals = ['🥇','🥈','🥉'];
+  var colors = ['#d4a843','#94a3b8','#cd7f32'];
+  var html = '';
+  items.forEach(function(item, i) {
+    html += '<div class="spt-top3-item">';
+    html += '<div class="spt-rank-badge" style="background:rgba(212,168,67,'+(0.15-i*0.04)+');color:'+colors[i]+';">'+medals[i]+'</div>';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:13px;font-weight:700;color:#334155;">'+item.icon+' '+sptTeamDisplay(item.match.a)+' vs '+sptTeamDisplay(item.match.b)+'</div>';
+    html += '<div style="font-size:10px;color:#a0afc0;">'+sptLeagueDisplay(item.match.league)+' · ⏰ '+item.match.time+'</div>';
+    html += '</div>';
+    html += '<div style="text-align:right;">';
+    html += '<div style="font-size:14px;font-weight:800;color:#34d399;">'+item.resA+'<span style="font-size:10px;font-weight:400;">pts</span></div>';
+    html += '<div style="font-size:10px;color:#a0afc0;">'+item.stars+'</div>';
+    html += '</div></div>';
+  });
+  if (items.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px;">'+((window._LANG&&window._LANG!=='ko')?'⏳ No matches scheduled today<br>or all matches have ended':'⏳ 오늘 예정된 경기가 없거나<br>모든 경기가 종료되었습니다')+'</div>';
+  } else {
+    el.innerHTML = html;
+  }
+}
+
+function sptSwitchTab(tab, btn) {
+  _sptCurrentTab = tab;
+  document.querySelectorAll('.spt-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  sptRenderMatches(tab);
+}
+
+function sptSelectMatch(idx) {
+  document.querySelectorAll('.spt-match-card').forEach(function(c){ c.classList.remove('selected'); });
+  var card = document.getElementById('spt-card-'+idx);
+  if (card) card.classList.add('selected');
+
+  // 해당 경기 찾기
+  var allMatches = [];
+  Object.keys(SPT_MATCH_DB).forEach(function(k){
+    SPT_MATCH_DB[k].forEach(function(m){ allMatches.push(Object.assign({},m,{type:k})); });
+  });
+  var m = allMatches[idx];
+  if (!m) return;
+  _sptAnalyzed = m;
+
+  var myOh = (window.calcResult && window.calcResult.domOh) || '목';
+  var ili = 70;
+  var bsFEl = document.getElementById('bsFIli');
+  if (bsFEl) ili = parseInt(bsFEl.textContent) || 70;
+  var resA = sptCalcResonance(myOh, m.aOh, ili, m.time);
+  var dataA = sptDataWinRate(m.a, m.b);
+  var totalA = Math.round(dataA * 0.6 + resA * 0.4);
+
+  var msg = (window._LANG&&window._LANG!=='ko')
+    ? (sptTeamDisplay(m.a)+' vs '+sptTeamDisplay(m.b)+' ('+m.league+', '+m.time+') selected.\n'+
+       'My element ('+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+') × '+m.a+' ('+((SPT_OH[m.aOh]&&SPT_OH[m.aOh].en)||m.aOh)+') resonance '+resA+'pts, overall energy '+totalA+'% · '+(100-totalA)+'%.\nPlease analyze the energy flow of this match.')
+    : (sptKoName(m.a)+' vs '+sptKoName(m.b)+' ('+m.league+', '+m.time+') 경기를 선택했어요.\n'+
+       '내 오행('+myOh+') × '+m.a+'('+m.aOh+' 오행) 공명 '+resA+'pts, 종합 에너지 '+totalA+'% · '+(100-totalA)+'% 입니다.\n이 경기의 에너지 흐름을 분석해주세요.');
+  sptAskAI(msg, true);
+
+  // 스크롤
+  var chatEl = document.getElementById('spt-chat-messages');
+  if (chatEl) setTimeout(function(){ chatEl.scrollTop = chatEl.scrollHeight; }, 300);
+}
+
+function sptAnalyze() {
+  var ta = (document.getElementById('spt-team-a')||{}).value.trim();
+  var tb = (document.getElementById('spt-team-b')||{}).value.trim();
+  var st = (document.getElementById('spt-sport-type')||{}).value || 'soccer';
+  var mt = (document.getElementById('spt-match-time')||{}).value || '19:00';
+  var res = document.getElementById('spt-analyze-result');
+  if (!ta || !tb) { if(res) res.innerHTML='<div style="color:#f87171;font-size:12px;padding:6px;">'+((window._LANG&&window._LANG!=='ko')?'Please enter both home and away teams.':'홈팀과 원정팀을 입력해주세요.')+'</div>'; return; }
+
+  // 임시 오행 자동 배정
+  var ohs = ['목','화','토','금','수'];
+  var hashA = ta.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % 5;
+  var hashB = tb.split('').reduce(function(a,c){return a+c.charCodeAt(0);},0) % 5;
+  var aOh = ohs[hashA], bOh = ohs[hashB];
+  var myOh = (window.calcResult && window.calcResult.domOh) || '목';
+  var ili = 70;
+  var bsFEl = document.getElementById('bsFIli');
+  if (bsFEl) ili = parseInt(bsFEl.textContent)||70;
+  var resA = sptCalcResonance(myOh, aOh, ili, mt.split(':')[0]);
+  var dataA = sptDataWinRate(ta, tb);
+  var totalA = Math.round(dataA * 0.6 + resA * 0.4);
+  var ohA = SPT_OH[aOh]||SPT_OH['목'];
+  var ohB = SPT_OH[bOh]||SPT_OH['화'];
+
+  if (res) res.innerHTML =
+    '<div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;margin-top:4px;">' +
+    '<div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:8px;">'+((window._LANG&&window._LANG!=='ko')?'📊 Analysis result':'📊 분석 결과')+'</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+    '<div style="flex:1;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">' +
+    '<div style="font-size:11px;color:'+ohA.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohA.en||aOh)+' element'):(aOh+' 오행'))+'</div>' +
+    '<div style="font-size:16px;font-weight:800;color:#34d399;">'+totalA+'%</div>' +
+    '<div style="font-size:11px;color:#a0afc0;">'+ta+'</div></div>' +
+    '<div style="display:flex;align-items:center;color:#475569;font-weight:700;font-size:12px;">VS</div>' +
+    '<div style="flex:1;text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;">' +
+    '<div style="font-size:11px;color:'+ohB.color+';">'+((window._LANG&&window._LANG!=='ko')?((ohB.en||bOh)+' element'):(bOh+' 오행'))+'</div>' +
+    '<div style="font-size:16px;font-weight:800;color:#60a5fa;">'+(100-totalA)+'%</div>' +
+    '<div style="font-size:11px;color:#a0afc0;">'+tb+'</div></div></div>' +
+    '<div style="font-size:11px;color:#a0afc0;">'+((window._LANG&&window._LANG!=='ko')?('Data-driven '+dataA+'% + energy adj '+(totalA-dataA>0?'+':'')+(totalA-dataA)+'% = overall '+totalA+'%'):('데이터 기반 '+dataA+'% + 에너지 보정 '+(totalA-dataA>0?'+':'')+(totalA-dataA)+'% = 종합 '+totalA+'%'))+'</div>' +
+    '</div>';
+
+  // ✦ 7대 엔진 점수 분해 카드 추가 (분석 결과 바로 아래) ✦
+  if (res && typeof sptBuildBreakdownCard === 'function') {
+    try {
+      res.innerHTML += sptBuildBreakdownCard(myOh, aOh, bOh, ta, tb, ili, mt.split(':')[0]);
+    } catch(e) {}
+  }
+
+  // AI 자동 상담
+  var _sptEN = (window._LANG&&window._LANG!=='ko');
+  _sptAnalyzed = {a:ta, b:tb, aOh:aOh, bOh:bOh, time:mt, league:(_sptEN?'Direct input':'직접입력')};
+  var sportNames = _sptEN ? {soccer:'Soccer',baseball:'Baseball',basketball:'Basketball',volleyball:'Volleyball',tennis:'Tennis',etc:'match'} : {soccer:'축구',baseball:'야구',basketball:'농구',volleyball:'배구',tennis:'테니스',etc:'기타'};
+  sptAskAI(_sptEN
+    ? (ta+' vs '+tb+' '+(sportNames[st]||'match')+' energy analysis: my element ('+((SPT_OH[myOh]&&SPT_OH[myOh].en)||myOh)+') × '+ta+' ('+((SPT_OH[aOh]&&SPT_OH[aOh].en)||aOh)+') resonance '+resA+'pts, overall '+totalA+'% · '+(100-totalA)+'%. Please analyze the energy flow.')
+    : (ta+' vs '+tb+' '+( sportNames[st]||'경기')+' 에너지 분석: 내 오행('+myOh+') × '+ta+'('+aOh+') 공명 '+resA+'pts, 종합 '+totalA+'% · '+(100-totalA)+'% 입니다. 에너지 흐름을 분석해주세요.'), true);
+}
+
+function sptAddBubble(role, text) {
+  var box = document.getElementById('spt-chat-messages');
+  if (!box) return;
+  var div = document.createElement('div');
+  div.className = 'spt-bubble ' + role;
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sptAddTyping() {
+  var box = document.getElementById('spt-chat-messages');
+  if (!box) return;
+  var div = document.createElement('div');
+  div.className = 'spt-bubble ai';
+  div.id = 'spt-typing';
+  div.innerHTML = '<span style="opacity:.6;">분석 중</span> <span style="animation:pulse 1s infinite;display:inline-block;">●●●</span>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sptRemoveTyping() {
+  var t = document.getElementById('spt-typing');
+  if (t) t.remove();
+}
+
+function sptQuick(text) {
+  sptAskAI(text, false);
+}
+
+function sptEnterSend(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sptSend(); }
+}
+
+function sptSend() {
+  var inp = document.getElementById('spt-chat-input');
+  if (!inp) return;
+  var text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  sptAskAI(text, false);
+}
+
+function sptAskAI(userText, isAuto) {
+  if (!isAuto) sptAddBubble('me', userText);
+  _sptHistory.push({role:'user', content:userText});
+  if (_sptHistory.length > 12) _sptHistory = _sptHistory.slice(-12);
+
+  var sendBtn = document.getElementById('spt-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  // 승률 질문 감지 시 AI로 실제 데이터 먼저 조회
+  var isWinQ = /전적|승률|몇승|몇패|성적|이겼|졌|비겼|역대/.test(userText);
+  var isSearchQ = /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|챔피언|득점|실점|이겼|졌|비겼|선수|감독|창단|언제|몇년/.test(userText);
+  sptAddTyping(isSearchQ ? '🔍 검색 중...' : null);
+  // 현재 선택 경기의 승률 캐시 없으면 AI로 조회
+  if (isWinQ && _sptAnalyzed) {
+    var _ck2 = _sptAnalyzed.a + '_vs_' + _sptAnalyzed.b;
+    if (_sptWinCache[_ck2] === undefined) {
+      sptFetchWinRate(_sptAnalyzed.a, _sptAnalyzed.b, null);
+    }
+  }
+
+  var myOh = (window.calcResult && window.calcResult.domOh) || '목';
+  var myName = (window.calcResult && window.calcResult.name) || '사용자';
+  // ★ 신버전: ILI 단독 → CEI 통합 점수
+  var _gsSpt = (typeof _cgoGetScore === 'function') ? _cgoGetScore() : null;
+  var ili = _gsSpt ? _gsSpt.score : 70;
+  var _sptBioLine = _gsSpt && _gsSpt.scanned
+    ? '\n## 생체 실측 (CEI 신버전)\nCEI '+_gsSpt.score+'점('+_gsSpt.grade+') = BAI '+_gsSpt.bai+'×40% + ILI '+_gsSpt.ili+'×35% + 공명×25%\n심박수 '+_gsSpt.bpm+'BPM / HRV '+_gsSpt.hrv+' / FCI '+_gsSpt.fci+'\n'
+    : '';
+
+  // ── JS 계산 수치 미리 확정 ──────────────────────────────
+  var _fixedScores = '';
+  if (_sptAnalyzed) {
+    var _resA = sptCalcResonance(myOh, _sptAnalyzed.aOh || '목', ili, (_sptAnalyzed.time||'19').split(':')[0]);
+    var _dataA = sptDataWinRate(_sptAnalyzed.a, _sptAnalyzed.b);
+    var _totalA = Math.round(_dataA * 0.6 + _resA * 0.4);
+    var _resB = sptCalcResonance(myOh, _sptAnalyzed.bOh || '화', ili, (_sptAnalyzed.time||'19').split(':')[0]);
+    var _totalB = 100 - _totalA;
+    _fixedScores =
+      '\n\n## ✅ JS 엔진이 계산한 확정 수치 (절대 변경 금지)\n' +
+      '- ' + _sptAnalyzed.a + ' SRI 공명 지수: ' + _totalA + '%\n' +
+      '- ' + _sptAnalyzed.b + ' SRI 공명 지수: ' + _totalB + '%\n' +
+      '- ' + _sptAnalyzed.a + ' 공명 지수: ' + _resA + 'pts\n' +
+      '- ' + _sptAnalyzed.b + ' 공명 지수: ' + _resB + 'pts\n' +
+      '- 데이터 기반 수치: ' + _dataA + '% vs ' + (100-_dataA) + '%\n' +
+      '⚠️ 위 수치는 CGO 역학 엔진이 계산한 고정값입니다. 당신이 새로운 %수치를 생성하거나 위 수치를 변경하는 것은 엄격히 금지됩니다.';
+  }
+
+  var nowD2 = new Date();
+  var sptDateStr = nowD2.getFullYear()+'년 '+(nowD2.getMonth()+1)+'월 '+nowD2.getDate()+'일';
+
+  // ── 20개 엔진 데이터 수집 ──────────────────────────────
+  var _scores = (window._HV && window._HV.scores) ? window._HV.scores : [];
+  var _engNames = ['호흡(HRV)','오장육부','체온','관상','손금','오행','자미두수','기문둔갑','구성학','_','수비학','성명학','달자리','점성술','주역','카발라','타로','자미두수궁위'];
+  var _engLines = [];
+  _scores.forEach(function(sc, i) {
+    if (sc > 0 && _engNames[i] && _engNames[i] !== '_') {
+      var lv = sc >= 80 ? '🔴 강' : sc >= 65 ? '🟡 중' : '🔵 약';
+      _engLines.push('  · ' + _engNames[i] + ': ' + sc + '점 ' + lv);
+    }
+  });
+  var _engSummary = _engLines.length > 0 ? _engLines.join('\n') : '  · (엔진 데이터 로딩 중)';
+
+  // NASA 행성 데이터
+  var _np = window._nasaPlanets || {};
+  var _nasaLines = [];
+  var _pnames = {sun:'☀️태양',moon:'🌙달',mars:'♂화성',venus:'♀금성',mercury:'☿수성',jupiter:'♃목성',saturn:'♄토성'};
+  Object.keys(_pnames).forEach(function(k) {
+    if (_np[k]) {
+      var retro = _np[k].retro ? ' Rx역행⚠️' : '';
+      _nasaLines.push('  · ' + _pnames[k] + ': ' + Math.round(_np[k].lon||0) + '°' + retro);
+    }
+  });
+  var _nasaSummary = _nasaLines.length > 0 ? _nasaLines.join('\n') : '  · (NASA 데이터 로딩 중)';
+
+  // cosmoSync 경고
+  var _cosmoWarn = '';
+  if (typeof cosmoSyncWarning === 'function') {
+    try { var _cw = cosmoSyncWarning(); if (_cw.warning) _cosmoWarn = '\n⚠️ 우주-생체 경고: ' + _cw.warning; } catch(e) {}
+  }
+
+  var systemPrompt =
+    '당신은 CGO-FULI 스포츠 에너지 분석 AI입니다. 이름은 "스포츠 에너지 AI"입니다.\n' +
+    '사용자: 이름=' + myName + ', 지배오행=' + myOh + ', 에너지지수(CEI/ILI)=' + ili + '점, 오늘=' + sptDateStr + '\n' +
+    _sptBioLine +
+    '※ 전문 용어는 쉬운 말로 풀어서 일반인도 이해할 수 있게 설명하세요.\n\n' +
+    '## ⚙️ 50대 역학 중 엔진 실시간 수치 (CGO 독자 알고리즘)\n' + _engSummary + '\n\n' +
+    '## 🪐 NASA JPL 실시간 행성 위치\n' + _nasaSummary + _cosmoWarn + '\n\n' +
+
+    ((window._LANG&&window._LANG!=='ko')
+    ? ('## ★ LANGUAGE RULE (TOP PRIORITY) ★\n' +
+    '- Answer ONLY in English.\n' +
+    '- Translate ALL metaphysics / engine names to English: Qi Men Dun Jia, Zi Wei Dou Shu, Nine Star Ki, I Ching, Four Pillars (Saju), Taeul, Feng Shui, Kabbalah, Tarot, numerology.\n' +
+    '- Never output Korean, Chinese or Japanese characters.\n' +
+    '- Use English element names: Wood, Fire, Earth, Metal, Water.\n' +
+    '- Do not end with a farewell.\n\n' )
+    : ('## ★ 언어 규칙 (최우선) ★\n' +
+    '- 순수 한국어로만 답변하세요\n' +
+    '- 중국어(真是, 令人 등), 일본어, 영어, 프랑스어 등 외국어 단어 금지\n' +
+    '- Wood, Fire 같은 영어 오행 표현 금지 → 목(木), 화(火) 등 한글로\n' +
+    '- 외국어가 나오려는 순간 즉시 한국어로 교체하세요\n' +
+    '- 인사말은 항상 한국어로: "또 봐요" 대신 "다음에 또 질문해 주세요!" 등\n\n')) +
+    '## ★ CGO-FULI 정체성 규칙 ★\n' +
+    '- 당신은 승패 예측 AI가 아닙니다. "내 에너지와 어느 팀이 공명하는가"를 분석하는 AI입니다\n' +
+    '- 예측이 실제 결과와 다를 수 있음을 항상 자연스럽게 안내하세요\n' +
+    '- "에너지 공명" 관점으로 분석하되, 베팅·도박·승패 확언 표현은 쓰지 마세요\n' +
+    '- 대화 종료 인사 금지 — "또 봐요", "그럼 안녕히" 등 마무리 인사 하지 마세요\n\n' +
+
+    '## 답변 방침\n' +
+    '1. 사용자의 모든 질문에 성실하게 답변하세요. "해당 경기를 선택하세요" 같은 회피 답변은 하지 마세요.\n' +
+    '2. 팀 역사·전적·승률 등 일반 스포츠 지식은 알고 있는 내용으로 친절하게 답변하세요.\n' +
+    '   단, 지식 컷오프(2024년 초) 이후 최신 결과는 "최근 데이터는 확인이 어렵지만 ~" 으로 솔직하게 안내하세요.\n' +
+    '3. 역학 기반 에너지 분석(공명 지수·SRI 공명 지수)은 아래 JS 확정값만 사용하고 새 % 수치를 만들지 마세요.\n' +
+    '4. 역학 수치가 없는 팀 간 비교를 묻는다면, 역학 분석 대신 알려진 통계·역사를 활용해 답변하세요.\n' +
+    '5. 베팅·도박·금액 투자 권유 표현을 쓰지 마세요. 승패를 확언하지 마세요.\n' +
+    '6. 에너지 분석 관련 수치는 "승률" 대신 "SRI 공명 지수" 또는 "공명 지수" 로 표현하세요.\n' +
+    '7. 답변은 핵심을 먼저, 부연 설명 순으로 간결하게 작성하세요.\n' +
+    '8. 점수 언급 시 이유 필수: A등급(NASA직결±20) > B등급(생체±15) > C등급(날씨±10) > D/E등급(생일기반)\n' +
+    '   예: "행성 트랜짓 점수가 낮은 이유는 현재 화성이 역행 중이기 때문입니다"\n' +
+    '9. ★ 답변 시 반드시 구체적인 수치를 명시하세요. "공명 지수 65점" 같은 점수 + "화성 168°에서 시간 sync +5.2점" 같은 세부 근거 둘 다 포함.\n' +
+    '   ✅ 좋은 예: "NASA 행성 트랜짓 +6.2점(화성 168°×경기시간 sync +3.4, 목성 순행 +6, 달 상현 +3 → 0.25 가중)"\n' +
+    '   ❌ 나쁜 예: "토성이 일직선상에 있어 강화될 수 있습니다" (좌표·각도 누락)\n' +
+    '10. ★ 근거는 수치로 제시하세요. 다만 승패·결과는 확언하지 말고 에너지 흐름의 경향으로 서술하세요.\n' +
+    '    ✅ "화성-시간 sync +3.4점으로 활동 에너지가 강하게 읽힙니다" — 수치 + 경향\n' +
+    '    ❌ "이 팀이 이깁니다" — 승패 확언 금지\n' +
+    '11. ★ 7대 엔진 분해 활용: NASA(25%) + 기문둔갑(18%) + 자미두수(15%) + 구성학(14%) + 주역(12%) + 사주(8%) + 태을(8%). 각 엔진별로 어떤 데이터로 점수가 나왔는지 1~2개 짚어 주세요.\n\n' +
+
+    '## 스포츠 지식 활용 범위\n' +
+    '- 팀 역사, 리그 성적, 주요 선수, 전통적 강팀 여부 등 → 적극 활용\n' +
+    '- 역학+스포츠 융합 분석: 팀의 창단일·연고지 오행 + 사용자 오행 궁합\n' +
+    '- 최신 경기 결과(2024년 이후): "최신 데이터 확인이 어렵습니다" 로 솔직히 안내\n\n' +
+
+    ((_sptAnalyzed) ? '## 현재 분석 중인 경기\n' + _sptAnalyzed.a + ' vs ' + _sptAnalyzed.b + ' (' + (_sptAnalyzed.league||'') + ')\n' : '## 현재 특정 경기 미선택 상태 (일반 스포츠 질문에 자유롭게 답변 가능)\n') +
+    _fixedScores;
+
+  var messages = [{role:'system', content:systemPrompt}];
+  _sptHistory.forEach(function(h){ messages.push({role:h.role, content:h.content}); });
+
+  var apiKey = (window.CG_GEMINI_KEY || '').trim();
+  if (!apiKey) {
+    try { apiKey = atob(''); window.CG_GEMINI_KEY = apiKey; } catch(e){}
+  }
+
+  // ── 검색 필요 여부 판단 키워드 ─────────────────────────
+  // 경기 일정 질문 여부 (별도 플래그)
+  // ══ 경기 일정 질문 감지 ══════════════════════════════════
+  var isScheduleQ = /일정|오늘 경기|내일 경기|내일|이번주|다음주|몇시|킥오프|경기가 있|경기 있|경기는|경기 언제|오늘은|챔피언|챔피언스|챔피온|유로파|프리미어|라리가|분데스|세리에/.test(userText);
+  var needSearch  = isScheduleQ || /전적|승률|역사|결과|스코어|우승|순위|몇승|몇패|성적|시즌|리그|득점|실점|이겼|졌|비겼|선수|감독|창단|몇년/.test(userText);
+
+  // ══ 경기 일정 질문 → 직접 TheSportsDB 호출 후 답변 ══
+  if (isScheduleQ) {
+    // 날짜 범위 계산
+    var today2 = new Date();
+    var dates2 = [];
+    var daysAhead = (userText.indexOf('이번주')!==-1||userText.indexOf('다음주')!==-1) ? 7 : 3;
+    for (var di=0; di<daysAhead; di++) {
+      var dd = new Date(today2); dd.setDate(dd.getDate()+di);
+      dates2.push(dd.toISOString().slice(0,10));
+    }
+
+    // TheSportsDB - Soccer 일정 조회 (무료, CORS 허용)
+    var fetchPromises2 = dates2.map(function(d){
+      // 5분 캐싱 (API 호출 절약)
+      var _cacheKey = 'sportsdb_' + d;
+      var _cached = window._sportCache && window._sportCache[_cacheKey];
+      if (_cached && (Date.now() - _cached.ts) < 300000) {
+        return Promise.resolve({ok:true, json:function(){return Promise.resolve(_cached.data);}});
+      }
+      return fetch('https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d='+d+'&s=Soccer')
+        .then(function(r){ return r.json(); })
+        .catch(function(){ return {events:[]}; });
+    });
+
+    sptAddTyping();
+    Promise.all(fetchPromises2).then(function(results2) {
+      var allEvents2 = [];
+      results2.forEach(function(r){ if(r.events) allEvents2 = allEvents2.concat(r.events); });
+
+      // 유럽 주요 리그만 필터
+      var euroKeywords = ['Champions','Europa','Premier League','La Liga','Bundesliga',
+        'Serie A','Ligue 1','UEFA','Eredivisie','Primeira'];
+      var filtered2 = allEvents2.filter(function(e){
+        var lg = e.strLeague||'';
+        return euroKeywords.some(function(k){ return lg.indexOf(k)!==-1; });
+      });
+
+      // 사용자가 특정 리그 언급했으면 추가 필터
+      var leagueKeyFilter = '';
+      if (/챔피언스|챔피온|UCL|Champions/i.test(userText)) leagueKeyFilter = 'Champions';
+      else if (/유로파/i.test(userText)) leagueKeyFilter = 'Europa';
+      else if (/프리미어|EPL/i.test(userText)) leagueKeyFilter = 'Premier';
+      else if (/라리가/i.test(userText)) leagueKeyFilter = 'La Liga';
+      else if (/분데스/i.test(userText)) leagueKeyFilter = 'Bundesliga';
+      else if (/세리에/i.test(userText)) leagueKeyFilter = 'Serie';
+
+      if (leagueKeyFilter) {
+        filtered2 = filtered2.filter(function(e){
+          return (e.strLeague||'').indexOf(leagueKeyFilter)!==-1;
+        });
+      }
+
+      sptRemoveTyping();
+
+      if (filtered2.length === 0) {
+        // 경기 없음 - 안내 메시지
+        sptAddBubble('ai',
+          '📅 조회 기간(' + dates2[0] + ' ~ ' + dates2[dates2.length-1] + ') 내\n' +
+          (leagueKeyFilter||'유럽 주요 리그') + ' 경기가 없거나 아직 일정이 등록되지 않았습니다.\n\n' +
+          '더 자세한 일정은 아래에서 확인하세요:\n' +
+          '• UEFA 공식: https://www.uefa.com/uefachampionsleague\n' +
+          '• 네이버 스포츠: https://sports.naver.com/wfootball\n' +
+          '• 다음 스포츠: https://sports.daum.net/worldsoccer'
+        );
+      } else {
+        // 날짜별 그룹핑
+        var byDate2 = {};
+        filtered2.sort(function(a,b){ return (a.dateEvent+a.strTime)>(b.dateEvent+b.strTime)?1:-1; });
+        filtered2.slice(0,20).forEach(function(e){
+          var d2 = e.dateEvent||'날짜미정';
+          if (!byDate2[d2]) byDate2[d2] = [];
+          // UTC→KST 변환
+          var timeStr2 = '시간미정';
+          if (e.strTime && e.strTime.length>=5) {
+            var hh2 = parseInt(e.strTime.slice(0,2),10);
+            var mm2 = e.strTime.slice(3,5);
+            var kst2 = (hh2+9)%24;
+            timeStr2 = (kst2<10?'0':'')+kst2+':'+mm2+' KST';
+          }
+          byDate2[d2].push('  ' + e.strHomeTeam + ' vs ' + e.strAwayTeam
+            + '  ' + timeStr2
+            + (e.strLeague ? '  ['+e.strLeague+']' : ''));
+        });
+
+        var msg2 = '📅 ' + (leagueKeyFilter ? leagueKeyFilter+' ' : '유럽 주요 ') + '경기 일정\n\n';
+        var dowArr2 = ['일','월','화','수','목','금','토'];
+        Object.keys(byDate2).sort().forEach(function(date2){
+          var dt2 = new Date(date2+'T12:00:00');
+          var dow2 = dowArr2[dt2.getDay()];
+          // 오늘/내일 표시
+          var label2 = '';
+          var todayStr2 = today2.toISOString().slice(0,10);
+          var tomorrowStr2 = new Date(today2.getTime()+86400000).toISOString().slice(0,10);
+          if (date2===todayStr2) label2 = ' (오늘)';
+          else if (date2===tomorrowStr2) label2 = ' (내일)';
+          msg2 += '【' + date2 + ' ' + dow2 + '요일' + label2 + '】\n';
+          msg2 += byDate2[date2].join('\n') + '\n\n';
+        });
+
+        // ── CGO 역학 분석을 AI로 생성 ──────────────────
+        var np3 = window._nasaPlanets || {};
+        var todayOh = myOh || '목';
+        var planetStr3 = '';
+        if (np3.jupiter) planetStr3 += '목성(' + (np3.jupiter.sign||'') + ') ';
+        if (np3.mars)    planetStr3 += '화성(' + (np3.mars.sign||'') + (np3.mars.retro?'역행':'') + ') ';
+        if (np3.saturn)  planetStr3 += '토성(' + (np3.saturn.sign||'') + (np3.saturn.retro?'역행':'') + ') ';
+        if (np3.venus)   planetStr3 += '금성(' + (np3.venus.sign||'') + ') ';
+
+        // 경기 목록 추출 (역학 분석용)
+        var matchList3 = [];
+        Object.keys(byDate2).sort().forEach(function(d3){
+          byDate2[d3].forEach(function(m3){ matchList3.push(m3.trim()); });
+        });
+
+        // Groq에 역학 분석 요청
+        var _sys3 = 'CGO-FULI 스포츠 역학 분석 AI. 한국어로만 답변.';
+        _sys3 += '\n각 경기 분석 형식:';
+        _sys3 += '\n[팀A vs 팀B]';
+        _sys3 += '\n오행: 두 팀 오행 충돌/조화';
+        _sys3 += '\n행성: 오늘 행성 영향';
+        _sys3 += '\n공명: 사용자(' + todayOh + ')와 공명하는 팀';
+        _sys3 += '\nNASA 행성: ' + (planetStr3||'없음');
+        _sys3 += '\n사용자 오행: ' + todayOh;
+        _sys3 += '\n영어 오행(Wood/Fire 등) 금지, 베팅 금지';
+        var _user3 = '오늘 경기:\n' + matchList3.slice(0,5).join('\n');
+        _user3 += '\n\n위 경기들 CGO 역학 분석해주세요.';
+        var schedMsg3 = [
+          {role:'system', content: _sys3},
+          {role:'user',   content: _user3}
+        ];
+
+        fetch('/api/groq', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:schedMsg3, max_tokens:1000, temperature:0.5, stream:false})
+        })
+        .then(function(r3){ return r3.json(); })
+        .then(function(d3){
+          var analysis3 = '';
+          try { analysis3 = d3.choices[0].message.content; } catch(e3){}
+          analysis3 = analysis3.replace(/[぀-ゟ゠-ヿ]+/g,'').replace(/[؀-ۿ]+/g,'');
+          var finalMsg3 = msg2.trim() + '\n\n' + (analysis3 || '⚡ CGO 역학: 오늘 ' + todayOh + ' 에너지로 관전하세요!');
+          sptAddBubble('ai', finalMsg3);
+          _sptHistory.push({role:'assistant', content:finalMsg3});
+          if (sendBtn) sendBtn.disabled = false;
+        })
+        .catch(function(){
+          // Groq 실패시 간단 역학만
+          var fallMsg3 = msg2.trim() + '\n⚡ CGO 역학: 오늘 ' + todayOh + ' 오행 에너지 기준 ';
+          if (np3.mars && np3.mars.retro) fallMsg3 += '화성 역행 중 — 주요 경기 변수 주의 🔴';
+          else if (np3.jupiter) fallMsg3 += '목성 기운이 공격력을 높이는 날 ✨';
+          else fallMsg3 += '경기 에너지 활발한 날 ⚽';
+          sptAddBubble('ai', fallMsg3);
+          _sptHistory.push({role:'assistant', content:fallMsg3});
+          if (sendBtn) sendBtn.disabled = false;
+        });
+      }
+      // sendBtn은 Groq 콜백 내에서 처리
+    }).catch(function(){
+      sptRemoveTyping();
+      sptAddBubble('ai',
+        '일정 데이터를 가져오지 못했습니다.\n\n' +
+        '아래에서 직접 확인해 주세요:\n' +
+        '• 네이버 스포츠: https://sports.naver.com/wfootball\n' +
+        '• 다음 스포츠: https://sports.daum.net/worldsoccer\n' +
+        '• UEFA 공식: https://www.uefa.com/uefachampionsleague'
+      );
+      if (sendBtn) sendBtn.disabled = false;
+    });
+    return; // 이후 코드 실행 안 함
+
+  } else if (needSearch) {
+    // ══ 전적/역사 질문 → AI 웹 검색 도구 사용 ══
+    var proxyUrl = 'https://c-go-fuli.vercel.app/api/search';
+
+    // NASA 행성 데이터 수집
+    var np2 = window._nasaPlanets || {};
+    var planetStr = '';
+    if (np2.jupiter) planetStr += '목성(' + (np2.jupiter.sign||'') + ') ';
+    if (np2.mars)    planetStr += '화성(' + (np2.mars.sign||'') + (np2.mars.retro?'역행':'') + ') ';
+    if (np2.saturn)  planetStr += '토성(' + (np2.saturn.sign||'') + (np2.saturn.retro?'역행':'') + ') ';
+    if (np2.venus)   planetStr += '금성(' + (np2.venus.sign||'') + ') ';
+    var moonPhaseNow = '';
+    try {
+      var phIdx2 = Math.floor((Math.floor((new Date() - new Date(new Date().getFullYear(),0,0))/86400000)%30)/3.75)%8;
+      moonPhaseNow = ['신월','초승','상현','보름','보름','하현','하현','그믐'][phIdx2];
+    } catch(e2){}
+
+    // AI에 웹 검색 포함 프롬프트로 직접 요청
+    var searchResult = '';
+    // 프록시 시도 후 실패 시 Groq 직접 검색 모드
+    fetch(proxyUrl, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query: userText})
+    })
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return {results:''}; })
+    .then(function(searchData) {
+      var searchResult = (searchData && searchData.results) || '';
+
+      var hasConcreteData = /\d-\d|\d{4}\.\d{2}|\d승|\d무|\d패|UCL|UEFA|Champion|vs |KST|\d:\d\d/i.test(searchResult);
+
+      var augSystem, augUserContent;
+
+      if (hasConcreteData) {
+        augSystem =
+          '당신은 스포츠 통계 전문 AI입니다. ' + ((window._LANG&&window._LANG!=='ko')?'':'반드시 한국어로만 답변하세요.') + '\n\n' +
+          '## 규칙\n' +
+          '1. [검색 결과]의 스코어·날짜·대회명을 최우선 활용\n' +
+          '2. 모호한 표현("일반적으로","상당히") 절대 금지\n' +
+          '3. 전적 형식:\n' +
+          '   📋 통산 전적: A팀 X승 X무 X패\n' +
+          '   📅 주요 경기:\n' +
+          '   - YYYY.MM.DD [대회] 팀A X-X 팀B\n' +
+          '   ⚡ 역학 분석: [오행 관점]\n' +
+          '4. 한국어만, 베팅 금지\n' +
+          '사용자 오행: ' + myOh;
+
+        augUserContent = userText
+          + '\n\n[🔍 검색 결과]\n' + searchResult
+          + '\n\n위 결과와 스포츠 지식으로 전적·스코어·날짜 포함 답변하세요.';
+
+      } else {
+        // 검색 결과 없음 → AI 자체 지식으로 최대한 답변
+        var managerDB2 = {
+          '\ub808\ubc84\ucfe8\uc820': {name:'\uc0e4\ube44 \uc54c\ub860\uc18c', birth:'1981-11-25', oh:'\uae08(\u91d1)', num:7},
+          '\uc544\uc2a4\ub0a0': {name:'\ubbf8\ucf08 \uc544\ub974\ud14c\ud0c0', birth:'1982-03-26', oh:'\uc218(\u6c34)', num:5},
+          '\ub9e8\uc720': {name:'\ub8e8\ubcca \uc544\ubaa8\ub9bc', birth:'1985-01-30', oh:'\ubaa9(\u6728)', num:3},
+          '\ub9e8\uccb4\uc2a4\ud130 \uc720\ub098\uc774\ud2f0\ub4dc': {name:'\ub8e8\ubcca \uc544\ubaa8\ub9bc', birth:'1985-01-30', oh:'\ubaa9(\u6728)', num:3},
+          '\ub9e8\uc2dc\ud2f0': {name:'\ud39c \uacfc\ub974\ub514\uc62c\ub77c', birth:'1971-01-18', oh:'\ud1a0(\u571f)', num:2},
+          '\ub9ac\ubc84\ud480': {name:'\uc544\ub974\ub124 \uc2ac\ub86f', birth:'1978-09-22', oh:'\ud654(\u706b)', num:9},
+          '\uccbc\uc2dc': {name:'\uc5d4\ucd08 \ub9c8\ub808\uc2a4\uce74', birth:'1980-02-10', oh:'\uae08(\u91d1)', num:4},
+          '\ubc14\ub974\uc140\ub85c\ub098': {name:'\ud55c\uc2dc \ud50c\ub9ad', birth:'1965-02-11', oh:'\ubaa9(\u6728)', num:6},
+          '\ub808\uc54c\ub9c8\ub4dc\ub9ac\ub4dc': {name:'\uce74\ub97c\ub85c \uc548\uccbc\ub85c\ud2f0', birth:'1959-06-10', oh:'\ud654(\u706b)', num:8},
+          '\ub808\uc54c \ub9c8\ub4dc\ub9ac\ub4dc': {name:'\uce74\ub97c\ub85c \uc548\uccbc\ub85c\ud2f0', birth:'1959-06-10', oh:'\ud654(\u706b)', num:8},
+          '\ubc14\uc774\uc5d0\ub978': {name:'\ubc59\uc0c1 \ucf69\ud30c\ub2c8', birth:'1986-04-10', oh:'\ubaa9(\u6728)', num:5},
+          '\ub3c4\ub974\ud2b8\ubb38\ud2b8': {name:'\ub2c8\ucf54 \ucf54\ubc14\uce58', birth:'1971-09-15', oh:'\ud1a0(\u571f)', num:6},
+          '\ud30c\ub9ac \uc0dd\uc81c\ub974\ub9dd': {name:'\ub8e8\uc774\uc2a4 \uc5d4\ub9ac\ucf00', birth:'1973-07-23', oh:'\ud654(\u706b)', num:8},
+          'PSG': {name:'\ub8e8\uc774\uc2a4 \uc5d4\ub9ac\ucf00', birth:'1973-07-23', oh:'\ud654(\u706b)', num:8},
+        };
+        var teamFoundedDB2 = {
+          '\ub808\ubc84\ucfe8\uc820': {year:1904, oh:'\ubaa9(\u6728)'},
+          '\uc544\uc2a4\ub0a0': {year:1886, oh:'\ud654(\u706b)'},
+          '\ub9e8\uc720': {year:1878, oh:'\ud1a0(\u571f)'},
+          '\ub9ac\ubc84\ud480': {year:1892, oh:'\uc218(\u6c34)'},
+          '\uccbc\uc2dc': {year:1905, oh:'\ub098\ubb34(\u6728)'},
+          '\ud1a0\ud2b8\ub144': {year:1882, oh:'\uc218(\u6c34)'},
+          '\ub9e8\uc2dc\ud2f0': {year:1880, oh:'\uae08(\u91d1)'},
+          '\ubc14\ub974\uc140\ub85c\ub098': {year:1899, oh:'\ud1a0(\u571f)'},
+          '\ub808\uc54c\ub9c8\ub4dc\ub9ac\ub4dc': {year:1902, oh:'\uc218(\u6c34)'},
+          '\ub808\uc54c \ub9c8\ub4dc\ub9ac\ub4dc': {year:1902, oh:'\uc218(\u6c34)'},
+        };
+
+        var foundManagers2 = [];
+        var foundedStr2 = '';
+        Object.keys(managerDB2).forEach(function(t){
+          if (userText.indexOf(t)!==-1) foundManagers2.push({team:t, info:managerDB2[t]});
+        });
+        Object.keys(teamFoundedDB2).forEach(function(t){
+          if (userText.indexOf(t)!==-1) {
+            var fd = teamFoundedDB2[t];
+            foundedStr2 += '\n- '+t+': '+fd.year+'\ub144 \ucc3d\ub2e8, \uc624\ud589='+fd.oh;
+          }
+        });
+
+        augSystem =
+          'CGO-FULI 스포츠 역학 AI입니다. ' + ((window._LANG&&window._LANG!=='ko')?'':'반드시 한국어로만 답변하세요.') + '\n\n' +
+          '## 중요: 전적/승률 질문 답변 방침\n' +
+          '- 학습 데이터(2024년 초까지)를 최대한 활용해 실제 전적·성적을 답변하세요.\n' +
+          '- 작은 지역 리그 팀이라도 리그명·구조·팀 특성을 최대한 설명하세요.\n' +
+          '- "정보가 없습니다"로만 답변하지 마세요. 리그 설명이라도 해주세요.\n' +
+          '- 답변 형식: 📋 팀/리그 정보 → 📊 알려진 전적 → ⚡ 역학 분석\n\n' +
+          '감독: ' + (foundManagers2.map(function(m){return m.team+' '+m.info.name+'('+m.info.oh+')'}).join(' vs ')||'검색 필요') + '\n' +
+          '팀 창단: ' + (foundedStr2||'검색 필요') + '\n' +
+          'NASA 행성: ' + (planetStr||'로딩중') + '\n사용자 오행: ' + myOh + '\n\n베팅 금지, 한국어만';
+
+        augUserContent = userText +
+          '\n\n[참고: 검색 결과 없음 → 학습 데이터+역학으로 최대한 답변]\n' +
+          (_sptAnalyzed ? '경기: ' + _sptAnalyzed.a + ' vs ' + _sptAnalyzed.b + ' (' + (_sptAnalyzed.league||'') + ')' : '');
+      }
+
+      var augMessages = [{role:'system', content: augSystem}];
+      _sptHistory.slice(0,-1).forEach(function(h){ augMessages.push({role:h.role, content:h.content}); });
+      augMessages.push({role:'user', content: augUserContent});
+
+      return fetch('/api/groq', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+          messages: augMessages,
+          max_tokens: 1800,
+          temperature: 0.3,
+          stream: false
+        })
+      }).then(function(r){ return r.json(); });
+    })
+    .then(function(data) {
+      sptRemoveTyping();
+      var text = '';
+      try { text = data.choices[0].message.content; } catch(e){}
+      if (!text) text = '\ubd84\uc11d\uc744 \uc644\ub8cc\ud558\uc9c0 \ubabb\ud588\uc5b4\uc694. \ub2e4\uc2dc \uc9c8\ubb38\ud574 \uc8fc\uc138\uc694.';
+      text = text.replace(/[\u3040-\u309F\u30A0-\u30FF]+/g,'').replace(/[\u0600-\u06FF]+/g,'');
+      sptAddBubble('ai', text);
+      _sptHistory.push({role:'assistant', content:text});
+      if (sendBtn) sendBtn.disabled = false;
+    })
+    .catch(function() {
+      _sptFallbackAnswer(messages, apiKey, sendBtn);
+    });
+
+  } else {
+    _sptFallbackAnswer(messages, apiKey, sendBtn);
+  }
+}
+
+function sptAutocomplete(side, q) {
+  var dropEl = document.getElementById('spt-ac-' + side);
+  if (!dropEl) return;
+  q = (q || '').trim();
+  if (q.length < 1) { dropEl.style.display = 'none'; return; }
+
+  // SPT_TEAM_OH 키 전체 검색 (한글·영문 모두)
+  var keys = (typeof SPT_TEAM_OH === 'object') ? Object.keys(SPT_TEAM_OH) : [];
+  var qLow = q.toLowerCase();
+  var matches = keys.filter(function(k){
+    return k.toLowerCase().indexOf(qLow) >= 0;
+  }).slice(0, 12); // 최대 12개
+
+  if (matches.length === 0) {
+    dropEl.style.display = 'none';
+    return;
+  }
+
+  var oh2col = {목:'#4ade80', 화:'#f87171', 토:'#fbbf24', 금:'#e2e8f0', 수:'#60a5fa'};
+  var html = matches.map(function(name){
+    var oh = SPT_TEAM_OH[name] || '토';
+    var col = oh2col[oh] || '#a0afc0';
+    return '<div onclick="sptSelectAutocomplete(\'' + side + '\',\'' + name.replace(/'/g,"\\'") + '\')" '+
+           'style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);" '+
+           'onmouseover="this.style.background=\'rgba(16,185,129,0.1)\'" onmouseout="this.style.background=\'transparent\'">'+
+           '<span style="font-size:11px;color:'+col+';font-weight:800;">'+oh+'</span>'+
+           '<span style="font-size:12px;color:#64748b;flex:1;">'+name+'</span>'+
+           '</div>';
+  }).join('');
+
+  dropEl.innerHTML = html;
+  dropEl.style.display = 'block';
+}
+
+function sptSelectAutocomplete(side, name) {
+  var inp = document.getElementById('spt-team-' + side);
+  var dropEl = document.getElementById('spt-ac-' + side);
+  if (inp) inp.value = name;
+  if (dropEl) dropEl.style.display = 'none';
+}
+
+function sptUpdatePopularTeams() {
+  var sportEl = document.getElementById('spt-sport-type');
+  var sport = sportEl ? sportEl.value : 'soccer';
+  var teams = SPT_POPULAR_TEAMS[sport] || SPT_POPULAR_TEAMS['soccer'];
+  var oh2col = {목:'#4ade80', 화:'#f87171', 토:'#fbbf24', 금:'#e2e8f0', 수:'#60a5fa'};
+
+  function buildChips(side) {
+    return teams.map(function(team){
+      var oh = (typeof SPT_TEAM_OH === 'object' && SPT_TEAM_OH[team]) ? SPT_TEAM_OH[team] : '토';
+      var col = oh2col[oh] || '#a0afc0';
+      // 표시 이름은 짧게 (긴 영문은 첫 단어만)
+      var _dn = (typeof sptTeamDisplay==='function')?sptTeamDisplay(team):team;
+      var displayName = _dn.length > 12 ? _dn.split(' ')[0] : _dn;
+      return '<button onclick="sptPickQuick(\'' + side + '\',\'' + team.replace(/'/g,"\\'") + '\')" '+
+             'style="padding:4px 9px;background:rgba(16,185,129,0.08);border:1px solid '+col+'33;border-radius:14px;color:#334155;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;" '+
+             'onmouseover="this.style.background=\'rgba(16,185,129,0.18)\';this.style.borderColor=\''+col+'\'" '+
+             'onmouseout="this.style.background=\'rgba(16,185,129,0.08)\';this.style.borderColor=\''+col+'33\'">'+
+             '<span style="color:'+col+';font-weight:800;margin-right:3px;">'+((window._LANG&&window._LANG!=='ko')?((typeof SPT_OH==='object'&&SPT_OH[oh]&&SPT_OH[oh].en)||oh):oh)+'</span>'+displayName+
+             '</button>';
+    }).join('');
+  }
+  var aEl = document.getElementById('spt-quick-a');
+  var bEl = document.getElementById('spt-quick-b');
+  if (aEl) aEl.innerHTML = buildChips('a');
+  if (bEl) bEl.innerHTML = buildChips('b');
+}
+
+function sptPickQuick(side, name) {
+  var inp = document.getElementById('spt-team-' + side);
+  if (inp) {
+    inp.value = name;
+    try { inp.dispatchEvent(new Event('input', {bubbles:true})); } catch(e) {}
+  }
+}
+
+function sptUpdateMyEnergy() {
+  var r = window.calcResult || {};
+  var M = window._CGO_MASTER;
+  var oh = r.domOh || '목';
+  var ohInfo = SPT_OH[oh] || SPT_OH['목'];
+  // CGO-MASTER CEI 우선 사용
+  var ili = M ? M.cei : (r.ili || 70);
+  if(!ili || ili===0){
+    var bsFEl = document.getElementById('bsFIli');
+    if (bsFEl) ili = parseInt(bsFEl.textContent)||70;
+  }
+
+  var chipOh = document.getElementById('spt-chip-oh');
+  var chipIli = document.getElementById('spt-chip-ili');
+  var chipPlanet = document.getElementById('spt-chip-planet');
+  var chipSport = document.getElementById('spt-chip-sport');
+
+  if (chipOh) { chipOh.textContent = _cgoT('오행: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.en||oh):oh); chipOh.style.color = ohInfo.color; chipOh.style.borderColor = ohInfo.color.replace(')',',0.3)').replace('rgb','rgba'); }
+  if (chipIli) chipIli.textContent = (M&&M.bio.scanned?'CEI':'ILI')+': '+ili;
+  if (chipPlanet) chipPlanet.textContent = _cgoT('행성: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.planetEn||ohInfo.planet):ohInfo.planet);
+  if (chipSport) chipSport.textContent = _cgoT('최적 종목: ')+((window._LANG&&window._LANG!=='ko')?(ohInfo.sportEn||ohInfo.sport):ohInfo.sport);
+}
+
+function _sptDiscoverKoreaLeagues(apiKey, callback) {
+  // localStorage 캐시 확인 (24시간 유효)
+  try {
+    var cached = localStorage.getItem('cgo_korea_leagues');
+    if (cached) {
+      var c = JSON.parse(cached);
+      var ageMs = Date.now() - (c.t || 0);
+      if (ageMs < 24*60*60*1000) {
+        // 캐시 유효 - 즉시 반환
+        if (callback) callback(c.data || {});
+        return;
+      }
+    }
+  } catch(e) {}
+
+  var headers = {'x-apisports-key': apiKey};
+  var result = {basketball: null, volleyball: null};
+  var pending = 2;
+
+  function done() {
+    pending--;
+    if (pending <= 0) {
+      // 캐시 저장
+      try {
+        localStorage.setItem('cgo_korea_leagues', JSON.stringify({
+          t: Date.now(),
+          data: result
+        }));
+      } catch(e) {}
+      if (callback) callback(result);
+    }
+  }
+
+  // 농구 — South Korea 리그 검색
+  fetch('https://v1.basketball.api-sports.io/leagues?country=South-Korea',
+    {method:'GET', headers: headers})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var leagues = (d.response || []);
+      // KBL (Korean Basketball League) 우선 검색
+      var kbl = leagues.find(function(L){
+        var name = ((L.name || '') ).toLowerCase();
+        return name.indexOf('kbl') >= 0 || name.indexOf('korean basketball') >= 0;
+      });
+      // 첫 번째 리그를 fallback으로 사용
+      if (!kbl && leagues.length > 0) kbl = leagues[0];
+      if (kbl) {
+        result.basketball = {
+          id: kbl.id,
+          name: kbl.name,
+          season: (kbl.seasons && kbl.seasons.length > 0)
+            ? (kbl.seasons[kbl.seasons.length - 1].season || '2025-2026')
+            : '2025-2026'
+        };
+      }
+      done();
+    })
+    .catch(function(){ done(); });
+
+  // 배구 — South Korea 리그 검색
+  fetch('https://v1.volleyball.api-sports.io/leagues?country=South-Korea',
+    {method:'GET', headers: headers})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var leagues = (d.response || []);
+      // V-League (KOVO) 우선 검색
+      var vleague = leagues.find(function(L){
+        var name = ((L.name || '') ).toLowerCase();
+        return name.indexOf('v-league') >= 0 || name.indexOf('v league') >= 0
+            || name.indexOf('kovo') >= 0 || name.indexOf('korean') >= 0;
+      });
+      if (!vleague && leagues.length > 0) vleague = leagues[0];
+      if (vleague) {
+        result.volleyball = {
+          id: vleague.id,
+          name: vleague.name,
+          season: (vleague.seasons && vleague.seasons.length > 0)
+            ? (vleague.seasons[vleague.seasons.length - 1].season || '2025-2026')
+            : '2025-2026'
+        };
+      }
+      done();
+    })
+    .catch(function(){ done(); });
+}
+
+function _sptGetCachedKoreaLeagues() {
+  try {
+    var cached = localStorage.getItem('cgo_korea_leagues');
+    if (cached) {
+      var c = JSON.parse(cached);
+      var ageMs = Date.now() - (c.t || 0);
+      if (ageMs < 24*60*60*1000) {
+        return c.data || {};
+      }
+    }
+  } catch(e) {}
+  return {};
+}
+
+function _sptFallbackAnswer(messages, apiKey, sendBtn) {
+  fetch('/api/groq', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false, messages:messages, max_tokens:1200, temperature:0.75, stream:false})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    sptRemoveTyping();
+    var text = '';
+    try { text = data.choices[0].message.content; } catch(e){}
+    if (!text) text = '에너지 분석을 완료했습니다. 다시 질문해 주세요.';
+    text = text.replace(/[぀-ゟ゠-ヿ]+/g,'').replace(/[؀-ۿ]+/g,'');
+    sptAddBubble('ai', text);
+    _sptHistory.push({role:'assistant', content:text});
+    if (sendBtn) sendBtn.disabled = false;
+  })
+  .catch(function() {
+    sptRemoveTyping();
+    sptAddBubble('ai', '잠시 연결이 원활하지 않아요. 다시 시도해 주세요 😅');
+    if (sendBtn) sendBtn.disabled = false;
+  });
+}
+
+/* 밖에서 부를 수 있게 내보낸다 — onclick 이 전역을 본다 */
+try{
+  ['sptRenderTotoBanner','sptGetCachedLogo','sptPreloadLogos','sptLeagueDisplay','sptKoName',
+   'sptTeamDisplay','sptGetOh','sptLeagueToType','sptLoadTodayMatches','sptSetApiStatus',
+   'sptForceReload','sptStartLiveUpdate','sptAdminAddMatch','sptAdminAddMatchUI','sptAdminClearMatches',
+   'sptCalcResonance','sptCalcBreakdown','sptBuildBreakdownCard','sptDataWinRate','sptFetchWinRate',
+   'sptRenderMatches','sptRenderTop3','sptSwitchTab','sptSelectMatch','sptAnalyze','sptAddBubble',
+   'sptAddTyping','sptRemoveTyping','sptQuick','sptEnterSend','sptSend','sptAskAI','sptAutocomplete',
+   'sptSelectAutocomplete','sptUpdatePopularTeams','sptPickQuick','sptUpdateMyEnergy',
+   '_sptDiscoverKoreaLeagues','_sptGetCachedKoreaLeagues','_sptFallbackAnswer','_sptInitPopular'
+  ].forEach(function(k){ try{ if(typeof eval(k)==='function') window[k]=eval(k); }catch(e){} });
+  ['SPT_OH','SPT_MATCH_DB','SPT_LEAGUE_COUNTRY','SPT_TEAM_KO','SPT_TEAM_EN_EXTRA',
+   'SPT_TEAM_OH','SPT_POPULAR_TEAMS'].forEach(function(k){ try{ window[k]=eval(k); }catch(e){} });
+}catch(e){}
+</script>
+
+<script>
 try{ window._L8n=_L8n; window._L8=_L8; }catch(e){}
 
 // 페이지 로드 시 초기화
@@ -42477,25 +44843,26 @@ list.innerHTML = scored.map(function(d){
           <div style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:4px;"><span data-k="15330"></span></div>
           <div style="font-size:11px;color:#4b6470;margin-bottom:14px;"><span data-k="15331"></span></div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-            <div style="background:#fff;border:2px solid #34d399;border-radius:12px;padding:12px 8px;text-align:center;">
+            <div id="ln-tier-basic" onclick="lnSetTier('basic')" style="cursor:pointer;background:#fff;border:2px solid #34d399;border-radius:12px;padding:12px 8px;text-align:center;transition:border-color .15s;">
               <div style="font-size:18px;">🟢</div>
               <div style="font-size:12px;font-weight:900;color:#0f172a;margin-top:3px;"><span data-k="15332"></span></div>
               <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;"><span data-k="15333"></span></div>
               <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;"><span data-k="1522"></span></div>
             </div>
-            <div style="background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;">
+            <div id="ln-tier-pro" onclick="lnSetTier('pro')" style="cursor:pointer;background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;transition:border-color .15s;">
               <div style="font-size:18px;">⭐</div>
               <div style="font-size:12px;font-weight:900;color:#0f172a;margin-top:3px;"><span data-k="15335"></span></div>
               <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;"><span data-k="15336"></span></div>
               <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;"><span data-k="15337"></span></div>
             </div>
-            <div style="background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;">
+            <div id="ln-tier-max" onclick="lnSetTier('max')" style="cursor:pointer;background:#fff;border:2px solid #e6eef0;border-radius:12px;padding:12px 8px;text-align:center;transition:border-color .15s;">
               <div style="font-size:18px;">💎</div>
               <div style="font-size:12px;font-weight:900;color:#0f172a;margin-top:3px;"><span data-k="15338"></span></div>
               <div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;"><span data-k="15339"></span></div>
               <div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;"><span data-k="15340"></span></div>
             </div>
           </div>
+          <div id="ln-tier-note" style="display:none;font-size:10.5px;font-weight:700;color:#dc2626;margin-top:9px;text-align:center;line-height:1.6;"></div>
           <div style="font-size:9.5px;color:#8a9aa3;margin-top:11px;line-height:1.6;"><span data-k="15343"></span></div>
         </div>
 
@@ -42609,6 +44976,459 @@ list.innerHTML = scored.map(function(d){
 
       </div>
     </div>
+
+<div class="page" id="page-sports" style="--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;background:#f0fdf9;min-height:100vh;">
+  <button onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(52,211,153,.25),rgba(56,189,248,.15));border:2px solid rgba(212,168,67,.75);border-radius:22px;color:#b8860b;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(212,168,67,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🏠 나가기</button>
+  <!-- ★ 새로고침 버튼 (주파수 음악과 동일) -->
+  <button onclick="if(typeof sptForceReload==='function'){sptForceReload();}else{location.reload();}" style="position:fixed;bottom:24px;right:120px;z-index:9000;min-width:88px;height:42px;padding:0 18px;background:linear-gradient(135deg,rgba(16,185,129,.25),rgba(52,211,153,.15));border:2px solid rgba(52,211,153,.75);border-radius:22px;color:#34d399;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 0 14px rgba(52,211,153,.35);animation:goldPulse 2s ease-in-out infinite;white-space:nowrap;font-family:inherit;">🔄 새로고침</button>
+
+  <!-- ★ 스포츠 에너지 궁합 안내 팝업 (음식·주파수·행운번호와 동일 패턴) -->
+  <style>
+  #spt-intro-pop{display:none;position:fixed;inset:0;z-index:29000;background:rgba(240,253,249,.97);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  #page-sports select,#page-sports option{color:#1f2937 !important;background:#ffffff !important;} .spi-wrap{max-width:560px;margin:0 auto;padding:0 0 80px;}
+  .spi-top{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:12px 16px;background:rgba(240,253,249,.97);}
+  .spi-x{background:rgba(16,185,129,.15);border:1px solid rgba(255,255,255,.15);border-radius:50%;width:36px;height:36px;color:rgba(71,85,105,.7);font-size:16px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;}
+  .spi-hero{text-align:center;padding:8px 20px 24px;}
+  .spi-hero-icon{font-size:44px;margin-bottom:12px;}
+  .spi-hero-title{font-size:20px;font-weight:900;color:#34d399;letter-spacing:.04em;margin-bottom:6px;}
+  .spi-hero-sub{font-size:11px;color:rgba(52,211,153,.5);letter-spacing:.08em;}
+  .spi-hero-tag{display:inline-block;margin-top:8px;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:9px;color:#34d399;letter-spacing:.12em;font-weight:700;}
+  .spi-body{padding:0 16px;}
+  .spi-sec{background:#ffffff;border:1px solid rgba(16,185,129,.15);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+  .spi-lbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#64748b;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);}
+  .spi-sec p{font-size:12px;color:rgba(71,85,105,.7);line-height:1.9;margin:0;}
+  .spi-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+  .spi-step:last-child{margin-bottom:0;}
+  .spi-step-n{width:24px;height:24px;border-radius:50%;background:rgba(52,211,153,.15);color:#34d399;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .spi-step-tit{font-size:12px;font-weight:700;color:rgba(71,85,105,.9);margin-bottom:3px;}
+  .spi-step-desc{font-size:11px;color:#64748b;line-height:1.7;}
+  .spi-eng{display:grid;grid-template-columns:32px 1fr 50px;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:5px;background:rgba(255,255,255,.02);}
+  .spi-eng-rk{font-family:Orbitron,sans-serif;font-size:11px;font-weight:900;color:#b8860b;text-align:center;}
+  .spi-eng-name{font-size:11px;font-weight:700;color:rgba(71,85,105,.85);}
+  .spi-eng-desc{font-size:9px;color:#64748b;margin-top:1px;}
+  .spi-eng-w{font-family:Orbitron,sans-serif;font-size:13px;font-weight:900;text-align:right;}
+  .spi-oh{display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+  .spi-oh:last-child{border-bottom:none;padding-bottom:0;}
+  .spi-oh-ico{font-size:18px;text-align:center;}
+  .spi-oh-name{font-size:12px;font-weight:700;}
+  .spi-oh-meta{font-size:10px;color:#64748b;margin-top:2px;line-height:1.5;}
+  .spi-oh-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;}
+  .spi-feat{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .spi-feat-item{background:#ffffff;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:11px 13px;}
+  .spi-feat-t{font-size:11px;font-weight:700;margin-bottom:4px;}
+  .spi-feat-d{font-size:10px;color:#64748b;line-height:1.6;}
+  .spi-tip{padding:11px 14px;background:rgba(52,211,153,.06);border-left:3px solid #34d399;border-radius:0 8px 8px 0;font-size:11px;color:rgba(71,85,105,.7);line-height:1.85;}
+  .spi-warn{padding:11px 14px;background:rgba(251,191,36,.05);border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;font-size:11px;color:rgba(71,85,105,.7);line-height:1.85;margin-top:8px;}
+  .spi-warn2{padding:11px 14px;background:rgba(248,113,113,.05);border-left:3px solid #f87171;border-radius:0 8px 8px 0;font-size:11px;color:rgba(71,85,105,.7);line-height:1.85;margin-top:8px;}
+  .spi-btn-wrap{padding:0 16px 16px;}
+  .spi-btn{width:100%;padding:14px;background:linear-gradient(135deg,rgba(52,211,153,.28),rgba(34,197,94,.18));border:2px solid rgba(52,211,153,.7);border-radius:14px;color:#34d399;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.04em;}
+  .spi-credit{margin-top:10px;font-size:9px;color:#64748b;text-align:center;letter-spacing:.06em;}
+  </style>
+  <div id="spt-intro-pop"><div class="spi-wrap">
+    <div class="spi-top"><button class="spi-x" onclick="document.getElementById('spt-intro-pop').style.display='none';">✕</button></div>
+
+    <!-- 히어로 -->
+    <div class="spi-hero">
+      <div class="spi-hero-icon">⚽</div>
+      <div class="spi-hero-title">스포츠 에너지 궁합</div>
+      <div class="spi-hero-sub">SPORTS × 7 ENGINES × NASA × 316 TEAMS</div>
+      <div class="spi-hero-tag">✦ 세계 최초 SRI 스포츠 공명 분석 시스템 ✦</div>
+    </div>
+
+    <div class="spi-body">
+
+      <!-- ① 무엇이 다른가 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">① 무엇이 다른가?</div>
+        <p>일반 스포츠 분석은 <b style="color:#34d399">데이터·통계로 승부를 가늠</b>합니다. 스포츠 에너지 궁합은 — <b style="color:#34d399">"내 에너지와 어느 팀이 공명하는가"</b>를 분석합니다. 사주 일간 + NASA 7행성 실시간 + 316개 팀 오행 매핑 + (선택 시) 생체 BPM·HRV로 — 같은 경기를 봐도 사람마다 다른 공명 결과가 나와요. <b style="color:#fbbf24">베팅·도박과 무관한 에너지 정보 서비스입니다.</b></p>
+      </div>
+
+      <!-- ② 사용법 5단계 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">② 사용법 — 5단계</div>
+        <div class="spi-step">
+          <div class="spi-step-n">1</div>
+          <div><div class="spi-step-tit">대시보드 정보 입력 + 자동 계산</div><div class="spi-step-desc">이름·생년월일·성별 → ⚡ 자동 계산. 사주 일간 오행이 결정됩니다.</div></div>
+        </div>
+        <div class="spi-step">
+          <div class="spi-step-n">2</div>
+          <div><div class="spi-step-tit">인기 팀 칩 또는 자동완성</div><div class="spi-step-desc">8개 인기 팀 칩 클릭하거나, 입력창에 첫 글자 입력 → 316개 팀 DB에서 자동완성. 한글·영문 모두 매칭.</div></div>
+        </div>
+        <div class="spi-step">
+          <div class="spi-step-n">3</div>
+          <div><div class="spi-step-tit">종목·경기 시간 선택</div><div class="spi-step-desc">⚽축구·⚾야구·🏀농구·🏐배구·🏊기타. 종목 변경 시 인기 팀 칩이 자동 교체됩니다.</div></div>
+        </div>
+        <div class="spi-step">
+          <div class="spi-step-n">4</div>
+          <div><div class="spi-step-tit">⚡ 에너지 궁합 분석 클릭</div><div class="spi-step-desc">데이터 60% + SRI 공명 40% = 종합 % 표시. 점수 범위 30~95점(정직 캡).</div></div>
+        </div>
+        <div class="spi-step">
+          <div class="spi-step-n">5</div>
+          <div><div class="spi-step-tit">7대 엔진 분해 + AI 상담</div><div class="spi-step-desc">분석 결과 아래 🔬 7대 엔진 점수 클릭 → 펼쳐짐. AI에 자유 질문 가능 (수치·근거 명시).</div></div>
+        </div>
+      </div>
+
+      <!-- ③ 7대 엔진 가중치 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">③ 7대 엔진 가중치 — 제미나이 설계</div>
+        <p style="margin-bottom:10px;">SRI(Sport Resonance Index) = 100점 만점, 7대 엔진 가중 평균:</p>
+        <div class="spi-eng" style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18);">
+          <div class="spi-eng-rk">1위</div>
+          <div><div class="spi-eng-name">🛰️ NASA 행성 트랜짓</div><div class="spi-eng-desc">화성·목성·수성·금성·토성·달·태양 좌표</div></div>
+          <div class="spi-eng-w" style="color:#34d399;">25%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">2위</div>
+          <div><div class="spi-eng-name">🧭 기문둔갑</div><div class="spi-eng-desc">12시진별 오행 매핑</div></div>
+          <div class="spi-eng-w" style="color:#60a5fa;">18%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">3위</div>
+          <div><div class="spi-eng-name">⭐ 자미두수</div><div class="spi-eng-desc">명반 + 궁위 점수</div></div>
+          <div class="spi-eng-w" style="color:#a78bfa;">15%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">4위</div>
+          <div><div class="spi-eng-name">🌟 구성학</div><div class="spi-eng-desc">태양 고도 × 시간 에너지</div></div>
+          <div class="spi-eng-w" style="color:#fbbf24;">14%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">5위</div>
+          <div><div class="spi-eng-name">☱ 주역</div><div class="spi-eng-desc">64괘 변화 패턴</div></div>
+          <div class="spi-eng-w" style="color:#b8860b;">12%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">6위</div>
+          <div><div class="spi-eng-name">☯ 사주명리(오행)</div><div class="spi-eng-desc">오행 균형 + HRV + 오장</div></div>
+          <div class="spi-eng-w" style="color:#b8860b;">8%</div>
+        </div>
+        <div class="spi-eng">
+          <div class="spi-eng-rk">7위</div>
+          <div><div class="spi-eng-name">🌌 태을신수</div><div class="spi-eng-desc">목성-토성 각도(합/충/삼합)</div></div>
+          <div class="spi-eng-w" style="color:#0369a1;">8%</div>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(212,168,67,.06);border-radius:8px;text-align:center;font-size:10px;color:#b8860b;font-weight:700;">합계 100% · 성격 유형 입력 시 ±1~3점 추가 보정</div>
+      </div>
+
+      <!-- ④ 5오행 매칭 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">④ 5오행 매칭 — 내 오행에 맞는 종목</div>
+        <div class="spi-oh">
+          <div class="spi-oh-ico">🌳</div>
+          <div><div class="spi-oh-name" style="color:#4ade80">목(木) — 축구·테니스</div><div class="spi-oh-meta">기민함·전략·창의력 / 행성: 목성</div></div>
+          <div class="spi-oh-tag" style="background:rgba(74,222,128,.12);color:#4ade80;">⚽🎾</div>
+        </div>
+        <div class="spi-oh">
+          <div class="spi-oh-ico">🔥</div>
+          <div><div class="spi-oh-name" style="color:#f87171">화(火) — 농구·배구</div><div class="spi-oh-meta">폭발력·열정·점프 / 행성: 화성</div></div>
+          <div class="spi-oh-tag" style="background:rgba(248,113,113,.12);color:#f87171;">🏀🏐</div>
+        </div>
+        <div class="spi-oh">
+          <div class="spi-oh-ico">🪨</div>
+          <div><div class="spi-oh-name" style="color:#fbbf24">토(土) — 야구·골프</div><div class="spi-oh-meta">정확성·인내·꾸준함 / 행성: 토성</div></div>
+          <div class="spi-oh-tag" style="background:rgba(251,191,36,.12);color:#fbbf24;">⚾⛳</div>
+        </div>
+        <div class="spi-oh">
+          <div class="spi-oh-ico">⚙️</div>
+          <div><div class="spi-oh-name" style="color:#64748b">금(金) — 수영·격투기</div><div class="spi-oh-meta">집중력·결단·승부욕 / 행성: 금성</div></div>
+          <div class="spi-oh-tag" style="background:rgba(148,163,184,.12);color:#64748b;">🏊🥊</div>
+        </div>
+        <div class="spi-oh">
+          <div class="spi-oh-ico">💧</div>
+          <div><div class="spi-oh-name" style="color:#60a5fa">수(水) — 수영·조정</div><div class="spi-oh-meta">유연성·지혜·흐름 / 행성: 수성</div></div>
+          <div class="spi-oh-tag" style="background:rgba(96,165,250,.12);color:#60a5fa;">🏊🚣</div>
+        </div>
+      </div>
+
+      <!-- ⑤ 6가지 핵심 기능 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">⑤ 6가지 핵심 기능</div>
+        <div class="spi-feat">
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#34d399;">📡 실시간 경기 로딩</div><div class="spi-feat-d">API-Sports + TheSportsDB 자동 연동</div></div>
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#fbbf24;">🎯 인기 종목 TOP 5</div><div class="spi-feat-d">EPL·NBA·KBO·라리가·UCL</div></div>
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#b8860b;">🔬 7대 엔진 분해</div><div class="spi-feat-d">왜 이 점수인지 모든 근거 표시</div></div>
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#60a5fa;">🤖 AI 스포츠 상담</div><div class="spi-feat-d">수치·근거 명시 답변</div></div>
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#a78bfa;">⚡ 자동완성 + 칩</div><div class="spi-feat-d">316개 팀 DB · 한글·영문 매칭</div></div>
+          <div class="spi-feat-item"><div class="spi-feat-t" style="color:#0284c7;">🛰 NASA 7행성 실시간</div><div class="spi-feat-d">태양·달·수성·금성·화성·목성·토성</div></div>
+        </div>
+      </div>
+
+      <!-- ⑥ 정직 안내 -->
+      <div class="spi-sec">
+        <div class="spi-lbl">⑥ 정직 안내</div>
+        <div class="spi-tip">
+          💡 <b style="color:#34d399">매번 다른 결과가 나옵니다.</b><br>
+          NASA 행성은 매 시간 이동 + 생체 데이터는 매 순간 변합니다. 같은 경기·같은 사람이라도 1시간 후 다시 분석하면 — 다른 공명 점수가 나오는 게 정상이에요.
+        </div>
+        <div class="spi-warn">
+          ⚠️ <b style="color:#fbbf24">점수 범위는 30~95점입니다.</b><br>
+          100점 표기를 피하고 정직하게 캡(cap)을 걸었습니다. 99점·100점 같은 과장 표기는 의도적으로 *하지 않습니다*.
+        </div>
+        <div class="spi-warn2">
+          ⛔ <b style="color:#f87171">베팅·도박 권유 아닙니다.</b><br>
+          본 분석은 <b>인포테인먼트·에너지 공명 참고용</b> 콘텐츠입니다. 승부 결과를 예측하거나 확언하지 않으며, 책임감 있는 사용을 권장합니다. AI도 "베팅" 관련 답변을 하지 않도록 설계되어 있습니다.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="spi-btn-wrap">
+      <button class="spi-btn" onclick="document.getElementById('spt-intro-pop').style.display='none';">⚽ 스포츠 에너지 궁합 시작하기</button>
+      <div class="spi-credit">스포츠 에너지 궁합 · CGO-FULI</div>
+    </div>
+  </div></div>
+  <!-- ★ 여기 있던 MutationObserver 를 지웠다 — 닫아도 곧바로 되살려
+       「팝업이 안 내려가는」 까닭이었다. 카드의 onclick 이 이미 열어 준다. -->
+
+  <div id="spt-key-warn-banner" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;align-items:center;gap:12px;">
+    <div style="font-size:22px;">🔑</div>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:800;color:#f87171;margin-bottom:3px;">AI 스포츠 상담 — 키 설정 필요</div>
+      <div style="font-size:11px;color:rgba(71,85,105,.7);">console.groq.com → 무료 회원가입 → API Keys → Create → 복사 후 1대1 상담 🔑 버튼에 입력</div>
+    </div>
+    <button onclick="cgShowKeyModal && cgShowKeyModal()" style="padding:7px 12px;background:rgba(248,113,113,.2);border:1px solid rgba(248,113,113,.5);border-radius:8px;color:#f87171;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">🔑 키 입력</button>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(56,189,248,.08));border:1px solid rgba(16,185,129,.35);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+    <div style="font-size:28px;flex-shrink:0;">🤖</div>
+    <div>
+      <div style="font-size:12px;font-weight:800;color:#34d399;margin-bottom:3px;">AI 스포츠 에너지 상담 활성화됨</div>
+      <div style="font-size:11px;color:rgba(71,85,105,.7);line-height:1.6;">경기를 선택하거나 아래 채팅창에 바로 질문하세요.<br>50대 역학 중 × NASA 실시간 데이터로 에너지 궁합을 분석합니다.</div>
+    </div>
+    <div style="margin-left:auto;width:10px;height:10px;background:#34d399;border-radius:50%;box-shadow:0 0 8px #34d399;flex-shrink:0;animation:pulse 2s infinite;"></div>
+  </div>
+      <div style="max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-bottom:24px;">
+
+        <!-- 안내 배너 -->
+        <div id="sports-guide-banner" style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.3);border-radius:16px;overflow:hidden;position:relative;">
+          <div style="padding:11px 16px 9px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(251,191,36,0.15)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">💡</span>
+              <span style="font-size:13px;font-weight:700;color:#fbbf24">⚽ 스포츠 에너지 궁합 최적화 방법</span>
+            </div>
+            <div onclick="this.closest('#sports-guide-banner').style.display='none'" style="font-size:16px;color:rgba(148,163,184,0.4);cursor:pointer;padding:2px 4px">✕</div>
+          </div>
+          <div style="padding:11px 16px">
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(71,85,105,0.85)">
+                <span style="width:20px;height:20px;border-radius:50%;background:rgba(251,191,36,0.25);border:1px solid rgba(251,191,36,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fbbf24;flex-shrink:0">1</span>
+                <span>🏠 대시보드 → <b style="color:#fbbf24">정보 입력</b> 후 ⚡ <b style="color:#fbbf24">자동 계산</b> 완료</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(71,85,105,0.85)">
+                <span style="width:20px;height:20px;border-radius:50%;background:rgba(251,191,36,0.25);border:1px solid rgba(251,191,36,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fbbf24;flex-shrink:0">2</span>
+                <span>✍️ <b style="color:#fbbf24">작명 서비스</b>까지 분석 → 50대 역학 중이 <b style="color:#34d399">내 사주에 최적화</b></span>
+              </div>
+            </div>
+            <!-- AI 채팅 안내 -->
+            <div style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🤖</span>
+              <div style="font-size:11px;color:rgba(52,211,153,0.9);font-weight:600">아래 스포츠 에너지 AI 채팅 상담이 가능합니다! 경기·팀·운세 무엇이든 물어보세요 💬</div>
+            </div>
+            <button onclick="cgoSoftGo('dashboard')" style="width:100%;padding:8px;border-radius:8px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">지금 입력하러 가기 →</button>
+          </div>
+        </div>
+
+        <!-- 오늘 국내 스포츠 인기 종목 TOP -->
+        <div id="spt-toto-banner" style="background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(59,130,246,0.06));border:1px solid rgba(16,185,129,0.25);border-radius:16px;padding:12px 14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:15px;">🎯</span>
+            <span style="font-size:11px;font-weight:700;color:#34d399;letter-spacing:.08em;">오늘 국내 스포츠 인기 종목 TOP</span>
+            <span style="font-size:10px;color:var(--text-3);margin-left:auto;">선택 장애 해소 가이드</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div onclick="window.open('https://www.premierleague.com','_blank')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(16,185,129,0.06);border-radius:8px;border:1px solid rgba(16,185,129,0.15);cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <span style="font-size:13px;">⚽</span>
+              <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">EPL (영국 프리미어리그)</span>
+              <span style="font-size:10px;color:#34d399;font-weight:600;">🔥 인기 1위</span>
+              <span style="font-size:10px;color:var(--text-3);">↗</span>
+              <span style="font-family:'Orbitron',monospace;font-size:11px;color:#34d399;font-weight:700;" id="spt-toto-epl">--</span>
+            </div>
+            <div onclick="window.open('https://www.nba.com','_blank')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(99,130,201,0.06);border-radius:8px;border:1px solid rgba(99,130,201,0.15);cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <span style="font-size:13px;">🏀</span>
+              <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">NBA (미국 농구)</span>
+              <span style="font-size:10px;color:#a78bfa;font-weight:600;">인기 2위</span>
+              <span style="font-size:10px;color:var(--text-3);">↗</span>
+              <span style="font-family:'Orbitron',monospace;font-size:11px;color:#a78bfa;font-weight:700;" id="spt-toto-nba">--</span>
+            </div>
+            <div onclick="window.open('https://www.koreabaseball.com','_blank')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(251,191,36,0.06);border-radius:8px;border:1px solid rgba(251,191,36,0.15);cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <span style="font-size:13px;">⚾</span>
+              <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">KBO (국내 야구)</span>
+              <span style="font-size:10px;color:#fbbf24;font-weight:600;">인기 3위</span>
+              <span style="font-size:10px;color:var(--text-3);">↗</span>
+              <span style="font-family:'Orbitron',monospace;font-size:11px;color:#fbbf24;font-weight:700;" id="spt-toto-kbo">--</span>
+            </div>
+            <div onclick="window.open('https://www.laliga.com','_blank')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(248,113,113,0.06);border-radius:8px;border:1px solid rgba(248,113,113,0.15);cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <span style="font-size:13px;">⚽</span>
+              <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">라리가 (스페인)</span>
+              <span style="font-size:10px;color:#f87171;font-weight:600;">인기 4위</span>
+              <span style="font-size:10px;color:var(--text-3);">↗</span>
+              <span style="font-family:'Orbitron',monospace;font-size:11px;color:#f87171;font-weight:700;" id="spt-toto-ucl">--</span>
+            </div>
+            <div onclick="window.open('https://www.uefa.com/uefachampionsleague/','_blank')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(212,168,67,0.06);border-radius:8px;border:1px solid rgba(212,168,67,0.15);cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <span style="font-size:13px;">🏆</span>
+              <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">UEFA 챔피언스리그</span>
+              <span style="font-size:10px;color:#b8860b;font-weight:600;">인기 5위</span>
+              <span style="font-size:10px;color:var(--text-3);">↗</span>
+              <span style="font-family:'Orbitron',monospace;font-size:11px;color:#b8860b;font-weight:700;" id="spt-toto-ucl2">--</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:6px 10px;background:rgba(212,168,67,0.08);border-radius:6px;border-left:3px solid var(--gold);">
+            <span style="font-size:10px;color:var(--text-3);">⚡ 나의 오행(</span><span style="font-size:10px;color:var(--gold);font-weight:700;" id="spt-toto-myoh">--</span><span style="font-size:10px;color:var(--text-3);">)과 오늘 가장 공명하는 종목. 역학 기반 참고용입니다.</span>
+          </div>
+        </div>
+
+        <!-- 배너 -->
+        <div class="spt-banner">
+          <div style="font-size:28px;margin-bottom:8px;">⚽🏀⚾🏐🎾🏊</div>
+          <div style="font-size:18px;font-weight:800;color:#f0e6c8;margin-bottom:6px;font-family:'DM Serif Display',serif;">스포츠 에너지 궁합</div>
+          <div style="font-size:12px;color:#475569;line-height:1.7;">나의 사주·오행·행성 에너지와 오늘 경기의 공명 지수를 읽습니다<br>
+          <span style="font-size:10px;color:#059669;">※ 본 분석은 역학·에너지 정보 제공 서비스이며, 베팅·도박과 무관합니다</span></div>
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
+            <span id="spt-api-status" style="font-size:11px;padding:3px 10px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:10px;color:#34d399;font-weight:600;">⏳ 경기 로딩 중...</span>
+            <button onclick="sptForceReload()" style="font-size:11px;padding:4px 12px;background:rgba(212,168,67,.15);border:1px solid rgba(212,168,67,.35);border-radius:10px;color:#fbbf24;font-weight:700;cursor:pointer;font-family:inherit;">🔄 새로고침</button>
+          </div>
+        </div>
+
+        <!-- 내 오늘 에너지 요약 -->
+        <div id="spt-my-energy" style="background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,67,0.2);border-radius:14px;padding:14px 16px;">
+          <div style="font-size:11px;letter-spacing:.12em;color:#b8860b;font-weight:600;margin-bottom:10px;text-transform:uppercase;">⚡ 오늘 나의 스포츠 에너지</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;" id="spt-energy-chips">
+            <div style="padding:6px 12px;background:rgba(212,168,67,0.1);border:1px solid rgba(212,168,67,0.25);border-radius:20px;font-size:12px;color:#fbbf24;" id="spt-chip-oh">오행: —</div>
+            <div style="padding:6px 12px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.25);border-radius:20px;font-size:12px;color:#0369a1;" id="spt-chip-ili">ILI: —</div>
+            <div style="padding:6px 12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:20px;font-size:12px;color:#6d28d9;" id="spt-chip-planet">행성: —</div>
+            <div style="padding:6px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:20px;font-size:12px;color:#059669;" id="spt-chip-sport">최적 종목: —</div>
+          </div>
+        </div>
+
+        <!-- 종목 탭 -->
+        <div class="spt-tab-bar" id="spt-tabs">
+          <button class="spt-tab active" onclick="sptSwitchTab('all',this)">🏆 전체</button>
+          <button class="spt-tab" onclick="sptSwitchTab('soccer',this)">⚽ 축구</button>
+          <button class="spt-tab" onclick="sptSwitchTab('baseball',this)">⚾ 야구</button>
+          <button class="spt-tab" onclick="sptSwitchTab('basketball',this)">🏀 농구</button>
+          <button class="spt-tab" onclick="sptSwitchTab('volleyball',this)">🏐 배구</button>
+
+          <button class="spt-tab" onclick="sptSwitchTab('etc',this)">🏊 기타</button>
+        </div>
+
+        <!-- TOP3 공명 경기 -->
+        <div class="spt-top3" id="spt-top3-wrap">
+          <div style="font-size:12px;font-weight:700;color:#b8860b;margin-bottom:12px;letter-spacing:.06em;">🔥 오늘 나와 최고 공명 경기 TOP 3</div>
+          <div id="spt-top3-list"><div style="font-size:12px;color:#475569;text-align:center;padding:10px;" data-i18n="analyzing">분석 중...</div></div>
+        </div>
+
+        <!-- 경기 목록 -->
+        <div>
+          <div style="font-size:11px;letter-spacing:.1em;color:#475569;font-weight:600;margin-bottom:10px;text-transform:uppercase;">📅 오늘의 경기 에너지 분석</div>
+          <div id="spt-match-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div id="spt-loading-msg" style="font-size:12px;color:#475569;text-align:center;padding:20px;">📡 API-Sports에서 오늘 경기 로딩 중...</div>
+          </div>
+        </div>
+
+        <!-- 📅 오늘 경기 직접 추가 (관리자) -->
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:4px;letter-spacing:.06em;">📅 오늘 경기 추가</div>
+          <div style="font-size:10px;color:#64748b;margin-bottom:10px;">실제 경기 일정을 직접 입력하면 공명 분석에 반영됩니다</div>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:end;margin-bottom:8px;">
+            <input id="spt-add-a" placeholder="홈팀 (예: 인터밀란)" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#334155;font-size:12px;outline:none;box-sizing:border-box;">
+            <div style="font-size:13px;color:#475569;font-weight:700;text-align:center;">VS</div>
+            <input id="spt-add-b" placeholder="원정팀 (예: 아틀레티코)" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#334155;font-size:12px;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+            <input id="spt-add-league" placeholder="리그 (UCL)" style="background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#334155;font-size:12px;outline:none;">
+            <input id="spt-add-time" type="time" style="background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:8px 10px;color:#334155;font-size:12px;outline:none;color-scheme:dark;">
+            <button onclick="sptAdminAddMatchUI()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;padding:8px;">+ 추가</button>
+          </div>
+          <button onclick="sptAdminClearMatches()" style="width:100%;padding:6px;border-radius:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;font-size:11px;cursor:pointer;">🗑 오늘 입력 경기 초기화</button>
+        </div>
+
+        <!-- 직접 분석 입력 -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:16px;">
+          <div style="font-size:12px;font-weight:700;color:#34d399;margin-bottom:12px;letter-spacing:.06em;">🔍 경기 직접 분석</div>
+
+          <!-- ✦ 인기 팀 빠른 선택 칩 — 종목 선택 시 동적 변경 ✦ -->
+          <div style="margin-bottom:10px;padding:10px 12px;background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.15);border-radius:10px;">
+            <div style="font-size:10px;color:rgba(52,211,153,0.7);margin-bottom:6px;font-weight:600;letter-spacing:.04em;">⚡ 빠른 선택 — 인기 팀 클릭 시 자동 입력</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+              <span style="font-size:10px;color:rgba(56,189,248,0.85);font-weight:700;min-width:28px;">홈팀:</span>
+              <div id="spt-quick-a" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;color:rgba(248,113,113,0.85);font-weight:700;min-width:28px;">원정:</span>
+              <div id="spt-quick-b" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;"></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:10px;">
+            <div style="position:relative;">
+              <div style="font-size:10px;color:#475569;margin-bottom:4px;">홈팀</div>
+              <input id="spt-team-a" placeholder="입력 시 자동완성 (예: 바이...)" autocomplete="off" oninput="sptAutocomplete('a',this.value)" onfocus="sptAutocomplete('a',this.value)" onblur="setTimeout(function(){var d=document.getElementById('spt-ac-a');if(d)d.style.display='none';},200)" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:9px 10px;color:#334155;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+              <div id="spt-ac-a" style="display:none;position:absolute;top:100%;left:0;right:0;background:rgba(6,13,26,0.98);border:1px solid rgba(16,185,129,0.4);border-radius:8px;margin-top:2px;max-height:180px;overflow-y:auto;z-index:100;box-shadow:0 6px 20px rgba(0,0,0,0.6);"></div>
+            </div>
+            <div style="font-size:16px;color:#475569;font-weight:700;padding-bottom:2px;text-align:center;">VS</div>
+            <div style="position:relative;">
+              <div style="font-size:10px;color:#475569;margin-bottom:4px;">원정팀</div>
+              <input id="spt-team-b" placeholder="입력 시 자동완성 (예: 맨...)" autocomplete="off" oninput="sptAutocomplete('b',this.value)" onfocus="sptAutocomplete('b',this.value)" onblur="setTimeout(function(){var d=document.getElementById('spt-ac-b');if(d)d.style.display='none';},200)" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:9px 10px;color:#334155;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+              <div id="spt-ac-b" style="display:none;position:absolute;top:100%;left:0;right:0;background:rgba(6,13,26,0.98);border:1px solid rgba(16,185,129,0.4);border-radius:8px;margin-top:2px;max-height:180px;overflow-y:auto;z-index:100;box-shadow:0 6px 20px rgba(0,0,0,0.6);"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div>
+              <div style="font-size:10px;color:#475569;margin-bottom:4px;">종목</div>
+              <select id="spt-sport-type" onchange="sptUpdatePopularTeams()" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:9px 10px;color:#334155;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;">
+                <option value="soccer">⚽ 축구</option>
+                <option value="baseball">⚾ 야구</option>
+                <option value="basketball">🏀 농구</option>
+                <option value="volleyball">🏐 배구</option>
+
+                <option value="etc">🏊 기타</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:10px;color:#475569;margin-bottom:4px;">경기 시간</div>
+              <input id="spt-match-time" type="time" style="width:100%;background:#f8fafc;border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:9px 10px;color:#334155;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;color-scheme:dark;">
+            </div>
+          </div>
+          <button onclick="sptAnalyze()" style="width:100%;padding:11px;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;letter-spacing:.04em;transition:all .2s;">⚡ 에너지 궁합 분석</button>
+          <div id="spt-analyze-result" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- AI 스포츠 상담 채팅 -->
+        <div class="spt-chat-outer">
+          <div class="spt-chat-header">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(59,130,246,0.2));display:flex;align-items:center;justify-content:center;font-size:18px;">🤖</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#d1fae5;">스포츠 에너지 AI 상담</div>
+              <div style="font-size:10px;color:#059669;">기운의 흐름만 읽습니다 · 승패 예측·베팅 권유 없음</div>
+            </div>
+            <div style="margin-left:auto;width:8px;height:8px;background:#34d399;border-radius:50%;box-shadow:0 0 6px #34d399;"></div>
+          </div>
+          <div class="spt-quick-btns">
+            <button class="spt-quick-btn" onclick="sptQuick('오늘 내 스포츠 운세는?')">🔮 오늘 운세</button>
+            <button class="spt-quick-btn" onclick="sptQuick('에너지 공명이 높은 종목은?')">⚡ 공명 종목</button>
+            <button class="spt-quick-btn" onclick="sptQuick('오늘 가장 강한 에너지 시간대는?')">⏰ 강한 시간</button>
+            <button class="spt-quick-btn" onclick="sptQuick('내 오행으로 유리한 팀 유형은?')">☯️ 팀 유형</button>
+          </div>
+          <div class="spt-chat-messages" id="spt-chat-messages"></div>
+          <div class="spt-chat-input-row">
+            <textarea class="spt-chat-input" id="spt-chat-input" rows="1" placeholder="스포츠 에너지에 대해 질문하세요..." onkeydown="sptEnterSend(event)"></textarea>
+            <button class="spt-send-btn" id="spt-send-btn" onclick="sptSend()">➤</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ★ 스포츠 인포테인먼트 고지 (고정 노출) -->
+      <div style="margin:18px 16px 0;padding:14px 16px;background:rgba(15,23,42,.04);border:1px solid rgba(100,116,139,.28);border-radius:12px;">
+        <div style="font-size:11px;font-weight:800;color:#dc2626;margin-bottom:6px;">🔒 스포츠 인포테인먼트 고지</div>
+        <div style="font-size:10.5px;color:#64748b;line-height:1.75;">
+          본 스포츠 에너지 궁합은 사용자의 오행 기류와 구단·선수의 천문 데이터를 기반으로 한 <b style="color:#64748b;">인포테인먼트·참고용 콘텐츠</b>입니다.<br>
+          실제 경기 결과나 승패를 예측하지 않으며, 어떤 결과도 확언하지 않습니다.<br>
+          사행성 베팅·도박을 권유하지 않으며, 스포츠토토를 포함한 어떠한 베팅의 근거로도 사용할 수 없습니다.<br>
+          모든 판단과 책임은 이용자 본인에게 있습니다.
+        </div>
+      </div>
+
+    </div><!-- /page-sports -->
 
 <div class="page cgop" id="page-report-v2" style="background:#f0fdf9;min-height:100vh;color:#0f172a;--text-1:#0f172a;--text-2:#334155;--text-3:#475569;--bg-card:#ffffff;--bg-panel:#f1f5f9;--bg-deep2:#f1f5f9;--border:rgba(16,185,129,.18);--gold:#b8860b;">
   <!-- ━━━━━━━ Chapter I: 18개 분야 ━━━━━━━ -->
@@ -91841,14 +94661,13 @@ var CSI_LANES=[
 ];
 /* ★ 고급·최고급은 손님에게 잠겨 있다 — 아직 만들고 있는 중이다.
    /lee 로 들어온 매니저만 고를 수 있다. */
-function csiTierLocked(t){
-  if(t==='basic') return false;
-  return !(window.cgoIsManager && window.cgoIsManager());
-}
+function csiTierLocked(t){ return false; }   /* 열어 둔다 — 별로 값을 받는다 */
 function csiSetTier(t){
-  if(csiTierLocked(t)){
-    var nm=({pro:'고급', max:'최고급'})[t]||t;
-    try{ if(typeof _cgoInfoToast==='function') _cgoInfoToast('🔒 '+nm+' 등급은 준비 중입니다'); }catch(e){}
+  if(!(window.cgoTierBuy && window.cgoTierBuy('stock', t))){
+    var C=window.CGO_TIER_COST.stock;
+    var need=(t==='max'?C.max:C.pro);
+    try{ if(typeof _cgoInfoToast==='function')
+      _cgoInfoToast('⭐ '+(window._L8?_L8('16796','별이 부족합니다. 충전해 주세요. ⭐'):'별이 부족합니다. 충전해 주세요. ⭐')+' ('+need+'⭐)'); }catch(e){}
     csiPaintTiers();
     return;
   }
@@ -91863,7 +94682,7 @@ function csiPaintTiers(){
   var t=window.csiTier||'basic';
   ['basic','pro','max'].forEach(function(x){
     var e=document.getElementById('csi-tier-'+x); if(!e) return;
-    var lock=csiTierLocked(x);
+    var lock=false;   /* 잠그지 않는다 — 별이 없으면 그때 알린다 */
     e.style.border='2px solid '+(x===t?'#34d399':'#e6eef0');
     e.style.opacity='1';
     e.style.cursor='pointer';
