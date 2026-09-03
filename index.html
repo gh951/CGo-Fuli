@@ -14816,7 +14816,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-cz';
+  var ver='CGO-FULI v2026.09.03-db';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25843,7 +25843,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-cz';
+window.CGO_VER='2026.09.03-db';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -39054,10 +39054,9 @@ function sptRenderTabs(){
   /* ★ 앞의 둘(그 나라 주력)은 경기가 없어도 남긴다 — 인도의 크리켓, 러시아의 하키가
      보이지 않으면 그 나라 손님이 이 앱을 쓸 이유가 없다.
      나머지는 경기가 있을 때만 보인다. */
-  var keep=list.slice(0,2);
-  list=list.filter(function(k,i){
-    return i<2 || (SPT_MATCH_DB[k]||[]).length>0;
-  });
+  /* ★ 그 나라가 즐기는 종목은 전부 남긴다 (경기가 아직 안 왔어도).
+     자료는 sptLoadExtraSports 가 늦게 오므로, 미리 걸러내면
+     러시아의 격투기·농구·배구처럼 늦게 채워지는 탭이 반짝 사라졌다. */
   /* 「기타」에 담긴 것이 있으면 끝에 붙인다 */
   if((SPT_MATCH_DB.etc||[]).length && list.indexOf('etc')<0) list.push('etc');
   var cur=window._sptCurrentTab||'all';
@@ -39142,7 +39141,7 @@ var SPT_WORLD_RE = /Champions ?League|Europa ?League|Conference ?League|World ?C
 
 /* ★ 2부·3부·유소년·여성부 — 무조건 뺀다.
    1부도 다 안 보는데 남의 나라 2부를 볼 이유가 없다. */
-var SPT_LOWER_RE = /\b(2|3|4|II|III)\.?\s*(Liga|Division|Divisi|League|Lig|Divisione)\b|Segunda|Serie\s?[BCD]\b|Ligue\s?2|2\.\s?Bundesliga|3\.\s?Liga|Eerste ?Divisie|League ?One|League ?Two|National ?League|Championship(?!\s*League)|Primavera|Reserve|U1[5-9]|U2[0-3]|Youth|Junior|Amateur|Regionalliga|Oberliga|\bMPBL\b|Maharlika|Liga ?MX ?Expansi|\bUSL\b|\bNPSL\b|Segunda ?Federaci|Tercera|Beta ?Ethniki|Super ?League ?2|Liga ?[234]\b|Divisi ?Utama|Group ?[BCD]\b|Qualif|Friendl|Women|Feminin|Femenin|Frauen|Femminile|Damallsvenskan|\bWNBA\b|Girls|Ladies|Trial|Test ?Match ?U/i;
+var SPT_LOWER_RE = /\b(2|3|4|II|III)\.?\s*(Liga|Division|Divisi|League|Lig|Divisione)\b|Segunda|Serie\s?[BCD]\b|Ligue\s?2|2\.\s?Bundesliga|3\.\s?Liga|Eerste ?Divisie|League ?One|League ?Two|National ?League|Championship(?!\s*League)|\bFirst ?NL\b|\bNL\b(?!.*Champions)|\b1\.? ?NL\b|Primavera|Reserve|U1[5-9]|U2[0-3]|Youth|Junior|Amateur|Regionalliga|Oberliga|\bMPBL\b|Maharlika|Liga ?MX ?Expansi|\bUSL\b|\bNPSL\b|Segunda ?Federaci|Tercera|Beta ?Ethniki|Super ?League ?2|Liga ?[234]\b|Divisi ?Utama|Group ?[BCD]\b|Qualif|Friendl|Women|Feminin|Femenin|Frauen|Femminile|Damallsvenskan|\bWNBA\b|Girls|Ladies|Trial|Test ?Match ?U/i;
 
 function _sptIsHome(m){
   var L=(window._LANG||'ko');
