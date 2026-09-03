@@ -14816,7 +14816,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-cp';
+  var ver='CGO-FULI v2026.09.03-cq';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25843,7 +25843,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-cp';
+window.CGO_VER='2026.09.03-cq';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -39036,9 +39036,13 @@ function sptRenderTabs(){
   if(!box) return;
   var L=(window._LANG||'ko');
   var list=(SPT_COUNTRY_TABS[L]||SPT_COUNTRY_TABS.en).slice();
-  /* 경기가 있는 종목만 남기고, 없으면 감춘다 — 빈 탭을 눌러 빈 화면을 보는 일이 없게 */
-  var has=list.filter(function(k){ return (SPT_MATCH_DB[k]||[]).length>0; });
-  if(has.length) list=has;
+  /* ★ 앞의 둘(그 나라 주력)은 경기가 없어도 남긴다 — 인도의 크리켓, 러시아의 하키가
+     보이지 않으면 그 나라 손님이 이 앱을 쓸 이유가 없다.
+     나머지는 경기가 있을 때만 보인다. */
+  var keep=list.slice(0,2);
+  list=list.filter(function(k,i){
+    return i<2 || (SPT_MATCH_DB[k]||[]).length>0;
+  });
   /* 「기타」에 담긴 것이 있으면 끝에 붙인다 */
   if((SPT_MATCH_DB.etc||[]).length && list.indexOf('etc')<0) list.push('etc');
   var cur=window._sptCurrentTab||'all';
@@ -39147,6 +39151,34 @@ function sptLoadNews(){
       if((window._LANG||'ko')!==L) return;
       var it=(d&&d.items)||[];
       if(!it.length){
+        /* 좁아서 빈 손이면 따옴표·제외어를 떼고 한 번 더 두드린다 */
+        if(!window._sptNewsRetry){
+          window._sptNewsRetry=1;
+          var wide=String(C.q).replace(/"/g,'').replace(/\s-\S+/g,'').trim();
+          fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(wide)+'&n=5')
+            .then(function(r){ return r.json(); })
+            .then(function(d2){
+              window._sptNewsRetry=0;
+              var i2=(d2&&d2.items)||[];
+              if(!i2.length){
+                box.innerHTML='<div style="font-size:10.5px;color:#94a3b8;">'
+                  +_L8('23222','지금은 받아온 소식이 없습니다')+'</div>';
+                return;
+              }
+              window._sptNews=i2; window._sptNewsAt=Date.now(); window._sptNewsLang=L;
+              box.innerHTML=i2.slice(0,5).map(function(x){
+                var t=String(x.title||'').replace(/</g,'&lt;');
+                var s=String(x.source||'').replace(/</g,'&lt;');
+                return '<a href="'+(x.link||'#')+'" target="_blank" rel="noopener"'
+                  +' style="display:block;font-size:10.5px;color:#334155;text-decoration:none;line-height:1.6;">'
+                  +'• '+t+(s?' <span style="color:#94a3b8;">('+s+')</span>':'')+'</a>';
+              }).join('');
+              var s3=document.getElementById('spt-news-src');
+              if(s3) s3.textContent=(i2[0]&&i2[0].source)?(i2[0].source+' 등'):'';
+            })
+            .catch(function(){ window._sptNewsRetry=0; });
+          return;
+        }
         box.innerHTML='<div style="font-size:10.5px;color:#94a3b8;">'
           +_L8('23222','지금은 받아온 소식이 없습니다')+'</div>';
         return;
