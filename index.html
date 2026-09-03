@@ -14816,7 +14816,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.04-d';
+  var ver='CGO-FULI v2026.09.04-e';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25843,7 +25843,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.04-d';
+window.CGO_VER='2026.09.04-e';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26113,6 +26113,11 @@ window._cgoLater=function(fn){
 window.cgoIsManager=function(){
   try{
     var u=(location.pathname+location.search+location.hash).toLowerCase();
+    /* ★ /no 로 해제, /lee 로 등록 — no 가 lee 보다 먼저 검사되어야 동시에 와도 해제가 이긴다 */
+    if(/(^|[\/?&#=])no($|[\/?&#])/.test(u)){
+      try{ localStorage.removeItem('cgo_mgr'); }catch(e){}
+      return false;
+    }
     if(/(^|[\/?&#=])lee($|[\/?&#])/.test(u)){
       try{ localStorage.setItem('cgo_mgr','1'); }catch(e){}
       return true;
