@@ -14816,7 +14816,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.03-ct';
+  var ver='CGO-FULI v2026.09.03-cw';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -25843,7 +25843,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.03-ct';
+window.CGO_VER='2026.09.03-cw';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -38042,10 +38042,12 @@ function sptRenderMatches(tab) {
         matches.push(Object.assign({}, m, {type:'etc'}));
       });
     }
+    if(window.sptArrange) matches=sptArrange(matches);
   } else {
     // 개별탭: 해당 종목 최대 30개만
     matches = (SPT_MATCH_DB[tab] || []).slice(0, MAX_PER_TAB).map(function(m){
       return Object.assign({}, m, {type:tab});
+    if(window.sptArrange) matches=sptArrange(matches);
     });
   }
 
@@ -39070,28 +39072,134 @@ function sptRenderTabs(){
 }
 try{ window.sptRenderTabs=sptRenderTabs; window.SPT_COUNTRY_TABS=SPT_COUNTRY_TABS; }catch(e){}
 
-var SPT_NEWS_Q = {
-  ko:    {q:'맞대결 전적 선발 라인업 K리그 KBO',                flag:'🇰🇷'},
-  en:    {q:'"head to head" lineup team news NFL NBA MLB',      flag:'🇺🇸'},
-  ja:    {q:'対戦成績 スタメン プロ野球 Jリーグ',                 flag:'🇯🇵'},
-  zh:    {q:'交锋战绩 首发 阵容 中超 CBA',                       flag:'🇨🇳'},
-  zh_HK: {q:'交鋒戰績 首發 陣容 英超',                           flag:'🇭🇰'},
-  ru:    {q:'обзор матча составы КХЛ UFC ММА РПЛ',              flag:'🇷🇺'},
-  es:    {q:'previa alineaciones LaLiga Champions',             flag:'🇪🇸'},
-  fr:    {q:'avant-match compositions Ligue 1',                 flag:'🇫🇷'},
-  de:    {q:'Vorschau Aufstellungen Bundesliga DEL',            flag:'🇩🇪'},
-  pt:    {q:'prévia escalações Brasileirão',                    flag:'🇧🇷'},
-  it:    {q:'presentazione formazioni Serie A',                 flag:'🇮🇹'},
-  nl:    {q:'vooruitblik opstellingen Eredivisie',              flag:'🇳🇱'},
-  vi:    {q:'đối đầu đội hình V-League Premier League',          flag:'🇻🇳'},
-  th:    {q:'สถิติการพบกัน ตัวจริง มวยไทย ONE Championship',       flag:'🇹🇭'},
-  id:    {q:'susunan pemain Liga 1 bulu tangkis',               flag:'🇮🇩'},
-  ms:    {q:'senarai pemain Liga Super badminton',              flag:'🇲🇾'},
-  tl:    {q:'PBA lineup NBA basketball',                        flag:'🇵🇭'},
-  tr:    {q:'ilk 11 Süper Lig karşılaşma',                      flag:'🇹🇷'},
-  hi:    {q:'प्लेइंग इलेवन आमना-सामना IPL क्रिकेट',                 flag:'🇮🇳'},
-  ar:    {q:'التشكيلة الدوري السعودي مواجهات',                    flag:'🇸🇦'}
+/* ══════════════════════════════════════════════════════════════
+   🏆 경기 구성 — 나라마다 1부 리그만, 그 나라 것부터.
+   2부·3부는 무조건 뺀다. 그 나라 경기가 없는 날은 세계 대회만 보인다.
+   ══════════════════════════════════════════════════════════════ */
+var SPT_HOME_FLAG = {
+  ko:'🇰🇷', en:'🇺🇸', ja:'🇯🇵', zh:'🇨🇳', zh_HK:'🇭🇰', ru:'🇷🇺',
+  es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱',
+  vi:'🇻🇳', th:'🇹🇭', id:'🇮🇩', ms:'🇲🇾', tl:'🇵🇭', tr:'🇹🇷', hi:'🇮🇳', ar:'🇸🇦'
 };
+
+/* ★ 나라별 1부 리그 — 이 이름이 든 경기만 「내 나라 경기」로 본다 */
+var SPT_HOME_LEAGUES = {
+  ko: [/K League 1|K리그1|KBO|KBL|V-League.*Korea|WKBL/i],
+  en: [/\bMLB\b|\bNBA\b|\bNFL\b|\bNHL\b|Major League Soccer|\bMLS\b/i],
+  ja: [/J1 League|J리그|NPB|Nippon Professional|B\.League|\bSV League\b/i],
+  zh: [/Chinese Super League|中超|\bCBA\b/i],
+  zh_HK: [/Hong Kong Premier/i],
+  ru: [/Premier League.*Russia|Russian Premier|РПЛ|\bKHL\b|КХЛ|VTB United/i],
+  es: [/La Liga|LaLiga|Primera Divisi|\bACB\b|Liga Endesa/i],
+  fr: [/Ligue 1|\bLNB\b|Betclic Elite/i],
+  de: [/\bBundesliga\b|\bDEL\b|\bBBL\b/i],
+  pt: [/Serie A.*Brazil|Brasileir|\bNBB\b|Superliga.*Brazil/i],
+  it: [/Serie A(?!.*Brazil)|Lega Basket|SuperLega/i],
+  nl: [/Eredivisie|\bDBL\b/i],
+  vi: [/V\.League 1|V-League 1|Vietnam.*Premier/i],
+  th: [/Thai League 1|Thailand.*Premier|Thai Fight/i],
+  id: [/Liga 1.*Indonesia|Indonesian Basketball|\bIBL\b|Proliga/i],
+  ms: [/Malaysia Super League|Liga Super/i],
+  tl: [/\bPBA\b|Philippines Basketball Association|Philippines Football League/i],
+  tr: [/Süper Lig|Super Lig|Basketbol Süper|\bBSL\b/i],
+  hi: [/Indian Premier League|\bIPL\b|Indian Super League|\bISL\b|Pro Kabaddi/i],
+  ar: [/Saudi Pro League|Saudi.*Premier|\bSPL\b/i]
+};
+
+/* ★ 세계 대회 — 어느 나라 손님이 봐도 뜻이 있다 */
+var SPT_WORLD_RE = /Champions League|Europa League|Conference League|World Cup|Olympic|UEFA|FIFA|Copa Libertadores|AFC Champions|Asian Cup|Euro 20|Nations League|T20 World|\bUFC\b|ONE Championship|EuroLeague|Euroleague|Stanley Cup|Club World/i;
+
+/* ★ 2부·3부·지역 리그 — 무조건 뺀다.
+   1부도 다 안 보는데 남의 나라 2부를 볼 이유가 없다. */
+var SPT_LOWER_RE = /\b(2|3|II|III)\.?\s*(Liga|Division|Divisi|League|Lig)\b|Segunda|Serie [BCD]\b|Ligue 2|2\. Bundesliga|3\. Liga|Eerste Divisie|League One|League Two|National League|Championship(?! League)|Primavera|Reserve|U1[5-9]|U2[0-3]|Youth|Junior|Women.*Division 2|Amateur|Regionalliga|Oberliga|MPBL|Maharlika|Serie C|Liga MX Expansi|USL|NPSL|Segunda Federaci|Tercera|Beta Ethniki|Super League 2|Liga 2|Liga 3|Divisi Utama|B Group|Cup Qualifi|Friendl/i;
+
+function _sptIsHome(lg){
+  var L=(window._LANG||'ko');
+  var fl=SPT_HOME_FLAG[L]||'';
+  if(fl && String(lg).indexOf(fl)>=0) return true;
+  var pats=SPT_HOME_LEAGUES[L]||[];
+  for(var i=0;i<pats.length;i++) if(pats[i].test(lg)) return true;
+  return false;
+}
+/* 끝난 경기인가 */
+function _sptDone(st){
+  return /FT|AET|PEN|Finished|Ended|Final|Match Finished|Game Finished|POST|CANC|ABD|AOT/i.test(String(st||''));
+}
+/* 아직 안 한 경기인가 */
+function _sptSoon(st){
+  return /NS|Not Started|TBD|SCHED|1H|2H|HT|LIVE|Q1|Q2|Q3|Q4|OT|P1|P2|P3|INPLAY|First|Second|Third/i.test(String(st||''));
+}
+
+/* ★ 경기 구성 — 이 함수 하나가 「무엇을 어느 순서로 보여줄지」 정한다 */
+function sptArrange(list){
+  var out=(list||[]).filter(function(m){
+    if(!m || !m.a || !m.b) return false;
+    var lg=String(m.league||'');
+    if(SPT_LOWER_RE.test(lg)) return false;          /* 2부·3부·유소년 — 무조건 뺀다 */
+    return true;
+  });
+  var home=[], world=[];
+  out.forEach(function(m){
+    var lg=String(m.league||'');
+    if(_sptIsHome(lg)) home.push(m);
+    else if(SPT_WORLD_RE.test(lg)) world.push(m);
+    /* 그 나라도 아니고 세계 대회도 아니면 버린다 — 남의 나라 1부도 보여주지 않는다 */
+  });
+  /* 안 한 경기 먼저, 끝난 경기는 맨 뒤 */
+  function order(arr){
+    var soon=[], done=[], etc=[];
+    arr.forEach(function(m){
+      var st=m.status||'NS';
+      if(_sptDone(st)) done.push(m);
+      else if(_sptSoon(st)) soon.push(m);
+      else etc.push(m);
+    });
+    return soon.concat(etc, done);
+  }
+  var pick=order(home).concat(order(world));
+  /* 종목당 여덟까지 — 한 종목이 화면을 다 차지하지 않게 */
+  var cnt={}, cap=[];
+  pick.forEach(function(m){
+    var k=m.type||'etc';
+    cnt[k]=(cnt[k]||0)+1;
+    if(cnt[k]<=8) cap.push(m);
+  });
+  return cap;
+}
+try{ window.sptArrange=sptArrange; window.SPT_HOME_LEAGUES=SPT_HOME_LEAGUES;
+     window._sptIsHome=_sptIsHome; }catch(e){}
+
+var SPT_NEWS_Q = {
+  ko:    {q:'"맞대결" OR "선발 라인업" OR "K리그" OR "KBO"',            flag:'🇰🇷'},
+  en:    {q:'"head to head" OR "starting lineup" OR NFL OR NBA OR MLB', flag:'🇺🇸'},
+  ja:    {q:'"対戦成績" OR "スタメン" OR "プロ野球" OR "Jリーグ"',        flag:'🇯🇵'},
+  zh:    {q:'"交锋战绩" OR "首发阵容" OR "中超" OR "CBA"',               flag:'🇨🇳'},
+  zh_HK: {q:'"交鋒戰績" OR "首發陣容" OR "英超"',                        flag:'🇭🇰'},
+  ru:    {q:'"обзор матча" OR "составы" OR КХЛ OR UFC OR РПЛ',          flag:'🇷🇺'},
+  es:    {q:'"previa" OR "alineaciones" OR LaLiga',                     flag:'🇪🇸'},
+  fr:    {q:'"avant-match" OR "compositions" OR "Ligue 1"',             flag:'🇫🇷'},
+  de:    {q:'"Vorschau" OR "Aufstellungen" OR Bundesliga OR DEL',       flag:'🇩🇪'},
+  pt:    {q:'"prévia" OR "escalações" OR Brasileirão',                  flag:'🇧🇷'},
+  it:    {q:'"presentazione" OR "formazioni" OR "Serie A"',             flag:'🇮🇹'},
+  nl:    {q:'"vooruitblik" OR "opstellingen" OR Eredivisie',            flag:'🇳🇱'},
+  vi:    {q:'"đối đầu" OR "đội hình" OR "V-League"',                    flag:'🇻🇳'},
+  th:    {q:'"สถิติการพบกัน" OR "ตัวจริง" OR "มวยไทย" OR "ONE Championship"', flag:'🇹🇭'},
+  id:    {q:'"susunan pemain" OR "Liga 1" OR "bulu tangkis"',           flag:'🇮🇩'},
+  ms:    {q:'"senarai pemain" OR "Liga Super" OR badminton',            flag:'🇲🇾'},
+  tl:    {q:'PBA OR NBA OR "starting lineup"',                          flag:'🇵🇭'},
+  tr:    {q:'"ilk 11" OR "Süper Lig" OR "karşılaşma"',                  flag:'🇹🇷'},
+  hi:    {q:'"प्लेइंग इलेवन" OR "आमना-सामना" OR IPL OR क्रिकेट',            flag:'🇮🇳'},
+  ar:    {q:'"التشكيلة" OR "الدوري السعودي" OR "مواجهات"',                flag:'🇸🇦'}
+};
+/* ★ 베팅 업체 그물 — 검색은 넓게 하고 여기서 버린다. */
+var SPT_NEWS_BLOCK = /ставк|букмекер|коэффициент|прогноз на матч|legalbet|winline|betcity|1xbet|bet365|marathonbet|fonbet|париматч|parimatch|odds|betting|bookmaker|sportsbook|wager|tipster|apuesta|cuota|scommess|wett|paris sportifs|aposta|taruhan|pertaruhan|bahis|iddaa|พนัน|แทงบอล|सट्टा|ऑड्स|مراهن|토토|배당률|먹튀/i;
+function sptNewsClean(items){
+  return (items||[]).filter(function(x){
+    var t=String((x&&x.title)||'')+' '+String((x&&x.source)||'')+' '+String((x&&x.link)||'');
+    return !SPT_NEWS_BLOCK.test(t);
+  });
+}
+try{ window.sptNewsClean=sptNewsClean; window.SPT_NEWS_BLOCK=SPT_NEWS_BLOCK; }catch(e){}
 /* ★ 베팅 업체 그물 — 검색은 넓게 하고 여기서 버린다.
    새 업체가 나와도 낱말 규칙에 걸린다. */
 var SPT_NEWS_BLOCK = /ставк|букмекер|коэффициент|прогноз на матч|legalbet|winline|betcity|1xbet|bet365|marathonbet|fonbet|париматч|parimatch|odds|betting|bookmaker|sportsbook|wager|tipster|apuesta|cuota|scommess|wett|paris sportifs|aposta|taruhan|pertaruhan|bahis|iddaa|พนัน|แทงบอล|सट्टा|ऑड्स|مراهن|토토|배당률|먹튀/i;
@@ -39188,7 +39296,8 @@ function sptLoadNews(){
         /* 좁아서 빈 손이면 따옴표·제외어를 떼고 한 번 더 두드린다 */
         if(!window._sptNewsRetry){
           window._sptNewsRetry=1;
-          var wide=String(C.q).replace(/"/g,'').replace(/\s-\S+/g,'').trim();
+          /* 그래도 비면 첫 낱말 하나만으로 넓게 — OR 묶음의 첫 항목 */
+          var wide=String(C.q).split(' OR ')[0].replace(/"/g,'').trim();
           fetch('/api/news?lang='+encodeURIComponent(L)+'&q='+encodeURIComponent(wide)+'&n=12')
             .then(function(r){ return r.json(); })
             .then(function(d2){
