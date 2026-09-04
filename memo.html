@@ -911,25 +911,28 @@ window.addEventListener('beforeunload', function(e){
 /* ★ 일반 메모장처럼: 「저장」 단추 · Ctrl+S · 「나가기」 → 저장할까요? → 잠금 화면 */
 /* ★ 진짜 파일 저장 — 윈도우 메모장처럼. 처음 저장하면 OS 저장 창이 떠서 바탕화면 등 자리를 고른다(Chrome·Edge·Whale 데스크톱).
    그 뒤부터는 같은 파일에 조용히 덮어쓴다(파일 손잡이를 기기 저장소에 기억). 지원 안 되는 브라우저(파이어폭스·사파리·폰)는 다운로드 폴더로 내려간다. */
-var FH_KEY='fileHandle';
+var FH_KEY='fileHandle';   /* 메모마다 자기 파일 — 열쇠는 'fh_'+메모id */
 function _fhStore(mode){ return new Promise(function(res){ try{ var r=indexedDB.open(DB_NAME+'_fh',1); r.onupgradeneeded=function(){ r.result.createObjectStore('h'); }; r.onsuccess=function(){ res(r.result.transaction('h',mode).objectStore('h')); }; r.onerror=function(){ res(null); }; }catch(e){ res(null); } }); }
-function _fhGet(){ return _fhStore('readonly').then(function(s){ return new Promise(function(res){ if(!s) return res(null); var g=s.get(FH_KEY); g.onsuccess=function(){ res(g.result||null); }; g.onerror=function(){ res(null); }; }); }); }
-function _fhPut(hd){ return _fhStore('readwrite').then(function(s){ try{ if(s) s.put(hd,FH_KEY); }catch(e){} }); }
+function _fhGet(k){ return _fhStore('readonly').then(function(s){ return new Promise(function(res){ if(!s) return res(null); var g=s.get(k||FH_KEY); g.onsuccess=function(){ res(g.result||null); }; g.onerror=function(){ res(null); }; }); }); }
+function _fhPut(hd,k){ return _fhStore('readwrite').then(function(s){ try{ if(s) s.put(hd,k||FH_KEY); }catch(e){} }); }
 async function saveToFile(askWhere){
-  var text=buildSeedJs();
-  if(!window.showSaveFilePicker){ downloadSeedJs(); _fileDirty=false; return 'download'; }          /* 폰·구형 브라우저: 다운로드 폴더 */
+  if(!currentId) return null;
+  var n=notes.find(function(x){return x.id===currentId;}); if(!n) return null;
+  var text=(n.content||''), base=(deriveTitle(n)||'메모').replace(/[\\/:*?"<>|\n]/g,'_').slice(0,50)||'메모', fk='fh_'+currentId;
+  var dl=function(){ var blob=new Blob([text],{type:'text/plain;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=base+'.txt'; a.click(); };
+  if(!window.showSaveFilePicker){ dl(); _fileDirty=false; return 'download'; }          /* 폰·구형 브라우저: 다운로드 폴더 */
   try{
-    var hd=askWhere?null:await _fhGet();
+    var hd=askWhere?null:await _fhGet(fk);
     if(hd){ var ok=await hd.queryPermission({mode:'readwrite'}); if(ok!=='granted') ok=await hd.requestPermission({mode:'readwrite'}); if(ok!=='granted') hd=null; }
-    if(!hd){ hd=await showSaveFilePicker({ suggestedName:'메모장.js', types:[{description:'메모장 파일',accept:{'text/javascript':['.js']}}] }); await _fhPut(hd); }
+    if(!hd){ hd=await showSaveFilePicker({ suggestedName:base+'.txt', types:[{description:'텍스트 파일',accept:{'text/plain':['.txt']}}] }); await _fhPut(hd,fk); }
     var w=await hd.createWritable(); await w.write(text); await w.close();
     _fileDirty=false;
     return hd.name;
-  }catch(e){ if(e && e.name==='AbortError') return null; downloadSeedJs(); _fileDirty=false; return 'download'; }
+  }catch(e){ if(e && e.name==='AbortError') return null; dl(); _fileDirty=false; return 'download'; }
 }
 function saveNow(askWhere){ clearTimeout(saveTimer); var p=saveCurrent(); _draftWrite();
   return Promise.resolve(p).then(function(){ return saveToFile(askWhere); }).then(function(r){
-    if(r===null) showToast('저장을 취소했어요'); else if(r==='download') showToast('💾 저장했어요 · 메모 파일을 내려받았어요'); else showToast('💾 저장했어요 · '+r); return r; }); }
+    if(r===null) showToast('저장을 취소했어요'); else if(r==='download') showToast('💾 저장했어요 · TXT 파일을 내려받았어요'); else showToast('💾 저장했어요 · '+r); return r; }); }
 $('saveNowBtn').oncontextmenu=function(e){ e.preventDefault(); saveNow(true); };   /* 오른쪽 클릭 = 다른 이름으로 저장(자리 다시 고르기) */
 $('saveNowBtn').onclick=function(){ saveNow(); };
 document.addEventListener('keydown', function(e){ if((e.ctrlKey||e.metaKey) && (e.key==='s'||e.key==='S')){ e.preventDefault(); saveNow(); } });
