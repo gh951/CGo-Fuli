@@ -692,31 +692,39 @@ window.setLang=window.cgoSwitchLang=function(L){
 
  /* 만들어져 붙는 글자 — 마크업에 없어 번호를 못 단다.
     한국어 원문을 열쇠로 되짚어 번호를 찾아 칠한다. 이 그물이 마지막 한 겹이다. */
- var REV=null, REVSRC=null, REVC={};
+ /* ★ 2026.09.05 — 되짚기 표를 두 곳(s07 REV · s12 _cgoRevKo)에서 각각, 언어를 바꿀 때마다 9천 × (지나온 언어 수) 를
+    trim·정규식으로 새로 짓고 있었다. 지나온 언어가 늘수록 커져(1개 35ms → 8개 168ms, 폰은 3~5배) 「터덕」이 되었다.
+    언어별 표는 한 번만 짓고(_cgoRevOf), 조합은 그 표들을 합치기만 한다(_cgoRevBuild). 조합 결과도 기억한다. */
+ window._cgoRevLang=window._cgoRevLang||{};
+ window._cgoRevOf=function(lang){
+   var C=window._cgoRevLang; if(C[lang]) return C[lang];
+   var dp=(window.DASH&&window.DASH[lang])||{}, m={};
+   for(var n in dp){ var v=String(dp[n]).trim(); if(!v || /^[\d.,\s%개]+$/.test(v)) continue; if(!(v in m)) m[v]=n; }
+   C[lang]=m; return m;
+ };
+ window._cgoRevBuild=function(L, SEEN){
+   var key=L+'|ko|'+SEEN.join(','); var RC=window._cgoRevCache||(window._cgoRevCache={});
+   if(RC[key] && RC[key].rev) return RC[key].rev;
+   var rev={}, ko=window._cgoRevOf('ko'); for(var k in ko) rev[k]=ko[k];
+   var TL=(window.DASH&&window.DASH[L])||{};
+   for(var i=0;i<SEEN.length;i++){ var mp=window._cgoRevOf(SEEN[i]);
+     for(var p in mp){ var n2=mp[p];
+       if(p in rev){ if(rev[p]===n2 || rev[p]==='') continue;
+         var t1=TL[rev[p]], t2=TL[n2]; if(!(t1!=null && t2!=null && String(t1)===String(t2))) rev[p]=''; }
+       else rev[p]=n2; } }
+   RC[key]=RC[key]||{pre4:null}; RC[key].rev=rev; return rev;
+ };
+ /* 지나온 언어는 최근 3개만 본다 — 화면에 남은 옛 글자는 그 안에 있다 */
+ window._cgoSeenFor=function(L){ return (window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==L; }).slice(-3); };
+ var REV=null, REVSRC=null;
  function rev(){
   /* ★ 지나온 언어도 함께 넣는다 — 한국어만 알면 네덜란드어로 칠해진 자리는
      태국어로 바꿔도 그대로 남는다(꿈 키워드에서 드러난 자리).
      같은 글자가 두 번호를 가리키면 빼 버린다 — 엉뚱한 자리를 건드리지 않게. */
-  var seen=(window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==CUR; });
+  var seen=window._cgoSeenFor(CUR);
   var srcKey=CUR+'|ko|'+seen.join(',');
   if(REV && REVSRC===srcKey) return REV;
-  if(REVC[srcKey]){ REV=REVC[srcKey]; REVSRC=srcKey; return REV; }   /* ★ 지은 표는 기억한다 */
-  REV={}; var src=(DASH&&DASH.ko)||{};
-  for(var k in src){ var v=src[k]; if(v && !(v in REV)) REV[v]=k; }
-  var p=(window.CGO_PACK||{}).ko;
-  if(p) for(var i=0;i<p.length;i++){ var w=p[i]; if(w && !(w in REV)) REV[w]=i; }
-  for(var si=0; si<seen.length; si++){
-   var dp=(DASH&&DASH[seen[si]]); if(!dp) continue;
-   for(var k2 in dp){ var v2=String(dp[k2]).trim(); if(!v2) continue;
-    if(v2 in REV){
-     if(String(REV[v2])===String(k2)) continue;
-     if(REV[v2]==='') continue;
-     /* 번호가 다르더라도 지금 언어에서 값이 같으면 결과가 같다 — 그대로 쓴다 */
-     var t1=(DASH&&DASH[CUR])?DASH[CUR][REV[v2]]:null, t2=(DASH&&DASH[CUR])?DASH[CUR][k2]:null;
-     if(!(t1!=null && t2!=null && String(t1)===String(t2))) REV[v2]='';
-    } else REV[v2]=k2; }
-  }
-  REVSRC=srcKey; REVC[srcKey]=REV;
+  REV=window._cgoRevBuild(CUR, seen); REVSRC=srcKey;   /* ★ 공용 표 — 짓지 않고 꺼낸다 */
   return REV;
  }
  window.CGO_T_net=function(root){
@@ -13458,6 +13466,10 @@ window._stkFragTbl=null; window._stkFragSrc=null;
 function _stkFrag(s, rev, tgt, L, D){
   try{
     if(window._stkFragSrc!==window._cgoRevSrc){
+      var _FC=window._stkFragCache||(window._stkFragCache={});
+      if(_FC[window._cgoRevSrc]){ window._stkFragTbl=_FC[window._cgoRevSrc]; window._stkFragSrc=window._cgoRevSrc; }
+    }
+    if(window._stkFragSrc!==window._cgoRevSrc){
       var a=[];
       for(var kk in rev){
         if(!rev[kk]) continue;
@@ -13468,12 +13480,28 @@ function _stkFrag(s, rev, tgt, L, D){
         a.push(kk);
       }
       a.sort(function(x,y){ return y.length-x.length; });
+      /* ★ 2026.09.05 — 앞 두 글자로 갈라 둔다. 전에는 칸마다 6,400 조각을 전부 indexOf 로 훑었다(대시보드 한 번에 0.3초) */
+      var _bg={}; for(var _q=0;_q<a.length;_q++){ var _f2=a[_q].slice(0,2); (_bg[_f2]||(_bg[_f2]=[])).push(a[_q]); }
+      a._bg=_bg;
       window._stkFragTbl=a; window._stkFragSrc=window._cgoRevSrc;
+      try{ (window._stkFragCache||(window._stkFragCache={}))[window._cgoRevSrc]=a; }catch(e){}
     }
     var tbl=window._stkFragTbl; if(!tbl || !tbl.length) return null;
+    /* 이 글에 실제로 나오는 두 글자 조합의 조각만 후보로 — 긴 것부터 (원래 순서와 같다) */
+    /* 조각 찾기는 코드가 조립한 짧은 문장을 위한 것이다 — 긴 설명문(120자 넘음)은 통째 번역 대상이라 여기서 훑지 않는다 */
+    if(s.length>120) return null;
+    var cand=tbl, _bgi=tbl._bg;
+    if(_bgi){ cand=[]; var _seenF={}, _cap=0;
+      for(var _p=0;_p+1<s.length && _cap<300;_p++){
+        var _c0=s.charCodeAt(_p); if(_c0<0xAC00||_c0>0xD7A3) continue;      /* 한글에서 시작하는 조각만 */
+        var _lst=_bgi[s.substr(_p,2)]; if(!_lst) continue;
+        for(var _r=0;_r<_lst.length && _cap<300;_r++){ var _fg=_lst[_r]; if(!_seenF[_fg]){ _seenF[_fg]=1; cand.push(_fg); _cap++; } } }
+      if(!cand.length) return null;
+      cand.sort(function(x,y){ return y.length-x.length; });
+    }
     var out=s, hit=0;
-    for(var i=0;i<tbl.length;i++){
-      var f=tbl[i];
+    for(var i=0;i<cand.length;i++){
+      var f=cand[i];
       if(out.indexOf(f)<0) continue;
       var num=rev[f]; if(!num) continue;
       var v=(tgt&&tgt[num])||(D.en&&D.en[num]);
@@ -13504,9 +13532,14 @@ window.cgoPaintKo=function(root){
    /* ★ 한국어만으로 표를 지으면 직전 언어의 글자를 되짚을 수 없다.
       직전 언어를 함께 넣어 「무슨 언어에서든 번호로」 돌아올 수 있게 한다.
       짧은 낱말은 언어끼리 겹쳐 엉뚱한 자리를 건드리므로 네 글자 이상만 넣는다. */
-   var _SEEN = (window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==L; });
+   var _SEEN = window._cgoSeenFor ? window._cgoSeenFor(L) : (window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==L; }).slice(-3);
    var _src = L + '|ko|' + _SEEN.join(',');
    var _RC=window._cgoRevCache||(window._cgoRevCache={});   /* ★ 언어 조합별로 표를 기억한다 */
+   if(window._cgoRevBuild && (!window._cgoRevKo || window._cgoRevSrc !== _src)){
+     /* ★ 공용 표(s07 _cgoRevBuild) — 언어별 표는 한 번만 짓고 조합은 합치기만 */
+     window._cgoRevKo=window._cgoRevBuild(L,_SEEN); window._cgoRevSrc=_src;
+     window._cgoPre4=(_RC[_src]&&_RC[_src].pre4)||null;
+   }
    if((!window._cgoRevKo || window._cgoRevSrc !== _src) && _RC[_src]){
      window._cgoRevKo=_RC[_src].rev; window._cgoPre4=_RC[_src].pre4; window._cgoRevSrc=_src;
    }
@@ -13548,12 +13581,13 @@ window.cgoPaintKo=function(root){
    /* 이번에 보이는 높이 — 한 번만 재고 돌려 쓴다 (칸마다 재면 그게 또 값이다) */
    var _vh=(window.innerHeight||800);
    var _vis=!window._cgoPaintAll;      /* 접기를 풀 차례면 전부 바꾼다 */
-   var _rest=[];
+   var _rest=[], _more=false;          /* ★ 접힌 것을 풀 때는 한 번에 60칸씩 — 한 덩이로 풀면 0.1~0.3초 멈췄다 */
    /* ★ 걸러내기(closest 네 갈래)를 글자칸마다 부르고 있었다 — 대시보드에서만 0.27초.
       한글이 든 칸은 전체의 몇 %뿐이니, 그 칸에만 물어본다 (하는 일은 똑같다) */
    var w=document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, null);
    var hits=[], t;
    while((t=w.nextNode())){
+     if(!_vis && hits.length>=60){ _more=true; break; }   /* ★ 이번 덩이는 여기까지 — 나머지는 다음 틈에 */
      if(t.parentElement && t.parentElement.closest && t.parentElement.closest('[data-notr]')) continue;
      var s=t.nodeValue; if(!s || s.indexOf('\u0000')>=0) continue;
      var k=s.trim(); if(k.length<2) continue;
@@ -13578,11 +13612,15 @@ window.cgoPaintKo=function(root){
      var _mm=MEMO[k];
      if(_mm!==undefined){
        if(_mm===null){
+         /* ★ 2026.09.05 — 조각 찾기(8천 조각 × indexOf)를 같은 글에 대해 매번 되풀이했다. 결과(없음 포함)를 기억한다 */
+         var _fk='\u0001'+s, _fm=MEMO[_fk];
+         if(_fm!==undefined){ if(_fm) hits.push([t,_fm]); continue; }
          /* ★ 통째로는 못 찾았다 — 조각으로 찾는다.
             「9월 2일(수) 뉴스 기운: 잔잔함 · 토(土) 기운」처럼 코드가 조립한 문장은
             통째로 사전에 있을 수가 없다. 그래서 지금까지 이런 자리를 한 개씩 손으로 고쳐 왔다.
             사전에 있는 조각을 긴 것부터 찾아 바꾸면, 앱 어디서든 한 번에 해결된다. */
          var _fx=_stkFrag(s, rev, tgt, L, D);
+         MEMO[_fk]=_fx===null?false:_fx;
          if(_fx!==null){ hits.push([t, _fx]); }
          continue;
        }
@@ -13644,6 +13682,7 @@ window.cgoPaintKo=function(root){
      if(!v || v===cut){
        MEMO[k]=null;                                   /* 통째로는 못 찾았다 */
        var _fx0=_stkFrag(s, rev, tgt, L, D);           /* ★ 그 자리에서 조각으로 찾는다 */
+       MEMO['\u0001'+s]=_fx0===null?false:_fx0;       /* ★ 조각 결과도 기억 */
        if(_fx0!==null) hits.push([t, _fx0]);
        continue;
      }
@@ -13651,6 +13690,15 @@ window.cgoPaintKo=function(root){
      hits.push([t, s.replace(cut, v)]);
    }
    for(var i=0;i<hits.length;i++) hits[i][0].nodeValue=hits[i][1];
+   /* ★ 2026.09.05 — 접힌 것을 풀던 두 번째 패스가 페이지 전체를 한 덩이로 돌아(대시보드 0.3초) 언어를 바꾼 직후 「터덕」했다.
+      60칸씩 끊어 다음 틈에 이어 간다. 이미 바뀐 칸은 한글이 없어 걷기만 하고 지나간다(값 거의 0). */
+   if(!_vis && _more && !window._cgoRestT){
+     window._cgoRestT=setTimeout(function(){
+       window._cgoRestT=null;
+       try{ window._cgoPaintAll=1; window.cgoPaintKo(root||document.body); }catch(e){}
+       finally{ window._cgoPaintAll=0; }
+     }, 40);
+   }
    /* ★ 접어 둔 칸은 손이 쉴 때 마무리한다. 화면에 보이는 것은 이미 다 바뀌었으니
       손님은 끝난 것으로 느끼고, 스크롤을 내리면 그때는 이미 바뀌어 있다. */
    if(_vis && _rest.length && !window._cgoRestT){
@@ -25794,7 +25842,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-f';
+window.CGO_VER='2026.09.05-k';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
