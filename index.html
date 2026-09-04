@@ -22575,6 +22575,12 @@ function cgoTfSelectAll(val){
 // ★ C-35 헌법 v3.0 §V.5.1: 결과 화면 떠있을 때만 디바운스 자동 재분석 (Rate Limit 보호)
 var _cgoTfReanalyzeTimer = null;
 function cgoOpenPureMetaphysics(){
+  /* ★ -aa: 50역학 엔진 표(_TF_ENGINES)는 사이드카 파일에서 온다. 파일이 아직 안 왔으면(부팅 직후·느린 회선·미리보기) 기다렸다가 연다. */
+  if(typeof _TF_ENGINES==='undefined'){
+    var _w=window._cgoTfWait||0; if(_w>40){ try{ alert('분석 엔진 파일을 아직 못 받았습니다 · 새로고침해 주세요'); }catch(e){} window._cgoTfWait=0; return; }
+    window._cgoTfWait=_w+1; setTimeout(cgoOpenPureMetaphysics,100); return;
+  }
+  window._cgoTfWait=0;
   var nm = ((document.getElementById('ipName')||{}).value||(document.getElementById('prof-name')||{}).value||localStorage.getItem('cgo_prof_name')||'');
   var by = ((document.getElementById('ipBirthY')||{}).value||(document.getElementById('prof-birth-y')||{}).value||localStorage.getItem('cgo_prof_birth_y')||'');
   var bm = ((document.getElementById('ipBirthM')||{}).value||(document.getElementById('prof-birth-m')||{}).value||localStorage.getItem('cgo_prof_birth_m')||'');
@@ -25941,7 +25947,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-z';
+window.CGO_VER='2026.09.05-aa';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
