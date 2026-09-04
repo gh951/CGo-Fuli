@@ -838,6 +838,10 @@ window.setLang=window.cgoSwitchLang=function(L){
        if(el.closest('#entSplash')||el.closest('#phase0')||el.closest('header')) continue;
        if(el.closest('[id$="-pop"],[id$="Pop"],[id$="-popup"],[id$="Popup"]')) continue;
        if(el.classList.contains('page')) continue;
+       /* ★ -ab: 움직이는 것(배너 슬라이드처럼 transform 으로 옮겨 다니는 것)과 그 안은 재우지 않는다 — 옮겨 오는 동안 빈 칸으로 보였다 */
+       if(el.closest('#cgo-hero-banner')) continue;
+       if((el.getAttribute('style')||'').indexOf('transform')>=0) continue;
+       if(el.querySelector('[style*="transition:transform"],[style*="transform:"]')) continue;
        el.classList.add('cgo-rest'); n++; }
      return n;
    }
@@ -25947,7 +25951,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-aa';
+window.CGO_VER='2026.09.05-ab';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
