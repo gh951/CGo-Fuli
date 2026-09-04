@@ -769,6 +769,16 @@ window.setLang=window.cgoSwitchLang=function(L){
    ══════════════════════════════════════════════════════════════ */
 (function(){
  if(!window.IntersectionObserver) return;
+ /* ★ 2026.09.05 — 지휘자 지시: 페이지 안 잠들기(.cgo-rest) 기본 OFF.
+    켜기: 콘솔 cgoCull('on') → 새로고침. 페이지 단위 「보이는 것만 살린다」(cgoGoPage·.page.active)는 그대로 돈다. */
+ window.cgoCull=function(v){ try{ if(v==='on') localStorage.setItem('cgo_cull','on'); else localStorage.removeItem('cgo_cull'); }catch(e){} return v==='on'?'on — 새로고침':'off — 새로고침'; };
+ var _cullOn=false; try{ _cullOn=(localStorage.getItem('cgo_cull')==='on'); }catch(e){}
+ if(!_cullOn){
+   window.cgoCullScan=function(){}; window.cgoCullJudge=function(){ return 'off'; };
+   window.cgoCullState=function(){ return {잠들기:'OFF', 켜기:"cgoCull('on')"}; };
+   try{ document.querySelectorAll('.cgo-rest').forEach(function(e){ e.classList.remove('cgo-rest'); }); }catch(e){}
+   return;
+ }
  var MARK='_cgoCull';
  /* 실제 이 앱의 덩어리들 — 클래스 이름이 달라 아무것도 잡히지 않았다 */
  var SEL='.content > div, .page, .fdash-cat, .fdash-grid, .fdash-card, .lc, .card, section, .fsp, .acc, .panel, [id^=page-], [id^=cgo-], details, .gf-item, .mypg-card, .guide-sec, #cgoGuidePopup > div > div, #mypage-pop-content > div';
@@ -3385,7 +3395,7 @@ html,body{width:100%;height:100%;overflow:auto;background:var(--bg);font-family:
 .fdash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 .fdash-card{position:relative;background:linear-gradient(158deg,rgba(227,178,60,.82) 0%,rgba(218,165,32,.82) 52%,rgba(198,148,27,.85) 100%);border:1px solid rgba(52,211,153,.55);border-radius:0;box-shadow:0 0 0 1px rgba(52,211,153,.12),inset 0 1px 0 rgba(255,255,255,.34),0 2px 6px rgba(120,88,10,.16);padding:18px 10px 14px;text-align:center;cursor:pointer;overflow:hidden;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .2s,border-color .2s,background .2s;}
 .fdash-card::before{content:"";position:absolute;inset:0;background:radial-gradient(110px 70px at 50% 0%,var(--fc) 0%,transparent 70%);opacity:.12;pointer-events:none;}
-.fdash-card:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 0 0 1px rgba(52,211,153,.3),0 6px 14px rgba(120,88,10,.24);background:linear-gradient(158deg,rgba(235,190,76,.92) 0%,rgba(224,174,40,.92) 52%,rgba(206,156,31,.94) 100%);}
+@media(hover:hover){.fdash-card:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 0 0 1px rgba(52,211,153,.3),0 6px 14px rgba(120,88,10,.24);background:linear-gradient(158deg,rgba(235,190,76,.92) 0%,rgba(224,174,40,.92) 52%,rgba(206,156,31,.94) 100%);}}
 .fdash-card:active{transform:scale(.97);}
 .fdash-ico{font-size:28px;line-height:1;;;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2));}
 .fdash-ttl{font-size:13px;font-weight:800;;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);}
@@ -6268,7 +6278,7 @@ body{font-family:Noto Sans KR,sans-serif;background:#fff;color:#111;padding:40px
 </style>
 <style>
 /* ★ 페이지 전환을 부드럽게 */
-.page.active{animation:cgoFadeIn .16s ease-out}
+.page.active{animation:none}
 @keyframes cgoFadeIn{from{opacity:.35}to{opacity:1}}
 /* 새로고침 때 카드가 늘었다 줄어드는 것을 막는다 — 자리를 미리 잡아 둔다 */
 .fdash-card{min-height:84px}
@@ -6555,7 +6565,7 @@ html.cgo-ready #entSplash,html.cgo-ready #phase0{content-visibility:hidden;conta
 </style>
 <style id="cgo-pop-solo">
 /* ★특허 — 팝업이 떠 있으면 뒤 페이지는 셈에서 뺀다 */
-body.cgo-pop-on .page{content-visibility:hidden}
+/* 2026.09.05 잔상: body.cgo-pop-on .page{content-visibility:hidden} 제거 — 닫을 때 페이지 재렌더가 잔상이었다 */
 body.cgo-pop-on .page.cgo-pop-keep{content-visibility:visible;contain:none}
 </style>
 </head>
@@ -24725,7 +24735,7 @@ try{
 .fdash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 .fdash-card{position:relative;background:linear-gradient(158deg,rgba(227,178,60,.82) 0%,rgba(218,165,32,.82) 52%,rgba(198,148,27,.85) 100%);border:1px solid rgba(52,211,153,.55);border-radius:16px;box-shadow:0 0 0 1px rgba(52,211,153,.12),inset 0 1px 0 rgba(255,255,255,.34),0 2px 6px rgba(120,88,10,.16);padding:18px 10px 14px;text-align:center;cursor:pointer;overflow:hidden;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .2s,border-color .2s,background .2s;}
 .fdash-card::before{content:"";position:absolute;inset:0;background:radial-gradient(110px 70px at 50% 0%,var(--fc) 0%,transparent 70%);opacity:.12;pointer-events:none;}
-.fdash-card:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 0 0 1px rgba(52,211,153,.3),0 6px 14px rgba(120,88,10,.24);background:linear-gradient(158deg,rgba(235,190,76,.92) 0%,rgba(224,174,40,.92) 52%,rgba(206,156,31,.94) 100%);}
+@media(hover:hover){.fdash-card:hover{transform:translateY(-2px);border-color:#34d399;box-shadow:0 0 0 1px rgba(52,211,153,.3),0 6px 14px rgba(120,88,10,.24);background:linear-gradient(158deg,rgba(235,190,76,.92) 0%,rgba(224,174,40,.92) 52%,rgba(206,156,31,.94) 100%);}}
 .fdash-card:active{transform:scale(.97);}
 .fdash-ico{font-size:28px;line-height:1;;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2));}
 .fdash-ttl{font-size:13px;font-weight:800;;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);}
@@ -25784,7 +25794,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-e';
+window.CGO_VER='2026.09.05-f';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
