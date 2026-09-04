@@ -299,7 +299,7 @@ window.CGO_I18N=window.CGO_I18N||{};   /* 옛 코드가 이 이름을 찾는다 
    REV=null;
    /* 사전이 도착했다 — 지금 그 언어를 보고 있으면 즉시 다시 칠한다.
       이것이 없으면 늦게 온 사전은 화면에 반영되지 않는다(zh에서 193곳이 남던 원인). */
-   if(CUR===L){ roots().forEach(function(r){ paint(L,r); });
+   if(CUR===L){ rootsVis().forEach(function(r){ paint(L,r); });
     /* ★ 문서 전체를 훑으면 3,500칸 배치 셈이 한 덩이로 몰려 휠이 멈췄다.
        열린 페이지와 떠 있는 팝업만 훑는다 */
     try{
@@ -394,6 +394,13 @@ function paint(L,root){
    var e=document.querySelector(s); if(e) r.push(e); });
   return r.length?r:[document.body];
  }
+ /* ★ 2026.09.05 — 60개 root 중 화면에 없는 것(닫힌 팝업·다른 페이지)까지 매번 칠하고 있었다.
+    보이는 것은 284칸인데 2,534칸을 칠했다 — 특허 법칙 위반이자 언어 전환 렉의 원인.
+    보이는 root 만 즉시, 숨은 root 는 dict().then 의 한가한 시간에 한 장씩. */
+ function _vis(e){ try{ if(e===document.body) return true; if(e.classList&&e.classList.contains('active')) return true;
+   return e.getClientRects().length>0; }catch(_){ return true; } }   /* display:none 이면 0 — 스타일 계산보다 싸다 */
+ function rootsVis(){ return roots().filter(_vis); }
+ function rootsHid(){ return roots().filter(function(e){ return !_vis(e); }); }
 
  /* 번호로 글자 하나를 얻는다 — 로직 안에서 K(6701)처럼 쓴다 */
  window.K=function(n){ try{ var v=val(CUR,+n); return (v==null?'':v); }catch(e){ return ''; } };
@@ -434,7 +441,7 @@ function paint(L,root){
      b.style.color = on?'#0d9488':'#334155';
     });
    }catch(e){}
-   roots().forEach(function(r){ paint(L,r); });      /* 첫 화면 — 기다림 없음 */
+   rootsVis().forEach(function(r){ paint(L,r); });   /* 첫 화면 — 보이는 것만, 기다림 없음 */
    try{ window.CGO_T_net(document.querySelector('.page.active')||document); }catch(e){}
    /* 계산이 채우는 화면은 다시 그려야 한다 — 어느 길로 언어를 바꿔도 */
    try{ window._cgoAccRedraw&&_cgoAccRedraw(); }catch(e){}
@@ -442,13 +449,13 @@ function paint(L,root){
    dict(L).then(function(){
     if(CUR!==L) return;                              /* 그 사이 언어가 또 바뀌었으면 버린다 */                    /* 나머지는 뒤에서 */
     REV=null;                                         /* 사전이 늘었으니 열쇠도 다시 */
-    roots().forEach(function(r){ paint(L,r); });
+    rootsVis().forEach(function(r){ paint(L,r); });
     /* 그물은 한 번만 — 세 번 돌던 것이 언어 전환 뒤 휠을 걸리게 했다 */
     setTimeout(function(){ if(CUR!==L) return;
       try{ window.CGO_T_net(document.querySelector('.page.active')||document.body); }catch(e){} },90);
     /* 안 보이는 페이지 — 한가할 때 한 장씩. 손가락이 움직이는 동안은 쉰다.
        (열 때 cgoGoPage 가 그 페이지를 칠하므로 늦어도 화면에는 제 언어가 나온다) */
-    var rest=[].slice.call(document.querySelectorAll('.page:not(.active)'));
+    var rest=rootsHid().concat([].slice.call(document.querySelectorAll('.page:not(.active)')));  /* 숨은 root 도 여기서 */
     (function next(){ if(CUR!==L || !rest.length) return;
      if(document.hidden || (window._cgoScrolling && Date.now()-window._cgoScrolling<220)){
        setTimeout(next,240); return; }
@@ -773,17 +780,24 @@ window.setLang=window.cgoSwitchLang=function(L){
      }
      el._cgoBox=r; return r;
    }
+   /* ★ 2026.09.05 — ① 읽기만 몰아서 ② 쓰기만 몰아서. 번갈아 하면 칸마다 배치를 다시 셈해 1.5초마다 걸렸다 */
+   var _rd=[];
    for(var i=0;i<LIST.length;i++){
      var el=LIST[i]; if(!el.isConnected) continue;
      var b=el.getBoundingClientRect();
      var host=box(el), top=0, bot=vh;
      if(host){ var hb=host.getBoundingClientRect(); top=hb.top; bot=hb.bottom; }
-     var near = b.bottom > top-pad && b.top < bot+pad;
-     if(near){ el.classList.remove('cgo-rest'); el.style.minHeight=''; }
+     _rd.push([el, (b.bottom > top-pad && b.top < bot+pad), b.height]);
+   }
+   for(var w=0;w<_rd.length;w++){
+     var el2=_rd[w][0], near=_rd[w][1];
+     if(near){ if(el2.classList.contains('cgo-rest')){ el2.classList.remove('cgo-rest'); el2.style.minHeight=''; } }
      else{
-       if(!el.dataset.cgoH){ var hh=b.height; if(hh>0) el.dataset.cgoH=Math.round(hh); }
-       if(el.dataset.cgoH){ el.style.containIntrinsicSize='auto '+el.dataset.cgoH+'px'; el.style.minHeight=el.dataset.cgoH+'px'; }
-       el.classList.add('cgo-rest');
+       if(!el2.dataset.cgoH){ var hh=_rd[w][2]; if(hh>0) el2.dataset.cgoH=Math.round(hh); }
+       if(!el2.classList.contains('cgo-rest')){
+         if(el2.dataset.cgoH){ el2.style.containIntrinsicSize='auto '+el2.dataset.cgoH+'px'; el2.style.minHeight=el2.dataset.cgoH+'px'; }
+         el2.classList.add('cgo-rest');
+       }
      }
    }
  }
@@ -13068,7 +13082,6 @@ function cgoGoPage(page){
   try{ if(window._cgoHideFeatBar) window._cgoHideFeatBar(); }catch(e){}  /* ★ C-64: 전역 헤더 바 숨기고 진짜 상단바(언어선택) 복원 — C-63 눈건강과 동일 */
   if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
-  try{ [60,300,800,1600].forEach(function(_m){ setTimeout(window._cgoRT, _m); }); }catch(e){}
   // C-39 v1.3 — scalp 페이지 진입 시 메뉴얼 즉시 표시 (깜빡임 0)
   if(arguments[0] === 'scalp'){
     try {
@@ -13409,7 +13422,8 @@ if(typeof window._LANG==='undefined'){
    if(window._cgoLangDict[L]) return Promise.resolve(window._cgoLangDict[L]);
    return fetch('lang/'+L+'.json').then(function(r){ return r.ok?r.json():null; })
      .then(function(j){ if(j){ window._cgoLangDict[L]=j;
-       try{ cgoPaintKo(document.body); }catch(e){} } return j; })
+       /* ★ 2026.09.05 — 문서 전체(수만 글자칸)를 되짚어 클릭 직후 멈추던 자리. 열린 페이지만 */
+       try{ cgoPaintKo(document.querySelector('.page.active')||document.body); }catch(e){} } return j; })
      .catch(function(){ return null; });
  };
  function pull(){ try{ cgoLoadDict((window.CGO_T&&CGO_T.cur())||'en'); }catch(e){} }
@@ -25754,7 +25768,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-a';
+window.CGO_VER='2026.09.05-b';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -47244,7 +47258,85 @@ function updateTransitSectionWithNASA(planets) {
 
 
 
-
+<div id="cgo-fs-intro-pop" style="display:none;position:fixed;inset:0;top:var(--hdrH,56px);z-index:29000;background:#f0fdf9;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;contain:layout paint style;">
+ <div style="max-width:520px;margin:0 auto;padding:18px 16px 30px;">
+  <div style="display:flex;justify-content:flex-end;"><button onclick="document.getElementById('cgo-fs-intro-pop').style.display='none'" style="background:none;border:none;font-size:20px;color:#64748b;cursor:pointer;padding:4px 8px;">✕</button></div>
+  <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:14px;">
+   <span style="font-size:30px;line-height:1.1;">📸</span>
+   <div style="min-width:0;flex:1;">
+    <div data-k="19320" style="font-size:17px;font-weight:900;color:#0f172a;line-height:1.3;"></div>
+    <div data-k="19321" style="font-size:11px;color:#64748b;margin-top:3px;line-height:1.5;"></div>
+   </div>
+  </div>
+  <div data-k="19322" style="font-size:12px;color:#334155;line-height:1.75;margin-bottom:14px;"></div>
+  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
+   <div data-k="19323" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:9px;"></div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <div data-k="19324" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19325" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19326" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19327" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19328" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19329" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19330" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
+   </div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
+   <div data-k="19331" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:9px;"></div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <div data-k="19332" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19333" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19334" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19335" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
+   </div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
+   <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:9px;">
+    <div data-k="19336" style="font-size:11.5px;font-weight:900;color:#0f172a;"></div>
+    <div data-k="19337" style="font-size:9.5px;color:#94a3b8;"></div>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <div data-k="19324" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19325" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19326" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19327" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
+   </div>
+   <div style="margin-top:6px;"><div data-k="19338" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div></div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
+   <div data-k="19339" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:7px;"></div>
+   <div data-k="19340" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19341" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19342" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19343" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19344" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div>
+  </div>
+  <div style="background:#fff;border:1px solid rgba(184,134,11,.18);border-radius:12px;padding:12px 13px;margin-bottom:14px;">
+   <div data-k="19345" style="font-size:10.5px;color:#64748b;line-height:1.7;margin-bottom:5px;"></div>
+   <div data-k="19346" style="font-size:10.5px;color:#b8860b;line-height:1.7;"></div>
+  </div>
+  <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:#64748b;margin-bottom:12px;cursor:pointer;">
+   <input type="checkbox" id="fs-skip" style="width:15px;height:15px;"><span data-k="19348"></span>
+  </label>
+  <button onclick="_cgoFsGo()" data-k="19347" style="width:100%;padding:15px;background:linear-gradient(135deg,#0d9488,#0f766e);border:none;border-radius:13px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;"></button>
+ </div>
+</div>
+<script>
+window._cgoFsIntroPopup=function(){
+  var p=document.getElementById('cgo-fs-intro-pop'); if(!p) return;
+  if(p.parentElement!==document.body) document.body.appendChild(p);
+  p.style.display='block';
+  try{ if(window.CGO_T&&CGO_T.paint) CGO_T.paint(p); }catch(e){}
+};
+window._cgoFsGo=function(){
+  var p=document.getElementById('cgo-fs-intro-pop'); if(p) p.style.display='none';
+  try{ cgoGoPage('gmd'); }catch(e){}
+  setTimeout(function(){ try{ var g=document.getElementById('page-gmd');
+    if(g&&window.CGO_T&&CGO_T.paint) CGO_T.paint(g); }catch(e){} }, 40);
+};
+</script>
+<script>
+(function _cgoFsRepaint(){
+  function again(){
+    try{
+      var p=document.getElementById('cgo-fs-intro-pop');
+      if(p && getComputedStyle(p).display!=='none' && p.offsetHeight){
+        if(window.CGO_T&&CGO_T.paint) CGO_T.paint(p);
+      }
+      /* 열려 있는 풍수 페이지도 그 자리에서 다시 칠한다 — 화면이 튀지 않게 그 페이지만 */
+      var g=document.getElementById('page-gmd');
+      if(g && getComputedStyle(g).display!=='none' && g.offsetHeight){
+        if(window.CGO_T&&CGO_T.paint) CGO_T.paint(g);
+      }
+    }catch(e){}
+  }
+  try{ if(window.cgoRepaintOn) cgoRepaintOn(function(){ again(); }); }catch(e){}
+})();
+</script>
 
 <script>
 /* ══ 작명 서비스 엔진 (구 CGO 핀셋 이식) ══ */
