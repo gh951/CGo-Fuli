@@ -236,6 +236,15 @@ html,body{background:#f0fdf9}
 /* ══ 공용 감시자 하나 — 문서 전체를 지켜보는 것은 이것뿐이다 (CLAUDE.md 규약) ══ */
 (function(){
   if(window.cgoDomWatch) return;
+  /* ★ 2026.09.05 — 지휘자 지시로 공용 감시자를 끈다(기본 OFF). 보이는 것만 살리는 원칙:
+     페이지는 cgoGoPage 가 열 때 그 페이지만 칠하고 훑는다. 감시자가 필요해지면 콘솔에서 cgoWatch('on') → 새로고침. */
+  window.cgoWatch=function(v){ try{ if(v==='on') localStorage.setItem('cgo_watch','on'); else localStorage.removeItem('cgo_watch'); }catch(e){} return v==='on'?'on — 새로고침하면 켜집니다':'off — 새로고침하면 꺼집니다'; };
+  var _on=false; try{ _on=(localStorage.getItem('cgo_watch')==='on'); }catch(e){}
+  if(!_on){
+    window.cgoDomWatch={ onAdd:function(){}, onAttr:function(){}, pause:function(){}, resume:function(){}, off:true,
+      state:function(){ return {감시자:'OFF', 켜기:"cgoWatch('on')"}; } };
+    return;
+  }
   var subsAdd=[], subsAttr=[];
   var qAdd=[], tAdd=null, hitAttr=false, tAttr=null, paused=0;
   function flushAdd(){ tAdd=null; var b=qAdd.splice(0,qAdd.length);
@@ -852,7 +861,7 @@ window.setLang=window.cgoSwitchLang=function(L){
  window.cgoCullScan=function(root){ watch(root); ping(); };
  window.cgoCullJudge=function(){ try{ judge(); return 'ok'; }catch(e){ return 'err '+e.message; } };
  window.cgoCullState=function(){ return {감시:LIST.length,쉬는것:document.querySelectorAll('.cgo-rest').length}; };
- addEventListener('DOMContentLoaded',function(){ watch(document); });
+ addEventListener('DOMContentLoaded',function(){ watch(document.querySelector('.page.active')||document.body); });
  /* 팝업·기능 페이지는 열린 뒤에야 높이가 생긴다 — 열림을 보고 다시 훑는다 */
  /* 열림 감지 — 공용 감시자에 얹는다 (문서 전체를 따로 지켜보지 않는다) */
  (function(){ function reg(){ if(!window.cgoDomWatch) return false;
@@ -864,15 +873,15 @@ window.setLang=window.cgoSwitchLang=function(L){
      if(document.hidden) return;
      /* ★ 구르는 중에 훑으면 그 자리에서 바가 걸린다 — 손이 쉴 때까지 비켜 있는다 */
      if(Date.now()-_lastSc<400){ _arm(); return; }
-     watch(document); ping(); },500); }
+     watch(document.querySelector('.page.active')||document.body); ping(); },500); }   /* ★ 문서 전체 → 열린 페이지만 */
    window.cgoDomWatch.onAttr(function(){ if(!_aw) _arm(); });
    return true; }
    if(!reg()) addEventListener('DOMContentLoaded',reg); })();
- [400,1500,3500].forEach(function(d){ setTimeout(function(){ watch(document); },d); });
+ [400,1500,3500].forEach(function(d){ setTimeout(function(){ watch(document.querySelector('.page.active')||document.body); },d); });
  /* 새로 붙는 화면(팝업·기능 페이지)도 바로 감시에 넣는다 */
  (function(){ var t=null;
    function reg(){ if(!window.cgoDomWatch) return false;
-     window.cgoDomWatch.onAdd(function(){ if(t) return; t=setTimeout(function(){ t=null; watch(document); },120); }); return true; }
+     window.cgoDomWatch.onAdd(function(){ if(t) return; t=setTimeout(function(){ t=null; watch(document.querySelector('.page.active')||document.body); },120); }); return true; }   /* ★ 열린 페이지만 */
    if(!reg()) addEventListener('DOMContentLoaded',reg); })();
 })();
 (function(){
@@ -15325,6 +15334,10 @@ try{
  };
  /* 한 번 쓸 수 있는가 — kind: 'ai' | 'photo' | 'c24' */
  window.cgoCanUse=function(kind){
+  /* ★ 2026.09.05 — 지휘자 지시: 「오늘 AI 답변 10회를 다 쓰셨습니다」·체험 종료·결제 창을 어디서도 띄우지 않는다.
+     횟수는 cgo_use 에 계속 적어 두기만 한다(콘솔 확인용). 다시 막으려면 아래 return true 한 줄을 지운다. */
+  try{ var _c0=counts(); _c0[kind]=(_c0[kind]||0)+1; save(_c0); }catch(e){}
+  return true;
   if(window.cgoIsPaid()) return true;
   try{ if(window.cgoIsManager && cgoIsManager()) return true; }catch(e){}   /* ★ 매니저(/lee)는 한도 없음 */
   if(window.cgoTrialOver()){
@@ -25771,7 +25784,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-c';
+window.CGO_VER='2026.09.05-e';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
