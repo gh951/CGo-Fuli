@@ -1,5 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" translate="no" class="gate-open"><head>
+<html lang="ko" translate="no" class="gate-open"><head><script>
+/* ★ 2026.09.05 — 카메라·캔버스 요소는 부팅 때 만들지 않는다. 코드가 getElementById 로 처음 찾는 순간(측정 시작) 그 자리에 만든다.
+   화면 버퍼·디코더를 준비하는 값이 부팅과 첫 진입에서 빠진다. 목록에 없는 id 는 이 길을 타지 않는다(값 0). */
+(function(){
+  var MAP={"fc360Video":1,"fcVideo":1,"fcCanvas":1,"sc-video":1,"food-video":1,"food-canvas":1,"tvyCamVideo":1,"trv2-scan-video":1,"trv2-scan-overlay":1,"trv2-mic-canvas":1,"bm2Video":1,"bm2Canvas":1};
+  var orig=Document.prototype.getElementById;
+  Document.prototype.getElementById=function(id){
+    var r=orig.call(this,id); if(r||this!==document||!MAP[id]) return r;
+    var t=orig.call(document,'cgo-media-'+id); if(!t) return null;
+    var frag=t.content.cloneNode(true), el=frag.firstElementChild;
+    t.parentNode.replaceChild(frag,t); return el;
+  };
+  /* template 에 id 를 달아 두면 위에서 원본 getElementById 로 바로 찾는다(문서 훑기 없음) */
+  function tag(){ try{ var ts=document.querySelectorAll('template[data-cgo-media]'); for(var i=0;i<ts.length;i++) ts[i].id='cgo-media-'+ts[i].getAttribute('data-cgo-media'); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',tag); else tag();
+  window.cgoMediaState=function(){ var o={}; for(var k in MAP) o[k]=orig.call(document,k)?'live':'folded'; return o; };
+})();
+</script>
 <!-- ★ 입구 가림막은 문서 첫머리에 둔다.
      규칙이 파일 끝(10.4MB 지점)에 있어, 그 앞의 상단바(8.2MB)와 대시보드가
      먼저 그려진 뒤에야 가려졌다 — 그것이 「대문 뜨기 전 스치는 잔상」이었다. -->
@@ -25369,7 +25386,7 @@ try{
 
           <!-- 카메라 뷰 + 촬영 버튼 -->
           <div style="position:relative;border-radius:14px;overflow:hidden;margin-bottom:14px;background:#000;">
-            <video id="fc360Video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:block;"></video>
+            <template data-cgo-media="fc360Video"><video id="fc360Video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:block;"></video></template>
             <!-- 나침반 오버레이 -->
             <div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;">
               <span style="font-size:14px;">🧭</span>
@@ -25396,7 +25413,7 @@ try{
             <span>📍</span>
             <span id="fcGpsCoord" data-k="19461">위치 확인 중...</span>
           </div>
-          <video id="fcVideo" autoplay playsinline muted></video>
+          <template data-cgo-media="fcVideo"><video id="fcVideo" autoplay playsinline muted></video></template>
           <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none">
             <div class="fc-dir-n" data-k="19462">N 북</div>
             <div class="fc-dir-s" data-k="19463">S 남</div>
@@ -25426,7 +25443,7 @@ try{
             <span style="font-size:13px;font-weight:900;color:#000;" data-k="19468">🧭 나침반 허용하기</span>
           </div>
         </div>
-        <canvas id="fcCanvas" style="display:none"></canvas>
+        <template data-cgo-media="fcCanvas"><canvas id="fcCanvas" style="display:none"></canvas></template>
 
         <!-- 🧭 360° 스캔 가이드 -->
         <!-- ① 시스템 선택 화면 -->
@@ -25848,7 +25865,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-q';
+window.CGO_VER='2026.09.05-s';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -30664,7 +30681,7 @@ var fcSystems = {
    </div>
    <div style="padding:0 0 14px;">
     <div style="position:relative;background:#000;overflow:hidden;margin-top:11px;aspect-ratio:3/4;">
-     <video id="sc-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+     <template data-cgo-media="sc-video"><video id="sc-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video></template>
      <canvas id="sc-canvas" style="display:none;"></canvas>
      <div id="sc-idle" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(2,20,16,.72);color:#fff;text-align:center;padding:20px;">
       <div style="font-size:30px;line-height:1;">🧴</div>
@@ -32597,8 +32614,8 @@ try{
 
       <!-- 카메라 뷰 -->
       <div style="position:relative;background:rgba(0,0,0,.85);border-radius:14px;overflow:hidden;margin-bottom:10px;min-height:180px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(16,185,129,.15);" id="food-cam-wrap">
-        <video id="food-video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:none;border-radius:14px;"></video>
-        <canvas id="food-canvas" style="display:none;"></canvas>
+        <template data-cgo-media="food-video"><video id="food-video" autoplay playsinline muted style="width:100%;max-height:240px;object-fit:cover;display:none;border-radius:14px;"></video></template>
+        <template data-cgo-media="food-canvas"><canvas id="food-canvas" style="display:none;"></canvas></template>
 
         <!-- 촬영 중 오버레이 -->
         <div id="food-scan-overlay" style="display:none;position:absolute;inset:0;pointer-events:none;">
@@ -32795,7 +32812,7 @@ try{
   <div id="pm-intro-pop"><div class="pmi-wrap">
     <div class="pmi-top"><button class="pmi-x" onclick="document.getElementById('pm-intro-pop').style.display='none';try{if(window._cgoHideFeatBar)window._cgoHideFeatBar()}catch(e){};">✕</button></div>
     <div class="pmi-hero"><div class="pmi-hero-icon">🎵</div><div class="pmi-hero-title" data-k="13200"></div><div class="pmi-hero-sub" data-k="13201"></div></div>
-    <div class="pmi-body">
+    <div class="pmi-body"><template data-cgo-fold="1">
       <div class="pmi-sec"><div class="pmi-lbl" data-k="13202"></div><p data-k="13203"></p></div>
       <div class="pmi-sec"><div class="pmi-lbl" data-k="13204"></div><div class="pmi-2col"><div class="pmi-s1"><div class="pmi-stag" data-k="13205"></div><div class="pmi-stit" data-k="13206"></div><div class="pmi-sdesc" data-k="13207"></div></div><div class="pmi-s2"><div class="pmi-stag" data-k="13208"></div><div class="pmi-stit" data-k="13209"></div><div class="pmi-sdesc" data-k="13210"></div></div></div></div>
       <div class="pmi-sec"><div class="pmi-lbl" data-k="13211"></div>
@@ -32857,7 +32874,7 @@ try{
           <div class="pmi-feat-item"><div class="pmi-feat-t" style="color:#a78bfa;" data-k="13287"></div><div class="pmi-feat-d"><span data-k="13296"></span><br><span data-k="13297"></span></div></div>
         </div>
       </div>
-    </div>
+    </template></div>
     <div class="pmi-btn-wrap">
       <button class="pmi-btn" onclick="document.getElementById('pm-intro-pop').style.display='none';try{if(window._cgoHideFeatBar)window._cgoHideFeatBar()}catch(e){};" data-k="13288"></button>
       <div class="pmi-credit" data-k="13289"></div>
@@ -43398,7 +43415,7 @@ header.topbar{border-bottom:0!important;background:#060d1a!important}
           
           <!-- 카메라 영역 -->
           <div id="tvyCamVideoBox" style="display:none;position:relative;border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:4/3;">
-            <video id="tvyCamVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+            <template data-cgo-media="tvyCamVideo"><video id="tvyCamVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video></template>
             <div style="position:absolute;top:8px;left:8px;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;font-family:Orbitron,sans-serif;">📸 LIVE</div>
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;pointer-events:none;">
               <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(212,168,67,.6);"></div>
@@ -43605,8 +43622,8 @@ header.topbar{border-bottom:0!important;background:#060d1a!important}
       </div>
       <div id="trv2-scan-wrap" style="display:none;">
         <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3;margin-bottom:8px;">
-          <video id="trv2-scan-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;filter:contrast(500%) brightness(150%) grayscale(100%) sepia(100%) hue-rotate(0deg);"></video>
-          <canvas id="trv2-scan-overlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas>
+          <template data-cgo-media="trv2-scan-video"><video id="trv2-scan-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;filter:contrast(500%) brightness(150%) grayscale(100%) sepia(100%) hue-rotate(0deg);"></video></template>
+          <template data-cgo-media="trv2-scan-overlay"><canvas id="trv2-scan-overlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;"></canvas></template>
           <div style="position:absolute;inset:0;pointer-events:none;">
             <div id="trv2-scan-line" style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(248,113,113,.8),transparent);animation:trv2ScanLine 2s linear infinite;"></div>
             <div style="position:absolute;top:8px;left:8px;width:20px;height:20px;border-top:2px solid rgba(248,113,113,.8);border-left:2px solid rgba(248,113,113,.8);border-radius:2px 0 0 0;"></div>
@@ -43664,7 +43681,7 @@ header.topbar{border-bottom:0!important;background:#060d1a!important}
         <div id="trv2-mic-wrap" style="display:none;">
           <!-- 스펙트럼 시각화 -->
           <div style="position:relative;border-radius:12px;overflow:hidden;background:#0a0e1a;padding:12px;margin-bottom:8px;">
-            <canvas id="trv2-mic-canvas" width="600" height="180" style="width:100%;height:140px;display:block;"></canvas>
+            <template data-cgo-media="trv2-mic-canvas"><canvas id="trv2-mic-canvas" width="600" height="180" style="width:100%;height:140px;display:block;"></canvas></template>
             <div style="display:flex;justify-content:space-between;font-size:9px;color:#94a3b8;margin-top:4px;font-family:monospace;">
               <span>0 Hz</span><span>5 kHz</span><span>10 kHz</span><span>15 kHz</span><span>20 kHz</span>
             </div>
@@ -44611,7 +44628,7 @@ list.innerHTML = scored.map(function(d){
 
       <!-- 카메라 뷰 -->
       <div id="bm2CamWrap" style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:14px;display:none;">
-        <video id="bm2Video" autoplay playsinline muted style="width:100%;max-height:300px;object-fit:cover;display:block;"></video>
+        <template data-cgo-media="bm2Video"><video id="bm2Video" autoplay playsinline muted style="width:100%;max-height:300px;object-fit:cover;display:block;"></video></template>
         <div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 120 260" width="90" style="opacity:.3;">
             <ellipse cx="60" cy="22" rx="16" ry="18" fill="none" stroke="#34d399" stroke-width="2.5"/>
@@ -44660,7 +44677,7 @@ list.innerHTML = scored.map(function(d){
         <div style="margin-top:12px;padding:12px 14px;background:rgba(212,168,67,.08);border:1px solid #f0e6d4;border-radius:10px;font-size:12px;color:#d4a843;font-weight:700;line-height:1.8;" id="bm2SizeRecom"></div>
         <button onclick="shopCustomOrder()" style="width:100%;margin-top:12px;padding:14px;border-radius:12px;background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(212,168,67,.15));border:1px solid rgba(248,113,113,.3);color:#f87171;font-size:13px;font-weight:800;cursor:pointer;">✨ 이 치수로 주문제작 신청하기</button>
       </div>
-      <canvas id="bm2Canvas" style="display:none;"></canvas>
+      <template data-cgo-media="bm2Canvas"><canvas id="bm2Canvas" style="display:none;"></canvas></template>
     </div>
 
     
@@ -45454,7 +45471,7 @@ list.innerHTML = scored.map(function(d){
       <div class="spi-hero-tag" data-k="23301">✦ 세계 최초 SRI 스포츠 공명 분석 시스템 ✦</div>
     </div>
 
-    <div class="spi-body">
+    <div class="spi-body"><template data-cgo-fold="1">
 
       <!-- ★ 연구 목적 안내 — 파트너님 요약을 그대로 살린다 -->
       <div class="spi-sec" style="background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.35);">
@@ -45595,7 +45612,7 @@ list.innerHTML = scored.map(function(d){
         </div>
       </div>
 
-    </div>
+    </template></div>
 
     <div class="spi-btn-wrap">
       <button class="spi-btn" onclick="document.getElementById('spt-intro-pop').style.display='none';" data-k="23370"></button>
@@ -94053,7 +94070,33 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
 })();
 
 </script>
-</body></html>
+
+<script>
+/* ★ 2026.09.05 — 큰 안내 팝업(주파수 음악 228요소 · 스포츠 153요소)의 본문을 접어 두었다가
+   팝업이 보인 뒤 한 틈(60ms) 뒤에 붙인다. 첫 프레임은 머리·단추만 그린다 — 보이는 것부터, 나머지는 손이 쉴 때. */
+(function(){
+  window.cgoUnfold=function(root){
+    try{ var ts=(root||document).querySelectorAll('template[data-cgo-fold]'); if(!ts.length) return 0;
+      for(var i=0;i<ts.length;i++){ var t=ts[i], p=t.parentNode; if(!p) continue;
+        p.insertBefore(t.content.cloneNode(true), t); p.removeChild(t); p.style.minHeight=''; }
+      try{ if(window.CGO_T&&CGO_T.paint) CGO_T.paint(root); }catch(e){}
+      try{ if(window.cgoPaintKo) cgoPaintKo(root); }catch(e){}
+      return ts.length;
+    }catch(e){ return 0; }
+  };
+  function arm(id){
+    var p=document.getElementById(id); if(!p) return;
+    var body=p.querySelector('template[data-cgo-fold]'); if(body&&body.parentNode) body.parentNode.style.minHeight='55vh';
+    var t=null;
+    function check(){ if(getComputedStyle(p).display==='none') return; if(!p.querySelector('template[data-cgo-fold]')) return;
+      if(t) return; t=setTimeout(function(){ t=null; window.cgoUnfold(p); },60); }
+    new MutationObserver(check).observe(p,{attributes:true,attributeFilter:['style','class']});
+    check();
+  }
+  function go(){ arm('pm-intro-pop'); arm('spt-intro-pop'); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
+})();
+</script></body></html>
 <style>
 /* ★v5 — 앱 전체 스크롤. 구형은 .content 안에만 스크롤이 있어 휠·스와이프가 겉돌았다 */
 html,body{height:auto!important;min-height:100%;max-height:none!important;
