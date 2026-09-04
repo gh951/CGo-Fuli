@@ -814,17 +814,42 @@ window.setLang=window.cgoSwitchLang=function(L){
    글자·구조는 그대로 두고 '그리는 일'만 미루므로 내용은 하나도 잃지 않는다.
    ══════════════════════════════════════════════════════════════ */
 (function(){
- if(!window.IntersectionObserver) return;
  /* ★ 2026.09.05 — 지휘자 지시: 페이지 안 잠들기(.cgo-rest) 기본 OFF.
     켜기: 콘솔 cgoCull('on') → 새로고침. 페이지 단위 「보이는 것만 살린다」(cgoGoPage·.page.active)는 그대로 돈다. */
- window.cgoCull=function(v){ try{ if(v==='on') localStorage.setItem('cgo_cull','on'); else localStorage.removeItem('cgo_cull'); }catch(e){} return v==='on'?'on — 새로고침':'off — 새로고침'; };
- var _cullOn=false; try{ _cullOn=(localStorage.getItem('cgo_cull')==='on'); }catch(e){}
- if(!_cullOn){
+
+ /* ★ 2026.09.05-t — 세 가지 모드. 기본은 「고정 잠들기(static)」.
+    · static : 덩어리에 .cgo-rest(content-visibility:auto) 를 한 번만 달고 그 뒤는 브라우저에 맡긴다. JS 가 높이·class 를 바꾸지 않아 탭 취소 없음.
+               화면 밖 덩어리는 배치·그리기를 건너뛰어 lang 이 바뀔 때 재배치가 한 화면 분량으로 줄어든다(끄면 대시보드 0.010→0.175).
+    · on : 예전 동적 판정(judge·IO). cgoCull('on')   · off : 아무것도 안 함. cgoCull('off')  — 바꾸면 새로고침 */
+ window.cgoCull=function(v){ try{ if(v==='on'||v==='off') localStorage.setItem('cgo_cull',v); else localStorage.removeItem('cgo_cull'); }catch(e){} return (v||'static')+' — 새로고침'; };
+ var _cullMode='static'; try{ var _cv=localStorage.getItem('cgo_cull'); if(_cv==='on'||_cv==='off') _cullMode=_cv; }catch(e){}
+ if(_cullMode==='off'){
    window.cgoCullScan=function(){}; window.cgoCullJudge=function(){ return 'off'; };
-   window.cgoCullState=function(){ return {잠들기:'OFF', 켜기:"cgoCull('on')"}; };
+   window.cgoCullState=function(){ return {잠들기:'OFF', 켜기:"cgoCull('static') 또는 cgoCull('on')"}; };
    try{ document.querySelectorAll('.cgo-rest').forEach(function(e){ e.classList.remove('cgo-rest'); }); }catch(e){}
    return;
  }
+ if(_cullMode==='static'){
+   var SELS='.content > div, .page, .fdash-cat, .fdash-grid, .fdash-card, .lc, .card, section, .fsp, .acc, .panel, [id^=page-], [id^=cgo-], details, .gf-item, .mypg-card, .guide-sec, #cgoGuidePopup > div > div, #mypage-pop-content > div';
+   function markStatic(root){
+     var list=(root||document.querySelector('.page.active')||document.body).querySelectorAll(SELS), n=0;
+     for(var i=0;i<list.length;i++){ var el=list[i];
+       if(el._cgoCullS) continue; el._cgoCullS=1;
+       if(el.closest('#entSplash')||el.closest('#phase0')||el.closest('header')) continue;
+       if(el.closest('[id$="-pop"],[id$="Pop"],[id$="-popup"],[id$="Popup"]')) continue;
+       if(el.classList.contains('page')) continue;
+       el.classList.add('cgo-rest'); n++; }
+     return n;
+   }
+   window.cgoCullScan=function(root){ try{ markStatic(root); }catch(e){} };
+   window.cgoCullJudge=function(){ return 'static'; };
+   window.cgoCullState=function(){ return {잠들기:'STATIC', 쉬는것:document.querySelectorAll('.cgo-rest').length}; };
+   function boot(){ markStatic(document.querySelector('.page.active')||document.body); }
+   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+   [400,1500].forEach(function(d){ setTimeout(boot,d); });
+   return;
+ }
+ if(!window.IntersectionObserver) return;   /* 동적 모드(on)만 IO 가 필요하다 */
  var MARK='_cgoCull';
  /* 실제 이 앱의 덩어리들 — 클래스 이름이 달라 아무것도 잡히지 않았다 */
  var SEL='.content > div, .page, .fdash-cat, .fdash-grid, .fdash-card, .lc, .card, section, .fsp, .acc, .panel, [id^=page-], [id^=cgo-], details, .gf-item, .mypg-card, .guide-sec, #cgoGuidePopup > div > div, #mypage-pop-content > div';
@@ -13340,7 +13365,9 @@ function cgoGoPage(page){
     if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
   if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
-  if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
+  if(page==='couple'){ /* ★ 2026.09.05 — 팝업의 「분석 시작」이 cgoGoPage('couple') 을 다시 불러 팝업이 되살아났다. 직전 페이지가 couple 이면 팝업 생략 */
+    try{ if(window._cgCurrent!=='couple') _cgoCoupleIntroPopup(); }catch(e){}
+    setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
   if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof gmdPopConfirm==='function'){ /* ★ 2026.09.05 — 두 번째 팝업(STEP 설정) 없이 바로 시작. 타입·역학은 페이지에서 바꾼다 */
     window._gmdPopType=window._gmdPopType||'home'; window._gmdPopSystems=window._gmdPopSystems||['all'];
@@ -25894,7 +25921,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s';
+window.CGO_VER='2026.09.05-v';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -39521,12 +39548,25 @@ function drawGrowth(){
 function _cgoFamilyIntroPopup(){
   _cgoFDIntro({
     id:'cgo-family-intro-pop', skipKey:'cgo_family_intro_skip_v2', accent:'#059669', accent2:'#047857', ico:'👨‍👩‍👧',
-    title:'가족 케어 센터', subtitle:'가족의 건강·위치·안전을 한 곳에서 관리',
-    summary:'연로하신 부모님, 자녀, 배우자의 <b>위치·컨디션·운세</b>를 실시간으로 확인하고, 긴급 상황 시 <b>SOS 문자</b>를 자동 발송합니다.',
-    howtoLabel:'📋 5가지 케어 기능',
-    howto:['위치 공유|GPS로 현재 위치를 가족에게 문자 전송 · 구글 지도 링크','긴급 SOS|버튼 3초 누르면 보호자에게 위치+긴급문자 자동 발송','컨디션 요약 공유|AI 통합 웰니스 리포트의 참고 요약을 가족 메신저로 전송','운세 교환|가족 구성원별 오늘의 운세를 메신저로 공유','ILI 모니터링|가족 통합 라이프 인덱스 12개월 추이 관리'],
-    howto2Label:'⚡ 시작 순서',
-    howto2:['위치 탭 → 내 번호 + 보호대상 번호 입력','초대 문자 보내기 → 가족에게 앱 설치 안내','구성원 추가 → 가족 정보 등록','SOS 탭 → 긴급 연락처 확인'],
+    title:'가족 ILI 관리', subtitle:'가족의 건강·위치·운세를 한 화면에서 함께 관리해요',
+    summary:'부모님·자녀·배우자를 <b>구성원으로 등록</b>하면, 그때부터 각자의 <b>위치·컨디션·운세</b>를 이 화면에서 한눈에 볼 수 있어요. 갑작스러운 상황엔 <b>SOS 버튼 하나</b>로 위치와 긴급문자를 바로 보낼 수 있습니다. 처음이라도 아래 순서대로만 따라 하시면 됩니다.',
+    howtoLabel:'📋 화면 구성 — 아래 6개 칸을 눌러 넘겨보세요',
+    howto:[
+      '📍 위치|가족의 현재 위치를 문자·구글 지도 링크로 서로 주고받는 칸이에요. 내 번호와 가족 번호를 먼저 넣어두세요.',
+      '🚨 SOS|위급할 때 누르는 칸이에요. 버튼을 3초 누르고 있으면 등록된 가족에게 내 위치가 담긴 긴급 문자가 자동으로 발송됩니다.',
+      '🌿 컨디션 공유|건강 밸런스 등에서 측정한 컨디션 요약을 가족 메신저로 간단히 보내는 칸이에요.',
+      '🌟 운세 교환|등록된 가족 각자의 오늘 운세를 서로 보내고 받는 칸이에요.',
+      '📋 피드|위치·SOS·컨디션·운세 등 가족이 주고받은 소식이 시간 순서로 모이는 알림 칸이에요.',
+      '+ 구성원 추가|맨 처음 눌러야 하는 칸이에요. 여기서 부모님·자녀·배우자 등 가족 정보를 등록해야 다른 칸들이 채워집니다.'
+    ],
+    howto2Label:'⚡ 처음이라면 이 순서로 해보세요',
+    howto2:[
+      '① 맨 위 "+ 구성원 추가" 칸을 눌러 가족 이름·생년월일을 입력해요 — 이게 제일 먼저입니다',
+      '② "📍 위치" 칸으로 이동해 내 전화번호와 보호할 가족의 번호를 입력해요',
+      '③ "초대 문자 보내기"를 눌러 가족에게 앱 설치 안내 문자를 보내요 (안 깔아도 위치 공유는 가능해요)',
+      '④ "🚨 SOS" 칸에서 긴급 연락처가 잘 들어갔는지 한 번 확인해요',
+      '⑤ 이제부터 카드를 눌러 그 가족의 위치·컨디션·운세를 언제든 확인할 수 있어요'
+    ],
     btnLabel:'✅ 이해했습니다 — 시작하기'
   });
 }
@@ -46706,7 +46746,7 @@ list.innerHTML = scored.map(function(d){
       <div style="text-align:center;padding:24px;background:rgba(52,211,153,.05);border:1px dashed rgba(52,211,153,.2);border-radius:12px;">
         <div style="font-size:28px;margin-bottom:8px;">🌿</div>
         <div style="font-size:12px;color:rgba(51,65,85,.5);">AI 통합 웰니스 리포트 후<br>컨디션 요약 카드가 여기에 표시됩니다</div>
-        <button onclick="window._c24CompStart && window._c24CompStart()" style="margin-top:12px;padding:8px 18px;border-radius:10px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#059669;font-size:12px;font-weight:700;cursor:pointer;">📋 지금 셀프 체크하기</button>
+        <button onclick="if(typeof c24GuideOpen==='function'){c24GuideOpen();}else{_cgoRppgGo();}" style="margin-top:12px;padding:8px 18px;border-radius:10px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.4);color:#059669;font-size:12px;font-weight:700;cursor:pointer;">❤️ 나의 건강 밸런스로 가기</button>
       </div>
     </div>
     <div id="famHealthFeed" style="margin-top:12px;"></div>
