@@ -13279,8 +13279,20 @@ function cgoGoPage(page){
     var _saveCt = document.querySelector('.content');
     window._cgoDashScrollY = _saveCt ? _saveCt.scrollTop : window.scrollY;
   }
+  // ★ 나가는 페이지를 「처음처럼」 되돌리는 일은 숨겨진 뒤에 한다 — 다음 진입이 아니라 지금 나가는 순간 예약
+  try{
+    var _prev = _cgCurrent;
+    if(_prev && _prev!==page && _prev!=='dashboard' && _prev!=='profile' && window._cgoPageSnap && window._cgoPageSnap[_prev]!==undefined){
+      var _pel = document.getElementById('page-'+_prev);
+      if(_pel && !_pel._cgoSnapBig){
+        var _pd2=window._cgoResetPending||(window._cgoResetPending={});
+        if(_pd2[_prev]) clearTimeout(_pd2[_prev]);
+        _pd2[_prev]=setTimeout(function(){ delete _pd2[_prev]; try{ if(!_pel.classList.contains('active')) _pel.innerHTML = window._cgoPageSnap[_prev]; }catch(e){} }, 250);
+      }
+    }
+  }catch(e){}
   // 모든 페이지 숨기기
-  document.querySelectorAll('.page').forEach(function(p){
+  (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){
     p.classList.remove('active');
     if(p.id === 'page-chat') p.style.display = 'none';
   });
@@ -13294,14 +13306,19 @@ function cgoGoPage(page){
            작명 283KB · 리포트 3.6MB 를 통째로 읽어 두었다가 재진입 때 다시 심었다.
            읽는 값과 심는 값을 두 번 내고 있었고, 그것이 작명 0.443초의 몸통이다.
            카메라를 쓰는 페이지만 되돌릴 이유가 있으니, 큰 페이지는 카메라만 끈다. */
-        var _snapBig = (_rpg.innerHTML && _rpg.innerHTML.length > 120000);
+        /* ★ 2026.09.05-x — 들어올 때마다 innerHTML 을 두 번 직렬화(크기 재기)하고, 작은 페이지는 사본으로 통째로 다시 심었다.
+           그 재파싱·재생성이 「팝업 → 페이지」의 몸통이었다. ① 크기는 한 번만 잰다 ② 되돌리기는 「나갈 때, 숨겨진 뒤」로 옮긴다
+           (아래 _cgoScheduleReset). 들어올 때는 아직 안 되돌려진 경우에만 그 자리에서 되돌린다. */
+        if(_rpg._cgoSnapBig === undefined){ _rpg._cgoSnapBig = !!(_rpg.innerHTML && _rpg.innerHTML.length > 120000); }
+        var _snapBig = _rpg._cgoSnapBig;
         if(_snapBig){
           try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject=null; } }); }catch(e){}
         } else if(window._cgoPageSnap[page] === undefined){
           window._cgoPageSnap[page] = _rpg.innerHTML;
         } else {
           try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
-          _rpg.innerHTML = window._cgoPageSnap[page];
+          var _pd=window._cgoResetPending||(window._cgoResetPending={});
+          if(_pd[page]){ clearTimeout(_pd[page]); delete _pd[page]; _rpg.innerHTML = window._cgoPageSnap[page]; }   /* 나간 뒤 0.25초 안에 되돌아왔다 — 지금 되돌린다 */
         }
       }
     }
@@ -13320,7 +13337,7 @@ function cgoGoPage(page){
   var _chatEl = document.getElementById('page-chat');
   if(_chatEl && page !== 'chat') _chatEl.style.display = 'none';
   // nav-btn active 업데이트 (내부 로직 유지)
-  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  (window._cgoNavBtns||(window._cgoNavBtns=document.querySelectorAll('.nav-btn'))).forEach(function(b){ b.classList.remove('active'); });
   var btn = document.querySelector('.nav-btn[data-page="'+page+'"]');
   if(btn) btn.classList.add('active');
   // 상단 타이틀 업데이트
@@ -13813,7 +13830,7 @@ window.cgoGoPage=function(page){
  ['wf10-pop','mypage-pop'].forEach(function(id){
    var ov=document.getElementById(id); if(ov) ov.style.display='none'; });
  try{ void 0; }catch(e){}
- var all=document.querySelectorAll('.page');
+ var all=window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'));   /* ★ 한 번만 훑는다 */
  for(var i=0;i<all.length;i++){ all[i].classList.remove('active'); }
  var t=document.getElementById('page-'+page);
  /* 지난 판에서 'block' 으로 굳은 기억을 씻는다 — 한 번만 돌면 된다 */
@@ -21687,7 +21704,7 @@ function cgoSoftGo(pageId) {
   document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active');});
   var btn = document.querySelector('[data-page="'+pageId+'"]');
   if (btn) btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){p.classList.remove('active');});
   var pg = document.getElementById('page-'+pageId);
   if (pg) pg.classList.add('active');
   var nb = document.getElementById('nasaMiniBar');
@@ -25922,7 +25939,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-w';
+window.CGO_VER='2026.09.05-x';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -55754,7 +55771,7 @@ function shopCustomOrder(){
   // 쇼핑 페이지로 이동 후 업로드 영역으로 스크롤
   var sp=document.getElementById('page-shop');
   if(sp&&!sp.classList.contains('active')){
-    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){p.classList.remove('active');});
     sp.classList.add('active');
     document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-page')==='shop');});
   }
