@@ -284,13 +284,13 @@
   <span class="fontctrl"><button id="fMinus" title="글자 작게">A−</button><span id="fSize" class="mono">15</span><button id="fPlus" title="글자 크게">A＋</button></span>
   <span class="fontctrl" title="줄 간격(행간)"><button id="lhMinus" title="줄 간격 좁게">↕−</button><span id="lhVal" class="mono">1.8</span><button id="lhPlus" title="줄 간격 넓게">↕＋</button></span>
   <button class="btn primary" id="saveNowBtn" title="지금 저장 (Ctrl+S)">💾 저장</button>
-  <button class="btn ghost" id="exitBtn" title="저장하고 잠금 화면으로">⏻ 나가기</button>
   <button class="btn ghost" id="pdfBtn">📄 PDF 저장</button>
   <button class="btn ghost" id="saveTxtBtn">💾 TXT</button>
   <button class="btn ghost" id="exportBtn">⬇ 전체 백업</button>
   </div>
   <button class="btn" id="voiceBtn" title="누르면 새 음성 메모가 열리고 바로 받아쓰기가 시작돼요" style="background:#e9f1f8; border:1px solid #bcd3e7; color:#1f4e79; font-weight:800;">🎤 음성 메모</button>
   <button class="btn primary" id="newBtn">＋ 새 메모</button>
+  <button class="icon-btn" id="exitBtn" title="닫기" style="font-size:20px;font-weight:900;margin-left:6px;">✕</button>
 </header>
 
 <!-- 📺 영상 보며 메모 (떠 있는 미니 창) -->
@@ -936,8 +936,11 @@ document.addEventListener('keydown', function(e){ if((e.ctrlKey||e.metaKey) && (
 var _exitAfter=null;
 function _doExit(){ $('saveAsk').style.display='none'; try{ if(typeof hasLock==='function' && hasLock()) showLock('unlock'); else showToast('저장됐어요 · 이제 창을 닫아도 됩니다'); }catch(e){} }
 $('exitBtn').onclick=function(){
-  if(!_dirty && !_fileDirty){ saveToFile().then(function(){ _doExit(); }); return; }
-  $('saveAsk').style.display='flex';
+  var changed=(_dirty||_fileDirty);
+  var go=function(){ _dirty=false; _fileDirty=false; _draftClear(); try{ window.close(); }catch(e){} setTimeout(function(){ if(!window.closed) _doExit(); },150); };
+  if(!changed){ go(); return; }
+  if(confirm('저장할까요?')){ saveNow().then(function(r){ if(r===null) return; go(); }); }
+  else { go(); }
 };
 $('saveAskCancel').onclick=function(){ $('saveAsk').style.display='none'; };
 $('saveAskNo').onclick=function(){ _dirty=false; _fileDirty=false; _draftClear(); _doExit(); };
@@ -1334,6 +1337,8 @@ openDB().then(dbGetAll).then(function(all){
     }
     _draftClear();
   }catch(e){}
+  /* ★ 이번에 켠 뒤 PC 파일에 한 번도 안 썼으면 「저장 안 됨」으로 본다 → 창을 닫으려 하면 반드시 묻는다 */
+  if(notes.length) _fileDirty=true;
   renderFolders(); renderFolderSelect(); renderList();
   var inFolder=notes.filter(function(n){return curFolder==='__all__'?true:folderOf(n)===curFolder;});
   if(inFolder.length){ openNote(inFolder.sort(function(a,b){return b.updated-a.updated;})[0].id); }
