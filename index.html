@@ -349,17 +349,6 @@ window.CGO_I18N=window.CGO_I18N||{};   /* 옛 코드가 이 이름을 찾는다 
    return r.bottom > -260 && r.top < (window.innerHeight||800) + 260;
   }catch(_){ return true; }
  }
- function _cgoFlat(L){
-  if(window._cgoFlatL===L && window._cgoFlatT) return window._cgoFlatT;
-  var t={}, D=null;
-  try{ var el=document.getElementById('dash6'); if(el) D=JSON.parse(el.textContent); }catch(e){}
-  var pk=null; try{ pk=(window.CGO_PACK||{})[L]||null; }catch(e){}
-  var base=(D&&(D[L]||D[String(L).split('_')[0]]))||null;
-  if(base) for(var k in base) t[k]=base[k];
-  if(pk) for(var k2 in pk) t[k2]=pk[k2];
-  window._cgoFlatL=L; window._cgoFlatT=t;
-  return t;
-}
 function paint(L,root){
   var sc=root||document;
   /* 자리표(placeholder)도 번호로 — 칸 안 회색 글자 */
@@ -687,7 +676,7 @@ window.setLang=window.cgoSwitchLang=function(L){
 
  /* 만들어져 붙는 글자 — 마크업에 없어 번호를 못 단다.
     한국어 원문을 열쇠로 되짚어 번호를 찾아 칠한다. 이 그물이 마지막 한 겹이다. */
- var REV=null, REVSRC=null;
+ var REV=null, REVSRC=null, REVC={};
  function rev(){
   /* ★ 지나온 언어도 함께 넣는다 — 한국어만 알면 네덜란드어로 칠해진 자리는
      태국어로 바꿔도 그대로 남는다(꿈 키워드에서 드러난 자리).
@@ -695,6 +684,7 @@ window.setLang=window.cgoSwitchLang=function(L){
   var seen=(window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==CUR; });
   var srcKey=CUR+'|ko|'+seen.join(',');
   if(REV && REVSRC===srcKey) return REV;
+  if(REVC[srcKey]){ REV=REVC[srcKey]; REVSRC=srcKey; return REV; }   /* ★ 지은 표는 기억한다 */
   REV={}; var src=(DASH&&DASH.ko)||{};
   for(var k in src){ var v=src[k]; if(v && !(v in REV)) REV[v]=k; }
   var p=(window.CGO_PACK||{}).ko;
@@ -710,7 +700,7 @@ window.setLang=window.cgoSwitchLang=function(L){
      if(!(t1!=null && t2!=null && String(t1)===String(t2))) REV[v2]='';
     } else REV[v2]=k2; }
   }
-  REVSRC=srcKey;
+  REVSRC=srcKey; REVC[srcKey]=REV;
   return REV;
  }
  window.CGO_T_net=function(root){
@@ -876,7 +866,7 @@ window.setLang=window.cgoSwitchLang=function(L){
  try{
    var s=localStorage.getItem('cgo_lang');
    var box=document.getElementById('dash6');
-   if(s && box && JSON.parse(box.textContent)[s]){
+   if(s && box && ((window.DASH&&window.DASH[s]) || JSON.parse(box.textContent)[s])){
      if(window.CGO_T && CGO_T.cur()!==s) CGO_T.set(s);
      var fire=function(){ try{ if(window.p0SelectLang) p0SelectLang(s); }catch(e){} };
      if(document.body) fire(); else addEventListener('DOMContentLoaded',fire);
@@ -13336,7 +13326,7 @@ window._cgoTk=function(str){
   try{
     var L=(window.CGO_T&&CGO_T.cur())||'ko';
     var box=document.getElementById('dash6');
-    if(box){ if(!window._cgoDash) window._cgoDash=JSON.parse(box.textContent);
+    if(box){ if(!window._cgoDash) window._cgoDash=window.DASH||JSON.parse(box.textContent);
       var v=(window._cgoDash[L]||{})[String(str).trim()];
       if(v!=null && v!=='') return v; }
   }catch(e){}
@@ -13354,7 +13344,7 @@ window._cgoT=function(str){
       /* ② 번호 사전 */
       var box=document.getElementById('dash6');
       if(box){
-        if(!window._cgoDash) window._cgoDash=JSON.parse(box.textContent);
+        if(!window._cgoDash) window._cgoDash=window.DASH||JSON.parse(box.textContent);
         var D=window._cgoDash;
         /* ★ 사전에 「6개」「8개」「10개」 항목이 있어(3224~3227·4038),
              되짚기가 화면의 배점 숫자 8·10 을 「8개」「10개」로 바꿨다.
@@ -13474,13 +13464,17 @@ window.cgoPaintKo=function(root){
    /* ★ 한국어로 돌아올 때도 돌아야 한다 — 지나온 언어의 글자를 한국어로 되돌린다 */
    if(L==='ko' && !(window._cgoSeenLangs && window._cgoSeenLangs.length)) return;
    var box=document.getElementById('dash6'); if(!box) return;
-   if(!window._cgoDash) window._cgoDash=JSON.parse(box.textContent);
+   if(!window._cgoDash) window._cgoDash=window.DASH||JSON.parse(box.textContent);
    var D=window._cgoDash; if(!D.ko) return;
    /* ★ 한국어만으로 표를 지으면 직전 언어의 글자를 되짚을 수 없다.
       직전 언어를 함께 넣어 「무슨 언어에서든 번호로」 돌아올 수 있게 한다.
       짧은 낱말은 언어끼리 겹쳐 엉뚱한 자리를 건드리므로 네 글자 이상만 넣는다. */
    var _SEEN = (window._cgoSeenLangs||[]).filter(function(x){ return x && x!=='ko' && x!==L; });
    var _src = L + '|ko|' + _SEEN.join(',');
+   var _RC=window._cgoRevCache||(window._cgoRevCache={});   /* ★ 언어 조합별로 표를 기억한다 */
+   if((!window._cgoRevKo || window._cgoRevSrc !== _src) && _RC[_src]){
+     window._cgoRevKo=_RC[_src].rev; window._cgoPre4=_RC[_src].pre4; window._cgoRevSrc=_src;
+   }
    if(!window._cgoRevKo || window._cgoRevSrc !== _src){
      window._cgoRevKo={};
      for(var n in D.ko){ var _k=String(D.ko[n]).trim(); if(_k && !(_k in window._cgoRevKo)) window._cgoRevKo[_k]=n; }
@@ -13497,6 +13491,7 @@ window.cgoPaintKo=function(root){
          } else if(!/^[\d.,\s%개]+$/.test(_p)) window._cgoRevKo[_p]=n2; }
      }
      window._cgoRevSrc=_src;
+     _RC[_src]={rev:window._cgoRevKo, pre4:null};
      /* ★ 되짚기 표를 다시 지었으면 앞머리 표도 함께 버려야 한다.
         전에는 한 번 짓고 그냥 두어, 언어를 바꾼 뒤에도 옛 언어 기준의
         앞머리 표로 7천 개를 뒤졌다. 찾지 못하니 매번 헛돌았고,
@@ -13511,7 +13506,8 @@ window.cgoPaintKo=function(root){
       찾은 것도 못 찾은 것도 기억해 둔다. 못 찾은 것을 기억하는 편이 더 크다 —
       7천 개 앞머리 뒤지기를 되풀이하지 않게 되기 때문이다. */
    if(!window._cgoKoMemo || window._cgoKoMemoSrc!==_src){
-     window._cgoKoMemo={}; window._cgoKoMemoSrc=_src;
+     var _MC=window._cgoKoMemoCache||(window._cgoKoMemoCache={});
+     window._cgoKoMemo=_MC[_src]||(_MC[_src]={}); window._cgoKoMemoSrc=_src;
    }
    var MEMO=window._cgoKoMemo;
    /* 이번에 보이는 높이 — 한 번만 재고 돌려 쓴다 (칸마다 재면 그게 또 값이다) */
@@ -13599,6 +13595,7 @@ window.cgoPaintKo=function(root){
            (window._cgoPre4[_h4]||(window._cgoPre4[_h4]=[])).push(kk); }
          for(var _hk in window._cgoPre4)
            window._cgoPre4[_hk].sort(function(a,b){ return b.length-a.length; });
+         try{ if(_RC[_src]) _RC[_src].pre4=window._cgoPre4; }catch(e){}
        }
        var P=window._cgoPre4[k.slice(0,4)];
        if(P) for(var pi=0;pi<P.length;pi++){
@@ -14916,7 +14913,7 @@ window._mySub=function(which){
     var _tn={terms:4072,privacy:4073,medical:4074,constitution:4075}[which];
     var _tt=null;
     try{ var _b=document.getElementById('dash6');
-      if(_tn && _b){ if(!window._cgoDash) window._cgoDash=JSON.parse(_b.textContent);
+      if(_tn && _b){ if(!window._cgoDash) window._cgoDash=window.DASH||JSON.parse(_b.textContent);
         var _dd=window._cgoDash, _ll=(window.CGO_T&&CGO_T.cur())||'en';
         _tt=(_dd[_ll]&&_dd[_ll][_tn])||(_dd.en&&_dd.en[_tn])||null; } }catch(e){}
     document.getElementById('mypage-pop-title').textContent=_tt||_x.t;
@@ -19407,49 +19404,8 @@ function _mK(n, f){ try{ var v = window.K ? window.K(n) : null; return (v && v !
 }catch(e){}
 try{
 
-/* ★개발 편의 — 정보 입력 없이도 전체 기능이 열린다.
-   출시 전에는 이 블록만 지우면 원래 잠금으로 돌아간다. */
-(function(){
- try{
-  if(!localStorage.getItem('cgo_info')){
-   localStorage.setItem('cgo_info', JSON.stringify({
-    name:'테스트', birth:'1990-01-01', calType:'solar', time:'12:00',
-    gender:'M', birthPlace:'서울', curPlace:'서울', lat:37.5665, lng:126.9780
-   }));
-  }
-  /* 잠금은 cgo_su_done 하나를 본다 — 5개 카드를 모두 완료로 */
-  try{ localStorage.setItem('cgo_su_done', JSON.stringify({
-   info:1, terms:1, social:1, pw:1, pay:1
-  })); }catch(e){}
-  /* 무료 체험 횟수 제한도 풀어 둔다 */
-  try{ localStorage.setItem('cgo_trial', JSON.stringify({
-   start: Date.now(), hours: 87600, pay:'dev', unlimited:1
-  })); }catch(e){}
-  try{ localStorage.setItem('cgo_plan','master'); }catch(e){}
-  try{ localStorage.setItem('cgo_stars','999999'); }catch(e){}
-  window.CGO_UNLOCKED = true;
-  window.CGO_NO_LIMIT = true;
- }catch(e){}
- /* 잠금을 묻는 곳들이 모두 통과하게 */
- addEventListener('DOMContentLoaded', function(){
-  try{
-   document.querySelectorAll('.locked,[data-locked]').forEach(function(el){
-    el.classList.remove('locked'); el.removeAttribute('data-locked');
-   });
-   document.querySelectorAll('[data-need-info]').forEach(function(el){
-    el.removeAttribute('data-need-info');
-   });
-  }catch(e){}
- });
- /* 남은 횟수를 묻는 함수가 있으면 늘 넉넉히 답한다 */
- addEventListener('DOMContentLoaded', function(){
-  try{
-   ['cgoQuotaLeft','_cgoQuota','cgoCanUse','_cgoCanUse'].forEach(function(k){
-    if(typeof window[k]==='function') window[k]=function(){ return 999999; };
-   });
-  }catch(e){}
- });
-})();
+/* ★ 2026.09.05 — 개발 편의 블록(가짜 cgo_info 「테스트 1990-01-01」·잠금 전부 해제·별 999,999·플랜 master)을 지웠다.
+   매니저는 /lee 문으로 통과한다. */
 
 }catch(e){}
 try{
@@ -21576,7 +21532,7 @@ function cgoSoftGo(pageId) {
   if (pageId === 'couple') {
     setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); }, 200);
   }
-  if (pageId === 'gmd') setTimeout(function(){ if(typeof _cgoGmdIntroPopup==='function') _cgoGmdIntroPopup(); },100);
+  /* ★ 여기 있던 gmd 팝업 중복 호출 삭제 — cgoGoPage 쪽에서 이미 부른다. 두 곳에서 불러 팝업이 겹쳤다. */
   window._cgoLastPage = pageId;
   // 페이지 이동 후 번역
   if (window._LANG && window._LANG !== 'ko') {
@@ -22111,68 +22067,8 @@ function cgoSaveUserInfo() {
   try{ localStorage.setItem('cgo_saved_info', JSON.stringify(info)); }catch(e){}
 }
 
-function _cgoT(str){
-  try{
-    var L=window._LANG;
-    if(!L || L==='ko' || !str) return str;
-    /* ★ 문자 열쇠 사전 — dash6 를 그대로 쓴다.
-       LANG_DICTIONARY 는 정의된 곳이 없어 문자 열쇠가 하나도 돌지 않았다. */
-    if(typeof LANG_DICTIONARY==='undefined'){
-      /* 이미 실려 있는 첫 화면 사전을 그대로 쓴다 — 다시 파싱하지 않는다 */
-      var d0=null;
-      try{ d0=(window.DASH&&window.DASH[L])||null; }catch(e){}
-      if(!d0){ try{ d0=(window.CGO_T&&window.CGO_T.dict&&window.CGO_T.dict(L))||null; }catch(e){} }
-      if(!d0){
-        try{
-          if(!window.LANG_DICTIONARY){
-            var _el=document.getElementById('dash6');
-            window.LANG_DICTIONARY=_el?JSON.parse(_el.textContent):{};
-          }
-          d0=window.LANG_DICTIONARY[L];
-        }catch(e){}
-      }
-      if(!d0) return str;
-      if(d0[str]!=null) return d0[str];
-      return str;
-    }
-    var d=LANG_DICTIONARY[L];
-    /* ★ 곁파일 사전에 없는 낱말은 첫 화면 사전(dash6)에서 찾는다.
-       두 사전을 한 번만 합쳐 두면 그 뒤로는 통짜로 바로 맞는다. */
-    if(!window._cgoMerged){
-      window._cgoMerged=true;
-      try{
-        var _el=document.getElementById('dash6');
-        var _D=_el?JSON.parse(_el.textContent):null;
-        if(_D) for(var _L in _D){
-          if(!LANG_DICTIONARY[_L]) LANG_DICTIONARY[_L]={};
-          var _s=_D[_L];
-          for(var _k in _s){ if(/[가-힣]/.test(_k) && LANG_DICTIONARY[_L][_k]==null) LANG_DICTIONARY[_L][_k]=_s[_k]; }
-        }
-      }catch(e){}
-      d=LANG_DICTIONARY[L];
-    }
-    if(!d) return str;
-    if(d[str]) return d[str];
-    /* ★2026-08-07 — 이번 세션에서 API가 이미 번역한 것은 그 값을 재사용한다.
-       같은 글자가 열 때마다 다르게 번역되던 문제와 중복 비용을 함께 없앤다. */
-    try{ var _ai=window._cgoAiDict && window._cgoAiDict[L]; if(_ai && _ai[str]) return _ai[str]; }catch(e){}
-    /* 통짜 매칭 실패 시: 한글 조각 치환 (긴 것부터) */
-    if(!/[가-힣]/.test(str)) return str;
-    /* ★C-68 ① 조각키 캐시를 언어별로 분리 — 직전 언어 키가 남아 오염되던 문제 */
-    if(!window._cgoTKeys || window._cgoTKeysLang!==L){
-      var ks=[]; for(var k in d){ if(k.length>=2 && /[가-힣]/.test(k)) ks.push(k); }
-      ks.sort(function(a,b){ return b.length-a.length; });
-      window._cgoTKeys=ks; window._cgoTKeysLang=L;
-    }
-    var K=window._cgoTKeys, out=str;
-    for(var i=0;i<K.length;i++){
-      /* ★C-68 ② join(undefined)는 JS가 쉼표로 잇는다 → 번역값 없으면 건드리지 않는다 */
-      if(out.indexOf(K[i])>=0){ var _rp=d[K[i]]; if(_rp==null||_rp==='') continue; out=out.split(K[i]).join(_rp); }
-      if(!/[가-힣]/.test(out)) break;
-    }
-    return out;
-  }catch(e){ return str; }
-}
+/* ★ 2026.09.05 — 구형 _cgoT(LANG_DICTIONARY) 선언을 지웠다. try 블록 안 function 선언이
+   실행 시점에 전역 _cgoT 를 덮어써서 신형(window._cgoT, dash6 되짚기)이 한 번도 돌지 않았다. */
 
 /* C-64: 값병합 전용 exact-only 번역 (폴백 미사용 → 엉킴 원천 차단) */
 /* 역학 목록 함수는 ip-deps.js 한 곳에만 둔다 (번호 겹침 사고 방지) */
@@ -25565,7 +25461,7 @@ window.cgoHasInfo=function(){
     function v(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
     if(v('ipName') && v('ipBirthY') && v('ipBirthM') && v('ipBirthD')) return true;
     var s=localStorage.getItem('cgo_saved_info');
-    if(s){ var o=JSON.parse(s); if(o && o.ipName && o.ipBirthY) return true; }
+    if(s){ var o=JSON.parse(s); if(o && (o.ipName||o.name) && (o.ipBirthY||o.birthY)) return true; }
   }catch(e){}
   return false;
 };
@@ -25858,12 +25754,12 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.04-p';
+window.CGO_VER='2026.09.05-a';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
     마무리타이머:'80ms',
-    번역자리:(function(){ try{ var D=JSON.parse(document.getElementById('dash6').textContent);
+    번역자리:(function(){ try{ var D=window.DASH||JSON.parse(document.getElementById('dash6').textContent);
       return Object.keys(D.ko).filter(function(k){ return /^\d+$/.test(k) && +k>=21700; }).length+'자리'; }catch(e){ return '?'; } })()};
 };
 try{ console.log('%cCGO-FULI '+window.CGO_VER, 'color:#059669;font-weight:bold'); }catch(e){}
@@ -26161,7 +26057,7 @@ window.cgoHasBirthTime=function(){
     if(e && String(e.value||'').trim()) return true;
     var r=window.calcResult; if(r && r.h!=null && r.h!=='') return true;
     var s=localStorage.getItem('cgo_saved_info');
-    if(s){ var o=JSON.parse(s); if(o && o.ipTime) return true; }
+    if(s){ var o=JSON.parse(s); if(o && (o.ipTime||o.time)) return true; }
   }catch(e){}
   return false;
 };
@@ -26189,42 +26085,7 @@ window.cgoTimeHint=function(){
 (function(){ function h(){ try{ window.cgoTimeHint(); }catch(e){} }
   if(document.readyState==='loading') addEventListener('DOMContentLoaded',h); else h();
   setTimeout(h,900); })();
-/* ★ 시각(태어난 시간)은 막지 않는다 — 모르는 분이 많다.
-   비어 있으면 세 기둥으로 셈하고, 넣으면 더 정확해진다는 것만 알려 준다. */
-window.cgoHasBirthTime=function(){
-  try{
-    var e=document.getElementById('ipTime');
-    if(e && String(e.value||'').trim()) return true;
-    var r=window.calcResult; if(r && r.h!=null && r.h!=='') return true;
-    var s=localStorage.getItem('cgo_saved_info');
-    if(s){ var o=JSON.parse(s); if(o && o.ipTime) return true; }
-  }catch(e){}
-  return false;
-};
-window.cgoTimeHint=function(){
-  try{
-    var sel=document.getElementById('ipTime'); if(!sel) return;
-    var box=document.getElementById('cgo-time-hint');
-    if(!box){
-      box=document.createElement('div');
-      box.id='cgo-time-hint';
-      box.style.cssText='font-size:10.5px;line-height:1.6;margin-top:5px;padding:7px 9px;'
-        +'border-radius:8px;background:#f0fdfa;border:1px solid rgba(52,211,153,.28);color:#4b6470;';
-      (sel.parentNode.parentNode||sel.parentNode).appendChild(box);
-    }
-    if(window.cgoHasBirthTime()){
-      box.style.display='none';
-    } else {
-      box.style.display='block';
-      box.innerHTML='🕰️ 태어난 시간을 모르셔도 됩니다 — <b style="color:#0f1b2e;">해·달·날 세 기둥으로 셈합니다.</b><br>'
-        +'<span style="color:#8a9aa3;">아시면 넣어 주세요. 네 기둥이 채워져 풀이가 한층 정밀해집니다.</span>';
-    }
-    if(!sel._cgoTimeBnd){ sel._cgoTimeBnd=1; sel.addEventListener('change', window.cgoTimeHint); }
-  }catch(e){}
-};
-(function(){ function h(){ try{ window.cgoTimeHint(); }catch(e){} }
-  if(document.readyState==='loading') addEventListener('DOMContentLoaded',h); else h();
-  setTimeout(h,900); })();
+
 window.cgoRequireInfo=function(what){
   if(window.cgoIsManager()) return true;      /* ★ 매니저는 모두 통과 */
   if(window.cgoHasInfo()) return true;
@@ -46443,7 +46304,7 @@ window.cgoWord = function(w){
   try{
     if(!window.__cgoDict){
       var el=document.getElementById('dash6');
-      window.__cgoDict = el ? JSON.parse(el.textContent) : {};
+      window.__cgoDict = window.DASH || (el ? JSON.parse(el.textContent) : {});
     }
     var L=(window.CGO_T&&CGO_T.cur)?CGO_T.cur():(localStorage.getItem('cgo_lang')||'ko');
     var d=window.__cgoDict[L];
@@ -47378,485 +47239,12 @@ function updateTransitSectionWithNASA(planets) {
     +'</div>';
 }
 </script>
-<script>
-// ══ 풍수 카메라 엔진 v3 ══════════════════════════════════════
-var fcType = 'home';
-var fcDegree = null;
-var fcImageData = null;
-var fcStream = null;
-var fcOrientHandler = null;
-var fcGpsLat = null;
-var fcGpsLng = null;
-var fcAnalysisData = null;
 
-// ── 모드 전환 ──
-// ★ 풍수 카메라 대문 팝업
 
-/* ✦ 통일 라이트 인트로 셰 (건강예측 톤) — _cgo*IntroPopup 통일용 by C-60 */
-/* ✦ 사용자 정보 저장/자동복원 (한 번 입력 → 계속 유지) by C-60 */
-var _cgoInfoToastT=0;
-function _cgoInfoToast(msg){ try{ if(window._cgoRestoring) return; var now=Date.now(); if(now-_cgoInfoToastT<1400) return; _cgoInfoToastT=now; var t=document.getElementById('_cgoInfoToastEl'); if(!t){ t=document.createElement('div'); t.id='_cgoInfoToastEl'; t.style.cssText='position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#0b1220;color:#34d399;font-size:13px;font-weight:700;padding:9px 16px;border-radius:20px;z-index:99999;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .3s;pointer-events:none;'; (document.body||document.documentElement).appendChild(t); } t.textContent=msg; t.style.opacity='1'; clearTimeout(t._h); t._h=setTimeout(function(){ if(t) t.style.opacity='0'; },1600); }catch(e){} }
-function _cgoSaveUserInfo(){ try{ if(typeof cgoSaveUserInfo==='function') cgoSaveUserInfo(); }catch(e){} }
-function _cgoRestoreUserInfo(){ try{ if(typeof cgoLoadUserInfo==='function') cgoLoadUserInfo(); }catch(e){} }
-function _cgoBindUserInfo(){ try{ ['ipName','ipBirthY','ipBirthM','ipBirthD','ipBirthPlace','ipCurPlace','ipGender','ipTime','ipCalType'].forEach(function(id){var el=document.getElementById(id); if(el && !el._cgoBnd){ el._cgoBnd=1; el.addEventListener('change',_cgoSaveUserInfo); el.addEventListener('input',_cgoSaveUserInfo); }}); }catch(e){} }
-function _cgoUpdateInfoGate(){ try{ var bn=document.getElementById('cgoInfoGateBanner'); if(!bn) return; var nm=(document.getElementById('ipName')||{}).value||''; var by=(document.getElementById('ipBirthY')||{}).value||''; var bm=(document.getElementById('ipBirthM')||{}).value||''; var bd=(document.getElementById('ipBirthD')||{}).value||''; var ok=nm.trim()&&by&&bm&&bd; try{ if(!ok && localStorage.getItem('cgo_saved_info')) ok=true; }catch(e){} if(ok){ bn.style.background='rgba(5,150,105,.1)'; bn.style.borderColor='rgba(5,150,105,.35)'; bn.style.color='#059669'; bn.textContent=_cgoT('✅ 정보 입력 완료 — 모든 분석 기능이 열렸어요'); } else { bn.style.background='rgba(220,38,38,.1)'; bn.style.borderColor='rgba(220,38,38,.3)'; bn.style.color='#dc2626'; bn.textContent=_cgoT('🔒 정보를 입력하세요 — 입력해야 분석 기능이 열립니다'); } }catch(e){} }
-function _cgoUserInfoInit(){ _cgoRestoreUserInfo(); _cgoBindUserInfo(); try{ if(typeof _cgoUpdateInfoGate==='function') setTimeout(_cgoUpdateInfoGate,100); }catch(e){} }
-if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _cgoUserInfoInit); } else { _cgoUserInfoInit(); }
-try{ setTimeout(_cgoUserInfoInit,400); setTimeout(_cgoUserInfoInit,1500); }catch(e){}
 
 
 
 
-/* ✦ 타로·MSP·역학 융합 인트로 (통일 라이트) by C-60 */
-
-
-
-
-
-
-/* ✦ 천지인 에너지 대문 인트로 (통일 라이트) by C-60 */
-
-/* ✦ 네비·에너지사진 인트로 (통일 라이트) by C-60 */
-
-
-
-
-/* ✦ 관상·손금 인트로 (통일 라이트, 차별점 강조) by C-60 */
-
-
-
-
-/* ✦ 역학 3단계(순수·실시간·rPPG) 인트로 (통일 라이트, 계층 스토리) by C-60 */
-function _cgoPureGo(){ try{ if(localStorage.getItem('cgo_pure_intro_skip_v2')==='1'){ if(typeof cgoOpenPureMetaphysics==='function') cgoOpenPureMetaphysics(); return; } }catch(e){} _cgoPureIntroPopup(); }
-
-function _cgoRealtimeGo(){ try{ if(localStorage.getItem('cgo_realtime_intro_skip_v2')==='1'){ if(typeof cgoLaunchRealtime==='function') cgoLaunchRealtime(); return; } }catch(e){} _cgoRealtimeIntroPopup(); }
-
-function _cgoRppgGo(){ try{ if(localStorage.getItem('cgo_rppg_intro_skip_v2')==='1'){ if(typeof cgoLaunchRppg==='function') cgoLaunchRppg(); return; } }catch(e){} _cgoRppgIntroPopup(); }
-
-
-function _cgoGmdStopCam(){
-  try{ if(typeof _fc360!=='undefined' && _fc360 && _fc360.stream){ _fc360.stream.getTracks().forEach(function(t){try{t.stop();}catch(e){}}); _fc360.stream=null; } }catch(e){}
-  try{ if(typeof fcStopCamera==='function') fcStopCamera(); }catch(e){}
-  ['fc360Video','fcVideo'].forEach(function(id){ var v=document.getElementById(id); if(v && v.srcObject){ try{ v.srcObject.getTracks().forEach(function(t){try{t.stop();}catch(e){}}); }catch(e){} v.srcObject=null; } });
-}
-function _cgoGmdFullReset(){
-  try{
-    try{ if(typeof fcImageData!=='undefined') fcImageData=null; }catch(e){}
-    if(typeof _cgoGmdStopCam==='function') _cgoGmdStopCam();
-    var _pt=document.getElementById('fc360ProgressTxt'); if(_pt) _pt.textContent='';
-    var _pb=document.getElementById('fc360ProgressBar'); if(_pb) _pb.style.width='0%';
-    ['fc360Result','fc360ScanResult'].forEach(function(id){
-      var el=document.getElementById(id); if(el){ el.innerHTML=''; el.style.display='none'; }
-    });
-    var _fr=document.getElementById('fcResult'); if(_fr) _fr.style.display='none';
-    var _fcc=document.getElementById('fcCards'); if(_fcc) _fcc.innerHTML='';
-    var _gs=document.getElementById('fcGlobalScore'); if(_gs) _gs.textContent='';
-    var _gd=document.getElementById('fcGlobalDesc'); if(_gd) _gd.textContent='';
-    try{ if(typeof _fc360scan!=='undefined' && _fc360scan){ _fc360scan.shots={}; _fc360scan.analyzing=false; if(_fc360scan.autoTimer) clearTimeout(_fc360scan.autoTimer); } }catch(e){}
-    try{ if(typeof _fc360!=='undefined' && _fc360){ _fc360.shots={}; _fc360.analyzing=false; if(_fc360.autoTimer) clearTimeout(_fc360.autoTimer); } }catch(e){}
-    try{ if(typeof fc360ResetScan==='function') fc360ResetScan(); }catch(e){}
-    try{ if(typeof fc360Reset==='function') fc360Reset(); }catch(e){}
-    var ab=document.getElementById('fcAnalyzeBtn'); if(ab){ ab.disabled=false; }
-  }catch(e){}
-}
-
-
-function gmdPopSelectType(type){
-  window._gmdPopType=type;
-  ['home','store','grave','interior'].forEach(function(t){
-    var el=document.getElementById('gmdPopType_'+t);
-    if(!el) return;
-    var on=(t===type);
-    el.style.border='2px solid '+(on?'#d4a843':'rgba(255,255,255,.1)');
-    el.style.background=on?'rgba(212,168,67,.12)':'rgba(255,255,255,.04)';
-    el.querySelector('div:last-child').style.color=on?'#d4a843':'rgba(240,230,200,.7)';
-  });
-}
-
-function gmdPopToggleSys(key){
-  if(!window._gmdPopSystems) window._gmdPopSystems=[];
-  var sys=window._gmdPopSystems;
-  // 전체 선택 누르면 나머지 해제
-  if(key==='all'){
-    sys.length=0; sys.push('all');
-  } else {
-    var ai=sys.indexOf('all');
-    if(ai>-1) sys.splice(ai,1);
-    var idx=sys.indexOf(key);
-    if(idx>-1) sys.splice(idx,1);
-    else sys.push(key);
-    if(sys.length===0) sys.push('all');
-  }
-  // UI 업데이트
-  ['fengshui','vastu','kanso','yangzhai','psychology','terroir','all'].forEach(function(k){
-    var el=document.getElementById('gmdPopSys_'+k);
-    var chk=document.getElementById('gmdPopChk_'+k);
-    if(!el||!chk) return;
-    var on=sys.indexOf(k)>-1;
-    var color=k==='all'?'#d4a843':k==='fengshui'?'#34d399':k==='vastu'?'#f97316':k==='kanso'?'#e2e8f0':k==='yangzhai'?'#34d399':k==='psychology'?'#a78bfa':'#4ade80';
-    el.style.border='2px solid '+(on?color:'rgba(255,255,255,.08)');
-    el.style.background=on?'rgba(212,168,67,.06)':'rgba(255,255,255,.03)';
-    chk.style.background=on?color:'transparent';
-    chk.innerHTML=on?'✓':'';
-  });
-}
-
-function gmdPopConfirm(){
-  // 선택한 타입·역학을 앱에 적용
-  var type=window._gmdPopType||'home';
-  var systems=window._gmdPopSystems||['all'];
-  // fcType 업데이트
-  if(typeof fcSelectType==='function'){
-    var btn=document.querySelector('[data-type="'+type+'"]');
-    if(btn) fcSelectType(btn,type);
-  } else { window.fcType=type; }
-  // 선택 역학 저장
-  window._fcSelectedSystems=systems;
-  // 팝업 닫기
-  var pop=document.getElementById('cgo-gmd-pop');
-  if(pop) pop.remove();
-  // ★ 카메라는 여기서(=철학 선택 확인 후, 실제 스캔 시작)만 켠다. 페이지 나가면 _cgoGmdStopCam이 해제.
-  if(typeof fcSwitchMode==='function') setTimeout(function(){ try{ fcSwitchMode('camera'); }catch(e){} }, 150);
-}
-
-// ★ 10방향 진행 바 업데이트
-
-
-
-
-
-// ══════════════════════════════════
-// 🧭 360° 풍수 스캔 시스템
-// ══════════════════════════════════
-var _fc360 = {
-  stream: null,
-  orientHandler: null,
-  currentDeg: 0,
-  shots: {}, // {N: base64, E: base64, ...}
-  dirOrder: ['N','NE','E','SE','S','SW','W','NW','UP','DN'],
-  dirNames: {N:'북',NE:'북동',E:'동',SE:'남동',S:'남',SW:'남서',W:'서',NW:'북서',UP:'천장 위',DN:'바닥 아래'},
-  dirArrows: {N:'↑',NE:'↗',E:'→',SE:'↘',S:'↓',SW:'↙',W:'←',NW:'↖',UP:'⬆',DN:'⬇'},
-  currentTarget: 'N',
-  analyzing: false
-};
-
-
-
-
-
-
-
-
-
-
-
-/* AI 가 답할 언어를 이름으로 알려 준다 — 결과 문장은 번호가 아니라 Groq 이 그 언어로 쓴다 */
-
-
-
-
-
-
-
-
-
-
-// ── 카메라 시작 ──
-
-
-// ── 카메라 중지 ──
-
-
-// ── GPS 획득 ──
-
-
-// ── 방위 핸들러 ──
-
-// ✅ 대시보드 나침반 위젯 업데이트 함수
-var _fengMapWidget = {
-  '북':'수(水) — 지혜·귀인','남':'화(火) — 열정·인기',
-  '동':'목(木) — 성장·도전','서':'금(金) — 재물·결단',
-  '북동':'토(土) — 안정·신뢰','남동':'목(木) — 발전·확장',
-  '남서':'토(土) — 기반·포용','북서':'금(金) — 명예·완성',
-  '북북동':'수(Water) — 귀인','동북동':'목(木) — 활력',
-  '동남동':'목(木) — 도약','남남동':'화(火) — 인기',
-  '남남서':'토(土) — 안정','서남서':'금(金) — 재물',
-  '서북서':'금(金) — 명예','북북서':'수(Water) — 지혜'
-};
-function _cgoUpdateCompassWidget(deg, dirText) {
-  var needle = document.getElementById('cgoCompassNeedleBar');
-  var degEl  = document.getElementById('cgoCompassDegBar');
-  var dirEl  = document.getElementById('cgoCompassDirBar');
-  var fengEl = document.getElementById('cgoCompassFengBar');
-  if(needle) needle.style.transform = 'rotate('+deg+'deg)';
-  if(degEl)  degEl.textContent = deg+'°';
-  if(dirEl)  dirEl.textContent = (_fcDirEn(dirText)||deg+'°')+(function(){var _d={ko:' 방위',en:' Dir',zh:'方向',zh_HK:'方向',ja:'方位',ru:' Напр',hi:' दिशा',es:' Dir',de:' Rich',fr:' Dir',pt:' Dir',vi:' Hướng',th:' ทิศ',id:' Arah',ar:' اتج',tr:' Yön',it:' Dir',tl:' Dir',ms:' Arah',uk:' Напр',nl:' Rich'};return _d[window._LANG||'ko']||' Dir';})();
-  if(fengEl) fengEl.textContent = _cgoT(_fengMapWidget[dirText]||'')||{ko:'방위 연동중',en:'Syncing...',zh:'同步中',zh_HK:'同步中',ja:'同期中',ru:'Синхронизация',hi:'सिंक हो रहा है',es:'Sincronizando',de:'Synchronisiert',fr:'Synchronisation',pt:'Sincronizando',vi:'Đồng bộ',th:'กำลังซิงค์',id:'Sinkronisasi',ar:'مزامنة',tr:'Senkronize',it:'Sincronizzazione',tl:'Nag-sync',ms:'Sinkronisasi',uk:'Синхронізація',nl:'Synchronisatie'}[window._LANG||'ko']||'Syncing...';
-  _cgoBarCompassActive = true;
-  // ✅ 공명 알고리즘용 전역 저장
-  window._cgoCompassDeg = deg;
-}
-
-
-// ── 방위 감지 시작 ──
-
-// ══ 360° 풍수 스캔 통합 로직 ══
-
-// ══ 시스템 선택 ══
-var _fc360SelectedSystem = 'all';
-
-var _fc360SystemInfo = {
-  spacepsych: {
-    name:'공간 심리학', emoji:'🧠', origin:'현대 과학 · 뇌과학 · 환경심리학', color:'#c4b5fd', stars:'★★★★★',
-    badge:'과학 입증',
-    prompt:'당신은 공간 심리학 전문가입니다. 현대 뇌과학·환경심리학을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[공간 심리학 점수: XX/100]\n\n🔬 이게 뭔가요?\n(공간 심리학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 조명 분석: 현재 조명이 뇌의 세로토닌 분비에 미치는 영향을 구체적으로\n2. 색상 분석: 공간의 색상이 감정과 집중력에 미치는 영향\n3. 동선 분석: 공간 배치가 스트레스 호르몬에 미치는 영향\n4. 소음·온도: 심리적 쾌적도 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(구체적이고 쉬운 방법으로, 예: "형광등을 따뜻한 색(3000K) 전구로 교체하세요")\n\n💰 예상 효과\n이 개선을 하면 어떻게 좋아지는지 구체적으로'
-  },
-  terroir: {
-    name:'테루아', emoji:'🌿', origin:'프랑스·유럽 · 땅의 기운 과학', color:'#38bdf8', stars:'★★★★☆',
-    badge:'환경과학',
-    prompt:'당신은 테루아(땅의 기운) 전문가입니다. 지질·수맥·일조량·통풍을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[테루아 점수: XX/100]\n\n🌍 이게 뭔가요?\n(테루아가 무엇인지 초등학생도 이해할 수 있게 2-3문장, 와인 비유 활용)\n\n📊 이 공간 심층 분석\n1. 일조량 분석: 이 공간에 햇빛이 어떻게 들어오는지, 생체리듬에 미치는 영향\n2. 통풍 분석: 공기 순환 상태와 건강에 미치는 영향\n3. 습도·온도: 쾌적한 주거를 위한 환경 평가\n4. 땅의 에너지: 이 위치의 지질적 특성이 거주자에게 미치는 영향\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(매우 구체적이고 실천 가능한 방법)\n\n🌱 자연 채택 방법\n이 공간에 어울리는 식물이나 자연 소재 추천'
-  },
-  kanso: {
-    name:'칸소 (일본 미니멀)', emoji:'⛩️', origin:'일본 선(禪)불교 · 미니멀리즘', color:'#e2e8f0', stars:'★★★☆☆',
-    badge:'실용미학',
-    prompt:'당신은 일본 칸소(簡素) 공간 철학 전문가입니다. 여백과 미니멀리즘을 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[칸소 점수: XX/100]\n\n⛩️ 이게 뭔가요?\n(칸소가 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 여백(Ma) 분석: 공간의 비어있는 부분이 충분한지, 에너지 흐름 평가\n2. 물건 밀도: 불필요한 물건이 Ki(기) 흐름을 막고 있는지\n3. 자연 소재: 나무·돌·천연 소재 활용도\n4. 시각적 소음: 눈에 피로를 주는 요소들\n\n✅ 지금 당장 할 수 있는 미니멀화 3단계\n(버려야 할 것, 정리해야 할 것, 추가해야 할 것)\n\n🍃 칸소 실천 규칙\n이 공간에서 바로 적용할 수 있는 칸소의 핵심 규칙'
-  },
-  vastu: {
-    name:'바스투 샤스트라', emoji:'🕌', origin:'인도 베다 시대 · 5,000년 전통', color:'#fb923c', stars:'★★★☆☆',
-    badge:'인도전통',
-    prompt:'당신은 인도 바스투 샤스트라 전문가입니다. 5대 원소와 8방위 에너지를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[바스투 점수: XX/100]\n\n🕌 이게 뭔가요?\n(바스투 샤스트라가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "인도판 풍수"로 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 북동쪽(이사나) 분석: 신성한 영역이 깨끗한지, 어떤 에너지가 흐르는지\n2. 북쪽(쿠베라) 분석: 재물신 방향의 에너지 상태와 재물운 영향\n3. 남서쪽(집주인) 분석: 집주인의 힘과 안정감 에너지\n4. 브라흐마스탄(중앙) 분석: 집의 중심 에너지 순환 상태\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(방향별 구체적 실천 방법, 예: "북동쪽 구석에 있는 잡동사니를 치우고 작은 화분을 놓으세요")\n\n🙏 바스투 핵심 금기사항\n이 공간에서 절대 하면 안 되는 배치 2가지'
-  },
-  yangzhai: {
-    name:'양택가상학', emoji:'🏡', origin:'한국·중국 · 주거 전문 풍수', color:'#34d399', stars:'★★☆☆☆',
-    badge:'한중전통',
-    prompt:'당신은 양택가상학(陽宅家相學) 전문가입니다. 대문·안방·부엌 삼요소와 8괘 방위를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[양택 점수: XX/100]\n\n🏡 이게 뭔가요?\n(양택가상학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 대문(門) 분석: 현관/입구 방향이 생기(生氣)를 받고 있는지\n2. 안방(主) 분석: 집의 주인 방 위치와 에너지 상태\n3. 부엌(竈) 분석: 주방 방향과 가족 건강운\n4. 삼요소 조화: 세 요소가 같은 괘에 속하는지, 동기감응 평가\n\n✅ 지금 당장 할 수 있는 개선법 3가지\n(풍수적으로 즉시 개선할 수 있는 구체적 방법)\n\n⚠️ 이 공간의 주의사항\n현재 배치에서 가장 시급하게 고쳐야 할 풍수적 문제점'
-  },
-  fengshui: {
-    name:'풍수지리', emoji:'🏯', origin:'중국·한국 · 4,000년 역사', color:'#d4a843', stars:'★★☆☆☆',
-    badge:'동양전통',
-    prompt:'당신은 풍수지리(風水地理) 전문가입니다. 기(氣)의 흐름과 배산임수를 기반으로 이 공간을 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[풍수 점수: XX/100]\n\n🏯 이게 뭔가요?\n(풍수지리가 무엇인지 초등학생도 이해할 수 있게 2-3문장, "기(氣)란 무엇인가" 쉽게 설명)\n\n📊 이 공간 심층 분석\n1. 기(氣)의 흐름 분석: 좋은 기운이 들어오고 나가는 통로\n2. 배산임수 평가: 이 공간이 명당 조건을 얼마나 충족하는지\n3. 용맥(龍脈) 분석: 이 위치의 땅의 에너지 흐름\n4. 살기(煞氣) 점검: 나쁜 기운이 들어오는 방향과 차단법\n\n✅ 지금 당장 할 수 있는 비보(裨補) 3가지\n(비보란 나쁜 기운을 막고 좋은 기운을 부르는 방법, 구체적으로)\n\n🌟 이 공간의 명당 가능성\n풍수적으로 이 공간이 가진 잠재적 좋은 기운과 최대한 활용하는 법'
-  },
-  native: {
-    name:'네이티브 공간 철학', emoji:'🪶', origin:'북미 원주민·아프리카 전통', color:'#fbbf24', stars:'★★☆☆☆',
-    badge:'원주민전통',
-    prompt:'당신은 북미 원주민과 아프리카 전통의 공간 철학 전문가입니다. 4방위 원소와 자연 조화를 기반으로 분석해주세요. 반드시 아래 형식으로 작성하세요:\n\n[네이티브 점수: XX/100]\n\n🪶 이게 뭔가요?\n(원주민 공간 철학이 무엇인지 초등학생도 이해할 수 있게 2-3문장)\n\n📊 이 공간 심층 분석\n1. 동쪽(탄생·시작) 에너지: 새로운 시작과 성장 에너지 분석\n2. 남쪽(성장·열정) 에너지: 활력과 따뜻함의 에너지 상태\n3. 서쪽(성찰·추수) 에너지: 결실과 내면 성찰 에너지\n4. 북쪽(지혜·휴식) 에너지: 지혜와 안정의 에너지\n\n✅ 지금 당장 할 수 있는 자연 조화 3가지\n(자연 소재, 4방위 상징물, 자연광 활용 등 구체적 방법)\n\n🌀 원형 에너지 순환\n이 공간의 에너지가 원활하게 순환하게 하는 핵심 방법'
-  },
-  all: {
-    name:'전체 7개 종합', emoji:'🌍', origin:'글로벌 7대 공간 철학 통합', color:'#d4a843', stars:'ALL',
-    badge:'종합분석',
-    prompt:'당신은 세계 7대 공간 철학 통합 전문가입니다. 다음 7가지 시스템으로 이 공간을 종합 분석해주세요. 반드시 아래 형식으로:\n\n[종합 풍수 점수: XX/100]\n\n각 시스템별 점수와 핵심 한줄 평가:\n🧠 공간심리학: XX점 - (한줄평)\n🌿 테루아: XX점 - (한줄평)\n⛩️ 칸소: XX점 - (한줄평)\n🕌 바스투: XX점 - (한줄평)\n🏡 양택가상학: XX점 - (한줄평)\n🏯 풍수지리: XX점 - (한줄평)\n🪶 네이티브: XX점 - (한줄평)\n\n🏆 이 공간의 최강점\n가장 좋은 에너지를 가진 방향이나 영역과 그 이유\n\n⚠️ 이 공간의 취약점\n가장 시급히 개선해야 할 부분과 이유\n\n✅ 당장 실천할 TOP 5 개선법\n(7개 시스템을 종합해 가장 효과적인 개선법 5가지, 매우 구체적으로)\n\n💎 종합 진단\n이 공간에 사는 사람에게 미치는 영향을 일반인이 이해할 수 있게 총평'
-  }
-};
-
-
-var _fc360scan = {
-  shots: {},
-  order: ['N','E','S','W','NE','SE','SW','NW','UP','DN'],
-  names: {N:'북',E:'동',S:'남',W:'서',NE:'북동',SE:'남동',SW:'남서',NW:'북서',UP:'천장(위)',DN:'바닥(아래)'},
-  arrows: {N:'↑',E:'→',S:'↓',W:'←',NE:'↗',SE:'↘',SW:'↙',NW:'↖',UP:'⬆',DN:'⬇'},
-  targetDeg: {N:0,E:90,S:180,W:270,NE:45,SE:135,SW:225,NW:315},
-  currentDeg: 0,
-  currentBeta: 0,
-  autoTimer: null,
-  analyzing: false
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ── iOS 나침반 권한 요청 (반드시 사용자 탭에서만 호출) ──
-
-
-// ── 방위 수동 입력 ──
-
-
-// ── 방위명 변환 ──
-
-
-// ── 공간 타입 선택 ──
-
-
-// ── 파일 업로드 ──
-
-
-
-
-// ── 사진 촬영 ──
-
-
-// ── 분석 실행 ──
-
-
-// ── 팝업 열기/닫기 ──
-function openFcPopup(key, score, deg){
-  var sys = fcSystems[key];
-  if(!sys) return;
-  document.getElementById('fcPopTitle').textContent = sys.emoji+' '+sys.name;
-  document.getElementById('fcPopOrigin').textContent = sys.origin;
-  document.getElementById('fcPopScore').innerHTML =
-    '<span style="color:'+sys.color+'">'+score+'</span>'
-    +'<span style="font-size:13px;color:#0284c7"> / 100</span>';
-  document.getElementById('fcPopEasy').textContent = sys.easy;
-  document.getElementById('fcPopAnalysis').textContent = sys.getAnalysis(fcType, deg||0);
-  document.getElementById('fcPopAdvice').textContent = sys.getAdvice(fcType);
-  var popup = document.getElementById('fcPopup');
-  if(popup){ popup.style.display = 'block'; popup.scrollTop = 0; }
-  document.body.style.overflow = 'hidden';
-  _cgoTransPopup('fcPopup');
-}
-
-function closeFcPopup(){
-  var popup = document.getElementById('fcPopup');
-  if(popup) popup.style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-// ── 방위 측정 버튼 (하단 컴패스 섹션용) ──
-
-// ── 7대 공간 에너지 시스템 데이터 ──────────────────────────
-var fcSystems = {
-  fengshui: {
-    name:'풍수지리 (風水地理)', origin:'🇨🇳 중국·한국·동남아 — 4,000년 역사', color:'#34d399', emoji:'🏯',
-    easy:'풍수지리는 "좋은 기운(氣)이 흐르는 공간"을 만드는 전통 학문입니다. 산과 물의 흐름, 바람의 방향, 방위에 따라 공간에 머무는 에너지가 달라집니다. 배산임수(뒤에 산, 앞에 물)가 최고의 명당 조건입니다.',
-    getAnalysis: function(t,d){ var dir=fcDegToDir(d); return '풍수 분석 결과 '+dir+' 방향 기(氣)의 흐름을 분석합니다. 현관이 향하는 방향과 물(수도·욕실)의 위치가 재물운을 결정합니다. 용맥(龍脈)과 명당수(明堂水) 배치를 종합할 때 안정적인 에너지 구조가 감지됩니다.'; },
-    getAdvice: function(t){ var m={home:'현관을 밝고 깨끗하게 유지하고 동쪽에 초록 식물을 배치하세요.',store:'입구 양쪽 화분과 밝은 조명으로 재물 기운을 높이세요.',grave:'배산임수 지형에 햇빛이 잘 들고 바람이 막히는 위치를 선택하세요.',interior:'문을 바라볼 수 있는 방향에 주요 가구를 배치하세요.'}; return m[t]||m.home; }
-  },
-  vastu: {
-    name:'바스투 샤스트라 (Vastu Shastra)', origin:'🇮🇳 인도 — 베다 시대 5,000년 전통', color:'#f97316', emoji:'🕌',
-    easy:'바스투 샤스트라는 인도판 풍수입니다. 흙·물·불·공기·공간 5대 원소와 8방위 에너지를 조화시켜 번영을 만드는 고대 인도 건축 철학입니다. 인도에서는 집 짓기 전 반드시 바스투 전문가를 찾는 문화가 있습니다.',
-    getAnalysis: function(t,d){ var dir=fcDegToDir(d); return '바스투 분석에서 '+dir+' 방향 에너지를 평가합니다. 북동쪽(이사나)은 신성한 영역으로 비워두고, 남서쪽은 집주인 방향으로 무거운 가구를 배치합니다. 북쪽은 쿠베라(재물신) 방향으로 금고와 재물 보관에 최적입니다.'; },
-    getAdvice: function(t){ return '북동쪽은 항상 깨끗하고 밝게 유지하세요. 화장실은 남쪽·서쪽에, 주방은 남동쪽(불의 방향)에 배치하는 것이 이상적입니다. 집 중앙(브라흐마스탄)은 비워 에너지가 순환하도록 하세요.'; }
-  },
-  kanso: {
-    name:'칸소 (Kanso) — 일본 공간 철학', origin:'🇯🇵 일본 — 선(禪) 불교 미니멀리즘', color:'#e2e8f0', emoji:'⛩️',
-    easy:'칸소(簡素)는 "단순함·간결함"을 의미하는 일본 공간 철학입니다. 선 불교에서 유래해 불필요한 것을 제거하여 에너지(Ki)가 원활하게 흐르도록 합니다. 비워낼수록 더 강한 에너지가 채워진다는 철학입니다.',
-    getAnalysis: function(t,d){ return '칸소 분석에서 공간의 여백(Ma·間)과 기(氣) 흐름을 평가합니다. 물건의 밀도와 시각적 복잡성이 에너지 흐름에 영향을 줍니다. 자연 소재 중심의 단순한 구성이 Ki의 순환을 돕습니다.'; },
-    getAdvice: function(t){ return '3개월에 한 번 미니멀화 프로젝트를 진행하세요. "1개 들이면 1개 버리기" 원칙을 적용하고, 자연 소재(나무·돌·천연 섬유)로 인테리어를 구성하세요.'; }
-  },
-  yangzhai: {
-    name:'양택가상학 (陽宅家相學)', origin:'🏯 한국·중국 — 주거 공간 전문 풍수', color:'#34d399', emoji:'🏡',
-    easy:'양택가상학은 "사람이 사는 집"에 특화된 풍수 학문입니다. 대문(門)·안방(主)·부엌(竈) 3요소의 방위 조화가 집 전체 운을 결정합니다. 이 세 요소가 같은 괘에 속하면 동기감응으로 가족 운이 상승합니다.',
-    getAnalysis: function(t,d){ var dir=fcDegToDir(d); return '양택가상학에서 대문·안방·부엌의 삼요소 배치를 분석합니다. '+dir+' 방향을 기준으로 대문이 생기(生氣)를 받을 수 있는지 확인합니다. 대문과 안방의 방위가 같은 괘에 속하면 가족 운이 상승합니다.'; },
-    getAdvice: function(t){ return '대문 방향이 동·동남·남향이면 양기가 충만합니다. 부엌은 대문과 마주 보지 않게 배치하고, 안방은 집 가장 안쪽 깊숙한 곳에 위치시키세요.'; }
-  },
-  spacepsych: {
-    name:'공간 심리학 (Space Psychology)', origin:'🌍 서양 현대 과학 — 환경·심리 연구', color:'#a78bfa', emoji:'🧠',
-    easy:'공간 심리학은 "환경이 사람의 행동·감정·생산성에 어떤 영향을 미치는가"를 과학적으로 연구합니다. 색상·조명·온도·소음·공간 크기가 모두 심리에 영향을 줍니다. 풍수가 기(氣)의 흐름을 다룬다면, 공간 심리학은 신경과학적 관점에서 같은 현상을 설명합니다.',
-    getAnalysis: function(t,d){ return '공간 심리학 분석에서 조명·색상·동선이 거주자 심리에 미치는 영향을 평가합니다. 자연 채광이 풍부할수록 세로토닌 분비가 증가하고, 천장 높이와 창문 크기가 인지적 유연성에 영향을 줍니다.'; },
-    getAdvice: function(t){ return '자연 채광을 최대화하세요. 파란색은 집중력·진정, 노란색은 창의성·에너지, 초록색은 안정감을 줍니다. 클러터(어지러움)는 스트레스 호르몬을 높이므로 정기적 정리가 필수입니다.'; }
-  },
-  native: {
-    name:'네이티브 공간 철학', origin:'🌎 북미 원주민 · 아프리카 · 원주민 전통', color:'#fbbf24', emoji:'🪶',
-    easy:'전 세계 원주민들은 각자의 공간 철학을 가지고 있습니다. 북미 원주민은 원형(Circle) 구조를 신성하게 여기며 4방위를 생명의 4원소와 연결합니다. 동쪽은 탄생, 남쪽은 성장, 서쪽은 성찰, 북쪽은 지혜와 연결됩니다.',
-    getAnalysis: function(t,d){ var dir=fcDegToDir(d); return '원주민 공간 철학에서 자연과의 조화와 4방위 에너지를 평가합니다. '+dir+' 방향의 원소 에너지가 이 공간에 영향을 미칩니다. 자연 소재 사용과 하늘·땅과의 연결성이 중요한 평가 기준입니다.'; },
-    getAdvice: function(t){ return '공간에 자연 소재(나무·돌·흙·식물)를 최대한 도입하세요. 동쪽 창문으로 아침 햇빛이 들어오도록 배치하면 새로운 시작의 에너지가 매일 충전됩니다.'; }
-  },
-  terroir: {
-    name:'테루아 — 땅의 기운 (Terroir)', origin:'🍷 프랑스·유럽 — 땅의 에너지 철학', color:'#38bdf8', emoji:'🌿',
-    easy:'테루아(Terroir)는 "땅의 기운"을 의미하는 프랑스어입니다. 원래 와인 용어로 토양·기후·지형이 품질을 결정한다는 개념입니다. 이를 공간에 적용하면 "어떤 땅 위에 사느냐가 삶의 질을 결정한다"는 철학으로, 풍수의 지기(地氣)와 본질적으로 같은 개념입니다.',
-    getAnalysis: function(t,d){ return '테루아 분석에서 지질·수맥·자기장·일조량·바람 패턴을 종합 평가합니다. 자연 채광이 풍부하고 통풍이 적절하며 수분 균형이 잡힌 공간이 높은 테루아 점수를 받습니다.'; },
-    getAdvice: function(t){ return '공간의 자연적 특성을 최대한 살리는 방향으로 설계하세요. 지역 토착 식물을 실내에 도입하고 자연 환기를 극대화하세요.'; }
-  }
-};
-
-</script>
-
-
-<div id="cgo-fs-intro-pop" style="display:none;position:fixed;inset:0;top:var(--hdrH,56px);z-index:29000;background:#f0fdf9;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;contain:layout paint style;">
- <div style="max-width:520px;margin:0 auto;padding:18px 16px 30px;">
-  <div style="display:flex;justify-content:flex-end;"><button onclick="document.getElementById('cgo-fs-intro-pop').style.display='none'" style="background:none;border:none;font-size:20px;color:#64748b;cursor:pointer;padding:4px 8px;">✕</button></div>
-  <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:14px;">
-   <span style="font-size:30px;line-height:1.1;">📸</span>
-   <div style="min-width:0;flex:1;">
-    <div data-k="19320" style="font-size:17px;font-weight:900;color:#0f172a;line-height:1.3;"></div>
-    <div data-k="19321" style="font-size:11px;color:#64748b;margin-top:3px;line-height:1.5;"></div>
-   </div>
-  </div>
-  <div data-k="19322" style="font-size:12px;color:#334155;line-height:1.75;margin-bottom:14px;"></div>
-  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
-   <div data-k="19323" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:9px;"></div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <div data-k="19324" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19325" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19326" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19327" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19328" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19329" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19330" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
-   </div>
-  </div>
-  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
-   <div data-k="19331" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:9px;"></div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <div data-k="19332" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19333" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19334" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19335" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
-   </div>
-  </div>
-  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
-   <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:9px;">
-    <div data-k="19336" style="font-size:11.5px;font-weight:900;color:#0f172a;"></div>
-    <div data-k="19337" style="font-size:9.5px;color:#94a3b8;"></div>
-   </div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <div data-k="19324" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19325" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19326" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div><div data-k="19327" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div>
-   </div>
-   <div style="margin-top:6px;"><div data-k="19338" style="background:#f0fdfa;border:1px solid rgba(13,148,136,.28);border-radius:9px;padding:8px 10px;font-size:10.5px;color:#0f766e;font-weight:700;"></div></div>
-  </div>
-  <div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
-   <div data-k="19339" style="font-size:11.5px;font-weight:900;color:#0f172a;margin-bottom:7px;"></div>
-   <div data-k="19340" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19341" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19342" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19343" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div><div data-k="19344" style="font-size:10.5px;color:#334155;line-height:1.75;padding:5px 0;"></div>
-  </div>
-  <div style="background:#fff;border:1px solid rgba(184,134,11,.18);border-radius:12px;padding:12px 13px;margin-bottom:14px;">
-   <div data-k="19345" style="font-size:10.5px;color:#64748b;line-height:1.7;margin-bottom:5px;"></div>
-   <div data-k="19346" style="font-size:10.5px;color:#b8860b;line-height:1.7;"></div>
-  </div>
-  <label style="display:flex;align-items:center;gap:7px;font-size:11px;color:#64748b;margin-bottom:12px;cursor:pointer;">
-   <input type="checkbox" id="fs-skip" style="width:15px;height:15px;"><span data-k="19348"></span>
-  </label>
-  <button onclick="_cgoFsGo()" data-k="19347" style="width:100%;padding:15px;background:linear-gradient(135deg,#0d9488,#0f766e);border:none;border-radius:13px;color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;"></button>
- </div>
-</div>
-<script>
-window._cgoFsIntroPopup=function(){
-  var p=document.getElementById('cgo-fs-intro-pop'); if(!p) return;
-  if(p.parentElement!==document.body) document.body.appendChild(p);
-  p.style.display='block';
-  try{ if(window.CGO_T&&CGO_T.paint) CGO_T.paint(p); }catch(e){}
-};
-window._cgoFsGo=function(){
-  var p=document.getElementById('cgo-fs-intro-pop'); if(p) p.style.display='none';
-  try{ cgoGoPage('gmd'); }catch(e){}
-  setTimeout(function(){ try{ var g=document.getElementById('page-gmd');
-    if(g&&window.CGO_T&&CGO_T.paint) CGO_T.paint(g); }catch(e){} }, 40);
-};
-</script>
-<script>
-(function _cgoFsRepaint(){
-  function again(){
-    try{
-      var p=document.getElementById('cgo-fs-intro-pop');
-      if(p && getComputedStyle(p).display!=='none' && p.offsetHeight){
-        if(window.CGO_T&&CGO_T.paint) CGO_T.paint(p);
-      }
-      /* 열려 있는 풍수 페이지도 그 자리에서 다시 칠한다 — 화면이 튀지 않게 그 페이지만 */
-      var g=document.getElementById('page-gmd');
-      if(g && getComputedStyle(g).display!=='none' && g.offsetHeight){
-        if(window.CGO_T&&CGO_T.paint) CGO_T.paint(g);
-      }
-    }catch(e){}
-  }
-  try{ if(window.cgoRepaintOn) cgoRepaintOn(function(){ again(); }); }catch(e){}
-})();
-</script>
 
 <script>
 /* ══ 작명 서비스 엔진 (구 CGO 핀셋 이식) ══ */
@@ -92738,6 +92126,19 @@ function stkToggleCountryPanel(){
   if(a) a.textContent=open?'▼':'▲';
 }
 
+/* ★ 2026.09.05 복구 — 09-04 중복 정리 때 죽은 블록과 함께 사라져 나라 칩이 통째로 안 그려졌다
+   (_stkChipStyle is not defined). 이 두 도우미는 살아있는 코드에서만 참조된다. */
+function _stkFlagCode(f){
+  try{ var s=String(f||''), out='';
+    for(var i=0;i<s.length;){ var cp=s.codePointAt(i); i+=(cp>0xFFFF?2:1);
+      if(cp>=0x1F1E6 && cp<=0x1F1FF) out+=String.fromCharCode(65+cp-0x1F1E6); }
+    return out||s.toUpperCase();
+  }catch(e){ return String(f||''); }
+}
+function _stkChipStyle(on){
+  return 'display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;min-width:0;text-align:left;'
+    +(on?'border:1.5px solid #0d9488;background:#f0fdfa;color:#0d9488;':'border:1.5px solid rgba(15,23,42,.10);background:#fff;color:#334155;');
+}
 function stkRenderCountryChips(){
   var box=document.getElementById('stk-country-chips'); if(!box) return;
   var counts={};
