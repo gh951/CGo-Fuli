@@ -25914,7 +25914,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s8';
+window.CGO_VER='2026.09.05-s9';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -47089,9 +47089,14 @@ list.innerHTML = scored.map(function(d){
       (best!=null?' · best '+fmt(best):'')+(scr!=null?' · screen '+fmt(scr):'');
   }
   window._spd2Mark=function(name){ kind=name||''; t0=performance.now(); };
+  /* ★ -s9: 새 탭으로 나가는 탭(메모장 등)은 재지 않는다 — 돌아올 때까지 rAF 가 멈춰 65초짜리 값이 평균을 망쳤다.
+     클릭 뒤 화면이 숨겨졌거나 2초를 넘긴 표본은 버린다. 나가는 것은 초시계의 대상이 아니다(회귀 시간은 앱 값이 아니다). */
+  var _hidden=false; document.addEventListener('visibilitychange', function(){ if(document.hidden) _hidden=true; });
   function done(){
     if(t0==null) return;
     var ms=performance.now()-t0; t0=null;
+    if(_hidden || ms>2000){ _hidden=false; return; }   /* 버림 */
+    _hidden=false;
     last=ms; n++; sum+=ms; if(best==null||ms<best) best=ms;
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
       scr=performance.now()-(performance.now()-ms)-0; draw(); }); });
@@ -47100,6 +47105,8 @@ list.innerHTML = scored.map(function(d){
   document.addEventListener('click', function(e){
     var t=e.target;
     if(box.contains(t)) return;
+    _hidden=false;
+    if(t.closest && t.closest('[onclick*="cgoMemoOpen"],[onclick*="window.open"],[target="_blank"]')) return;   /* 나가는 단추는 안 잰다 */
     var nm='';
     if(t.closest && t.closest('[onclick*="cgoHome"]')) nm='home';
     else if(t.closest && t.closest('[onclick*="cgoGoPage"]')) nm='page';
