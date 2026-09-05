@@ -25914,7 +25914,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s6';
+window.CGO_VER='2026.09.05-s7';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -94995,7 +94995,118 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
 })();
-</script></body></html>
+</script>
+<script>
+/* ★ 2026.09.05-s7 — 자동 점검 cgoCheck() : 매니저(/lee) 전용. 읽기만 한다 — 카메라·네트워크·AI 호출·결제는 절대 누르지 않는다.
+   결과는 화면 표 + [복사] + 콘솔. 항목: 버전 / 뿌리 문서 / 사이드카 / 37페이지 / 안내 팝업 / onclick 참조 / 사전 / 시간 / 저장소 */
+(function(){
+  var R=[]; var errs=[];
+  function ok(s){ R.push('✅ '+s); } function bad(s){ R.push('❌ '+s); } function info(s){ R.push('· '+s); } function head(s){ R.push(''); R.push('【'+s+'】'); }
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+  function safe(fn){ try{ return fn(); }catch(e){ errs.push(String(e&&e.message||e)); return undefined; } }
+  window.cgoCheck=async function(opts){
+    opts=opts||{}; R=[]; errs=[];
+    var onerr=function(ev){ try{ errs.push((ev.message||String(ev.reason&&ev.reason.message||ev.reason||'')).slice(0,120)); }catch(e){} };
+    window.addEventListener('error',onerr); window.addEventListener('unhandledrejection',onerr);
+    var t0=performance.now();
+    R.push('CGO-FULI 자동 점검 · '+new Date().toLocaleString()+' · '+navigator.userAgent.replace(/.*\((.*?)\).*/,'$1').slice(0,60));
+    /* 1 버전 */
+    head('1 버전');
+    var tag=document.getElementById('cgo-ver-tag'); var ver=window.CGO_VER||'?';
+    info('파일 버전 '+ver+(tag?' · 딱지 '+tag.textContent:' · 딱지 없음(숨김)'));
+    if(tag && tag.textContent.indexOf(ver)<0) bad('딱지와 파일 버전이 다르다 — 옛 캐시'); else ok('버전 일치');
+    /* 2 뿌리 문서 */
+    head('2 뿌리 문서');
+    var isCgo=(document.title||'').indexOf('CGO')>=0 && typeof cgoGoPage==='function' && !!document.getElementById('page-dashboard');
+    if(isCgo) ok('뿌리 = CGO 본앱 (제목·cgoGoPage·대시보드)'); else bad('뿌리가 CGO 본앱이 아니다 — 제목 「'+document.title+'」, cgoGoPage '+typeof cgoGoPage);
+    var box=document.getElementById('dash6'); var D=window.DASH||null;
+    if(box && D && Object.keys(D).length>=20) ok('dash6 사전 '+Object.keys(D).filter(function(k){return k!=='_w';}).length+'개 언어 · ko '+Object.keys(D.ko||{}).length+'키'); else bad('dash6 사전을 못 읽었다');
+    /* 3 사이드카 */
+    head('3 사이드카');
+    var srcs=[].slice.call(document.querySelectorAll('script[src]')).map(function(s){ return s.getAttribute('src'); });
+    var res={}; try{ performance.getEntriesByType('resource').forEach(function(e){ res[e.name]=e; }); }catch(e){}
+    var missing=[];
+    srcs.forEach(function(src){ var full=(function(){ try{ return new URL(src,location.href).href; }catch(e){ return src; } })(); var e=res[full];
+      var loaded = e ? ((e.responseStatus? e.responseStatus<400 : (e.transferSize>0||e.decodedBodySize>0||e.duration>0))) : null;
+      var name=src.split('?')[0].split('/').pop();
+      if(loaded===false) missing.push(name); });
+    if(missing.length) bad('안 온 사이드카: '+missing.join(', ')); else ok('사이드카 '+srcs.length+'개 응답');
+    var fns={'_TF_ENGINES(50역학 표)':typeof window._TF_ENGINES!=='undefined','c24GuideOpen(건강 밸런스)':typeof window.c24GuideOpen==='function','c39GuideOpen(인지 건강)':typeof window.c39GuideOpen==='function','Peer(peerjs)':typeof window.Peer==='function','_cgoFDIntro(안내 팝업 틀)':typeof window._cgoFDIntro==='function','CGO_T.set(번역 엔진)':!!(window.CGO_T&&CGO_T.set)};
+    Object.keys(fns).forEach(function(k){ if(fns[k]) ok(k); else bad(k+' 없음'); });
+    /* 4 페이지 */
+    head('4 페이지 열기·닫기');
+    var pages=[].slice.call(document.querySelectorAll('.page')).map(function(p){ return p.id.replace('page-',''); });
+    var pageErr=[]; var before=errs.length;
+    for(var i=0;i<pages.length;i++){ var pid=pages[i]; var n0=errs.length; safe(function(){ cgoGoPage(pid); }); await sleep(opts.fast?0:20); if(errs.length>n0) pageErr.push(pid+'('+errs.slice(n0).join('; ').slice(0,80)+')'); }
+    safe(function(){ cgoGoPage('dashboard'); }); await sleep(50);
+    if(pageErr.length) bad('오류 난 페이지 '+pageErr.length+': '+pageErr.join(' | ')); else ok(pages.length+'페이지 열기·닫기 오류 0');
+    /* 5 안내 팝업 */
+    head('5 안내 팝업 (열고 본문 확인 뒤 닫기)');
+    var popFns=Object.keys(window).filter(function(k){ return /^_cgo\w+IntroPopup$/.test(k) && typeof window[k]==='function'; }).sort();
+    var popBad=[], popSkip=[], popOk=0;
+    var beforeIds=new Set([].slice.call(document.querySelectorAll('body > [id]')).map(function(e){return e.id;}));
+    for(var j=0;j<popFns.length;j++){ var fn=popFns[j]; var n1=errs.length;
+      safe(function(){ window[fn](); }); await sleep(opts.fast?0:30);
+      var newEls=[].slice.call(document.querySelectorAll('body > [id]')).filter(function(e){ return !beforeIds.has(e.id); });
+      var shown=newEls.find(function(e){ return getComputedStyle(e).display!=='none'; });
+      if(!shown){ var vis=[].slice.call(document.querySelectorAll('[id$="-pop"],[id$="-intro-pop"]')).find(function(e){ return e.offsetParent!==null || getComputedStyle(e).display!=='none' && e.getBoundingClientRect().height>0; }); if(vis && !beforeIds.has(vis.id)) shown=vis; }
+      if(!shown){ popSkip.push(fn.replace(/^_cgo|IntroPopup$/g,'')); }
+      else { var cnt=shown.querySelectorAll('*').length; if(cnt<20 || errs.length>n1) popBad.push(fn.replace(/^_cgo|IntroPopup$/g,'')+'('+cnt+'요소'+(errs.length>n1?' 오류':'')+')'); else popOk++; try{ shown.remove(); }catch(e){} }
+      /* 정적 팝업이 display 로 켜진 경우 끄기 */
+      [].slice.call(document.querySelectorAll('[id$="-intro-pop"]')).forEach(function(e){ if(beforeIds.has(e.id) && e.style.display==='block') e.style.display='none'; });
+    }
+    /* 정적 접힘 팝업 둘 */
+    ['spt-intro-pop','pm-intro-pop'].forEach(function(id){ var p=document.getElementById(id); if(!p) return; var prev=p.style.display; p.style.display='block'; var body=p.querySelector('.spi-body,.pmi-body'); var c=body?body.querySelectorAll('*').length:0; var tpl=!!p.querySelector('template[data-cgo-fold]'); if(c<20 && !tpl) popBad.push(id+'(본문 '+c+'요소)'); else popOk++; p.style.display=prev||'none'; });
+    if(popBad.length) bad('본문이 비었거나 오류: '+popBad.join(', ')); else ok('안내 팝업 '+popOk+'개 본문 정상');
+    if(popSkip.length) info('건너뜀(오늘 하루 보지 않기 등): '+popSkip.join(', '));
+    /* 6 onclick 참조 */
+    head('6 카드·단추가 부르는 함수');
+    var skip=new Set(['if','else','function','return','event','this','window','document','localStorage','setTimeout','try','catch','var','typeof','new','true','false','null','alert','confirm','void','location','console','String','Number','parseInt','Date','JSON','Math','Promise','Object','Array','navigator','history','requestAnimationFrame','encodeURIComponent','open','close','focus','blur','rgba','rgb','linear','translateX','translateY','scale','url','var','calc']);
+    var refs={}; [].slice.call(document.querySelectorAll('[onclick]')).forEach(function(el){ var s=el.getAttribute('onclick')||''; var m; var re=/(?:^|[^\w.$])([A-Za-z_$][\w$]*)\s*\(/g; while((m=re.exec(s))){ var nm=m[1]; if(skip.has(nm)) continue; if(typeof window[nm]!=='function'){ refs[nm]=(refs[nm]||0)+1; } } });
+    var miss=Object.keys(refs); if(miss.length) bad('정의 없는 함수 '+miss.length+': '+miss.map(function(k){return k+'×'+refs[k];}).join(', ')); else ok('onclick 참조 함수 전부 정의됨');
+    /* 7 사전 */
+    head('7 사전 번호');
+    if(D&&D.ko){ var ks=[]; [].slice.call(document.querySelectorAll('[data-k]')).forEach(function(e){ String(e.getAttribute('data-k')||'').split(',').forEach(function(k){ k=k.trim(); if(k) ks.push(k); }); }); var nok=ks.filter(function(k){ return D.ko[k]===undefined; }); var uniq=Array.from(new Set(nok));
+      if(uniq.length) info('dash6 에 없는 data-k 번호 '+uniq.length+'개(팩 파일 lang/pack.*.js 에 있을 수 있음): '+uniq.slice(0,15).join(' ')+(uniq.length>15?' …':'')); else ok('화면 data-k '+ks.length+'개 전부 dash6 에 있음');
+      var langs=Object.keys(D).filter(function(k){return k!=='_w'&&k!=='ko';}); var koKeys=Object.keys(D.ko); var gaps=[];
+      langs.forEach(function(L){ var m2=0; for(var i2=0;i2<koKeys.length;i2++){ if(D[L][koKeys[i2]]===undefined) m2++; } if(m2) gaps.push(L+':'+m2); });
+      if(gaps.length) info('ko 대비 빠진 키: '+gaps.join(' ')); else ok('20개 언어 키 수 일치'); }
+    /* 8 시간 */
+    head('8 시간 (ms, 순수 로직)');
+    var L0=window._LANG||'ko'; var times=[];
+    ['en','ja',L0].forEach(function(L){ var t=performance.now(); safe(function(){ setLang(L); }); times.push(L+' '+(performance.now()-t).toFixed(1)); });
+    info('언어 전환: '+times.join(' · '));
+    var pt=[]; ['lotto','sports','couple','dashboard'].forEach(function(p){ if(!document.getElementById('page-'+p)) return; var t=performance.now(); safe(function(){ cgoGoPage(p); }); pt.push(p+' '+(performance.now()-t).toFixed(1)); });
+    info('페이지 진입: '+pt.join(' · '));
+    /* 9 저장소 */
+    head('9 저장소');
+    ['cgo_info','cgo_saved_info','cgo_mgr','cgo_lang','cgo_su_done','cgo_use','cgo_ver_seen'].forEach(function(k){ var v=localStorage.getItem(k); info(k+' = '+(v===null?'(없음)':String(v).slice(0,40))); });
+    window.removeEventListener('error',onerr); window.removeEventListener('unhandledrejection',onerr);
+    R.push(''); R.push('걸린 시간 '+((performance.now()-t0)/1000).toFixed(1)+'s · 잡힌 오류 '+errs.length+(errs.length?(' → '+Array.from(new Set(errs)).slice(0,5).join(' | ')):''));
+    var text=R.join('\n'); try{ console.log(text); }catch(e){}
+    if(!opts.silent) showPanel(text);
+    return text;
+  };
+  function showPanel(text){
+    var old=document.getElementById('cgo-check-panel'); if(old) old.remove();
+    var p=document.createElement('div'); p.id='cgo-check-panel';
+    p.style.cssText='position:fixed;inset:0;z-index:100000;background:#0b1220;color:#e5eef7;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow:auto;padding:16px 16px 80px;white-space:pre-wrap;word-break:break-all;';
+    var bar=document.createElement('div'); bar.style.cssText='position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:10px 16px;background:#0b1220;border-top:1px solid #1f2a3d;';
+    var copy=document.createElement('button'); copy.textContent='📋 복사'; copy.style.cssText='flex:1;padding:12px;border:0;border-radius:10px;background:#059669;color:#fff;font-weight:800;font-size:14px;';
+    copy.onclick=function(){ var done=function(){ copy.textContent='✅ 복사됨'; }; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done,function(){ fallback(); }); } else fallback(); function fallback(){ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} ta.remove(); } };
+    var cls=document.createElement('button'); cls.textContent='닫기'; cls.style.cssText='padding:12px 18px;border:0;border-radius:10px;background:#334155;color:#fff;font-weight:800;font-size:14px;'; cls.onclick=function(){ p.remove(); };
+    bar.appendChild(copy); bar.appendChild(cls); p.textContent=text; p.appendChild(bar); document.body.appendChild(p);
+  }
+  /* 매니저만 보이는 🩺 단추 — 버전 딱지 옆 */
+  function btn(){ try{ if(!(window.cgoIsManager&&cgoIsManager())) return; if(document.getElementById('cgo-check-btn')) return;
+    var b=document.createElement('div'); b.id='cgo-check-btn'; b.textContent='🩺 점검'; b.title='자동 점검 (매니저)';
+    b.style.cssText='position:fixed;left:6px;bottom:28px;z-index:99997;font-size:9px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(15,23,42,.9);color:#fff;cursor:pointer;';
+    b.onclick=function(){ b.textContent='🩺 점검 중…'; window.cgoCheck().then(function(){ b.textContent='🩺 점검'; }); };
+    document.body.appendChild(b); }catch(e){} }
+  if(document.readyState==='loading') addEventListener('DOMContentLoaded',function(){ setTimeout(btn,800); }); else setTimeout(btn,800);
+})();
+</script>
+</body></html>
 <style>
 /* ★v5 — 앱 전체 스크롤. 구형은 .content 안에만 스크롤이 있어 휠·스와이프가 겉돌았다 */
 html,body{height:auto!important;min-height:100%;max-height:none!important;
