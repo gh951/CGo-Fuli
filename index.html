@@ -25915,7 +25915,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s20';
+window.CGO_VER='2026.09.05-s22';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -95223,15 +95223,17 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
    결과는 화면 표 + [복사] + 콘솔. 항목: 버전 / 뿌리 문서 / 사이드카 / 37페이지 / 안내 팝업 / onclick 참조 / 사전 / 시간 / 저장소 */
 (function(){
   var R=[]; var errs=[];
-  function ok(s){ R.push('✅ '+s); } function bad(s){ R.push('❌ '+s); } function info(s){ R.push('· '+s); } function head(s){ R.push(''); R.push('【'+s+'】'); }
+  function ok(s){ R.push('✅ '+s); } function bad(s){ R.push('❌ '+s); } function info(s){ R.push('· '+s); } function head(s){ R.push(''); R.push('【'+s+'】'); _live(); }
+  function _live(){ try{ var p=document.getElementById('cgo-check-panel'); if(p&&p._live&&p.firstChild){ p.firstChild.nodeValue=R.join('\n')+'\n\n… 진행 중'; } }catch(e){} }
   function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
   function safe(fn){ try{ return fn(); }catch(e){ errs.push(String(e&&e.message||e)); return undefined; } }
-  window.cgoCheck=async function(opts){ try{ return await _cgoCheckRun(opts); }catch(e){ R.push(''); R.push('❌ 점검 도중 멈춤: '+(e&&e.message||e)); var t=R.join('\n'); try{ console.log(t); }catch(_){} if(!(opts&&opts.silent)) showPanel(t); return t; } };
+  window.cgoCheck=async function(opts){ try{ return await _cgoCheckRun(opts); }catch(e){ try{ cgoGoPage('dashboard'); }catch(_){} R.push(''); R.push('❌ 점검 도중 멈춤: '+(e&&e.message||e)+' @ '+String(e&&e.stack||'').split('\n')[1]); var t=R.join('\n'); try{ console.log(t); }catch(_){} if(!(opts&&opts.silent)) showPanel(t); return t; } };
   async function _cgoCheckRun(opts){
     opts=opts||{}; R=[]; errs=[];
     var onerr=function(ev){ try{ errs.push((ev.message||String(ev.reason&&ev.reason.message||ev.reason||'')).slice(0,120)); }catch(e){} };
     window.addEventListener('error',onerr); window.addEventListener('unhandledrejection',onerr);
     var t0=performance.now();
+    if(!opts.silent){ showPanel('점검 시작…'); var _pp=document.getElementById('cgo-check-panel'); if(_pp){ _pp._live=true; } }
     R.push('CGO-FULI 자동 점검 · '+new Date().toLocaleString()+' · '+navigator.userAgent.replace(/.*\((.*?)\).*/,'$1').slice(0,60));
     /* 1 버전 */
     head('1 버전');
@@ -95268,13 +95270,14 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     var popFns=Object.keys(window).filter(function(k){ return /^_cgo\w+IntroPopup$/.test(k) && typeof window[k]==='function'; }).sort();
     var popBad=[], popSkip=[], popOk=0;
     var beforeIds=new Set([].slice.call(document.querySelectorAll('body > [id]')).map(function(e){return e.id;}));
+    var beforeAll=new Set([].slice.call(document.querySelectorAll('[id]')).map(function(e){return e.id;}));   /* 문서에 원래 있던 모든 id — 이것들은 절대 지우지 않는다 */
     for(var j=0;j<popFns.length;j++){ var fn=popFns[j]; var n1=errs.length;
       safe(function(){ window[fn](); }); await sleep(opts.fast?0:30);
       var newEls=[].slice.call(document.querySelectorAll('body > [id]')).filter(function(e){ return !beforeIds.has(e.id); });
       var shown=newEls.find(function(e){ return getComputedStyle(e).display!=='none'; });
       if(!shown){ var vis=[].slice.call(document.querySelectorAll('[id$="-pop"],[id$="-intro-pop"]')).find(function(e){ return e.offsetParent!==null || getComputedStyle(e).display!=='none' && e.getBoundingClientRect().height>0; }); if(vis && !beforeIds.has(vis.id)) shown=vis; }
       if(!shown){ popSkip.push(fn.replace(/^_cgo|IntroPopup$/g,'')); }
-      else { var cnt=shown.querySelectorAll('*').length; if(cnt<20 || errs.length>n1) popBad.push(fn.replace(/^_cgo|IntroPopup$/g,'')+'('+cnt+'요소'+(errs.length>n1?' 오류':'')+')'); else popOk++; try{ shown.remove(); }catch(e){} }
+      else { var cnt=shown.querySelectorAll('*').length; if(cnt<20 || errs.length>n1) popBad.push(fn.replace(/^_cgo|IntroPopup$/g,'')+'('+cnt+'요소'+(errs.length>n1?' 오류':'')+')'); else popOk++; try{ if(!beforeAll.has(shown.id) && shown.parentNode===document.body) shown.remove(); else shown.style.display='none'; }catch(e){} }
       /* 정적 팝업이 display 로 켜진 경우 끄기 */
       [].slice.call(document.querySelectorAll('[id$="-intro-pop"]')).forEach(function(e){ if(beforeIds.has(e.id) && e.style.display==='block') e.style.display='none'; });
     }
@@ -95306,6 +95309,7 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     ['cgo_info','cgo_saved_info','cgo_mgr','cgo_lang','cgo_su_done','cgo_use','cgo_ver_seen'].forEach(function(k){ var v=localStorage.getItem(k); info(k+' = '+(v===null?'(없음)':String(v).slice(0,40))); });
     window.removeEventListener('error',onerr); window.removeEventListener('unhandledrejection',onerr);
     R.push(''); R.push('걸린 시간 '+((performance.now()-t0)/1000).toFixed(1)+'s · 잡힌 오류 '+errs.length+(errs.length?(' → '+Array.from(new Set(errs)).slice(0,5).join(' | ')):''));
+    try{ cgoGoPage('dashboard'); }catch(e){}
     var text=R.join('\n'); try{ console.log(text); }catch(e){}
     if(!opts.silent) showPanel(text);
     return text;
@@ -95318,7 +95322,7 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     var copy=document.createElement('button'); copy.textContent='📋 복사'; copy.style.cssText='flex:1;padding:12px;border:0;border-radius:10px;background:#059669;color:#fff;font-weight:800;font-size:14px;';
     copy.onclick=function(){ var done=function(){ copy.textContent='✅ 복사됨'; }; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done,function(){ fallback(); }); } else fallback(); function fallback(){ var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){} ta.remove(); } };
     var cls=document.createElement('button'); cls.textContent='닫기'; cls.style.cssText='padding:12px 18px;border:0;border-radius:10px;background:#334155;color:#fff;font-weight:800;font-size:14px;'; cls.onclick=function(){ p.remove(); };
-    bar.appendChild(copy); bar.appendChild(cls); p.textContent=text; p.appendChild(bar); document.body.appendChild(p);
+    bar.appendChild(copy); bar.appendChild(cls); p.appendChild(document.createTextNode(text)); p.appendChild(bar); document.body.appendChild(p);
   }
   /* 매니저만 보이는 🩺 단추 — 버전 딱지 옆 */
   function btn(){ try{ if(!(window.cgoIsManager&&cgoIsManager())) return; if(document.getElementById('cgo-check-btn')) return;
