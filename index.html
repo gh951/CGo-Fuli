@@ -13538,18 +13538,25 @@ if(typeof window._LANG==='undefined'){
     번호 사전에 없는 글자는 이 사전에서 찾으므로, 문구를 하나씩 등록할 필요가 없다.
     파일로 두어 HTML은 가볍게 유지하고, 고른 언어 것만 한 번 불러온다. */
  window._cgoLangDict={};
- window.cgoLoadDict=function(L){
+ window.cgoLoadDict=function(L, quiet){
    if(!L||L==='ko') return Promise.resolve(null);
    if(!/^(en|ja|zh|zh_HK|ru|es|fr|de|pt|it|nl|vi|th|id|ms|tl|tr|hi|ar)$/.test(L)) return Promise.resolve(null);
    if(window._cgoLangDict[L]) return Promise.resolve(window._cgoLangDict[L]);
    return fetch('lang/'+L+'.json').then(function(r){ return r.ok?r.json():null; })
      .then(function(j){ if(j){ window._cgoLangDict[L]=j;
-       /* ★ 2026.09.05 — 문서 전체(수만 글자칸)를 되짚어 클릭 직후 멈추던 자리. 열린 페이지만 */
-       try{ cgoPaintKo(document.querySelector('.page.active')||document.body); }catch(e){} } return j; })
+       /* ★ 2026.09.05 — 문서 전체(수만 글자칸)를 되짚어 클릭 직후 멈추던 자리. 열린 페이지만. 미리 받기(quiet)면 칠하지 않는다 */
+       if(!quiet || L===((window.CGO_T&&CGO_T.cur())||'')) try{ cgoPaintKo(document.querySelector('.page.active')||document.body); }catch(e){} } return j; })
      .catch(function(){ return null; });
  };
  function pull(){ try{ cgoLoadDict((window.CGO_T&&CGO_T.cur())||'en'); }catch(e){} }
  [200,900,2500].forEach(function(d){ setTimeout(pull,d); });
+ /* ★ -s26: 팩 파일이 있는 언어(ja·zh·zh_HK·ru·en)는 손이 쉴 때 미리 받아 둔다 — 일본어·중국어로 바꿀 때 「칠하고 → 팩 도착 → 다시 칠하기」 두 번째 패스가 사라진다.
+    한 번에 하나씩, 화면이 숨겨져 있으면 미룬다. 서비스 워커가 있으면 두 번째 방문부터는 캐시에서 온다. */
+ (function(){ var Q=['ja','zh','zh_HK','ru','en']; var i=0;
+   function next(){ if(i>=Q.length) return; if(document.hidden){ setTimeout(next,2000); return; } var L=Q[i++]; var cur=(window.CGO_T&&CGO_T.cur())||'ko'; if(L===cur||window._cgoLangDict[L]){ next(); return; }
+     cgoLoadDict(L,true).then(function(){ var run=function(){ setTimeout(next,150); }; if(window.requestIdleCallback) requestIdleCallback(run,{timeout:2000}); else run(); }); }
+   window.addEventListener('load',function(){ setTimeout(function(){ var run=function(){ next(); }; if(window.requestIdleCallback) requestIdleCallback(run,{timeout:4000}); else run(); },3000); });
+ })();
  addEventListener('DOMContentLoaded',pull);
 })();
 /* ★ 조각 찾기 표 — 사전의 한국어 열쇠 중 네 글자 이상만, 긴 것부터.
@@ -25938,7 +25945,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s25';
+window.CGO_VER='2026.09.05-s26';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
