@@ -189,6 +189,7 @@ html:not(.cgo-ready) #phase0{z-index:100005!important}
 .fdash-grid [style*="box-shadow"]{ box-shadow:none!important }
 /* 흐림은 상단 바와 팝업 머리만 — 나머지는 불투명으로 대신한다 */
 [style*="backdrop-filter"]:not(.topbar):not([style*="sticky"]){ backdrop-filter:none!important }
+.topbar{ backdrop-filter:none!important; -webkit-backdrop-filter:none!important }
 </style>
 
 <script>
@@ -1086,7 +1087,7 @@ body{background:var(--bg-deep);color:var(--text-1);font-family:'Noto Sans KR','N
 
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:visible;min-width:0}
-.topbar{height:56px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid var(--border);background:rgba(6,13,26,0.8);flex-shrink:0;position:relative;z-index:100;}
+.topbar{height:56px;display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:1px solid var(--border);background:#060d1a;flex-shrink:0;position:relative;z-index:100;}   /* -s25: 80% 유리 → 불투명 */
 .topbar-title{font-family:'DM Serif Display',serif;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-date{font-size:11px;color:var(--text-2);font-weight:600}/* ── 앱 전체 글씨 진하게 ── */
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -8066,14 +8067,14 @@ function cgoBannerGo(n){
     d.style.background = isActive ? '#0284c7' : 'rgba(255,255,255,.25)';
   });
   clearInterval(_cgoBannerTimer);
-  _cgoBannerTimer = setInterval(function(){ if(document.hidden) return; cgoBannerGo(_cgoBannerIdx+1); }, 4000);
+  _cgoBannerTimer = setInterval(function(){ if(document.hidden) return; var _d=document.getElementById('page-dashboard'); if(_d && !_d.classList.contains('active')) return; cgoBannerGo(_cgoBannerIdx+1); }, 4000);   /* -s25: 대시보드가 안 보이면 안 돈다 */
 }
 function cgoBannerNext(){ cgoBannerGo(_cgoBannerIdx+1); }
 function cgoBannerPrev(){ cgoBannerGo(_cgoBannerIdx-1); }
 
 // 자동 재생
 document.addEventListener('DOMContentLoaded', function(){
-  _cgoBannerTimer = setInterval(function(){ cgoBannerGo(_cgoBannerIdx+1); }, 4000);
+  _cgoBannerTimer = setInterval(function(){ if(document.hidden) return; var _d=document.getElementById('page-dashboard'); if(_d && !_d.classList.contains('active')) return; cgoBannerGo(_cgoBannerIdx+1); }, 4000);
 
   // ILI 점수 카드 실시간 동기화
   setInterval(function(){ if(document.hidden) return;
@@ -13207,7 +13208,7 @@ function cgoGoPage(page){
   /* ⚽ 스포츠 에너지 — 구앱 초기화를 그대로 (콜백 안에서 다시 그린다) */
   if(page === 'sports'){
     try{ if(typeof sptUpdateMyEnergy==='function') sptUpdateMyEnergy(); }catch(e){}
-    setTimeout(function(){
+    (window._cgoAfterIntro||function(i,f){ setTimeout(f,90); })(['spt-intro-pop'], function(){   /* -s25: 안내 팝업 닫힌 뒤 */
       try{ if(typeof sptUpdatePopularTeams==='function') sptUpdatePopularTeams(); }catch(e){}
       try{ if(typeof sptRenderTotoBanner==='function') sptRenderTotoBanner(); }catch(e){}
       try{ if(typeof sptLoadNews==='function') sptLoadNews(); }catch(e){}
@@ -13244,7 +13245,7 @@ function cgoGoPage(page){
           sptAddBubble('ai', _L8('23572','안녕하세요! 스포츠 에너지 AI입니다 ⚽\n오늘 당신의 {0} 오행 에너지로 경기를 읽어 드릴게요.\n팀 전적·역사·에너지 궁합 무엇이든 물어보세요! 🔮').replace('{0}', _ohName));
         }
       }catch(e){}
-    }, 90);
+    });
   } else {
     /* 나가면 실시간 고리를 멈춘다 — 보이지 않는 것은 죽인다 */
     try{ if(window._sptLiveTimer){ clearInterval(window._sptLiveTimer); window._sptLiveTimer=null; } }catch(e){}
@@ -13276,8 +13277,21 @@ function cgoGoPage(page){
     var _saveCt = document.querySelector('.content');
     window._cgoDashScrollY = _saveCt ? _saveCt.scrollTop : window.scrollY;
   }
+  // ★ -s25: 나가는 페이지의 「처음처럼」 되돌리기는 숨겨진 뒤 손이 쉴 때
+  try{
+    var _prev = _cgCurrent;
+    if(_prev && _prev!==page && _prev!=='dashboard' && _prev!=='profile' && window._cgoPageSnap && window._cgoPageSnap[_prev]!==undefined){
+      var _pel = document.getElementById('page-'+_prev);
+      if(_pel && !_pel._cgoSnapBig){
+        var _pd2=window._cgoResetPending||(window._cgoResetPending={});
+        if(_pd2[_prev]) clearTimeout(_pd2[_prev]);
+        _pd2[_prev]=setTimeout(function(){ var run=function(){ delete _pd2[_prev]; try{ if(!_pel.classList.contains('active')) _pel.innerHTML = window._cgoPageSnap[_prev]; }catch(e){} };
+          if(window.requestIdleCallback) requestIdleCallback(run,{timeout:3000}); else setTimeout(run,600); }, 250);
+      }
+    }
+  }catch(e){}
   // 모든 페이지 숨기기
-  document.querySelectorAll('.page').forEach(function(p){
+  (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){
     p.classList.remove('active');
     if(p.id === 'page-chat') p.style.display = 'none';
   });
@@ -13291,14 +13305,17 @@ function cgoGoPage(page){
            작명 283KB · 리포트 3.6MB 를 통째로 읽어 두었다가 재진입 때 다시 심었다.
            읽는 값과 심는 값을 두 번 내고 있었고, 그것이 작명 0.443초의 몸통이다.
            카메라를 쓰는 페이지만 되돌릴 이유가 있으니, 큰 페이지는 카메라만 끈다. */
-        var _snapBig = (_rpg.innerHTML && _rpg.innerHTML.length > 120000);
+        /* ★ -s25(-x 재적용): 들어올 때 크기 재기·사본 되심기를 하지 않는다. 크기는 한 번만, 되심기는 나갈 때 한가할 때(_cgoScheduleReset). */
+        if(_rpg._cgoSnapBig === undefined){ _rpg._cgoSnapBig = !!(_rpg.innerHTML && _rpg.innerHTML.length > 120000); }
+        var _snapBig = _rpg._cgoSnapBig;
         if(_snapBig){
           try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject=null; } }); }catch(e){}
         } else if(window._cgoPageSnap[page] === undefined){
           window._cgoPageSnap[page] = _rpg.innerHTML;
         } else {
           try{ document.querySelectorAll('video').forEach(function(v){ if(v.srcObject){ v.srcObject.getTracks().forEach(function(t){ try{t.stop();}catch(e){} }); v.srcObject = null; } }); }catch(e){}
-          _rpg.innerHTML = window._cgoPageSnap[page];
+          var _pd=window._cgoResetPending||(window._cgoResetPending={});
+          if(_pd[page]){ clearTimeout(_pd[page]); delete _pd[page]; _rpg.innerHTML = window._cgoPageSnap[page]; }
         }
       }
     }
@@ -13317,7 +13334,7 @@ function cgoGoPage(page){
   var _chatEl = document.getElementById('page-chat');
   if(_chatEl && page !== 'chat') _chatEl.style.display = 'none';
   // nav-btn active 업데이트 (내부 로직 유지)
-  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  (window._cgoNavBtns||(window._cgoNavBtns=document.querySelectorAll('.nav-btn'))).forEach(function(b){ b.classList.remove('active'); });
   var btn = document.querySelector('.nav-btn[data-page="'+page+'"]');
   if(btn) btn.classList.add('active');
   // 상단 타이틀 업데이트
@@ -13809,7 +13826,7 @@ window.cgoGoPage=function(page){
  ['wf10-pop','mypage-pop'].forEach(function(id){
    var ov=document.getElementById(id); if(ov) ov.style.display='none'; });
  try{ void 0; }catch(e){}
- var all=document.querySelectorAll('.page');
+ var all=window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'));
  for(var i=0;i<all.length;i++){ all[i].classList.remove('active'); }
  var t=document.getElementById('page-'+page);
  /* 지난 판에서 'block' 으로 굳은 기억을 씻는다 — 한 번만 돌면 된다 */
@@ -19092,10 +19109,13 @@ function _mK(n, f){ try{ var v = window.K ? window.K(n) : null; return (v && v !
 
       var _later = function(fn, ms){ setTimeout(fn, ms || 0); };   /* 반드시 돈다 */
       _later(function(){ try{ mfuRenderTracks('kr'); }catch(e){} }, 0);   /* 곧 보이는 것 */
-      _later(function(){ try{ mfuRenderOh(); }catch(e){} }, 40);
-      _later(function(){ try{ mfuRenderSol(); }catch(e){} }, 80);
-      _later(function(){ try{ mfuRenderYk(); }catch(e){} }, 120);         /* 화면 밖 36칸 */
-      setTimeout(function(){ try{ _mfuCallAi(); }catch(e){} }, 900);
+      /* -s25: 나머지는 안내 팝업 둘(mfu·pm)이 닫힌 뒤 — 팝업 뒤에서 36칸·AI 호출을 돌리던 것이 두 번째 팝업의 걸림 */
+      (window._cgoAfterIntro||function(i,f){ setTimeout(f,40); })(['mfu-intro-pop','pm-intro-pop'], function(){
+        _later(function(){ try{ mfuRenderOh(); }catch(e){} }, 0);
+        _later(function(){ try{ mfuRenderSol(); }catch(e){} }, 40);
+        _later(function(){ try{ mfuRenderYk(); }catch(e){} }, 80);         /* 화면 밖 36칸 */
+        setTimeout(function(){ try{ _mfuCallAi(); }catch(e){} }, 300);
+      });
     };
 
     if(document.readyState === 'loading'){
@@ -21683,7 +21703,7 @@ function cgoSoftGo(pageId) {
   document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active');});
   var btn = document.querySelector('[data-page="'+pageId+'"]');
   if (btn) btn.classList.add('active');
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){p.classList.remove('active');});
   var pg = document.getElementById('page-'+pageId);
   if (pg) pg.classList.add('active');
   var nb = document.getElementById('nasaMiniBar');
@@ -25918,7 +25938,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s24';
+window.CGO_VER='2026.09.05-s25';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -56005,7 +56025,7 @@ function shopCustomOrder(){
   // 쇼핑 페이지로 이동 후 업로드 영역으로 스크롤
   var sp=document.getElementById('page-shop');
   if(sp&&!sp.classList.contains('active')){
-    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    (window._cgoPages||(window._cgoPages=document.querySelectorAll('.page'))).forEach(function(p){p.classList.remove('active');});
     sp.classList.add('active');
     document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-page')==='shop');});
   }
@@ -95839,6 +95859,23 @@ window.cgoRunDiagnosis=function(){ if(typeof cgoDiagGate==='function') cgoDiagGa
   });
   window.cgoSW=function(){ return navigator.serviceWorker.getRegistrations().then(function(rs){ var o={등록:rs.length, 제어중:!!navigator.serviceWorker.controller, 범위:rs.map(function(r){return r.scope;})}; console.log(o); return o; }); };
 })();
+</script>
+
+<script>
+/* ★ -s25: 안내 팝업 뒤에 숨은 페이지의 무거운 일(소식 받기·AI 추천·36칸 그리기)은 팝업이 닫힌 뒤에 한다.
+   보이지도 않는 페이지가 팝업 뒤에서 네트워크·연산을 돌리던 것이 「카드 → 팝업」의 걸림이었다. */
+window._cgoAfterIntro=function(ids, fn){
+  try{
+    var open=function(){ for(var i=0;i<ids.length;i++){ var p=document.getElementById(ids[i]); if(p && getComputedStyle(p).display!=='none') return p; } return null; };
+    var p=open(); if(!p){ setTimeout(function(){ if(open()){ wait(); } else fn(); }, 120); return; }   /* 카드가 cgoGoPage 뒤에 팝업을 켜므로 한 틈 기다려 다시 본다 */
+    wait();
+    function wait(){
+    var done=false, fire=function(){ if(done) return; if(open()) return; done=true; try{ mo.disconnect(); }catch(e){} clearTimeout(tm); setTimeout(fn, 30); };
+    var mo=new MutationObserver(fire); ids.forEach(function(id){ var e=document.getElementById(id); if(e) mo.observe(e,{attributes:true,attributeFilter:['style','class']}); });
+    var tm=setTimeout(function(){ done=true; try{ mo.disconnect(); }catch(e){} fn(); }, 60000);   /* 1분 지나면 그냥 한다 */
+    }
+  }catch(e){ try{ fn(); }catch(_){} }
+};
 </script>
 </body></html>
 <style>
