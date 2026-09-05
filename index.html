@@ -7482,7 +7482,7 @@ function _cgoEyeCloseAll(){
   try{ if(window.eyeStopMeasure) eyeStopMeasure(); }catch(_){}
 }
 function cgoHome(){
-  if(typeof _ab2==='function'&&_ab2('home')){ try{ _cgoGoPageOrig('dashboard'); }catch(e){} return; }   /* AB2 home: 구앱처럼 로고 = 원본 cgoGoPage('dashboard') 만 */
+  if(typeof _ab2==='function'&&_ab2('home')){ try{ (window._cgoGoPageOrig||window.cgoGoPage)('dashboard'); }catch(e){ try{ cgoGoPage('dashboard'); }catch(_){} } return; }   /* AB2 home: 구앱처럼 로고 = 원본 cgoGoPage('dashboard') 만 */
   try{ _cgoEyeCloseAll(); }catch(_){}
 
   /* 화면에 떠 있는 것을 모두 닫는다 */
@@ -13829,7 +13829,7 @@ window.cgoPaintKo=function(root){
 var _cgoGoPageOrig = cgoGoPage;   /* 먼저 붙잡는다 — 안 붙잡으면 자기 자신을 되풀어 15초가 걸렸다 */
 window.cgoAB2=function(v){ try{ if(!v||v==='off') localStorage.removeItem('cgo_ab2'); else localStorage.setItem('cgo_ab2',v); }catch(e){} return (v||'off')+' — 새로고침'; };
 var _AB2=''; try{ _AB2=localStorage.getItem('cgo_ab2')||''; }catch(e){}
-function _ab2(k){ return _AB2===k||_AB2==='all'; }
+function _ab2(k){ return _AB2==='all'||_AB2.split(',').indexOf(k)>=0; }   /* 여러 개 동시: cgoAB2('home,layer') */
 if(_ab2('anim')){ try{ var _s=document.createElement('style'); _s.textContent='#page-dashboard *,#page-dashboard{animation:none!important;transition:none!important}'; document.head.appendChild(_s); }catch(e){} }
 if(_ab2('layer')){ try{ var _s3=document.createElement('style'); _s3.textContent='.page.active{-webkit-overflow-scrolling:auto!important}*{will-change:auto!important;backface-visibility:visible!important;transform-style:flat!important}'; document.head.appendChild(_s3); }catch(e){} }   /* AB2 layer: 페이지를 별도 합성 레이어로 띄우던 것 끔 */
 if(_ab2('css')){ try{ var _s2=document.createElement('style'); _s2.textContent='.fdash-card{background:#daa520!important;box-shadow:none!important}.fdash-card::before,.fdash-card::after{display:none!important}#page-dashboard [style*="rgba("]{opacity:1!important}'; document.head.appendChild(_s2); }catch(e){} }   /* AB2 css: 대시보드 카드 반투명·후광 끔 */
@@ -25952,7 +25952,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-d';
+window.CGO_VER='2026.09.06-e';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
