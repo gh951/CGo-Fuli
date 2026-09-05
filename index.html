@@ -7482,6 +7482,7 @@ function _cgoEyeCloseAll(){
   try{ if(window.eyeStopMeasure) eyeStopMeasure(); }catch(_){}
 }
 function cgoHome(){
+  if(typeof _ab2==='function'&&_ab2('home')){ try{ _cgoGoPageOrig('dashboard'); }catch(e){} return; }   /* AB2 home: 구앱처럼 로고 = 원본 cgoGoPage('dashboard') 만 */
   try{ _cgoEyeCloseAll(); }catch(_){}
 
   /* 화면에 떠 있는 것을 모두 닫는다 */
@@ -13829,7 +13830,10 @@ var _cgoGoPageOrig = cgoGoPage;   /* 먼저 붙잡는다 — 안 붙잡으면 �
 window.cgoAB2=function(v){ try{ if(!v||v==='off') localStorage.removeItem('cgo_ab2'); else localStorage.setItem('cgo_ab2',v); }catch(e){} return (v||'off')+' — 새로고침'; };
 var _AB2=''; try{ _AB2=localStorage.getItem('cgo_ab2')||''; }catch(e){}
 function _ab2(k){ return _AB2===k||_AB2==='all'; }
+if(_ab2('anim')){ try{ var _s=document.createElement('style'); _s.textContent='#page-dashboard *,#page-dashboard{animation:none!important;transition:none!important}'; document.head.appendChild(_s); }catch(e){} }
+if(_ab2('css')){ try{ var _s2=document.createElement('style'); _s2.textContent='.fdash-card{background:#daa520!important;box-shadow:none!important}.fdash-card::before,.fdash-card::after{display:none!important}#page-dashboard [style*="rgba("]{opacity:1!important}'; document.head.appendChild(_s2); }catch(e){} }   /* AB2 css: 대시보드 카드 반투명·후광 끔 */
 window.cgoGoPage=function(page){
+ if(_ab2('orig')){ try{ return _cgoGoPageOrig(page); }catch(e){ return false; } }   /* AB2 orig: 구앱처럼 원본만 */
  /* v5는 .page.active 로만 보인다 — 구 CGO 함수가 활성 처리를 하지 않아 화면이 안 열렸다 */
  try{ _cgoGoPageOrig(page); }catch(e){}
  /* 전체 팝업은 페이지를 옮길 때 닫는다 — 안 닫아 돌아오면 화면을 덮고 있었다 */
@@ -25947,7 +25951,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-a';
+window.CGO_VER='2026.09.06-c';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
