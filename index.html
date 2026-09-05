@@ -13426,7 +13426,9 @@ function cgoGoPage(page){
   // 대시보드 복귀 시 저장 위치 복원, 나머지는 맨 위로
   var _ct = document.querySelector('.content');
   if (page === 'dashboard' && window._cgoDashScrollY != null) {
-    if (_ct) setTimeout(function(){ _ct.scrollTop = window._cgoDashScrollY; }, 50);
+    /* ★ -h: 50ms 뒤에 스크롤을 되돌리던 것이 잔상의 정체 후보 — 그 3프레임 동안 대시보드가 「직전 페이지의 스크롤 위치」로 그려진 뒤 튀어 올랐다.
+       지금 바로 되돌리고(첫 프레임부터 맞는 자리), 배치가 늦게 확정되는 기기를 위해 다음 프레임에 한 번 더. */
+    if (_ct){ try{ _ct.scrollTop = window._cgoDashScrollY; }catch(e){} var _y=window._cgoDashScrollY; if(window.requestAnimationFrame) requestAnimationFrame(function(){ try{ _ct.scrollTop=_y; }catch(e){} }); }
   } else {
     if (_ct) _ct.scrollTop = 0;
     var mainEl = document.querySelector('.main') || document.querySelector('.pages');
@@ -25954,7 +25956,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-g';
+window.CGO_VER='2026.09.06-h';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
