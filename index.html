@@ -25896,7 +25896,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s3';
+window.CGO_VER='2026.09.05-s4';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -94958,7 +94958,7 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     }catch(e){ return 0; }
   };
   function arm(id){
-    var p=document.getElementById(id); if(!p) return;
+    var p=document.getElementById(id); if(!p||p._cgoArmed) return; p._cgoArmed=1;
     var body=p.querySelector('template[data-cgo-fold]'); if(body&&body.parentNode) body.parentNode.style.minHeight='55vh';
     var t=null;
     function check(){ if(getComputedStyle(p).display==='none') return; if(!p.querySelector('template[data-cgo-fold]')) return;
@@ -94966,7 +94966,15 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     new MutationObserver(check).observe(p,{attributes:true,attributeFilter:['style','class']});
     check();
   }
-  function go(){ arm('pm-intro-pop'); arm('spt-intro-pop'); }
+  function go(){ arm('pm-intro-pop'); arm('spt-intro-pop');
+    /* ★ -s4: 「재진입 처음처럼」이 페이지 innerHTML 을 사본으로 되심으면 팝업 요소가 새로 만들어져 위 감시자가 끊기고,
+       접힌 본문(template)이 다시 생겨 빈 팝업으로 보였다(빠르게 왔다갔다 할 때). 페이지에 들어갈 때마다 60ms 뒤 그 페이지의 접힌 것을 펼치고 감시자를 다시 단다. */
+    try{ var _og=window.cgoGoPage; if(typeof _og==='function' && !_og._cgoFoldWrapped){
+      var _w=function(page){ var r=_og.apply(this,arguments);
+        if(page==='sports'||page==='music-v2'){ setTimeout(function(){ try{ var pg=document.getElementById('page-'+page); if(pg){ window.cgoUnfold(pg); } arm('pm-intro-pop'); arm('spt-intro-pop'); }catch(e){} },60); }
+        return r; };
+      _w._cgoFoldWrapped=1; window.cgoGoPage=_w; } }catch(e){}
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
 })();
 </script></body></html>
