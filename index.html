@@ -13340,7 +13340,9 @@ function cgoGoPage(page){
     if(page==='music' && typeof goMusic==='function') setTimeout(goMusic,50);
   if(page==='shop' && typeof shopInit==='function') shopInit();
   if(page==='shop' && typeof _cgoShopIntroPopup==='function') _cgoShopIntroPopup();
-  if(page==='couple'){ _cgoCoupleIntroPopup(); setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
+  if(page==='couple'){ /* 팝업의 「시작」으로 들어온 길이면(카드가 이미 팝업을 띄웠다) 다시 띄우지 않고, 같은 페이지 재호출도 생략 */
+    try{ if(window._cgoCplFromIntro){ window._cgoCplFromIntro=0; } else if(window._cgCurrent!=='couple') _cgoCoupleIntroPopup(); }catch(e){}
+    setTimeout(function(){ if(typeof cplAutoFill==='function') cplAutoFill(); },300); }
   if(page==='algo'){ if(typeof _cgoHealthIntroPopup==='function') _cgoHealthIntroPopup(); setTimeout(function(){ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); },200); }
   if(page==='gmd'){ try{ if(typeof _cgoGmdFullReset==='function') _cgoGmdFullReset(); }catch(e){} } if(page==='gmd' && typeof gmdPopConfirm==='function'){ /* ★ 2026.09.05 — 두 번째 팝업(STEP 설정) 없이 바로 시작. 타입·역학은 페이지에서 바꾼다 */
     window._gmdPopType=window._gmdPopType||'home'; window._gmdPopSystems=window._gmdPopSystems||['all'];
@@ -25894,7 +25896,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s2';
+window.CGO_VER='2026.09.05-s3';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -35697,7 +35699,7 @@ function _cgoCoupleIntroPopup(){
     howto:['📡 실시간 영상 궁합|두 사람 모두 접속 → 방 코드 공유 → 영상 보며 실시간 분석','📋 정보 입력 궁합|상대방 생년월일·이름 입력 → 사주·역학 기반 정밀 분석'],
     tip:'📊 분석 항목: 종합 궁합도·결혼운·자녀운·오행 궁합·별자리 궁합·수비학·기질 궁합·에너지 충돌 / 🔮 AI 통합 역학 리포트에서 관상·손금 스캔 완료 시 자동 반영됩니다.',
     note:'궁합은 전통 역학에 기반한 인포테인먼트·웰니스 참고용 콘텐츠예요. 감정·심리 상태나 건강을 진단하지 않으며, 미래를 확정하지 않아요. 카메라 영상은 기기 내부에서만 처리돼요.',
-    launch:"cgoGoPage('couple'); setTimeout(function(){ try{ var g=document.getElementById('page-couple'); if(g&&window.CGO_T&&CGO_T.paint) CGO_T.paint(g); if(window.cgoCullScan) cgoCullScan(g); }catch(e){} },40);",
+    launch:"window._cgoCplFromIntro=1; cgoGoPage('couple'); setTimeout(function(){ try{ var g=document.getElementById('page-couple'); if(g&&window.CGO_T&&CGO_T.paint) CGO_T.paint(g); if(window.cgoCullScan) cgoCullScan(g); }catch(e){} },40);",
     btnLabel:'💑 궁합 분석 시작'
   });
 }
