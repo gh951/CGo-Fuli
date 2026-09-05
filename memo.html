@@ -157,13 +157,6 @@
   .ed-top input::placeholder{color:#b4bccb;}
   textarea{flex:1; width:100%; background:transparent; border:none; resize:none; outline:none; color:#1e293b; font-size:15px; line-height:1.75; font-family:inherit; padding:8px 26px 22px; letter-spacing:.005em;}
   textarea::placeholder{color:#b4bccb;}
-  /* 가상 편집 칸(VE) — 50만 자 위에서만 .big 이 붙는다. 그 아래는 예전과 완전히 같은 textarea */
-  .ve-wrap{flex:1; min-height:0; display:flex; flex-direction:column; position:relative;}
-  .ve-wrap .ve-space{flex:1; min-height:0; display:flex; flex-direction:column;}
-  .ve-wrap.big{display:block; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;}
-  .ve-wrap.big .ve-space{display:block; position:relative; width:100%; flex:none;}
-  .ve-wrap.big textarea{position:absolute; left:0; top:0; height:auto; overflow:hidden; display:block; flex:none;}
-  .ve-mirror{position:absolute; left:-99999px; top:0; visibility:hidden; white-space:pre-wrap; overflow-wrap:break-word; word-wrap:break-word; pointer-events:none; box-sizing:border-box; color:#1e293b;}
   .ed-foot{display:flex; align-items:center; gap:16px; padding:9px 26px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); flex-shrink:0; background:#fbfcfe;}
   .ed-foot .count{font-family:'Consolas','Menlo',monospace;}
   .ed-foot .count b{color:var(--accent); font-weight:700;}
@@ -283,6 +276,7 @@
   <button class="icon-btn show-sm" id="moreBtn" title="더보기">⋯</button>
   <div id="hdrTools" class="hdr-tools">
   <button class="icon-btn" id="calcBtn" title="계산기">🧮</button>
+  <button class="btn ghost" id="cgoHomeBtn" title="저장하고 CGO-FULI 대시보드로" style="font-weight:800;">🏠 CGO로</button>
   <button class="icon-btn" id="lockBtn" title="잠금 설정">🔒</button>
   <button class="icon-btn" id="vidBtn" title="영상 보며 메모 (유튜브·내 영상)">📺</button>
   <button class="icon-btn" id="pinBtn" title="메모를 영상 앞에 띄우기 (순수 메모창)">📌</button>
@@ -520,277 +514,6 @@ var $=function(id){return document.getElementById(id);};
 var listEl=$('list'), titleEl=$('titleInput'), contentEl=$('contentInput'),
     charEl=$('charCount'), savedTag=$('savedTag'), edWrap=$('edWrap'), blank=$('blank');
 
-/* ═══════════ 가상 편집 칸 (VE) — 1억 자 ═══════════
-   특허 원칙: 「보이는 것만 살리고, 안 보이는 것엔 값을 내지 않는다」를 글 편집기에 적용.
-   · 50만 자 아래 : 지금까지와 완전히 같은 보통 textarea (이 코드는 손을 대지 않고 지나감)
-   · 50만 자 위    : 글 전체는 조각(chunk)으로 메모리에 두고, 화면 근처 몇백 줄만 textarea 에 그린다.
-                     같은 #contentInput 요소를 그대로 쓰므로 단추·자동저장·받아쓰기·시각 찍기 등은 그대로 동작.
-   · contentEl.value / selectionStart / selectionEnd / setSelectionRange 는 이 요소 위에서만 덮어써서
-     바깥 코드가 보면 언제나 「글 전체」로 보인다.
-   · 실행취소는 바뀐 조각(위치·지운 글·넣은 글)만 기억 → 크기 무관, 단계 제한 없음. */
-var VE=(function(){
-  var TA=contentEl, BIG=500000, CH=1<<20;
-  var P=HTMLTextAreaElement.prototype;
-  var dV=Object.getOwnPropertyDescriptor(P,'value'), dS=Object.getOwnPropertyDescriptor(P,'selectionStart'), dE=Object.getOwnPropertyDescriptor(P,'selectionEnd');
-  var nGet=function(){ return dV.get.call(TA); }, nSet=function(v){ dV.set.call(TA,v); };
-  var nS=function(){ return dS.get.call(TA); }, nE=function(){ return dE.get.call(TA); };
-  var nSetSel=P.setSelectionRange, nFocus=HTMLElement.prototype.focus;
-
-  /* ── 모델 ── */
-  var big=false, chunks=[], rows=[], charPre=[0], rowPre=[0], len=0, totalRows=0, joined=null, cols=80;
-  /* ── 화면(창) ── */
-  var wrap, space, mirror, winOff=0, g0=0, g1=0, T=0, taH=0, spacerH=0, LHest=26, viewH=0, offs=null, offN=0;
-  var expectS=-1, lastS=0, composing=false, pendAnchor=false, detached=false, detOff=0, idleT=null, rszT=null, prevWin='';
-
-  function splitRows(str){
-    var out=[], pos=0, L=str.length, c=cols;
-    while(pos<L){
-      var nl=str.indexOf('\n',pos), end=(nl<0)?L:nl+1;
-      if(end-pos<=c){ out.push(pos); pos=end; }
-      else { while(pos<end){ out.push(pos); pos=Math.min(pos+c,end); } }
-    }
-    if(!out.length) out.push(0);
-    return Uint32Array.from(out);
-  }
-  function rebuildPre(){
-    charPre=[0]; rowPre=[0];
-    for(var i=0;i<chunks.length;i++){ charPre.push(charPre[i]+chunks[i].length); rowPre.push(rowPre[i]+rows[i].length); }
-    len=charPre[chunks.length]; totalRows=rowPre[chunks.length];
-  }
-  function build(text){
-    chunks=[]; rows=[];
-    for(var p=0;p<text.length;p+=CH){ var s=text.slice(p,Math.min(p+CH,text.length)); chunks.push(s); rows.push(splitRows(s)); }
-    if(!chunks.length){ chunks=['']; rows=[splitRows('')]; }
-    rebuildPre(); joined=text;
-  }
-  function rebuildRows(){ for(var i=0;i<chunks.length;i++) rows[i]=splitRows(chunks[i]); rebuildPre(); }
-  function bs(arr,n,v){ /* 가장 큰 i (i<n) with arr[i]<=v */ var lo=0,hi=n-1; while(lo<hi){ var m=(lo+hi+1)>>1; if(arr[m]<=v) lo=m; else hi=m-1; } return lo; }
-  function chunkAt(off){ if(off>=len) return chunks.length-1; return bs(charPre,chunks.length,off); }
-  function rowAt(off){ off=Math.max(0,Math.min(off,len)); var c=chunkAt(off); return rowPre[c]+bs(rows[c],rows[c].length,off-charPre[c]); }
-  function rowStart(g){ if(g>=totalRows) return len; var c=bs(rowPre,chunks.length,g); return charPre[c]+rows[c][g-rowPre[c]]; }
-  function getRange(s,e){
-    s=Math.max(0,Math.min(s,len)); e=Math.max(s,Math.min(e,len)); if(s===e) return '';
-    if(joined) return joined.slice(s,e);
-    var cs=chunkAt(s), ce=chunkAt(e-1), out='';
-    for(var c=cs;c<=ce;c++){ var a=Math.max(0,s-charPre[c]), b=Math.min(chunks[c].length,e-charPre[c]); out+=chunks[c].slice(a,b); }
-    return out;
-  }
-  function text(){ if(joined===null) joined=chunks.join(''); return joined; }
-  /* 모델 치환: [s,e) → ins.  바뀐 조각의 chunk 만 다시 만든다 */
-  function modelReplace(s,e,ins){
-    var cs=chunkAt(s), ce=chunkAt(Math.max(s,e-1));
-    var head=chunks[cs].slice(0,s-charPre[cs]), tail=chunks[ce].slice(e-charPre[ce]);
-    var ns=head+ins+tail, parts=[];
-    if(ns.length>2*CH){ for(var p=0;p<ns.length;p+=CH) parts.push(ns.slice(p,Math.min(p+CH,ns.length))); } else parts=[ns];
-    var rs=parts.map(splitRows);
-    chunks.splice.apply(chunks,[cs,ce-cs+1].concat(parts)); rows.splice.apply(rows,[cs,ce-cs+1].concat(rs));
-    rebuildPre(); joined=null;
-  }
-
-  /* ── 실행취소(조각 기억) ── */
-  var U=[], R=[];
-  function uPush(o,del,ins){
-    var now=Date.now(), l=U[U.length-1];
-    if(l && now-l.ts<900){
-      if(!del && !l.del && l.o+l.ins.length===o){ l.ins+=ins; l.ts=now; R=[]; return; }                 /* 이어 치기 */
-      if(!ins && !l.ins && del.length===1 && o+del.length===l.o){ l.o=o; l.del=del+l.del; l.ts=now; R=[]; return; } /* 백스페이스 연타 */
-      if(!ins && !l.ins && del.length===1 && o===l.o){ l.del+=del; l.ts=now; R=[]; return; }             /* Delete 연타 */
-      if(del && l.ins && l.o+l.ins.length===o+del.length && l.ins.length>=del.length && l.ins.slice(l.ins.length-del.length)===del){ l.ins=l.ins.slice(0,l.ins.length-del.length)+ins; l.ts=now; R=[]; return; } /* 한글 조합(ㅎ→하→한) */
-    }
-    U.push({o:o,del:del,ins:ins,ts:now}); R=[];
-  }
-  function uApply(en,undo){
-    var o=en.o, rm=undo?en.ins:en.del, put=undo?en.del:en.ins;
-    modelReplace(o,o+rm.length,put); afterModel(o+put.length, o, o+put.length);
-  }
-  function undo(){ if(!U.length) return; var en=U.pop(); uApply(en,true); R.push(en); }
-  function redo(){ if(!R.length) return; var en=R.pop(); uApply(en,false); U.push(en); }
-
-  /* ── 화면 ── */
-  function css(k){ return getComputedStyle(TA)[k]; }
-  function measureCols(){
-    mirror.style.width=TA.offsetWidth+'px';
-    ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','wordSpacing','paddingTop','paddingRight','paddingBottom','paddingLeft','tabSize'].forEach(function(k){ mirror.style[k]=css(k); });
-    mirror.textContent=''; var sp=document.createElement('span'); sp.textContent=new Array(41).join('x')+new Array(41).join('가'); mirror.appendChild(sp);
-    var w=sp.getBoundingClientRect().width/80 || 8, inner=TA.clientWidth-parseFloat(css('paddingLeft'))-parseFloat(css('paddingRight'));
-    cols=Math.max(16,Math.floor(inner/w)); LHest=parseFloat(css('lineHeight'))||parseFloat(css('fontSize'))*1.75;
-    mirror.textContent='';
-  }
-  /* 창 안 줄들의 세로 위치를 거울 div 로 잰다 (textarea 는 줄 위치를 못 준다) */
-  function measure(){
-    g0=rowAt(winOff); var frag=document.createDocumentFragment(), g=g0, L=nGet().length, end=winOff+L, n=0;
-    while(g<totalRows){ var a=Math.max(rowStart(g),winOff), b=rowStart(g+1), t=getRange(a,Math.min(b,end)); var sp=document.createElement('span'); sp.textContent=t; frag.appendChild(sp); g++; n++; if(b>=end) break; }
-    g1=g;
-    if(!n){ var sp0=document.createElement('span'); sp0.textContent='\u200b'; frag.appendChild(sp0); n=1; }
-    mirror.textContent=''; mirror.appendChild(frag);
-    var top=mirror.getBoundingClientRect().top, ch=mirror.childNodes; offs=new Float64Array(n);
-    for(var i=0;i<n;i++) offs[i]=ch[i].getBoundingClientRect().top-top;
-    offN=n; mirror.textContent='';
-  }
-  function autosize(){ TA.style.height='0px'; taH=TA.scrollHeight; TA.style.height=taH+'px'; if(T+taH>spacerH) setSpacer(T+taH+(g1<totalRows?viewH:0)); }
-  function setSpacer(h){ spacerH=Math.max(viewH,Math.round(h)); space.style.height=spacerH+'px'; }
-  function estTop(g){ return g*LHest; }
-  function estTotal(){ return totalRows*LHest+40; }
-  function scaleS(){ var tot=estTotal(); return Math.min(tot,12000000)/tot; }
-  /* 핵심: anchorRow 의 윗선이 화면 y=vy 에 오도록 창을 다시 그린다 (눈에는 아무 변화 없음) */
-  function renderAt(anchorRow, vy, keepS){
-    var rpv=Math.max(4,Math.ceil(viewH/LHest));
-    g0=Math.max(0,anchorRow-2*rpv); g1=Math.min(totalRows,anchorRow+4*rpv); if(g1<=g0) g1=Math.min(totalRows,g0+1);
-    var gc=null; if(TA===document.activeElement && !detached) gc=winOff+nS(); /* 커서 전역 위치(다시 그리기 전) */
-    winOff=rowStart(g0); var t=getRange(winOff,rowStart(g1));
-    nSet(t); prevWin=t; autosize(); measure();
-    var a=Math.min(offN-1,anchorRow-g0), oa=offs[a]||0, S;
-    if(keepS!==undefined && keepS!==null) S=keepS; else S=Math.round(estTop(anchorRow)*scaleS()-vy);
-    if(g0===0){ T=0; S=Math.round(oa-vy); }
-    else { S=Math.max(0,S); T=Math.round(S+vy-oa); if(T<0){ S-=T; T=0; } }
-    if(g1>=totalRows){ if(T+taH<S+viewH) S=Math.max(0,T+taH-viewH); setSpacer(Math.max(T+taH, S+viewH)); }   /* 글 끝: 보통 textarea 처럼 끝이 화면 밑에 붙는다 */
-    else setSpacer(Math.max(estTotal()*scaleS(), T+taH+viewH));
-    if(S>spacerH-viewH) S=Math.max(0,spacerH-viewH);
-    TA.style.transform='translateY('+T+'px)';
-    if(Math.abs(wrap.scrollTop-S)>0.5){ expectS=S; wrap.scrollTop=S; } lastS=S;
-    if(gc!==null){ var lc=gc-winOff; if(lc>=0 && lc<=t.length){ try{ nSetSel.call(TA,lc,lc); }catch(e){} } else { detached=true; detOff=gc; } }
-  }
-  function afterModel(caretOff, selS, selE){
-    /* 모델이 바뀐 뒤(실행취소·치환 등) 커서 자리 기준으로 다시 그린다 */
-    if(len<=BIG){ leaveBig(text(), selS, selE); return; }
-    var r=rowAt(caretOff); detached=false; renderAt(r, Math.round(viewH*0.3));
-    setSel(selS==null?caretOff:selS, selE==null?caretOff:selE);
-  }
-  function relayoutNow(){ if(!big) return; viewH=wrap.clientHeight; if(!offs) measure(); var top=curTopRow(); measureCols(); rebuildRows(); renderAt(top.row, top.vy); }
-  function curTopRow(){ /* 지금 화면 맨 위에 걸린 줄과 그 줄 윗선의 화면 y (음수) */
-    var y0=wrap.scrollTop-T; if(!offs||!offN||offs.length!==offN) return {row:g0,vy:0};
-    var i=bs(offs,offN,y0); return {row:g0+i, vy:offs[i]-y0};
-  }
-  function onScroll(){
-    if(!big) return;
-    var S=wrap.scrollTop;
-    if(expectS>=0 && Math.abs(S-expectS)<1){ expectS=-1; lastS=S; return; }
-    expectS=-1;
-    var d=S-lastS; lastS=S;
-    if(Math.abs(d)>3*viewH){ /* 스크롤바를 멀리 끌었다 → 비율로 점프 */
-      var row=Math.max(0,Math.min(totalRows-1,Math.floor(S/Math.max(1,spacerH-viewH)*totalRows)));
-      if(composing){ pendAnchor=true; return; }
-      renderAt(row,0,S); return;
-    }
-    var y0=S-T, y1=y0+viewH, need=false;
-    if(y0<viewH && g0>0) need=true; if(y1>taH-viewH && g1<totalRows) need=true;
-    if(need){ if(composing){ pendAnchor=true; return; } measure(); var tr=curTopRow(); renderAt(tr.row, tr.vy, (g0>0&&tr.row>0)?S:undefined); }
-    clearTimeout(idleT); idleT=setTimeout(idleSync,400);
-  }
-  function idleSync(){ /* 멈춘 뒤: 스크롤바 위치를 비율 자리로 조용히 맞춘다 (화면 변화 없음) */
-    if(!big||composing||g0===0||g1>=totalRows) return;
-    measure(); var tr=curTopRow(); var S=Math.round(estTop(tr.row)*scaleS()-tr.vy); if(S<0) S=0; if(S>spacerH-viewH) S=spacerH-viewH;
-    if(Math.abs(S-wrap.scrollTop)<viewH) return;
-    T=Math.round(S+tr.vy-offs[tr.row-g0]); if(T<0){ S-=T; T=0; }
-    TA.style.transform='translateY('+T+'px)'; expectS=S; wrap.scrollTop=S; lastS=S;
-  }
-  function onInput(e){
-    if(!big){ if(e.isTrusted && nGet().length>BIG){ enterBig(nGet(), nS(), nE()); } return; }
-    if(!e.isTrusted){ autosize(); return; }
-    var nw=nGet(), ow=prevWin; prevWin=nw;
-    var p=0, m=Math.min(ow.length,nw.length); while(p<m && ow.charCodeAt(p)===nw.charCodeAt(p)) p++;
-    var s=0; while(s<m-p && ow.charCodeAt(ow.length-1-s)===nw.charCodeAt(nw.length-1-s)) s++;
-    var del=ow.slice(p,ow.length-s), ins=nw.slice(p,nw.length-s);
-    if(!del && !ins){ autosize(); return; }
-    modelReplace(winOff+p, winOff+p+del.length, ins); uPush(winOff+p,del,ins);
-    autosize(); offs=null;
-    if(len<=BIG){ var cs=nS(), ce=nE(); leaveBig(text(), winOff+cs, winOff+ce); }
-  }
-  function onKey(e){
-    if(!big) return;
-    if(detached && !e.ctrlKey && !e.metaKey && !e.altKey && e.key!=='Shift'){ gotoOffset(detOff); }
-    if((e.ctrlKey||e.metaKey)&&!e.altKey){
-      var k=(e.key||'').toLowerCase();
-      if(k==='z'&&!e.shiftKey){ e.preventDefault(); undo(); return; }
-      if(k==='y'||(k==='z'&&e.shiftKey)){ e.preventDefault(); redo(); return; }
-      if(e.key==='Home'){ e.preventDefault(); gotoOffset(0); return; }
-      if(e.key==='End'){ e.preventDefault(); gotoOffset(len); return; }
-    }
-  }
-  function onBeforeInput(){ if(big && detached) gotoOffset(detOff); }
-  /* 큰 붙여넣기: 브라우저가 textarea 에 1억 자를 한 글자씩 밀어 넣으면 몇 분을 멈춘다(「페이지 응답 없음」).
-     50만 자를 넘길 붙여넣기는 우리가 가로채서 모델에 바로 넣고 화면 근처만 그린다 → 몇 초. */
-  function onPaste(e){
-    var cd=e.clipboardData; if(!cd) return;
-    var txt=cd.getData('text/plain'); if(!txt) return;
-    var s=big?winOff+nS():nS(), en=big?winOff+nE():nE(), total=(big?len:nGet().length)-(en-s)+txt.length;
-    if(total<=BIG) return;                                        /* 작은 붙여넣기는 예전 그대로 브라우저에 맡긴다 */
-    e.preventDefault(); e.stopImmediatePropagation();
-    if(big){ var del=getRange(s,en); modelReplace(s,en,txt); uPush(s,del,txt); afterModel(s+txt.length); }
-    else { var v=nGet(); enterBig(v.slice(0,s)+txt+v.slice(en), s+txt.length, s+txt.length); }
-    setTimeout(function(){ TA.dispatchEvent(new Event('input',{bubbles:true})); },0);   /* 글자 수·자동저장은 늘 하던 대로 */
-  }
-  function gotoOffset(off,end){
-    off=Math.max(0,Math.min(off,len)); detached=false;
-    var r=rowAt(off), lc=off-winOff, inWin=(lc>=0 && lc<=nGet().length);
-    if(!inWin){ renderAt(r, Math.round(viewH*0.3)); }
-    setSel(off, end==null?off:end);
-  }
-  function setSel(s,e){
-    if(!big){ try{ nSetSel.call(TA,s,e); }catch(x){} return; }
-    var L=nGet().length; if(s-winOff<0 || s-winOff>L){ gotoOffset(s,e); return; }
-    var a=Math.max(0,s-winOff), b=Math.max(a,Math.min(L,e-winOff)); detached=false;
-    try{ nSetSel.call(TA,a,b); }catch(x){}
-  }
-  function enterBig(v, selS, selE){
-    build(v); big=true; U=[]; R=[];
-    wrap.classList.add('big'); viewH=wrap.clientHeight; measureCols(); rebuildRows();
-    var off=(selS!=null)?selS:0; var r=rowAt(off); renderAt(r, Math.round(viewH*0.3));
-    setSel(off, selE==null?off:selE);
-  }
-  function leaveBig(v, selS, selE){
-    big=false; wrap.classList.remove('big'); TA.style.transform=''; TA.style.height=''; space.style.height=''; wrap.scrollTop=0; offs=null; detached=false;
-    nSet(v); joined=null; chunks=[]; rows=[]; len=v.length; U=[]; R=[];
-    if(selS!=null){ try{ nSetSel.call(TA,selS,selE==null?selS:selE); }catch(x){} }
-  }
-
-  /* ── 요소 감싸기 (마크업은 그대로, 여기서만 감싼다) ── */
-  wrap=document.createElement('div'); wrap.className='ve-wrap'; wrap.id='veWrap';
-  space=document.createElement('div'); space.className='ve-space';
-  mirror=document.createElement('div'); mirror.className='ve-mirror'; mirror.setAttribute('aria-hidden','true');
-  TA.parentNode.insertBefore(wrap,TA); wrap.appendChild(space); space.appendChild(TA); document.body.appendChild(mirror);
-  wrap.addEventListener('scroll', onScroll, {passive:true});
-  TA.addEventListener('input', onInput, true);
-  TA.addEventListener('keydown', onKey, true);
-  TA.addEventListener('beforeinput', onBeforeInput, true);
-  TA.addEventListener('paste', onPaste, true);
-  TA.addEventListener('compositionstart', function(){ composing=true; });
-  TA.addEventListener('compositionend', function(){ composing=false; if(pendAnchor){ pendAnchor=false; setTimeout(function(){ if(big){ measure(); var tr=curTopRow(); renderAt(tr.row,tr.vy,wrap.scrollTop); } },0); } });
-  TA.addEventListener('pointerdown', function(){ detached=false; });
-  if(window.ResizeObserver){ new ResizeObserver(function(){ if(!big) return; clearTimeout(rszT); rszT=setTimeout(relayoutNow,200); }).observe(wrap); }
-
-  /* ── 바깥 코드가 보는 얼굴: 언제나 「글 전체」 ── */
-  Object.defineProperty(TA,'value',{configurable:true,
-    get:function(){ return big?text():nGet(); },
-    set:function(v){ v=(v==null)?'':String(v);
-      if(v.length>BIG){ if(big){ build(v); U=[]; R=[]; measureCols(); rebuildRows(); detached=false; renderAt(0,0); setSel(0,0); } else enterBig(v,0,0); }   /* 글을 통째로 새로 받으면 맨 위부터 */
-      else { if(big) leaveBig(v,0,0); else nSet(v); } } });
-  Object.defineProperty(TA,'selectionStart',{configurable:true,
-    get:function(){ return big?winOff+nS():nS(); },
-    set:function(v){ v=+v||0; var e=big?winOff+nE():nE(); setSel(v,Math.max(v,e)); } });
-  Object.defineProperty(TA,'selectionEnd',{configurable:true,
-    get:function(){ return big?winOff+nE():nE(); },
-    set:function(v){ v=+v||0; var s=big?winOff+nS():nS(); setSel(Math.min(s,v),v); } });
-  TA.setSelectionRange=function(s,e,d){ if(!big) return nSetSel.call(TA,s,e,d); setSel(+s||0,+e||0); };
-  TA.focus=function(o){ return nFocus.call(TA, big?{preventScroll:true}:o); };
-
-  return {
-    get big(){ return big; }, BIG:BIG,
-    len:function(){ return big?len:nGet().length; }, text:text,
-    getRange:function(s,e){ return big?getRange(s,e):nGet().slice(s,e); },
-    replaceRange:function(s,e,ins,caret){ if(!big){ var v=nGet(); nSet(v.slice(0,s)+ins+v.slice(e)); try{ nSetSel.call(TA,caret==null?s+ins.length:caret,caret==null?s+ins.length:caret); }catch(x){} return; }
-      s=Math.max(0,Math.min(s,len)); e=Math.max(s,Math.min(e,len)); var del=getRange(s,e); modelReplace(s,e,ins); uPush(s,del,ins); afterModel(caret==null?s+ins.length:caret, caret==null?s+ins.length:caret, caret==null?s+ins.length:caret); },
-    selection:function(){ var s=TA.selectionStart, e=TA.selectionEnd; return {s:s,e:e,text:(big?getRange(s,e):nGet().slice(s,e))}; },
-    setSel:setSel, gotoOffset:gotoOffset, undo:undo, redo:redo, uReset:function(){ U=[]; R=[]; },
-    relayout:function(){ if(big){ clearTimeout(rszT); rszT=setTimeout(relayoutNow,30); } },
-    _dbg:function(){ return {big:big,chunks:chunks.length,rows:totalRows,len:len,g0:g0,g1:g1,winOff:winOff,T:T,taH:taH,spacerH:spacerH,S:wrap.scrollTop,cols:cols,LHest:LHest,undo:U.length}; }
-  };
-})();
-/* 큰 글에서도 안전한 범위 읽기/치환 (단추들이 이걸 쓴다) */
-function edGetRange(s,e){ return VE.getRange(s,e); }
-function edReplaceRange(s,e,txt,caret){ VE.replaceRange(s,e,txt,caret); }
-
-
 function folderOf(n){ return n.folderId||'default'; }
 
 /* ───────── 유틸 ───────── */
@@ -798,7 +521,7 @@ function fmtDate(ts){var d=new Date(ts), p=function(n){return (n<10?'0':'')+n;};
 function numf(n){return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function deriveTitle(note){
   if(note.title && note.title.trim()) return note.title.trim();
-  var first=(note.content||'').slice(0,2000).split('\n').find(function(l){return l.trim();});   /* 1억 자를 줄 단위로 쪼개지 않는다 */
+  var first=(note.content||'').split('\n').find(function(l){return l.trim();});
   return first? first.trim().slice(0,60) : '(제목 없음)';
 }
 function escapeHtml(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -926,7 +649,7 @@ function renderList(){
   var q=currentQuery();
   var searching=!!q;
   var arr = searching
-    ? notes.filter(function(n){ var c=n.content||''; return deriveTitle(n).toLowerCase().indexOf(q)>=0 || (c.length>2000000 ? c.indexOf(q)>=0 : c.toLowerCase().indexOf(q)>=0); })
+    ? notes.filter(function(n){ return deriveTitle(n).toLowerCase().indexOf(q)>=0 || (n.content||'').toLowerCase().indexOf(q)>=0; })
     : notes.filter(function(n){ return curFolder==='__all__' ? true : folderOf(n)===curFolder; });
   arr.sort(function(a,b){return b.updated-a.updated;});
   if(!arr.length){
@@ -1024,14 +747,15 @@ function delNote(id){
 }
 
 /* ───────── 글자 수 / 자동 저장 ───────── */
-function updateCount(){ charEl.textContent=numf(VE.len()); }
+function updateCount(){ charEl.textContent=numf(contentEl.value.length); }
 /* ★ 저장 안전장치 — 「저장 안 하고 나가서 날린」 일이 다시 없게.
    ① dirty: 마지막 저장 뒤에 글이 바뀌었는지  ② 비상 사본: 글자를 칠 때마다 localStorage(동기)에 남긴다 — IndexedDB 는 비동기라
    창을 닫는 순간의 쓰기가 사라질 수 있다  ③ 나갈 때 dirty 면 브라우저가 「나갈까요?」를 묻는다  ④ 다음에 열면 비상 사본이 더 새로우면 되살린다 */
 var _dirty=false, _fileDirty=false, DKEY='c61memo_draft';   /* _fileDirty: PC 파일에 마지막으로 쓴 뒤 글이 바뀌었는지 */
-function _draftWrite(){ if(!currentId) return; if(VE.len()>2000000) return; /* 200만 자 넘으면 비상 사본 생략(localStorage 5MB 한계) */ try{ localStorage.setItem(DKEY, JSON.stringify({id:currentId,title:titleEl.value,content:contentEl.value,ts:Date.now()})); }catch(e){} }
+function _draftWrite(){ if(!currentId) return; if((contentEl.value||'').length>2000000){ try{ localStorage.removeItem(DKEY); }catch(e){} return; }   /* 200만 자 넘는 큰 메모는 비상 사본을 두지 않는다(localStorage 5MB 한계) — IndexedDB 자동저장이 맡는다 */
+  try{ localStorage.setItem(DKEY, JSON.stringify({id:currentId,title:titleEl.value,content:contentEl.value,ts:Date.now()})); }catch(e){} }
 function _draftClear(){ try{ localStorage.removeItem(DKEY); }catch(e){} }
-function scheduleSave(){ updateCount(); _dirty=true; _fileDirty=true; _draftWrite(); clearTimeout(saveTimer); saveTimer=setTimeout(saveCurrent, VE.big?4000:600); }   /* 큰 글은 자주 쓰지 않는다(발열) */
+function scheduleSave(){ updateCount(); _dirty=true; _fileDirty=true; _draftWrite(); clearTimeout(saveTimer); saveTimer=setTimeout(saveCurrent, 600); }
 titleEl.addEventListener('input', scheduleSave);
 contentEl.addEventListener('input', scheduleSave);
 
@@ -1040,12 +764,12 @@ contentEl.addEventListener('input', scheduleSave);
 var _uUndo=[], _uRedo=[], _uTimer=null, _uHold=false, _uMAX=10;
 function _uSnap(){ return contentEl.value+'\u0001'+(titleEl.value||''); }
 function _uApply(s){ _uHold=true; var i=s.indexOf('\u0001'); contentEl.value=s.slice(0,i); titleEl.value=s.slice(i+1); contentEl.dispatchEvent(new Event('input')); titleEl.dispatchEvent(new Event('input')); _uHold=false; }
-function _uReset(){ VE.uReset(); if(VE.big){ _uUndo=[]; _uRedo=[]; clearTimeout(_uTimer); return; } _uUndo=[_uSnap()]; _uRedo=[]; clearTimeout(_uTimer); }
-function _uCommit(){ if(_uHold||VE.big) return; var s=_uSnap(); if(_uUndo.length && _uUndo[_uUndo.length-1]===s) return; _uUndo.push(s); if(_uUndo.length>_uMAX+1) _uUndo.shift(); _uRedo=[]; }
-function _uEdit(){ if(_uHold||VE.big) return; clearTimeout(_uTimer); _uTimer=setTimeout(_uCommit, 500); }
+function _uReset(){ _uUndo=[_uSnap()]; _uRedo=[]; clearTimeout(_uTimer); }
+function _uCommit(){ if(_uHold) return; var s=_uSnap(); if(_uUndo.length && _uUndo[_uUndo.length-1]===s) return; _uUndo.push(s); if(_uUndo.length>_uMAX+1) _uUndo.shift(); _uRedo=[]; }
+function _uEdit(){ if(_uHold) return; clearTimeout(_uTimer); _uTimer=setTimeout(_uCommit, 500); }
 function _uUndoDo(){ clearTimeout(_uTimer); _uCommit(); if(_uUndo.length<=1) return; var cur=_uUndo.pop(); _uRedo.push(cur); if(_uRedo.length>_uMAX) _uRedo.shift(); _uApply(_uUndo[_uUndo.length-1]); }
 function _uRedoDo(){ if(!_uRedo.length) return; var s=_uRedo.pop(); _uUndo.push(s); _uApply(s); }
-function _uKey(e){ if(VE.big) return; if((e.ctrlKey||e.metaKey)&&!e.altKey){ var k=(e.key||'').toLowerCase(); if(k==='z'&&!e.shiftKey){ e.preventDefault(); _uUndoDo(); } else if(k==='y'||(k==='z'&&e.shiftKey)){ e.preventDefault(); _uRedoDo(); } } }
+function _uKey(e){ if((e.ctrlKey||e.metaKey)&&!e.altKey){ var k=(e.key||'').toLowerCase(); if(k==='z'&&!e.shiftKey){ e.preventDefault(); _uUndoDo(); } else if(k==='y'||(k==='z'&&e.shiftKey)){ e.preventDefault(); _uRedoDo(); } } }
 contentEl.addEventListener('input', _uEdit);
 titleEl.addEventListener('input', _uEdit);
 contentEl.addEventListener('keydown', _uKey);
@@ -1074,14 +798,14 @@ applyCollapsed();
 
 /* 글자 크기 (기억됨) */
 var FSIZE=parseInt(localStorage.getItem('c61memo_fsize'),10); if(isNaN(FSIZE)||FSIZE<11||FSIZE>30){ FSIZE=15; }
-function applyFont(){ contentEl.style.fontSize=FSIZE+'px'; var fs=$('fSize'); if(fs) fs.textContent=FSIZE; localStorage.setItem('c61memo_fsize',FSIZE); VE.relayout(); }
+function applyFont(){ contentEl.style.fontSize=FSIZE+'px'; var fs=$('fSize'); if(fs) fs.textContent=FSIZE; localStorage.setItem('c61memo_fsize',FSIZE); }
 $('fMinus').onclick=function(){ if(FSIZE>11){FSIZE--; applyFont();} };
 $('fPlus').onclick=function(){ if(FSIZE<30){FSIZE++; applyFont();} };
 applyFont();
 
 /* 줄 간격(행간) — 한 칸씩 조절, 기억됨 */
 var LH=parseFloat(localStorage.getItem('c61memo_lh')); if(isNaN(LH)||LH<1.2||LH>3){ LH=1.75; }
-function applyLH(){ contentEl.style.lineHeight=LH; var el=$('lhVal'); if(el) el.textContent=LH.toFixed(1); localStorage.setItem('c61memo_lh',LH); VE.relayout(); }
+function applyLH(){ contentEl.style.lineHeight=LH; var el=$('lhVal'); if(el) el.textContent=LH.toFixed(1); localStorage.setItem('c61memo_lh',LH); }
 $('lhMinus').onclick=function(){ if(LH>1.2){ LH=Math.round((LH-0.15)*100)/100; applyLH(); } };
 $('lhPlus').onclick=function(){ if(LH<3){ LH=Math.round((LH+0.15)*100)/100; applyLH(); } };
 applyLH();
@@ -1102,14 +826,13 @@ $('tidyBtn').onclick=function(){
   if(!currentId){ alert('정리할 메모가 없어요. 먼저 메모를 여세요.'); return; }
   var ta=$('contentInput'); var s=ta.selectionStart, e=ta.selectionEnd;
   if(s!==e){ /* 드래그로 고른 부분만 정리 */
-    var sel=edGetRange(s,e), out=cleanLines(sel);
+    var sel=ta.value.slice(s,e), out=cleanLines(sel);
     if(out===sel){ showToast('고른 부분은 이미 정리돼 있어요 👍'); return; }
-    edReplaceRange(s,e,out);
-    try{ ta.setSelectionRange(s, s+out.length); }catch(err){}
+    ta.value=ta.value.slice(0,s)+out+ta.value.slice(e);
+    try{ ta.selectionStart=s; ta.selectionEnd=s+out.length; }catch(err){}
     ta.dispatchEvent(new Event('input')); ta.focus();
     showToast('🧹 고른 부분만 정리했어요'); return;
   }
-  if(VE.big){ showToast('큰 메모는 정리할 부분을 드래그해서 고른 뒤 누르세요 (보이는 것만)'); return; }   /* 1억 자 전체 정규식은 수 초 멈춤 */
   var before=ta.value, after=cleanLines(before);
   if(after===before){ showToast('이미 줄바꿈이 되어 있어요 👍 (일부만 하려면 그 부분을 드래그하고 누르세요)'); return; }
   ta.value=after; ta.dispatchEvent(new Event('input'));
@@ -1121,13 +844,9 @@ $('splitBtn').onclick=function(){
   if(!currentId){ alert('먼저 메모를 여세요.'); return; }
   var ta=$('contentInput'), s=ta.selectionStart, e=ta.selectionEnd;
   if(s===e){ showToast('먼저 떼어낼 부분을 드래그해서 선택하세요'); return; }
-  /* 앞뒤 공백만 걷어내고 그 자리만 바꾼다 — 글 전체를 다시 쓰지 않는다(1억 자에서도 즉시) */
-  var L=VE.len(), a=s, b=e;
-  while(a>0){ var pc=edGetRange(Math.max(0,a-64),a), k=pc.length; while(k>0 && /\s/.test(pc[k-1])) k--; a-=(pc.length-k); if(k>0) break; }
-  while(b<L){ var nc=edGetRange(b,Math.min(L,b+64)), j=0; while(j<nc.length && /\s/.test(nc[j])) j++; b+=j; if(j<nc.length) break; }
-  var selT=edGetRange(s,e).replace(/^\s+|\s+$/g,''), hasPre=a>0, hasPost=b<L;
-  edReplaceRange(a,b,(hasPre?'\n\n':'')+selT+(hasPost?'\n\n':''));
-  var np=a+(hasPre?2:0); try{ ta.setSelectionRange(np, np+selT.length); }catch(err){}
+  var pre=ta.value.slice(0,s).replace(/\s+$/,''), selT=ta.value.slice(s,e).replace(/^\s+|\s+$/g,''), post=ta.value.slice(e).replace(/^\s+/,'');
+  ta.value=(pre?pre+'\n\n':'')+selT+(post?'\n\n'+post:'');
+  var np=(pre?pre.length+2:0); try{ ta.selectionStart=np; ta.selectionEnd=np+selT.length; }catch(err){}
   ta.dispatchEvent(new Event('input')); ta.focus();
   showToast('↵ 선택한 부분을 떼어냈어요');
 };
@@ -1140,9 +859,7 @@ $('pdfBtn').onclick=function(){
   var pa=$('printArea');
   pa.querySelector('h1').textContent=deriveTitle(n);
   pa.querySelector('.pdate').textContent=fmtDate(n.updated)+'  ·  '+folderName(folderOf(n));
-  var body;
-  if(VE.big){ var _sel=VE.selection(); if(!_sel.text){ showToast('큰 메모는 PDF로 만들 부분을 드래그해서 고른 뒤 누르세요 (보이는 것만)'); return; } body=cleanLines(_sel.text); }
-  else body=cleanLines(n.content||'');
+  var body=cleanLines(n.content||'');
   var paras=body.split(/\n{2,}/);
   pa.querySelector('.pbody').innerHTML = body ? paras.map(function(p){ return '<p style="line-height:'+LH+'">'+escapeHtml(p)+'</p>'; }).join('') : '';
   document.title=deriveTitle(n);
@@ -1231,6 +948,13 @@ $('exitBtn').onclick=function(){
   else { go(); }
 };
 $('saveAskCancel').onclick=function(){ $('saveAsk').style.display='none'; };
+/* ★ 🏠 CGO로 — 저장 안 된 글이 있으면 「저장할까요?」 → 확인 = 제목.txt 저장 → CGO-FULI 대시보드(index.html). 취소 = 저장 없이 대시보드로 */
+$('cgoHomeBtn').onclick=function(){
+  var goHome=function(){ _dirty=false; _fileDirty=false; _draftClear(); location.href='index.html'; };
+  if(!(_dirty||_fileDirty)){ goHome(); return; }
+  if(confirm('저장할까요?')){ saveNow().then(function(r){ if(r===null) return; goHome(); }); }
+  else { goHome(); }
+};
 $('saveAskNo').onclick=function(){ _dirty=false; _fileDirty=false; _draftClear(); _doExit(); };
 $('saveAskYes').onclick=function(){ saveNow().then(function(r){ if(r===null) return; _dirty=false; _draftClear(); _doExit(); }); };
 /* 탭을 숨길 때(폰에서 홈으로 나갈 때)도 저장 — 폰에서는 beforeunload 가 안 오는 경우가 많다 */
@@ -1369,9 +1093,9 @@ function vidLoadFile(file){ if(!file) return; var url=URL.createObjectURL(file);
 /* ⏱ 영상 시각 → 메모에 찍기 / 텍스트의 [mm:ss] 누르면 그 장면으로 점프 (로컬 영상) */
 function fmtT(s){ s=Math.floor(s||0); var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60,p=function(n){return(n<10?'0':'')+n;}; return h>0?(h+':'+p(m)+':'+p(x)):(m+':'+p(x)); }
 function parseT(str){ var a=str.split(':').map(Number); if(a.some(isNaN))return null; if(a.length===3)return a[0]*3600+a[1]*60+a[2]; if(a.length===2)return a[0]*60+a[1]; return null; }
-function insertAtCursor(ta,text){ var s=(ta.selectionStart!=null?ta.selectionStart:ta.value.length), e=(ta.selectionEnd!=null?ta.selectionEnd:s); if(ta===contentEl){ edReplaceRange(s,e,text); var pos2=s+text.length; try{ ta.setSelectionRange(pos2,pos2); }catch(err){} ta.focus(); ta.dispatchEvent(new Event('input')); return; } ta.value=ta.value.slice(0,s)+text+ta.value.slice(e); var pos=s+text.length; try{ta.selectionStart=ta.selectionEnd=pos;}catch(err){} ta.focus(); ta.dispatchEvent(new Event('input')); }
+function insertAtCursor(ta,text){ var s=(ta.selectionStart!=null?ta.selectionStart:ta.value.length), e=(ta.selectionEnd!=null?ta.selectionEnd:s); ta.value=ta.value.slice(0,s)+text+ta.value.slice(e); var pos=s+text.length; try{ta.selectionStart=ta.selectionEnd=pos;}catch(err){} ta.focus(); ta.dispatchEvent(new Event('input')); }
 function stampInto(ta){ if(!window._vid){ showToast('먼저 📁 내 영상 파일을 여세요 (유튜브는 시각 기록이 안 돼요)'); return; } insertAtCursor(ta, '['+fmtT(window._vid.currentTime)+'] '); }
-function seekFromTextarea(ta){ if(!window._vid) return; var pos=ta.selectionStart, val=ta.value; if(ta===contentEl&&VE.big){ var b0=Math.max(0,pos-24); val=VE.getRange(b0,pos+24); pos-=b0; } re=/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, m; while((m=re.exec(val))){ var st=m.index, en=st+m[0].length; if(pos>=st&&pos<=en){ var t=parseT(m[1]); if(t!=null){ try{ window._vid.currentTime=t; if(window._vid.play) window._vid.play(); }catch(e){} showToast('▶ '+m[1]); } return; } } }
+function seekFromTextarea(ta){ if(!window._vid) return; var pos=ta.selectionStart, val=ta.value, re=/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, m; while((m=re.exec(val))){ var st=m.index, en=st+m[0].length; if(pos>=st&&pos<=en){ var t=parseT(m[1]); if(t!=null){ try{ window._vid.currentTime=t; if(window._vid.play) window._vid.play(); }catch(e){} showToast('▶ '+m[1]); } return; } } }
 $('vidBtn').onclick=function(){ var p=$('vidPanel'); p.style.display=(!p.style.display||p.style.display==='none')?'block':'none'; };
 $('vidClose').onclick=function(){ $('vidPanel').style.display='none'; };
 $('vidGo').onclick=vidLoadYt;
@@ -1383,7 +1107,6 @@ contentEl.addEventListener('click', function(){ seekFromTextarea(contentEl); });
 $('vidFile').onchange=function(e){ if(e.target.files[0]) vidLoadFile(e.target.files[0]); };
 /* 📌 메모를 화면 맨 앞에 띄우기 (Document Picture-in-Picture) — 무슨 영상 위에서든 바로 적기 */
 async function openMemoPiP(){
-  if(VE.big){ showToast('50만 자 넘는 큰 메모는 앞에 띄우기를 지원하지 않아요'); return; }   /* 앞창 textarea 가 글 전체를 통째로 쥐게 되므로 */
   if(!window.documentPictureInPicture){ showToast('이 브라우저는 "앞에 띄우기"를 지원하지 않아요. 크롬·엣지에서 열어 주세요.'); return; }
   if(!currentId){ newNote(); }
   try{
@@ -1461,8 +1184,7 @@ function _micBuild(){
     var interim='', fin='';
     for(var i=e.resultIndex;i<e.results.length;i++){ var t=e.results[i][0].transcript; if(e.results[i].isFinal) fin+=t; else interim+=t; }
     if(fin){ micCommitted += fin; }
-    if(VE.big){ VE.replaceRange(micBase0.length, VE.len(), micCommitted + interim); }   /* 글 전체를 다시 쓰지 않고 받아쓴 꼬리만 */
-    else contentEl.value = micBase0 + micCommitted + interim;
+    contentEl.value = micBase0 + micCommitted + interim;
     contentEl.dispatchEvent(new Event('input'));
   };
   recog.onerror=function(ev){
