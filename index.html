@@ -7502,8 +7502,9 @@ function cgoHome(){
   /* ★ 눈이 먼저 대문을 본다 — 화면부터 옮기고, 무거운 뒷정리는 손이 쉬는 뒤에.
      예전엔 카메라 끄기(6ms)와 취소 처리를 다 끝낸 뒤에야 화면을 옮겨
      그 사이 옛 화면이 남아 「찰나의 잔상」으로 보였다. */
-  try{ cgoGoPage('dashboard'); }catch(_){}
-  if(!(typeof _ab2==='function'&&_ab2('scroll'))){ try{ window.scrollTo(0,0); }catch(_){} }
+  /* -g: 먼저 닫은 상태를 한 프레임 확정한 뒤 이동한다 — 큰 대시보드 첫 그림을 두 프레임으로 나눈다 */
+  var _goHome=function(){ try{ cgoGoPage('dashboard'); }catch(_){} if(!(typeof _ab2==='function'&&_ab2('scroll'))){ try{ window.scrollTo(0,0); }catch(_){} } };
+  if(window.requestAnimationFrame) requestAnimationFrame(_goHome); else _goHome();
   setTimeout(function(){
     /* 측정 중이면 결과를 만들지 않고 접는다 · 카메라도 끈다 */
     try{ if(window._c24Cancel) window._c24Cancel(); }catch(_){}
@@ -9327,7 +9328,7 @@ try{
   if(c&&c.checked){ try{ localStorage.setItem('c39_guide_skip', today()); }catch(e){} }
   var p=document.getElementById('c39GuidePop'); if(p) p.style.display='none';
  };
- window.c39GuideStart=function(){ c39GuideClose(); try{ cgoGoPage('c39'); }catch(e){} };
+ window.c39GuideStart=function(){ c39GuideClose(); var _g=function(){ try{ cgoGoPage('c39'); }catch(e){} }; if(window.requestAnimationFrame) requestAnimationFrame(_g); else _g(); };
 })();
 
 }catch(e){}
@@ -20347,7 +20348,7 @@ function _cgoFDIntro(cfg){
   if(cfg.note) h+='<div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.18);border-radius:12px;padding:11px 14px;margin-bottom:14px;"><div style="font-size:11px;font-weight:800;color:#dc2626;margin-bottom:5px;" data-k="19897">⚖️ 정직 안내</div><div style="font-size:10px;color:#475569;line-height:1.75;"'+_dk('note')+'>'+_t('note',cfg.note)+'</div></div>';
   var cbId=id+'-skip';
   if(sk) h+='<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:11px;color:#64748b;"><input type="checkbox" id="'+cbId+'" style="cursor:pointer;width:14px;height:14px;accent-color:'+ac+';"><span data-k="19898">오늘 하루 보지 않기</span></label>';
-  h+='<button onclick="(function(){var cb=document.getElementById(\''+cbId+'\');if(cb&&cb.checked){try{localStorage.setItem(\''+(sk||'')+'\',\'1\');}catch(e){}}var p=document.getElementById(\''+id+'\');if(p)p.remove();'+(cfg.launch||'')+'})();" style="width:100%;padding:16px;background:linear-gradient(135deg,'+ac+','+ac2+');border:none;border-radius:14px;color:#334155;font-size:15px;font-weight:900;cursor:pointer;"'+_dk('btnLabel')+'>'+_t('btnLabel',cfg.btnLabel||'시작하기')+'</button>';
+  h+='<button onclick="(function(){var cb=document.getElementById(\''+cbId+'\');if(cb&&cb.checked){try{localStorage.setItem(\''+(sk||'')+'\',\'1\');}catch(e){}}var p=document.getElementById(\''+id+'\');if(p)p.remove();var _L=function(){'+(cfg.launch||'')+'};if(window.requestAnimationFrame)requestAnimationFrame(_L);else _L();})();" style="width:100%;padding:16px;background:linear-gradient(135deg,'+ac+','+ac2+');border:none;border-radius:14px;color:#334155;font-size:15px;font-weight:900;cursor:pointer;"'+_dk('btnLabel')+'>'+_t('btnLabel',cfg.btnLabel||'시작하기')+'</button>';
   h+='</div>';
   pop.innerHTML=h;
   /* 지금 만든 팝업만 기억한다 — 되살리기는 「떠 있을 때만」 조건이 막는다 */
@@ -25953,7 +25954,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-f';
+window.CGO_VER='2026.09.06-g';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
