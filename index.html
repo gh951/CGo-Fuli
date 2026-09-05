@@ -25915,7 +25915,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.05-s18';
+window.CGO_VER='2026.09.05-s20';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -95226,7 +95226,8 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
   function ok(s){ R.push('✅ '+s); } function bad(s){ R.push('❌ '+s); } function info(s){ R.push('· '+s); } function head(s){ R.push(''); R.push('【'+s+'】'); }
   function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
   function safe(fn){ try{ return fn(); }catch(e){ errs.push(String(e&&e.message||e)); return undefined; } }
-  window.cgoCheck=async function(opts){
+  window.cgoCheck=async function(opts){ try{ return await _cgoCheckRun(opts); }catch(e){ R.push(''); R.push('❌ 점검 도중 멈춤: '+(e&&e.message||e)); var t=R.join('\n'); try{ console.log(t); }catch(_){} if(!(opts&&opts.silent)) showPanel(t); return t; } };
+  async function _cgoCheckRun(opts){
     opts=opts||{}; R=[]; errs=[];
     var onerr=function(ev){ try{ errs.push((ev.message||String(ev.reason&&ev.reason.message||ev.reason||'')).slice(0,120)); }catch(e){} };
     window.addEventListener('error',onerr); window.addEventListener('unhandledrejection',onerr);
@@ -95283,7 +95284,7 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     if(popSkip.length) info('건너뜀(오늘 하루 보지 않기 등): '+popSkip.join(', '));
     /* 6 onclick 참조 */
     head('6 카드·단추가 부르는 함수');
-    var skip=new Set(['if','else','function','return','event','this','window','document','localStorage','setTimeout','try','catch','var','typeof','new','true','false','null','alert','confirm','void','location','console','String','Number','parseInt','Date','JSON','Math','Promise','Object','Array','navigator','history','requestAnimationFrame','encodeURIComponent','open','close','focus','blur','rgba','rgb','linear','translateX','translateY','scale','url','var','calc']);
+    var skip=new Set(['if','else','function','return','event','this','window','document','localStorage','setTimeout','try','catch','var','typeof','new','true','false','null','alert','confirm','void','location','console','String','Number','parseInt','Date','JSON','Math','Promise','Object','Array','navigator','history','requestAnimationFrame','encodeURIComponent','open','close','focus','blur','rgba','rgb','linear','translateX','translateY','scale','url','var','calc','rgba','rgb','linear','translateX','translateY','scale','url','var','calc']);
     var refs={}; [].slice.call(document.querySelectorAll('[onclick]')).forEach(function(el){ var s=el.getAttribute('onclick')||''; var m; var re=/(?:^|[^\w.$])([A-Za-z_$][\w$]*)\s*\(/g; while((m=re.exec(s))){ var nm=m[1]; if(skip.has(nm)) continue; if(typeof window[nm]!=='function'){ refs[nm]=(refs[nm]||0)+1; } } });
     var miss=Object.keys(refs); if(miss.length) bad('정의 없는 함수 '+miss.length+': '+miss.map(function(k){return k+'×'+refs[k];}).join(', ')); else ok('onclick 참조 함수 전부 정의됨');
     /* 7 사전 */
@@ -95326,6 +95327,8 @@ try{ window.csiRender=csiRender; window.csiFuse=csiFuse; window.csiRefresh=csiRe
     b.onclick=function(){ b.textContent='🩺 점검 중…'; window.cgoCheck().then(function(){ b.textContent='🩺 점검'; }); };
     document.body.appendChild(b); }catch(e){} }
   if(document.readyState==='loading') addEventListener('DOMContentLoaded',function(){ setTimeout(btn,800); }); else setTimeout(btn,800);
+  var _tries=0; var _iv=setInterval(function(){ btn(); if(document.getElementById('cgo-check-btn')||++_tries>80) clearInterval(_iv); },1500);   /* 비밀번호 뒤 매니저가 된 경우 */
+  window.cgoCheckBtn=btn;
 })();
 </script>
 
