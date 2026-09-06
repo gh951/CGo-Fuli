@@ -720,18 +720,49 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       h+='<div class="slp-rec-row"><span>'+_sk(23810,'바이노럴 (이어폰 필요)')+' · <b>'+r.bin+'Hz</b></span><button class="slp-rec-btn" onclick="cgoSlpRecPlay(\'bin\','+r.bin+')">'+_sk(23808,'▶ 지금 켜기')+'</button></div>';
       h+='<div class="slp-rec-row"><span>'+_sk(23811,'타이머')+' · <b>'+r.tmr+_sk(23812,'분')+'</b></span></div>';
       h+='<span style="color:#999;font-size:11px;">'+_sk(11465,'사람마다 맞는 주파수는 달라요 — 참고만 하고 끌리는 걸 고르세요.')+'</span></div>';
-      /* AI 상담사 */
-      h+='<div class="slp-ai"><div class="slp-ai-h">'+_sk(23813,'🤖 수면 AI 상담사')+'</div><p class="slp-ai-sub">'+_sk(23814,'점수·측정값을 바탕으로 웰니스 범주 안에서만 이야기해요. 진단·치료가 아니에요.')+'</p>';
-      h+='<div id="slp-ai-log"></div>';
-      h+='<button class="slp-btn" style="margin-top:8px;" onclick="cgoSlpAI()">'+_sk(23815,'🤖 내 결과 읽어 주기')+'</button>';
-      h+='<div class="slp-ai-in"><input id="slp-ai-in" type="text" placeholder="'+_sk(23816,'궁금한 점을 물어보세요…').replace(/"/g,'&quot;')+'" onkeydown="if(event.key===\'Enter\')cgoSlpAI(this.value)"><button onclick="cgoSlpAI(document.getElementById(\'slp-ai-in\').value)">'+_sk(23817,'보내기')+'</button></div></div>';
       h+='<button class="slp-btn2" onclick="cgoSlpSelfCheck();var a=document.getElementById(\'slp-acc-self\');if(a){a.open=true;}">'+_sk(23821,'🔄 다시 점검하기')+'</button>';
     }
+    /* ── 분석 등급 (항상) ── */
+    var T=_slpTier(), left=_slpTierLeft();
+    function card(t,ico,nm,pr,ds,extra){ return '<div class="slp-tier'+(T===t?' sel':'')+' t-'+t+'" onclick="cgoSlpTier(\''+t+'\')"><div class="ti">'+ico+'</div><div class="tn">'+nm+'</div><div class="tp">'+pr+'</div><div class="td">'+ds+(extra?'<br>'+extra:'')+'</div></div>'; }
+    h+='<div class="slp-tiers"><div class="slp-tiers-h"><b>'+_sk(8890,'분석 등급을 고르세요')+'</b><span>'+_sk(8891,'✦ 측정은 같고, 풀이의 깊이가 다릅니다')+'</span></div><div class="slp-tier-grid">';
+    h+=card('basic','🟢',_sk(8892,'기본'),_sk(8893,'유료 회원 1회'),_sk(23827,'점수 요약 + 짧은 상담'));
+    h+=card('pro','⭐',_sk(8895,'고급'),_sk(8896,'1회 100원'),_sk(23825,'AI 상담 15분'),_sk(8911,'첫 가입 24시간 안에는 1회 무료'));
+    h+=card('max','💎',_sk(8898,'최고급'),_sk(8899,'1회 500원'),_sk(23826,'AI 상담 30분'));
+    h+='</div><div id="slp-tier-note" class="slp-tier-note" style="display:none;"></div>'+(left>0?'<div class="slp-tier-left">'+_sk(23828,'남은 시간')+' <b>'+left+_sk(23812,'분')+'</b></div>':'')+'</div>';
+    /* ── AI 상담사 (항상) ── */
+    h+='<div class="slp-ai"><div class="slp-ai-h">'+_sk(23813,'🤖 수면 AI 상담사')+'</div><p class="slp-ai-sub">'+_sk(23814,'점수·측정값을 바탕으로 웰니스 범주 안에서만 이야기해요. 진단·치료가 아니에요.')+'</p>';
+    h+='<div id="slp-ai-log"></div>';
+    h+='<button class="slp-btn" style="margin-top:8px;" onclick="cgoSlpAI()">'+_sk(23815,'🤖 내 결과 읽어 주기')+'</button>';
+    h+='<div class="slp-ai-in"><input id="slp-ai-in" type="text" placeholder="'+_sk(23816,'궁금한 점을 물어보세요…').replace(/"/g,'&quot;')+'" onkeydown="if(event.key===\'Enter\')cgoSlpAI(this.value)"><button onclick="cgoSlpAI(document.getElementById(\'slp-ai-in\').value)">'+_sk(23817,'보내기')+'</button></div></div>';
     h+='<button class="slp-btn2" onclick="cgoSleepOpen()">'+_sk(11721,'처음으로')+'</button><p class="slp-note">'+_sk(11722,'기록은 이 기기의 브라우저에만 저장되며 언제든 사라질 수 있어요. 참고용이며 의료 데이터가 아닙니다.')+'</p>';
     var ad=$('slp-acc-data'); if(ad) ad.open=true;
     $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';
     /* 지난 대화가 있으면 되살린다 */
     var lg=$('slp-ai-log'); if(lg && _slpAiHist.length){ _slpAiHist.forEach(function(m){ _slpAiBubble(m.role==='user'?'me':'ai', m.content); }); }
+  };
+
+  /* ══ 분석 등급 — 고급 15분 · 최고급 30분. 별은 고를 때 깎는다(다른 기능과 같은 길: cgoTierBuy) ══ */
+  var _slpT={tier:'basic',until:0};
+  function _slpTier(){ if(_slpT.tier!=='basic' && Date.now()>_slpT.until){ _slpT={tier:'basic',until:0}; try{ if(window.cgoSetAiTier) cgoSetAiTier('basic'); }catch(e){} } return _slpT.tier; }
+  function _slpTierLeft(){ if(_slpTier()==='basic') return 0; return Math.max(1, Math.ceil((_slpT.until-Date.now())/60000)); }
+  function _slpFreeProOk(){ /* 첫 가입 24시간 안 고급 1회 무료 */
+    try{ if(localStorage.getItem('cgo_slp_pro_free')) return false;
+      var t=JSON.parse(localStorage.getItem('cgo_trial')||'null'); if(!t||!t.start) return false;
+      return (Date.now()-t.start) < (t.hours||24)*3600000; }catch(e){ return false; }
+  }
+  window.cgoSlpTier=function(t){
+    if(t!=='basic' && _slpTier()!==t){
+      var free = (t==='pro' && _slpFreeProOk());
+      if(free){ try{ localStorage.setItem('cgo_slp_pro_free','1'); }catch(e){} }
+      else if(window.cgoTierBuy && !cgoTierBuy('sleep', t)){
+        var C=(window.CGO_TIER_COST&&window.CGO_TIER_COST.sleep)||{pro:100,max:500};
+        if(window.cgoTierNote) cgoTierNote('slp-tier-note', (t==='max'?C.max:C.pro)+'⭐'); return;
+      }
+      _slpT={tier:t, until:Date.now()+(t==='max'?30:15)*60000};
+    } else if(t==='basic'){ _slpT={tier:'basic',until:0}; }
+    try{ if(window.cgoSetAiTier) cgoSetAiTier(_slpTier()); }catch(e){}
+    cgoSlpData();
   };
 
   /* ══ 🤖 수면 AI 상담사 — 점수(코드가 셈) + 수면 rPPG + 건강 밸런스(있을 때만) 를 담아 기본 등급으로 ══ */
@@ -744,8 +775,13 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
   }
   function _slpAiContext(){
     var chk=null,rppg=null; try{chk=JSON.parse(localStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(localStorage.getItem('cgo_sleep_rppg'));}catch(e){}
-    if(!chk || chk.bi==null) return null;
-    var B=_SLP_BAND(), FL=_SLP_FLAG(), TN=_SLP_THNM(), r=_slpRec(chk,rppg);
+    var B=_SLP_BAND(), FL=_SLP_FLAG(), TN=_SLP_THNM();
+    if(!chk || chk.bi==null){
+      var l0=['[수면 자가 점검] 아직 하지 않음 — 점수가 없음을 그대로 말하고, 100문항 점검을 권할 것'];
+      if(rppg && rppg.bpm) l0.push('[수면 rPPG 40초 관찰값] 심박 '+rppg.bpm+' bpm · HRV(RMSSD) '+(rppg.hrv!=null?rppg.hrv:'—')+' · 긴장도 '+(rppg.stress!=null?rppg.stress:'—')+'/100');
+      return l0.join('\n');
+    }
+    var r=_slpRec(chk,rppg);
     var lines=['[수면 자가 점검 · 100문항 · 자가 보고]',
       '수면 부담 지수(ISI 7문항): '+chk.isi+'/28 → '+B[chk.bi][0],
       '종합 부담: '+chk.pct+'%', '호흡 영역 합: '+chk.apnea+' · 다리 영역 합: '+chk.rls+' · 생체리듬 영역 합: '+chk.circ+' · 기분 영역 평균: '+chk.ma+'/4',
@@ -761,7 +797,10 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
   window.cgoSlpAI=function(q){
     q=(q||'').trim();
     var ctx=_slpAiContext();
-    if(!ctx){ _slpAiBubble('ai',_sk(23820,'먼저 100문항 자가 점검을 마쳐 주세요.')); return; }
+    var hasChk=false; try{ var c0=JSON.parse(localStorage.getItem('cgo_sleep_check')); hasChk=!!(c0&&c0.bi!=null); }catch(e){}
+    if(!q && !hasChk){ _slpAiBubble('ai',_sk(23820,'먼저 100문항 자가 점검을 마쳐 주세요.')); return; }
+    var wasT=_slpT.tier; if(_slpTier()!==wasT){ _slpAiBubble('ai',_sk(23829,'고급 시간이 끝나 기본으로 돌아왔어요.')); cgoSlpData(); }
+    try{ if(window.cgoSetAiTier) cgoSetAiTier(_slpTier()); }catch(e){}
     var inp=$('slp-ai-in'); if(inp) inp.value='';
     var user = q || '내 수면 자가 점검 결과와 관찰값을 읽고, 오늘 밤 잠들기 전 생활 습관 두세 가지와 추천 사운드의 이유를 짧게 알려 주세요.';
     if(q) _slpAiBubble('me',q);
@@ -772,7 +811,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     _slpAiHist.slice(-6).forEach(function(m){ msgs.push(m); });
     msgs.push({role:'user',content:user});
     fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:msgs,max_tokens:520,temperature:0.5})})
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:msgs,max_tokens:(_slpTier()==='max'?1400:_slpTier()==='pro'?900:520),temperature:0.5})})
       .then(function(r){ return r.json(); })
       .then(function(d){ var a=(d&&d.choices&&d.choices[0]&&d.choices[0].message)?d.choices[0].message.content:''; if(!a) a=_sk(16155,'잠시 후 다시 시도해 주세요.');
         if(wait) wait.textContent=a; _slpAiHist.push({role:'user',content:user},{role:'assistant',content:a}); if(_slpAiHist.length>10) _slpAiHist=_slpAiHist.slice(-10); })
