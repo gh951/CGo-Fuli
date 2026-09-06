@@ -25979,7 +25979,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-u';
+window.CGO_VER='2026.09.06-v';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -97972,6 +97972,33 @@ window._cgoAfterIntro=function(ids, fn){
   };
 
   </script>
+
+<script>
+/* ★ -v 잔상 기록기: 로고(cgoHome)를 누른 뒤 1.5초 동안 ① 어느 요소가 얼마나 자리를 옮겼나(layout-shift) ② .content 스크롤이 몇 프레임에 걸쳐 바뀌었나 ③ 긴 작업(long task) 을 적는다.
+   콘솔 cgoGhostLog() → 마지막 기록 출력(복사해서 클로드에게). 손님 영향 0. */
+(function(){
+  var log=null;
+  function desc(n){ try{ if(!n) return '?'; var s=n.tagName? n.tagName.toLowerCase():'#text'; if(n.id) s+='#'+n.id; else if(n.className&&typeof n.className==='string') s+='.'+n.className.trim().split(/\s+/).slice(0,2).join('.'); var p=n.parentElement; if(p&&p.id) s+=' <'+p.id; else if(p&&p.className) s+=' <.'+String(p.className).trim().split(/\s+/)[0]; return s; }catch(e){ return '?'; } }
+  function start(){
+    log={t0:performance.now(), shifts:[], scrolls:[], longs:[], frames:[]};
+    var ct=document.querySelector('.content'); var lastTop=ct?ct.scrollTop:0; log.scrolls.push({t:0,top:lastTop,note:'start'});
+    var po=null, po2=null;
+    try{ po=new PerformanceObserver(function(list){ list.getEntries().forEach(function(e){ if(e.hadRecentInput===false||e.hadRecentInput===true){ log.shifts.push({t:Math.round(e.startTime-log.t0),value:+e.value.toFixed(4),src:(e.sources||[]).slice(0,3).map(function(s){ return desc(s.node)+' '+(s.previousRect?Math.round(s.previousRect.top):'?')+'→'+(s.currentRect?Math.round(s.currentRect.top):'?'); })}); } }); }); po.observe({type:'layout-shift',buffered:false}); }catch(e){}
+    try{ po2=new PerformanceObserver(function(list){ list.getEntries().forEach(function(e){ log.longs.push({t:Math.round(e.startTime-log.t0),dur:Math.round(e.duration)}); }); }); po2.observe({type:'longtask',buffered:false}); }catch(e){}
+    var n=0; function frame(){ var now=Math.round(performance.now()-log.t0); var top=ct?ct.scrollTop:0; if(top!==lastTop){ log.scrolls.push({t:now,top:top}); lastTop=top; } log.frames.push(now); if(++n<90 && now<1500) requestAnimationFrame(frame); else { try{ po&&po.disconnect(); po2&&po2.disconnect(); }catch(e){} } }
+    requestAnimationFrame(frame);
+  }
+  var _h=window.cgoHome; if(typeof _h==='function'){ window.cgoHome=function(){ try{ start(); }catch(e){} return _h.apply(this,arguments); }; }
+  window.cgoGhostLog=function(){ if(!log){ console.log('기록 없음 — 로고를 눌러 대시보드로 돌아온 뒤 다시 부르세요'); return null; }
+    var gaps=[]; for(var i=1;i<log.frames.length;i++){ var g=log.frames[i]-log.frames[i-1]; if(g>34) gaps.push(log.frames[i-1]+'→'+log.frames[i]+'ms('+g+')'); }
+    var out=['CGO 잔상 기록 · 로고 뒤 '+Math.round(log.frames[log.frames.length-1]||0)+'ms · '+log.frames.length+'프레임',
+      '자리 옮긴 요소(layout-shift) '+log.shifts.length+'건:'].concat(log.shifts.slice(0,12).map(function(s){ return '  t+'+s.t+'ms value '+s.value+' : '+s.src.join(' | '); }))
+      .concat(['.content 스크롤 변화 '+(log.scrolls.length-1)+'번:'], log.scrolls.slice(0,10).map(function(s){ return '  t+'+s.t+'ms top='+s.top+(s.note?' '+s.note:''); }))
+      .concat(['긴 작업(50ms+) '+log.longs.length+'건:'], log.longs.slice(0,8).map(function(l){ return '  t+'+l.t+'ms '+l.dur+'ms'; }))
+      .concat(['프레임 끊김(34ms+) '+gaps.length+'곳: '+gaps.slice(0,8).join(', ')]);
+    var text=out.join('\n'); console.log(text); try{ if(navigator.clipboard) navigator.clipboard.writeText(text); }catch(e){} return text; };
+})();
+</script>
 </body></html>
 <style>
 /* ★v5 — 앱 전체 스크롤. 구형은 .content 안에만 스크롤이 있어 휠·스와이프가 겉돌았다 */
