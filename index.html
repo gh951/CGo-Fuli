@@ -36,16 +36,12 @@ window.CGO_TIER_COST = window.CGO_TIER_COST || {
   lotto:  {pro:100,  max:500},    /* 행운 번호     · 화면 100원 · 500원 */
   stock:  {pro:2000, max:5000},   /* 주식 에너지   · 화면 2,000원 · 5,000원 */
   sports: {pro:500,  max:1000},   /* 스포츠 에너지 · 화면 500원 · 1,000원 */
-  med:    {pro:2000, max:3000},   /* 나의 건강 밸런스 · 화면 1,000원(기본 유료)·2,000원·3,000원 */
   def:    {pro:100,  max:500}
 };
 /* 별을 깎는다. 부족하면 false — 문구는 사전 16796 을 쓴다 (20개 언어) */
 window.cgoTierBuy = function(feat, tier){
   if(tier==='basic') return true;
-  if(window.cgoIsManager && window.cgoIsManager()) return true;   /* 매니저는 값이 안 든다, 무제한 */
-  if(window.cgoIsSubManager && window.cgoIsSubManager()){         /* 부매니저는 유료 기능 하루 1회, 별 안 씀 */
-    return window.cgoSubMgrDailyOk(feat + '_' + tier);
-  }
+  if(window.cgoIsManager && window.cgoIsManager()) return true;   /* 매니저는 값이 안 든다 */
   var C = (window.CGO_TIER_COST[feat] || window.CGO_TIER_COST.def);
   var need = (tier==='max') ? C.max : C.pro;
   var ok = true;
@@ -12991,23 +12987,15 @@ try{
   el.value = '';
   bubble('me', t);
   var wait = bubble('ai', '…');
-  var _result = (window._c24 && window._c24.lastResult) || null;
-  var _resultTxt = _result ? ('\n\n[내 6부위 검사 결과]\n' + JSON.stringify(_result)) : '';
-  var _sys = 'CGO-FULI 건강 밸런스 AI 상담사. 방금 끝난 6부위 검사 결과를 알고 있는 상태로, '
-    + '사용자 질문에 그 결과를 바탕으로 답한다. 진단·처방 표현은 쓰지 않고 참고용으로만 안내한다.'
-    + (window.cgoEnvBrief ? ('\n환경: ' + cgoEnvBrief()) : '');
-  var body = {
-    kind: 'med',
-    tier: (window._c24Tier || 'basic'),
-    system: _sys,
-    prompt: t + _resultTxt,
-    max_tokens: 700, temperature: 0.6
-  };
+  var body = { message: t, feature: (window._cgoChatFeature || 'c24'),
+    lang: (window.CGO_T && CGO_T.cur && CGO_T.cur()) || 'ko',
+    env: (window.cgoEnvBrief ? cgoEnvBrief() : ''),
+    result: (window._c24 && window._c24.lastResult) || null };
   try{
-    fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    fetch('/api/groq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        var a = (j && j.text) || K(8910,'');
+        var a = (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || K(8910,'');
         if(wait) wait.querySelector('div').textContent = a;
       })
       .catch(function(){ if(wait) wait.querySelector('div').textContent = K(8910,''); });
@@ -13088,14 +13076,8 @@ try{
 /* 분석 등급 — 기본 1회 무료 / 고급 100원 / 최고급 500원. 별(코인)에서 차감한다 */
 window._c24Tier='basic';
 window.c24PickTier=function(t){
-  var _key = (t==='plus') ? 'pro' : (t==='pro' ? 'max' : t);   /* c24 라벨(basic/plus/pro) → 값표 키(basic/pro/max) */
-  if(_key!=='basic' && !(window.cgoTierBuy && window.cgoTierBuy('med', _key))){
-    try{ if(window.cgoTierNote) cgoTierNote('c24-tier-note', ''); }catch(_){}
-    return;
-  }
-  var _apiTier = ({basic:'basic', plus:'advanced', pro:'premium'})[t] || 'basic';  /* api/claude.js MED_MODEL 키와 일치 */
-  window._c24Tier=_apiTier;
-  try{ localStorage.setItem('cgo_c24_tier',_apiTier); }catch(_){}
+  window._c24Tier=t;
+  try{ localStorage.setItem('cgo_c24_tier',t); }catch(_){}
   var K={basic:8892,plus:8895,pro:8898}[t];
   var nm=(window.K&&K)?window.K(K):t;
   try{ if(window.cgoToast) cgoToast(nm); }catch(_){}
@@ -25979,7 +25961,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-s';
+window.CGO_VER='2026.09.06-t';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -26251,33 +26233,15 @@ window.cgoIsManager=function(){
     var u=(location.pathname+location.search+location.hash).toLowerCase();
     /* ★ /no 로 해제, /lee 로 등록 — no 가 lee 보다 먼저 검사되어야 동시에 와도 해제가 이긴다 */
     if(/(^|[\/?&#=])no($|[\/?&#])/.test(u)){
-      try{ localStorage.removeItem('cgo_mgr'); localStorage.removeItem('cgo_submgr'); }catch(e){}
-      return false;
-    }
-    /* ★ /lee1 은 부매니저 — 매니저(전면 무료)와 분리해 등록한다 */
-    if(/(^|[\/?&#=])lee1($|[\/?&#])/.test(u)){
-      try{ localStorage.setItem('cgo_submgr','1'); localStorage.removeItem('cgo_mgr'); }catch(e){}
+      try{ localStorage.removeItem('cgo_mgr'); }catch(e){}
       return false;
     }
     if(/(^|[\/?&#=])lee($|[\/?&#])/.test(u)){
-      try{ localStorage.setItem('cgo_mgr','1'); localStorage.removeItem('cgo_submgr'); }catch(e){}
+      try{ localStorage.setItem('cgo_mgr','1'); }catch(e){}
       return true;
     }
     return localStorage.getItem('cgo_mgr')==='1';
   }catch(e){ return false; }
-};
-/* ★ 부매니저 — 무료 기능은 매니저처럼 무제한, 값이 드는 기능(고급·최고급)은 하루 1회만 */
-window.cgoIsSubManager=function(){
-  try{ return localStorage.getItem('cgo_submgr')==='1'; }catch(e){ return false; }
-};
-window.cgoSubMgrDailyOk=function(feat){
-  try{
-    var day=new Date().toISOString().slice(0,10);
-    var key='cgo_submgr_used_'+feat+'_'+day;
-    if(localStorage.getItem(key)==='1') return false;
-    localStorage.setItem(key,'1');
-    return true;
-  }catch(e){ return true; }
 };
 (function(){ try{ if(/[?&]lee=off/i.test(location.search)) localStorage.removeItem('cgo_mgr'); }catch(e){} })();
 window.cgoMgrBadge=function(){
@@ -30664,6 +30628,140 @@ var fcSystems = {
 </div>
 
 <!-- ══ 두피 케어 — 기능 페이지 ══ -->
+<!-- ★ -t: 구앱 두피 카메라 모달·최종 리포트 모달(그대로) -->
+<style>
+  #scalp-intro-pop{display:none;position:fixed;inset:0;z-index:29000;background:rgba(255,255,255,.98);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .sip-wrap{max-width:560px;margin:0 auto;padding:0 0 80px;}
+  .sip-top{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:12px 16px;background:rgba(255,255,255,.98);border-bottom:1px solid #f0f2f7;}
+  .sip-close{width:36px;height:36px;border-radius:50%;border:1px solid #e8eaf0;background:#fff;color:#666;font-size:18px;cursor:pointer;}
+  .sip-body{padding:24px 20px;color:#1a1408;}
+  .sip-hero{text-align:center;padding:20px 0 32px;border-bottom:1px solid #f0f2f7;margin-bottom:24px;}
+  .sip-badge{display:inline-block;padding:6px 16px;background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(251,191,36,.08));border:1px solid rgba(212,168,67,.3);border-radius:20px;font-size:10px;font-weight:800;color:#b8860b;letter-spacing:.12em;margin-bottom:14px;}
+  .sip-title{font-size:26px;font-weight:900;letter-spacing:-.03em;color:#1a1408;margin-bottom:8px;}
+  .sip-sub{font-size:13px;color:#666;line-height:1.5;}
+  .sip-step{display:flex;gap:14px;padding:16px;background:linear-gradient(135deg,#fef9f3,#fffbeb);border:1px solid #f0e6d4;border-radius:14px;margin-bottom:12px;}
+  .sip-step-num{flex-shrink:0;width:34px;height:34px;background:#d4a843;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;font-family:'Courier New',monospace;}
+  .sip-step-body{flex:1;}
+  .sip-step-title{font-size:14px;font-weight:800;color:#1a1408;margin-bottom:4px;}
+  .sip-step-desc{font-size:11px;color:#666;line-height:1.5;}
+  .sip-cta{margin-top:24px;padding:16px;background:#1a1408;color:#fff;border:none;border-radius:14px;width:100%;font-size:15px;font-weight:800;letter-spacing:.04em;cursor:pointer;}
+  .sip-disc{margin-top:16px;padding:12px;background:#f5f6fa;border-left:3px solid #d4a843;border-radius:8px;font-size:10px;color:#64748b;line-height:1.5;}
+
+  /* 자가 점검 질문지 스타일 */
+  .scalp-step-block{background:#fff;border:1px solid #f0e6d4;border-radius:16px;padding:18px 16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(212,168,67,.05);}
+  .scalp-step-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .scalp-step-tag{display:inline-block;padding:4px 10px;background:#d4a843;color:#fff;border-radius:8px;font-size:10px;font-weight:800;letter-spacing:.08em;font-family:'Courier New',monospace;}
+  .scalp-step-h{font-size:18px;font-weight:900;color:#1a1408;letter-spacing:-.02em;}
+  .scalp-step-sub{font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;}
+  .scalp-opt{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fafbfc;border:1px solid #f0f2f7;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .2s;font-size:13px;color:#1a1408;line-height:1.5;}
+  .scalp-opt:hover{border-color:#b8860b;background:#ffffff;}
+  .scalp-opt.checked{border-color:#b8860b;background:linear-gradient(135deg,#fef9f3,#fffbeb);color:#1a1408;font-weight:700;}
+  .scalp-opt-mark{flex-shrink:0;width:20px;height:20px;border:2px solid #d4d4d4;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;transition:all .2s;margin-top:1px;}
+  .scalp-opt.checked .scalp-opt-mark{background:#d4a843;border-color:#b8860b;}
+  .scalp-type-card{display:flex;align-items:flex-start;gap:14px;padding:16px;background:#fafbfc;border:1px solid #f0f2f7;border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all .2s;}
+  .scalp-type-card:hover{border-color:#b8860b;background:#ffffff;}
+  .scalp-type-card.checked{border-color:#b8860b;background:linear-gradient(135deg,#fef9f3,#fffbeb);box-shadow:0 4px 12px rgba(212,168,67,.1);}
+  .scalp-type-emoji{flex-shrink:0;font-size:30px;width:50px;height:50px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;}
+  .scalp-type-name{font-size:14px;font-weight:800;color:#1a1408;margin-bottom:3px;}
+  .scalp-type-desc{font-size:11px;color:#666;line-height:1.5;}
+  .scalp-detail-q{margin-bottom:18px;}
+  .scalp-detail-q-title{font-size:13px;font-weight:800;color:#1a1408;margin-bottom:10px;}
+  .scalp-detail-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .scalp-detail-opts .scalp-opt{margin-bottom:0;text-align:center;justify-content:center;}
+  .scalp-result-btn{width:100%;padding:18px;background:linear-gradient(135deg,#1a1408,#2a2418);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;letter-spacing:.04em;cursor:pointer;margin-top:16px;}
+  .scalp-result-btn:disabled{background:#ccc;cursor:not-allowed;}
+  .scalp-reset-btn{width:100%;padding:12px;background:#fafbfc;color:#666;border:1px solid #e8eaf0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px;}
+
+  /* Accordion */
+  .scalp-acc-head{cursor:pointer;user-select:none;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;}
+  .scalp-acc-head:hover .scalp-acc-icon{color:#b8860b;background:#ffffff;}
+  .scalp-acc-meta{margin-left:auto;font-size:11px;color:#64748b;font-weight:600;white-space:nowrap;}
+  .scalp-acc-icon{display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#64748b;transition:all .2s;padding:6px 10px;border-radius:8px;background:#fafbfc;flex-shrink:0;}
+  .scalp-acc-body{transition:all .3s;}
+  /* 카드형 STEP — 모바일 컴팩트 */
+  .scalp-step-block{transition:all .2s;}
+  .scalp-step-tag{flex-shrink:0;}
+  .scalp-step-h{flex-shrink:0;}
+
+  /* 카메라 모달 */
+  #scalp-cam-modal{display:none;position:fixed;inset:0;z-index:30000;background:#000;color:#fff;overflow:hidden;}
+  .scc-top{position:absolute;top:0;left:0;right:0;z-index:5;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(0,0,0,.85),transparent);}
+  .scc-progress{font-size:12px;font-weight:800;color:#fbbf24;letter-spacing:.06em;font-family:'Courier New',monospace;}
+  .scc-close{width:36px;height:36px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.4);color:#fff;border-radius:50%;font-size:18px;cursor:pointer;backdrop-filter:blur(8px);}
+  .scc-video-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .scc-video{width:100%;height:100%;object-fit:cover;}
+  .scc-canvas{display:none;}
+  .scc-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;border:3px dashed #fbbf24;border-radius:50%;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.4);}
+  .scc-guide-label{position:absolute;top:20%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:10px 18px;border-radius:24px;font-size:14px;font-weight:800;letter-spacing:.04em;border:1px solid rgba(251,191,36,.5);}
+  .scc-timer{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);font-size:54px;font-weight:900;color:#fbbf24;letter-spacing:-.04em;font-family:'Courier New',monospace;text-shadow:0 4px 20px rgba(0,0,0,.7);}
+  .scc-instruction{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);padding:14px 22px;border-radius:14px;font-size:12px;line-height:1.5;text-align:center;max-width:90%;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(8px);}
+  .scc-action-bar{position:absolute;bottom:0;left:0;right:0;padding:20px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);display:flex;gap:10px;justify-content:center;}
+  .scc-action-btn{padding:14px 32px;background:#fbbf24;color:#1a1408;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;}
+  .scc-action-btn.secondary{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
+  .scc-error{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);color:#fff;padding:30px 24px;border-radius:16px;max-width:80%;text-align:center;border:1px solid rgba(251,191,36,.3);}
+
+  /* 캡처 완료 그리드 */
+  .scc-result-grid{position:absolute;inset:0;background:#0a0a0a;overflow-y:auto;padding:60px 20px 100px;display:none;}
+  .scc-result-title{text-align:center;font-size:20px;font-weight:900;color:#fbbf24;margin-bottom:20px;}
+  .scc-result-imgs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;}
+  .scc-result-imgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;border:2px solid rgba(251,191,36,.3);}
+  .scc-result-label{font-size:10px;color:#fbbf24;text-align:center;margin-top:6px;font-weight:800;letter-spacing:.08em;font-family:'Courier New',monospace;}
+  </style>
+<div id="scalp-cam-modal">
+    <div class="scc-top">
+      <div class="scc-progress" id="scc-progress">PART 1 / 5</div>
+      <button class="scc-close" onclick="scalpCamClose()">×</button>
+    </div>
+    <div class="scc-video-wrap">
+      <video id="scalp-cam-video" class="scc-video" autoplay playsinline muted></video>
+      <canvas id="scalp-cam-canvas" class="scc-canvas"></canvas>
+      <div class="scc-guide" id="scc-guide"></div>
+      <div class="scc-guide-label" id="scc-guide-label">👤 정수리</div>
+    </div>
+    <div class="scc-timer" id="scc-timer">30</div>
+    <div class="scc-instruction" id="scc-instruction">머리를 카메라 앞으로 숙여 정수리가 가이드 원 안에 들어오게 해주세요</div>
+    <div class="scc-action-bar">
+      <button class="scc-action-btn secondary" onclick="scalpCamSkip()">건너뛰기</button>
+      <button class="scc-action-btn" id="scc-capture-btn" onclick="scalpCamCapture()">📸 지금 촬영</button>
+    </div>
+
+    <!-- 측정 완료 그리드 -->
+    <div class="scc-result-grid" id="scc-result-grid">
+      <div class="scc-result-title">📋 측정 완료 — 5부위 캡처</div>
+      <div class="scc-result-imgs" id="scc-result-imgs"></div>
+      <button class="scc-action-btn" style="width:100%;" onclick="scalpCamFinish()">✓ 분석 시작</button>
+    </div>
+
+    <!-- 에러 메시지 -->
+    <div class="scc-error" id="scc-error" style="display:none;"></div>
+  </div>
+<style>
+  #scalp-final-modal{display:none;position:fixed;inset:0;z-index:31000;background:rgba(2,8,23,.96);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .sfm-wrap{max-width:560px;margin:0 auto;padding:20px 16px 100px;}
+  .sfm-close{position:fixed;top:14px;right:14px;z-index:5;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:20px;cursor:pointer;backdrop-filter:blur(10px);}
+  .sfm-score-card{text-align:center;padding:32px 20px;background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(30,41,59,.95));border:1px solid rgba(251,191,36,.3);border-radius:18px;margin-bottom:16px;color:#fff;}
+  .sfm-score-label{font-size:11px;color:rgba(251,191,36,.85);letter-spacing:.12em;margin-bottom:10px;}
+  .sfm-score-num{font-size:72px;font-weight:900;color:#fbbf24;letter-spacing:-.04em;line-height:1;margin-bottom:6px;}
+  .sfm-score-grade{font-size:20px;font-weight:800;color:#fbbf24;}
+  .sfm-imgs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .sfm-img-cell{aspect-ratio:1;border-radius:12px;background:#0a0a0a;border:1px solid rgba(251,191,36,.2);overflow:hidden;position:relative;}
+  .sfm-img-cell img{width:100%;height:100%;object-fit:cover;}
+  .sfm-img-cell-empty{display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:8px;}
+  .sfm-img-label{position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.65);color:#fbbf24;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;font-family:'Courier New',monospace;}
+  .sfm-section{background:linear-gradient(135deg,rgba(15,23,42,.85),rgba(30,41,59,.85));border-radius:14px;padding:18px;margin-bottom:12px;border-left:4px solid #fbbf24;color:rgba(240,230,200,.92);}
+  .sfm-section-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#fbbf24;margin-bottom:10px;}
+  .sfm-section-body{font-size:13px;line-height:1.7;color:rgba(240,230,200,.88);}
+  .sfm-confidence{display:inline-block;padding:3px 8px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);border-radius:6px;font-size:10px;color:#fbbf24;font-weight:700;letter-spacing:.04em;font-family:'Courier New',monospace;margin-left:6px;}
+  .sfm-loading{text-align:center;padding:60px 20px;color:#fff;}
+  .sfm-loading-spinner{width:48px;height:48px;border:4px solid rgba(251,191,36,.2);border-top-color:#fbbf24;border-radius:50%;animation:scalp-spin 1s linear infinite;margin:0 auto 20px;}
+  .sfm-close-btn{display:block;width:100%;padding:16px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1408;border:none;border-radius:14px;font-size:14px;font-weight:900;letter-spacing:.04em;cursor:pointer;margin-top:16px;}
+  </style>
+<div id="scalp-final-modal">
+    <button class="sfm-close" onclick="scalpCloseFinalModal()">×</button>
+    <div class="sfm-wrap" id="sfm-wrap">
+      <!-- 동적 박입 -->
+    </div>
+  </div>
 <div class="page" id="page-scalp" style="background:#f0fdf9;min-height:100vh;color:#0f172a;">
  <div style="max-width:820px;margin:0 auto;padding:0 0 44px;">
 
@@ -30824,10 +30922,16 @@ var fcSystems = {
     </div>
    </div>
    <div style="padding:0 16px 4px;">
-    <button type="button" onclick="scStart()"
+    <button type="button" onclick="scalpStartScan()"
       style="width:100%;padding:15px;border:0;border-radius:13px;background:#0f172a;
       color:#fff;font-size:14.5px;font-weight:900;cursor:pointer;font-family:inherit;">
       <span data-k="9283"></span></button>
+<!-- ★ -t: 구앱 두피 카메라 엔진 이식 — 결과·분석 자리 -->
+<div id="scalp-camera-result" style="padding:0 16px;"></div>
+<div id="scalp-data-status" style="display:none"><span id="scalp-data-quest"></span><span id="scalp-data-cam"></span><span id="scalp-data-c37"></span></div>
+<div style="padding:0 16px;"><button id="scalp-analyze-btn" onclick="scalpRunAnalysis()" style="display:none;width:100%;padding:15px;border:0;border-radius:13px;background:linear-gradient(135deg,#0f766e,#059669);color:#fff;font-size:14.5px;font-weight:900;cursor:pointer;font-family:inherit;margin-top:12px;">🧠 AI 두피 종합 분석</button></div>
+<div id="scalp-result-area" style="display:none;padding:0 16px;"><div id="scalp-score-num"></div><div id="scalp-score-grade"></div><div id="scalp-suspect"></div><div id="scalp-recommendations"></div></div>
+
    </div>
    <div style="padding:0 16px;">
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:13px 14px;margin-top:14px;">
@@ -95946,6 +96050,1892 @@ window._cgoAfterIntro=function(ids, fn){
 </script>
 
 
+<script>
+/* ★ -t: 구앱 두피케어 엔진(문진·5부위 촬영·홍반/모발 분석·STP·K한방·Few-shot 리포트·채팅) 그대로. 구앱 인트로 팝업(scalp-intro-pop)은 신앱 단계 팝업이 대신하므로 마크업을 넣지 않았다 → 관련 함수는 요소가 없어 조용히 넘어간다. */
+  (function(){
+    var _scalpShown = false;
+    // C-39 v1.3 — 페이지 진입 즉시 팝업 (setTimeout 제거)
+    function _scalpShowIntroNow(){
+      if(_scalpShown) return;
+      _scalpShown = true;
+      var p = document.getElementById('scalp-intro-pop');
+      if(p){
+        p.style.display = 'block';
+        // 페이지 본문 깜빡임 방지 — 팝업 z-index 강제 최상단
+        p.style.zIndex = '99999';
+      }
+    }
+    window.addEventListener('hashchange', function(){
+      if(location.hash === '#scalp' && !_scalpShown){
+        _scalpShowIntroNow();
+      }
+    });
+    if(location.hash === '#scalp'){
+      // 즉시 표시 (setTimeout 0ms — DOM 준비 직후)
+      if(document.readyState === 'complete' || document.readyState === 'interactive'){
+        _scalpShowIntroNow();
+      } else {
+        document.addEventListener('DOMContentLoaded', _scalpShowIntroNow);
+      }
+    }
+  })();
+
+  // 자가 점검 상태 저장
+  window.scalpAnswers = { s1:[], s2:null, s3:{} };
+
+  // STEP 1 다중 선택 토글
+  function scalpToggleS1(el){
+    var id = el.getAttribute('data-s1');
+    el.classList.toggle('checked');
+    if(el.classList.contains('checked')){
+      if(window.scalpAnswers.s1.indexOf(id) < 0) window.scalpAnswers.s1.push(id);
+    } else {
+      window.scalpAnswers.s1 = window.scalpAnswers.s1.filter(function(x){return x !== id;});
+    }
+  }
+
+  // STEP 2 단일 선택
+  function scalpSelectS2(el){
+    var type = el.getAttribute('data-s2');
+    var cards = document.querySelectorAll('#scalp-s2-opts .scalp-type-card');
+    cards.forEach(function(c){ c.classList.remove('checked'); });
+    el.classList.add('checked');
+    window.scalpAnswers.s2 = type;
+  }
+
+  // STEP 3 심화 질문 선택
+  function scalpSelectS3(el){
+    var q = el.getAttribute('data-s3');
+    var v = el.getAttribute('data-v');
+    var siblings = document.querySelectorAll('[data-s3="'+q+'"]');
+    siblings.forEach(function(s){ s.classList.remove('checked'); });
+    el.classList.add('checked');
+    window.scalpAnswers.s3[q] = v;
+  }
+
+  // 진단 결과 보기
+  function scalpShowResult(){
+    var a = window.scalpAnswers;
+    if(a.s1.length === 0 || !a.s2 || Object.keys(a.s3).length < 4){
+      alert(_cgoT('STEP 1~3을 모두 완료해주세요.\n\n· STEP 1: 1개 이상 컨디션 선택\n· STEP 2: 유형 1개 선택\n· STEP 3: 4개 모두 선택'));
+      return;
+    }
+
+    // 점수 계산 (간이): 선택 항목 수 × 5 + 진행 속도 가중치 + 두피 상태 가중치
+    var score = 100 - (a.s1.length * 4);
+    if(a.s3.q1 === 'fast') score -= 12;
+    else if(a.s3.q1 === 'medium') score -= 6;
+    if(a.s3.q2 === 'inflame') score -= 10;
+    else if(a.s3.q2 === 'dry') score -= 5;
+    if(a.s3.q3 === 'weak') score -= 12;
+    else if(a.s3.q3 === 'thin') score -= 6;
+    score = Math.max(35, Math.min(95, score));
+
+    var grade = 'A(양호)';
+    var gradeColor = '#34d399';
+    if(score < 50){ grade = 'D(위험)'; gradeColor = '#ef4444'; }
+    else if(score < 65){ grade = 'C(주의)'; gradeColor = '#f59e0b'; }
+    else if(score < 80){ grade = 'B(관찰)'; gradeColor = '#fbbf24'; }
+
+    document.getElementById('scalp-score-num').textContent = score;
+    document.getElementById('scalp-score-num').style.color = gradeColor;
+    document.getElementById('scalp-score-grade').textContent = grade + ' 등급';
+    document.getElementById('scalp-score-grade').style.color = gradeColor;
+
+    // 참고 유형 매핑
+    var typeNames = {
+      crown:'🧑‍🦱 정수리 밀도 정체', mshape:'〰️ 전면 라인 텐션 다운', round:'⭕ 국소 부위 급성 방전',
+      female:'여성형 모발 변화', thinning:'📉 전체 볼륨 쇠퇴', inflame:'두피 자극·민감형',
+      reloss:'스타일 튠업 후 리듬 불안정', stress:'스트레스 관련 모발 변화'
+    };
+
+    // 참고 요인 (다중 분석)
+    var causes = [];
+    if(a.s1.indexOf('7') >= 0 || a.s2 === 'stress'){ causes.push('• 스트레스·수면 부족과 관련된 내면 탄력성 균형 참고 (rPPG 측정 권장)'); }
+    if(a.s1.indexOf('8') >= 0){ causes.push('• 호르몬 변화·영양 상태와 관련될 수 있어요 — 의료기관 상담 권장'); }
+    if(a.s2 === 'crown' || a.s2 === 'mshape'){ causes.push('• 유전적 요인과 관련된 모발 변화 경향'); }
+    if(a.s2 === 'inflame' || a.s3.q2 === 'inflame'){ causes.push('• 두피 자극·민감 상태 — 진정 케어와 전문기관 상담 권장'); }
+    if(a.s2 === 'female'){ causes.push('• 호르몬 변화와 관련된 모발 변화 경향'); }
+    if(causes.length === 0){ causes.push('• 일반적인 모발 변화 — 현재 상태 양호, 정기 모니터링 권장'); }
+
+    document.getElementById('scalp-suspect').innerHTML =
+      '<div style="margin-bottom:12px;"><b>참고 유형:</b> <span style="color:#b8860b;font-weight:800;">'+ typeNames[a.s2] +'</span></div>' +
+      '<div><b>참고 요인:</b><br/>'+ causes.join('<br/>') +'</div>';
+
+    // 권장 점검 항목
+    var recs = [
+      '📷 두피 생기 스캔 카메라 측정 (5부위 분석 — 아래 STEP 2)',
+      '💓 rPPG 내면 탄력성 측정 (스트레스 영향 참고)',
+      '🩺 전문기관 상담 권장'
+    ];
+    if(a.s1.indexOf('6') >= 0 || a.s3.q2 === 'inflame'){ recs.push('🩺 두피 자극이 지속되면 의료기관 상담 권장'); }
+    if(a.s1.indexOf('8') >= 0){ recs.push('🩺 호르몬 관련 변화가 걱정되면 의료기관 상담 권장'); }
+    document.getElementById('scalp-recommendations').innerHTML = recs.map(function(r){return '<div style="margin-bottom:6px;">'+ r +'</div>';}).join('');
+
+    // 결과 영역 표시
+    document.getElementById('scalp-result-area').style.display = 'block';
+    document.getElementById('scalp-result-area').scrollIntoView({behavior:'smooth', block:'start'});
+
+    // (OEM 라이프웨어 섹션 출시 준비 중 — 박입 보류)
+  }
+
+  // 초기화
+  function scalpResetAll(){
+    if(!confirm(_cgoT('자가 점검을 초기화하시겠습니까?'))) return;
+    window.scalpAnswers = { s1:[], s2:null, s3:{} };
+    document.querySelectorAll('#page-scalp .scalp-opt.checked, #page-scalp .scalp-type-card.checked').forEach(function(el){
+      el.classList.remove('checked');
+    });
+    document.getElementById('scalp-result-area').style.display = 'none';
+  }
+
+  // AI 챗 (헤어 인덱싱 도우미 페르소나)
+  function scalpChatSend(){
+    var input = document.getElementById('scalp-chat-input');
+    var msgs = document.getElementById('scalp-chat-messages');
+    if(!input || !msgs) return;
+    var text = (input.value || '').trim();
+    if(!text) return;
+    var userBubble = document.createElement('div');
+    userBubble.style.cssText = 'align-self:flex-end;max-width:85%;padding:12px 14px;background:linear-gradient(135deg,#1a1408,#2a2418);color:#fff;border-radius:14px 14px 4px 14px;font-size:12px;line-height:1.5;';
+    userBubble.textContent = text;
+    msgs.appendChild(userBubble);
+    input.value = '';
+    msgs.scrollTop = msgs.scrollHeight;
+
+    var aiBubble = document.createElement('div');
+    aiBubble.style.cssText = 'align-self:flex-start;max-width:85%;padding:12px 14px;background:#fff;border:1px solid #f0e6d4;border-radius:14px 14px 14px 4px;font-size:12px;color:#1a1408;line-height:1.6;';
+    aiBubble.innerHTML = _cgoT('💭 분석 중...');
+    msgs.appendChild(aiBubble);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    // 자가 점검 데이터 컨텍스트 구축
+    var ctx = '';
+    var a = window.scalpAnswers || {};
+    if(a.s1 && a.s1.length > 0){ ctx += '[자가 점검 STEP1 컨디션]: '+ a.s1.length +'개 선택\n'; }
+    if(a.s2){ ctx += '[자가 점검 STEP2 유형]: '+ a.s2 +'\n'; }
+    if(a.s3 && Object.keys(a.s3).length > 0){ ctx += '[자가 점검 STEP3]: '+ JSON.stringify(a.s3) +'\n'; }
+
+    // 시스템 프롬프트: AI 페르소나 (내부)
+    var sysPrompt = '당신은 FULI 두피 케어 AI 정보 도우미입니다. 공개된 두피·모발·동양 철학 자료를 학습했으며, 의료인이 아니고 진단·처방을 하지 않습니다. 친절하고 정확하게, 그러나 "의료 진단·예측·치료"가 아닌 "라이프스타일 케어 가이드" 관점으로 답변하세요. 의학적 판단은 전문의 상담을 권장하는 안내를 마무리에 항상 포함하세요.';
+
+    // ★ C-40 박입 ⑥ — GROQ 직접 호출 (본진 표준 패턴 · 두피 AI 실 연동 · 130명 전문가)
+    var scalpFullPrompt = sysPrompt + '\n\n' + ctx + '\n[사용자 질문]: ' + text + (window._demLangDirective?window._demLangDirective():'');
+    var scalpGroqBody = {
+      model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+      max_tokens: 1800,
+      temperature: 0.6,
+      messages: [{ role: 'user', content: scalpFullPrompt }]
+    };
+    
+    fetch('/api/groq', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(scalpGroqBody)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      if(answer){
+        var disclaimer = '<br/><br/><span style="font-size:10px;color:#64748b;">⚠️ 본 답변은 라이프스타일 가이드입니다. 의학적 진단·치료는 피부과 전문의 상담을 권장드립니다.</span>';
+        aiBubble.innerHTML = answer.replace(/\n/g, '<br/>') + disclaimer;
+      } else {
+        aiBubble.innerHTML = _cgoT('죄송해요, 일시적으로 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.');
+      }
+      msgs.scrollTop = msgs.scrollHeight;
+    })
+    .catch(function(err){
+      aiBubble.innerHTML = _cgoT('⚠️ 네트워크 오류. 잠시 후 다시 시도해 주세요.');
+      msgs.scrollTop = msgs.scrollHeight;
+      console.warn('[C-40 두피 AI] GROQ 호출 실패:', err);
+    });
+  }
+
+  function scalpChatEnter(e){
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      scalpChatSend();
+    }
+  }
+
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 질문지 Accordion
+  // ═════════════════════════════════════════════════════════════════════
+  // C-39 v1.9 — 7부위 사진 풀스크린 팝업
+  window.scalpShowPhotoZoom = function(src, name){
+    try {
+      var existing = document.getElementById('scalp-photo-zoom-modal');
+      if(existing) existing.remove();
+      var modal = document.createElement('div');
+      modal.id = 'scalp-photo-zoom-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;cursor:zoom-out;';
+      modal.onclick = function(){ modal.remove(); };
+      modal.innerHTML = '<div style="position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;cursor:pointer;">×</div>' +
+        '<div style="color:#fbbf24;font-size:14px;font-weight:800;margin-bottom:14px;text-shadow:0 2px 8px rgba(0,0,0,.5);">📍 ' + name + ' — 측정 위치</div>' +
+        '<img src="' + src + '" alt="' + name + '" style="max-width:92vw;max-height:78vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);">' +
+        '<div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:14px;text-shadow:0 1px 4px rgba(0,0,0,.5);">화면 아무 곳이나 누르면 닫힙니다</div>';
+      document.body.appendChild(modal);
+    } catch(e){ console.log('[C-39 v1.9] 사진 팝업 실패:', e.message); }
+  };
+  
+  function scalpToggleAcc(step){
+    var body = document.getElementById('scalp-acc-body-'+step);
+    var icon = document.getElementById('scalp-acc-icon-'+step);
+    if(!body || !icon) return;
+    var isOpen = body.style.display !== 'none';
+    if(isOpen){
+      body.style.display = 'none';
+      icon.textContent = '▶';
+    } else {
+      body.style.display = 'block';
+      icon.textContent = '▼';
+    }
+  }
+
+  // 응답 카운트 업데이트
+  function scalpUpdateAccMeta(){
+    var a = window.scalpAnswers || {s1:[], s2:null, s3:{}};
+    var m1 = document.getElementById('scalp-acc-meta-1');
+    var m2 = document.getElementById('scalp-acc-meta-2');
+    var m3 = document.getElementById('scalp-acc-meta-3');
+    if(m1) m1.innerHTML = '— ' + (a.s1.length) + '개 선택';
+    if(m2){
+      var typeNames = {crown:'정수리 밀도', mshape:'전면 라인', round:'국소 방전', female:'가르마 밀도', thinning:'전체 볼륨', inflame:'열감 민감', reloss:'리듬 불안정', stress:'라이프 데미지'};
+      m2.innerHTML = a.s2 ? '— <b style="color:#b8860b;">'+ (typeNames[a.s2]||'선택') +'</b>' : '— 미선택';
+    }
+    if(m3) m3.innerHTML = '— ' + Object.keys(a.s3 || {}).length + '/4 응답';
+  }
+
+  // 기존 토글 함수 hook (메타 자동 업데이트)
+  var _origToggleS1 = window.scalpToggleS1;
+  window.scalpToggleS1 = function(el){
+    if(_origToggleS1) _origToggleS1(el);
+    scalpUpdateAccMeta();
+  };
+  var _origSelectS2 = window.scalpSelectS2;
+  window.scalpSelectS2 = function(el){
+    if(_origSelectS2) _origSelectS2(el);
+    scalpUpdateAccMeta();
+    // STEP 2 완료 시 자동으로 STEP 3 펼치기
+    setTimeout(function(){
+      var b3 = document.getElementById('scalp-acc-body-3');
+      if(b3 && b3.style.display === 'none'){
+        scalpToggleAcc(3);
+      }
+    }, 300);
+  };
+  var _origSelectS3 = window.scalpSelectS3;
+  window.scalpSelectS3 = function(el){
+    if(_origSelectS3) _origSelectS3(el);
+    scalpUpdateAccMeta();
+  };
+
+  // STEP 1 완료 시 STEP 2 자동 펼치기 (3개 이상 선택 시)
+  var _scalpS1Hook = window.scalpToggleS1;
+  window.scalpToggleS1 = function(el){
+    if(_scalpS1Hook) _scalpS1Hook(el);
+    if(window.scalpAnswers && window.scalpAnswers.s1.length === 3){
+      setTimeout(function(){
+        var b2 = document.getElementById('scalp-acc-body-2');
+        if(b2 && b2.style.display === 'none'){
+          scalpToggleAcc(2);
+        }
+      }, 300);
+    }
+  };
+
+  // 초기화 시 Accordion 메타도 리셋
+  var _origReset = window.scalpResetAll;
+  window.scalpResetAll = function(){
+    if(_origReset) _origReset();
+    scalpUpdateAccMeta();
+    // STEP 2, 3 다시 접기
+    var b2 = document.getElementById('scalp-acc-body-2');
+    var b3 = document.getElementById('scalp-acc-body-3');
+    var i2 = document.getElementById('scalp-acc-icon-2');
+    var i3 = document.getElementById('scalp-acc-icon-3');
+    if(b2){ b2.style.display = 'none'; if(i2) i2.textContent = '▶'; }
+    if(b3){ b3.style.display = 'none'; if(i3) i3.textContent = '▶'; }
+  };
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 카메라 모듈 (5부위 두피 측정)
+  // ═════════════════════════════════════════════════════════════════════
+  window.scalpCamParts = [
+    { key:'face',     name:'얼굴',    emoji:'👤', sec:30, mode:'rppg', phase:1, guide:'안정 상태에서 얼굴을 가이드 안에 정확히 위치 — rPPG 내면 탄력성 측정 (움직임 최소)' },
+    { key:'tongue',   name:'혀 관찰', emoji:'👅', sec:20, mode:'snap', phase:1, guide:'혀를 자연스럽게 내밀어 카메라에 가까이 — 오행 기운 리듬 참고용' },
+    { key:'crown',    name:'정수리',  emoji:'🧑‍🦱', sec:30, mode:'snap', phase:2, guide:'머리를 카메라 앞으로 숙여 정수리가 가이드 원 안에 들어오게 해주세요' },
+    { key:'mleft',    name:'헤어라인 좌측', emoji:'↖️', sec:20, mode:'snap', phase:2, guide:'왼쪽 이마 라인이 가이드 안에 들어오도록 머리를 살짝 기울여주세요' },
+    { key:'mright',   name:'헤어라인 우측', emoji:'↗️', sec:20, mode:'snap', phase:2, guide:'오른쪽 이마 라인이 가이드 안에 들어오도록 머리를 살짝 기울여주세요' },
+    { key:'midline',  name:'정중선',  emoji:'📏', sec:20, mode:'snap', phase:2, guide:'정수리에서 이마 방향으로 가르마를 보여주세요' },
+    { key:'occiput',  name:'후두부',  emoji:'🌫️', sec:20, mode:'snap', phase:2, guide:'뒷머리(후두부)를 카메라에 보여주세요 — 보호자 도움이 편합니다' }
+  ];
+  window.scalpCamState = { idx:0, stream:null, timer:null, sec:0, captures:[] };
+
+  // 카메라 시작 (메인 진입)
+  window.scalpStartScan = function(){
+    var modal = document.getElementById('scalp-cam-modal');
+    if(!modal) return;
+    window.scalpCamState = { idx:0, stream:null, timer:null, sec:0, captures:[] };
+    modal.style.display = 'block';
+    document.getElementById('scc-result-grid').style.display = 'none';
+    document.getElementById('scc-error').style.display = 'none';
+    scalpCamRequestStream();
+  };
+
+  // 카메라 권한 요청 + 스트림 시작
+  // C-39 v1.6 — 카메라 열림 후 사용자가 [지금 촬영] 누를 때까지 대기
+  // C-39 v1.7 — 카메라 전환 (사용자가 선택)
+  window.scalpCamSwitchCamera = function(facingMode, callback){
+    // 기존 스트림 정지
+    if(window.scalpCamState.stream){
+      window.scalpCamState.stream.getTracks().forEach(function(t){ t.stop(); });
+    }
+    // 새 카메라 시작
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode, width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    }).then(function(stream){
+      window.scalpCamState.stream = stream;
+      var v = document.getElementById('scalp-cam-video');
+      if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+      window.scalpCamState.facingMode = facingMode;
+      if(callback) callback(true);
+    }).catch(function(err){
+      // 폴백 — facingMode 무시하고 그냥 시도
+      navigator.mediaDevices.getUserMedia({video:true, audio:false})
+        .then(function(stream){
+          window.scalpCamState.stream = stream;
+          var v = document.getElementById('scalp-cam-video');
+          if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+          if(callback) callback(true);
+        })
+        .catch(function(){ if(callback) callback(false); });
+    });
+  };
+  
+  // C-39 v1.7 — 부위별 카메라 선택 UI 표시
+  window.scalpShowCameraChoice = function(idx){
+    var parts = window.scalpCamParts;
+    if(idx >= parts.length){ scalpCamStartPart(idx); return; }
+    // C-39 v1.8 — 카메라 선택 UI 표시 시 알림 (사용자 주의 환기)
+    try { scalpPlayDing(); } catch(e){}
+    var p = parts[idx];
+    var inst = document.getElementById('scc-instruction');
+    var label = document.getElementById('scc-guide-label');
+    var timer = document.getElementById('scc-timer');
+    var prog = document.getElementById('scc-progress');
+    var btn = document.getElementById('scc-capture-btn');
+    
+    // 부위 추천 카메라
+    var recommend = (p.key === 'tongue') ? 'user' : 'environment';
+    var recommendText = (recommend === 'user') ? '📱 전면(셀카) 추천' : '📷 후면 추천';
+    
+    if(label) label.innerHTML = p.emoji + ' ' + _cgoT(p.name) + _cgoT(' · 카메라 선택');
+    if(timer) timer.textContent = p.sec;
+    if(prog) prog.textContent = 'PART ' + (idx+1) + ' / ' + parts.length + ' · 카메라 선택';
+    if(inst) inst.innerHTML = '📍 <b>' + p.emoji + ' ' + _cgoT(p.name) + '</b><br><span style="font-size:11px;opacity:.8;">' + p.guide + '</span><br><br>' +
+      '<div style="margin-top:12px;padding:10px;background:rgba(16,185,129,.15);border-radius:10px;font-size:12px;color:#10b981;">' + recommendText + '</div>' +
+      '<br><b style="color:#10b981;">사용하실 카메라를 선택해주세요 ↓</b>';
+    
+    // 버튼을 2개로 변경
+    if(btn){
+      btn.style.display = 'none';  // 기존 버튼 숨김
+      // 카메라 선택 컨테이너
+      var existingChoice = document.getElementById('scc-camera-choice');
+      if(existingChoice) existingChoice.remove();
+      
+      var choice = document.createElement('div');
+      choice.id = 'scc-camera-choice';
+      choice.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;';
+      choice.innerHTML = 
+        '<button onclick="window.scalpStartWithCamera(' + idx + ', \'environment\')" style="padding:18px 10px;background:' + (recommend === 'environment' ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#475569,#334155)') + ';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.2);">📷 후면 카메라<br><span style="font-size:10px;opacity:.85;font-weight:600;">(외부 촬영)</span></button>' +
+        '<button onclick="window.scalpStartWithCamera(' + idx + ', \'user\')" style="padding:18px 10px;background:' + (recommend === 'user' ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#475569,#334155)') + ';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.2);">📱 전면 카메라<br><span style="font-size:10px;opacity:.85;font-weight:600;">(셀카)</span></button>';
+      btn.parentNode.insertBefore(choice, btn.nextSibling);
+    }
+  };
+  
+  // C-39 v1.7 — 카메라 선택 후 측정 시작
+  window.scalpStartWithCamera = function(idx, facingMode){
+    var choice = document.getElementById('scc-camera-choice');
+    if(choice) choice.remove();
+    var btn = document.getElementById('scc-capture-btn');
+    if(btn){
+      btn.style.display = '';
+      btn.onclick = function(){ scalpCamCapture(); };
+    }
+    // C-39 v1.8 — 카메라 시작 알림 (시작 딩동)
+    try { scalpPlayDing(); } catch(e){}
+    // 카메라 전환 후 부위 측정 시작
+    window.scalpCamSwitchCamera(facingMode, function(ok){
+      if(ok){
+        scalpCamStartPart(idx);
+      } else {
+        scalpCamShowError('카메라 권한이 필요합니다.');
+      }
+    });
+  };
+
+  function scalpCamWaitFirst(){
+    // C-39 v1.7 — 첫 부위부터 카메라 선택 UI 표시
+    window.scalpShowCameraChoice(0);
+  }
+
+  function scalpCamRequestStream(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      scalpCamShowError('이 브라우저는 카메라를 지원하지 않습니다.<br/><br/>최신 Chrome·Safari·Edge를 권장합니다.');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} },
+      audio: false
+    }).then(function(stream){
+      window.scalpCamState.stream = stream;
+      var v = document.getElementById('scalp-cam-video');
+      if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+      // C-39 v1.6 — 카메라만 켜고 대기 (사용자가 [지금 촬영] 클릭 시 첫 부위 시작)
+      scalpCamWaitFirst();
+    }).catch(function(err){
+      // 후면 카메라 실패 시 전면 시도
+      navigator.mediaDevices.getUserMedia({video:true, audio:false})
+        .then(function(stream){
+          window.scalpCamState.stream = stream;
+          var v = document.getElementById('scalp-cam-video');
+          if(v){ v.srcObject = stream; v.play().catch(function(){}); }
+          // C-39 v1.6 — 카메라만 켜고 대기
+          scalpCamWaitFirst();
+        })
+        .catch(function(){
+          scalpCamShowError('카메라 권한이 거부되었습니다.<br/><br/>브라우저 설정에서 카메라 권한을 허용 후 다시 시도해주세요.');
+        });
+    });
+  }
+
+  // 딩동 벨소리 (Web Audio API — 사용자 권한 불필요)
+  function scalpPlayDing(){
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return;
+      var ctx = new AudioCtx();
+      // 첫 음: 높은 톤 (딩)
+      var o1 = ctx.createOscillator();
+      var g1 = ctx.createGain();
+      o1.frequency.value = 880; o1.type = 'sine';
+      g1.gain.setValueAtTime(0.001, ctx.currentTime);
+      g1.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.02);
+      g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o1.connect(g1); g1.connect(ctx.destination);
+      o1.start(ctx.currentTime); o1.stop(ctx.currentTime + 0.4);
+      // 두번째 음: 낮은 톤 (동)
+      var o2 = ctx.createOscillator();
+      var g2 = ctx.createGain();
+      o2.frequency.value = 587; o2.type = 'sine';
+      g2.gain.setValueAtTime(0.001, ctx.currentTime + 0.25);
+      g2.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.28);
+      g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.start(ctx.currentTime + 0.25); o2.stop(ctx.currentTime + 0.7);
+    } catch(e){ console.log('[scalp] sound err:', e); }
+  }
+
+  // 부위별 시작
+  function scalpCamStartPart(idx){
+    var parts = window.scalpCamParts;
+    if(idx >= parts.length){ 
+      scalpPlayDing();  // 전체 측정 완료 시 딩동
+      setTimeout(function(){ scalpPlayDing(); }, 400); // 한번 더 (완료 알림 강조)
+      scalpCamShowResult(); 
+      return; 
+    }
+    // C-39 v1.8 — 모든 부위 진입 시 딩동 (첫 부위 포함)
+    scalpPlayDing();  // 부위 진입 시 측정 시작 알림
+    window.scalpCamState.idx = idx;
+    var p = parts[idx];
+    document.getElementById('scc-progress').textContent = 'PART '+ (idx+1) +' / '+ parts.length;
+    document.getElementById('scc-guide-label').innerHTML = p.emoji +' '+ _cgoT(p.name);
+    document.getElementById('scc-instruction').textContent = p.guide;
+    // 카운트다운 시작
+    window.scalpCamState.sec = p.sec;
+    document.getElementById('scc-timer').textContent = p.sec;
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    window.scalpCamState.timer = setInterval(function(){
+      window.scalpCamState.sec--;
+      var t = document.getElementById('scc-timer');
+      if(t) t.textContent = window.scalpCamState.sec;
+      if(window.scalpCamState.sec <= 0){
+        // C-39 v1.4 — 타이머 만료 시 자동 캡처 X, 사용자 직접 촬영 대기
+        clearInterval(window.scalpCamState.timer);
+        window.scalpCamState.sec = 0;
+        if(t) t.textContent = '0';
+        scalpPlayDing();  // 카메라 정지 알림음
+        var inst = document.getElementById('scc-instruction');
+        if(inst) inst.innerHTML = '⏰ 시간 완료 — <b style="color:#10b981;">위치 확인 후 [지금 촬영] 버튼을 눌러주세요</b>';
+        var capBtn = document.getElementById('scc-capture-btn');
+        if(capBtn){
+          capBtn.style.animation = 'scalp-pulse 1s infinite';
+          capBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+        }
+      }
+    }, 1000);
+  }
+
+  // 캡처 (Canvas로 video → image)
+  // ════════════════════════════════════════════════════
+  // C-39 v1.1 — 클라이언트 픽셀 분석 엔진 (Google AI 솔루션)
+  // ① 두피 열감 검출 (R-G-B 적색 치우침)
+  // ② Sobel Edge 모발 윤곽 (3x3 회선 행렬)
+  // 추가 용량: ~3KB | 외부 의존성: 0 | 본진 SoC 완전 보존
+  // ════════════════════════════════════════════════════
+  
+  /* ★ C-63: 두피 스펙트럼 + 환경(조명) 보정 엔진
+     ─────────────────────────────────────────────────────────────
+     ⚠️ 얼굴 rPPG의 '좌표(FaceMesh 468)'는 두피에 적용 불가하다.
+        정수리·헤어라인·정중선·후두부는 얼굴이 프레임에 없어 랜드마크가 잡히지 않는다.
+        대신 '두피 영역 검출(피부톤 세그먼트)'로 ROI를 대체한다.
+
+     적용되는 것:
+       ① 환경(조명) 정규화 — Gray-World 화이트밸런스로 색온도 보정
+                              + 밝기 정규화로 노출 차이 상쇄
+       ② 스펙트럼 정규화   — 절대 RGB 대신 채널 비율(r/(r+g+b))로 판정
+                              → 조명 밝기·색온도에 불변
+       ③ 두피 ROI 검출     — 머리카락(어두움)·배경 제외, 두피 픽셀만 대상
+
+     기존 문제(수정 전):
+       score = r - (g*0.6 + b*0.4);  if(score>35 && r>120)
+       → r>120 절대 임계값. 어두운 방에서는 홍반이 있어도 무조건 미검출.
+       → 밝은 조명에서는 정상 두피도 홍반으로 오검출.
+     원복: window._cgoScalpSpecV2 = false */
+  window._cgoScalpSpecV2 = (window._cgoScalpSpecV2 !== false);
+
+  /* ① 환경(조명) 정규화 — 밝기(luma)만 기준값으로 스케일
+     ⚠️ Gray-World 화이트밸런스는 쓰지 않는다.
+        Gray-World는 '장면에 다양한 색이 섞여 있다'고 가정하는데,
+        두피 클로즈업은 화면 전체가 살색이라 그 안색 톤 자체를 '조명 편향'으로
+        오인해 지워버린다(= 홍반이 사라짐). 실측 시뮬레이션으로 확인.
+        따라서 색비율은 원본 유지하고 밝기만 정규화한다. */
+  window.scalpLumaNorm = function(data){
+    var n = data.length / 4;
+    var lumS = 0;
+    for(var i = 0; i < data.length; i += 4){
+      lumS += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+    var L = lumS / n;
+    var k = (L > 1) ? (140.0 / L) : 1.0;      /* 기준 밝기 140 */
+    k = Math.max(0.5, Math.min(2.0, k));      /* 과보정 방지 */
+    return { k:k, lum:L };
+  };
+
+  /* ③ 두피 픽셀 판정 — 머리카락(저명도)·배경(무채색) 제외 */
+  window.scalpIsScalpPx = function(r, g, b){
+    var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    var v = mx / 255;                       /* 명도 */
+    var sat = mx > 0 ? (mx-mn)/mx : 0;      /* 채도 */
+    if(v < 0.28) return false;              /* 너무 어두움 = 머리카락·그림자 */
+    if(sat < 0.06) return false;            /* 무채색 = 배경·흰벽 */
+    if(!(r >= g && g >= b)) return false;   /* 피부톤은 R≥G≥B */
+    return true;
+  };
+
+  // ① 두피 열감 픽셀 분석 (염증·열감 검출)
+  window.scalpAnalyzeErythema = function(imgData){
+    try {
+      var data = imgData.data;
+      var erythemaPx = 0;
+      var totalPx = data.length / 4;
+      var rSum = 0, gSum = 0, bSum = 0;
+
+      if(window._cgoScalpSpecV2 === false){
+        /* ── 폴백: 기존 절대 RGB 방식 (조명 의존) ── */
+        for(var i = 0; i < data.length; i += 4){
+          var r0 = data[i], g0 = data[i+1], b0 = data[i+2];
+          rSum += r0; gSum += g0; bSum += b0;
+          var score0 = r0 - (g0 * 0.6 + b0 * 0.4);
+          if(score0 > 35 && r0 > 120) erythemaPx++;
+        }
+        return {
+          erythemaPct: (erythemaPx / totalPx * 100).toFixed(1),
+          avgR: Math.round(rSum / totalPx), avgG: Math.round(gSum / totalPx), avgB: Math.round(bSum / totalPx),
+          confidence: totalPx > 50000 ? 'high' : 'mid', method: 'legacy'
+        };
+      }
+
+      /* ★ C-63 스펙트럼 + 환경 보정 방식 ─────────────────────
+         ① 환경: Gray-World 화이트밸런스로 색온도 제거
+         ② 스펙트럼: 절대값 대신 채널 비율 → 조명 밝기에 불변
+         ③ ROI: 두피 픽셀만 (머리카락·배경 제외) */
+      /* ★ C-63: 특허 명세서(INP26-126) 준거 구현
+         ─────────────────────────────────────────────────────
+         · 청구항 12: "두피 복수 부위 영상의 열감 지수 및 경계 검출 기반 밀도 지표"
+         · 실시예   : "열감 지수 EI = log₁₀(R/G)"
+         · 청구항 6 : "모든 측정 모듈(110-a~110-g)이 동일 파이프라인 공유"
+                      → 색차 정규화 → 대역통과 → 다부위 신뢰도 가중 융합
+
+         EI = log₁₀(R/G) 의 성질:
+           조명이 k배 밝아지면 R→kR, G→kG 이므로
+           log₁₀(kR/kG) = log₁₀(R/G)  → 조명 밝기가 완전히 소거된다.
+           (비어-람베르트 법칙 기반 광학 밀도. 헤모글로빈 흡광 특성 반영)
+         이것이 명세서가 말하는 '스펙트럼' 정규화이며,
+         기존 구현의 `r > 120` 절대 임계값 문제를 근본 해결한다. */
+      var ln = window.scalpLumaNorm(data);   /* 밝기 통계(참고·신뢰도 판정용) */
+      var scalpPx = 0;
+      var eiList = [];                        /* 두피 픽셀별 열감 지수 EI */
+
+      for(var i2 = 0; i2 < data.length; i2 += 4){
+        var r = data[i2], g = data[i2+1], b = data[i2+2];
+        rSum += r; gSum += g; bSum += b;
+
+        /* ROI: 두피 픽셀만 (머리카락·배경 제외) */
+        if(!window.scalpIsScalpPx(r, g, b)) continue;
+        if(g < 1) continue;                   /* log 정의역 보호 */
+        scalpPx++;
+
+        /* ★ 명세서 수식: 열감 지수 EI = log₁₀(R/G) — 조명 불변 */
+        eiList.push(Math.log(r / g) / Math.LN10);
+      }
+
+      /* 홍반 판정 — 절대 기준 + 개인 상대 기준 병행
+         · 절대: EI ≥ 0.13 (정상 피부 EI ≈ 0.06~0.09, 홍반 ≈ 0.18~0.25)
+         · 상대: 이 사람 두피 평균 + 0.6σ (피부톤 개인차 흡수) */
+      var eiMean = 0, eiMax = 0;
+      if(eiList.length > 0){
+        for(var q = 0; q < eiList.length; q++){ eiMean += eiList[q]; if(eiList[q] > eiMax) eiMax = eiList[q]; }
+        eiMean /= eiList.length;
+        var vr = 0;
+        for(var q2 = 0; q2 < eiList.length; q2++){ var d2 = eiList[q2] - eiMean; vr += d2*d2; }
+        var eiSd = Math.sqrt(vr / eiList.length) || 0.0001;
+        var eiThr = Math.max(eiMean + 0.6*eiSd, 0.13);
+        for(var q3 = 0; q3 < eiList.length; q3++){ if(eiList[q3] > eiThr) erythemaPx++; }
+      }
+
+      /* 두피 픽셀 대비 비율 (전체 픽셀 대비가 아님 → 머리카락 많아도 왜곡 없음) */
+      var denom = scalpPx > 0 ? scalpPx : totalPx;
+      return {
+        erythemaPct: (erythemaPx / denom * 100).toFixed(1),
+        avgR: Math.round(rSum / totalPx),
+        avgG: Math.round(gSum / totalPx),
+        avgB: Math.round(bSum / totalPx),
+        scalpPx: scalpPx,
+        scalpCoverage: (scalpPx / totalPx * 100).toFixed(1),
+        /* ★ 명세서 준거 열감 지수 통계 (EI = log₁₀(R/G)) */
+        eiMean: +eiMean.toFixed(4),
+        eiMax: +eiMax.toFixed(4),
+        lum: Math.round(ln.lum),
+        /* 두피가 너무 적게 잡히면 신뢰도 낮음 (정직) */
+        confidence: (scalpPx / totalPx < 0.08) ? 'low' : (totalPx > 50000 ? 'high' : 'mid'),
+        method: 'spectrum-v2'
+      };
+    } catch(e){ return null; }
+  };
+  
+  // ② Sobel Edge — 모발 윤곽·밀도 카운트
+  window.scalpDetectHairEdge = function(imgData, w, h){
+    try {
+      var d = imgData.data;
+      var kx = [-1,0,1,-2,0,2,-1,0,1];
+      var ky = [-1,-2,-1,0,0,0,1,2,1];
+      var edgePx = 0;
+      var sampleStep = 2; // 성능 위해 2픽셀 간격 샘플링
+      /* ★ C-63: 조명 적응형 엣지 임계값 — 평균 밝기에 비례
+         (어두운 사진에서 gradient가 작아져 모발 윤곽을 놓치던 문제) */
+      var _edgeThr = 50;
+      try{
+        var _lS = 0, _lN = 0;
+        for(var _li = 0; _li < d.length; _li += 40){   /* 10픽셀 간격 샘플 */
+          _lS += 0.299*d[_li] + 0.587*d[_li+1] + 0.114*d[_li+2]; _lN++;
+        }
+        var _lAvg = _lN ? (_lS/_lN) : 140;
+        _edgeThr = Math.max(22, Math.min(90, 50 * (_lAvg/140)));
+      }catch(e){}
+      for(var y = 1; y < h - 1; y += sampleStep){
+        for(var x = 1; x < w - 1; x += sampleStep){
+          var gx = 0, gy = 0;
+          for(var cy = -1; cy <= 1; cy++){
+            for(var cx = -1; cx <= 1; cx++){
+              var idx = ((y + cy) * w + (x + cx)) * 4;
+              var val = (d[idx] + d[idx+1] + d[idx+2]) / 3;
+              var kIdx = (cy + 1) * 3 + (cx + 1);
+              gx += val * kx[kIdx];
+              gy += val * ky[kIdx];
+            }
+          }
+          var mag = Math.sqrt(gx * gx + gy * gy);
+          /* ★ C-63: mag>50 절대 임계값은 조명에 의존 — 어두우면 모발 윤곽이 사라진다.
+             밝기(luma)로 정규화한 상대 임계값 사용. 원복: _cgoScalpSpecV2=false */
+          var _thr = (window._cgoScalpSpecV2 === false) ? 50 : _edgeThr;
+          if(mag > _thr) edgePx++;
+        }
+      }
+      var sampleArea = Math.floor((w-2)/sampleStep) * Math.floor((h-2)/sampleStep);
+      return {
+        edgeDensity: (edgePx / sampleArea * 100).toFixed(1),
+        edgeCount: edgePx,
+        sampledArea: sampleArea
+      };
+    } catch(e){ return null; }
+  };
+  
+  // ③ 캡처 + 픽셀 분석 통합
+  window.scalpCamCapture = function(){
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    var v = document.getElementById('scalp-cam-video');
+    var c = document.getElementById('scalp-cam-canvas');
+    if(!v || !c) return;
+    var w = v.videoWidth || 640, h = v.videoHeight || 480;
+    c.width = w; c.height = h;
+    var ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0, w, h);
+    var dataUrl = c.toDataURL('image/jpeg', 0.85);
+    
+    // C-39 v1.1 — 클라이언트 즉시 분석 (Vision API 보완)
+    var pixelAnalysis = null;
+    try {
+      var imgData = ctx.getImageData(0, 0, w, h);
+      var erythema = window.scalpAnalyzeErythema(imgData);
+      var edge = window.scalpDetectHairEdge(imgData, w, h);
+      pixelAnalysis = { erythema: erythema, edge: edge, w: w, h: h };
+      console.log('[C-39 v1.1] 부위 ' + (window.scalpCamState.idx+1) + ' 픽셀 분석:',
+        '열감=' + (erythema ? erythema.erythemaPct + '%' : 'N/A'),
+        '윤곽밀도(참고)=' + (edge ? edge.edgeDensity + '%' : 'N/A'));
+    } catch(e){
+      console.log('[C-39 v1.1] 픽셀 분석 실패 (정상 작동):', e.message);
+    }
+    
+    var p = window.scalpCamParts[window.scalpCamState.idx];
+    window.scalpCamState.captures.push({ 
+      key:p.key, name:p.name, emoji:p.emoji, img:dataUrl,
+      pixelAnalysis: pixelAnalysis  // C-39 v1.1
+    });
+    // C-39 v1.4 — 캡처 직후 자동 진행 X, 사용자 위치 이동 후 다음 부위 시작
+    scalpPlayDing();  // 캡처 완료 알림
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    var _nextIdx = window.scalpCamState.idx + 1;
+    var _parts = window.scalpCamParts;
+    if(_nextIdx >= _parts.length){
+      // 마지막 부위 완료 → 결과 표시
+      setTimeout(function(){ scalpCamStartPart(_nextIdx); }, 600);
+    } else {
+      // 다음 부위 안내 — 사용자가 위치 이동 후 직접 버튼 클릭
+      var _nextP = _parts[_nextIdx];
+      var _inst = document.getElementById('scc-instruction');
+      var _lbl = document.getElementById('scc-guide-label');
+      var _t = document.getElementById('scc-timer');
+      var _pg = document.getElementById('scc-progress');
+      var _btn = document.getElementById('scc-capture-btn');
+      if(_inst) _inst.innerHTML = '✓ 부위 ' + (window.scalpCamState.idx+1) + ' 촬영 완료!<br><br>📍 다음 부위: <b>' + _nextP.emoji + ' ' + _cgoT(_nextP.name) + '</b><br><span style="font-size:11px;opacity:.8;">' + _nextP.guide + '</span><br><br><b style="color:#10b981;">위치를 잡으신 후 아래 버튼을 누르세요</b>';
+      if(_lbl) _lbl.innerHTML = _nextP.emoji + ' ' + _cgoT(_nextP.name) + _cgoT(' (대기 중)');
+      if(_t) _t.textContent = _nextP.sec;
+      if(_pg) _pg.textContent = 'PART ' + (_nextIdx+1) + ' / ' + _parts.length + ' · 준비';
+      // C-39 v1.7 — 다음 부위 진입 시 카메라 선택 UI 표시
+      window.scalpShowCameraChoice(_nextIdx);
+    }
+  };
+
+  // 건너뛰기
+  window.scalpCamSkip = function(){
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    var p = window.scalpCamParts[window.scalpCamState.idx];
+    window.scalpCamState.captures.push({ key:p.key, name:p.name, emoji:p.emoji, img:null, skipped:true });
+    scalpCamStartPart(window.scalpCamState.idx + 1);
+  };
+
+  // 측정 완료 그리드
+  function scalpCamShowResult(){
+    var imgs = document.getElementById('scc-result-imgs');
+    if(!imgs) return;
+    imgs.innerHTML = '';
+    window.scalpCamState.captures.forEach(function(cap){
+      var wrap = document.createElement('div');
+      var imgHtml = cap.img ? '<img src="'+ cap.img +'">' : '<div style="width:100%;aspect-ratio:1;background:#222;border:2px solid rgba(255,255,255,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#666;font-size:11px;">건너뜀</div>';
+      wrap.innerHTML = imgHtml + '<div class="scc-result-label">'+ cap.emoji +' '+ _cgoT(cap.name) +'</div>';
+      imgs.appendChild(wrap);
+    });
+    document.getElementById('scc-result-grid').style.display = 'block';
+  }
+
+  // 분석 시작 (모달 닫고 결과 영역에 사진 + 분석 박입)
+  window.scalpCamFinish = function(){
+    scalpCamStopStream();
+    document.getElementById('scalp-cam-modal').style.display = 'none';
+    var caps = window.scalpCamState.captures;
+    // 결과 영역에 카메라 결과 렌더
+    var resBox = document.getElementById('scalp-camera-result');
+    if(resBox){
+      var html = '<div class="scalp-step-block" style="background:linear-gradient(135deg,#fff,#fef9f3);">';
+      html += '<div style="font-size:18px;font-weight:900;color:#1a1408;margin-bottom:6px;">📷 카메라 측정 결과 — 5부위</div>';
+      html += '<div style="font-size:11px;color:#64748b;margin-bottom:14px;">각 부위별 캡처 이미지와 정량 분석</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">';
+      caps.forEach(function(cap){
+        if(cap.img){
+          // 간이 색상 분석 (열감 점수)
+          var analysis = scalpAnalyzeImage(cap.img);
+          html += '<div style="background:#fff;border:1px solid #f0e6d4;border-radius:12px;overflow:hidden;">';
+          html += '<div style="aspect-ratio:1;background:#000;position:relative;"><img src="'+ cap.img +'" style="width:100%;height:100%;object-fit:cover;">';
+          html += '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.65);color:#fbbf24;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.04em;font-family:Courier New,monospace;">'+ cap.emoji +' '+ _cgoT(cap.name) +'</div></div>';
+          html += '<div style="padding:10px;">';
+          html += '<div style="font-size:11px;font-weight:800;color:#1a1408;margin-bottom:6px;">분석 결과</div>';
+          html += '<div style="font-size:10px;color:#666;line-height:1.5;">';
+          html += '· 두피 열감 점수: <b style="color:#'+ (analysis.redness > 50 ? 'ef4444' : '34d399') +'">'+ analysis.redness +'/100</b><br/>';
+          html += '· 유분·각질 점수: <b style="color:#'+ (analysis.oiliness > 50 ? 'f59e0b' : '34d399') +'">'+ analysis.oiliness +'/100</b><br/>';
+          html += '· 모발 밀도 추정: <b style="color:#1a1408">'+ analysis.density +'%</b>';
+          html += '</div></div></div>';
+        } else {
+          html += '<div style="background:#f5f6fa;border:1px dashed #ccc;border-radius:12px;padding:30px 14px;text-align:center;color:#64748b;font-size:11px;">'+ cap.emoji +' '+ _cgoT(cap.name) +'<br/><span style="font-size:10px;">측정 건너뜀</span></div>';
+        }
+      });
+      html += '</div></div>';
+      resBox.innerHTML = html;
+      resBox.style.display = 'block';
+      resBox.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  };
+
+  // 간이 이미지 분석 (Canvas로 평균 색상 계산)
+  function scalpAnalyzeImage(dataUrl){
+    try {
+      var c = document.createElement('canvas');
+      var img = new Image();
+      img.src = dataUrl;
+      // 동기 분석을 위해 이미 로드된 dataUrl 사용
+      var w = 100, h = 100;
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      var d = ctx.getImageData(0, 0, w, h).data;
+      var rSum=0, gSum=0, bSum=0, count=0;
+      for(var i=0; i<d.length; i+=4){
+        rSum += d[i]; gSum += d[i+1]; bSum += d[i+2]; count++;
+      }
+      var r = rSum/count, g = gSum/count, b = bSum/count;
+      // 열감: R 채널이 G보다 클수록 높음
+      var redness = Math.max(0, Math.min(100, Math.round((r - g) * 1.5 + 30)));
+      // 유분: 전체 밝기 (R+G+B) 의 황색조
+      var brightness = (r+g+b)/3;
+      var oiliness = Math.max(0, Math.min(100, Math.round((brightness - 100) * 0.5 + 20)));
+      // 밀도 추정 (어두운 픽셀 비율 — 모발 추정)
+      var darkPixels = 0;
+      for(var i=0; i<d.length; i+=4){
+        if((d[i]+d[i+1]+d[i+2])/3 < 80) darkPixels++;
+      }
+      var density = Math.max(20, Math.min(95, Math.round((darkPixels/count) * 120 + 30)));
+      return { redness: redness, oiliness: oiliness, density: density };
+    } catch(e){
+      return { redness: 35, oiliness: 25, density: 65 };
+    }
+  }
+
+  // 스트림 종료
+  function scalpCamStopStream(){
+    if(window.scalpCamState.timer) clearInterval(window.scalpCamState.timer);
+    if(window.scalpCamState.stream){
+      window.scalpCamState.stream.getTracks().forEach(function(t){ try{t.stop();}catch(e){} });
+      window.scalpCamState.stream = null;
+    }
+  }
+
+  // 모달 닫기
+  window.scalpCamClose = function(){
+    if(window.scalpCamState.captures.length > 0){
+      if(!confirm(_cgoT('측정을 중단하시겠습니까? 캡처된 이미지는 사라집니다.'))) return;
+    }
+    scalpCamStopStream();
+    document.getElementById('scalp-cam-modal').style.display = 'none';
+  };
+
+  // 에러 표시
+  function scalpCamShowError(msg){
+    var e = document.getElementById('scc-error');
+    if(!e) return;
+    e.innerHTML = '<div style="font-size:14px;font-weight:800;margin-bottom:10px;color:#fbbf24;">⚠️ 카메라 오류</div><div style="font-size:12px;line-height:1.6;">'+ msg +'</div><button class="scc-action-btn" style="margin-top:16px;" onclick="scalpCamClose()">닫기</button>';
+    e.style.display = 'block';
+  }
+
+  // 페이지 떠날 때 스트림 종료
+  window.addEventListener('hashchange', function(){
+    if(location.hash !== '#scalp' && window.scalpCamState && window.scalpCamState.stream){
+      scalpCamStopStream();
+      var m = document.getElementById('scalp-cam-modal');
+      if(m) m.style.display = 'none';
+    }
+  });
+
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 데이터 상태 체크 (자가 점검 / 카메라 / C-37)
+  // ═════════════════════════════════════════════════════════════════════
+  function scalpCheckDataStatus(){
+    var a = window.scalpAnswers || {s1:[], s2:null, s3:{}};
+    var hasQuest = (a.s1.length > 0 || a.s2 || Object.keys(a.s3).length > 0);
+    var hasCam = window.scalpCamState && window.scalpCamState.captures && window.scalpCamState.captures.length > 0;
+    var hasC37 = !!(window._c24CompState && (window._c24CompState.captures || window._c24CompState.scores));
+
+    var qEl = document.getElementById('scalp-data-quest');
+    var cEl = document.getElementById('scalp-data-cam');
+    var c37El = document.getElementById('scalp-data-c37');
+    if(qEl) qEl.innerHTML = hasQuest
+      ? '✅ <b style="color:#34d399">자가 점검 — 완료</b> ('+ a.s1.length +'/'+ (a.s2?1:0) +'/'+ Object.keys(a.s3).length +'/4)'
+      : '⚪ 자가 점검 — 미완료 (STEP 1~3 응답 권장)';
+    if(cEl) cEl.innerHTML = hasCam
+      ? '✅ <b style="color:#34d399">카메라 측정 — 완료</b> ('+ window.scalpCamState.captures.filter(function(c){return c.img;}).length +_cgoT('/5 부위)')
+      : '⚪ 카메라 측정 — 미완료 (정확도 향상 권장)';
+    if(c37El) c37El.innerHTML = hasC37
+      ? '✅ <b style="color:#34d399">C-63 웰니스 리포트 — 연동됨</b> (내면 탄력성·rPPG 데이터 사용)'
+      : '⚪ C-63 웰니스 리포트 — 미측정 (먼저 C-63 측정 권장)';
+
+    return { hasQuest:hasQuest, hasCam:hasCam, hasC37:hasC37 };
+  }
+
+  // 페이지 진입 시 + 주기적으로 상태 체크
+  setInterval(scalpCheckDataStatus, 2000);
+  setTimeout(scalpCheckDataStatus, 800);
+
+  // ═════════════════════════════════════════════════════════════════════
+  // 종합 분석 시작 (API 호출 + 결과 모달)
+  // ═════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════
+  // C-39 v1.2 — STP (Scalp Thermal-Pulse) 융합 스코어 공식
+  // Google AI Solution: Erythema × BPM × HRV 의학적 융합
+  // Total = (Erythema × 6.0) + (BPM Factor × 40) + HRV Penalty
+  // 세계 최초 '두피 열감 × 내면 탄력성' 융합 스코어
+  // ════════════════════════════════════════════════════
+  window.scalpCalculateSTP = function(camAnalysis, c37){
+    try {
+      // ① Erythema Ratio (60점 만점) — 5부위 평균 열감율
+      var erythemaPxSum = 0, erythemaCount = 0;
+      if(camAnalysis && camAnalysis.length){
+        camAnalysis.forEach(function(c){
+          if(c.skipped) return;
+          // v1.1 픽셀 분석 결과 우선 사용
+          if(window.scalpCamState && window.scalpCamState.captures){
+            window.scalpCamState.captures.forEach(function(cap){
+              if(cap.name === c.name && cap.pixelAnalysis && cap.pixelAnalysis.erythema){
+                erythemaPxSum += parseFloat(cap.pixelAnalysis.erythema.erythemaPct);
+                erythemaCount++;
+              }
+            });
+          }
+          // 백업: 기존 redness 점수
+          if(erythemaCount === 0 && c.redness !== undefined){
+            erythemaPxSum += c.redness;
+            erythemaCount++;
+          }
+        });
+      }
+      var avgErythema = erythemaCount > 0 ? (erythemaPxSum / erythemaCount) : 0;
+      // 0~10% → 0~10점 정규화, ×6 = 0~60점
+      var erythemaScore = Math.min(10, avgErythema) * 6.0;
+
+      // ② BPM Factor (40점 만점) — 정상 60~90, 과열 시 가중치 ↑
+      var bpm = 0;
+      if(c37 && c37.bpm){ bpm = parseFloat(c37.bpm) || 0; }
+      // DOM 백업
+      if(bpm === 0){
+        var bpmEl = document.getElementById('c24-res-bpm');
+        if(bpmEl){ bpm = parseFloat(bpmEl.textContent) || 0; }
+      }
+      var bpmFactor = 0;
+      if(bpm > 0){
+        if(bpm < 60) bpmFactor = 0.30;       // 서맥
+        else if(bpm <= 75) bpmFactor = 0.20;  // 안정
+        else if(bpm <= 90) bpmFactor = 0.45;  // 정상 상한
+        else if(bpm <= 100) bpmFactor = 0.65; // 약한 과열
+        else if(bpm <= 110) bpmFactor = 0.85; // BPM 108 = 0.85 (Google AI 룩업)
+        else bpmFactor = 0.95;                // 강한 과열
+      }
+      var bpmScore = bpmFactor * 40;
+
+      // ③ HRV Penalty (RMSSD 20ms 이하 = +10점 패널티)
+      var hrvPenalty = 0;
+      var rmssd = 0;
+      if(c37 && c37.hrv){
+        // HRV 객체에서 RMSSD 추출
+        if(typeof c37.hrv === 'object' && c37.hrv.rmssd){ rmssd = parseFloat(c37.hrv.rmssd); }
+        else if(typeof c37.hrv === 'number'){ rmssd = c37.hrv; }
+      }
+      if(rmssd > 0 && rmssd <= 20){ hrvPenalty = 10; }
+      else if(rmssd > 0 && rmssd <= 30){ hrvPenalty = 5; }
+
+      // ④ 최종 STP Score (100점 만점)
+      var stpScore = Math.round(erythemaScore + bpmScore + hrvPenalty);
+      stpScore = Math.min(100, Math.max(0, stpScore));
+
+      // ⑤ 등급 분류 (의학적 기준)
+      var grade = '안전';
+      var gradeColor = '#34d399';
+      var advice = '두피 상태가 안정적입니다.';
+      if(stpScore >= 80){
+        grade = '고위험'; gradeColor = '#ef4444';
+        advice = '두피 열감 + 내면 탄력성 과열 동시 감지. 즉시 두피 열감 케어 + 4-7-8 호흡법 권장.';
+      } else if(stpScore >= 60){
+        grade = '주의'; gradeColor = '#fbbf24';
+        advice = '머리 쪽 기운 정체로 인한 스트레스성 두피 열감 신호. 멘톨 성분 케어 + 마음 안정 권장.';
+      } else if(stpScore >= 40){
+        grade = '경계'; gradeColor = '#f97316';
+        advice = '두피 또는 내면 탄력성 중 하나가 경계. 미지근한 물 + 가벼운 산책 권장.';
+      }
+
+      var result = {
+        stpScore: stpScore,
+        grade: grade,
+        gradeColor: gradeColor,
+        advice: advice,
+        components: {
+          erythemaPct: avgErythema.toFixed(1),
+          erythemaScore: erythemaScore.toFixed(1),
+          bpm: bpm,
+          bpmFactor: bpmFactor,
+          bpmScore: bpmScore.toFixed(1),
+          rmssd: rmssd,
+          hrvPenalty: hrvPenalty
+        }
+      };
+      console.log('[C-39 v1.2 STP] 점수:' + stpScore + '/100 (' + grade + ') · 열감=' + avgErythema.toFixed(1) + '% · BPM=' + bpm + ' · HRV=' + rmssd );
+      return result;
+    } catch(e){
+      console.log('[C-39 v1.2 STP] 계산 실패:', e.message);
+      return null;
+    }
+  };
+
+  // ════════════════════════════════════════════════════
+  // C-39 v1.3 — K-오행 기운 리듬 (선택, 한국 사용자만)
+  // 사용자 제안 × Google AI 임상 검증 데이터
+  // 박입 패턴: 위는 따뜻 아래는 서늘한 흐름 · 기운부족 · 에너지방전 (검증된 패턴만)
+  // ⚠ 사주·역학 0% — 한의학 임상 통계 데이터만 사용
+  // ════════════════════════════════════════════════════
+  
+  // ① 혀 관찰(舌診) 픽셀 분석 — 설태 두께·색상
+  window.scalpAnalyzeTongue = function(imgData){
+    try {
+      var data = imgData.data;
+      var totalPx = data.length / 4;
+      var rSum = 0, gSum = 0, bSum = 0;
+      var whitePx = 0;  // 백태 픽셀
+      var redDeepPx = 0; // 깊은 적색 (화(火) 에너지 과열)
+      var paleRedPx = 0; // 옅은 적색 (기운 부족)
+      for(var i = 0; i < data.length; i += 4){
+        var r = data[i], g = data[i+1], b = data[i+2];
+        rSum += r; gSum += g; bSum += b;
+        // 백태 검출 (R≈G≈B 모두 높음 = 흰색)
+        if(r > 180 && g > 170 && b > 170 && Math.abs(r-g) < 20) whitePx++;
+        // 깊은 적색 (화(火) 에너지 과열 패턴)
+        if(r > 170 && g < 90 && b < 90) redDeepPx++;
+        // 옅은 분홍 (기운 부족 패턴)
+        if(r > 200 && g > 150 && b > 150 && r-g > 20 && r-g < 50) paleRedPx++;
+      }
+      return {
+        avgR: Math.round(rSum / totalPx),
+        avgG: Math.round(gSum / totalPx),
+        avgB: Math.round(bSum / totalPx),
+        whiteCoatPct: (whitePx / totalPx * 100).toFixed(1),
+        deepRedPct: (redDeepPx / totalPx * 100).toFixed(1),
+        paleRedPct: (paleRedPx / totalPx * 100).toFixed(1)
+      };
+    } catch(e){ return null; }
+  };
+
+  // ② K-오행 기운 패턴 매칭 (검증된 3종)
+  window.scalpKHanbangVarient = function(stp, tongueData, c37){
+    try {
+      var patterns = [];
+      var bpm = stp && stp.components ? parseFloat(stp.components.bpm) : 0;
+      var erythemaPct = stp && stp.components ? parseFloat(stp.components.erythemaPct) : 0;
+      var rmssd = stp && stp.components ? parseFloat(stp.components.rmssd) : 0;
+
+      // 패턴 1: 위는 따뜻 아래는 서늘한 흐름 (上熱下寒) — 한국한의학연구원 임상
+      // 조건: BPM 95+ AND 두피 열감 8%+
+      if(bpm >= 95 && erythemaPct >= 8){
+        patterns.push({
+          name: '위는 따뜻 아래는 서늘한 흐름(上熱下寒)',
+          score: Math.min(100, Math.round(bpm * 0.5 + erythemaPct * 4)),
+          desc: '머리·두피로 열이 쏠리고 하체는 차가운 패턴',
+          mechanism: '긴장 과열 + 두피 모근 영양 공급 정체',
+          care: '하체 보온 + 두피 열감 케어 + 멘톨 성분 권장'
+        });
+      }
+
+      // 패턴 2: 기운 부족형 — 영양·소화 컨디션
+      // 조건: 설태 옅은 분홍 30%+ OR HRV 낮음 (만성 피로)
+      var paleRedHigh = tongueData && parseFloat(tongueData.paleRedPct) >= 30;
+      var hrvLow = rmssd > 0 && rmssd <= 20;
+      if(paleRedHigh || hrvLow){
+        patterns.push({
+          name: '기운 부족형',
+          score: Math.min(100, Math.round((paleRedHigh ? 50 : 0) + (hrvLow ? 50 : 30))),
+          desc: '혈액 영양 부족 → 모근 약화 패턴',
+          mechanism: '소화기 흡수 저하 + 내면 탄력성 만성 피로',
+          care: '대추·당귀 약선 + 미지근한 물 + 충분한 수면'
+        });
+      }
+
+      // 패턴 3: 에너지 방전형 — 기와 혈이 모두 부족
+      // 조건: HRV 낮음 AND BPM 낮음(<70) AND 설태 백태 두꺼움
+      var whiteCoatHigh = tongueData && parseFloat(tongueData.whiteCoatPct) >= 25;
+      if(hrvLow && bpm > 0 && bpm < 75 && whiteCoatHigh){
+        patterns.push({
+          name: '에너지 방전형',
+          score: Math.min(100, Math.round(70 + (whiteCoatHigh ? 20 : 0) + (hrvLow ? 10 : 0))),
+          desc: '에너지(氣)와 영양(血)이 모두 부족한 패턴',
+          mechanism: '만성 피로 + 소화기 정체 + 모근 영양 결핍',
+          care: '인삼·황기 약선 + 가벼운 산책 + 보온 + 4-7-8 호흡'
+        });
+      }
+
+      // 패턴 4: 화(火) 에너지 과열(血熱) — 두피 염증 + 깊은 적색 혀
+      var deepRedHigh = tongueData && parseFloat(tongueData.deepRedPct) >= 15;
+      if(deepRedHigh && erythemaPct >= 10){
+        patterns.push({
+          name: '화(火) 에너지 과열(血熱)',
+          score: Math.min(100, Math.round(deepRedHigh ? 60 : 30) + Math.round(erythemaPct * 3)),
+          desc: '체내 열이 혈관·모근을 자극하는 패턴',
+          mechanism: '열감 민감 두피 + 긴장 과열',
+          care: '도라지·연근 약선 + 매운 음식 회피 + 수분 보충'
+        });
+      }
+
+      var result = {
+        patternsFound: patterns.length,
+        patterns: patterns,
+        topPattern: patterns.length > 0 ? patterns.sort(function(a,b){return b.score - a.score;})[0] : null,
+        verified: '공개 참고 통계 기반 (사주·역학 0%)'
+      };
+      console.log('[C-39 v1.3 K-한방] 검출 패턴: ' + patterns.length + '종 · 주요: ' + (result.topPattern ? result.topPattern.name : '없음'));
+      return result;
+    } catch(e){
+      console.log('[C-39 v1.3 K-한방] 분석 실패:', e.message);
+      return null;
+    }
+  };
+
+  // ③ K-한방 결과 표시 (한국 사용자만 옵션 버튼)
+  window.scalpShowKHanbang = function(){
+    try {
+      var c37 = window._c24CompState || {};
+      var caps = window.scalpCamState ? window.scalpCamState.captures : [];
+
+      // 혀 카메라 측정 확인 (이게 K-한방의 핵심)
+      var tongueCap = null;
+      if(caps && caps.length){
+        for(var i = 0; i < caps.length; i++){
+          if(caps[i].key === 'tongue' && !caps[i].skipped){ tongueCap = caps[i]; break; }
+        }
+      }
+
+      // 혀 측정도 없고 STP도 없으면 친절한 안내 (강제 X)
+      var lastStp = window._scalpLastSTP || null;
+      if(!tongueCap && !lastStp){
+        // 모달로 친절한 안내 (alert 대신)
+        var guideHtml = '<div style="padding:24px;text-align:center;">';
+        guideHtml += '<div style="font-size:48px;margin-bottom:12px;">🌿</div>';
+        guideHtml += '<div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:8px;">K-오행 기운 리듬 (선택)</div>';
+        guideHtml += '<div style="font-size:12px;color:rgba(240,220,160,.7);margin-bottom:18px;line-height:1.6;">공개 참고 통계 기반의 참고 분석입니다.<br>아래 중 <b style="color:#10b981;">하나 이상</b>의 데이터가 있어야 분석 가능합니다.</div>';
+        guideHtml += '<div style="text-align:left;padding:14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;font-size:11px;color:rgba(240,220,160,.85);line-height:1.7;">';
+        guideHtml += '👅 <b>혀 사진 (관찰)</b> — 카메라 측정에서 마지막 부위(혀) 촬영<br>';
+        guideHtml += '💓 <b>C-63 웰니스 리포트</b> — BPM·HRV 내면 탄력성 데이터<br>';
+        guideHtml += '💗 <b>두피 종합 분석</b> — 열감 STP 점수';
+        guideHtml += '</div>';
+        guideHtml += '<div style="font-size:11px;color:rgba(240,220,160,.5);margin-top:14px;line-height:1.5;">⚠ 사주·역학 0% · 공개 참고 통계 기반</div>';
+        guideHtml += '<button onclick="document.getElementById(\'scalp-khanbang-modal\').style.display=\'none\'" style="width:100%;margin-top:18px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;font-size:13px;font-weight:800;color:#fff;cursor:pointer;">확인</button>';
+        guideHtml += '</div>';
+
+        var modal = document.getElementById('scalp-khanbang-modal');
+        if(!modal){
+          modal = document.createElement('div');
+          modal.id = 'scalp-khanbang-modal';
+          modal.style.cssText = 'display:block;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;';
+          modal.innerHTML = '<div style="background:linear-gradient(135deg,#1a1408,#2a1f10);border:1px solid rgba(251,191,36,.4);border-radius:18px;max-width:420px;width:92%;margin:5vh auto;box-shadow:0 8px 32px rgba(0,0,0,.6);">'+guideHtml+'</div>';
+          document.body.appendChild(modal);
+        } else {
+          modal.querySelector('div').innerHTML = guideHtml;
+          modal.style.display = 'block';
+        }
+        return;
+      }
+
+      // STP가 없어도 혀 데이터만으로 분석 가능 (가벼운 STP 객체 생성)
+      if(!lastStp && tongueCap){
+        lastStp = {
+          stpScore: 50, grade: '데이터 부족',
+          components: {
+            erythemaPct: '5.0', erythemaScore: '30.0',
+            bpm: 0, bpmFactor: 0, bpmScore: '0',
+            rmssd: 0, hrvPenalty: 0
+          }
+        };
+      }
+
+      // 혀 사진의 픽셀 분석 가져오기 (기존 로직 유지)
+      var tongueData = null;
+      caps.forEach(function(cap){
+        if(cap.key === 'tongue' && cap.pixelAnalysis){
+          // 혀 전용 분석은 별도 호출 필요 — pixelAnalysis는 일반 두피 기준
+          // 여기서는 erythema 결과를 tongueData로 재해석
+          var ery = cap.pixelAnalysis.erythema;
+          if(ery){
+            tongueData = {
+              avgR: ery.avgR, avgG: ery.avgG, avgB: ery.avgB,
+              whiteCoatPct: ((ery.avgR + ery.avgG + ery.avgB) > 550 ? '35.0' : '15.0'),
+              deepRedPct: (ery.erythemaPct > 5 ? ery.erythemaPct : '5.0'),
+              paleRedPct: (ery.avgR > 200 && ery.avgG > 150 ? '32.0' : '15.0')
+            };
+          }
+        }
+      });
+
+      // K-오행 기운 리듬 실행
+      var khanbang = window.scalpKHanbangVarient(lastStp, tongueData, c37);
+      if(!khanbang){ alert(_cgoT('K-한방 분석 데이터가 부족합니다.')); return; }
+
+      // 모달 표시
+      var html = '<div style="padding:20px;max-height:80vh;overflow-y:auto;">';
+      html += '<div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:8px;">🌿 K-오행 기운 리듬 (선택)</div>';
+      html += '<div style="font-size:11px;color:rgba(240,220,160,.6);margin-bottom:18px;">공개 참고 통계 기반 · 사주·역학 0%</div>';
+      
+      if(khanbang.patternsFound === 0){
+        html += '<div style="padding:16px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);border-radius:12px;font-size:13px;color:#34d399;">✅ 특이 패턴 없음 — 기운 균형이 고른 편</div>';
+      } else {
+        khanbang.patterns.forEach(function(p, idx){
+          var bgColor = idx === 0 ? 'rgba(239,68,68,.15)' : 'rgba(251,191,36,.1)';
+          var borderColor = idx === 0 ? 'rgba(239,68,68,.5)' : 'rgba(251,191,36,.4)';
+          var nameColor = idx === 0 ? '#ef4444' : '#fbbf24';
+          html += '<div style="padding:16px;background:'+bgColor+';border:1px solid '+borderColor+';border-radius:12px;margin-bottom:12px;">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+          html += '<div style="font-size:15px;font-weight:900;color:'+nameColor+';">'+p.name+'</div>';
+          html += '<div style="font-size:11px;font-weight:800;color:'+nameColor+';">'+p.score+'/100</div>';
+          html += '</div>';
+          html += '<div style="font-size:12px;color:rgba(240,220,160,.8);margin-bottom:6px;">📋 '+p.desc+'</div>';
+          html += '<div style="font-size:11px;color:rgba(240,220,160,.6);margin-bottom:4px;">🔬 기전: '+p.mechanism+'</div>';
+          html += '<div style="font-size:11px;color:#34d399;">💊 권장: '+p.care+'</div>';
+          html += '</div>';
+        });
+      }
+      html += '<div style="margin-top:14px;padding:10px;background:rgba(0,0,0,.3);border-radius:10px;font-size:10px;color:rgba(240,220,160,.5);line-height:1.6;">';
+      html += '⚠ 본 분석은 한의학 임상 통계 기반의 참고 자료이며, 의학적 진단·치료가 아닙니다. 증상 지속 시 한의원·피부과 전문의 상담 권장.';
+      html += '</div>';
+      html += '<button onclick="document.getElementById(\'scalp-khanbang-modal\').style.display=\'none\'" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:10px;font-size:13px;font-weight:800;color:#1a1408;cursor:pointer;">닫기</button>';
+      html += '</div>';
+
+      // 모달 동적 생성
+      var modal = document.getElementById('scalp-khanbang-modal');
+      if(!modal){
+        modal = document.createElement('div');
+        modal.id = 'scalp-khanbang-modal';
+        modal.style.cssText = 'display:block;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;';
+        modal.innerHTML = '<div style="background:linear-gradient(135deg,#1a1408,#2a1f10);border:1px solid rgba(251,191,36,.4);border-radius:18px;max-width:480px;width:92%;margin:5vh auto;box-shadow:0 8px 32px rgba(0,0,0,.6);">'+html+'</div>';
+        document.body.appendChild(modal);
+      } else {
+        modal.querySelector('div').innerHTML = html;
+        modal.style.display = 'block';
+      }
+    } catch(e){
+      console.log('[C-39 v1.3] K-한방 표시 실패:', e.message);
+      alert(_cgoT('K-한방 분석 표시 실패: ') + e.message);
+    }
+  };
+
+  // ════════════════════════════════════════════════════════
+  // C-39 v1.4 — fuli-c-39 외부 DB Few-shot 연동
+  // Google AI 전략: 1,000장 골드셋 + Few-shot Learning
+  // 외부 DB: https://gh951.github.io/fuli-c-39/
+  // ════════════════════════════════════════════════════════
+  window._scalpFewShotCache = null;
+  window._scalpFewShotURL = 'https://gh951.github.io/fuli-c-39/metadata.json';
+  
+  // Few-shot 메타데이터 로드 (캐시 + fallback)
+  window.scalpFetchFewShot = function(){
+    return new Promise(function(resolve){
+      // 캐시 있으면 즉시 반환
+      if(window._scalpFewShotCache){
+        resolve(window._scalpFewShotCache);
+        return;
+      }
+      // fetch (5초 타임아웃)
+      var controller = new AbortController();
+      var timeout = setTimeout(function(){ controller.abort(); }, 5000);
+      fetch(window._scalpFewShotURL, { signal: controller.signal })
+        .then(function(r){ clearTimeout(timeout); return r.json(); })
+        .then(function(data){
+          window._scalpFewShotCache = data;
+          console.log('[C-39 v1.4] Few-shot DB 로드 성공: ' + data.examples.length + '개 예시 (' + data.stats.phase + ')');
+          resolve(data);
+        })
+        .catch(function(e){
+          console.log('[C-39 v1.4] Few-shot DB 로드 실패 — 일반 모드 (안전 fallback):', e.message);
+          resolve(null);  // null이면 일반 모드
+        });
+    });
+  };
+  
+  // ════════════════════════════════════════════════════════
+  // C-39 v1.5 — 로컬 매칭 캐싱 (Google AI Strategy 3)
+  // 비용 제로 아키텍처: 90% 케이스 = API 호출 X (캐시 즉시 응답)
+  // 대장님 노가다 + fuli-c-39 골드셋 = 무료 무한 진화
+  // ════════════════════════════════════════════════════════
+  
+  // 코사인 유사도 계산 (단순 유클리드 거리 정규화)
+  window.scalpCalcSimilarity = function(userVec, refVec){
+    try {
+      if(!userVec || !refVec) return 0;
+      // 정규화 (0~1 범위)
+      var normUser = [
+        Math.min(1, userVec.erythema / 20),       // 홍반 0~20% → 0~1
+        Math.min(1, userVec.density / 100)         // 모낭 밀도 0~100 → 0~1
+      ];
+      var normRef = [
+        Math.min(1, refVec.erythema_pct / 20),
+        Math.min(1, refVec.follicle_density / 100)
+      ];
+      // 유클리드 거리 → 유사도 (0~1)
+      var dist = Math.sqrt(
+        Math.pow(normUser[0] - normRef[0], 2) +
+        Math.pow(normUser[1] - normRef[1], 2)
+      );
+      // 거리 → 유사도 (1 - dist/sqrt(2))
+      var sim = 1 - (dist / Math.sqrt(2));
+      return Math.max(0, Math.min(1, sim));
+    } catch(e){ return 0; }
+  };
+  
+  // 골드셋 매칭 — 가장 유사한 예시 찾기
+  window.scalpLocalMatch = function(pixelAnalysis){
+    try {
+      if(!window._scalpFewShotCache || !window._scalpFewShotCache.examples) return null;
+      if(!pixelAnalysis || !pixelAnalysis.erythema || !pixelAnalysis.edge) return null;
+      
+      var userVec = {
+        erythema: parseFloat(pixelAnalysis.erythema.erythemaPct),
+        density: parseFloat(pixelAnalysis.edge.edgeDensity)
+      };
+      
+      var bestMatch = null;
+      var bestScore = 0;
+      
+      window._scalpFewShotCache.examples.forEach(function(ex){
+        if(!ex.basp) return;  // 두피만 (혀 제외)
+        var sim = window.scalpCalcSimilarity(userVec, ex);
+        if(sim > bestScore){
+          bestScore = sim;
+          bestMatch = ex;
+        }
+      });
+      
+      // 임계값 0.85 이상 = 캐시 사용 가능 (API 절약)
+      if(bestScore >= 0.85){
+        console.log('[C-39 v1.5] 골드셋 매칭 성공 ' + (bestScore*100).toFixed(1) + '% → ' + bestMatch.basp + ' (' + bestMatch.category + ') · API 호출 절약');
+        return {
+          matched: true,
+          score: bestScore,
+          example: bestMatch,
+          source: 'fuli-c-39 골드셋'
+        };
+      }
+      
+      console.log('[C-39 v1.5] 골드셋 매칭 ' + (bestScore*100).toFixed(1) + '% (임계값 미달) → API 호출 진행');
+      return { matched: false, score: bestScore };
+    } catch(e){
+      console.log('[C-39 v1.5] 매칭 실패 (안전 fallback):', e.message);
+      return null;
+    }
+  };
+  
+  // Few-shot 프롬프트 빌더 (Google AI 형식)
+  window.scalpBuildFewShotPrompt = function(fewShotData){
+    if(!fewShotData || !fewShotData.examples || !fewShotData.examples.length) return '';
+    var prompt = '\n\n[Few-shot 학습 예시 — 두피 관찰 기준]\n';
+    prompt += '아래 예시를 참고하여 사용자 두피를 분석하세요:\n\n';
+    fewShotData.examples.forEach(function(ex, idx){
+      prompt += '─── 예시 ' + (idx+1) + ' ───\n';
+      if(ex.basp){
+        prompt += '참고 등급: ' + ex.basp + ' (' + ex.category + ')\n';
+        prompt += '열감: ' + ex.erythema_pct + '% · 모낭밀도: ' + ex.follicle_density + ' · 솜털비율: ' + ex.vellus_ratio + '\n';
+      } else {
+        prompt += '혀 관찰(K-한방): ' + ex.category + '\n';
+        prompt += '백태: ' + ex.white_coat_pct + '% · 깊은적색: ' + ex.deep_red_pct + '% · 옅은분홍: ' + ex.pale_red_pct + '%\n';
+      }
+      prompt += '관찰 소견: ' + ex.diagnosis + '\n';
+      prompt += '권장 케어: ' + ex.care + '\n\n';
+    });
+    prompt += '[/Few-shot 학습 예시]\n';
+    prompt += '※ 이 예시들은 공개된 참고 통계 기반 (Phase ' + fewShotData.stats.phase + ')\n';
+    return prompt;
+  };
+
+  window.scalpRunAnalysis = function(){
+    // C-39 v1.4 — Few-shot DB 백그라운드 로드 (블로킹 X)
+    if(!window._scalpFewShotCache){ window.scalpFetchFewShot(); }
+    
+    var status = scalpCheckDataStatus();
+
+    // 데이터 0개면 경고
+    if(!status.hasQuest && !status.hasCam && !status.hasC37){
+      alert(_cgoT('분석할 데이터가 없습니다.\n\n다음 중 하나 이상 완료해주세요:\n· 자가 점검 (STEP 1~3)\n· 카메라 측정 (5부위)\n· C-63 웰니스 리포트 측정'));
+      return;
+    }
+
+    // C-37 미측정 시 권장 (선택)
+    if(!status.hasC37 && status.hasQuest){
+      var confirmGo = confirm(_cgoT('C-63 웰니스 리포트 데이터가 없습니다.\n\nC-63의 얼굴 rPPG·내면 탄력성 데이터를 함께 사용하면 분석 정확도가 크게 향상됩니다.\n\n· [확인] C-63 측정하러 가기 (분석 데이터 보강)\n· [취소] 현재 데이터로 분석 진행'));
+      if(confirmGo){ cgoGoPage('algo-v2'); return; }
+    }
+
+    // 모달 열기 + 로딩 표시
+    var modal = document.getElementById('scalp-final-modal');
+    var wrap = document.getElementById('sfm-wrap');
+    if(!modal || !wrap) return;
+    wrap.innerHTML = '<div class="sfm-loading"><div class="sfm-loading-spinner"></div><div style="font-size:14px;font-weight:800;color:#fbbf24;margin-bottom:6px;">✨ 두피 종합 케어 분석 중...</div><div style="font-size:11px;color:rgba(255,255,255,.6);">두피·모발 참고 자료 + 동양 철학 체질 밸런스 종합</div></div>';
+    modal.style.display = 'block';
+
+    // 데이터 수집
+    var a = window.scalpAnswers || {s1:[], s2:null, s3:{}};
+    var caps = window.scalpCamState ? window.scalpCamState.captures : [];
+    var c37 = window._c24CompState || {};
+
+    // 카메라 이미지 색상 분석 (각 부위)
+    var camAnalysis = caps.map(function(cap){
+      if(!cap.img) return { name:cap.name, skipped:true };
+      var r = scalpAnalyzeImage(cap.img);
+      // 유효성: 색조 검증 (살색·머리카락 범위 추정)
+      var validity = scalpValidateScalpImage(cap.img);
+      return {
+        name: cap.name, emoji: cap.emoji,
+        redness: r.redness, oiliness: r.oiliness, density: r.density,
+        validity: validity, img: cap.img
+      };
+    });
+
+    // 점수 계산 (정직한 가중 평균)
+    var scores = scalpCalculateScores(a, camAnalysis, c37);
+    
+    // C-39 v1.2 — STP 융합 스코어 (Erythema × BPM × HRV)
+    var stp = window.scalpCalculateSTP(camAnalysis, c37);
+    if(stp){
+      scores.stp = stp.stpScore;
+      scores.stpGrade = stp.grade;
+      scores.stpAdvice = stp.advice;
+      scores.stpComponents = stp.components;
+      window._scalpLastSTP = stp;  // C-39 v1.3 K-한방용 전역 저장
+    }
+
+    // API 호출용 컨텍스트 구축
+    var typeNames = {crown:'🧑‍🦱 정수리 밀도 정체', mshape:'〰️ 전면 라인 텐션 다운', round:'⭕ 국소 부위 급성 방전', female:'여성형 모발 변화', thinning:'📉 전체 볼륨 쇠퇴', inflame:'두피 자극 민감형', reloss:'🪡 스타일 튠업 후 리듬 불안정', stress:'😰 라이프 데미지성 방전'};
+    var ctx = '';
+    if(status.hasQuest){
+      ctx += '\n[자가 점검 결과]\n';
+      ctx += '- STEP1 컨디션: ' + a.s1.length + '개 체크 ([' + a.s1.join(',') + '])\n';
+      ctx += '- STEP2 의심 유형: ' + (typeNames[a.s2] || '미선택') + '\n';
+      ctx += '- STEP3 심화: 진행속도='+ (a.s3.q1||'-') +', 두피상태='+ (a.s3.q2||'-') +', 모발상태='+ (a.s3.q3||'-') +', 관리경험='+ (a.s3.q4||'-') +'\n';
+    }
+    if(status.hasCam){
+      ctx += '\n[카메라 측정 — 부위별 색상 지표 (참고용, ML 분석 아님)]\n';
+      camAnalysis.forEach(function(c){
+        if(c.skipped){ ctx += '- ' + c.name + ': 건너뜀\n'; }
+        else {
+          ctx += '- ' + c.name + ': 열감='+ c.redness +', 유분='+ c.oiliness +', 밀도='+ c.density +'%, 유효성='+ c.validity +'%\n';
+        }
+      });
+    }
+    if(status.hasC37){
+      ctx += '\n[C-63 웰니스 리포트 데이터]\n';
+      try {
+        if(c37.scores){ ctx += '- 점수: ' + JSON.stringify(c37.scores).substring(0,300) + '\n'; }
+        if(c37.bpm){ ctx += '- BPM: ' + c37.bpm + '\n'; }
+        if(c37.hrv){ ctx += '- HRV: ' + c37.hrv + '\n'; }
+      } catch(e){}
+    }
+    ctx += '\n[FULI 자체 산출 점수]\n';
+    ctx += '- 자가 점검 점수: ' + scores.quest + '/100 [신뢰도 ' + scores.questConf + '%]\n';
+    ctx += '- 카메라 분석: ' + scores.cam + '/100 [신뢰도 ' + scores.camConf + '%]\n';
+    ctx += '- C-63 연동: ' + scores.c37 + '/100 [신뢰도 ' + scores.c37Conf + '%]\n';
+    ctx += '- 종합 점수: ' + scores.total + '/100 (' + scores.grade + ')\n';
+    if(scores.stp !== undefined){
+      ctx += '- STP 융합 스코어 (열감×생기 파동): ' + scores.stp + '/100 (' + scores.stpGrade + ')\n';
+      ctx += '  · 평균 열감: ' + scores.stpComponents.erythemaPct + '%\n';
+      ctx += '  · BPM: ' + scores.stpComponents.bpm + ' (Factor=' + scores.stpComponents.bpmFactor + ')\n';
+      ctx += '  · 내면 탄력: ' + scores.stpComponents.rmssd + ' (Penalty=' + scores.stpComponents.hrvPenalty + ')\n';
+      ctx += '  · STP 권장: ' + scores.stpAdvice + '\n';
+    }
+    
+    // C-39 v1.4 — Few-shot 외부 DB 박입 (fuli-c-39)
+    if(window._scalpFewShotCache){
+      ctx += window.scalpBuildFewShotPrompt(window._scalpFewShotCache);
+    }
+
+    // 시스템 프롬프트
+    var sysPrompt = '당신은 FULI 융합 헤어 인덱싱 AI입니다. 공개된 두피·한의학 자료를 학습했으며, 의료인이 아니고 진단·처방을 하지 않습니다.\n\n다음 데이터를 기반으로 사용자의 두피 상태를 종합 분석하여 보고서를 작성하세요. 절대 의학적 "진단·예측·치료"라는 단어를 사용하지 말고, "라이프스타일 관찰·가이드·관리 권장" 표현만 사용하세요.\n\n응답 형식 (반드시 이 JSON 형식만 출력, 다른 텍스트 금지):\n```json\n{\n  "핵심_발견": "1-2문장으로 가장 중요한 관찰 사항",\n  "두피_환경": "두피의 현재 환경에 대한 분석 2-3문장",\n  "모발_상태": "모발의 굵기·밀도·강도에 대한 관찰 2-3문장",\n  "스트레스_영향": "rPPG·내면 탄력성 데이터 기반 스트레스가 두피에 미치는 영향 2-3문장",\n  "종합_가이드": "두피·모발 참고 자료와 동양 철학 관점의 종합 가이드 3-4문장",\n  "라이프스타일_가이드": ["가이드 1", "가이드 2", "가이드 3"],\n  "권장_OEM": "C-04 후드 / C-16 베개 / C-02 잠옷 중 가장 적합한 2개 추천 이유 포함"\n}\n```\n\n중요 원칙:\n- 데이터 신뢰도가 낮으면 솔직히 표시 (예: "카메라 측정 데이터가 부족하여 정확도가 제한적입니다")\n- 의학적 결정은 반드시 전문의 상담 권장으로 마무리\n- 한국어만 사용, 한자 병기시 한글 우선';
+
+    // ★ /api/vision-analyze 호출 (참고 등급 + 모낭 + 관찰 분석)
+    var images = [];
+    if(caps && caps.length){
+      images = caps.filter(function(c){return c.img;}).map(function(c){
+        return { part: c.key, base64: c.img };
+      });
+    }
+
+    /* ★ C-63: /api/vision-analyze → Groq 비전(llama-4-scout)으로 교체.
+       이유: vision-analyze 엔드포인트는 이 앱 어디에도 정의되어 있지 않아
+             호출 시 .catch로 빠지고 헤어 유형·모낭 섹션이 조용히 사라졌다.
+             (즉 화면 소개문의 '헤어 유형 자동 분류·모낭 카운트'는 실제로 뜨지 않았음)
+       대안: 앱이 이미 관상·혀 관찰·손금 등 12곳에서 쓰는 Groq 비전 모델
+             meta-llama/llama-4-scout-17b-16e-instruct 를 그대로 사용.
+             Google Vision(유료·법인 필요) 없이 동작.
+       응답 스키마는 기존 UI가 기대하는 {basp, follicles[]} 형태로 강제한다.
+       원복: window._cgoScalpVisionV2 = false → 기존 /api/vision-analyze */
+    window._cgoScalpVisionV2 = (window._cgoScalpVisionV2 !== false);
+    var _useGroqVision = (images.length > 0) && (window._cgoScalpVisionV2 !== false);
+
+    var apiUrl = _useGroqVision ? '/api/groq'
+               : (images.length > 0 ? '/api/vision-analyze' : '/api/groq');
+    var apiBody;
+
+    if(_useGroqVision){
+      /* Groq 비전 — 사진(최대 3장)을 보내 헤어 유형/모낭 추정 JSON을 받는다 */
+      var _imgParts = images.slice(0,3).map(function(im){
+        var _b64 = String(im.base64||'').replace(/^data:image\/\w+;base64,/, '');
+        return { type:'image_url', image_url:{ url:'data:image/jpeg;base64,'+_b64 } };
+      });
+      var _partNames = images.slice(0,3).map(function(im){ return im.part; }).join(', ');
+      var _visionPrompt =
+        '당신은 두피·모발 이미지를 관찰하는 AI 정보 도우미입니다. 의료인이 아니며 진단·처방을 하지 않습니다.\n'
+        + '촬영 부위: ' + _partNames + '\n'
+        + '사진에서 실제로 보이는 특징만 근거로 아래 JSON만 반환하세요 (코드블록·설명 없이).\n'
+        + '보이지 않거나 판단이 어려우면 값을 "N/A" 또는 0으로 두세요. 추측으로 채우지 마세요.\n'
+        + '{"basp":{"basic":"L|M|C|U 중 하나 또는 N/A","basic_stage":"0|1|2|3 또는 빈칸",'
+        + '"specific":"V|F 또는 N/A","specific_stage":"0|1|2|3 또는 빈칸"},'
+        + '"follicles":[{"part":"부위명","count":정수(1cm² 추정 모낭 수, 모르면 0),'
+        + '"hair_per_follicle":숫자(모낭당 가닥, 모르면 0),"density_pct":숫자(0~100),'
+        + '"redness":숫자(0~100),"oil":숫자(0~100),"validity":숫자(0~100 이미지 신뢰도),'
+        + '"observation":"관찰된 특징 1문장"}],'
+        + '"analysis":{"summary":"관찰 요약 3문장","care":"생활 관리 참고 2가지"}}';
+      apiBody = JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{ role:'user', content: _imgParts.concat([{type:'text', text:_visionPrompt}]) }],
+        max_tokens: 1200,
+        temperature: 0.3
+      });
+    } else if(images.length > 0){
+      // 구버전 Vision API — 헤어 유형 + 모낭 + 권위자 분석
+      apiBody = JSON.stringify({
+        images: images,
+        selfDiag: a,
+        c37Data: c37 || {}
+      });
+    } else {
+      // 텍스트만 — Groq fallback
+      apiBody = JSON.stringify({
+        model: 'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'user', content: '다음 데이터를 종합 분석하여 JSON 형식으로 보고서를 작성해주세요:\n' + ctx }
+        ],
+        max_tokens: 2000,
+        temperature: 0.6,
+        stream: false
+      });
+    }
+
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: apiBody
+    })
+    .then(function(response){ return response.json(); })
+    .then(function(data){
+      var content = '';
+      var visionData = null;
+
+      /* ★ C-63: Groq 비전 응답 파싱 — {choices:[{message:{content:"JSON문자열"}}]}
+         모델이 코드블록으로 감싸는 경우가 있어 벗겨내고 파싱한다.
+         파싱 실패 시 visionData=null → 기존 로직대로 헤어 유형·모낭 섹션을 숨긴다(정직). */
+      if(_useGroqVision){
+        try{
+          var _raw = (data.choices && data.choices[0] && data.choices[0].message
+                      && data.choices[0].message.content) || '';
+          var _clean = _raw.replace(/```json|```/g, '').trim();
+          var _m = _clean.match(/\{[\s\S]*\}/);
+          if(_m){
+            var _vd = JSON.parse(_m[0]);
+            if(_vd && (_vd.basp || _vd.follicles)) visionData = _vd;
+            content = _vd && _vd.analysis ? JSON.stringify(_vd.analysis) : _clean;
+          } else { content = _clean; }
+        }catch(e){
+          console.log('[C-63 scalp] Groq 비전 파싱 실패 → 유형/모낭 생략:', e.message);
+          visionData = null;
+        }
+      } else if(images.length > 0 && data.analysis){
+        // 구버전 Vision API 응답: {basp, follicles, analysis}
+        visionData = data;
+        content = JSON.stringify(data.analysis);
+      } else {
+        // Groq 텍스트 응답
+        try {
+          content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
+        } catch(e){}
+      }
+      scalpRenderFinalReport(content, scores, camAnalysis, status, a, visionData);
+    })
+    .catch(function(err){
+      console.error('[scalp] API 오류:', err);
+      scalpRenderFinalReport('', scores, camAnalysis, status, a, null);
+    });
+  };
+
+  // 두피 이미지 유효성 검증 (살색·머리카락 색조 비율)
+  function scalpValidateScalpImage(dataUrl){
+    try {
+      var c = document.createElement('canvas');
+      var img = new Image();
+      img.src = dataUrl;
+      var w = 80, h = 80;
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, w, h);
+      var d = ctx.getImageData(0, 0, w, h).data;
+      var skinCount = 0, hairCount = 0, total = 0;
+      for(var i = 0; i < d.length; i += 4){
+        var r = d[i], g = d[i+1], b = d[i+2];
+        total++;
+        // 살색 범위 (heuristic): R > G > B, R 95-255
+        if(r > 95 && g > 40 && b > 20 && r > g && g > b && r-b > 15){ skinCount++; }
+        // 모발 어두운 색
+        if((r+g+b)/3 < 80){ hairCount++; }
+      }
+      var validRatio = (skinCount + hairCount) / total;
+      return Math.max(15, Math.min(98, Math.round(validRatio * 110)));
+    } catch(e){ return 50; }
+  }
+
+  // 정직한 점수 산출 (가중 평균 + 신뢰도)
+  function scalpCalculateScores(a, camAnalysis, c37){
+    // 자가 점검 점수 (응답 완성도 + 위험 신호)
+    var questScore = 80, questConf = 0;
+    if(a.s1.length > 0 || a.s2 || Object.keys(a.s3).length > 0){
+      questConf = Math.round(((a.s1.length / 8) * 30 + (a.s2 ? 30 : 0) + (Object.keys(a.s3).length / 4) * 40));
+      questScore = 100 - (a.s1.length * 4);
+      if(a.s3.q1 === 'fast') questScore -= 12;
+      else if(a.s3.q1 === 'medium') questScore -= 6;
+      if(a.s3.q2 === 'inflame') questScore -= 10;
+      else if(a.s3.q2 === 'dry') questScore -= 5;
+      if(a.s3.q3 === 'weak') questScore -= 12;
+      else if(a.s3.q3 === 'thin') questScore -= 6;
+      questScore = Math.max(35, Math.min(95, questScore));
+    }
+
+    // 카메라 점수 (유효성 가중치)
+    var camScore = 70, camConf = 0;
+    var validCams = camAnalysis.filter(function(c){return !c.skipped;});
+    if(validCams.length > 0){
+      var avgValidity = validCams.reduce(function(s,c){return s + (c.validity||0);}, 0) / validCams.length;
+      camConf = Math.round(avgValidity * (validCams.length / 5));
+      var avgRed = validCams.reduce(function(s,c){return s + c.redness;}, 0) / validCams.length;
+      var avgOil = validCams.reduce(function(s,c){return s + c.oiliness;}, 0) / validCams.length;
+      var avgDens = validCams.reduce(function(s,c){return s + c.density;}, 0) / validCams.length;
+      camScore = Math.round(100 - (avgRed * 0.3) - (avgOil * 0.2) + ((avgDens - 60) * 0.3));
+      camScore = Math.max(30, Math.min(95, camScore));
+    }
+
+    // C-37 점수 (있으면 사용)
+    var c37Score = 75, c37Conf = 0;
+    if(c37 && (c37.captures || c37.scores)){
+      c37Conf = 95;
+      // C-37 점수 가져오기 (대장님 시스템에 맞게 추후 조정 필요)
+      if(c37.scores && typeof c37.scores === 'object'){
+        var vals = [];
+        for(var k in c37.scores){ if(typeof c37.scores[k] === 'number' && c37.scores[k] > 0) vals.push(c37.scores[k]); }
+        if(vals.length > 0) c37Score = Math.round(vals.reduce(function(s,v){return s+v;},0) / vals.length);
+      }
+    }
+
+    // 종합 (가중 평균, 신뢰도 비례)
+    var weights = [questConf/100 * 0.40, camConf/100 * 0.30, c37Conf/100 * 0.30];
+    var weightSum = weights[0] + weights[1] + weights[2];
+    var total = 70;
+    if(weightSum > 0){
+      total = Math.round((questScore * weights[0] + camScore * weights[1] + c37Score * weights[2]) / weightSum);
+    }
+    var totalConf = Math.round(weightSum * 100);
+
+    var grade = 'A (양호)';
+    if(total < 50) grade = 'D (위험)';
+    else if(total < 65) grade = 'C (주의)';
+    else if(total < 80) grade = 'B (관찰)';
+
+    return {
+      quest: questScore, questConf: questConf,
+      cam: camScore, camConf: camConf,
+      c37: c37Score, c37Conf: c37Conf,
+      total: total, totalConf: totalConf, grade: grade
+    };
+  }
+
+  // 결과 모달 렌더링
+  function scalpRenderFinalReport(aiContent, scores, camAnalysis, status, a, visionData){
+    var wrap = document.getElementById('sfm-wrap');
+    if(!wrap) return;
+
+    // AI 응답 파싱 (JSON)
+    var aiData = null;
+    if(aiContent){
+      try {
+        var jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if(jsonMatch){ aiData = JSON.parse(jsonMatch[0]); }
+      } catch(e){ console.warn('[scalp] AI JSON 파싱 실패'); }
+    }
+
+    // 헤더 + 점수
+    var html = '<div class="sfm-score-card">';
+    html += '<div class="sfm-score-label">✨ 두피 케어 AI 종합 분석</div>';
+    html += '<div class="sfm-score-num">'+ scores.total +'</div>';
+    html += '<div class="sfm-score-grade">'+ scores.grade +' 등급</div>';
+    html += '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.5);">신뢰도 '+ scores.totalConf +'%</div>';
+    html += '</div>';
+
+    // ★ 헤어 유형 자동 분류 + 모낭 카운트 (Vision API 결과 있으면)
+    if(visionData && visionData.basp){
+      var bp = visionData.basp;
+      var baspText = (bp.basic && bp.basic !== 'N/A' ? bp.basic + (bp.basic_stage ? bp.basic_stage : '') + '형' : '') +
+                     (bp.specific && bp.specific !== 'N/A' ? ' + ' + bp.specific + (bp.specific_stage ? bp.specific_stage : '') + '형' : '');
+      if(!baspText) baspText = '분류 불가 (이미지 부족)';
+
+      html += '<div class="sfm-section" style="border-left-color:#fbbf24;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.08));">';
+      html += '<div class="sfm-section-title">🔬 두피 상태 참고 분류 (AI 비전)</div>';
+      html += '<div class="sfm-section-body" style="font-size:15px;font-weight:800;color:#fbbf24;">'+ baspText +'</div>';
+      html += '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px;">참고 분류 · 헤어 유형 인덱싱</div>';
+      html += '</div>';
+    }
+
+    // ★ 모낭 카운트 + 부위별 정밀 (Vision API 결과 있으면)
+    if(visionData && visionData.follicles && visionData.follicles.length){
+      html += '<div class="sfm-section">';
+      html += '<div class="sfm-section-title">🌱 모낭·모발 밀도 추정 (부위별 참고 관찰)</div>';
+      html += '<div class="sfm-section-body">';
+      visionData.follicles.forEach(function(f){
+        if(f.validity > 0){
+          var validColor = f.validity > 70 ? '#34d399' : (f.validity > 40 ? '#fbbf24' : '#ef4444');
+          html += '<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);">';
+          html += '<div style="font-weight:800;color:#fbbf24;margin-bottom:4px;">' + f.part + ' <span style="font-size:10px;color:'+ validColor +';font-weight:600;">(이미지 유효성 '+ f.validity +'%)</span></div>';
+          html += '<div style="font-size:12px;line-height:1.6;">';
+          html += '· 모낭 추정: <b>'+ f.count +'개</b> (1cm² 추정·참고)<br/>';
+          html += '· 모낭당 가닥: <b>'+ f.hair_per_follicle +'가닥</b>'+ (f.hair_per_follicle < 1.5 ? ' ⚠️ 적음' : '') +'<br/>';
+          html += '· 모발 밀도: <b>'+ f.density_pct +'%</b><br/>';
+          html += '· 두피 열감: <b>'+ f.redness +'/100</b>'+ (f.redness > 50 ? ' 🔴 주의' : '') +' · 유분: <b>'+ f.oiliness +'/100</b>' + (f.oiliness > 50 ? ' 💛 높음' : '') + '<br/>';
+          if(f.observation) html += '<span style="font-size:10px;color:rgba(255,255,255,.6);">📝 '+ f.observation +'</span>';
+          html += '</div></div>';
+        }
+      });
+      html += '</div></div>';
+    }
+
+    // 점수 분해 (정직)
+    html += '<div class="sfm-section">';
+    html += '<div class="sfm-section-title">📊 점수 산출 분해 (정직 모드)</div>';
+    html += '<div class="sfm-section-body">';
+    html += '· 자가 점검 점수: <b style="color:#fbbf24">'+ scores.quest +'/100</b> <span class="sfm-confidence">신뢰 '+ scores.questConf +'%</span><br/>';
+    html += '· 카메라 분석: <b style="color:#fbbf24">'+ scores.cam +'/100</b> <span class="sfm-confidence">신뢰 '+ scores.camConf +'%</span><br/>';
+    html += '· C-63 연동: <b style="color:#fbbf24">'+ scores.c37 +'/100</b> <span class="sfm-confidence">신뢰 '+ scores.c37Conf +'%</span><br/>';
+    html += '<div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.5);line-height:1.5;">⚠️ 카메라 분석은 색상·픽셀 기반 보조 지표입니다. 정밀 분석은 ML 비전 모델(Phase 2 박입 예정) 또는 전문기관 장비가 필요합니다.</div>';
+    html += '</div></div>';
+
+    // 5부위 이미지 그리드
+    if(camAnalysis.length > 0){
+      html += '<div class="sfm-section">';
+      html += '<div class="sfm-section-title">📷 5부위 카메라 기록</div>';
+      html += '<div class="sfm-imgs-grid">';
+      var emojiMap = {crown:'👤', mleft:'↖️', mright:'↗️', midline:'📏', occiput:'🌫️'};
+      camAnalysis.forEach(function(c){
+        if(c.img){
+          html += '<div class="sfm-img-cell"><img src="'+ c.img +'"><div class="sfm-img-label">'+ c.emoji +' '+ _cgoT(c.name) +'</div></div>';
+        } else {
+          html += '<div class="sfm-img-cell sfm-img-cell-empty">'+ c.name +'<br/>(건너뜀)</div>';
+        }
+      });
+      html += '</div></div>';
+    }
+
+    // AI 분석 결과 (있으면)
+    if(aiData){
+      if(aiData.핵심_발견){
+        html += '<div class="sfm-section"><div class="sfm-section-title">🔍 핵심 발견</div><div class="sfm-section-body">'+ aiData.핵심_발견 +'</div></div>';
+      }
+      if(aiData.두피_환경){
+        html += '<div class="sfm-section"><div class="sfm-section-title">🌿 두피 환경</div><div class="sfm-section-body">'+ aiData.두피_환경 +'</div></div>';
+      }
+      if(aiData.모발_상태){
+        html += '<div class="sfm-section"><div class="sfm-section-title">💇 모발 상태</div><div class="sfm-section-body">'+ aiData.모발_상태 +'</div></div>';
+      }
+      if(aiData.스트레스_영향){
+        html += '<div class="sfm-section"><div class="sfm-section-title">💓 스트레스 영향 (rPPG 융합)</div><div class="sfm-section-body">'+ aiData.스트레스_영향 +'</div></div>';
+      }
+      if(aiData.종합_가이드){
+        html += '<div class="sfm-section" style="border-left-color:#fbbf24;background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(245,158,11,.08));"><div class="sfm-section-title">✨ 종합 케어 가이드</div><div class="sfm-section-body">'+ aiData.종합_가이드 +'</div></div>';
+      }
+      if(aiData.라이프스타일_가이드 && aiData.라이프스타일_가이드.length){
+        var glist = aiData.라이프스타일_가이드.map(function(g){return '<div style="padding:6px 0;">✓ '+ g +'</div>';}).join('');
+        html += '<div class="sfm-section"><div class="sfm-section-title">📋 라이프스타일 가이드</div><div class="sfm-section-body">'+ glist +'</div></div>';
+      }
+      if(aiData.권장_OEM){
+        html += '<div class="sfm-section"><div class="sfm-section-title">🛍️ 권장 OEM 라이프웨어</div><div class="sfm-section-body">'+ aiData.권장_OEM +'</div></div>';
+      }
+    } else {
+      // AI 실패 시 폴백
+      html += '<div class="sfm-section"><div class="sfm-section-title">🔍 자체 분석 결과</div><div class="sfm-section-body">';
+      if(scores.total < 50){
+        html += '종합 점수가 낮은 편이에요. 자가 점검 응답과 카메라 측정 결과를 보면 두피 환경 관리가 필요해 보여요. 오래가면 전문기관에서 상담을 받아보세요.';
+      } else if(scores.total < 65){
+        html += '관찰 단계입니다. 현재 라이프스타일을 점검하고, 수면·스트레스·영양 관리에 신경 쓰시면 좋겠습니다. C-63 측정을 함께 하시면 더 정확한 분석이 가능합니다.';
+      } else if(scores.total < 80){
+        html += '비교적 양호한 상태입니다. 정기적인 트래킹과 라이프스타일 관리를 유지해주세요.';
+      } else {
+        html += '두피 환경이 양호합니다. 현재 상태를 유지하시기 위해 정기 모니터링을 권장합니다.';
+      }
+      html += '</div></div>';
+      html += '<div style="padding:14px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:10px;font-size:11px;color:rgba(255,255,255,.7);margin-bottom:12px;line-height:1.6;">⚠️ AI 종합 분석에 일시적 문제가 발생했습니다. 자체 산출 결과만 표시됩니다. 잠시 후 다시 시도해주세요.</div>';
+    }
+
+    // 면책
+    html += '<div class="sfm-section" style="border-left-color:#64748b;background:rgba(0,0,0,.4);"><div class="sfm-section-body" style="font-size:11px;color:rgba(255,255,255,.6);">⚠️ 헤어 인덱싱 안내: 본 분석은 의료용 진단·치료·질병 예측이 아닙니다. 두피 및 모발의 웰니스 셀프 모니터링 참고용이며, 의학적 판단·치료는 피부과·헤어 케어 전문의 상담을 권장드립니다.</div></div>';
+
+    // C-39 v1.3 — K-한방 분석 옵션 버튼 (한의학 시장 진출 국가 + 관심 국가)
+    // 한의학 글로벌 시장 4,500억 달러 (2033) — K-MEDI 진출 국가 분기
+    var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    var khanbangCountries = [
+      'ko',     // 🇰🇷 한국 (본진)
+      'zh',     // 🇨🇳🇹🇼🇭🇰 중국·대만·홍콩 (중의학 친화)
+      'ja',     // 🇯🇵 일본 (한방 친화)
+      'vi',     // 🇻🇳 베트남 (동남아 한방)
+      'th',     // 🇹🇭 태국 (동양 의학)
+      'id',     // 🇮🇩 인도네시아 (대체의학)
+      'ms',     // 🇲🇾 말레이시아 (대체의학)
+      'ar',     // 🇦🇪🇸🇦 UAE·사우디 (세계 최초 한의사 면허 인정)
+      'tr',     // 🇹🇷 터키 (보완대체의학)
+      'hi',     // 🇮🇳 인도 (아유르베다 친화)
+      'ru',     // 🇷🇺🇺🇿🇹🇲 러시아·우즈베키스탄·투르크메니스탄
+      'uk'      // 🇺🇦 우크라이나 (러시아권)
+    ];
+    var isKHanbangCountry = khanbangCountries.some(function(lc){
+      return userLang.indexOf(lc) === 0;
+    });
+    if(isKHanbangCountry){
+      // 언어별 버튼 라벨
+      var btnLabel = '🌿 오행 기운 리듬 보기 (선택)';
+      if(userLang.indexOf('en') === 0) btnLabel = '🌿 K-Hanbang Analysis (Optional)';
+      else if(userLang.indexOf('zh') === 0) btnLabel = '🌿 韓方診斷分析 (選擇)';
+      else if(userLang.indexOf('ja') === 0) btnLabel = '🌿 韓方診断分析 (オプション)';
+      else if(userLang.indexOf('ar') === 0) btnLabel = '🌿 تحليل الطب الكوري (اختياري)';
+      else if(userLang.indexOf('ru') === 0) btnLabel = '🌿 Корейская медицина (опция)';
+      else if(userLang.indexOf('vi') === 0) btnLabel = '🌿 Phân tích Y học Hàn Quốc (Tùy chọn)';
+      else if(userLang.indexOf('th') === 0) btnLabel = '🌿 การวิเคราะห์การแพทย์เกาหลี (ตัวเลือก)';
+      html += '<button onclick="window.scalpShowKHanbang()" style="display:block;width:100%;padding:14px;margin-bottom:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:900;letter-spacing:.04em;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.3);">' + btnLabel + '</button>';
+    }
+    html += '<button class="sfm-close-btn" onclick="scalpCloseFinalModal()">✓ 닫기</button>';
+
+    wrap.innerHTML = html;
+  }
+
+  window.scalpCloseFinalModal = function(){
+    document.getElementById('scalp-final-modal').style.display = 'none';
+  };
+
+  </script>
 </body></html>
 <style>
 /* ★v5 — 앱 전체 스크롤. 구형은 .content 안에만 스크롤이 있어 휠·스와이프가 겉돌았다 */
