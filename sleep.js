@@ -605,7 +605,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
   var TOTALQ=_flat().length, sAns={};
   Object.defineProperty(window,'_slpSQ',{get:_SQ});
   window.cgoSlpSelfCheck=function(){
-    sAns={};
+    sAns={}; _slpScored=false;
     var h='<div class="slp-badge">SLEEP SELF-CHECK · '+TOTALQ+'</div><h2 class="slp-h">'+_sk(11675,'수면 자가 점검')+'</h2><p class="slp-sub" style="margin-bottom:4px;">'+(_sk(11676,'자가 보고 기반 '))+TOTALQ+(_sk(11677,'문항.'))+'<br>'+_sk(11678,'최근 2~4주를 기준으로 1번부터 차례로 체크하세요.')+'</p>';
     var n=0;
     for(var p=0;p<_SQ().length;p++){
@@ -617,7 +617,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
         h+='</div></div>';
       }
     }
-    h+='<div id="slp-q-warn" class="slp-q-warn"></div><button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpScore()">'+_sk(11679,'결과 보기 →')+'</button><button class="slp-btn2" onclick="cgoSleepOpen()">처음으로</button>';
+    h+='<div id="slp-q-warn" class="slp-q-warn"></div><button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpScore()">'+_sk(11679,'결과 보기 →')+'</button><button class="slp-btn2" onclick="cgoSleepOpen()">'+_sk(11721,'처음으로')+'</button>';
     var ac=$('slp-acc-self'); if(ac) ac.open=true;
     $('slp-self-q').innerHTML='<div class="slp-q-wrap">'+h+'</div>';
   };
@@ -627,56 +627,156 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     for(var i=0;i<bs.length;i++) bs[i].classList.remove('sel');
     btn.classList.add('sel');
     var q=$('slp-q-'+n); if(q) q.classList.add('done');
+    /* ★ 100번째 답이 들어오면 스스로 셈한다 — 한 번만. 답을 고치면 「결과 보기」로 다시 */
+    var c=0,k; for(k in sAns) c++;
+    if(c>=TOTALQ && !_slpScored){ _slpScored=true; setTimeout(function(){ cgoSlpScore(true); },250); }
   };
-  window.cgoSlpScore=function(){
+  var _slpScored=false;
+  /* 언어를 바꿔 다시 그린 뒤, 상자(sAns)에 든 답을 버튼에 다시 표시한다 */
+  window.__slpRemark=function(){
+    for(var n in sAns){ var q=$('slp-q-'+n); if(!q) continue;
+      var bs=q.querySelectorAll('.slp-q-opts button'); var b=bs[sAns[n]];
+      if(b){ for(var i=0;i<bs.length;i++) bs[i].classList.remove('sel'); b.classList.add('sel'); q.classList.add('done'); } }
+  };
+  Object.defineProperty(window,'_slpAns',{get:function(){ return sAns; }, set:function(v){ sAns=v||{}; }});
+  window.cgoSlpScore=function(auto){
   try{ window._slpDone = true; }catch(_){}
     var answered=0,k; for(k in sAns) answered++;
     var w=$('slp-q-warn');
-    if(answered<TOTALQ){
-      w.style.display='block';
-      w.innerHTML=_sk(11680,'아직 <b>')+(TOTALQ-answered)+'</b>문항이 비어 있어요. 그래도 결과를 보려면 버튼을 한 번 더 누르세요.';
-      if(!w._armed){ w._armed=true; return; }
+    if(answered<TOTALQ && !auto){
+      if(w){ w.style.display='block';
+        w.innerHTML=_sk(11680,'아직 <b>')+(TOTALQ-answered)+'</b>문항이 비어 있어요. 그래도 결과를 보려면 버튼을 한 번 더 누르세요.';
+        if(!w._armed){ w._armed=true; return; } }
     }
     var isi=0,apnea=0,rls=0,circ=0,mood=0,mq=0,total=0;
     for(var n=1;n<=TOTALQ;n++){ var v=sAns[n]||0, dom=_flat()[n-1][2]; total+=v;
       if(dom==='isi')isi+=v; else if(dom==='apnea')apnea+=v; else if(dom==='rls')rls+=v; else if(dom==='circ')circ+=v; else if(dom==='mood'){mood+=v;mq++;} }
-    var isiBand,isiMsg,isiColor;
-    if(isi<=7){isiBand=_sk(11681,'고른 편');isiColor='#5a9a6b';isiMsg=_sk(11682,'수면 결이 대체로 고른 편이에요. 지금 리듬을 유지하세요.');}
-    else if(isi<=14){isiBand=_sk(11683,'약간 뒤척임');isiColor='#d4a843';isiMsg=_sk(11684,'약간의 과각성이 보여요. 취침 전 4-7-8 호흡과 사운드 이완을 꾸준히 해보세요.');}
-    else if(isi<=21){isiBand=_sk(11685,'자주 뒤척임');isiColor='#d98a3b';isiMsg=_sk(11686,'수면이 일상에 영향을 주는 편이에요. 수면 습관을 정비하고, 오래가면 전문기관 상담을 권해요.');}
-    else {isiBand=_sk(11687,'많이 뒤척임');isiColor='#c0553b';isiMsg=_sk(11688,'수면 부담이 상당히 큰 편이에요. 전문기관에서 상담을 받아보시길 권해요.');}
-    var flags=[];
-    if(apnea>=8) flags.push([_sk(11689,'🌬️ 호흡·코골이 부담'),_sk(11690,'코골이·호흡 끊김·구강건조 항목이 여러 개 높아요. 오래가면 전문기관에서 상담을 받아보세요.')]);
-    if(rls>=5) flags.push([_sk(11691,'🦵 다리 불편감'),_sk(11692,'다리 불쾌감·잦은 움직임이 있어요. 오래가면 전문기관에서 상담을 받아보세요.')]);
-    if(circ>=8) flags.push([_sk(11693,'🧭 생체리듬 교란'),_sk(11694,'잠드는 시간이 밀리고 불규칙해요. 아침 햇빛 쬐기와 일정한 기상이 가장 도움이 돼요.')]);
-    var moodNote=(mq && mood/mq>=2.5)?_sk(11695,'요즘 기분이 가라앉고 버거운 신호가 보여요. 수면과 마음은 깊이 연결돼 있어요. 혼자 견디지 말고 가까운 사람이나 정신건강 전문가와 이야기 나눠보시길 권해요.'):'';
+    var bi = isi<=7?0 : isi<=14?1 : isi<=21?2 : 3;              /* 등급 0~3 (글자는 그릴 때 그 언어로) */
     var pct=Math.round(total/(TOTALQ*4)*100);
-    var burden=pct<20?_sk(11696,'양호'):pct<40?_sk(11697,'주의'):pct<60?_sk(11698,'상당'):_sk(11672,'높음');
-    var rec = apnea>=8?_sk(11699,'🌌 우주 기저의 휴식 (저음 위주, 호흡 방해 적음)'):(mq&&mood/mq>=2)?_sk(11700,'🌊 고요한 심해의 기억 (차분한 진정)'):(isi>=15?_sk(11701,'🌧️ 밤비의 기적 (소음 마스킹)'):_sk(11702,'🍃 대나무숲의 속삭임 (부드러운 이완)'));
-    var h='<div class="slp-badge">RESULT · 참고용</div><h2 class="slp-h">수면 자가 점검 결과</h2>';
-    h+='<div class="slp-rcard"><div class="slp-rrow"><span>수면 부담 지수</span><b style="color:'+isiColor+'">'+isi+' / 28 · '+isiBand+'</b></div>';
-    h+='<div class="slp-rrow"><span>종합 부담 지수</span><b>'+pct+'% · '+burden+'</b></div></div>';
-    h+='<p class="slp-rmsg">'+isiMsg+'</p>';
-    if(flags.length){ h+='<div class="slp-flags">'; for(var f=0;f<flags.length;f++) h+='<div class="slp-flag"><b>'+flags[f][0]+'</b><span>'+flags[f][1]+'</span></div>'; h+='</div>'; }
-    if(moodNote) h+='<div class="slp-flag mood"><b>💛 마음 돌봄</b><span>'+moodNote+'</span></div>';
-    h+='<div class="slp-rrec">추천 사운드 · <b>'+rec+'</b></div>';
-    h+='<button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpToSound()">🎵 추천 사운드 들으러 →</button>';
-    h+='<button class="slp-btn2" onclick="cgoSlpGoMeasure()">📸 측정·호흡으로</button>';
-    h+='<p class="slp-note">이 점검은 자가 보고 기반 <b>웰니스 참고 지표</b>이며, 질병의 진단·치료·예방 목적으로 사용할 수 없습니다. 수면 어려움이 2주 이상 지속되면 전문기관 상담을 권해요.</p>';
-    $('slp-self-q').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';
-    var pg=$('page-cgo-sleep'); if(pg) pg.scrollTop=0;
-    try{ localStorage.setItem('cgo_sleep_check', JSON.stringify({t:Date.now(),isi:isi,band:isiBand,pct:pct,burden:burden,flags:flags.map(function(x){return x[0];})})); }catch(e){}
+    var bu = pct<20?0 : pct<40?1 : pct<60?2 : 3;                 /* 종합 부담 0~3 */
+    var flags=[]; if(apnea>=8) flags.push('apnea'); if(rls>=5) flags.push('rls'); if(circ>=8) flags.push('circ');
+    var ma = mq? Math.round(mood/mq*100)/100 : 0;
+    var chk={t:Date.now(),isi:isi,bi:bi,pct:pct,bu:bu,flags:flags,ma:ma,apnea:apnea,rls:rls,circ:circ,total:total,n:TOTALQ,
+             /* 지난 판과 같은 이름도 함께(다른 화면이 읽을 수 있게) */
+             band:_SLP_BAND()[bi][0], burden:_SLP_BURDEN()[bu]};
+    try{ localStorage.setItem('cgo_sleep_check', JSON.stringify(chk)); }catch(e){}
+    _slpScored=true;
+    /* 문항 판 밑에 완료 줄만 남기고, 결과는 「나의 수면 데이터」 하나로 */
+    if(w){ w.style.display='block'; w.innerHTML=_sk(23803,'✅ 100문항 완료 — 결과는 아래 「나의 수면 데이터」에 있어요.'); w._armed=false; }
+    var as=$('slp-acc-self'); if(as) as.open=false;   /* 자가 점검 접기(배타 아코디언 미지원 기기 대비) */
+    cgoSlpData();
+    var ad=$('slp-acc-data'); if(ad){ ad.open=true; setTimeout(function(){ try{ ad.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },120); }
+  };
+  function _SLP_BAND(){ return [
+    [_sk(11681,'고른 편'),'#5a9a6b',_sk(11682,'수면 결이 대체로 고른 편이에요. 지금 리듬을 유지하세요.')],
+    [_sk(11683,'약간 뒤척임'),'#d4a843',_sk(11684,'약간의 과각성이 보여요. 취침 전 4-7-8 호흡과 사운드 이완을 꾸준히 해보세요.')],
+    [_sk(11685,'자주 뒤척임'),'#d98a3b',_sk(11686,'수면이 일상에 영향을 주는 편이에요. 수면 습관을 정비하고, 오래가면 전문기관 상담을 권해요.')],
+    [_sk(11687,'많이 뒤척임'),'#c0553b',_sk(11688,'수면 부담이 상당히 큰 편이에요. 전문기관에서 상담을 받아보시길 권해요.')] ]; }
+  function _SLP_BURDEN(){ return [_sk(11696,'양호'),_sk(11697,'주의'),_sk(11698,'상당'),_sk(11672,'높음')]; }
+  function _SLP_FLAG(){ return {
+    apnea:[_sk(11689,'🌬️ 호흡·코골이 부담'),_sk(11690,'코골이·호흡 끊김·구강건조 항목이 여러 개 높아요. 오래가면 전문기관에서 상담을 받아보세요.')],
+    rls:[_sk(11691,'🦵 다리 불편감'),_sk(11692,'다리 불쾌감·잦은 움직임이 있어요. 오래가면 전문기관에서 상담을 받아보세요.')],
+    circ:[_sk(11693,'🧭 생체리듬 교란'),_sk(11694,'잠드는 시간이 밀리고 불규칙해요. 아침 햇빛 쬐기와 일정한 기상이 가장 도움이 돼요.')] }; }
+  function _SLP_THNM(){ return {t1:'🌌 '+_sk(11247,'우주 기저의 휴식'),t2:'🌧️ '+_sk(11250,'밤비의 기적'),t3:'🍃 '+_sk(11253,'대나무숲의 속삭임'),
+    t4:'🔥 '+_sk(11256,'모닥불과 무의식'),t5:'🌊 '+_sk(11259,'고요한 심해의 기억'),t6:'🏔️ '+_sk(11262,'고산의 정묵')}; }
+  /* ★ 사운드 추천은 코드가 셈한다(AI 에 맡기지 않는다 — 값 0원·지어내기 없음) */
+  function _slpRec(chk,rppg){
+    var st=(rppg&&rppg.stress!=null)?rppg.stress:null;
+    var th = chk.apnea>=8?'t1' : chk.ma>=2?'t5' : (chk.isi>=15||st>=60)?'t2' : 't3';
+    var sol = (chk.isi>=15||st>=60)?396 : chk.ma>=2?639 : chk.circ>=8?417 : 528;
+    var bin = chk.isi>=15?2:4;
+    var tmr = chk.isi>=15?60:30;
+    return {th:th,sol:sol,bin:bin,tmr:tmr};
+  }
+  window._slpRecNow=function(){ var c=null,r=null; try{c=JSON.parse(localStorage.getItem('cgo_sleep_check'));}catch(e){} try{r=JSON.parse(localStorage.getItem('cgo_sleep_rppg'));}catch(e){} return c?_slpRec(c,r):null; };
+  window.cgoSlpRecPlay=function(kind,v){
+    cgoSlpToSound();
+    if(kind==='th') cgoSlpTheme(v); else if(kind==='sol') cgoSlpSol(+v); else if(kind==='bin') cgoSlpBinaural(+v);
+    var r=_slpRecNow(); if(r) cgoSlpTimer(r.tmr);
   };
   window.cgoSlpData=function(){
     var h='<div class="slp-badge">MY SLEEP DATA</div><h2 class="slp-h">'+_sk(11710,'나의 수면 데이터')+'</h2><p class="slp-sub" style="margin-bottom:14px;">'+_sk(11711,'기기 안에서만 모은 최근 기록이에요.')+'<br>'+_sk(11712,'(저장 제로 · 서버 0 · 외부 전송 없음)')+'</p>';
     var chk=null,rppg=null; try{chk=JSON.parse(localStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(localStorage.getItem('cgo_sleep_rppg'));}catch(e){}
     function ago(t){ var d=Math.floor((Date.now()-t)/86400000); return d<=0?_sk(11703,'오늘'):d+_sk(11704,'일 전'); }
-    if(chk){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11713,'최근 자가점검')+'</span><b>'+ago(chk.t)+'</b></div><div class="slp-rrow"><span>'+_sk(11714,'수면 부담 지수')+'</span><b>'+chk.isi+'/28 · '+chk.band+'</b></div><div class="slp-rrow"><span>'+_sk(11715,'종합 부담')+'</span><b>'+chk.pct+'% · '+chk.burden+'</b></div>'+(chk.flags&&chk.flags.length?'<div class="slp-rrow"><span>신호</span><b>'+chk.flags.join(', ')+'</b></div>':'')+'</div>'; }
+    var B=_SLP_BAND(), BU=_SLP_BURDEN(), FL=_SLP_FLAG(), TN=_SLP_THNM();
+    var hasNew = chk && chk.bi!=null;
+    var band = chk ? (hasNew? B[chk.bi][0] : chk.band) : '';
+    var burden = chk ? (hasNew? BU[chk.bu] : chk.burden) : '';
+    var flagNames = chk ? (hasNew? chk.flags.map(function(f){ return FL[f]?FL[f][0]:f; }) : (chk.flags||[])) : [];
+    if(chk){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11713,'최근 자가점검')+'</span><b>'+ago(chk.t)+'</b></div><div class="slp-rrow"><span>'+_sk(11714,'수면 부담 지수')+'</span><b'+(hasNew?' style="color:'+B[chk.bi][1]+'"':'')+'>'+chk.isi+'/28 · '+band+'</b></div><div class="slp-rrow"><span>'+_sk(11715,'종합 부담')+'</span><b>'+chk.pct+'% · '+burden+'</b></div>'+(flagNames.length?'<div class="slp-rrow"><span>'+_sk(23805,'신호')+'</span><b>'+flagNames.join(', ')+'</b></div>':'')+'</div>'; }
     else { h+='<div class="slp-empty">'+_sk(11717,'아직 자가점검 기록이 없어요.')+'<button class="slp-acc-btn" style="margin-top:10px;" onclick="cgoSlpSelfCheck()">'+_sk(11718,'100문항 점검 시작 →')+'</button></div>'; }
-    if(rppg){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11719,'최근 측정')+'</span><b>'+ago(rppg.t)+'</b></div>'+(rppg.bpm?'<div class="slp-rrow"><span>'+_sk(11460,'활력 박자')+'</span><b>'+rppg.bpm+' bpm</b></div>':'')+(rppg.hrv!=null?'<div class="slp-rrow"><span>내면 탄력</span><b>'+rppg.hrv+' </b></div>':'')+(rppg.stress!=null?'<div class="slp-rrow"><span>'+_sk(11464,'긴장도')+'</span><b>'+rppg.stress+'</b></div>':'')+'</div>'; }
+    if(rppg){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11719,'최근 측정')+'</span><b>'+ago(rppg.t)+'</b></div>'+(rppg.bpm?'<div class="slp-rrow"><span>'+_sk(11460,'활력 박자')+'</span><b>'+rppg.bpm+' bpm</b></div>':'')+(rppg.hrv!=null?'<div class="slp-rrow"><span>'+_sk(11461,'내면 탄력 안정도')+'</span><b>'+rppg.hrv+' </b></div>':'')+(rppg.stress!=null?'<div class="slp-rrow"><span>'+_sk(11464,'긴장도')+'</span><b>'+rppg.stress+'</b></div>':'')+'</div>'; }
+    /* ── 결과 요약 (점검을 마쳤을 때만) ── */
+    if(hasNew){
+      h+='<div class="slp-badge" style="margin-top:6px;">RESULT</div><h2 class="slp-h" style="font-size:18px;">'+_sk(23804,'수면 자가 점검 결과')+'</h2>';
+      h+='<p class="slp-rmsg">'+B[chk.bi][2]+'</p>';
+      if(chk.flags.length){ h+='<div class="slp-flags">'; chk.flags.forEach(function(f){ if(FL[f]) h+='<div class="slp-flag"><b>'+FL[f][0]+'</b><span>'+FL[f][1]+'</span></div>'; }); h+='</div>'; }
+      if(chk.ma>=2.5) h+='<div class="slp-flag mood"><b>'+_sk(23806,'💛 마음 돌봄')+'</b><span>'+_sk(11695,'요즘 기분이 가라앉고 버거운 신호가 보여요. 수면과 마음은 깊이 연결돼 있어요. 혼자 견디지 말고 가까운 사람이나 정신건강 전문가와 이야기 나눠보시길 권해요.')+'</span></div>';
+      /* 맞춤 사운드 — 코드가 셈한 추천, 누르면 바로 켠다 */
+      var r=_slpRec(chk,rppg);
+      h+='<div class="slp-rrec"><b>'+_sk(23807,'🎵 맞춤 수면 사운드 · 점수와 측정값으로 셈한 추천이에요')+'</b>';
+      h+='<div class="slp-rec-row"><span>'+_sk(23824,'테마')+' · <b>'+TN[r.th]+'</b></span><button class="slp-rec-btn" onclick="cgoSlpRecPlay(\'th\',\''+r.th+'\')">'+_sk(23808,'▶ 지금 켜기')+'</button></div>';
+      h+='<div class="slp-rec-row"><span>'+_sk(23809,'솔페지오')+' · <b>'+r.sol+'Hz</b></span><button class="slp-rec-btn" onclick="cgoSlpRecPlay(\'sol\','+r.sol+')">'+_sk(23808,'▶ 지금 켜기')+'</button></div>';
+      h+='<div class="slp-rec-row"><span>'+_sk(23810,'바이노럴 (이어폰 필요)')+' · <b>'+r.bin+'Hz</b></span><button class="slp-rec-btn" onclick="cgoSlpRecPlay(\'bin\','+r.bin+')">'+_sk(23808,'▶ 지금 켜기')+'</button></div>';
+      h+='<div class="slp-rec-row"><span>'+_sk(23811,'타이머')+' · <b>'+r.tmr+_sk(23812,'분')+'</b></span></div>';
+      h+='<span style="color:#999;font-size:11px;">'+_sk(11465,'사람마다 맞는 주파수는 달라요 — 참고만 하고 끌리는 걸 고르세요.')+'</span></div>';
+      /* AI 상담사 */
+      h+='<div class="slp-ai"><div class="slp-ai-h">'+_sk(23813,'🤖 수면 AI 상담사')+'</div><p class="slp-ai-sub">'+_sk(23814,'점수·측정값을 바탕으로 웰니스 범주 안에서만 이야기해요. 진단·치료가 아니에요.')+'</p>';
+      h+='<div id="slp-ai-log"></div>';
+      h+='<button class="slp-btn" style="margin-top:8px;" onclick="cgoSlpAI()">'+_sk(23815,'🤖 내 결과 읽어 주기')+'</button>';
+      h+='<div class="slp-ai-in"><input id="slp-ai-in" type="text" placeholder="'+_sk(23816,'궁금한 점을 물어보세요…').replace(/"/g,'&quot;')+'" onkeydown="if(event.key===\'Enter\')cgoSlpAI(this.value)"><button onclick="cgoSlpAI(document.getElementById(\'slp-ai-in\').value)">'+_sk(23817,'보내기')+'</button></div></div>';
+      h+='<button class="slp-btn2" onclick="cgoSlpSelfCheck();var a=document.getElementById(\'slp-acc-self\');if(a){a.open=true;}">'+_sk(23821,'🔄 다시 점검하기')+'</button>';
+    }
     h+='<button class="slp-btn2" onclick="cgoSleepOpen()">'+_sk(11721,'처음으로')+'</button><p class="slp-note">'+_sk(11722,'기록은 이 기기의 브라우저에만 저장되며 언제든 사라질 수 있어요. 참고용이며 의료 데이터가 아닙니다.')+'</p>';
     var ad=$('slp-acc-data'); if(ad) ad.open=true;
     $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';
+    /* 지난 대화가 있으면 되살린다 */
+    var lg=$('slp-ai-log'); if(lg && _slpAiHist.length){ _slpAiHist.forEach(function(m){ _slpAiBubble(m.role==='user'?'me':'ai', m.content); }); }
+  };
+
+  /* ══ 🤖 수면 AI 상담사 — 점수(코드가 셈) + 수면 rPPG + 건강 밸런스(있을 때만) 를 담아 기본 등급으로 ══ */
+  var _slpAiHist=[];
+  function _slpAiBubble(who,txt){
+    var lg=$('slp-ai-log'); if(!lg) return null;
+    var d=document.createElement('div'); d.className='slp-ai-b '+who; d.textContent=txt; lg.appendChild(d);
+    try{ d.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+    return d;
+  }
+  function _slpAiContext(){
+    var chk=null,rppg=null; try{chk=JSON.parse(localStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(localStorage.getItem('cgo_sleep_rppg'));}catch(e){}
+    if(!chk || chk.bi==null) return null;
+    var B=_SLP_BAND(), FL=_SLP_FLAG(), TN=_SLP_THNM(), r=_slpRec(chk,rppg);
+    var lines=['[수면 자가 점검 · 100문항 · 자가 보고]',
+      '수면 부담 지수(ISI 7문항): '+chk.isi+'/28 → '+B[chk.bi][0],
+      '종합 부담: '+chk.pct+'%', '호흡 영역 합: '+chk.apnea+' · 다리 영역 합: '+chk.rls+' · 생체리듬 영역 합: '+chk.circ+' · 기분 영역 평균: '+chk.ma+'/4',
+      '신호: '+(chk.flags.length? chk.flags.map(function(f){return FL[f][0];}).join(', ') : '없음')];
+    if(rppg && rppg.bpm) lines.push('[수면 rPPG 40초 관찰값] 심박 '+rppg.bpm+' bpm · HRV(RMSSD) '+(rppg.hrv!=null?rppg.hrv:'—')+' · 긴장도 '+(rppg.stress!=null?rppg.stress:'—')+'/100');
+    else lines.push('[수면 rPPG] 측정값 없음 — 아직 재지 않았음을 그대로 말할 것');
+    var bs=null; try{ bs=(window._c24 && window._c24.lastResult) || null; }catch(e){}
+    if(bs){ var t=''; try{ t=JSON.stringify(bs); if(t.length>900) t=t.slice(0,900)+'…'; }catch(e){ t=''; } if(t) lines.push('[나의 건강 밸런스 6부위 관찰값] '+t); }
+    else lines.push('[나의 건강 밸런스] 측정값 없음 — 아직 재지 않았음을 그대로 말할 것');
+    lines.push('[앱이 셈한 추천 사운드] 테마 '+TN[r.th]+' · 솔페지오 '+r.sol+'Hz · 바이노럴 '+r.bin+'Hz · 타이머 '+r.tmr+'분 — 이 네 가지는 화면에 단추로 이미 있으니 그 이유를 짧게 풀어 주고 다른 주파수를 새로 짓지 말 것');
+    return lines.join('\n');
+  }
+  window.cgoSlpAI=function(q){
+    q=(q||'').trim();
+    var ctx=_slpAiContext();
+    if(!ctx){ _slpAiBubble('ai',_sk(23820,'먼저 100문항 자가 점검을 마쳐 주세요.')); return; }
+    var inp=$('slp-ai-in'); if(inp) inp.value='';
+    var user = q || '내 수면 자가 점검 결과와 관찰값을 읽고, 오늘 밤 잠들기 전 생활 습관 두세 가지와 추천 사운드의 이유를 짧게 알려 주세요.';
+    if(q) _slpAiBubble('me',q);
+    var wait=_slpAiBubble('ai',_sk(23823,'생각 중…'));
+    var sys='당신은 CGO-FULI 「수면」 기능의 AI 상담사입니다. 아래 자료는 사용자의 수면 자가 점검 점수(자가 보고)와 카메라 rPPG 심박·HRV 관찰값입니다. '
+      +'웰니스 범주 안에서만, 잠·빛·카페인·호흡·소리 같은 생활 습관 이야기까지만 상담합니다. 없는 측정값은 없다고 정직하게 말합니다.\n\n'+ctx;
+    var msgs=[{role:'system',content:sys}];
+    _slpAiHist.slice(-6).forEach(function(m){ msgs.push(m); });
+    msgs.push({role:'user',content:user});
+    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:msgs,max_tokens:520,temperature:0.5})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ var a=(d&&d.choices&&d.choices[0]&&d.choices[0].message)?d.choices[0].message.content:''; if(!a) a=_sk(16155,'잠시 후 다시 시도해 주세요.');
+        if(wait) wait.textContent=a; _slpAiHist.push({role:'user',content:user},{role:'assistant',content:a}); if(_slpAiHist.length>10) _slpAiHist=_slpAiHist.slice(-10); })
+      .catch(function(){ if(wait) wait.textContent=_sk(16155,'잠시 후 다시 시도해 주세요.'); });
   };
 })();
 
@@ -698,13 +798,13 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     try{
       var q = document.getElementById('slp-self-q');
       if(window.cgoSlpSelfCheck && q && q.innerHTML && q.innerHTML.length > 200){
-        var keep = [];
-        q.querySelectorAll('input[type=radio]:checked').forEach(function(r){ keep.push([r.name, r.value]); });
+        /* 답은 상자(_slpAns)에 번호로 들어 있다 — 다시 그린 뒤 상자를 되돌리고 버튼에 표시만 다시 붙인다 */
+        var keep = window._slpAns || {}, kc = 0, kk; for(kk in keep) kc++;
         cgoSlpSelfCheck();
-        keep.forEach(function(p){
-          var el = q.querySelector('input[name="'+p[0]+'"][value="'+p[1]+'"]');
-          if(el){ el.checked = true; try{ el.dispatchEvent(new Event('change', {bubbles:true})); }catch(_){ } }
-        });
+        window._slpAns = keep;
+        if(window.__slpRemark) __slpRemark();
+        var warn = document.getElementById('slp-q-warn');
+        if(warn && kc >= 100){ warn.style.display='block'; warn.innerHTML=_sk(23803,'✅ 100문항 완료 — 결과는 아래 「나의 수면 데이터」에 있어요.'); }
       }
     }catch(e){}
   }
