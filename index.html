@@ -13451,7 +13451,10 @@ function cgoGoPage(page){
   if (page === 'dashboard' && window._cgoDashScrollY != null) {
     /* ★ -h: 50ms 뒤에 스크롤을 되돌리던 것이 잔상의 정체 후보 — 그 3프레임 동안 대시보드가 「직전 페이지의 스크롤 위치」로 그려진 뒤 튀어 올랐다.
        지금 바로 되돌리고(첫 프레임부터 맞는 자리), 배치가 늦게 확정되는 기기를 위해 다음 프레임에 한 번 더. */
-    if (_ct){ try{ _ct.scrollTop = window._cgoDashScrollY; }catch(e){} var _y=window._cgoDashScrollY; if(window.requestAnimationFrame) requestAnimationFrame(function(){ try{ _ct.scrollTop=_y; }catch(e){} }); }
+    /* ★ -w 잔상의 정체(cgoGhostLog 기록): 복귀 직후 .content 가 0 → 저장 위치(1887) → 다시 0 으로 두 번 튀었다. 저장 위치를 되살리는 이 줄이 첫 번째 튐이고, 뒤에서 누가 0 으로 내리니 결국 0 이 최종값.
+       두 단계를 한 단계로: 대시보드 복귀는 처음부터 맨 위. (저장 위치 복원 기능은 끔 — 되살리려면 아래 주석 해제) */
+    if (_ct){ try{ _ct.scrollTop = 0; }catch(e){} }
+    // if (_ct){ try{ _ct.scrollTop = window._cgoDashScrollY; }catch(e){} }
   } else {
     if (_ct) _ct.scrollTop = 0;
     var mainEl = document.querySelector('.main') || document.querySelector('.pages');
@@ -25979,7 +25982,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-v';
+window.CGO_VER='2026.09.06-w';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
