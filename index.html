@@ -25956,7 +25956,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.06-h';
+window.CGO_VER='2026.09.06-j';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -31281,6 +31281,130 @@ var fcSystems = {
 
   </div>
  </div>
+
+<!-- ★ 2026.09.06-i: 구앱 page-algo 의 ④ 통합 건강 리포트(hlt) 이식 — 10장 카드·4배지·체중 바·분석·처방. ②결과판·③질병 카드/채팅은 c24.js 엔진 내부 상태에 묶여 있어 c24.js 확인 뒤. -->
+<div id="hlt-section" class="c24-scanhide" style="margin-top:18px;">
+<div style="font-size:12px;font-weight:700;color:rgba(52,211,153,.75);margin:18px 0 10px;letter-spacing:.05em;display:flex;align-items:center;gap:8px">
+      🧬 생체 실측 지표 <span style="font-size:10px;color:rgba(52,211,153,.5);font-weight:400">— 건강 종합점수의 70% 반영</span>
+      <span id="hlt-bio-badge" style="display:none;padding:2px 8px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);border-radius:10px;font-size:9px;color:#34d399;font-weight:700">✅ 실측 연동</span>
+    </div>
+<div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:rgba(212,168,67,.75);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        🍱 오늘 음식 건강 영향
+        <span style="font-size:10px;color:rgba(212,168,67,.5);font-weight:400">— 음식 궁합 C-11 연동</span>
+        <button onclick="cgoGoPage('food')" style="margin-left:auto;padding:3px 8px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.3);border-radius:6px;color:#d4a843;font-size:10px;font-weight:700;cursor:pointer;">🍱 분석하기</button>
+      </div>
+      <div id="hlt-food-card" style="display:none;background:linear-gradient(135deg,rgba(6,14,30,.97),rgba(4,10,24,.99));border:1px solid rgba(212,168,67,.3);border-radius:12px;padding:12px 14px;"></div>
+      <div id="hlt-food-empty" style="background:rgba(212,168,67,.04);border:1px dashed rgba(212,168,67,.2);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:6px;">🍽️</div>
+        <div style="font-size:11px;color:rgba(212,168,67,.5);">음식 궁합 C-11에서 음식을 분석하면<br>건강에 미치는 영향이 여기에 표시됩니다</div>
+      </div>
+    </div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">
+
+      <!-- 안면 생기 톤 -->
+      <div id="hlt-bio-face" style="background:var(--bg-panel);border:1px solid rgba(167,139,250,.2);border-radius:13px;padding:13px 10px;text-align:center;cursor:pointer;transition:all .2s" onclick="hltBioCardTap('face')">
+        <div style="font-size:20px;margin-bottom:5px">🧖</div>
+        <div style="font-size:10px;color:rgba(167,139,250,.7);font-weight:700;margin-bottom:2px">안면 생기 톤</div><div style="font-size:8px;color:rgba(167,139,250,.5);margin-bottom:4px">안면 혈류 지수</div>
+        <div id="hlt-bio-face-score" style="font-size:26px;font-weight:900;color:#a78bfa;font-family:'Orbitron',sans-serif;line-height:1">--</div>
+        <div style="margin:6px 0;height:3px;background:rgba(255,255,255,.07);border-radius:2px">
+          <div id="hlt-bio-face-bar" style="height:100%;width:0%;background:#a78bfa;border-radius:2px;transition:width 1.2s ease"></div>
+        </div>
+        <div id="hlt-bio-face-desc" style="font-size:9px;color:var(--text-3)">대시보드 스캔 후 표시</div>
+      </div>
+
+      <!-- 손바닥 (BLI) -->
+      <div id="hlt-bio-palm" style="background:var(--bg-panel);border:1px solid rgba(244,114,182,.2);border-radius:13px;padding:13px 10px;text-align:center;cursor:pointer;transition:all .2s" onclick="hltBioCardTap('palm')">
+        <div style="font-size:20px;margin-bottom:5px">✋</div>
+        <div style="font-size:10px;color:rgba(244,114,182,.7);font-weight:700;margin-bottom:2px">손바닥 (BLI)</div><div style="font-size:8px;color:rgba(244,114,182,.5);margin-bottom:4px">손바닥 혈류 지수</div>
+        <div id="hlt-bio-palm-score" style="font-size:26px;font-weight:900;color:#f472b6;font-family:'Orbitron',sans-serif;line-height:1">--</div>
+        <div style="margin:6px 0;height:3px;background:rgba(255,255,255,.07);border-radius:2px">
+          <div id="hlt-bio-palm-bar" style="height:100%;width:0%;background:#f472b6;border-radius:2px;transition:width 1.2s ease"></div>
+        </div>
+        <div id="hlt-bio-palm-desc" style="font-size:9px;color:var(--text-3)">대시보드 스캔 후 표시</div>
+      </div>
+
+      <!-- 혀 (체질) -->
+      <div id="hlt-bio-tongue" style="background:var(--bg-panel);border:1px solid rgba(248,113,113,.2);border-radius:13px;padding:13px 10px;text-align:center;cursor:pointer;transition:all .2s" onclick="hltBioCardTap('tongue')">
+        <div style="font-size:20px;margin-bottom:5px">👅</div>
+        <div style="font-size:10px;color:rgba(248,113,113,.7);font-weight:700;margin-bottom:2px">혀 (체질)</div><div style="font-size:8px;color:rgba(248,113,113,.5);margin-bottom:4px">장기의 거울</div>
+        <div id="hlt-bio-tongue-score" style="font-size:26px;font-weight:900;color:#f87171;font-family:'Orbitron',sans-serif;line-height:1">--</div>
+        <div style="margin:6px 0;height:3px;background:rgba(255,255,255,.07);border-radius:2px">
+          <div id="hlt-bio-tongue-bar" style="height:100%;width:0%;background:#f87171;border-radius:2px;transition:width 1.2s ease"></div>
+        </div>
+        <div id="hlt-bio-tongue-desc" style="font-size:9px;color:var(--text-3)">대시보드 스캔 후 표시</div>
+      </div>
+
+      <!-- 4·7·8 호흡 -->
+      <div id="hlt-bio-breath" style="background:var(--bg-panel);border:1px solid rgba(56,189,248,.2);border-radius:13px;padding:13px 10px;text-align:center;cursor:pointer;transition:all .2s" onclick="hltBioCardTap('breath')">
+        <div style="font-size:20px;margin-bottom:5px">🫁</div>
+        <div style="font-size:10px;color:rgba(56,189,248,.7);font-weight:700;margin-bottom:2px">4·7·8 호흡</div><div style="font-size:8px;color:rgba(56,189,248,.5);margin-bottom:4px">내면 탄력 안정도</div>
+        <div id="hlt-bio-breath-score" style="font-size:26px;font-weight:900;color:#38bdf8;font-family:'Orbitron',sans-serif;line-height:1">--</div>
+        <div style="margin:6px 0;height:3px;background:rgba(255,255,255,.07);border-radius:2px">
+          <div id="hlt-bio-breath-bar" style="height:100%;width:0%;background:#38bdf8;border-radius:2px;transition:width 1.2s ease"></div>
+        </div>
+        <div id="hlt-bio-breath-desc" style="font-size:9px;color:var(--text-3)">숨결 안정 지수 측정 후 표시</div>
+      </div>
+
+    </div>
+<div id="hlt-weight-bar" style="display:none;margin-bottom:14px;padding:8px 12px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:10px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:5px">
+        <span>🧬 생체 실측 <strong style="color:#34d399">70%</strong></span>
+        <span>종합 건강 점수</span>
+        <span>🔮 역학 분석 <strong style="color:#d4a843">70%</strong></span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;display:flex">
+        <div id="hlt-bio-pct-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 1s ease"></div>
+        <div style="height:100%;flex:1;background:linear-gradient(90deg,#d4a843,#a78bfa)"></div>
+      </div>
+    </div>
+<div style="font-size:12px;font-weight:700;color:rgba(212,168,67,.65);margin:18px 0 10px;letter-spacing:.05em">📊 10가지 통합 건강 지표 <span style="font-size:10px;color:rgba(52,211,153,.6);font-weight:400;">— 50대 역학 중 × LJR 실측 생체</span></div>
+<div class="hv-grid12">
+      <!-- 생체 실측 5 -->
+      <div class="hv-cell" id="hc1" onclick="hltCardTap(1)"><div class="hv-cico" style="color:#f87171">💓</div><div class="hv-cnm">심장 활력</div><div class="hv-csc" id="hlt-c1s" style="color:#f87171">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c1b" style="background:#f87171"></div></div><div class="hv-cd" id="hlt-c1d">BPM·HRV 실측</div></div>
+      <div class="hv-cell" id="hc2" onclick="hltCardTap(2)"><div class="hv-cico" style="color:#a78bfa">🎨</div><div class="hv-cnm">안면혈류</div><div class="hv-csc" id="hlt-c2s" style="color:#a78bfa">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c2b" style="background:#a78bfa"></div></div><div class="hv-cd" id="hlt-c2d">FCI 혈색 실측</div></div>
+      <div class="hv-cell" id="hc3" onclick="hltCardTap(3)"><div class="hv-cico" style="color:#f87171">👅</div><div class="hv-cnm">혀 관찰</div><div class="hv-csc" id="hlt-c3s" style="color:#f87171">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c3b" style="background:#f87171"></div></div><div class="hv-cd" id="hlt-c3d">혀·장기 반응</div></div>
+      <div class="hv-cell" id="hc4" onclick="hltCardTap(4)"><div class="hv-cico" style="color:#34d399">👁️</div><div class="hv-cnm">눈·피부·손</div><div class="hv-csc" id="hlt-c4s" style="color:#34d399">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c4b" style="background:#34d399"></div></div><div class="hv-cd" id="hlt-c4d">시각 관찰</div></div>
+      <div class="hv-cell" id="hc5" onclick="hltCardTap(5)"><div class="hv-cico" style="color:#38bdf8">🫁</div><div class="hv-cnm">숨결 안정 지수</div><div class="hv-csc" id="hlt-c5s" style="color:#38bdf8">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c5b" style="background:#38bdf8"></div></div><div class="hv-cd" id="hlt-c5d">4·7·8 호흡</div></div>
+      <!-- 한의학·역학 5 -->
+      <div class="hv-cell" id="hc6" onclick="hltCardTap(6)"><div class="hv-cico" style="color:#d4a843">☯️</div><div class="hv-cnm">음양 균형</div><div class="hv-csc" id="hlt-c6s" style="color:#d4a843">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c6b" style="background:#d4a843"></div></div><div class="hv-cd" id="hlt-c6d">기운의 강약·온냉 성향</div></div>
+      <div class="hv-cell" id="hc7" onclick="hltCardTap(7)"><div class="hv-cico" style="color:#d4a843">🌳</div><div class="hv-cnm">오행 체질</div><div class="hv-csc" id="hlt-c7s" style="color:#d4a843">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c7b" style="background:#d4a843"></div></div><div class="hv-cd" id="hlt-c7d">사주 오행 기반</div></div>
+      <div class="hv-cell" id="hc8" onclick="hltCardTap(8)"><div class="hv-cico" style="color:#38bdf8">🌟</div><div class="hv-cnm">자미두수</div><div class="hv-csc" id="hlt-c8s" style="color:#38bdf8">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c8b" style="background:#38bdf8"></div></div><div class="hv-cd" id="hlt-c8d">성좌 체질 분석</div></div>
+      <div class="hv-cell" id="hc9" onclick="hltCardTap(9)"><div class="hv-cico" style="color:#fb923c">🔮</div><div class="hv-cnm">구성학</div><div class="hv-csc" id="hlt-c9s" style="color:#fb923c">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c9b" style="background:#fb923c"></div></div><div class="hv-cd" id="hlt-c9d">계절·장기 에너지</div></div>
+      <div class="hv-cell" id="hc10" onclick="hltCardTap(10)"><div class="hv-cico" style="color:#c084fc">🕉️</div><div class="hv-cnm">베딕 점성술</div><div class="hv-csc" id="hlt-c10s" style="color:#c084fc">--</div><div class="hv-cbw"><div class="hv-cb" id="hlt-c10b" style="background:#c084fc"></div></div><div class="hv-cd" id="hlt-c10d">아야남사 체질</div></div>
+    </div>
+<button id="hlt-analyze-btn" onclick="hltRunAnalysis()" style="width:100%;margin:14px 0;padding:16px;background:linear-gradient(135deg,rgba(212,168,67,.22),rgba(52,211,153,.1));border:1px solid rgba(212,168,67,.38);border-radius:14px;color:#d4a843;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.03em;transition:all .2s">
+      ⚡ 10가지 통합 건강 분석 실행
+    </button>
+<div id="hlt-result" style="display:none">
+      <div style="background:linear-gradient(135deg,rgba(212,168,67,.1),rgba(52,211,153,.05));border:1px solid rgba(212,168,67,.22);border-radius:16px;padding:20px;text-align:center;margin-bottom:12px">
+        <div style="font-size:11px;color:rgba(212,168,67,.5);letter-spacing:.1em;margin-bottom:6px">통합 건강 ILI 점수</div>
+        <div id="hlt-total-score" style="font-size:60px;font-weight:900;color:#d4a843;line-height:1">--</div>
+        <div id="hlt-total-grade" style="font-size:13px;color:#94a3b8;margin:6px 0 4px">/ 100</div>
+        <div id="hlt-total-desc" style="font-size:11px;color:rgba(240,230,200,.5);margin-bottom:12px;">생체 실측·역학 10가지 종합 평균</div>
+        <div style="background:rgba(212,168,67,.1);border-radius:8px;height:8px;overflow:hidden">
+          <div id="hlt-total-bar" style="height:100%;background:linear-gradient(90deg,#d4a843,#34d399);width:0%;transition:width 1.4s cubic-bezier(.34,1.56,.64,1)"></div>
+        </div>
+      </div>
+      <div style="background:#111f35;border:1px solid rgba(99,130,201,.15);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:#f87171;margin-bottom:12px">✨ 기운 흐름 밸런스 — 교차 예측 분석 TOP 3</div>
+        <div id="hlt-disease-list"></div>
+      </div>
+      <div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.2);border-radius:14px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:#34d399;margin-bottom:12px">🔮 종합 웰니스 리포트</div>
+        <div id="hlt-prescription"></div>
+      </div>
+      
+    </div>
+<div id="hlt-pop-ov" onclick="hltPopClose()" style="display:none;position:fixed;inset:0;background:rgba(2,8,23,.85);z-index:8500;backdrop-filter:blur(3px)"></div>
+<div id="hlt-pop" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:88vh;overflow-y:auto;background:#111f35;border-radius:20px 20px 0 0;border-top:1px solid rgba(212,168,67,.25);z-index:8501;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,0,.67,1)">
+      <div style="position:sticky;top:0;background:#111f35;padding:14px 18px 10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+        <div id="hlt-pop-title" style="font-size:15px;font-weight:700;color:#d4a843"></div>
+        <button onclick="hltPopClose()" style="background:rgba(255,255,255,.07);border:none;color:rgba(255,255,255,.55);border-radius:50%;width:30px;height:30px;font-size:17px;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="hlt-pop-body" style="padding:18px"></div>
+    </div>
+</div>
 </div>
 
 <div class="page cgop" id="page-mypage" style="background:#f0fdf9;min-height:100vh;color:#0f172a;"><style>.mypg-card{transition:border-color .15s;}@media (hover:hover){.mypg-card:hover{border-color:rgba(6,182,212,.55);}}.mypg-btn{display:block;width:100%;text-align:left;padding:13px 15px;margin-bottom:10px;background:#fff;border:1px solid rgba(6,182,212,.22);border-radius:12px;font-size:14px;font-weight:700;color:#0f172a;cursor:pointer;text-decoration:none;box-sizing:border-box;}.mypg-btn:hover{background:#ecfeff;}.mypg-btnd{display:block;width:100%;text-align:left;padding:13px 15px;margin-bottom:8px;background:#fff5f5;border:1px solid rgba(220,38,38,.3);border-radius:12px;font-size:14px;font-weight:800;color:#dc2626;cursor:pointer;text-decoration:none;box-sizing:border-box;}.mypg-note{font-size:11px;color:#64748b;margin:4px 2px 16px;line-height:1.55;}.mypg-box{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid rgba(6,182,212,.15);margin-bottom:14px;}</style><button data-k="3694" onclick="cgoGoPage('dashboard')" style="position:fixed;bottom:24px;right:16px;z-index:50;width:54px;height:54px;border-radius:50%;border:none;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;font-size:22px;box-shadow:0 4px 16px rgba(6,182,212,.45);cursor:pointer;">🏠</button><div style="max-width:560px;margin:0 auto;padding:56px 16px 96px;"><div style="text-align:center;margin-bottom:20px;"><div data-k="3695" style="font-size:24px;font-weight:900;color:#0e7490;">👤 My Page</div><div data-k="3696" style="font-size:12px;color:#64748b;margin-top:5px;">Account · Subscription · Storage · Settings · Support</div></div><div style="display:flex;flex-direction:column;gap:12px;"><div onclick="_myPop('profile')" class="mypg-card" style="background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;"><div data-k="3697" style="font-size:28px;flex-shrink:0;">👤</div><div style="flex:1;min-width:0;"><div data-k="3698" style="font-size:15px;font-weight:800;color:#0f172a;">Profile & Account Management</div><div data-k="3699" style="font-size:11px;color:#64748b;margin-top:3px;">Member info · Password · SNS · Delete account</div></div><span data-k="3700" style="color:#06b6d4;font-size:16px;flex-shrink:0;">&#9654;</span></div><div onclick="_myPop('billing')" class="mypg-card" style="background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;"><div data-k="3701" style="font-size:28px;flex-shrink:0;">💳</div><div style="flex:1;min-width:0;"><div data-k="3702" style="font-size:15px;font-weight:800;color:#0f172a;">Subscription & Payment Management</div><div data-k="3703" style="font-size:11px;color:#64748b;margin-top:3px;">Subscription status · Payment method · Refund request</div></div><span data-k="3704" style="color:#06b6d4;font-size:16px;flex-shrink:0;">&#9654;</span></div><div onclick="_myPop('vault')" class="mypg-card" style="background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:16px;padding:16px 18px;cursor:pointer;display:none;align-items:center;gap:14px;"><div data-k="3705" style="font-size:28px;flex-shrink:0;">📊</div><div style="flex:1;min-width:0;"><div data-k="3706" style="font-size:15px;font-weight:800;color:#0f172a;">Vault</div><div data-k="3707" style="font-size:11px;color:#64748b;margin-top:3px;">Coupons · points · event wins</div></div><span data-k="3708" style="color:#06b6d4;font-size:16px;flex-shrink:0;">&#9654;</span></div><div onclick="_myPop('settings')" class="mypg-card" style="background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;"><div data-k="3709" style="font-size:28px;flex-shrink:0;">⚙️</div><div style="flex:1;min-width:0;"><div data-k="3710" style="font-size:15px;font-weight:800;color:#0f172a;">App Settings</div><div data-k="3711" style="font-size:11px;color:#64748b;margin-top:3px;">Notifications · Theme · Font size · Cache · Version</div></div><span data-k="3712" style="color:#06b6d4;font-size:16px;flex-shrink:0;">&#9654;</span></div><div onclick="_myPop('support')" class="mypg-card" style="background:#fff;border:1px solid rgba(6,182,212,.18);border-radius:16px;padding:16px 18px;cursor:pointer;display:flex;align-items:center;gap:14px;"><div data-k="3713" style="font-size:28px;flex-shrink:0;">📞</div><div style="flex:1;min-width:0;"><div data-k="3714" style="font-size:15px;font-weight:800;color:#0f172a;">Customer Support & Info</div><div data-k="3715" style="font-size:11px;color:#64748b;margin-top:3px;">AI counselor · 1:1 email · Terms</div></div><span data-k="3716" style="color:#06b6d4;font-size:16px;flex-shrink:0;">&#9654;</span></div></div></div><div id="mypage-pop" style="display:none;position:fixed;left:0;right:0;bottom:0;top:var(--hdrH,56px);z-index:30000;background:#f0fdf9;overflow-y:auto;flex-direction:column;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;"><div style="width:100%;max-width:600px;margin:0 auto;background:#f0fdf9;border-top:3px solid #06b6d4;flex-shrink:0;"><div style="position:sticky;top:0;z-index:9;background:#f0fdf9;padding:16px 18px;border-bottom:1px solid rgba(6,182,212,.18);display:flex;justify-content:space-between;align-items:center;z-index:2;"><div id="mypage-pop-title" style="font-size:16px;font-weight:900;color:#0e7490;"></div><button data-k="3717" onclick="_myPopClose()" style="width:40px;height:40px;border-radius:50%;border:none;background:rgba(6,182,212,.12);color:#0e7490;font-size:15px;cursor:pointer;">✕</button></div><div id="mypage-pop-content" style="padding:18px;"></div></div></div></div>
@@ -95894,6 +96018,1323 @@ window._cgoAfterIntro=function(ids, fn){
     }
   }catch(e){ try{ fn(); }catch(_){} }
 };
+</script>
+
+<script>
+/* ★ 2026.09.06-i: 구앱 통합 건강 리포트(hlt) 함수 20개 이식(그대로). 사이드카에만 있을 수 있는 외부 함수는 typeof 가드. */
+window._hltAnalyzed = false;
+function hltReset(){
+  window._hltAnalyzed = false; // 분석 플래그 초기화
+  clearInterval(_HV.bTimer);clearInterval(_HV.tTimer);
+  clearInterval(_HV.tmpTimer);clearInterval(_HV.visTimer);clearInterval(_HV.dotTimer);
+  _HV={bDone:false,tDone:false,tmpDone:false,visDone:false,
+    bScore:0,tScore:0,tmpScore:0,v4:0,v5:0,
+    bTimer:null,tTimer:null,tmpTimer:null,visTimer:null,dotTimer:null,
+    bPhase:0,bSec:0,bCycle:0,scores:new Array(18).fill(0)};
+  var defs=['측정 대기','스캔 대기','측정 대기','얼굴 12궁','생명선·건강선','오행 불균형','질액궁 분석','에너지 흐름','현재 운때','64괘 조언','수 진동 에너지','이름 음가 파동'];
+  for(var i=1;i<=12;i++){
+    var sc=_g('hlt-c'+i+'s');if(sc)sc.textContent='--';
+    var b=_g('hlt-c'+i+'b');if(b)b.style.width='0%';
+    var d=_g('hlt-c'+i+'d');if(d)d.textContent=defs[i-1];
+    var c=_g('hc'+i);if(c)c.classList.remove('done');
+  }
+  // STEP1
+  var bnum=_g('hlt-bnum');if(bnum){bnum.textContent='--';bnum.style.color='#38bdf8';}
+  var blbl=_g('hlt-blbl');if(blbl){blbl.textContent=_cgoT('대기');blbl.style.color='rgba(56,189,248,.5)';}
+  var bph=_g('hlt-bphase');if(bph){bph.textContent=_cgoT('시작 버튼을 눌러주세요');bph.style.color='#e2e8f0';}
+  var bsb=_g('hlt-bscore-box');if(bsb)bsb.style.display='none';
+  var bring=_g('hlt-bring');if(bring){bring.style.strokeDashoffset='219.9';bring.style.stroke='#38bdf8';}
+  var bbtn=_g('hlt-bbtn');if(bbtn){bbtn.textContent=_cgoT('▶ 호흡 시작');bbtn.disabled=false;}
+  // STEP2
+  var tp=_g('hlt-tprog');if(tp)tp.style.display='none';
+  var tb=_g('hlt-tbar');if(tb)tb.style.width='0%';
+  ['tc-color-v','tc-coat-v','tc-shape-v'].forEach(function(id){var e=_g(id);if(e)e.textContent=_cgoT('대기');});
+  var tbtn=_g('hlt-tbtn');if(tbtn){tbtn.textContent=_cgoT('📷 혀 스캔 시작');tbtn.disabled=false;}
+  for(var j=1;j<=10;j++){var d2=_g('hvd'+j);if(d2){d2.style.background='rgba(248,113,113,.15)';d2.style.transform='scale(1)';d2.style.boxShadow='none';}}
+  // STEP3
+  var tv=_g('hlt-tempval');if(tv){tv.textContent='--';}
+  var ki=_g('hlt-kival');if(ki)ki.textContent='--';
+  var en=_g('hlt-enval');if(en)en.textContent='--';
+  var ts=_g('hlt-temp-status');if(ts)ts.textContent=_cgoT('스마트폰을 양손으로 꽉 쥐어주세요');
+  var tring=_g('hlt-tcircle');if(tring){tring.style.strokeDashoffset='232.5';tring.style.stroke='#fbbf24';}
+  var tempbtn=_g('hlt-tempbtn');if(tempbtn){tempbtn.textContent=_cgoT('🌡️ 온도 리듬 체크 시작');tempbtn.disabled=false;}
+  // STEP4
+  var fs=_g('hlt-facesc');if(fs)fs.textContent='--';
+  var ps=_g('hlt-palmsc');if(ps)ps.textContent='--';
+  var fst=_g('hlt-facest');if(fst)fst.textContent=_cgoT('대기중');
+  var pst=_g('hlt-palmst');if(pst)pst.textContent=_cgoT('대기중');
+  var vbtn=_g('hlt-visbtn');
+  if(vbtn){
+    vbtn.textContent=_cgoT('🔬 비전 분석 시작');
+    vbtn.disabled=false;
+    vbtn.style.background='';
+    vbtn.style.color='';
+    vbtn.style.borderColor='';
+    vbtn.style.cursor='';
+  }
+  // 얼굴/손금 박스 초기화
+  var fbox2=_g('hlt-facebox');
+  if(fbox2){ fbox2.style.background='rgba(167,139,250,.06)'; fbox2.style.borderColor='rgba(167,139,250,.25)'; }
+  var pbox2=_g('hlt-palmbox');
+  if(pbox2){ pbox2.style.background='rgba(244,114,182,.06)'; pbox2.style.borderColor='rgba(244,114,182,.25)'; }
+  var fst2=_g('hlt-facest'); if(fst2) fst2.textContent=_cgoT('대기중');
+  var pst2=_g('hlt-palmst'); if(pst2) pst2.textContent=_cgoT('대기중');
+  var fsc2=_g('hlt-facesc'); if(fsc2) fsc2.textContent='--';
+  var psc2=_g('hlt-palmsc'); if(psc2) psc2.textContent='--';
+  if(typeof _HV !== 'undefined'){ _HV.visDone1=false; _HV.visDone2=false; }
+  var fb=_g('hlt-facebox');if(fb){fb.style.background='rgba(167,139,250,.06)';fb.style.borderColor='rgba(167,139,250,.25)';}
+  var pb=_g('hlt-palmbox');if(pb){pb.style.background='rgba(244,114,182,.06)';pb.style.borderColor='rgba(244,114,182,.25)';}
+  var res=_g('hlt-result');if(res)res.style.display='none';
+}
+function hltBreathStart(){
+  if(_HV.bDone)return;
+  clearInterval(_HV.bTimer);
+  _HV.bPhase=0;_HV.bSec=0;_HV.bCycle=0;
+  _breathEngineStart();
+  var btn=_g('hlt-bbtn');if(btn){btn.textContent=_cgoT('● 진행 중');btn.disabled=true;}
+
+  // ✅ Web Audio API 마이크 연결 (호흡 실제 감지)
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({audio:true, video:false}).then(function(micStream){
+      window._breathMicStream = micStream;
+      var audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+      var analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      var src = audioCtx.createMediaStreamSource(micStream);
+      src.connect(analyser);
+      var buf = new Uint8Array(analyser.frequencyBinCount);
+      window._breathAnalyser = analyser;
+      window._breathAudioBuf = buf;
+      window._breathAudioCtx = audioCtx;
+    }).catch(function(){ /* 마이크 없어도 타이머로 진행 */ });
+  }
+
+  // ✅ iOS 핵심: 클릭 직후 user gesture 체인 안에서 즉시 speak()
+  if(window._ttsEnabled && window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var _u = new SpeechSynthesisUtterance(' '); // 시작 안내 없음 — 엔진 웜업만
+    _u.lang='ko-KR'; _u.volume=1.0; _u.rate=0.88;
+    var _vv=window.speechSynthesis.getVoices();
+    var _kv=_vv.filter(function(v){return v.lang==='ko-KR';})[0]||_vv.filter(function(v){return v.lang.indexOf('ko')>=0;})[0];
+    if(_kv) _u.voice=_kv;
+    _u.onend=function(){
+      _HV.bTimer=setInterval(_hvbTick,1000);
+      _hvbTick();
+    };
+    // 안전장치: 4초 후 강제 시작
+    var _fb=setTimeout(function(){
+      if(!_HV.bTimer){ _HV.bTimer=setInterval(_hvbTick,1000); _hvbTick(); }
+    },4000);
+    _u.onend=function(){ clearTimeout(_fb); _HV.bTimer=setInterval(_hvbTick,1000); _hvbTick(); };
+    window.speechSynthesis.speak(_u);
+    if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+  } else {
+    _HV.bTimer=setInterval(_hvbTick,1000);
+    _hvbTick();
+  }
+}
+function hltBreathStop(){
+  clearInterval(_HV.bTimer);
+  var btn=_g('hlt-bbtn');
+  if(btn&&!_HV.bDone){btn.textContent=_cgoT('▶ 호흡 시작');btn.disabled=false;}
+  var bph=_g('hlt-bphase');if(bph&&!_HV.bDone){bph.textContent=_cgoT('시작 버튼을 눌러주세요');bph.style.color='#e2e8f0';}
+}
+function hltTongueScan(){
+  // ★ 실제 카메라로 혀 촬영 (cgoTongueVisionAnalysis 연동)
+  if(typeof cgoTongueVisionAnalysis === 'function'){
+    // 스캔 원점 기록 (생체스캔 페이지에서 호출)
+    window._cgoScanOrigin = window._cgoScanOrigin || 'bioscan';
+    (typeof cgoTongueVisionAnalysis==="function"?cgoTongueVisionAnalysis:function(){})();
+  } else {
+    // 폴백: 원래 타이머 방식
+    _hltTongueScanLegacy();
+  }
+}
+function _hltTongueScanLegacy(){
+  if(_HV.tDone)return;
+  var btn=_g('hlt-tbtn');if(btn){btn.textContent=_cgoT('📷 스캔 중...');btn.disabled=true;}
+  var tp=_g('hlt-tprog');if(tp)tp.style.display='block';
+  var seed=_hvds()+2002;
+  var pct=0;
+  var ds=0;
+  // 도트 웨이브 애니메이션
+  _HV.dotTimer=setInterval(function(){
+    ds=(ds+1)%10;
+    for(var i=1;i<=10;i++){
+      var d=_g('hvd'+i);
+      if(!d)continue;
+      var dist=Math.min(Math.abs(i-1-ds),10-Math.abs(i-1-ds));
+      if(dist===0){d.style.background='#f87171';d.style.transform='scale(2)';d.style.boxShadow='0 0 10px rgba(248,113,113,.7)';}
+      else if(dist===1){d.style.background='rgba(248,113,113,.6)';d.style.transform='scale(1.4)';d.style.boxShadow='0 0 5px rgba(248,113,113,.4)';}
+      else{d.style.background='rgba(248,113,113,.12)';d.style.transform='scale(1)';d.style.boxShadow='none';}
+    }
+  },150);
+  _HV.tTimer=setInterval(function(){
+    pct+=10;
+    var bar=_g('hlt-tbar');if(bar)bar.style.width=pct+'%';
+    var pctEl=_g('hlt-tpct');if(pctEl)pctEl.textContent=pct+'%';
+    if(pct>=100){clearInterval(_HV.tTimer);_hvtFinish(seed);}
+  },1000);
+}
+function hltTempScan(){
+  if(_HV.tmpDone)return;
+  // ✅ 체온 T1 기준점 기록 (성능 타임스탬프 기반)
+  window._tempT1 = performance.now();
+  window._tempBaseline = performance.memory ? performance.memory.usedJSHeapSize : 0;
+  var btn=_g('hlt-tempbtn');if(btn){btn.textContent=_cgoT('🌡️ 측정 중...');btn.disabled=true;}
+  var ts=_g('hlt-temp-status');if(ts)ts.textContent=_cgoT('📱 센서 수집 중... (15초)');
+
+  // 온도 리듬 체크 시작 (AudioContext 언락)
+  if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+
+  _tempEngineCollect(function(){
+    var targetTemp=_tempCalcFromSensors();
+    var elapsed=0; // 경과 초
+    var TOTAL=15;  // 15초 측정
+
+    _HV.tmpTimer=setInterval(function(){
+      elapsed++;
+      var remain=TOTAL-elapsed;
+      // 7초 시점 중간 안내 — setInterval 안에서 처리 (iOS에서 허용)
+      // 중간 안내 음성 없음
+      var progress=elapsed/TOTAL;
+
+      // 카운트다운 표시
+      var ts2=_g('hlt-temp-status');
+      if(ts2) ts2.textContent=_cgoT('🌡️ 측정 중... (')+remain+'초 남음)';
+
+      // 온도 애니메이션
+      var animTemp=35.8+(targetTemp-35.8)*progress+(_hvr(3003+elapsed)%3)*0.01;
+      animTemp=Math.max(35.5,Math.min(38.5,animTemp));
+      var tv=_g('hlt-tempval');if(tv)tv.textContent=animTemp.toFixed(2); // ✅ 0.01°C 단위
+      var normP=Math.min(1,(animTemp-35.5)/2);
+      var ring=_g('hlt-tcircle'),wrap=_g('hlt-tempval-wrap');
+      var col=animTemp<36?'#38bdf8':animTemp<37?'#fbbf24':animTemp<37.5?'#f97316':'#f87171';
+      if(ring){ring.style.strokeDashoffset=(232.5*(1-normP*0.85)).toFixed(1);ring.style.stroke=col;}
+      if(wrap){wrap.style.boxShadow='0 0 '+(elapsed*3)+'px '+col+'44';var tv2=_g('hlt-tempval');if(tv2)tv2.style.color=col;}
+
+      if(elapsed>=TOTAL && !_HV.tmpDone){
+        clearInterval(_HV.tmpTimer);
+        var ts3=_g('hlt-temp-status');
+        // ✅ T2 변화 확인 — 실제 온기 전달 여부 판단
+        var _tempT2 = performance.now();
+        var _elapsed_ms = _tempT2 - (window._tempT1||_tempT2);
+        // 15초 동안 손 온기로 targetTemp가 35.8보다 올랐는지 확인
+        var _tempRise = targetTemp - 35.8;
+        if(_tempRise < 0.3){
+          // 온기 전달 미흡 — 경고 + 재측정 유도 (tmpDone 설정 안 함)
+          clearInterval(_HV.tmpTimer);
+          if(ts3) ts3.textContent=_cgoT('⚠️ 온기 전달 미흡! 양손으로 꽉 쥐고 다시 측정하세요.');
+          var btn=_g('hlt-tempbtn');
+          if(btn){btn.textContent=_cgoT('🌡️ 다시 측정');btn.disabled=false;}
+          if(typeof window._cgoUnlockAudio==='function') window._cgoUnlockAudio();
+          // 알람
+          try{var _acF=new(window.AudioContext||window.webkitAudioContext)();
+          var _oF=_acF.createOscillator(),_gF=_acF.createGain();
+          _oF.connect(_gF);_gF.connect(_acF.destination);
+          _oF.frequency.value=220;_oF.type='sawtooth';
+          _gF.gain.setValueAtTime(.3,_acF.currentTime);
+          _gF.gain.exponentialRampToValueAtTime(.001,_acF.currentTime+.5);
+          _oF.start();_oF.stop(_acF.currentTime+.5);}catch(e){}
+        } else {
+          if(ts3) ts3.textContent=_cgoT('✅ 측정 완료! (')+targetTemp.toFixed(2)+'°C)';
+          _hvtmpFinish(targetTemp,_hvds()+3003);
+        }
+      }
+    },1000); // 1초마다 (15초 카운트)
+  });
+}
+function hltVisScan(){
+  if(_HV.visDone)return;
+  // 생체 스캔 완료된 경우 → 즉시 스캔 데이터로 채움
+  if(window._baiScanned && window.BS && (BS.faceData || BS.palmData)){
+    var _bfdV = window._bioFinalData || {};
+    var fs2 = (_bfdV.faceScore > 0) ? _bfdV.faceScore :
+              (_HV.v4 && _HV.v4>0) ? _HV.v4 :
+              Math.round((_bfdV.fci||BS.fci||80)*0.6 + (_bfdV.hrv||BS.hrv||50)*0.4);
+    var ps2 = (_bfdV.palmScore > 0) ? _bfdV.palmScore :
+              (_HV.v5 && _HV.v5>0) ? _HV.v5 :
+              (BS.palmData ? Math.round(BS.palmData.bliScore) : 72);
+    fs2 = Math.min(95, Math.max(40, fs2));
+    ps2 = Math.min(95, Math.max(40, ps2));
+    _hvvisFinish2(fs2, ps2);
+    return;
+  }
+  // 생체 스캔 없으면 기존 애니메이션
+  var btn=_g('hlt-visbtn');if(btn){btn.textContent=_cgoT('🔬 분석 중...');btn.disabled=true;}
+  var seed=_hvds()+4004;
+  var step=0;
+  var pals=['명궁','재백궁','관록궁','전택궁','질액궁','남녀궁','노복궁','천이궁','복덕궁','부처궁','형제궁','상모궁'];
+  var lines=['생명선','두뇌선','감정선','건강선','운명선'];
+  _HV.visTimer=setInterval(function(){
+    step++;
+    var fst=_g('hlt-facest');if(fst)fst.textContent=pals[(step-1)%pals.length]+' 분석 중...';
+    var pst=_g('hlt-palmst');if(pst)pst.textContent=lines[(step-1)%lines.length]+' 분석 중...';
+    var fb=_g('hlt-facebox');if(fb)fb.style.borderColor='rgba(167,139,250,'+(.25+step*.05)+')';
+    var pb=_g('hlt-palmbox');if(pb)pb.style.borderColor='rgba(244,114,182,'+(.25+step*.05)+')';
+    if(step>=8){clearInterval(_HV.visTimer);_hvvisFinish(seed);}
+  },500);
+}
+/* 함수 안 지역문 — 추출 오류로 빠져나온 것 제거 */
+/* 함수 안 지역문 — 추출 오류로 빠져나온 것 제거 */
+function hltRunAnalysis(){
+  // ★ 생체 스캔 완료 여부 확인 — 미완료 시 팝업
+  var _bfd = window._bioFinalData||{};
+  var _scanned = (_bfd.fci>0||_bfd.hrv>0||_bfd.bpm>0||window._lastBreathScore>0);
+  if(!_scanned){
+    var _old=document.getElementById('hlt-scan-required-pop');
+    if(_old) _old.remove();
+    var _pop=document.createElement('div');
+    _pop.id='hlt-scan-required-pop';
+    _pop.style.cssText='position:fixed;inset:0;z-index:19000;background:rgba(2,8,23,.92);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;';
+    _pop.innerHTML=
+      '<div style="width:100%;max-width:480px;background:linear-gradient(160deg,#0a1628,#0d1f3c);border-radius:20px 20px 0 0;border-top:2px solid rgba(52,211,153,.4);padding:24px 20px 36px;">'
+      +'<div style="text-align:center;margin-bottom:18px;">'
+      +'<div style="font-size:48px;margin-bottom:10px;">📷</div>'
+      +'<div style="font-size:16px;font-weight:900;color:#34d399;margin-bottom:8px;">생체 스캔이 필요합니다</div>'
+      +'<div style="font-size:13px;color:rgba(240,230,200,.7);line-height:1.8;">'
+      +'카메라 스캔을 먼저 완료하면<br>'
+      +'<b style="color:#fff;">10가지 지표가 실측 데이터</b>로<br>'
+      +'정밀하게 분석됩니다.'
+      +'</div></div>'
+      +'<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:rgba(240,230,200,.7);line-height:1.9;">'
+      +'👤 얼굴 60초 → 💓 심장 활력·안면혈류 측정<br>'
+      +'👅 혀 20초 → 혀 색·태 관찰<br>'
+      +'🫁 478호흡 → 내면 탄력 안정도 측정'
+      +'</div>'
+      +'<div style="display:flex;gap:10px;">'
+      +'<button onclick="document.getElementById(\'hlt-scan-required-pop\').remove();(typeof _c24CompStart==="function"?_c24CompStart:function(){})();" style="flex:3;padding:15px;background:linear-gradient(135deg,rgba(52,211,153,.3),rgba(56,189,248,.2));border:2px solid rgba(52,211,153,.7);border-radius:14px;color:#34d399;font-size:14px;font-weight:900;cursor:pointer;">📷 지금 스캔하기</button>'
+      +'<button onclick="document.getElementById(\'hlt-scan-required-pop\').remove();" style="flex:1;padding:15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;color:rgba(240,230,200,.5);font-size:13px;cursor:pointer;">닫기</button>'
+      +'</div></div>';
+    document.body.appendChild(_pop);
+    return; // 분석 중단
+  }
+
+  window._hltAnalyzed = true;
+  var r = window.calcResult; // ← 누락된 변수 선언
+  // ── 새 ID 카드(자미두수·베딕·구성학) 초기화 — 분석 후 _hvset이 채워줌
+  ['x2','x4','x5'].forEach(function(k){
+    var s=document.getElementById('hlt-'+k+'s'); if(s) s.textContent='--';
+    var b=document.getElementById('hlt-'+k+'b'); if(b) b.style.width='0%';
+  });
+  var seed=_hvds();
+  var oh=(r&&r.domOh)||['목','화','토','금','수'][_hvr(seed+6)%5];
+  var sd=HDB.SAJU[oh]||HDB.SAJU['토'];
+
+  // ══════════════════════════════════════════════════════════
+  // CGO-MASTER → 건강 대시보드 유기체 연결
+  // 대시보드 ILI + 생체 BAI → 건강 20개 카드 일관성 보장
+  // ══════════════════════════════════════════════════════════
+  var M = window._CGO_MASTER;
+  var masterILI = M ? M.ili : (r ? r.ili : 70);
+  var masterBio = M ? M.bio : (window._bioFinalData || {});
+  var masterBAI = M ? M.bai : 0;
+  var masterCEI = M ? M.cei : masterILI;
+  var bioScanned = masterBio.scanned || window._baiScanned || false;
+
+  // ★ 신버전: _cgoGetScore()로 CEI 통합 점수 우선 적용
+  if(typeof _cgoGetScore === 'function'){
+    var _gsH = _cgoGetScore();
+    masterCEI = _gsH.score;  // CEI(스캔완료) 또는 ILI(미완료)
+    masterBAI = _gsH.bai;
+    masterILI = _gsH.ili;
+    bioScanned = _gsH.scanned;
+  }
+
+  // 생체 실측값 (스캔 완료 시 우선 적용)
+  var bioHRV = masterBio.hrv || (window.BS && window.BS.hrv) || 0;
+  var bioFCI = masterBio.fci || (window.BS && window.BS.fci) || 0;
+  var bioBLI = masterBio.bli || 0;
+  var bioFMA = masterBio.fma || 0;
+  var bioBPM = masterBio.bpm || (window.BS && window.BS.bpm) || 0;
+
+  // ── 생체 보정값 계산 (CEI 기반 점수 앵커) ──
+  // 각 역학 카드가 마스터 ILI 기준 ±15 이내로 유지
+  function _hlt_sc(base, delta) {
+    var anchored = masterILI + delta;
+    return Math.min(93, Math.max(44, Math.round(
+      base * 0.55 + anchored * 0.45  // 역학 55% + ILI 앵커 45% (역학 비중 상향)
+    )));
+  }
+
+  // ── 출생지 위도·경도 건강 보정 ─────────────────────────
+  var bLat=r&&r.birthLat?parseFloat(r.birthLat):37.57;
+  var bLng=r&&r.birthLng?parseFloat(r.birthLng):126.98;
+  var latAdj=0; var latZone=''; var latDesc='';
+  if(bLat>=37.5){
+    latAdj=-3; latZone='북부 한냉지역';
+    latDesc='출생지('+bLat.toFixed(1)+'°N)는 한냉 기후권입니다. 수분 순환·뼈 계통이 선천적으로 부담을 받기 쉽고, 겨울 면역력 관리가 특히 중요합니다.';
+  } else if(bLat>=36.0){
+    latAdj=0; latZone='중부 온대지역';
+    latDesc='출생지('+bLat.toFixed(1)+'°N)는 사계절이 뚜렷한 온대 기후권입니다. 환절기 면역 변동이 크며, 오행 전체 균형이 비교적 골고루 영향받습니다.';
+  } else if(bLat>=35.0){
+    latAdj=2; latZone='남부 온난지역';
+    latDesc='출생지('+bLat.toFixed(1)+'°N)는 온난 기후권입니다. 화(火) 기운이 선천적으로 강해 심장 활력 관리가 필요합니다.';
+  } else {
+    latAdj=4; latZone='제주·남해 아열대';
+    latDesc='출생지('+bLat.toFixed(1)+'°N)는 한국 최남단 기후권입니다. 심장 활력·위장 관리가 최우선입니다.';
+  }
+  var lngAdj=0; var lngDesc='';
+  if(bLng>=129.0){
+    lngAdj=2; lngDesc='동해안 기운 — 수(水) 에너지 풍부.';
+  } else if(bLng<=127.0){
+    lngAdj=-1; lngDesc='서해안·내륙 기운 — 토(土) 에너지 강.';
+  } else {
+    lngAdj=0; lngDesc='내륙 중앙 기운 — 균형잡힌 지기.';
+  }
+  var geoAdj=latAdj+lngAdj;
+  window._hltGeo={zone:latZone,latDesc:latDesc,lngDesc:lngDesc,adj:geoAdj,lat:bLat,lng:bLng};
+  var _ga=geoAdj;
+  var np=window._nasaPlanets||{};
+
+  // ── hc1: 심장 활력 (BPM·HRV 생체 실측) ────────────────────
+  (function(){
+    var bpm=bioBPM, hrv=bioHRV;
+    var s;
+    if(bpm>0&&hrv>0){
+      var bpmScore=bpm<60?55:bpm>100?60:bpm>90?70:bpm>80?80:88;
+      var hrvScore=hrv<20?50:hrv<35?65:hrv<50?75:hrv>=60?92:82;
+      s=Math.round(bpmScore*0.5+hrvScore*0.5);
+      s=Math.min(95,Math.max(44,s));
+      _hvset(1,s,'활력 박자 '+bpm+' · 내면 탄력 '+hrv,true);
+    } else {
+      var base=Math.min(90,Math.max(50,_hlt_sc(68+_hvr(seed+1)%20,0)));
+      _hvset(1,base,'역학 기반 — 생체 스캔 시 정밀화',true);
+    }
+  })();
+
+  // ── hc2: 안면혈류 (FCI 생체 실측) ─────────────────────
+  (function(){
+    var fci=bioFCI;
+    if(fci>0){
+      var s=Math.min(95,Math.max(44,fci));
+      _hvset(2,s,'생기 톤 '+fci+' — 안색 실측',true);
+    } else {
+      _hvset(2,_hlt_sc(66+_hvr(seed+2)%22,0),'역학 기반 — 스캔 시 정밀화',true);
+    }
+  })();
+
+  // ── hc3: 혀 관찰 (혀 스캔) ──────────────────────────────────
+  (function(){
+    var bsd=window._bioSkinData||{};
+    var tongue=bsd.tongue;
+    if(tongue&&tongue.color){
+      var colorScore={담홍색:80,붉음:60,창백:52,자색:50}[tongue.color.split('(')[0]]||65;
+      var s=Math.min(90,Math.max(44,Math.round(colorScore+(tongue.energy||65)*0.1)));
+      _hvset(3,s,tongue.color+' — '+tongue.organ,true);
+    } else {
+      _hvset(3,_hlt_sc(65+_hvr(seed+3)%22,0),'역학 기반 — 혀 스캔 시 정밀화',true);
+    }
+  })();
+
+  // ── hc4: 눈·피부·손 (시각 진단) ─────────────────────────
+  (function(){
+    var s4=_c24CompState&&(_c24CompState.images.eye||_c24CompState.images.skin||_c24CompState.images.hand_back);
+    if(s4){
+      var base=Math.min(90,Math.max(50,70+_hvr(seed+4)%20));
+      _hvset(4,base,'시각 관찰 완료 — AI 분석 반영',true);
+    } else {
+      _hvset(4,_hlt_sc(66+_hvr(seed+4)%22,0),'역학 기반 — 스캔 시 정밀화',true);
+    }
+  })();
+
+  // ── hc5: 숨결 안정 지수 (4·7·8) ─────────────────────────────
+  (function(){
+    var bs=window._lastBreathScore||window._HV&&window._HV.bScore||0;
+    if(bs>0){
+      _hvset(5,bs,'숨결 안정 지수 '+bs+'% — 내면 탄력',true);
+    } else {
+      var hrv=bioHRV;
+      var base=hrv>0?Math.min(85,Math.max(50,52+Math.round(hrv*0.4))):_hlt_sc(62+_hvr(seed+5)%20,0);
+      _hvset(5,base,'역학 기반 — 호흡 측정 시 정밀화',true);
+    }
+  })();
+
+  // ── hc6: 음양 균형 (기운의 강약·온냉) ───────────────────────────
+  (function(){
+    var bpm=bioBPM, hrv=bioHRV, fci=bioFCI;
+    var s;
+    if(bpm>0){
+      // 과열: BPM높음+FCI붉음 / 수분부족: BPM낮음+FCI창백
+      var yangScore=bpm>95?55:bpm>85?68:bpm>70?78:82;
+      var yinScore=hrv>50?85:hrv>35?75:hrv>20?62:52;
+      s=Math.round(yangScore*0.4+yinScore*0.6);
+      s=Math.min(92,Math.max(44,s));
+      var desc=s>=78?'음양 균형 양호':s>=65?'양기 과다 주의':'수분 부족 — 충분한 수분 섭취 권장';
+      _hvset(6,s,desc,true);
+    } else {
+      var ohYin={목:72,화:65,토:78,금:70,수:75};
+      s=_hlt_sc((ohYin[oh]||70)+_hvr(seed+6)%15,0);
+      _hvset(6,s,oh+' 오행 음양 기반',true);
+    }
+  })();
+
+  // ── hc7: 오행 체질 (사주명리) ────────────────────────────
+  (function(){
+    var base=Math.min(97,Math.max(30,58+_hvr(seed+7)%30+_ga));
+    var s=_hlt_sc(base, _ga);
+    _hvset(7,s,oh+' 오행 — '+_hvp(sd.advices,seed+71).substring(0,24),true);
+  })();
+
+  // ── hc8: 자미두수 ────────────────────────────────────────
+  (function(){
+    var jd=_hvp(HDB.JAMI,seed+8);
+    var starAdj=np.moon?(Math.sin(np.moon.lon*Math.PI/180)*3|0):0;
+    var base=Math.min(95,Math.max(48,56+_hvr(seed+8)%32+starAdj));
+    var s=_hlt_sc(base, starAdj);
+    _hvset(8,s,jd.name+' — '+_hvp(jd.advices,seed+81).substring(0,22),true);
+  })();
+
+  // ── hc9: 구성학 ──────────────────────────────────────────
+  (function(){
+    var kn=r&&r.kujusei?(r.kujusei-1)%9+1:_hvr(seed+9)%9+1;
+    var kd=HDB.KUSEI[kn]||HDB.KUSEI[5];
+    var sunAdj=np.sun?(Math.sin(np.sun.lon*Math.PI/180)*2|0):0;
+    var base=Math.min(95,Math.max(48,55+_hvr(seed+9)%32+sunAdj+_ga));
+    var s=_hlt_sc(base, sunAdj+_ga);
+    _hvset(9,s,kd.name+' — '+_hvp(kd.advices,seed+91).substring(0,20),true);
+  })();
+
+  // ── hc10: 베딕 점성술 ────────────────────────────────────
+  (function(){
+    var AYANAMSA=23.86;
+    var sunSid=np.sun?((parseFloat(np.sun.lon)-AYANAMSA+360)%360):(_hvr(seed+10)*1.5%360);
+    var rashiIdx=Math.floor(sunSid/30)%12;
+    var rashiNames=['메샤(양)','브리샤바(황소)','미투나(쌍둥이)','카르카타(게)','심하(사자)','칸야(처녀)','툴라(천칭)','브리쉬치카(전갈)','다누(사수)','마카라(염소)','쿰바(물병)','미나(물고기)'];
+    var dashaLords=['목성','토성','수성','케투','금성','태양','달','화성','라후'];
+    var dashaIdx=_hvr(seed+10)%dashaLords.length;
+    var adj=(np.jupiter&&!np.jupiter.retro)?4:(np.saturn&&np.saturn.retro)?-3:0;
+    var base=Math.min(95,Math.max(50,64+_hvr(seed+101)%22+adj));
+    var s=_hlt_sc(base, adj);
+    _hvset(10,s,(rashiNames[rashiIdx]+' '+dashaLords[dashaIdx]+'다샤').substring(0,22),true);
+  })();
+
+    setTimeout(function(){_hvShowResult(seed,oh,sd);},1300);
+
+  if(window._LANG&&window._LANG!=='ko'&&typeof _cgoAiTranslatePage==='function'){setTimeout(function(){(typeof _cgoAiTranslatePage==="function"?_cgoAiTranslatePage:function(){})(window._LANG,CGO_I18N[window._LANG]||{},document.getElementById('page-scan'));},800);}}
+function hltSyncBioCards() {
+  // rPPG 소카드 자동 체크 + 출처가 rPPG 팝업이면 복귀
+  setTimeout(function(){
+    var bfd2 = window._bioFinalData || {};
+    var HV2  = window._HV || {};
+    // ★ sessionStorage에서 혀 데이터 복원
+  if(!window._bioSkinData) window._bioSkinData = {};
+  if(!window._bioSkinData.tongue){
+    try{
+      var _tc=sessionStorage.getItem('_cgoTongueColor');
+      var _to=sessionStorage.getItem('_cgoTongueOrgan');
+      var _te=sessionStorage.getItem('_cgoTongueEnergy');
+      if(_tc){ window._bioSkinData.tongue={color:_tc,organ:_to||'그라운딩 에너지',energy:parseInt(_te)||70}; }
+    }catch(e){}
+  }
+  var bsd2 = window._bioSkinData || {};
+    var doneFace=false, donePalm=false, doneTongue=false, doneBreath=false;
+    if(bfd2.fci > 0){
+      doneFace=true;
+      var ef=document.getElementById('rppg-check-face'); if(ef) ef.style.display='inline';
+      try{sessionStorage.setItem('_cgoRppgDone_face','1');}catch(e){}
+    }
+    if(bfd2.bli > 0 || (window._c24CompState&&window._c24CompState.images&&window._c24CompState.images.hand_palm)){
+      donePalm=true;
+      var ep=document.getElementById('rppg-check-palm'); if(ep) ep.style.display='inline';
+      try{sessionStorage.setItem('_cgoRppgDone_palm','1');}catch(e){}
+    }
+    if((bsd2.tongue && bsd2.tongue.color) || (window._bioFinalData && window._bioFinalData.tongueDone)){
+      doneTongue=true;
+      var et=document.getElementById('rppg-check-tongue'); if(et) et.style.display='inline';
+      try{sessionStorage.setItem('_cgoRppgDone_tongue','1');}catch(e){}
+    }
+    if(HV2.bDone === true){
+      doneBreath=true;
+      var eb=document.getElementById('rppg-check-breath'); if(eb) eb.style.display='inline';
+      try{sessionStorage.setItem('_cgoRppgDone_breath','1');}catch(e){}
+    }
+
+    // ★ 대시보드 BAI 수치 직접 업데이트
+    // ★ rPPG 시진 렌더링 (생체 스캔 완료 시)
+    setTimeout(function(){
+      var _bfd=window._bioFinalData||{};var _bsd=window._bioSkinData||{};
+      if((_bfd.fci>0||_bfd.hrv>0||(_bsd.tongue&&_bsd.tongue.color)) && typeof _cgoRenderSijin==='function'){
+        (typeof _cgoRenderSijin==="function"?_cgoRenderSijin:function(){})('sijin4Content','rppg');
+      }
+    }, 300);
+    var bfd3=window._bioFinalData||{};
+    var dH=document.getElementById('dash-hrv-num'); if(dH&&bfd3.hrv>0) dH.textContent=bfd3.hrv;
+    var dF=document.getElementById('dash-fci-num'); if(dF&&bfd3.fci>0) dF.textContent=bfd3.fci;
+    var dM=document.getElementById('dash-fma-num'); if(dM&&bfd3.fma>0) dM.textContent=bfd3.fma;
+    var dB=document.getElementById('dash-bli-num'); if(dB&&bfd3.bli>0) dB.textContent=bfd3.bli;
+
+    // ★ ILI 점수 업데이트
+    var M3=window._CGO_MASTER;
+    var ili3=(M3&&M3.ili)||( window.calcResult&&window.calcResult.ili)||0;
+    if(ili3>0){
+      var iliEl=document.getElementById('dash-ili-num'); if(iliEl) iliEl.textContent=ili3;
+      var iliBar=document.getElementById('dash-ili-bar'); if(iliBar) iliBar.style.width=ili3+'%';
+      var iliGr=document.getElementById('dash-ili-grade');
+      if(iliGr){
+        var g3=ili3>=88?'🎰 로또':ili3>=85?'🌟 매우좋음':ili3>=75?'⭐ 좋음':ili3>=65?'😊 양호':ili3>=55?'😐 보통':ili3>=45?'⚠️ 주의':'💀 경고';
+        iliGr.textContent=g3;
+        iliGr.style.color=ili3>=80?'#34d399':ili3>=70?'#d4a843':ili3>=60?'#fbbf24':'#f87171';
+      }
+    }
+
+    // ★ 출처가 rPPG 팝업이면 → 팝업으로 복귀
+    if(window._cgoScanOrigin === 'rppg'){
+      window._cgoScanOrigin = null;
+      setTimeout(function(){
+        window._cgoInRealtimeMode = true;
+        window._cgoInPureMode = false;
+        if(typeof _cgoRestoreEngineMode==='function') (typeof _cgoRestoreEngineMode==="function"?_cgoRestoreEngineMode:function(){})('rppg');
+        var ov = document.getElementById('todayFortuneOverlay');
+        if(ov){ ov.style.display='block'; document.body.style.overflow='hidden'; }
+        setTimeout(function(){
+          var h=document.getElementById('tf-overlay-title');
+          if(h){h.textContent=_cgoT('🛰️ 실시간 rPPG 데이터 연동 분석');h.style.color='#059669';}
+          var rc=document.getElementById('tf-realtime-card'); if(rc) rc.style.display='block';
+          var bc=document.getElementById('tf-bio-card');      if(bc) bc.style.display='none';
+          var rp=document.getElementById('tf-rppg-card');     if(rp) rp.style.display='block';
+          var rs=document.getElementById('tf-result');        if(rs) rs.style.display='none';
+          var rts=document.getElementById('tf-rt-result');    if(rts) rts.style.display='none';
+          var ld=document.getElementById('tf-loading');       if(ld) ld.style.display='none';
+          // 저장된 체크 상태 전체 복원
+          ['face','palm','tongue','breath'].forEach(function(t){
+            try{
+              if(sessionStorage.getItem('_cgoRppgDone_'+t)){
+                var ce=document.getElementById('rppg-check-'+t);
+                if(ce) ce.style.display='inline';
+              }
+            }catch(e){}
+          });
+        },100);
+      },400);
+    }
+  },300);
+  var M   = window._CGO_MASTER;
+  var bfd = window._bioFinalData || {};
+  var bs  = window.BS || {};
+  var bsd = window._bioSkinData || {};
+  var HV  = window._HV || {};
+
+  // ① 관상 (FCI 기반) — 모든 소스에서 폴백
+  var _as = (window.appState&&window.appState.bio) || {};
+  var fciVal = bfd.fci || bs.fci || _as.fci || 0;
+  var fmaVal = bfd.fma || bs.fma || _as.fma || 0;
+  // fmaVal 없으면 fciVal 100% 사용 (fma=0이면 fci만으로 점수)
+  // 관상 점수 = FCI 그대로 (FMA 혼합 없이 FCI 값 그대로 사용)
+  var faceScore = (fciVal>0) ? Math.min(95,Math.max(30,fciVal)) : 0;
+  // 관상 desc: 오행체질 + FCI 수치 표시
+  var faceGwan = bsd.face ? bsd.face.gwan : (window.calcResult ? {목:'목형(木)',화:'화형(火)',토:'토형(土)',금:'금형(金)',수:'수형(水)'}[window.calcResult.domOh]||'' : '');
+  var faceDescStr = fciVal>0
+    ? (faceGwan ? faceGwan+' · 생기 톤 '+fciVal : '생기 톤 '+fciVal)
+    : '대시보드 스캔 필요';
+  _hltBioSet('face', faceScore, faceDescStr, '#a78bfa');
+
+  // ② 손금 (BLI 기반) — 모든 소스에서 폴백 + 종합스캔 손사진 기준점수 (C-60)
+  var _bsPalmBliV = (BS.palmData&&BS.palmData.bliScore>0) ? BS.palmData.bliScore : 0;
+  var bliVal = bfd.bli || _bsPalmBliV || _as.bli || 0;   // 진짜 측정 BLI
+  // 종합스캔에서 손바닥 사진만 찍힌 경우 → 손 기준점수(6부위 그리드와 동일)
+  var _compPalm = (window._c24CompState && window._c24CompState.images && window._c24CompState.images.hand_palm && window.CGOFULI_HEALTH_CONST) ? CGOFULI_HEALTH_CONST.hand_palm_base : 0;
+  var palmScore = (bliVal>0) ? Math.min(95,Math.max(30,bliVal)) : (_compPalm>0 ? _compPalm : 0);
+  // 손금 desc: 손금선 + BLI 수치 표시 (기준점수면 정직하게 구분 표기)
+  var palmLine = bsd.palm ? bsd.palm.line : (bliVal>0 ? '감정선' : '');
+  var palmDescStr = bliVal>0
+    ? (palmLine ? palmLine+' · BLI '+bliVal : 'BLI '+bliVal)
+    : (_compPalm>0 ? ('손 사진 분석 · 기준 '+_compPalm) : '대시보드 스캔 필요');
+  _hltBioSet('palm', palmScore, palmDescStr, '#f472b6');
+
+  // ③ 혀 (체질 에너지)
+  var tongueScore = 0;
+  var tongueDesc = '대시보드 스캔 필요';
+  // ★ BS.tongueData sessionStorage 복원
+  if(!bsd.tongue){
+    try{
+      var _tc2=sessionStorage.getItem('_cgoTongueColor');
+      var _te2=sessionStorage.getItem('_cgoTongueEnergy');
+      var _to2=sessionStorage.getItem('_cgoTongueOrgan');
+      if(_tc2){
+        if(!window._bioSkinData) window._bioSkinData={};
+        window._bioSkinData.tongue={color:_tc2,organ:_to2||'그라운딩 에너지',energy:parseInt(_te2)||70};
+        bsd=window._bioSkinData;
+      }
+    }catch(e){}
+  }
+  if(bsd.tongue){
+    var tongueColorScore = {담홍색:75, 붉음:58, 창백:52, 자색:48}[(bsd.tongue.color||'').split('(')[0]] || 60;
+    tongueScore = Math.round(tongueColorScore + (bsd.tongue.energy||60)*0.1);
+    tongueScore = Math.min(90,Math.max(30,tongueScore));
+    tongueDesc = bsd.tongue.color+' · '+bsd.tongue.organ;
+  } else if(HV.tScore > 0){
+    tongueScore = HV.tScore;
+    tongueDesc = '혀 스캔 측정값';
+  }
+  _hltBioSet('tongue', tongueScore, tongueDesc, '#f87171');
+
+  // ④ 4·7·8 호흡 (숨결 안정 지수)
+  // 가장 최근 측정된 호흡 점수 우선 (대시보드/건강페이지 어디서 측정했든)
+  var breathScore = (window._lastBreathScore||0) || HV.bScore || 0;
+  var breathDesc = breathScore > 0
+    ? '숨결 안정 지수 '+breathScore+'% · '+(breathScore>=80?'매우 안정':breathScore>=65?'안정':'개선 필요')
+    : '호흡 측정 필요';
+  _hltBioSet('breath', breathScore, breathDesc, '#38bdf8');
+
+  // ⑤ 체온·에너지 (tmpScore)
+  // 가장 최근 측정된 체온 점수 우선
+  var tempScore = (window._lastTempScore||0) || HV.tmpScore || 0;
+  var tempVal = (window._lastTempVal||0) || (window.appState&&window.appState.bio&&window.appState.bio.temp) || 0;
+  var tempDesc = tempScore > 0
+    ? (tempVal>0?tempVal.toFixed(1)+'°C · ':'')+(tempScore>=80?'기혈 순환 양호':tempScore>=65?'보통':'주의')
+    : '온도 리듬 체크 필요';
+  _hltBioSet('temp', tempScore, tempDesc, '#fbbf24');
+
+  // 실측 배지 + 비중 바 표시
+  var bioReady = (faceScore>0||palmScore>0||tongueScore>0||breathScore>0||tempScore>0);
+  var badge = document.getElementById('hlt-bio-badge');
+  var wbar  = document.getElementById('hlt-weight-bar');
+  if(badge) badge.style.display = bioReady ? 'inline-block' : 'none';
+  if(wbar)  wbar.style.display  = bioReady ? 'block' : 'none';
+
+  // 실측값 비율에 따라 비중 바 조정
+  // ★ 5카드 DOM 업데이트 (점수 + 바 + 설명)
+  (function(){
+    var cards = [
+      {id:'face',  score:faceScore,   desc:faceDescStr||''},
+      {id:'palm',  score:palmScore,   desc:palmDescStr||''},
+      {id:'tongue',score:tongueScore, desc:tongueDesc||''},
+      {id:'breath',score:breathScore, desc:breathDesc||''},
+    ];
+    cards.forEach(function(c){
+      var sEl=document.getElementById('hlt-bio-'+c.id+'-score');
+      var bEl=document.getElementById('hlt-bio-'+c.id+'-bar');
+      var dEl=document.getElementById('hlt-bio-'+c.id+'-desc');
+      if(c.score>0){
+        if(sEl) sEl.textContent=c.score;
+        if(bEl) setTimeout(function(){ bEl.style.width=Math.min(100,c.score)+'%'; },200);
+        if(dEl&&c.desc) dEl.textContent=c.desc;
+      }
+    });
+  })();
+
+  var bioCount = [faceScore,palmScore,tongueScore,breathScore,tempScore].filter(function(v){return v>0;}).length;
+  var bioPct = Math.round(bioCount/6*70); // 최대 70%
+  var bioBar = document.getElementById('hlt-bio-pct-bar');
+  if(bioBar) setTimeout(function(){ bioBar.style.width = bioPct+'%'; }, 200);
+}
+function _hltBioSet(type, score, desc, color){
+  var sEl = document.getElementById('hlt-bio-'+type+'-score');
+  var bEl = document.getElementById('hlt-bio-'+type+'-bar');
+  var dEl = document.getElementById('hlt-bio-'+type+'-desc');
+  var cEl = document.getElementById('hlt-bio-'+type);
+  if(sEl) sEl.textContent = score>0 ? score : '--';
+  if(sEl && score>0) sEl.style.color = score>=75?color:score>=60?'#fbbf24':'#f87171';
+  if(bEl) setTimeout(function(){ bEl.style.width = (score>0?score:0)+'%'; }, 300);
+  if(dEl) dEl.textContent = desc;
+  if(cEl && score>0){
+    // HEX 색상을 rgba로 변환 (#rrggbb → rgba(r,g,b,a))
+    function _hexToRgba(hex, alpha){
+      var r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+      return 'rgba('+r+','+g+','+b+','+alpha+')';
+    }
+    var _col = color.startsWith('#') ? _hexToRgba(color, 0.4) : color.replace(')',',0.4)').replace('rgb','rgba');
+    var _bg  = color.startsWith('#') ? _hexToRgba(color, 0.06): color.replace(')',',0.06)').replace('rgb','rgba');
+    cEl.style.borderColor = _col;
+    cEl.style.background  = _bg;
+    // ★ 황금빛 반짝이 효과
+    cEl.classList.remove('glitter-gold');
+    void cEl.offsetWidth;
+    cEl.classList.add('glitter-gold');
+    setTimeout(function(){ cEl.classList.remove('glitter-gold'); }, 1500);
+  }
+}
+function hltBioCardTap(type){
+  // Gold-Stream Docking 애니메이션 실행
+  var _cardEl = document.getElementById('hlt-bio-'+type);
+  if(_cardEl && typeof goldStreamDocking==='function') goldStreamDocking(_cardEl);
+
+  var msg = {
+    face:   '관상 스캔 → 대시보드 생체 분석에서 관상(얼굴) 스캔을 실행하세요.',
+    palm:   '손금 스캔 → 대시보드 생체 분석에서 손금 스캔을 실행하세요.',
+    tongue: '혀 스캔 → 대시보드 생체 분석에서 혀 스캔을 실행하세요.',
+    breath: '호흡 측정 → 이 페이지 아래 4·7·8 호흡 가이드를 이용하세요.',
+    temp:   '온도 리듬 체크 → 이 페이지 아래 스마트폰 파지 측정을 이용하세요.'
+  };
+  var bfd = window._bioFinalData || {};
+  var HV  = window._HV || {};
+  var scores = {
+    // ▼ C-60 정직 통일: 측정 안 되면 가짜 floor 없이 0 (손바닥과 동일 기준) ▼
+    face:   (bfd.fci>0 ? Math.min(95,bfd.fci) : (HV.v4>0?HV.v4:0)),
+    palm:   (bfd.bli>0 ? bfd.bli : (bfd.palmScore>0 ? bfd.palmScore : (HV.v5>0 ? HV.v5 : ((window._bioSkinData&&window._bioSkinData.palm&&window._bioSkinData.palm.bli>0) ? window._bioSkinData.palm.bli : ((window._c24CompState&&window._c24CompState.images&&window._c24CompState.images.hand_palm&&window.CGOFULI_HEALTH_CONST) ? CGOFULI_HEALTH_CONST.hand_palm_base : 0))))),
+    tongue: ((window._bioSkinData&&window._bioSkinData.tongue&&HV.tScore>0) ? HV.tScore : 0),
+    breath: (HV.bScore>0 ? HV.bScore : 0),
+    temp:   (HV.tmpScore>0 ? HV.tmpScore : 0)
+  };
+  var sc = scores[type];
+  var info = sc>0 ? '현재 점수: '+sc+'점' : '아직 측정 전입니다.';
+  alert('🧬 '+{face:'안면 생기 톤',palm:'손바닥 (BLI)',tongue:'혀 (체질)',breath:'4·7·8 호흡',temp:'온기·에너지'}[type]+'\n'+info+'\n\n'+msg[type]);
+}
+/* 함수 안 지역문 — 추출 오류로 빠져나온 것 제거 */
+/* 함수 안 지역문 — 추출 오류로 빠져나온 것 제거 */
+/* 함수 안 지역문 — 추출 오류로 빠져나온 것 제거 */
+function hltOrgPop(idx){
+  var orgList = window._orgList;
+  if(!orgList || !orgList[idx]) return;
+  var o = orgList[idx];
+  var seed = window._hltSeed || 12345;
+  var oh   = window._hltOh  || '토';
+  var r    = window.calcResult || {};
+  var np   = window._nasaPlanets || {};
+  var _bfd = window._bioFinalData || {};
+  var bio  = window.appState && window.appState.bio ? window.appState.bio : {};
+  var lv   = o.sc>=75?{lbl:'양호',c:'#34d399',bg:'rgba(52,211,153,.08)'}
+            :o.sc>=60?{lbl:'보통',c:'#fbbf24',bg:'rgba(251,191,36,.08)'}
+            :o.sc>=45?{lbl:'주의',c:'#f97316',bg:'rgba(249,115,22,.08)'}
+                     :{lbl:'위험',c:'#f87171',bg:'rgba(248,113,113,.08)'};
+
+  // ── 50대 역학 중별 이 장부에 미치는 영향 데이터 ──────────
+  var ohK={목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var orgOhMap={
+    '간(肝)':'목','담(膽)':'목','심장(心)':'화','소장(小腸)':'화',
+    '비장(脾)':'토','위장(胃)':'토','폐(肺)':'금','대장(大腸)':'금',
+    '신장(腎)':'수','방광(膀胱)':'수','심포(心包)':'화','삼초(三焦)':'화'
+  };
+  var orgOh = orgOhMap[o.n] || oh;
+  var isWeak = (orgOh === oh);
+  var ohColors={목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#a78bfa',수:'#38bdf8'};
+  var orgColor = ohColors[orgOh] || o.col;
+
+  // 50대 역학 중 각각의 설명 생성
+  var marsR=np.mars&&np.mars.retro, satR=np.saturn&&np.saturn.retro, jupG=np.jupiter;
+  var now18=new Date();
+  var phIdx=Math.floor((Math.floor((now18-(new Date(now18.getFullYear(),0,0)))/86400000)%30)/3.75)%8;
+  var moonPh=['신월','초승','상현','상현보름','보름','하현보름','하현','그믐'][phIdx];
+  var sj18=['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'][Math.floor((now18.getHours()+1)/2)%12];
+
+  // 오행 취약/보강 공통 텍스트
+  // ── 막둥이 미션12 처방전 DB 연결 (콘텐츠 도착 시 자동 적용) ──
+  var _orgPrescription = null;
+  if(window._ORG_PRESCRIPTION && window._ORG_PRESCRIPTION[orgOh]){
+    _orgPrescription = window._ORG_PRESCRIPTION[orgOh][o.n] ||
+                       window._ORG_PRESCRIPTION[orgOh]['default'];
+  }
+
+  var ohWeakTxt = isWeak
+    ? '사주 지배 오행 <b style="color:'+orgColor+'">'+ohK[orgOh]+'('+orgOh+')</b>이 이 장기를 관장합니다. 오행 과잉으로 인한 기능 항진 → 소진 패턴이 나타납니다.'
+    : '현재 오행 에너지와 이 장기의 오행이 <b>'+ohK[orgOh]+'('+orgOh+')</b>로 일치하지 않아 외부 지원 없이 자체 에너지로 유지 중입니다.';
+
+  // 18개 항목 정의
+  var items18 = [
+    {ico:'🔴',lb:'사주명리',
+     tx: isWeak
+       ? '일간 오행 '+ohK[oh]+'('+oh+')이 '+o.n+' 계통을 주관합니다. 세운(歲運)과의 충·극이 겹치는 시기에 가장 예민해지기 쉽습니다. '+(o.sc<65?'현재 에너지가 낮아 주의가 필요합니다.':'현재는 비교적 안정적입니다.')
+       : '지배 오행('+oh+')과 이 장기 오행('+orgOh+')이 '+(oh===orgOh?'일치':'상생·상극 관계')+'입니다. 사주 구조상 '+(o.sc<65?'간접적 영향을 받고 있습니다.':'에너지 지원을 받고 있습니다.')},
+    {ico:'🟣',lb:'자미두수',
+     tx:'질액궁(疾厄宮) 분석 결과 '+o.n+' 계통과 연관된 주성 에너지가 '+(o.sc<70?'약화':'활성')+'되어 있습니다. '+(o.sc<65?'귀인성(貴人星)의 지원이 부족한 상태입니다.':'복덕궁 에너지가 이 장기를 보호하고 있습니다.')},
+    {ico:'🔵',lb:'기문둔갑',
+     tx:'현재 시국 에너지장에서 '+o.n+'에 해당하는 방위 문(門)이 '+(o.sc<65?'사문(死門)·상문(傷門) 영향권에 있습니다. 에너지 소통이 막혀 있는 상태입니다.':'개문(開門)·생문(生門) 에너지를 받고 있습니다. 에너지 흐름이 원활합니다.')},
+    {ico:'🟢',lb:'구성기학',
+     tx:'본명성 에너지와 '+o.n+' 오행('+ohK[orgOh]+')의 상호작용을 분석하면 '+(o.sc<65?'현재 운로(運路)에서 이 장기가 에너지 지원을 받지 못하는 시기입니다.':'길성(吉星) 에너지가 이 장기를 보완하고 있습니다.')},
+    {ico:'🟠',lb:'주역 64괘',
+     tx:o.n+' 기운과 현재 괘상(卦象)이 '+(o.sc<65?'소통·정체를 나타내는 괘로 에너지 막힘이 예상됩니다. 변화를 통한 돌파가 필요합니다.':'순환·성장을 나타내는 괘로 자연적 회복력이 작동 중입니다.')},
+    {ico:'🟡',lb:'수비학 생명수',
+     tx:'생명수 진동이 '+o.n+'의 고유 주파수와 '+(o.sc<65?'불협화음 상태입니다. 솔페지오 '+(orgOh==='목'?'528Hz':orgOh==='화'?'417Hz':orgOh==='토'?'396Hz':orgOh==='금'?'741Hz':'852Hz')+' 음악으로 공명을 회복하세요.':'조화 상태입니다. 현재 주파수 에너지가 이 장기를 지지하고 있습니다.')},
+    {ico:'⚪',lb:'성명학 파동',
+     tx:'이름 음가의 진동이 '+o.n+' 오행('+ohK[orgOh]+')에 '+(o.sc<65?'약화 영향을 주고 있습니다. 이름을 소리 낼 때 이 장기 에너지가 소모됩니다.':'보강 에너지를 공급하고 있습니다.')},
+    {ico:'♈',lb:'태양궁 점성술',
+     tx:(np.moon?'달자리 에너지':'태양궁 에너지')+'가 '+o.n+' 계통과 '+(o.sc<65?'긴장 각도(스퀘어·오포지션)를 형성 중입니다. 행성 에너지 보정이 필요합니다.':'조화 각도(트라인·섹스타일)를 형성하여 보호 에너지를 방출하고 있습니다.')},
+    {ico:'🛰️',lb:'NASA 트랜짓',
+     tx:marsR?'화성 역행 중 — '+o.n+' 계통의 활력·혈류 에너지가 내면으로 향해 기능 저하가 나타납니다.'
+       :satR?'토성 역행 중 — '+o.n+' 구조적 기능 약화. 만성화 주의가 필요합니다.'
+       :jupG?'목성 활성 — '+o.n+' 면역·회복 에너지가 강화되는 시기입니다.'
+       :'현재 행성 에너지 균형 상태 — '+o.n+' 에너지에 특별한 간섭 없음.'},
+    {ico:'⚡',lb:'육임신살',
+     tx:o.sc<60?'현재 흉살 에너지가 '+o.n+' 계통을 압박하고 있습니다. 신살 에너지가 소멸되는 시기까지 과로를 피하세요.'
+       :'현재 길신 에너지가 활성화되어 '+o.n+' 회복력이 상승하는 시기입니다.'},
+    {ico:'🏡',lb:'풍수지리',
+     tx:o.n+' 오행('+ohK[orgOh]+') 방위의 공간 에너지가 '+(o.sc<65?'차단되거나 약화된 환경입니다. 해당 방위 정리·청소가 도움됩니다.':'활성화된 환경입니다. 현재 생활 공간이 이 장기를 지원합니다.')},
+    {ico:'✡️',lb:'카발라 수비학',
+     tx:'세피로트 에너지 흐름에서 '+o.n+' 에너지 센터가 '+(o.sc<65?'막혀 있습니다. 해당 구체 명상으로 에너지 통로를 개방하세요.':'원활하게 개통되어 있습니다.')},
+    {ico:'🏛️',lb:'하우스 시스템',
+     tx:'현재 행성 트랜짓이 '+o.n+' 관련 하우스에 '+(o.sc<65?'긴장 에너지를 형성하고 있습니다. 6하우스(건강궁) 에너지 점검이 필요합니다.':'활성화 에너지를 보내고 있습니다.')},
+    {ico:'🌀',lb:'태을신수',
+     tx:'현재 '+sj18+' 태을구궁 에너지가 '+o.n+' 오행('+ohK[orgOh]+')과 '+(o.sc<65?'상극 관계입니다. 이 시진에 해당 장기 과로를 피하세요.':'상생 관계입니다. 현재 시진 에너지가 이 장기를 보강합니다.')},
+    {ico:'🎴',lb:'타로',
+     tx: (np && np.moon) 
+       ? moonPh+'('+['신월','초승','상현','상현보름','보름','하현보름','하현','그믐'][phIdx]+') — '+o.n+' 에너지가 '+(o.sc<65?'달이 기우는 시기와 겹쳐 해독·배출 기능이 저하될 수 있습니다.':'달 위상 에너지와 조화를 이루고 있습니다.')
+       : '⏳ NASA 달 위상 데이터 수신 중 — 분석 대기'},
+    {ico:'👤',lb:'관상 12궁',
+     tx: (window._baiScanned || (_bfd && _bfd.fci>0))
+       ? o.n+' 계통에 해당하는 얼굴 부위의 기색이 '+(o.sc<65?'어둡거나 탁한 경향이 감지됩니다. 해당 부위 지압과 마사지가 도움됩니다.':'밝고 맑은 상태입니다. 기혈 순환이 원활합니다.')
+       : '🔒 CGO-Bio 관상 스캔 미완료 — 대시보드에서 관상 분석을 먼저 진행해주세요'},
+    {ico:'✋',lb:'손금 에너지',
+     tx: (window._baiScanned || (_bfd && _bfd.bli>0))
+       ? '손바닥 '+o.n+' 관련 반사구(反射區)의 에너지가 '+(o.sc<65?'약화되어 있습니다. 해당 반사구 지압으로 에너지를 자극하세요.':'충분히 활성화되어 있습니다.')
+       : '🔒 CGO-Bio 손금 스캔 미완료 — 대시보드에서 손금 분석을 먼저 진행해주세요'},
+    {ico:'👅',lb:'혀 색·태 관찰',
+     tx: (window._baiScanned || (_bfd && _bfd.tongue))
+       ? '혀의 색상·설태 분석에서 '+o.n+' 계통이 '+(o.sc<65?'컨디션 저하 경향이 관찰됩니다. 혀 색상이 창백하거나 설태가 두꺼우면 관리가 권장됩니다.':'정상 범위 내에 있습니다.')
+       : '🔒 혀 관찰 미완료 — 혀 관찰을 먼저 진행해주세요'}
+  ];
+
+  // 보강 방법 (장기별)
+  var orgAdvice = {
+    '간(肝)':    {food:'녹색 채소·매실·결명자차·브로콜리',exercise:'스트레칭·요가 — 근육·인대 이완',check:'간기능(ALT·AST·GGT), 복부 초음파'},
+    '담(膽)':    {food:'민들레차·오이·레몬수 — 담즙 분비 촉진',exercise:'걷기·가벼운 유산소 — 담낭 수축 활성',check:'복부 초음파(담석), 담낭 기능 검사'},
+    '심장(心)':  {food:'산사(山楂)·홍삼·오메가3·토마토',exercise:'걷기·수영 — 심폐 무리 없이',check:'규칙적인 운동과 균형 잡힌 식사'},
+    '소장(小腸)':{food:'생강차·위장 친화적 발효식품',exercise:'식후 10분 걷기',check:'소장 내시경, 소화 기능 검사'},
+    '비장(脾)':  {food:'고구마·단호박·대추·생강 — 비위 보강',exercise:'태극권·식후 산책',check:'규칙적인 수면·영양 관리'},
+    '위장(胃)':  {food:'양배추즙·마·생강차 — 위 점막 보호',exercise:'식후 10~20분 걷기, 복부 마사지',check:'위내시경, 헬리코박터 검사'},
+    '폐(肺)':    {food:'도라지·배·무·은행 — 폐 기운 보강',exercise:'복식 호흡 15분/일, 수영',check:'폐기능 검사, 흉부 X-ray'},
+    '대장(大腸)':{food:'식이섬유(고구마·양배추·바나나), 요거트',exercise:'아침 공복 걷기·복부 마사지',check:'대장내시경, 장내 세균 검사'},
+    '신장(腎)':  {food:'검은콩·미역·두충차 — 신장 보강',exercise:'족욕·수영·신장 지압',check:'수분 섭취·나트륨 관리'},
+    '방광(膀胱)':{food:'옥수수수염차·수박·크랜베리',exercise:'케겔 운동·족욕',check:'요검사, 방광 초음파'},
+    '심포(心包)':{food:'연자육·산조인·오미자 — 심신 안정',exercise:'명상·요가·이완 호흡',check:'스트레스 지수 검사, 심박변이도(HRV)'},
+    '삼초(三焦)':{food:'율무차·생강·계피 — 삼초 기운 순환',exercise:'전신 스트레칭·온수 반신욕',check:'체온 조절 기능, 내면 탄력성 검사'}
+  };
+  var adv = orgAdvice[o.n] || {food:'균형 잡힌 자연식 위주',exercise:'규칙적 유산소 운동',check:'정기 건강검진 권장'};
+
+  // ── 팝업 HTML 조립 ──────────────────────────────────
+  var body = '';
+
+  // 상단 점수 배너
+  body += '<div style="background:'+lv.bg+';border:1px solid '+o.col+'33;border-radius:14px;padding:16px;margin-bottom:14px;text-align:center">'
+    + '<div style="font-size:13px;color:'+o.col+';font-weight:700;margin-bottom:6px">'+o.ico+' '+o.n+'</div>'
+    + '<div style="font-size:52px;font-weight:900;color:'+o.col+';line-height:1;font-family:Orbitron,sans-serif">'+o.sc+'</div>'
+    + '<div style="font-size:11px;color:rgba(240,230,200,0.8);margin:4px 0 8px">/ 100 · 건강 지수</div>'
+    + '<div style="background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden">'
+    + '<div style="height:100%;background:'+o.col+';border-radius:6px;width:'+o.sc+'%;transition:width 1s"></div>'
+    + '</div>'
+    + '<div style="margin-top:8px;display:inline-block;padding:4px 14px;background:'+lv.bg+';border:1px solid '+lv.c+'66;border-radius:20px;font-size:12px;font-weight:700;color:'+lv.c+'">'+lv.lbl+' · 관리 우선도 '+o.risk+'%</div>'
+    + (o.isWeak ? '<div style="margin-top:6px;font-size:10px;color:'+orgColor+'">⚠️ 사주 지배 오행 집중 케어 부위</div>' : '')
+    + '</div>';
+
+  // 50대 역학 중 근거 섹션
+  body += '<div style="font-size:11px;font-weight:700;color:rgba(212,168,67,.8);letter-spacing:.08em;margin-bottom:10px">📐 50대 역학 중이 이 장기를 이렇게 분석합니다</div>';
+  body += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">';
+  items18.forEach(function(it){
+    var isNeg = o.sc < 65;
+    var itColor = isNeg ? '#f97316' : '#34d399';
+    body += '<div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:2px solid '+(isNeg?'rgba(249,115,22,.4)':'rgba(52,211,153,.3)')+'">'
+      + '<span style="font-size:15px;flex-shrink:0">'+it.ico+'</span>'
+      + '<div><div style="font-size:10px;color:rgba(212,168,67,.6);font-weight:600;margin-bottom:3px">'+it.lb+'</div>'
+      + '<div style="font-size:12px;color:#cbd5e1;line-height:1.7">'+it.tx+'</div></div>'
+      + '</div>';
+  });
+  body += '</div>';
+
+  // 보강 가이드 3가지
+  body += '<div style="font-size:11px;font-weight:700;color:rgba(52,211,153,.8);letter-spacing:.08em;margin-bottom:10px">💊 '+o.n+' 보강 가이드</div>';
+  body += '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px">';
+  body += '<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:11px 13px"><div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px">🥗 추천 식품·한방</div><div style="font-size:12px;color:#6ee7b7;line-height:1.7">'+adv.food+'</div></div>';
+  body += '<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:11px 13px"><div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:4px">🏃 운동 가이드</div><div style="font-size:12px;color:#fde68a;line-height:1.7">'+adv.exercise+'</div></div>';
+  body += '<div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:11px 13px"><div style="font-size:10px;color:#38bdf8;font-weight:700;margin-bottom:4px">🏥 권장 검진</div><div style="font-size:12px;color:#7dd3fc;line-height:1.7">'+adv.check+'</div></div>';
+  body += '</div>';
+  body += '<div style="font-size:10px;color:rgba(255,255,255,.12);text-align:center;margin-top:6px">* 50대 역학 중 교차 분석 (참고용)</div>';
+
+  // 팝업 표시
+  var pt=_g('hlt-pop-title'); if(pt) pt.innerHTML = o.ico+' '+o.n+' — 50대 역학 중 분석';
+  var pb=_g('hlt-pop-body');  if(pb) pb.innerHTML = body;
+  var ov=_g('hlt-pop-ov');    if(ov) ov.style.display='block';
+  var pop=_g('hlt-pop');
+  if(pop){ pop.style.display='block'; setTimeout(function(){ pop.style.transform='translateY(0)'; }, 20); }
+  _cgoTransPopup('hlt-pop');
+}
+function hltCardTap(n){
+  var d=_HVC[n-1];
+  var sc=_HV.scores[n-1]||0;
+  var r=window.calcResult;
+  var seed=_hvds()+n*100;
+  var geo=window._hltGeo||{zone:'',latDesc:'',lngDesc:'',adj:0,lat:37.57,lng:126.98};
+  var oh2=(r&&r.domOh)||'토';
+  var lv=sc>=85?{t:'최상',c:'#34d399',bg:'rgba(52,211,153,.08)'}:sc>=75?{t:'양호',c:'#38bdf8',bg:'rgba(56,189,248,.08)'}:sc>=65?{t:'보통',c:'#fbbf24',bg:'rgba(251,191,36,.08)'}:sc>=50?{t:'주의',c:'#f97316',bg:'rgba(249,115,22,.08)'}:{t:'위험',c:'#f87171',bg:'rgba(248,113,113,.08)'};
+
+  var body='<div style="background:'+lv.bg+';border-radius:14px;padding:18px;margin-bottom:16px;text-align:center;border:1px solid '+d.c+'33">'
+    +'<div style="font-size:56px;font-weight:900;color:'+d.c+';line-height:1">'+sc+'</div>'
+    +'<div style="font-size:11px;color:rgba(240,230,200,0.85);margin:4px 0 10px">/ 100 · '+d.nm+' 건강 지수</div>'
+    +'<div style="background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden">'
+    +'<div style="height:100%;background:linear-gradient(90deg,'+d.c+','+d.c+'99);border-radius:6px;width:0%;transition:width 1s" data-w="'+sc+'"></div>'
+    +'</div>'
+    +'<div style="margin-top:8px;display:inline-block;padding:4px 14px;background:'+lv.bg+';border:1px solid '+lv.c+'66;border-radius:20px;font-size:12px;font-weight:700;color:'+lv.c+'">'+lv.t+'</div>'
+    +'</div>';
+
+  body+='<div style="font-size:13px;color:rgba(240,230,200,.75);line-height:1.9;padding:14px 16px;background:rgba(255,255,255,.03);border-radius:12px;border-left:3px solid '+d.c+';margin-bottom:16px">'+d.detail+'</div>';
+
+  if(geo.latDesc){
+    body+='<div style="margin-bottom:16px">'
+      +'<div style="font-size:11px;font-weight:700;color:#38bdf8;letter-spacing:.08em;margin-bottom:8px">🌍 출생지 지역 건강 영향 ('+geo.zone+')</div>'
+      +'<div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:12px 14px">'
+      +'<div style="font-size:12px;color:#cbd5e1;line-height:1.8;margin-bottom:8px">'+geo.latDesc+'</div>'
+      +'<div style="font-size:11px;color:#94a3b8;line-height:1.7">'+geo.lngDesc+'</div>'
+      +'<div style="margin-top:8px;padding:6px 10px;background:rgba(56,189,248,.1);border-radius:8px;font-size:11px;color:#38bdf8">'
+      +'📍 위도 '+geo.lat.toFixed(2)+'°N · 경도 '+geo.lng.toFixed(2)+'°E → 건강 지수 보정 '+(geo.adj>=0?'+':'')+geo.adj+'점 적용'
+      +'</div></div></div>';
+  }
+
+  var advices=[],sysName='',sysDetail='',weakOrgan='',foodAdvice='',exerciseAdvice='',checkupAdvice='';
+
+  if(n===1){
+    // ① 행성 트랜짓 — NASA 실시간
+    var np1=window._nasaPlanets||{};
+    var marsR1=np1.mars&&np1.mars.retro, satR1=np1.saturn&&np1.saturn.retro, jupG1=np1.jupiter&&!np1.jupiter.retro;
+    sysName='행성 트랜짓 · NASA 실시간 분석';
+    sysDetail='NASA 실시간 행성 궤도 데이터 직결 — 현재 화성(활력·염증), 토성(만성·구조), 목성(면역·확장), 수성(신경·소통) 에너지가 신체에 미치는 영향을 초단위로 분석합니다.'+(marsR1?' <b style="color:#f87171">현재 화성 역행 중 — 충동·염증 주의</b>':'')+(satR1?' <b style="color:#94a3b8">토성 역행 중 — 만성 관리 중요</b>':'')+(jupG1?' <b style="color:#34d399">목성 길상 — 면역 상승 기간</b>':'');
+    weakOrgan=marsR1?'근육·혈행·회복':satR1?'관절·뼈·만성':'심장 활력·면역';
+    foodAdvice=marsR1?'항염 식품(강황·생강·오메가3). 과열·자극적 음식을 피하세요.':satR1?'칼슘·마그네슘(두부·견과류·유제품). 관절 보강이 최우선입니다.':'항산화 식품(블루베리·녹차·석류). 면역 강화에 집중하세요.';
+    exerciseAdvice=marsR1?'격렬한 운동을 자제하고 요가·스트레칭으로 대체하세요.':satR1?'가벼운 걷기·수중 운동으로 관절 부담 없이 운동하세요.':'적당 강도 유산소로 면역계를 활성화하세요.';
+    checkupAdvice='행성 트랜짓은 매 순간 변화합니다. NASA JPL 실시간 데이터 기반 — 오늘의 행성 배치가 내일과 다릅니다.';
+    advices=['NASA 실시간 행성 트랜짓은 CGO-FULI의 핵심 역학으로, 20개 중 가중치 14점으로 최고 비중입니다.','행성 역행은 해당 에너지가 외부가 아닌 내면으로 향하는 시기입니다. 무리한 외부 활동보다 내적 정비에 집중하세요.','목성이 길상 구간에 있으면 면역과 회복력이 강화됩니다. 이 시기에 치료나 수술을 받는 것이 유리합니다.','토성 역행 기간에는 오래된 건강 문제가 재발하거나 만성화될 수 있습니다. 정기 검진을 앞당기세요.'];
+  } else if(n===2){
+    // ② 자미두수
+    var jd=_hvp(HDB.JAMI,seed);
+    sysName='자미두수 · '+jd.name+' 질액궁 분석';
+    sysDetail='실제 성좌의 광도·배치를 기반으로 기운 흐름을 봅니다. 명궁 주성 <b style="color:'+d.c+'">'+jd.name+'</b>이 질액궁(疾厄宮)과 형성하는 관계가 집중 케어 존을 결정합니다.';
+    weakOrgan='질액궁 기준 집중 케어 부위';
+    foodAdvice='보기(補氣): 인삼·황기·대추·구기자. 보혈(補血): 당귀·숙지황·흑임자. 익정(益精): 산수유·오미자.';
+    exerciseAdvice='기공(氣功) 수련, 태극권, 명상 호흡. 내기(內氣)를 강화하는 정적 운동을 권장합니다.';
+    checkupAdvice='체질에 관심이 있다면 한의원 등 전문기관에서 상담해 보세요.';
+    advices=jd.advices;
+  } else if(n===3){
+    // ③ 기문둔갑
+    var gd=_hvp(HDB.GMD,seed);
+    sysName='기문둔갑 · '+gd.gate+' 에너지장';
+    sysDetail='전리층·지자기 변화를 반영한 시공간 전략 역학입니다. 현재 문(門) <b style="color:'+d.c+'">'+gd.gate+'</b>의 에너지가 신체 각 부위에 미치는 영향을 분석합니다.';
+    weakOrgan='현재 기문 에너지 기준 집중 케어 존';
+    foodAdvice='현재 방위 에너지에 맞는 제철 식품 섭취. 동쪽 기운 → 녹색 발효식품, 서쪽 기운 → 흰색 담백한 식품.';
+    exerciseAdvice='기문 길방(吉方) 방향으로 산책·운동. 흉방(凶方)에서의 과격한 활동을 자제하세요.';
+    checkupAdvice='절기(節氣)에 맞춰 계절마다 생활 습관을 점검해 보세요.';
+    advices=gd.advices;
+  } else if(n===4){
+    // ④ 베딕 점성술
+    var AYANAMSA4=23.86;
+    var np4=window._nasaPlanets||{};
+    var sunSid4=np4.sun?((parseFloat(np4.sun.lon)-AYANAMSA4+360)%360):(seed*1.5%360);
+    var rashiNames4=['메샤(양자리)','브리샤바(황소자리)','미투나(쌍둥이자리)','카르카타(게자리)','심하(사자자리)','칸야(처녀자리)','툴라(천칭자리)','브리쉬치카(전갈자리)','다누(사수자리)','마카라(염소자리)','쿰바(물병자리)','미나(물고기자리)'];
+    var rashiHealth4=['💡 클리어 마인드 존 — 가벼운 산책으로 머리를 식혀 주세요','🌬️ 보이스 & 넥 라인 — 따뜻한 차로 목을 부드럽게','🍃 브리딩 존 — 어깨를 펴고 신선한 공기를 마셔 보세요','🍚 웰빙 소화 리듬 — 따뜻하고 부드러운 음식을 추천해요','❤️‍🔥 코어 에너지 밸런스 — 무리한 스케줄은 잠시 미뤄 두세요','🌱 이너 클렌징 존 — 유산균과 함께 편안한 하루를','💧 워터 밸런스 리듬 — 미지근한 물을 자주 마셔 주세요','🔄 이너 서큘레이션 — 하체를 따뜻하게 유지하세요','🚶 무브먼트 존 — 가벼운 스트레칭으로 하체를 풀어 주세요','🦴 스트롱 프레임 — 칼슘과 바른 자세를 유지하세요','💫 플로우 에너지 — 발목을 자주 돌려 주세요','🌊 릴렉스 존 — 족욕이나 가벼운 마사지가 이롭습니다'];
+    var dashaLords4=['목성','토성','수성','케투','금성','태양','달','화성','라후'];
+    var rIdx4=Math.floor(sunSid4/30)%12;
+    var dIdx4=_hvr(seed+4)%9;
+    sysName='베딕 점성술(Jyotish) · '+rashiNames4[rIdx4]+' × '+dashaLords4[dIdx4]+' 다샤';
+    sysDetail='항성황도(Sidereal) 기반 태양궁 <b style="color:'+d.c+'">'+rashiNames4[rIdx4]+'</b> — NASA 실측 좌표에서 아야남사(23.86°)를 보정하여 서양 점성술보다 천문 정합성이 높습니다. 현재 <b style="color:#c084fc">'+dashaLords4[dIdx4]+' 다샤</b> 운행 중.';
+    weakOrgan=rashiHealth4[rIdx4];
+    foodAdvice='나바그라하(9행성) 에너지 보강: 태양→밀·구리, 달→쌀, 화성→붉은 렌틸콩, 수성→녹두, 목성→강황, 금성→흰음식·유제품, 토성→검은 참깨·철분.';
+    exerciseAdvice='베딕 전통 건강법: 수리야 나마스카라(태양경배) 12회/일, 나디 쇼다나 호흡법(좌우 콧구멍 교대), 아유르베다 오일 마사지 주 2회.';
+    checkupAdvice='아야남사 보정 출생 천궁도 분석 — 베딕 점성사 상담 권장. 아유르베다 체질(바타·피타·카파)에 관심을 가져 보세요.';
+    advices=['베딕 점성술은 항성황도를 사용하므로 서양 별자리와 약 23~24° 차이납니다. NASA 실측 데이터를 아야남사로 보정합니다.','나바그라하(9행성) 중 현재 다샤 주성('+dashaLords4[dIdx4]+')의 영향이 가장 강합니다. 해당 행성을 강화하는 보석·색상·음식을 활용하세요.','베딕 건강 원칙: 해뜨기 전 기상(브라흐마무후르타), 규칙적 식사, 절기에 맞는 생활 리듬.','현재 라시('+rashiNames4[rIdx4]+')의 집중 케어 부위를 집중 관리하세요.'];
+  } else if(n===5){
+    // ⑤ 구성학
+    var kn5=(r&&r.kujusei)?(r.kujusei-1)%9+1:seed%9+1;
+    var kd5=HDB.KUSEI[kn5]||HDB.KUSEI[5];
+    sysName='구성기학 · '+kd5.name+' 건강';
+    sysDetail='지구 자전축·태양 고도각 기반 초단위 타이밍 역학입니다. 본명성 <b style="color:'+d.c+'">'+kd5.name+'</b>의 기운이 현재 운로와 공명하는 패턴을 분석합니다.';
+    weakOrgan='본명성 기준 집중 케어 부위';
+    foodAdvice='본명성 방위·오행에 맞는 제철 음식. 최소 가공된 자연 상태에 가까운 식품을 드세요.';
+    exerciseAdvice='본명성 방위 방향으로 걷기·등산. 실시간 태양 고도각이 높은 시간대(오전 10~11시)에 야외 활동이 최적입니다.';
+    checkupAdvice='봄엔 소화, 여름엔 활력, 가을엔 호흡, 겨울엔 수분 — 계절별 컨디션을 살펴보세요.';
+    advices=kd5.advices;
+  } else if(n===6){
+    // ⑥ 주역
+    var id6=_hvp(HDB.ICHING,seed);
+    sysName='주역(周易) · '+id6.name+' 64괘 분석';
+    sysDetail='우주 변화 패턴을 디지털 알고리즘으로 구현한 역학입니다. 현재 괘 <b style="color:'+d.c+'">'+id6.name+'</b>의 음양 변화가 신체 에너지 흐름에 미치는 영향을 NASA 행성 배치와 교차 분석합니다.';
+    weakOrgan='현재 괘 기준 변화 주목 부위';
+    foodAdvice='음양 균형 원리: 양(陽)이 강한 괘 → 음성 식품(채소·과일), 음(陰)이 강한 괘 → 양성 식품(생강·마늘·육류).';
+    exerciseAdvice='괘의 변화 방향: 양 기운 강할 때 활발한 운동, 음 기운 강할 때 휴식·명상 우선.';
+    checkupAdvice='효변(爻變) 시기(생활 습관이 크게 바뀌는 시기)에 컨디션을 점검해 보세요.';
+    advices=id6.advices;
+  } else if(n===7){
+    // ⑦ 태을신수 (실시간)
+    var gungList7=['一宮(坎·水)','二宮(坤·土)','三宮(震·木)','四宮(巽·木)','五宮(中·土)','六宮(乾·金)','七宮(兌·金)','八宮(艮·土)','九宮(離·火)'];
+    var gungHealth7=['수분 순환·뼈·청력 — 모발·냉기·허리 컨디션 관리','비위·소화기·면역 — 소화·대사 컨디션 관리','간담·근육·눈·신경 — 눈 피로·근육통 주의','신경계·호흡기 — 불면·두통·신경과민 주의','전신 균형 에너지 — 면역과 소화기 관리','호흡·피부·코 — 호흡·피부 컨디션 관리','호흡·장·구강 — 소화와 구강 컨디션 관리','위장·관절·피부 — 복통·관절통 주의','심장·혈관·눈·뇌 — 긴장·수면 관리'];
+    var now7=new Date();
+    var minSeed7=now7.getHours()*60+now7.getMinutes();
+    var gIdx7=(_hvr(seed+7+minSeed7)%9);
+    sysName='태을신수 · '+gungList7[gIdx7]+' (실시간)';
+    sysDetail='거대 행성 주기 기반 거시적 흐름 분석 역학입니다. <b style="color:#e879f9">'+gungList7[gIdx7]+'</b> 에너지가 현재 활성화되어 있습니다. <b style="color:rgba(240,230,200,.6)">2시간 고정 시진이 아닌 분·초 단위 실시간 우주 에너지를 반영합니다.</b>';
+    weakOrgan=gungList7[gIdx7]+' — '+gungHealth7[gIdx7].split('—')[0].trim();
+    foodAdvice=['수기→검은음식(흑임자·미역·검은콩)','토기→노란음식(고구마·단호박)','목기→녹색채소(시금치·케일)','목기→녹색채소','토기→노란음식','금기→흰음식(도라지·배·무)','금기→흰음식','토기→노란음식','화기→붉은음식(토마토·홍삼)'][gIdx7];
+    exerciseAdvice='실시간 구궁 에너지 기준 — 수기: 족욕·수영, 토기: 산책·태극권, 목기: 요가·스트레칭, 금기: 등산·호흡운동, 화기: 걷기·명상.';
+    checkupAdvice='태을구궁 에너지에 맞는 집중 케어 부위('+gungHealth7[gIdx7].split('—')[0].trim()+') 정기 검진. 절기 전환점에 종합 검진.';
+    advices=[gungHealth7[gIdx7],'태을신수는 실시간(분 단위)으로 바뀌는 우주 에너지를 반영합니다. 지금 이 순간의 에너지를 최대한 활용하세요.','태을구궁 에너지는 오행과 연결되어 신체 각 장기에 영향을 미칩니다.','현재 궁의 에너지가 길(吉)하면 치료·수술에 좋고, 흉(凶)하면 안정과 휴식을 우선하세요.'];
+  } else if(n===8){
+    // ⑧ 사주명리
+    var ohNames8={목:'木 — 근육·눈·신경',화:'火 — 열정·순환·표현',토:'土 — 비위·소화기·입·근육',금:'金 — 호흡·피부·코·뼈',수:'水 — 신장·방광·뼈·귀·생식기'};
+    sysName='사주명리 · '+oh2+'('+{목:'木',화:'火',토:'土',금:'金',수:'水'}[oh2]+') 오행 건강';
+    sysDetail='현재 우주 오행 에너지 밀도를 보정하는 핵심 역학입니다. 지배 오행 <b style="color:'+d.c+'">'+oh2+'('+{목:'木',화:'火',토:'土',금:'金',수:'水'}[oh2]+')</b>: '+(ohNames8[oh2]||'');
+    weakOrgan=ohNames8[oh2]||'';
+    foodAdvice=oh2==='목'?'신맛(식초·레몬·매실), 녹색 채소, 결명자차':oh2==='화'?'쓴맛(여주·씀바귀), 붉은 음식, 연자육':oh2==='토'?'단맛(고구마·대추), 노란 음식, 생강':oh2==='금'?'매운맛(마늘·도라지·배), 흰 음식':'짠맛(미역·다시마), 검은 음식, 두충차';
+    exerciseAdvice=oh2==='목'?'스트레칭·요가·달리기':oh2==='화'?'걷기·수영 — 심장 무리 없이':oh2==='토'?'식후 산책·태극권':oh2==='금'?'수영·호흡운동·등산':'수영·족욕·수중운동';
+    checkupAdvice=oh2==='목'?'간기능(ALT·AST), 담낭 초음파, 안과':oh2==='화'?'규칙적인 운동과 균형 잡힌 식사':oh2==='토'?'소화·면역 컨디션 살피기':oh2==='금'?'폐기능, 대장내시경':'신장기능, 요검사, 골밀도';
+    advices=(HDB.SAJU[oh2]||HDB.SAJU['토']).advices;
+  } else if(n===9){
+    // ⑨ 전체 차트
+    var signs9=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+    var np9b=window._nasaPlanets||{};
+    var ascIdx9=np9b.moon?Math.floor(((np9b.moon.lon+90)%360)/30)%12:seed%12;
+    sysName='전체 차트 · 탄생 천문 좌표 분석';
+    sysDetail='탄생 시점의 10개 천체 정밀 천문 좌표가 평생 건강 패턴의 청사진을 형성합니다. 상승궁 <b style="color:'+d.c+'">'+signs9[ascIdx9]+'</b>이 신체 외형과 체력을 나타냅니다.';
+    weakOrgan='탄생 차트 기준 집중 케어 하우스';
+    foodAdvice='탄생 차트 상승궁('+signs9[ascIdx9]+') 기준 체질 식품. 6번째 하우스(건강) 지배 행성의 에너지를 강화하는 식품을 우선 섭취하세요.';
+    exerciseAdvice='탄생 차트 상승궁 특성: 불의 별자리→활동적 운동, 흙의 별자리→지속성 운동, 공기→사교적 운동, 물→수영·유연성 운동.';
+    checkupAdvice='탄생 차트 6번째 하우스(건강), 8번째 하우스(재생)의 흐름을 살펴보세요.';
+    advices=['탄생 차트는 평생 변하지 않는 선천적 건강 설계도입니다. 이를 이해하면 자신의 집중 케어 존을 알 수 있습니다.','10개 행성 모두가 건강에 영향을 미치지만, 특히 태양(활력), 달(면역), 화성(에너지), 토성(지구력)이 핵심입니다.','탄생 차트와 현재 트랜짓의 교차점에서 건강 위기가 발생할 가능성이 높습니다.','정기적으로 탄생 차트 점성술사와 상담하여 예방적 건강 관리를 받는 것이 권장됩니다.'];
+  } else if(n===10){
+    // ⑩ 태양궁 점성술
+    var signs10=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+    var np10b=window._nasaPlanets||{};
+    var moonSign10=np10b.moon?signs10[Math.floor(np10b.moon.lon/30)%12]:signs10[seed%12];
+    var healths10={양자리:'두통·긴장·안면 피로',황소자리:'목·성대·인후 컨디션',쌍둥이자리:'폐·신경피로·과호흡',게자리:'위·소화기·감정성식욕',사자자리:'심장·맥박·과로',처녀자리:'장·소화기 예민',천칭자리:'신장·허리·수분 관리',전갈자리:'생식기·방광·비뇨기',사수자리:'고관절·하체 컨디션',염소자리:'무릎·뼈·관절',물병자리:'순환·발목·신경',물고기자리:'발·림프·과민면역'};
+    sysName='태양궁 점성술 · 달자리 '+moonSign10+' 건강';
+    sysDetail='태양 활동 주기 기반 자아 분석 역학입니다. 달자리 <b style="color:'+d.c+'">'+moonSign10+'</b>은 감정과 면역 리듬을 나타냅니다. NASA 태양 활동 데이터와 연동하여 실시간 보정합니다.';
+    weakOrgan=healths10[moonSign10]||'면역·호르몬 균형';
+    foodAdvice='달자리 '+moonSign10+' 기준 집중 케어 존 보강 식품. 달의 위상에 맞춰 보름달에는 풍부하게, 신월에는 절식·디톡스를 권장합니다.';
+    exerciseAdvice='달의 위상 기반 운동: 상현→강도 높이기, 보름→최대 활동, 하현→강도 낮추기, 신월→휴식·스트레칭.';
+    checkupAdvice='달 주기(29.5일)에 맞춰 한 달에 한 번 건강 상태를 점검하세요. 생리 주기, 수면 리듬, 감정 상태를 기록하면 패턴이 보입니다.';
+    advices=['달자리는 면역 리듬과 감정 건강을 좌우합니다. 달자리 '+moonSign10+'의 집중 케어 존('+healths10[moonSign10]+')를 집중 관리하세요.','태양 흑점 활동이 높은 시기에는 면역계가 교란될 수 있습니다.','달의 위상에 맞춘 생활 리듬이 호르몬과 면역계를 최적화합니다.','NASA 태양풍·지자기 폭풍 경보 시에는 충분한 수분 섭취와 휴식을 늘리세요.'];
+  } else if(n===12){
+    var sm=_hvp(HDB.SEONG,seed);
+    sysName='성격·심리 건강 · '+sm.type;
+    sysDetail='성격 유형 <b style="color:'+d.c+'">'+sm.type+'</b>이 건강에 미치는 고유한 패턴을 분석합니다. 마음이 몸을 만듭니다.';
+    weakOrgan='심리-신체 연결 집중 케어 존';
+    foodAdvice='스트레스 완충 영양소: 마그네슘(견과류·다크초콜릿), 비타민B군(통곡물·달걀), 트립토판(바나나·우유) 충분 섭취.';
+    exerciseAdvice='외향형 → 팀 스포츠·댄스, 내향형 → 요가·수영·달리기. 운동은 기분 전환에 큰 도움이 됩니다.';
+    checkupAdvice='마음 상태를 주기적으로 돌아보세요. 힘들 땐 가까운 사람이나 상담 전문가와 이야기 나눠보세요.';
+    advices=sm.advices;
+
+  } else if(n===13){
+    var signs13=['양자리','황소자리','쌍둥이자리','게자리','사자자리','처녀자리','천칭자리','전갈자리','사수자리','염소자리','물병자리','물고기자리'];
+    var signHealth={
+      양자리:'머리·긴장 부담이 쌓이기 쉬워요. 분노와 충동을 다스리는 휴식이 중요합니다.',
+      황소자리:'목과 성대에 부담이 가기 쉬워요. 과식을 줄이고 규칙적 운동이 핵심입니다.',
+      쌍둥이자리:'호흡과 신경이 예민해지기 쉬워요. 깊은 호흡으로 마음을 가라앉혀 보세요.',
+      게자리:'소화가 예민해지기 쉬워요. 감정 기복이 컨디션에 바로 나타납니다.',
+      사자자리:'가슴과 등에 긴장이 쌓이기 쉬워요. 과로와 마음의 상처를 살펴보세요.',
+      처녀자리:'장과 신경이 예민해지기 쉬워요. 스트레스가 소화에 바로 영향을 줍니다.',
+      천칭자리:'허리와 피부에 부담이 가기 쉬워요. 수분을 충분히 드세요.',
+      전갈자리:'해독과 순환에 신경 쓰면 좋아요. 물과 채소를 충분히 드세요.',
+      사수자리:'고관절과 허벅지에 부담이 가기 쉬워요. 무리한 확장을 줄여 보세요.',
+      염소자리:'무릎과 관절에 부담이 가기 쉬워요. 칼슘과 햇볕이 도움이 됩니다.',
+      물병자리:'순환과 발목에 부담이 가기 쉬워요. 규칙적인 생활 리듬이 도움이 됩니다.',
+      물고기자리:'발과 순환이 예민해지기 쉬워요. 수면의 질 관리가 핵심입니다.'
+    };
+    var np13=window._nasaPlanets;
+    var moonSign13=np13&&np13.moon?signs13[Math.floor(np13.moon.lon/30)%12]:signs13[_hvr(seed+13)%12];
+    var sunSign13=signs13[_hvr(seed+130)%12];
+    sysName='태양궁 점성술 · '+sunSign13+' × 달자리 '+moonSign13;
+    sysDetail='태양궁 <b style="color:'+d.c+'">'+sunSign13+'</b> × 달자리 <b style="color:#94a3b8">'+moonSign13+'</b> — 두 에너지의 교차점에서 건강 집중 케어 존가 드러납니다.';
+    weakOrgan=sunSign13+' — '+(signHealth[sunSign13]||'').split('.')[0];
+    foodAdvice='항산화 식품(블루베리·석류·녹차), 오메가3(등푸른생선·아마씨), 마그네슘(다크초콜릿·아몬드) 충분 섭취.';
+    exerciseAdvice='달자리 '+moonSign13+' 기준 — 보름달 전후 에너지가 높을 때 유산소 운동, 신월 전후 회복기에는 요가·명상.';
+    checkupAdvice='태양궁 관련 부위를 꾸준히 관리하세요. '+sunSign13+' 기준 관련 장기 1년 1회 이상 체크.';
+    advices=[signHealth[sunSign13]||'', signHealth[moonSign13]||'','달이 차면 체액이 증가하고 달이 이지러지면 해독이 활발해집니다. 달 주기에 맞춰 식이와 운동을 조절하세요.','보름달 3일 전후: 수분 섭취 증가, 림프 마사지 권장. 신월: 단식·해독 프로그램 시작에 최적.'];
+
+  } else if(n===14){
+    var np14=window._nasaPlanets||{};
+    var marsR=np14.mars&&np14.mars.retro;
+    var satR=np14.saturn&&np14.saturn.retro;
+    var jupG=np14.jupiter&&(np14.jupiter.lon>60&&np14.jupiter.lon<240);
+    sysName='NASA 행성 트랜짓 · 실시간 에너지장';
+    sysDetail='현재 실시간 행성 위치 기반 — '+(marsR?'🔴 화성 역행: 에너지 소진 경고':satR?'🪐 토성 역행: 만성 피로 주의':jupG?'🟡 목성 길상: 면역·회복력 상승':'⚖️ 행성 균형 상태')+'. 생체 에너지와 행성 에너지장이 교차 분석됩니다.';
+    weakOrgan=marsR?'근골격·긴장 (화성 역행)':satR?'뼈·관절·피부 (토성 역행)':jupG?'면역·간 (목성 활성)':'전신 균형 상태';
+    foodAdvice=marsR?'항염증 식품(강황·생강·오메가3), 과격한 운동 자제':satR?'칼슘·단백질(뼈·피부 관리), 충분한 수면':jupG?'간 기능 음식(민들레차·밀크씨슬), 단백질 보충':'제철 균형 식단 유지';
+    exerciseAdvice=marsR?'과격한 운동 금지 — 요가·명상·스트레칭으로 대체':satR?'저강도 지속 운동, 수영, 족욕':jupG?'유산소 운동 효과 극대화 시기 — 적극 활용':'평소 루틴 유지';
+    checkupAdvice='화성 역행 시: 중요한 결정은 미루기. 토성 역행 시: 뼈·관절 관리. 목성 활성 시: 새 건강 습관 시작에 최적.';
+    advices=[
+      marsR?'화성 역행 중 — 충동적 행동, 과격한 운동, 수술을 피하세요. 에너지 보존이 핵심입니다.':'화성 에너지 순행 중 — 적극적 운동과 새로운 도전에 좋은 시기입니다.',
+      satR?'토성 역행 중 — 뼈·관절·피부가 예민해지기 쉽습니다. 충분한 수면과 스트레스 관리가 필수입니다.':'토성 에너지 순행 — 구조와 규율을 강화하는 시기입니다.',
+      jupG?'목성 길상 — 면역력과 회복력이 높아집니다. 건강 습관을 시작하기에 최적의 시기입니다.':'목성 에너지 점검 — 과잉(과식·과로) 없이 균형을 유지하세요.',
+      '행성 에너지는 5분마다 재계산됩니다. 실시간 데이터를 기반으로 건강 관리 타이밍을 최적화하세요.'
+    ];
+
+  } else if(n===15){
+    var yukList15=[
+      {n:'천을귀인(天乙貴人)',mod:8,organ:'전신 면역',food:'인삼·황기·대추 — 귀인 에너지로 면역 보강',advice:'귀인 도움으로 건강 회복력이 강한 시기입니다. 수술·치료 시작에 길합니다.'},
+      {n:'문창귀인(文昌貴人)',mod:5,organ:'뇌·신경계',food:'오메가3·레시틴·견과류 — 뇌 기능 강화',advice:'신경·뇌 기능이 활성화됩니다. 집중력 높은 작업과 정신 건강 관리에 좋습니다.'},
+      {n:'역마살(驛馬殺)',mod:-3,organ:'관절·허리',food:'마그네슘·칼슘 보충, 과로 금지',advice:'과로와 이동 피로가 누적됩니다. 충분한 수면과 관절 보호가 필수입니다.'},
+      {n:'도화살(桃花殺)',mod:-2,organ:'피부·혈액',food:'항산화 식품, 수분 충분 보충',advice:'피부·혈액 순환 불균형이 나타납니다. 스킨케어와 수분 관리가 중요합니다.'},
+      {n:'삼재살(三災殺)',mod:-6,organ:'면역·전신',food:'면역 강화 식품(표고버섯·마늘·생강), 정기검진 권장',advice:'면역 저하 주의 시기입니다. 무리한 계획보다 건강 보존에 집중하세요.'},
+      {n:'화개살(華蓋殺)',mod:3,organ:'정신·영적 에너지',food:'명상·호흡, 항산화 식품',advice:'영적 에너지가 강화됩니다. 명상과 호흡법으로 내면 면역을 보강하세요.'}
+    ];
+    var yd15=yukList15[_hvr(seed+15)%yukList15.length];
+    sysName='육임신살 · '+yd15.n;
+    sysDetail='현재 년주 신살 <b style="color:'+d.c+'">'+yd15.n+'</b>이 활성화되어 있습니다. 신살은 운의 흐름과 건강 에너지에 직접적인 영향을 미칩니다.';
+    weakOrgan=yd15.organ;
+    foodAdvice=yd15.food;
+    exerciseAdvice=yd15.mod>0?'에너지 상승 시기 — 새로운 운동 프로그램 시작에 적합합니다. 유산소+근력 병행.':'에너지 소모 주의 시기 — 저강도 운동(요가·명상·걷기)을 권장합니다.';
+    checkupAdvice='신살 에너지에 맞춰 집중 케어 존('+yd15.organ+') 정기 검진을 받으세요.';
+    advices=[yd15.advice,'신살은 운명이 아닌 에너지의 흐름입니다. 미리 알고 준비하면 길흉을 조절할 수 있습니다.','오행 보강 음식과 규칙적인 수면이 신살 에너지를 중화시킵니다.','현재 에너지 방향에 역행하지 않고, 흐름을 타는 것이 건강 보존의 핵심입니다.'];
+
+  } else if(n===16){
+    var sephirot16=['케테르(왕관)','호크마(지혜)','비나(이해)','헤세드(자비)','게부라(강인)','티페레트(균형)','네짜흐(승리)','호드(영광)','예소드(기반)','말쿠트(왕국)'];
+    var sephHealth=['신성 의식 활성 — 전신 면역 정점. 두통·빛 과민증 주의.','직관·우뇌 활성 — 뇌 기능 상승. 과도한 사고로 인한 피로 주의.','이해·좌뇌 강화 — 청각·귀 건강. 과부하 시 이명 주의.','자비·심장 에너지 활성 — 심장 활력 강화. 과도한 감정 소모 주의.','의지·근육 강화 — 면역 전사 에너지. 과도한 분노가 간에 영향.','균형·심폐 조화 — 에너지 중심. 전신 균형이 최고조인 상태.','감성·창의력 — 신장 에너지. 감정 억압 시 방광·신장 영향.','소통·폐 기능 — 호흡기 에너지. 언어 스트레스가 폐에 영향.','생명력·생식 에너지 — 하복부·생식기 건강. 과로 시 소진됨.','현실·골격 에너지 — 뼈·피부·발 건강. 지나친 물질 집착이 부담.'];
+    var r16=window.calcResult;
+    var ln16=(r16&&r16.lifeNum)?r16.lifeNum%10:_hvr(seed+16)%10;
+    sysName='카발라 수비학 · '+sephirot16[ln16];
+    sysDetail='생명수 기반 세피로트 <b style="color:'+d.c+'">'+sephirot16[ln16]+'</b> — 카발라 생명나무(Tree of Life)에서 현재 에너지가 위치한 구체입니다.';
+    weakOrgan=sephirot16[ln16]+' 기준 집중 케어 존';
+    foodAdvice='생명수 '+((ln16)+1)+'번 에너지 보강: 항산화 식품(블루베리·석류), 미네랄(마그네슘·아연), 허브차(캐모마일·라벤더).';
+    exerciseAdvice='카발라 에너지 정렬: 명상(세피로트 시각화), 호흡법, 요가. 내면 에너지 흐름을 의식하며 운동하세요.';
+    checkupAdvice=sephHealth[ln16].split('.')[0]+' — 해당 부위 정기 검진 권장.';
+    advices=[sephHealth[ln16],'카발라 생명나무의 각 구체는 신체 에너지 센터(차크라)와 대응합니다. 에너지 균형이 건강의 열쇠입니다.','72개 천사 이름을 활용한 명상은 특정 세피로트 에너지를 강화합니다.','생명수와 세피로트 에너지는 매년 바뀝니다. 올해 에너지에 맞는 건강 관리를 하세요.'];
+
+  } else if(n===17){
+    var moonPhases17=['신월(씨앗·시작)','초승(발아·성장)','상현(도전·확장)','상현보름(가속·활력)','보름(충만·절정)','하현보름(해방·정화)','하현(성찰·회수)','그믐(휴식·재생)'];
+    var tarot17=['THE FOOL (새로운 시작)','THE HIGH PRIESTESS (직관)','THE EMPEROR (의지)','THE SUN (활력)','THE WORLD (완성)','THE HERMIT (내면 탐구)','JUDGEMENT (깨달음)','THE MOON (무의식)'];
+    var tarotHealth=['새로운 건강 습관 시작에 최적. 두려움 없이 변화를 시작하세요.','몸의 신호를 직관적으로 감지하세요. 내면의 목소리가 최고의 의사입니다.','의지력이 상승합니다. 운동·식단 루틴을 강력하게 구축할 시기입니다.','에너지·면역·기분이 최고조입니다. 중요한 치료·시술에 길한 시기입니다.','종합 에너지 피크. 무리 없이 최대한 활용하되, 과용은 금물입니다.','해독·배출의 시기. 가공식품·알코올·약물을 줄이고 정화 프로그램을 시작하세요.','만성 증상과 내면 패턴을 점검하세요. 오래된 습관을 내려놓을 때입니다.','충분한 휴식이 최고입니다. 수면을 최우선으로 하고 몸의 회복력을 믿어 보세요.'];
+    var now17=new Date();
+    var dayOfYear17=Math.floor((now17-(new Date(now17.getFullYear(),0,0)))/86400000);
+    var phaseIdx=Math.floor((dayOfYear17%30)/3.75)%8;
+    sysName='타로 × 달위상 · '+moonPhases17[phaseIdx];
+    sysDetail='현재 달 위상 <b style="color:'+d.c+'">'+moonPhases17[phaseIdx]+'</b> × 아르카나 카드 <b style="color:#f59e0b">'+tarot17[phaseIdx]+'</b> — 달의 중력 변화가 체액, 호르몬, 감정 에너지에 직접 영향을 미칩니다.';
+    weakOrgan='달위상 기준 집중 케어 에너지';
+    foodAdvice=phaseIdx===4?'보름달: 수분·과일·채소 풍부하게. 해독 주스 권장.':phaseIdx===0?'신월: 단식·해독 시작 최적. 가벼운 식단으로 소화기 휴식.':'제철 자연식 위주. 달 위상에 맞춰 가벼운 날과 충분한 날을 조절하세요.';
+    exerciseAdvice=phaseIdx<4?'달이 차는 시기 — 운동 강도를 점진적으로 높이세요.':'달이 기우는 시기 — 강도를 낮추고 회복·스트레칭 중심으로.';
+    checkupAdvice='보름달 3일 전후는 몸의 리듬 변화를 관찰하기 좋습니다. 신월에는 새 습관을 시작해 보세요.';
+    advices=[tarotHealth[phaseIdx],'달의 인력은 지구 조석(潮汐)을 움직입니다. 인체의 60~70%가 수분이므로 달 에너지에 민감하게 반응합니다.','보름달 전후 수면과 감정 기복이 커질 수 있어요. 미리 준비하세요.','달 주기(29.5일) 다이어트와 건강 루틴을 설계하면 자연의 리듬과 함께 최적 결과를 얻습니다.'];
+
+  } else if(n===18){
+    var gungList18=['一宮(坎·水)','二宮(坤·土)','三宮(震·木)','四宮(巽·木)','五宮(中·土)','六宮(乾·金)','七宮(兌·金)','八宮(艮·土)','九宮(離·火)'];
+    var gungOh=['수','토','목','목','토','금','금','토','화'];
+    var gungHealth=['수분 순환·뼈·청력 — 모발·냉기·허리 컨디션 관리. 수기(水氣) 보강 필요.','비위·소화기·면역 — 소화·대사·피부 컨디션 관리. 토기(土氣) 안정화.','간담·근육·눈·신경 — 눈 피로·근육통·두통 주의. 목기(木氣) 소통.','신경계·호흡기·담 — 불면·두통·신경과민 주의. 목기 유연성 유지.','전신 균형 에너지 — 오행 전반 관리. 면역과 소화기 균형이 핵심.','호흡·피부·코 — 호흡·피부 컨디션 관리. 금기(金氣) 청결.','호흡·장·구강·성대 — 소화와 구강 컨디션 관리. 금기 정화.','위장·관절·피부·근육 — 복통·관절통·두드러기 주의. 토기 충실.','심장·활력·눈·뇌 — 긴장·수면·눈 피로 관리. 화기(火氣) 조절.'];
+    var now18=new Date();
+    var gungIdx18=(_hvr(seed+18+now18.getHours())%9);
+    var sj18=['자시(子·23~1시)','축시(丑·1~3시)','인시(寅·3~5시)','묘시(卯·5~7시)','진시(辰·7~9시)','사시(巳·9~11시)','오시(午·11~13시)','미시(未·13~15시)','신시(申·15~17시)','유시(酉·17~19시)','술시(戌·19~21시)','해시(亥·21~23시)'][Math.floor((now18.getHours()+1)/2)%12];
+    var ohTaeul=gungOh[gungIdx18];
+    sysName='태을신수 · '+gungList18[gungIdx18]+' × '+sj18;
+    sysDetail='현재 시진 <b style="color:'+d.c+'">'+sj18+'</b> 태을구궁 <b style="color:#e879f9">'+gungList18[gungIdx18]+'</b> — 태을신수는 시간과 공간 에너지가 교차하는 지점에서 건강 흐름을 예측합니다.';
+    weakOrgan=gungList18[gungIdx18]+' — '+gungHealth[gungIdx18].split('—')[0].trim();
+    foodAdvice=ohTaeul==='수'?'검은 음식(흑임자·미역·검은콩), 신장 보강':ohTaeul==='토'?'노란 음식(고구마·단호박), 소화기 보강':ohTaeul==='목'?'녹색 채소(시금치·케일), 간 보강':ohTaeul==='금'?'흰 음식(도라지·배·무), 폐 보강':'붉은 음식(토마토·홍삼), 심장 보강';
+    exerciseAdvice='현재 시진('+sj18+') 최적 활동: '+(now18.getHours()>=6&&now18.getHours()<10?'기상 스트레칭·아침 걷기':now18.getHours()>=10&&now18.getHours()<14?'집중력 필요한 운동·요가':now18.getHours()>=14&&now18.getHours()<18?'유산소·수영·등산':now18.getHours()>=18&&now18.getHours()<22?'가벼운 저녁 산책·스트레칭':'충분한 수면 준비·명상');
+    checkupAdvice='태을구궁 에너지에 맞는 집중 케어 부위('+weakOrgan+') 정기 검진. 절기(節氣) 전환점에 종합 검진 권장.';
+    advices=[gungHealth[gungIdx18],'태을신수는 2시간마다 바뀌는 시진 에너지를 반영합니다. 지금 이 시각의 에너지를 최대한 활용하세요.','태을구궁 에너지는 오행과 연결되어 신체 각 장기에 영향을 미칩니다. 오행 균형이 건강의 열쇠입니다.','현재 궁의 에너지가 길(吉)하면 치료·수술에 좋고, 흉(凶)하면 안정과 휴식을 우선하세요.'];
+
+  } else if(n===19){
+    // ── 베딕 점성술 (Jyotish) 팝업 ──
+    var AYANAMSA19=23.86;
+    var np19=window._nasaPlanets||{};
+    var sunSid19=np19.sun?((parseFloat(np19.sun.lon)-AYANAMSA19+360)%360):((_hvr(seed+19)*1.7)%360);
+    var rashiIdx19=Math.floor(sunSid19/30)%12;
+    var rashiNames19=['메샤(牡羊)','브리샤바(金牛)','미투나(雙子)','카르카타(巨蟹)','심하(獅子)','칸야(處女)','툴라(天秤)','브리쉬치카(天蠍)','다누(射手)','마카라(山羊)','쿰바(水甁)','미나(雙魚)'];
+    var rashiHealth19={
+      '메샤(牡羊)':'두부·뇌·안면 — 두통·긴장·안면 피로 관리. 마스(화성) 지배 — 충동 억제와 충분한 수면.',
+      '브리샤바(金牛)':'목·성대 — 목과 인후 컨디션 관리. 슈크라(금성) 지배 — 과식 경향.',
+      '미투나(雙子)':'어깨·폐·신경계 — 호흡기·신경 피로·과호흡 주의. 부다(수성) 지배 — 복식 호흡 권장.',
+      '카르카타(巨蟹)':'흉부·위·소화기 — 소화와 감정성 식욕 관리. 찬드라(달) 지배 — 감정 관리.',
+      '심하(獅子)':'심장·등·척추 — 과로·심장 리듬·순환 주의. 수리야(태양) 지배 — 규칙적 휴식.',
+      '칸야(處女)':'장·복부 — 스트레스성 소화 불편 관리. 부다(수성) 지배 — 예민한 소화기.',
+      '툴라(天秤)':'신장·허리 — 요통·수분 관리. 슈크라(금성) 지배 — 수분 충분히.',
+      '브리쉬치카(天蠍)':'생식기·방광·결장 — 비뇨기·생식기 건강 주의. 망갈라(화성) 지배 — 독소 배출.',
+      '다누(射手)':'고관절·허벅지 — 하체 컨디션 관리. 구루(목성) 지배 — 과잉 확장 경계.',
+      '마카라(山羊)':'무릎·뼈·관절·피부 — 관절·뼈 컨디션 관리. 샤니(토성) 지배 — 칼슘 보충 권장.',
+      '쿰바(水甁)':'발목·순환 — 순환 컨디션 관리. 샤니(토성) 지배 — 규칙적 운동.',
+      '미나(雙魚)':'발·순환 — 붓기와 순환 관리. 구루(목성) 지배 — 마음 돌봄.'
+    };
+    var dashaLords19=['목성 주기','토성 주기','수성 주기','케투 주기','금성 주기','태양 주기','달 주기','화성 주기','라후 주기'];
+    var dashaIdx19=_hvr(seed+191)%dashaLords19.length;
+    var currentRashi19=rashiNames19[rashiIdx19];
+    sysName='베딕 점성술 (Jyotish) · '+currentRashi19+' × '+dashaLords19[dashaIdx19];
+    sysDetail='항성황도(Sidereal Zodiac) 기반 태양궁 <b style="color:#c084fc">'+currentRashi19+'</b> — 베딕 점성술은 실제 별의 위치(NASA 실측값 -아야남사 23.86°)를 사용하여 서양 점성술보다 NASA 데이터와의 정합성이 높습니다. 현재 <b style="color:#c084fc">'+dashaLords19[dashaIdx19]+'</b> 운행 중.';
+    weakOrgan=(rashiHealth19[currentRashi19]||'').split('—')[0].trim();
+    foodAdvice='나바그라하(9행성) 에너지 보강: 태양 → 밀·구리, 달 → 쌀·진주, 화성 → 붉은 렌틸콩, 수성 → 녹두·에메랄드 색 채소, 목성 → 강황·황금색 음식, 금성 → 흰 음식·유제품, 토성 → 검은 참깨·철분 식품.';
+    exerciseAdvice='베딕 전통 건강법: 태양 경배(수리야 나마스카라) 12회/일, 나디 쇼다나 호흡법(좌우 콧구멍 교대 호흡), 아유르베다 오일 마사지(아비얀가) 주 2회.';
+    checkupAdvice='아야남사 보정 출생 천궁도 분석 — 베딕 점성사 상담 권장. 아유르베다 체질(트리도샤: 바타·피타·카파)에 관심을 가져 보세요.';
+    advices=[
+      rashiHealth19[currentRashi19]||'베딕 라시 에너지 건강 분석',
+      '베딕 점성술은 항성황도를 사용하므로 서양 별자리와 약 23~24° 차이가 납니다. NASA 실측 행성 좌표를 아야남사로 보정하여 계산됩니다.',
+      '나바그라하(9행성) 중 현재 다샤 주성('+dashaLords19[dashaIdx19]+')의 영향이 가장 강합니다. 해당 행성을 강화하는 보석·색상·음식을 활용하세요.',
+      '베딕 건강 원칙: 해뜨기 전 기상(브라흐마무후르타), 규칙적 식사, 절기에 맞는 생활 리듬이 건강의 근본입니다.'
+    ];
+
+  } else if(n===20){
+    // ── MSP / NPTI 성격 에너지 팝업 ──
+    var mspType20=window._mspResult&&window._mspResult.type?window._mspResult.type:'';
+    var nptiType20=window._nptiResult&&window._nptiResult.type?window._nptiResult.type:'';
+    var typeKey20=mspType20||nptiType20||'미설정';
+    var mspCareMap20={
+      'INTJ':'과집중이 길어지기 쉬워요. 정기 휴식 루틴·디지털 디톡스를 권해요.',
+      'INTP':'생활 리듬이 흐트러지기 쉬워요. 루틴 설정·규칙적 식사를 권해요.',
+      'ENTJ':'과로·스트레스 관리. 이완 운동·명상 권장. 심박·순환 관리.',
+      'ENTP':'에너지가 여러 곳으로 흩어지기 쉬워요. 집중 휴식을 권해요.',
+      'INFJ':'감정 소진이 쌓이기 쉬워요. 혼자만의 시간·자연 산책을 권해요.',
+      'INFP':'신경이 예민하고 잠이 얕아지기 쉬워요. 자연 산책·예술 표현을 권해요.',
+      'ENFJ':'감정 과몰입으로 피로가 쌓이기 쉬워요. 경계 설정·자기 돌봄을 권해요.',
+      'ENFP':'식습관과 수면이 불규칙해지기 쉬워요. 리듬 관리·규칙적 운동을 권해요.',
+      'ISTJ':'몸이 경직되기 쉬워요. 스트레칭·유연성 운동을 권해요.',
+      'ISFJ':'감정을 눌러 담기 쉬워요. 표현 활동·사회적 지지망을 권해요.',
+      'ESTJ':'과부하·긴장 상승 주의. 정기 휴식 스케줄·위임 연습.',
+      'ESFJ':'타인의 스트레스를 흡수하기 쉬워요. 자기 돌봄 시간을 권해요.',
+      'ISTP':'감각 과부하·근골격 긴장 관리. 신체 활동·스포츠를 권해요.',
+      'ISFP':'정서 과민·소화 예민 관리. 예술 표현·자연 활동을 권해요.',
+      'ESTP':'충동적으로 무리하기 쉬워요. 안전한 운동·충분한 수면을 권해요.',
+      'ESFP':'자극이 넘쳐 수면이 밀리기 쉬워요. 규칙적 수면 리듬을 권해요.'
+    };
+    sysName='성격 유형 / NPTI · 성격 에너지 보정 — '+typeKey20;
+    sysDetail=typeKey20!=='미설정'?
+      '<b style="color:#818cf8">'+typeKey20+'</b> 유형의 에너지 발현 패턴이 역학 점수에 보정 적용됩니다. 같은 사주라도 성격 유형 유형에 따라 에너지 발현 방식이 다르므로 CGO-FULI의 핵심 차별화 요소입니다.':
+      '아직 성격 유형 유형이 설정되지 않았습니다. 대시보드에서 성향 유형을 입력하면 20번째 역학 보정이 활성화됩니다.';
+    weakOrgan=typeKey20!=='미설정'?(mspCareMap20[typeKey20]||'성격 에너지 기반 집중 케어 존').split('.')[0]:'성격 유형 미설정';
+    foodAdvice=typeKey20&&typeKey20[0]==='I'?'내향형: 마그네슘(견과류·다크초콜릿) — 신경계 안정. 트립토판(칠면조·계란) — 세로토닌 보충.':'외향형: 비타민B(통곡물·콩류) — 에너지 대사. 아연(굴·호박씨) — 면역 강화.';
+    exerciseAdvice=typeKey20&&typeKey20[0]==='I'?'내향형: 혼자 하는 운동(요가·수영·달리기·등산) — 에너지 회복에 최적.':'외향형: 그룹 운동(댄스·크로스핏·단체 스포츠) — 동기 부여와 에너지 극대화.';
+    checkupAdvice='성격 유형별 스트레스 반응 패턴을 알아두면 도움이 돼요. 힘들 땐 상담을 받아보세요.';
+    advices=[
+      typeKey20!=='미설정'?(mspCareMap20[typeKey20]||'성격 에너지 기반 건강 관리'):'대시보드에서 성격 유형을 입력하면 맞춤 건강 조언이 활성화됩니다.',
+      '성격 유형/NPTI는 역학 결과에 0.5점 가중치로 반영됩니다. 낮지만 개인 편차 보정의 핵심 역할을 합니다.',
+      '같은 사주팔자라도 INTJ와 ESFP는 에너지 발현 방식이 완전히 다릅니다. 성격 유형을 역학에 통합한 것은 CGO-FULI만의 독자적 설계입니다.',
+      'NPTI(자연성격유형지표)는 성격 유형의 확장판으로, 자연 환경과의 에너지 반응 패턴을 추가 분석합니다.'
+    ];
+  }
+
+  if(sysName){
+    body+='<div style="margin-bottom:16px">'
+      +'<div style="font-size:11px;font-weight:700;color:'+d.c+';letter-spacing:.06em;margin-bottom:8px">📋 '+sysName+'</div>'
+      +'<div style="background:rgba(255,255,255,.03);border-radius:10px;padding:12px 14px;font-size:12px;color:#94a3b8;line-height:1.8">'+sysDetail+'</div>'
+      +'</div>';
+  }
+
+  if(advices.length){
+    body+='<div style="margin-bottom:16px">'
+      +'<div style="font-size:11px;font-weight:700;color:'+d.c+';letter-spacing:.06em;margin-bottom:10px">💡 맞춤 건강 조언</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">';
+    var icons=['🌿','⚡','🎯','💊','🔬','🏃','🧘'];
+    advices.forEach(function(a,i){
+      body+='<div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;border-left:2px solid '+d.c+'66">'
+        +'<span style="font-size:14px;flex-shrink:0">'+(icons[i%7])+'</span>'
+        +'<span style="font-size:12px;color:#cbd5e1;line-height:1.7">'+a+'</span>'
+        +'</div>';
+    });
+    body+='</div></div>';
+  }
+
+  if(weakOrgan||foodAdvice||exerciseAdvice){
+    body+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+    if(weakOrgan) body+='<div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:5px">⚠️ 주의 장기</div>'
+      +'<div style="font-size:11px;color:#fca5a5;line-height:1.6">'+weakOrgan+'</div></div>';
+    if(checkupAdvice) body+='<div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;color:#38bdf8;font-weight:700;margin-bottom:5px">🏥 검진 권장</div>'
+      +'<div style="font-size:11px;color:#7dd3fc;line-height:1.6">'+checkupAdvice+'</div></div>';
+    body+='</div>';
+    body+='<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">';
+    if(foodAdvice) body+='<div style="background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:10px 14px">'
+      +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:5px">🥗 추천 식품</div>'
+      +'<div style="font-size:12px;color:#6ee7b7;line-height:1.7">'+foodAdvice+'</div></div>';
+    if(exerciseAdvice) body+='<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:10px 14px">'
+      +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:5px">🏃 운동 가이드</div>'
+      +'<div style="font-size:12px;color:#fde68a;line-height:1.7">'+exerciseAdvice+'</div></div>';
+    body+='</div>';
+  }
+
+  var pt=_g('hlt-pop-title');if(pt)pt.innerHTML=d.ico+' '+d.nm;
+  var pb=_g('hlt-pop-body');if(pb)pb.innerHTML=body;
+  var ov=_g('hlt-pop-ov');var pop=_g('hlt-pop');
+  if(ov)ov.style.display='block';
+  if(pop){pop.style.display='block';setTimeout(function(){pop.style.transform='translateY(0)';},20);}
+  setTimeout(function(){if(pb)pb.querySelectorAll('[data-w]').forEach(function(b){b.style.width=b.getAttribute('data-w')+'%';});},400);
+
+  _cgoTransPopup && _cgoTransPopup('hlt-pop');}
+function hltPopClose(){
+  var pop=_g('hlt-pop');var ov=_g('hlt-pop-ov');
+  if(pop){pop.style.transform='translateY(100%)';setTimeout(function(){pop.style.display='none';},350);}
+  if(ov)ov.style.display='none';
+}
+window.hltRunAnalysis=hltRunAnalysis; window.hltCardTap=hltCardTap; window.hltBioCardTap=hltBioCardTap; window.hltPopClose=hltPopClose;
 </script>
 </body></html>
 <style>
