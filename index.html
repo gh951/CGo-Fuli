@@ -36,12 +36,16 @@ window.CGO_TIER_COST = window.CGO_TIER_COST || {
   lotto:  {pro:100,  max:500},    /* 행운 번호     · 화면 100원 · 500원 */
   stock:  {pro:2000, max:5000},   /* 주식 에너지   · 화면 2,000원 · 5,000원 */
   sports: {pro:500,  max:1000},   /* 스포츠 에너지 · 화면 500원 · 1,000원 */
+  med:    {pro:2000, max:3000},   /* 나의 건강 밸런스 · 화면 1,000원(기본 유료)·2,000원·3,000원 */
   def:    {pro:100,  max:500}
 };
 /* 별을 깎는다. 부족하면 false — 문구는 사전 16796 을 쓴다 (20개 언어) */
 window.cgoTierBuy = function(feat, tier){
   if(tier==='basic') return true;
-  if(window.cgoIsManager && window.cgoIsManager()) return true;   /* 매니저는 값이 안 든다 */
+  if(window.cgoIsManager && window.cgoIsManager()) return true;   /* 매니저는 값이 안 든다, 무제한 */
+  if(window.cgoIsSubManager && window.cgoIsSubManager()){         /* 부매니저는 유료 기능 하루 1회, 별 안 씀 */
+    return window.cgoSubMgrDailyOk(feat + '_' + tier);
+  }
   var C = (window.CGO_TIER_COST[feat] || window.CGO_TIER_COST.def);
   var need = (tier==='max') ? C.max : C.pro;
   var ok = true;
@@ -12987,15 +12991,23 @@ try{
   el.value = '';
   bubble('me', t);
   var wait = bubble('ai', '…');
-  var body = { message: t, feature: (window._cgoChatFeature || 'c24'),
-    lang: (window.CGO_T && CGO_T.cur && CGO_T.cur()) || 'ko',
-    env: (window.cgoEnvBrief ? cgoEnvBrief() : ''),
-    result: (window._c24 && window._c24.lastResult) || null };
+  var _result = (window._c24 && window._c24.lastResult) || null;
+  var _resultTxt = _result ? ('\n\n[내 6부위 검사 결과]\n' + JSON.stringify(_result)) : '';
+  var _sys = 'CGO-FULI 건강 밸런스 AI 상담사. 방금 끝난 6부위 검사 결과를 알고 있는 상태로, '
+    + '사용자 질문에 그 결과를 바탕으로 답한다. 진단·처방 표현은 쓰지 않고 참고용으로만 안내한다.'
+    + (window.cgoEnvBrief ? ('\n환경: ' + cgoEnvBrief()) : '');
+  var body = {
+    kind: 'med',
+    tier: (window._c24Tier || 'basic'),
+    system: _sys,
+    prompt: t + _resultTxt,
+    max_tokens: 700, temperature: 0.6
+  };
   try{
-    fetch('/api/groq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        var a = (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || K(8910,'');
+        var a = (j && j.text) || K(8910,'');
         if(wait) wait.querySelector('div').textContent = a;
       })
       .catch(function(){ if(wait) wait.querySelector('div').textContent = K(8910,''); });
@@ -13076,8 +13088,14 @@ try{
 /* 분석 등급 — 기본 1회 무료 / 고급 100원 / 최고급 500원. 별(코인)에서 차감한다 */
 window._c24Tier='basic';
 window.c24PickTier=function(t){
-  window._c24Tier=t;
-  try{ localStorage.setItem('cgo_c24_tier',t); }catch(_){}
+  var _key = (t==='plus') ? 'pro' : (t==='pro' ? 'max' : t);   /* c24 라벨(basic/plus/pro) → 값표 키(basic/pro/max) */
+  if(_key!=='basic' && !(window.cgoTierBuy && window.cgoTierBuy('med', _key))){
+    try{ if(window.cgoTierNote) cgoTierNote('c24-tier-note', ''); }catch(_){}
+    return;
+  }
+  var _apiTier = ({basic:'basic', plus:'advanced', pro:'premium'})[t] || 'basic';  /* api/claude.js MED_MODEL 키와 일치 */
+  window._c24Tier=_apiTier;
+  try{ localStorage.setItem('cgo_c24_tier',_apiTier); }catch(_){}
   var K={basic:8892,plus:8895,pro:8898}[t];
   var nm=(window.K&&K)?window.K(K):t;
   try{ if(window.cgoToast) cgoToast(nm); }catch(_){}
@@ -26233,15 +26251,33 @@ window.cgoIsManager=function(){
     var u=(location.pathname+location.search+location.hash).toLowerCase();
     /* ★ /no 로 해제, /lee 로 등록 — no 가 lee 보다 먼저 검사되어야 동시에 와도 해제가 이긴다 */
     if(/(^|[\/?&#=])no($|[\/?&#])/.test(u)){
-      try{ localStorage.removeItem('cgo_mgr'); }catch(e){}
+      try{ localStorage.removeItem('cgo_mgr'); localStorage.removeItem('cgo_submgr'); }catch(e){}
+      return false;
+    }
+    /* ★ /lee1 은 부매니저 — 매니저(전면 무료)와 분리해 등록한다 */
+    if(/(^|[\/?&#=])lee1($|[\/?&#])/.test(u)){
+      try{ localStorage.setItem('cgo_submgr','1'); localStorage.removeItem('cgo_mgr'); }catch(e){}
       return false;
     }
     if(/(^|[\/?&#=])lee($|[\/?&#])/.test(u)){
-      try{ localStorage.setItem('cgo_mgr','1'); }catch(e){}
+      try{ localStorage.setItem('cgo_mgr','1'); localStorage.removeItem('cgo_submgr'); }catch(e){}
       return true;
     }
     return localStorage.getItem('cgo_mgr')==='1';
   }catch(e){ return false; }
+};
+/* ★ 부매니저 — 무료 기능은 매니저처럼 무제한, 값이 드는 기능(고급·최고급)은 하루 1회만 */
+window.cgoIsSubManager=function(){
+  try{ return localStorage.getItem('cgo_submgr')==='1'; }catch(e){ return false; }
+};
+window.cgoSubMgrDailyOk=function(feat){
+  try{
+    var day=new Date().toISOString().slice(0,10);
+    var key='cgo_submgr_used_'+feat+'_'+day;
+    if(localStorage.getItem(key)==='1') return false;
+    localStorage.setItem(key,'1');
+    return true;
+  }catch(e){ return true; }
 };
 (function(){ try{ if(/[?&]lee=off/i.test(location.search)) localStorage.removeItem('cgo_mgr'); }catch(e){} })();
 window.cgoMgrBadge=function(){

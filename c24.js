@@ -1189,15 +1189,13 @@ function _c24CompFinalAnalyze(){
 
   var _analyzeImg = function(b64, prompt, key){
     if(!b64) return Promise.resolve('');
-    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages:[{role:'user',content:[
-          {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
-          {type:'text',text:prompt}
-        ]}],max_tokens:300,temperature:0.3})})
+    var _tier = window._c24Tier || 'basic';
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:_tier,
+        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
     .then(function(r2){return r2.json();})
     .then(function(d){
-      var t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
+      var t=d.text||'';
       return t.replace(/```json|```/g,'').trim();
     }).catch(function(){return '';});
   };
@@ -1254,14 +1252,14 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
-        messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
-        max_tokens:2500,temperature:0.6})});
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
+        system:sysPrompt, prompt:userPrompt,
+        max_tokens:2500, temperature:0.6})});
   })
   .then(function(r3){return r3.json();})
   .then(function(d3){
-    var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'{}';
+    var t=d3.text||'{}';
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=m?JSON.parse(m[0]):{};
     _c24CompShowResult(ai);
@@ -1705,29 +1703,16 @@ function _c24AutoAnalyze(){
 
   var msgs=[{role:'system',content:systemPrompt},{role:'user',content:userMsg}];
 
-  // Vision 이미지 있으면 Vision 모델, 없으면 텍스트 모델
-  var body;
-  if(useVision && visionImg){
-    body={
-      model:'meta-llama/llama-4-scout-17b-16e-instruct',
-      max_tokens:1800, temperature:0.6,
-      messages:[{role:'user',content:[
-        {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+visionImg}},
-        {type:'text',text:systemPrompt+'\n\n'+userMsg}
-      ]}]
-    };
-  } else {
-    body={
-      model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
-      max_tokens:1800, temperature:0.6,
-      messages:msgs
-    };
-  }
+  // Vision 이미지 있으면 Vision 모델, 없으면 텍스트 모델 — 등급별로 Haiku/Sonnet/Opus
+  var _tier = window._c24Tier || 'basic';
+  var body = { kind:'med', tier:_tier, system:systemPrompt, prompt:userMsg,
+    images: (useVision && visionImg) ? [visionImg] : [],
+    max_tokens:1800, temperature:0.6 };
 
-  fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   .then(function(r){return r.json();})
   .then(function(data){
-    var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'분석 결과를 가져오지 못했습니다.';
+    var text=data.text||'분석 결과를 가져오지 못했습니다.';
     var disclaimer='<div style="margin-top:10px;padding:8px 10px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px;font-size:10px;color:rgba(251,191,36,.7);">⚠️ 본 분석은 건강 참고 정보 제공 목적이며, 의학적 진단을 대체하지 않습니다. 이상 증상이 지속되면 반드시 전문의 진료를 받으시기 바랍니다.</div>';
 
     // ★ 측정 결과 분석 카드에 검진 결과 표시
