@@ -13196,8 +13196,10 @@ function cgoGoPage(page){
       try{ if(window.eyeCancelMeasure) window.eyeCancelMeasure(); }catch(e){}
     }
   } }catch(e){}
-  /* ★ C-64: 순수역학/실시간/rPPG 오버레이(todayFortuneOverlay·pm-intro-pop)도 페이지 이동 시 닫기 — C-62 눈건강과 동일 패턴 */
-  try{ var _tfoX=document.getElementById('todayFortuneOverlay'); if(_tfoX && _tfoX.style.display!=='none'){ if(typeof cgoCloseTodayFortune==='function'){ cgoCloseTodayFortune(); } else { _tfoX.style.display='none'; try{document.body.style.overflow='';}catch(e){} } } var _pmiX=document.getElementById('pm-intro-pop'); if(_pmiX && _pmiX.style.display!=='none') _pmiX.style.display='none'; }catch(e){}
+  /* ★ C-64: 순수역학/실시간/rPPG 오버레이(todayFortuneOverlay·pm-intro-pop)도 페이지 이동 시 닫기 — C-62 눈건강과 동일 패턴
+     ★ -r1: page==='music-v2' 로 "이동"할 때는 닫지 않는다 — 1팝업 CTA 가 자기 페이지로 cgoGoPage('music-v2') 를 다시 부르며
+     그 순간 2팝업(pm-intro-pop)을 열던 참인데, 이 줄이 바로 지워버려 2팝업이 뜨자마자 사라지고 1팝업이 다시 뜬 것처럼 보였다. */
+  try{ var _tfoX=document.getElementById('todayFortuneOverlay'); if(_tfoX && _tfoX.style.display!=='none'){ if(typeof cgoCloseTodayFortune==='function'){ cgoCloseTodayFortune(); } else { _tfoX.style.display='none'; try{document.body.style.overflow='';}catch(e){} } } if(page!=='music-v2'){ var _pmiX=document.getElementById('pm-intro-pop'); if(_pmiX && _pmiX.style.display!=='none') _pmiX.style.display='none'; } }catch(e){}
   try{ if(window._cgoHideFeatBar) window._cgoHideFeatBar(); }catch(e){}  /* ★ C-64: 전역 헤더 바 숨기고 진짜 상단바(언어선택) 복원 — C-63 눈건강과 동일 */
   if(page==='svi'){ setTimeout(function(){ try{ if(typeof _sviFullReset==='function') _sviFullReset(); }catch(e){} }, 120); }
   try{ if(page!=='gmd' && typeof _cgoGmdStopCam==='function') _cgoGmdStopCam(); }catch(e){}
@@ -26007,7 +26009,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.07-r';
+window.CGO_VER='2026.09.07-s';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
