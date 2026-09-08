@@ -60,6 +60,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     stopBreath(); stopCam();
     var ds=document.querySelectorAll('#page-cgo-sleep .slp-acc'); for(var i=0;i<ds.length;i++) ds[i].open=false;
     var p=$('page-cgo-sleep'); if(p){ p.style.display='block'; p.scrollTop=0; try{ if(window.CGO_T) CGO_T.paint(p); }catch(e){} }
+    try{ if(window.cgoSlpData) cgoSlpData(); }catch(e){}
     var seen=null; try{ seen=localStorage.getItem('sleep_intro_seen_v7'); }catch(e){}
     if(!seen) cgoSlpIntro();
   };
@@ -249,7 +250,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
   function showResult(){
     slpRppgShow('result');
     var el=$('slp-result-body');
-    try{ var rd=afterData||beforeData; if(rd) localStorage.setItem('cgo_sleep_rppg', JSON.stringify({t:Date.now(),bpm:rd.bpm,hrv:rd.hrv,stress:rd.stress})); }catch(e){}
+    try{ var rd=afterData||beforeData; if(rd) sessionStorage.setItem('cgo_sleep_rppg', JSON.stringify({t:Date.now(),bpm:rd.bpm,hrv:rd.hrv,stress:rd.stress})); }catch(e){}
     if(beforeData && afterData){
       var dB=beforeData.bpm-afterData.bpm;
       var hOk=(beforeData.hrv!=null && afterData.hrv!=null);
@@ -653,30 +654,80 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     var pct=Math.round(total/(TOTALQ*4)*100);
     var burden=pct<20?_sk(11696,'양호'):pct<40?_sk(11697,'주의'):pct<60?_sk(11698,'상당'):_sk(11672,'높음');
     var rec = apnea>=8?_sk(11699,'🌌 우주 기저의 휴식 (저음 위주, 호흡 방해 적음)'):(mq&&mood/mq>=2)?_sk(11700,'🌊 고요한 심해의 기억 (차분한 진정)'):(isi>=15?_sk(11701,'🌧️ 밤비의 기적 (소음 마스킹)'):_sk(11702,'🍃 대나무숲의 속삭임 (부드러운 이완)'));
-    var h='<div class="slp-badge">RESULT · 참고용</div><h2 class="slp-h">수면 자가 점검 결과</h2>';
-    h+='<div class="slp-rcard"><div class="slp-rrow"><span>수면 부담 지수</span><b style="color:'+isiColor+'">'+isi+' / 28 · '+isiBand+'</b></div>';
-    h+='<div class="slp-rrow"><span>종합 부담 지수</span><b>'+pct+'% · '+burden+'</b></div></div>';
+    var h='<div class="slp-badge">'+_sk(11723,'RESULT · 참고용')+'</div><h2 class="slp-h">'+_sk(11724,'수면 자가 점검 결과')+'</h2>';
+    h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11714,'수면 부담 지수')+'</span><b style="color:'+isiColor+'">'+isi+' / 28 · '+isiBand+'</b></div>';
+    h+='<div class="slp-rrow"><span>'+_sk(11715,'종합 부담 지수')+'</span><b>'+pct+'% · '+burden+'</b></div></div>';
     h+='<p class="slp-rmsg">'+isiMsg+'</p>';
     if(flags.length){ h+='<div class="slp-flags">'; for(var f=0;f<flags.length;f++) h+='<div class="slp-flag"><b>'+flags[f][0]+'</b><span>'+flags[f][1]+'</span></div>'; h+='</div>'; }
-    if(moodNote) h+='<div class="slp-flag mood"><b>💛 마음 돌봄</b><span>'+moodNote+'</span></div>';
-    h+='<div class="slp-rrec">추천 사운드 · <b>'+rec+'</b></div>';
-    h+='<button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpToSound()">🎵 추천 사운드 들으러 →</button>';
-    h+='<button class="slp-btn2" onclick="cgoSlpGoMeasure()">📸 측정·호흡으로</button>';
-    h+='<p class="slp-note">이 점검은 자가 보고 기반 <b>웰니스 참고 지표</b>이며, 질병의 진단·치료·예방 목적으로 사용할 수 없습니다. 수면 어려움이 2주 이상 지속되면 전문기관 상담을 권해요.</p>';
-    $('slp-self-q').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';
+    if(moodNote) h+='<div class="slp-flag mood"><b>'+_sk(11725,'💛 마음 돌봄')+'</b><span>'+moodNote+'</span></div>';
+    h+='<div class="slp-rrec">'+_sk(11726,'추천 사운드 ·')+' <b>'+rec+'</b></div>';
+    h+='<button class="slp-btn" style="margin-top:16px;" onclick="cgoSlpToSound()">'+_sk(11727,'🎵 추천 사운드 들으러 →')+'</button>';
+    h+='<button class="slp-btn2" onclick="cgoSlpGoMeasure()">'+_sk(11728,'📸 측정·호흡으로')+'</button>';
+    h+='<p class="slp-note">'+_sk(11729,'이 점검은 자가 보고 기반 <b>웰니스 참고 지표</b>이며, 질병의 진단·치료·예방 목적으로 사용할 수 없습니다. 수면 어려움이 2주 이상 지속되면 전문기관 상담을 권해요.')+'</p>';
+    var qEl=$('slp-self-q'); if(qEl) qEl.innerHTML='';   /* 자가점검 문항 자리는 비운다 — 결과는 아래 독립 카드로 */
+    var ac=$('slp-acc-self'); if(ac) ac.open=false;
+    var host=$('slp-data-host'); if(host) host.scrollIntoView({behavior:'smooth',block:'start'});
     var pg=$('page-cgo-sleep'); if(pg) pg.scrollTop=0;
-    try{ localStorage.setItem('cgo_sleep_check', JSON.stringify({t:Date.now(),isi:isi,band:isiBand,pct:pct,burden:burden,flags:flags.map(function(x){return x[0];})})); }catch(e){}
+    try{ sessionStorage.setItem('cgo_sleep_check', JSON.stringify({t:Date.now(),isi:isi,band:isiBand,pct:pct,burden:burden,flags:flags.map(function(x){return x[0];})})); }catch(e){}
+    $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';   /* 방금 낸 전체 결과(원인 설명·마음 돌봄 포함)를 그대로 얹는다 — 요약판(cgoSlpData)으로 덮지 않는다 */
   };
   window.cgoSlpData=function(){
     var h='<div class="slp-badge">MY SLEEP DATA</div><h2 class="slp-h">'+_sk(11710,'나의 수면 데이터')+'</h2><p class="slp-sub" style="margin-bottom:14px;">'+_sk(11711,'기기 안에서만 모은 최근 기록이에요.')+'<br>'+_sk(11712,'(저장 제로 · 서버 0 · 외부 전송 없음)')+'</p>';
-    var chk=null,rppg=null; try{chk=JSON.parse(localStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(localStorage.getItem('cgo_sleep_rppg'));}catch(e){}
+    var tier = (window._slpTier||'basic');
+    h+='<div style="background:#f0fdfa;border:1px solid rgba(52,211,153,.28);border-radius:16px;padding:18px 16px;margin-bottom:14px;">'
+      +'<div style="font-size:14px;font-weight:900;color:#0f1b2e;margin-bottom:4px;">'+_sk(11730,'분석 등급을 고르세요')+'</div>'
+      +'<div style="font-size:11px;color:#4b6470;margin-bottom:14px;">'+_sk(11731,'✦ 측정은 같고, 풀이의 깊이가 다릅니다')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">'
+      +'<div id="slp-tier-basic" onclick="cgoSlpSetTier(\'basic\')" style="cursor:pointer;background:#fff;border:2px solid '+(tier==='basic'?'#34d399':'#e6eef0')+';border-radius:12px;padding:12px 8px;text-align:center;">'
+      +'<div style="font-size:18px;">🟢</div><div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+_sk(11732,'기본')+'</div>'
+      +'<div style="font-size:10px;color:#059669;font-weight:800;margin-top:2px;">'+_sk(11733,'무료 하루 1회')+'</div></div>'
+      +'<div id="slp-tier-adv" onclick="cgoSlpSetTier(\'adv\')" style="cursor:pointer;background:#fff;border:2px solid '+(tier==='adv'?'#34d399':'#e6eef0')+';border-radius:12px;padding:12px 8px;text-align:center;">'
+      +'<div style="font-size:18px;">⭐</div><div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+_sk(11734,'고급')+'</div>'
+      +'<div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;">'+_sk(11736,'500원 · AI 상담 15분')+'</div></div>'
+      +'<div id="slp-tier-prem" onclick="cgoSlpSetTier(\'prem\')" style="cursor:pointer;background:#fff;border:2px solid '+(tier==='prem'?'#34d399':'#e6eef0')+';border-radius:12px;padding:12px 8px;text-align:center;">'
+      +'<div style="font-size:18px;">💎</div><div style="font-size:12px;font-weight:900;color:#0f1b2e;margin-top:3px;">'+_sk(11735,'최고급')+'</div>'
+      +'<div style="font-size:9.5px;color:#4b6470;margin-top:5px;line-height:1.5;">'+_sk(11737,'1,000원 · AI 상담 30분')+'</div></div>'
+      +'</div></div>';
+    h+='<div style="background:var(--bg-card);border:1px solid rgba(139,92,246,.25);border-radius:14px;padding:20px;margin-bottom:14px;">'
+      +'<div style="font-size:13px;font-weight:800;color:#7c3aed;margin-bottom:10px;">'+_sk(11738,'🤖 AI 상담')+'</div>'
+      +'<div id="slp-ai-box" style="display:flex;flex-direction:column;gap:10px;max-height:320px;overflow-y:auto;margin-bottom:12px;min-height:60px;"></div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="slp-ai-in" type="text" placeholder="'+_sk(11740,'수면에 대해 물어보세요')+'" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(139,92,246,.3);font-size:13px;" onkeydown="if(event.key===\'Enter\')cgoSlpAiSend();">'
+      +'<button onclick="cgoSlpAiSend()" style="padding:10px 16px;border-radius:10px;border:none;background:#7c3aed;color:#fff;font-weight:800;cursor:pointer;">'+_sk(11741,'전송')+'</button>'
+      +'</div>'
+      +'</div>'
+      +'<p class="slp-note" style="margin:0 0 14px;">'+_sk(11739,'일반적 연구 수준을 요약한 참고용입니다. 2주 이상 지속되는 불면은 전문 상담을 권합니다. 본 내용은 참고용이며 의료 진단·처방이 아닙니다.')+'</p>';
+    var chk=null,rppg=null; try{chk=JSON.parse(sessionStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(sessionStorage.getItem('cgo_sleep_rppg'));}catch(e){}
     function ago(t){ var d=Math.floor((Date.now()-t)/86400000); return d<=0?_sk(11703,'오늘'):d+_sk(11704,'일 전'); }
     if(chk){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11713,'최근 자가점검')+'</span><b>'+ago(chk.t)+'</b></div><div class="slp-rrow"><span>'+_sk(11714,'수면 부담 지수')+'</span><b>'+chk.isi+'/28 · '+chk.band+'</b></div><div class="slp-rrow"><span>'+_sk(11715,'종합 부담')+'</span><b>'+chk.pct+'% · '+chk.burden+'</b></div>'+(chk.flags&&chk.flags.length?'<div class="slp-rrow"><span>신호</span><b>'+chk.flags.join(', ')+'</b></div>':'')+'</div>'; }
-    else { h+='<div class="slp-empty">'+_sk(11717,'아직 자가점검 기록이 없어요.')+'<button class="slp-acc-btn" style="margin-top:10px;" onclick="cgoSlpSelfCheck()">'+_sk(11718,'100문항 점검 시작 →')+'</button></div>'; }
     if(rppg){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11719,'최근 측정')+'</span><b>'+ago(rppg.t)+'</b></div>'+(rppg.bpm?'<div class="slp-rrow"><span>'+_sk(11460,'활력 박자')+'</span><b>'+rppg.bpm+' bpm</b></div>':'')+(rppg.hrv!=null?'<div class="slp-rrow"><span>내면 탄력</span><b>'+rppg.hrv+' </b></div>':'')+(rppg.stress!=null?'<div class="slp-rrow"><span>'+_sk(11464,'긴장도')+'</span><b>'+rppg.stress+'</b></div>':'')+'</div>'; }
-    h+='<button class="slp-btn2" onclick="cgoSleepOpen()">'+_sk(11721,'처음으로')+'</button><p class="slp-note">'+_sk(11722,'기록은 이 기기의 브라우저에만 저장되며 언제든 사라질 수 있어요. 참고용이며 의료 데이터가 아닙니다.')+'</p>';
-    var ad=$('slp-acc-data'); if(ad) ad.open=true;
-    $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';
+    $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide" style="max-width:100%;">'+h+'</div>';
+  };
+  window.cgoSlpAiSend=function(){
+    var el=$('slp-ai-in'); if(!el) return;
+    var t=(el.value||'').trim(); if(!t) return;
+    el.value='';
+    var box=$('slp-ai-box'); if(!box) return;
+    box.innerHTML+='<div style="align-self:flex-end;background:#7c3aed;color:#fff;padding:8px 12px;border-radius:10px;max-width:80%;font-size:13px;word-break:break-word;">'+t.replace(/</g,'&lt;')+'</div>';
+    var waitId='slp-ai-wait-'+Date.now();
+    box.innerHTML+='<div id="'+waitId+'" style="align-self:flex-start;background:#f1f5f9;padding:8px 12px;border-radius:10px;max-width:80%;font-size:13px;word-break:break-word;">…</div>';
+    box.scrollTop=box.scrollHeight;
+    var chk=null,rppg=null; try{chk=JSON.parse(sessionStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(sessionStorage.getItem('cgo_sleep_rppg'));}catch(e){}
+    var resultTxt=''; if(chk) resultTxt+='\n[수면 자가점검] ISI '+chk.isi+'/28, 종합부담 '+chk.pct+'%'; if(rppg) resultTxt+='\n[rPPG] bpm '+rppg.bpm+', hrv '+rppg.hrv;
+    var sys='CGO-FULI 수면 AI 상담사. 사용자의 수면 관련 질문에 참고용으로만 답한다. 진단·처방 표현은 쓰지 않는다.'+resultTxt;
+    var body={ kind:'sleep', tier:(window._slpTier==='prem'?'premium':window._slpTier==='adv'?'advanced':'basic'), system:sys, prompt:t, max_tokens:500, temperature:0.6 };
+    fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var w=document.getElementById(waitId);
+        var txt=(j&&(j.text||j.reply||j.message))||'…';
+        if(w) w.textContent=txt;
+      })
+      .catch(function(){ var w=document.getElementById(waitId); if(w) w.textContent='오류가 발생했어요.'; });
+  };
+  window.cgoSlpSetTier=function(t){
+    window._slpTier=t;
+    try{ if(window.cgoSlpData) cgoSlpData(); }catch(e){}
   };
 })();
 
@@ -691,8 +742,8 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     try{ if(window.CGO_T) CGO_T.paint(pg); }catch(e){}
     try{ var rc = document.getElementById('slp-rec');
          if(window.cgoSlpSoundInit && rc && rc.innerHTML) cgoSlpSoundInit(); }catch(e){}
-    try{ var dv = document.getElementById('slp-acc-data');
-         if(window.cgoSlpData && dv && dv.open) cgoSlpData(); }catch(e){}
+    try{ var dv = document.getElementById('page-cgo-sleep');
+         if(window.cgoSlpData && dv) cgoSlpData(); }catch(e){}
     try{ if(window.cgoSlpNatTab && window._slpNatTab != null) cgoSlpNatTab(window._slpNatTab); }catch(e){}
     /* 자가점검 — 고른 답을 안고 다시 그린 뒤 그대로 되돌린다 (답이 지워지지 않는다) */
     try{
