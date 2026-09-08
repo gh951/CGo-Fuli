@@ -1,110 +1,74 @@
-// CGo-Fuli × 오늘의 경기 프록시 v7
-// API-Football 실시간 + 글로벌 타임존 자동 최적화
+// ══════════════════════════════════════════════════════════════
+//  /api/matches  —  오늘의 경기 한 자리
+//
+//  앱이 부르는 모양      /api/matches?tz=Asia%2FSeoul
+//  앱이 기다리는 답      { matches: [...] }  (API-Sports 원본 그대로 중계)
+//
+//  ★ 왜 서버를 거치나 — API-Sports 는 브라우저 직접 호출을 CORS로 막는다.
+//    열쇠도 서버에만 두고, 여기서 대신 불러 그대로 돌려준다.
+//
+//  ★ 60초 기억 — 같은 날짜는 여러 손님이 눌러도 밖으로는 드물게 나간다.
+// ══════════════════════════════════════════════════════════════
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 's-maxage=1800');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+const API_KEY = process.env.API_SPORTS_KEY || 'a2b817796a2948f1345add5506099cda';
 
-  const API_KEY = 'd687daf8d309411965927954eb397e7f';
+const CACHE = new Map();
+const TTL = 60 * 1000;
 
-  // 클라이언트 타임존 수신 (없으면 Asia/Seoul 기본)
-  const clientTZ = req.query.tz || 'Asia/Seoul';
-
-  // 클라이언트 타임존 기준 오늘 날짜 계산
-  const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone: clientTZ }));
-  const todayStr = nowLocal.getFullYear() + '-'
-    + String(nowLocal.getMonth()+1).padStart(2,'0') + '-'
-    + String(nowLocal.getDate()).padStart(2,'0');
-
-  // UTC→클라이언트 타임존 시간 변환
-  function toLocalTime(utcStr) {
-    if (!utcStr) return '—';
-    try {
-      const d = new Date(utcStr);
-      const local = new Date(d.toLocaleString('en-US', { timeZone: clientTZ }));
-      return String(local.getHours()).padStart(2,'0') + ':' + String(local.getMinutes()).padStart(2,'0');
-    } catch(e) { return '—'; }
-  }
-
-  const leagueMap = {
-    2:'UCL', 3:'UEL', 848:'UECL',
-    39:'EPL', 140:'라리가', 78:'분데스',
-    135:'세리에A', 61:'리그앙', 88:'에레디',
-    94:'프리메이라', 292:'K리그1', 293:'K리그2',
-  };
-  const keepIds = Object.keys(leagueMap).map(Number);
-
-  const teamKoMap = {
-    'Bayer Leverkusen':'레버쿠젠','Arsenal':'아스널',
-    'Real Madrid':'레알 마드리드','Manchester City':'맨시티',
-    'Paris Saint Germain':'파리 생제르맹','Chelsea':'첼시',
-    'Bodo/Glimt':'보되/글림트','Sporting CP':'스포르팅 CP',
-    'Barcelona':'바르셀로나','Atletico Madrid':'아틀레티코',
-    'Bayern Munich':'바이에른','Borussia Dortmund':'도르트문트',
-    'Inter Milan':'인터밀란','Liverpool':'리버풀',
-    'Manchester United':'맨유','Tottenham Hotspur':'토트넘',
-    'AC Milan':'AC밀란','Juventus':'유벤투스','Napoli':'나폴리',
-    'Porto':'포르투','Benfica':'벤피카','Ajax':'아약스',
-    'PSV Eindhoven':'PSV','Sevilla':'세비야',
-    'Real Sociedad':'레알 소시에다드','Monaco':'모나코',
-    'RB Leipzig':'RB 라이프치히','Eintracht Frankfurt':'프랑크푸르트',
-    'Roma':'AS 로마','Lazio':'라치오','Fiorentina':'피오렌티나',
-    'Marseille':'마르세유','Lyon':'리옹',
-    'Jeonbuk Hyundai':'전북 현대','Ulsan HD':'울산 HD',
-    'Incheon United':'인천 유나이티드','Seoul':'서울 FC',
-    'Pohang Steelers':'포항 스틸러스',
-  };
-  function toKo(name){ return teamKoMap[name] || name; }
-
-  try {
-    const r = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${todayStr}&timezone=${encodeURIComponent(clientTZ)}`,
-      { headers: { 'x-apisports-key': API_KEY } }
-    );
-    const data = await r.json();
-
-    if (data.errors && Object.keys(data.errors).length > 0)
-      throw new Error(JSON.stringify(data.errors));
-
-    const fixtures = (data.response || []).filter(f => keepIds.includes(f.league?.id));
-    if (fixtures.length === 0)
-      return res.status(200).json({ matches:[], date:todayStr, count:0, source:'api-football', tz:clientTZ, note:'오늘 주요리그 경기 없음' });
-
-    // TheSportsDB 로고
-    const logoCache = {};
-    const uniqueTeams = [...new Set(fixtures.flatMap(f=>[f.teams?.home?.name,f.teams?.away?.name]).filter(Boolean))];
-    await Promise.all(uniqueTeams.slice(0,12).map(async name => {
-      try {
-        const lr = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(name)}`);
-        const ld = await lr.json();
-        const team = ld.teams?.[0];
-        if (team?.strTeamBadge) { logoCache[name]=team.strTeamBadge; logoCache[toKo(name)]=team.strTeamBadge; }
-      } catch(e) {}
-    }));
-
-    const matches = fixtures.slice(0,16).map(f => {
-      const homeEn = f.teams?.home?.name||'';
-      const awayEn = f.teams?.away?.name||'';
-      return {
-        a: toKo(homeEn), b: toKo(awayEn),
-        league: leagueMap[f.league?.id] || f.league?.name || '',
-        time: toLocalTime(f.fixture?.date),   // 클라이언트 로컬 시간
-        timeUTC: f.fixture?.date || '',
-        date: todayStr,
-        aLogo: logoCache[homeEn]||f.teams?.home?.logo||'',
-        bLogo: logoCache[awayEn]||f.teams?.away?.logo||'',
-        aGoals: f.goals?.home ?? null,
-        bGoals: f.goals?.away ?? null,
-        status: f.fixture?.status?.short || 'NS',
-        fixtureId: f.fixture?.id || '',
-      };
-    });
-
-    return res.status(200).json({ matches, date:todayStr, count:matches.length, source:'api-football', tz:clientTZ });
-
-  } catch(e) {
-    return res.status(200).json({ matches:[], date:todayStr, count:0, source:'error', error:e.message, tz:clientTZ });
+function cacheGet(k) {
+  const hit = CACHE.get(k);
+  if (!hit) return null;
+  if (Date.now() - hit.at > TTL) { CACHE.delete(k); return null; }
+  return hit.v;
+}
+function cacheSet(k, v) {
+  CACHE.set(k, { v, at: Date.now() });
+  if (CACHE.size > 100) {
+    const first = CACHE.keys().next().value;
+    CACHE.delete(first);
   }
 }
+
+async function askFootball(date, tz) {
+  const url = 'https://v3.football.api-sports.io/fixtures?date=' + encodeURIComponent(date)
+    + '&timezone=' + encodeURIComponent(tz);
+  const r = await fetch(url, { headers: { 'x-apisports-key': API_KEY } });
+  if (!r.ok) return [];
+  const j = await r.json();
+  const out = (j && j.response) || [];
+  return out.map(m => ({
+    league: (m.league && m.league.name) || '',
+    leagueId: (m.league && m.league.id) || 0,
+    country: (m.league && m.league.country) || '',
+    a: (m.teams && m.teams.home && m.teams.home.name) || '',
+    b: (m.teams && m.teams.away && m.teams.away.name) || '',
+    aScore: (m.goals && m.goals.home) != null ? m.goals.home : null,
+    bScore: (m.goals && m.goals.away) != null ? m.goals.away : null,
+    status: (m.fixture && m.fixture.status && m.fixture.status.short) || '',
+    date: (m.fixture && m.fixture.date) || '',
+    type: 'soccer'
+  }));
+}
+
+module.exports = async (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+
+  try {
+    const q = req.query || {};
+    const tz = String(q.tz || 'Asia/Seoul').trim();
+    const today = new Date().toISOString().slice(0, 10);
+
+    const key = today + '|' + tz;
+    const hit = cacheGet(key);
+    if (hit) return res.status(200).json(hit);
+
+    const matches = await askFootball(today, tz);
+    const out = { matches };
+    cacheSet(key, out);
+    return res.status(200).json(out);
+
+  } catch (e) {
+    return res.status(200).json({ matches: [], error: String((e && e.message) || e) });
+  }
+};
