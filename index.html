@@ -44,6 +44,7 @@ window.CGO_TIER_COST = window.CGO_TIER_COST || {
   sleep:  {pro:500,  max:1000},   /* 좋은 수면 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
   gws:    {pro:500,  max:1000},   /* 관상·혀·손금 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
   skm:    {pro:500,  max:1000},   /* 두피 케어 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
+  rfu:    {pro:4000, max:7000},   /* 정밀 분석 리포트 · 기본 무료 1회 · 고급 4,000원 · 최고급 7,000원 */
   def:    {pro:100,  max:500}
 };
 /* ★ 등급 결제 확인 — 브라우저 confirm()은 주소가 보이고 앱 밖 느낌이 난다.
@@ -48009,11 +48010,20 @@ function _rfuTierCard(id,ico,nT,nP,nD,on){
     '<div data-k="'+nD+'" style="font-size:9.5px;color:#64748b;line-height:1.5;"></div></div>';
 }
 function _rfuPickTier(id){
-  try{ ['rfu-t1','rfu-t2','rfu-t3'].forEach(function(z){
-    var el=document.getElementById(z); if(!el) return;
-    el.style.borderColor = (z===id)?'rgba(184,134,11,.55)':'rgba(15,23,42,.1)';
-    el.style.background  = (z===id)?'#fffdf6':'#fff';
-  }); window._rfuTier=id; }catch(e){}
+  var _key = (id==='rfu-t2') ? 'pro' : (id==='rfu-t3') ? 'max' : 'basic';
+  function _apply(){
+    try{ ['rfu-t1','rfu-t2','rfu-t3'].forEach(function(z){
+      var el=document.getElementById(z); if(!el) return;
+      el.style.borderColor = (z===id)?'rgba(184,134,11,.55)':'rgba(15,23,42,.1)';
+      el.style.background  = (z===id)?'#fffdf6':'#fff';
+    }); window._rfuTier=id; }catch(e){}
+    try{ var Cr=window.CGO_TIER_COST.rfu; window.cgoTierPicked(_key, _key==='max'?Cr.max:(_key==='pro'?Cr.pro:0)); }catch(e){}
+  }
+  if(_key==='basic'){ _apply(); return; }
+  window.cgoTierBuyAsk('rfu', _key, function(ok){
+    if(!ok) return;
+    _apply();
+  });
 }
 function _rfuBlankPreview(){
   try{
