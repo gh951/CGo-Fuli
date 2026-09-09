@@ -39,7 +39,7 @@ const FEAT = {
   food:  { basic:SONNET, advanced:SONNET, premium:SONNET },  // ⑫ 음식 궁합
   tarot: {               advanced:SONNET, premium:SONNET },  // ⑭⑮⑯ 타로 3종
   navi:  {               advanced:SONNET, premium:SONNET },  // ⑰ 오행 길방
-  cgp:   { basic:SONNET, advanced:SONNET, premium:SONNET },  // ⑱ 사진 색·기운 (유료 200)
+  cgp:   {               advanced:SONNET, premium:OPUS   },  // ⑱ 사진 색·기운 — 기본 무료(Groq) · 500 · 1,000 (2026.09.10 결정: 색 셈은 기기 안, AI 는 글만)
   gws:   {               advanced:SONNET, premium:OPUS   },  // ⑲⑳ 관상·손금
   dash:  {               advanced:SONNET, premium:OPUS   },  // ㉑~㉕ 꿈해몽·천지인·순수역학·실시간·rPPG (대시보드 역학 카드)
   fsc:   {               advanced:SONNET, premium:OPUS   },  // ㉗ 풍수 카메라
