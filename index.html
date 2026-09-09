@@ -9666,30 +9666,28 @@ window.cgoCardDeepRun=function(){
 function cgoFaceVisionAnalysis(){
   window._cgoVisionMode = 'face';
   window.gwsSetTier=window.gwsSetTier||function(t,el){
-    var map={basic:'basic',adv:'advanced',prem:'premium'};
-    var _tier2=t==='prem'?'max':(t==='adv'?'pro':'basic');
-    window.cgoTierBuyAsk('gws', _tier2, function(ok){
-      if(!ok) return;
-      try{ if(window.cgoSetAiTier) window.cgoSetAiTier(map[t]||'basic'); }catch(e){}
-      window._gwsTier=t;
-      try{ window.cgoTierPicked(_tier2, _tier2==='max'?window.CGO_TIER_COST.gws.max:(_tier2==='pro'?window.CGO_TIER_COST.gws.pro:0)); }catch(e){}
-      if(el && el.parentElement){ var sib=el.parentElement.children;
-        for(var i=0;i<sib.length;i++){ sib[i].style.borderColor='rgba(184,134,11,.22)'; }
-        el.style.borderColor='#b8860b'; }
-    });
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('face',t,cost); }catch(e){}
+  }
+  var map={basic:'basic',adv:'advanced',prem:'premium'};
+  var _tier2=t==='prem'?'max':(t==='adv'?'pro':'basic');
+  try{ window.cgoSetAiTier(_tier2); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+}
   };
   window.skmSetTier=window.skmSetTier||function(t,el){
-    var map={basic:'basic',adv:'advanced',prem:'premium'};
-    var _tier3=t==='prem'?'max':(t==='adv'?'pro':'basic');
-    window.cgoTierBuyAsk('skm', _tier3, function(ok){
-      if(!ok) return;
-      try{ if(window.cgoSetAiTier) window.cgoSetAiTier(map[t]||'basic'); }catch(e){}
-      window._skmTier=t;
-      try{ window.cgoTierPicked(_tier3, _tier3==='max'?window.CGO_TIER_COST.skm.max:(_tier3==='pro'?window.CGO_TIER_COST.skm.pro:0)); }catch(e){}
-      if(el && el.parentElement){ var sib=el.parentElement.children;
-        for(var i=0;i<sib.length;i++){ sib[i].style.borderColor='rgba(184,134,11,.22)'; }
-        el.style.borderColor='#b8860b'; }
-    });
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('palm',t,cost); }catch(e){}
+  }
+  var map={basic:'basic',adv:'advanced',prem:'premium'};
+  var _tier3=t==='prem'?'max':(t==='adv'?'pro':'basic');
+  try{ window.cgoSetAiTier(_tier3); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+}
   };
   _cgoVisionPopup((window._LANG&&window._LANG!=='ko')?'Face measurement':_gwT(16780,'얼굴 측정'), '#93c5fd', '🧖');
   var guide = document.getElementById('cgo-vision-guide');
@@ -11436,12 +11434,16 @@ try{
 (function(){
  window.qtTier='basic';
  window.qtPickTier=function(t,el){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('taro',t,cost); }catch(e){}
+  }
   window.qtTier=t;
   try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
-  try{ window.cgoTierPicked(t, 0); }catch(e){}
-  try{ document.querySelectorAll('#page-tarot .qt-tier').forEach(function(e){ e.style.boxShadow=''; e.style.transform=''; }); }catch(e){}
-  if(el){ el.style.boxShadow='0 0 0 2px #0d9488'; el.style.transform='translateY(-2px)'; }
- };
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ if(el) el.style.outline='2px solid #b8860b'; }catch(e){}
+}
  window.qtFocusChat=function(){
   var i=document.getElementById('qt-chat-input');
   if(i){ try{ i.focus(); }catch(e){} }
@@ -11542,12 +11544,16 @@ try{
   window._cgnT=T;
   window.CGN_TIER='basic';
   window.cgnPickTier=function(t,el){
-    CGN_TIER=t;
-    try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='prem'?'premium':'advanced')); }catch(e){}
-    try{ window.cgoTierPicked(t, 0); }catch(e){}
-    var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.borderColor='rgba(184,134,11,.22)'; c.style.background='#fff'; });
-    if(el){ el.style.borderColor='#0f172a'; el.style.background='#f0fdf9'; }
-  };
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('sky',t,cost); }catch(e){}
+  }
+  CGN_TIER=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='prem'?'premium':'advanced')); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ if(el) el.className='sel'; }catch(e){}
+}
   window.cgnChatSend=function(){
     var inp=document.getElementById('cgn-chat-input'); if(!inp||!inp.value.trim()) return;
     var msg=inp.value.trim(); inp.value='';
@@ -11924,7 +11930,16 @@ try{
   }
   window.cgpPickSchool=function(k){ CGP_SEL=(CGP_SEL===k)?null:k; cgp3Render(); };
   window.cgpSetMode=function(m){ CGP_MODE=(CGP_MODE===m&&m!=='pure')?'pure':m; cgp3Render(); };
-  window.cgpSetTier=function(t){ CGP_TIER=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){} try{ window.cgoTierPicked(t, 0); }catch(e){} cgp3Render(); };
+  window.cgpSetTier=function(t){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('pure',t,cost); }catch(e){}
+  }
+  window.CGP_TIER=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  cgp3Render(); };
 
   /* ── 갈래별 몸통 ── */
   function bodyPerson(){
@@ -12747,19 +12762,27 @@ try{
   if(!reg()){ var _c=0, t=setInterval(function(){ if(document.hidden) return; if(reg()||++_c>75) clearInterval(t); },400); setTimeout(function(){ clearInterval(t); },15000); }
 })();
 window.f3PickTier=function(t,el){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('fusion3',t,cost); }catch(e){}
+  }
+  window._f3Tier=t;
   try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
-  try{ window.cgoTierPicked(t, 0); }catch(e){}
-  try{ var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.outline=''; });
-    if(el) el.style.outline='2px solid #b8860b'; window._f3Tier=t; }catch(e){}
-};
-window.tnPickTier=function(t,el){
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ if(el) el.style.outline='2px solid #b8860b'; }catch(e){}
+}
+window.tnPickTier=function(t){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('tn',t,cost); }catch(e){}
+  }
+  window._tnTier=t;
   try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
-  try{
-    var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.outline=''; });
-    if(el) el.style.outline='2px solid #b8860b';
-    window._tnTier=t;
-  }catch(e){}
-};
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ localStorage.setItem('cgo_tn_tier',t); }catch(_){}
+}
 
 }catch(e){}
 try{
@@ -13152,7 +13175,17 @@ try{
 try{
 
 window._iqTier='basic';
-window.iqPickTier=function(t){ window._iqTier=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){} try{ window.cgoTierPicked(t, 0); }catch(e){} try{ localStorage.setItem('cgo_iq_tier',t); }catch(_){} };
+window.iqPickTier=function(t){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('iq',t,cost); }catch(e){}
+  }
+  window._iqTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ localStorage.setItem('cgo_iq_tier',t); }catch(_){}
+}
 try{ var _it=localStorage.getItem('cgo_iq_tier'); if(_it) window._iqTier=_it; }catch(_){}
 
 
@@ -13191,7 +13224,15 @@ window.scFold=function(id){
   if(a) a.textContent=open?'▼':'▲';
   if(!open){ try{ if(window.cgoCullScan) cgoCullScan(b); }catch(_){} }
 };
-window.scPickTier=function(t){ window._sc.tier=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){} try{ window.cgoTierPicked(t, 0); }catch(e){} try{ localStorage.setItem('cgo_sc_tier',t); }catch(_){} };
+window.scPickTier=function(t){
+  var costs={basic:1000, pro:2000, max:3000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('scalp',t,cost); }catch(e){}
+  }
+  window._sc.tier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){} try{ window.cgoTierPicked(t, 0); }catch(e){} try{ localStorage.setItem('cgo_sc_tier',t); }catch(_){} };
 window.scStep=function(n){ window._sc.step=n; };
 window.scChat=function(){ try{ if(window.cgoOpenAIChat) cgoOpenAIChat('scalp'); }catch(_){} };
 window.scStart=function(){
@@ -13218,43 +13259,38 @@ try{
 /* 분석 등급 — 기본 1,000원 · 고급 2,000원 · 최고급 3,000원. 기본도 유료라 세 등급 다 결제를 받는다. */
 window._c24Tier='basic';
 window.c24PickTier=function(t){
-  var _key = (t==='plus') ? 'pro' : (t==='pro' ? 'max' : t);   /* c24 라벨(basic/plus/pro) → 값표 키(basic/pro/max) */
-  /* ★ 이 기능은 기본도 무료가 아니다 — basic 이라고 결제를 건너뛰면 안 된다. */
-  var _need = ({basic:1000, pro:2000, max:3000})[_key] || 0;
-  function _apply(){
-    var _apiTier = ({basic:'basic', plus:'advanced', pro:'premium'})[t] || 'basic';  /* api/claude.js MED_MODEL 키와 일치 */
-    window._c24Tier=_apiTier;
-    window._c24TierPaid=true;   /* ★ 결제(또는 무료 통과)가 실제로 끝났다는 표시 — 측정 시작 전에 이걸 본다 */
-    try{ localStorage.setItem('cgo_c24_tier',_apiTier); }catch(_){}
-    var _won={basic:1000,plus:2000,pro:3000}[t]||0;
-    try{ window.cgoTierPicked(_apiTier==='basic'?'basic':(_apiTier==='premium'?'max':'pro'), _won); }catch(_){}
+  var costs={basic:1000, pro:2000, max:3000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('c24',t,cost); }catch(e){}
   }
-  if(_need>0){
-    if(window.cgoIsManager && window.cgoIsManager()){ _apply(); return; }
-    if(window.cgoIsSubManager && window.cgoIsSubManager()){
-      if(window.cgoSubMgrDailyOk('med_'+_key)) _apply();
-      else try{ cgoTierNote('c24-tier-note', _need+'⭐'); }catch(_){}
-      return;
-    }
-    var _tname = window._L8(({basic:24028,pro:24029,max:24030})[_key], ({basic:'🟢 기본',pro:'⭐ 고급',max:'💎 최고급'})[_key]);
-    var askMsg=(window._L8?window._L8('24025','{0}으로 {1}⭐을 결제하시겠습니까?'):'{0}으로 {1}⭐을 결제하시겠습니까?').replace('{0}',_tname).replace('{1}',_need);
-    window._cgoPayAsk(askMsg, function(){
-      var ok=true;
-      try{ ok=window.chargeStars(_need); }catch(e){ ok=true; }
-      if(!ok){ try{ cgoTierNote('c24-tier-note', _need+'⭐'); }catch(_){} return; }
-      _apply();
-    }, function(){});
-    return;
-  }
-  _apply();
-};
+  window._c24Tier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ localStorage.setItem('cgo_c24_tier',t); }catch(_){}
+}
 try{ var _t=localStorage.getItem('cgo_c24_tier'); if(_t) window._c24Tier=_t; }catch(_){}
 window._c39={course:10};
 /* 인지 건강 — 등급과 종합 관리 카드 */
 window._c39Tier='basic';
-window.c39PickTier=function(t){ window._c39Tier=t;
+window.c39PickTier=function(t){
+  var costs={basic:0, pro:500, max:800};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('c39',t,cost); }catch(e){}
+  }
+  window._c39Tier=t;
   try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
-  try{ window.cgoTierPicked(t, 0); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ localStorage.setItem('cgo_c39_tier',t); }catch(_){}
+}
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('c39',t,cost); }catch(e){}
+  }
+  window._c39Tier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
   try{ localStorage.setItem('cgo_c39_tier',t); }catch(_){}
 };
 try{ var _ct=localStorage.getItem('cgo_c39_tier'); if(_ct) window._c39Tier=_ct; }catch(_){}
@@ -22848,16 +22884,16 @@ try{
 
 window.C14_TIER='basic';
 window.c14SetTier=function(t,el){
+  var costs={basic:0, pro:500, max:1000};
+  var cost=costs[t]||0;
+  if(cost>0){
+    try{ if(window.cgoTierBuyAsk) return cgoTierBuyAsk('dream',t,cost); }catch(e){}
+  }
   window.C14_TIER=t;
   try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
-  try{ window.cgoTierPicked(t, t==='pro'?63:(t==='adv'?10:0)); }catch(e){}
-  var box=el.parentElement;
-  for(var i=0;i<box.children.length;i++){
-    var c=box.children[i];
-    c.style.borderColor='rgba(168,85,247,.22)'; c.style.background='#fff'; c.style.boxShadow='none';
-  }
-  el.style.borderColor='#7c3aed'; el.style.background='#faf5ff';
-};
+  try{ window.cgoTierPicked(t, cost); }catch(e){}
+  try{ if(el) el.style.outline='2px solid #b8860b'; }catch(e){}
+}
 
 }catch(e){}
 try{
@@ -54457,7 +54493,7 @@ window.tvyCamUpdateGuide = function(deg){
 
 // 카메라 시작
 window.tvySetTier = function(t){
-  var costMap={pro:1500, max:3000};
+  var costMap={basic:0, pro:1500, max:3000};
   function _apply(){
     window._tvyTier=t;
     try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
@@ -56106,7 +56142,7 @@ function _shopPrompt(pk,oh,ili,nm){
 }
 window.shopInit=shopInit;
 window.shopSetTier = function(t){
-  var costMap={pro:1500, max:3000};
+  var costMap={basic:0, pro:1500, max:3000};
   function _apply(){
     window._shopTier=t;
     try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
