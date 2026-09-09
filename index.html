@@ -789,12 +789,7 @@ window.setLang=window.cgoSwitchLang=function(L){
      한국어일 때도 지나온 언어의 글자를 번호로 되돌려 한국어로 칠한다. */
   var L=CUR; if(!L) return 0;
   var R=rev(), sc=root||document, c=0;
-  var w=document.createTreeWalker(sc,NodeFilter.SHOW_TEXT,{acceptNode:function(nd){
-    /* ★ 매번 그 순간 언어로 새로 그려지는 팝업(주파수 음악 18역학 카드)은
-       역방향 사전이 모호 매칭(Earth→지구/토 등)을 일으켜 건드리면 안 된다 */
-    var p=nd.parentElement; while(p){ if(p.id==='mfu-yk-pop') return NodeFilter.FILTER_REJECT; p=p.parentElement; }
-    return NodeFilter.FILTER_ACCEPT;
-  }});
+  var w=document.createTreeWalker(sc,NodeFilter.SHOW_TEXT,null);
   var n, list=[];
   while((n=w.nextNode())){
    var t=n.nodeValue; if(!t) continue;
@@ -15049,7 +15044,7 @@ _myPop=function(id){
   var nick=localStorage.getItem('cgo_nick')||localStorage.getItem('userName')||'게스트';
   var email=localStorage.getItem('cgo_email')||localStorage.getItem('userEmail')||'(로그인 정보 없음)';
   var grade=localStorage.getItem('cgo_grade')||'무료 회원';
-  var ver='CGO-FULI v2026.09.08-m';
+  var ver='CGO-FULI v2026.09.08-o';
   var did=localStorage.getItem('cgo_device_id')||'FULI-DEVICE-0000';
   var gcode=localStorage.getItem('cgo_grade_code')||'free';
   var GR={free:{lab:'FREE',c:'#64748b',bg:'#f1f5f9',nx:'MEMBER',pct:33},member:{lab:'\u2B50 MEMBER',c:'#0e7490',bg:'#ecfeff',nx:'VIP',pct:66},vvip:{lab:'💎 VIP',c:'#7c3aed',bg:'linear-gradient(135deg,#f5e6ff,#fff7e6)',nx:'',pct:100}};
@@ -18705,7 +18700,7 @@ var MUSIC_DB={
   },
   YEOKAK:[
     {id:'saju',name:'사주명리',sub:_mK(24030,'일간(日干) · 오행(五行) · 대운 분석'),emoji:'🔴',color:'#f87171',bg:'rgba(248,113,113,.08)',border:'rgba(248,113,113,.25)',
-      analyze:function(bs){var oh=bs.oh,ohi=MUSIC_DB.OH_MUSIC[oh],ok={목:'木',화:'火',토:'土',금:'金',수:'水'};var _k={목:0,화:1,토:2,금:3,수:4}[oh]||0,ohN=_mK(23807+_k,oh),ohS=_mK(23812+_k,ohi.scale),ohI=_mK(23817+_k,ohi.instruments),ohE=_mK(23822+_k,ohi.effect);var ohH='<strong style="color:'+ohi.color+'">'+(ohN===ok[oh]?ohN:ohN+'('+ok[oh]+')')+'</strong>',ohF='<strong>'+ohi.freq+'</strong>';return{score:(function(){var _s=rng((bs.dateSeed||54321)*7+101)&0x7fff;return Math.max(65,Math.min(92,70+_s%22));})(),detail:_mKf(23803,'일간 오행 {0} 분석 결과 {1} 주파수 대역과 공명 최적화.',[ohH,ohF])+' '+_mKf(23804,'BAI {0}BPM은 {1} 범위 일치.',[bs.bpm,ohi.tempo])+' '+ohE+'.',rows:[{i:'🎵',t:_mKf(23805,'권장 주파수: {0} · {1}',[ohF,ohS])},{i:'🎸',t:_mKf(23806,'최적 악기: {0}',[ohI])},{i:'✨',t:ohE}]};
+      analyze:function(bs){var oh=bs.oh,ohi=MUSIC_DB.OH_MUSIC[oh],ok={목:'木',화:'火',토:'土',금:'金',수:'水'};var _k={목:0,화:1,토:2,금:3,수:4}[oh]||0,ohN=_mK(23807+_k,oh),ohS=_mK(23812+_k,ohi.scale),ohI=_mK(23817+_k,ohi.instruments),ohE=_mK(23822+_k,ohi.effect);var ohH='<strong data-notr="1" style="color:'+ohi.color+'">'+(ohN===ok[oh]?ohN:ohN+'('+ok[oh]+')')+'</strong>',ohF='<strong>'+ohi.freq+'</strong>';return{score:(function(){var _s=rng((bs.dateSeed||54321)*7+101)&0x7fff;return Math.max(65,Math.min(92,70+_s%22));})(),detail:_mKf(23803,'일간 오행 {0} 분석 결과 {1} 주파수 대역과 공명 최적화.',[ohH,ohF])+' '+_mKf(23804,'BAI {0}BPM은 {1} 범위 일치.',[bs.bpm,ohi.tempo])+' '+ohE+'.',rows:[{i:'🎵',t:_mKf(23805,'권장 주파수: {0} · {1}',[ohF,ohS])},{i:'🎸',t:_mKf(23806,'최적 악기: {0}',[ohI])},{i:'✨',t:ohE}]};
       }},
     {id:'jami',name:'자미두수',sub:_mK(24031,'12궁(宮) · 18주성(主星) 에너지 분석'),emoji:'🟣',color:'#a78bfa',bg:'rgba(167,139,250,.08)',border:'rgba(167,139,250,.25)',
       analyze:function(bs){var p=['命宮','財帛','官祿','福德','夫妻','遷移','田宅','疾厄','子女','兄弟','父母','奴僕'][(bs.bpm+bs.hrv)%12];var s=['紫微','天機','太陽','武曲','天同','廉貞','天府','太陰','貪狼','巨門','天相','天梁','七殺','破軍'][(bs.fci+bs.eng)%14];var f=[396,417,432,528,639,741,852][(bs.fci+bs.eng)%7];var pH='<strong style="color:#a78bfa">'+p+'</strong>',sH='<strong style="color:#a78bfa">'+s+'</strong>',fH='<strong>'+f+'Hz</strong>';return{score:(function(){var _s=rng((bs.dateSeed||54321)*11+202)&0x7fff;return Math.max(67,Math.min(92,72+_s%20));})(),detail:_mKf(23827,'명궁 {0}에 주성 {1}. 공명 주파수 {2}. rPPG 이마 혈류(FCI {3}%) — 천격 에너지 활성.',[pH,sH,fH,bs.fci]),rows:[{i:'⭐',t:_mKf(23828,'활성 주성: {0} · 안착궁: {1}',['<strong>'+s+'</strong>','<strong>'+p+'</strong>'])},{i:'🎵',t:_mKf(23829,'공명 주파수: {0}',[fH])},{i:'✨',t:_mK(23830,'복덕궁 활성화, 귀인운·재물운 상승')}]};
@@ -25985,7 +25980,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.08-m';
+window.CGO_VER='2026.09.08-o';
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -47691,11 +47686,11 @@ list.innerHTML = scored.map(function(d){
   </div>
 </div>
 <style id="spd2css">
-#spd2{position:fixed;right:12px;bottom:16px;z-index:2147483000;font-family:ui-monospace,Menlo,monospace;opacity:.55;transition:opacity .15s;user-select:none}
+#spd2{position:fixed;right:12px;bottom:16px;z-index:2147483000;font-family:ui-monospace,Menlo,monospace;opacity:.55;transition:opacity .15s;user-select:none;pointer-events:none}
 #spd2:hover,#spd2.open{opacity:1}
-#spd2pill{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:100px;background:#0b1220;color:#e2e8f0;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap}
+#spd2pill{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:100px;background:#0b1220;color:#e2e8f0;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);white-space:nowrap;pointer-events:auto}
 #spd2dot{width:6px;height:6px;border-radius:50%;background:#34d399;flex:none}
-#spd2card{display:none;width:230px;padding:12px 13px;border-radius:12px;background:#0b1220;color:#e2e8f0;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#spd2card{display:none;width:230px;padding:12px 13px;border-radius:12px;background:#0b1220;color:#e2e8f0;box-shadow:0 4px 18px rgba(0,0,0,.35);pointer-events:auto}
 #spd2.open #spd2pill{display:none}
 #spd2.open #spd2card{display:block}
 #spd2hd{display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.16em;color:#64748b;margin-bottom:7px}
