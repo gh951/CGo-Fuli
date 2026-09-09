@@ -1056,8 +1056,21 @@ function _ekf(n, f){ var s=_ek(n,f); for(var i=2;i<arguments.length;i++){ s=s.sp
           + (window.K?K(10396):'') + ' ' + eyeState._lux + ' lux'
           + (eyeState._lux < 25 ? ' — ' + (window.K?K(10397):'') : '') + '</div>' : '')
       + '</div>';
+    /* ★ 2026.09.10 — AI 풀이 자리. 위 규칙 문장은 그대로 두고(즉시 보임), 이 칸은 /api 로 받아 채운다 */
+    resultHtml += '<div id="eye-ai-box" style="margin-top:12px;padding:14px;background:linear-gradient(135deg,#fff,#f0fdfb);border:1px solid #ccfbf1;border-radius:14px;">'
+      + '<div style="font-size:13px;font-weight:900;color:#134e4a;margin-bottom:6px;">' + _ek(10684,'🤖 AI 눈 상태 풀이') + '</div>'
+      + '<div id="eye-ai-text" style="font-size:11.5px;color:#444;line-height:1.75;white-space:pre-wrap;">' + _ek(10685,'AI가 측정값을 읽고 있습니다…') + '</div></div>';
     document.getElementById('eye-result-content').innerHTML = resultHtml;
     document.getElementById('eye-result-area').style.display = 'block';
+
+    /* 측정 요약 — AI 프롬프트·상담 채팅이 같이 쓴다 */
+    try{
+      var _rates={}; Object.keys(catStats).forEach(function(k){ var c=catStats[k]; _rates[k]=c.t>0?Math.round(c.c/c.t*100):null; });
+      var _g=function(id){ var el=document.getElementById(id); return el?el.textContent:'--'; };
+      eyeState.lastSummary={ side:eyeState.selectedSide||'-', clarity:estVision, clarityLabel:estLabel, avgRtMs:Math.round(avgRt),
+        rates:_rates, bpm:_g('eye-bpm'), hrv:_g('eye-hrv'), blink:_g('eye-blink'), fatigue:_g('eye-fatigue'), stability:_g('eye-stab'), pupil:_g('eye-pupil') };
+    }catch(e){ eyeState.lastSummary=null; }
+    try{ eyeAiAnalyze(); }catch(e){}
 
     eyeState.started = false;
     eyeDebug(_cgoT('✅ 측정 완료 — 눈 선명도 지수 ') + estVision + ' (' + estLabel + ')');
@@ -1107,20 +1120,46 @@ function _ekf(n, f){ var s=_ek(n,f); for(var i=2;i<arguments.length;i++){ s=s.sp
   window.eyeChatEnter = function(e){
     if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); eyeChatSend(); }
   };
+  /* ★ 2026.09.10 — 눈 건강 AI 연결. /api/groq 을 부르면 앱의 fetch 인터셉터가 등급(기본 Sonnet·고급 Sonnet·최고급 Sonnet)·언어·웰니스 주의문·한도를 붙여 /api/claude 로 보낸다.
+     system 에 「눈 건강」이 꼭 들어가야 한다 — AI 허용 명단(CGO_AI_ALLOW)과 웰니스 판별(CGO_AI_MED)이 이 단어를 본다. */
+  function eyeSummaryText(){
+    var S=eyeState.lastSummary; if(!S) return '(측정값 없음 — 아직 측정 전)';
+    var r=S.rates||{};
+    return '눈 건강 측정 요약 — 측정 눈: ' + (S.side==='left'?'왼쪽':'오른쪽') + ' / 눈 선명도 지수: ' + S.clarity + ' (' + S.clarityLabel + ')'
+      + ' / 평균 반응 ' + S.avgRtMs + 'ms / 정답률(%) 형태 ' + r.shape + ' · 색 ' + r.color + ' · 기호 ' + r.symbol + ' · 명암 ' + r.contrast + ' · 시선고정 ' + r.fixation
+      + ' / 눈가 rPPG BPM ' + S.bpm + ' · HRV ' + S.hrv + ' / 깜빡임 ' + S.blink + ' · 피로 ' + S.fatigue + ' · 안정도 ' + S.stability + ' · 동공 ' + S.pupil;
+  }
+  var EYE_SYS = '당신은 CGO-FULI 「나의 눈 건강」의 웰니스 상담사입니다. 아래 눈 건강 측정값(반응 시간·정답률·눈가 rPPG·깜빡임)만 근거로 오늘의 눈 컨디션을 따뜻하고 구체적으로 풀어 줍니다. '
+    + '수치를 실제로 인용하고, 생활 습관(20-20-20 규칙·깜빡임·화면 거리·조명·수면·수분)까지만 권합니다. 병명·진단·판정은 절대 쓰지 않습니다. 이것은 의료 진단이 아닙니다.';
+  function eyeCallAi(userText, isChat, done){
+    var body={ model:'llama-3.3-70b-versatile', max_tokens: isChat?600:1100, temperature:0.7,
+      messages:[ {role:'system', content: EYE_SYS + (isChat?' [눈 건강 상담]':' [눈 건강 본풀이 · 분석 지침: 5~7문장, 항목마다 수치 인용]')}, {role:'user', content:userText} ] };
+    fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ var t=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||(j&&j.text)||''; done(String(t).trim()); })
+      .catch(function(){ done(''); });
+  }
+  window.eyeAiAnalyze = function(){
+    var box=document.getElementById('eye-ai-text'); if(!box) return;
+    eyeCallAi(eyeSummaryText() + '\n\n이 측정값으로 오늘의 눈 컨디션을 풀어 주세요.', false, function(t){
+      var el=document.getElementById('eye-ai-text'); if(!el) return;
+      el.textContent = t || _ek(10686,'AI 풀이를 불러오지 못했습니다 — 위 분석을 참고하세요');
+    });
+  };
   window.eyeChatSend = function(){
     var input = document.getElementById('eye-chat-input');
     var msg = input.value.trim();
     if(!msg) return;
     var hist = document.getElementById('eye-chat-history');
-    var userBubble = '<div style="background:#0d9488;color:#fff;border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:right;">' + msg + '</div>';
-    hist.innerHTML += userBubble;
+    var esc=function(s){ return String(s).replace(/[&<>]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); };
+    hist.innerHTML += '<div style="background:#0d9488;color:#fff;border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:right;">' + esc(msg) + '</div>';
     input.value = '';
-    setTimeout(function(){
-      var reply = eyeAiReply(msg);
-      var botBubble = '<div style="background:#f0fdfb;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' + reply + '</div>';
-      hist.innerHTML += botBubble;
+    var bot=document.createElement('div'); bot.style.cssText='background:#f0fdfb;border-radius:10px;padding:10px 12px;margin-bottom:8px;white-space:pre-wrap;'; bot.textContent='…';
+    hist.appendChild(bot); hist.scrollTop = hist.scrollHeight;
+    eyeCallAi(eyeSummaryText() + '\n\n[사용자] ' + msg, true, function(t){
+      if(t){ bot.textContent=t; } else { bot.innerHTML = eyeAiReply(msg); }   /* 망이 막히면 옛 키워드 답으로 */
       hist.scrollTop = hist.scrollHeight;
-    }, 400);
+    });
   };
   function eyeAiReply(msg){
     var m = msg.toLowerCase();

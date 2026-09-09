@@ -715,7 +715,9 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     var chk=null,rppg=null; try{chk=JSON.parse(sessionStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(sessionStorage.getItem('cgo_sleep_rppg'));}catch(e){}
     var resultTxt=''; if(chk) resultTxt+='\n[수면 자가점검] ISI '+chk.isi+'/28, 종합부담 '+chk.pct+'%'; if(rppg) resultTxt+='\n[rPPG] bpm '+rppg.bpm+', hrv '+rppg.hrv;
     var sys='CGO-FULI 수면 AI 상담사. 사용자의 수면 관련 질문에 참고용으로만 답한다. 진단·처방 표현은 쓰지 않는다.'+resultTxt;
-    var body={ kind:'sleep', tier:(window._slpTier==='prem'?'premium':window._slpTier==='adv'?'advanced':'basic'), system:sys, prompt:t, max_tokens:500, temperature:0.6 };
+    /* ★ 2026.09.10 — feat:'sleep' 을 보내 서버 FEAT 표(고급 Sonnet · 최고급 Opus)를 타게 한다. 길이도 등급대로 연다 */
+    var _tt=(window._slpTier==='prem'?'premium':window._slpTier==='adv'?'advanced':'basic');
+    var body={ kind:'sleep', feat:'sleep', tier:_tt, system:sys, prompt:t, max_tokens:(_tt==='premium'?3200:(_tt==='advanced'?1500:500)), temperature:0.6 };
     fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
@@ -725,9 +727,15 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       })
       .catch(function(){ var w=document.getElementById(waitId); if(w) w.textContent='오류가 발생했어요.'; });
   };
+  /* ★ 2026.09.10 — 등급 결제: 좋은 수면 고급 500 · 최고급 1,000 (CGO_TIER_COST.sleep). 별이 없으면 등급이 바뀌지 않는다 */
   window.cgoSlpSetTier=function(t){
-    window._slpTier=t;
-    try{ if(window.cgoSlpData) cgoSlpData(); }catch(e){}
+    var t2=(t==='prem'?'max':(t==='adv'?'pro':'basic'));
+    var apply=function(){ window._slpTier=t;
+      try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t2); }catch(e){}
+      try{ if(window.cgoTierPicked) window.cgoTierPicked(t2, window.cgoTierCost?window.cgoTierCost('sleep',t2):0); }catch(e){}
+      try{ if(window.cgoSlpData) cgoSlpData(); }catch(e){} };
+    if(!window.cgoTierBuyAsk){ apply(); return; }
+    window.cgoTierBuyAsk('sleep', t2, function(ok){ if(!ok){ try{ window.cgoTierDeny&&window.cgoTierDeny('sleep',t2); }catch(e){} return; } apply(); });
   };
 })();
 
