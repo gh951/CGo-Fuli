@@ -10,9 +10,18 @@
 //    { choices:[{ message:{ content } }] }
 // ══════════════════════════════════════════════════════════════════
 
+import { check as rateCheck, limitedBody } from './_limit.js';   // ★ 2026.09.10 문지기 — claude.js 와 같은 표
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ choices: [], error: 'POST only' });
+  }
+
+  // ── 문지기 — 기본 등급(Groq) 도 IP 당 1분 3회 · 하루 40회. 0.4원이라도 봇이 만 번 돌리면 값이고,
+  //    Groq 무료 한도가 막히면 유료 회원까지 답이 안 나온다. 매니저는 x-cgo-mgr 열쇠로 면제.
+  const hit = rateCheck(req, 'basic');
+  if (hit) {
+    return res.status(200).json(Object.assign(limitedBody(hit, 'basic'), { choices: [{ message: { content: '' } }] }));
   }
 
   const key = process.env.GROQ_API_KEY;
