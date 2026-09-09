@@ -1,4 +1,6 @@
 function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== String(n)) ? v : f; }catch(e){ return f; } }
+/* ★ 2026.09.09 — 번호 사전 + 자리표({0}{1}) 채우기. 조립 문장이 사전에 없어 한국어가 남던 자리를 모두 번호로 바꿨다 */
+function _ekf(n, f){ var s=_ek(n,f); for(var i=2;i<arguments.length;i++){ s=s.split('{'+(i-2)+'}').join(String(arguments[i])); } return s; }
 /* 나의 눈 건강 — 구 CGO 원본 엔진 그대로 */
 /* 나의 눈 건강 엔진 (메신저 C-44 이식 · 자체완결 IIFE) */
 
@@ -165,7 +167,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       rightBtn.style.background = '#fff';
       rightBtn.style.borderWidth = '2px';
       rightBtn.style.boxShadow = 'none';
-      statusEl.innerHTML = '🔴 <b>왼쪽 눈</b> 선택 · 오른쪽 눈을 손으로 가리고 측정 시작';
+      statusEl.textContent = '🔴 ' + _ek(10513,'왼쪽 눈 선택 · 오른쪽 눈을 손으로 가리고 측정 시작');
       statusEl.style.color = '#ef4444';
     } else {
       rightBtn.style.background = '#eff6ff';
@@ -174,7 +176,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       leftBtn.style.background = '#fff';
       leftBtn.style.borderWidth = '2px';
       leftBtn.style.boxShadow = 'none';
-      statusEl.innerHTML = '🔵 <b>오른쪽 눈</b> 선택 · 왼쪽 눈을 손으로 가리고 측정 시작';
+      statusEl.textContent = '🔵 ' + _ek(10514,'오른쪽 눈 선택 · 왼쪽 눈을 손으로 가리고 측정 시작');
       statusEl.style.color = '#3b82f6';
     }
 
@@ -184,8 +186,8 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     startBtn.style.background = 'linear-gradient(135deg,#14b8a6,#0d9488)';
     startBtn.style.boxShadow = '0 4px 12px rgba(20,184,166,.4)';
     /* ★C-68: 조각을 이어붙이면 사전에 통짜 키가 없어 한국어가 남는다 → 완성문을 통째로 번역 */
-        startBtn.textContent = _cgoT(side === 'left' ? '📸 측정 시작 (왼쪽 눈)' : '📸 측정 시작 (오른쪽 눈)');
-    eyeDebug(_cgoT(side === 'left' ? '👁️ 왼쪽 눈 측정 선택 — 시작 가능' : '👁️ 오른쪽 눈 측정 선택 — 시작 가능'));
+        startBtn.textContent = side === 'left' ? _ek(10662,'📸 측정 시작 (왼쪽 눈)') : _ek(10663,'📸 측정 시작 (오른쪽 눈)');
+    eyeDebug(side === 'left' ? _ek(10515,'👁️ 왼쪽 눈 선택됨 — 측정 시작 가능') : _ek(10516,'👁️ 오른쪽 눈 선택됨 — 측정 시작 가능'));
   };
 
   // ── 시작 ─────────────────────────────────────────────────
@@ -215,7 +217,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       // 5) UI 원상복구 (eyeStartMeasure가 바꾼 것 역순)
       var ids={'eye-camera-area':'none','eye-question-area':'none','eye-start-btn':'block','eye-side-select':'block'};
       for(var id in ids){ var el=document.getElementById(id); if(el) el.style.display=ids[id]; }
-      try{ if(typeof eyeDebug==='function') eyeDebug('⏹️ 측정을 닫았습니다 — 카메라 종료됨. 다시 시작할 수 있어요.'); }catch(e){}
+      try{ if(typeof eyeDebug==='function') eyeDebug(_ek(10517,'👁️ 측정을 마쳤습니다 — 카메라 종료됨. 다시 시작할 수 있어요')); }catch(e){}
     }catch(e){}
   };
 
@@ -227,7 +229,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     // ★ 박입 119 — 눈 선택 검증
     if(!eyeState.selectedSide){
       alert(_cgoT(_ek(10619,'먼저 측정할 눈 (왼쪽/오른쪽) 을 선택해 주세요.')));
-      eyeDebug('⚠️ 눈 선택 X — 왼쪽 또는 오른쪽 눈 선택 후 시작 가능');
+      eyeDebug(_ek(10664,'⚠️ 눈이 선택되지 않았습니다 — 왼쪽 또는 오른쪽 눈을 고른 뒤 시작할 수 있어요'));
       return;
     }
     eyeState.started = true;
@@ -239,7 +241,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     eyeState.blinkCount = 0;
 
     var sideKor = eyeState.selectedSide === 'left' ? _ek(10620,'왼쪽') : _ek(10621,'오른쪽');
-    eyeDebug('🎬 ' + sideKor + ' 눈 측정 시작 — 카메라 활성화...');
+    eyeDebug(eyeState.selectedSide === 'left' ? _ek(10665,'🎬 왼쪽 눈 측정 시작 — 카메라 활성화…') : _ek(10666,'🎬 오른쪽 눈 측정 시작 — 카메라 활성화…'));
     document.getElementById('eye-start-btn').style.display = 'none';
     document.getElementById('eye-side-select').style.display = 'none';  // ★ 박입 119 — 선택 박스 숨김
     document.getElementById('eye-camera-area').style.display = 'block';
@@ -250,13 +252,13 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       // ★ 박입 78 — 측정 시작 비프 (띠—) + 사용자 안내
       eyeBeepStart();
       try{ if(window.eyeLuxStart) eyeLuxStart(); }catch(_){}
-      eyeDebug('🔔 측정 시작! 카메라 ON');
+      eyeDebug(_ek(10667,'🔔 측정 시작! 카메라 ON'));
       setTimeout(function(){
         eyeShowQuestion(0);
         eyeStartRppgLoop();
       }, 500);
     }).catch(function(err){
-      eyeDebug('⚠️ 카메라 접근 실패: ' + err.message);
+      eyeDebug(_ek(10668,'⚠️ 카메라 접근 실패:') + ' ' + err.message);
       alert(_cgoT(_ek(10622,'카메라 권한이 필요합니다. 다시 시도해 주세요.')));
       eyeState.started = false;
       document.getElementById('eye-start-btn').style.display = 'block';
@@ -538,7 +540,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       s108.detCanvas.width = 64;
       s108.detCanvas.height = 64;
       s108.detCtx = s108.detCanvas.getContext('2d', {willReadFrequently:true});
-      eyeDebug('✓ Guardian 피부색 감지 박입 (FaceMesh X · 즉시 작동)');
+      eyeDebug(_ek(10669,'✓ 피부색 감지 준비 완료 — 즉시 작동'));
     }
 
     // ★ 박입 114 — Guardian 피부색 감지 루프 (100ms 마다, FaceMesh X)
@@ -664,7 +666,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
           } else {
             statusMsg = _ek(10635,'얼굴이 안 보입니다');
             statusSub = _ek(10636,'카메라 정면을 바라봐 주세요 (조명 밝게)');
-            _eye111UpdateDot('#ef4444', '얼굴 X');
+            _eye111UpdateDot('#ef4444', _ek(10676,'얼굴 없음'));
           }
         }
         document.getElementById('eye-dist').textContent = '--';
@@ -674,7 +676,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
         if(lostSec2 >= 3 && now - s108.lastBeepTime > 3000){
           eyeBeepDistWarn();
           s108.lastBeepTime = now;
-          eyeDebug('⚠️ 얼굴이 안 보입니다 (' + lostSec2 + '초)');
+          eyeDebug(_ekf(10670,'⚠️ 얼굴이 보이지 않습니다 ({0}초)', lostSec2));
         }
         s108.distState = 'noface';
         return;
@@ -699,16 +701,16 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
 
       // ★ 박입 111 — 점 + 차단 박입
       if(nowState === 'ok'){
-        _eye111UpdateDot('#3b82f6', '측정 OK · ' + dist + 'cm');  // 파란 점
+        _eye111UpdateDot('#3b82f6', _ekf(10677,'측정 OK · {0}cm', dist));  // 파란 점
         _eye111BlockQuestion(false);
       } else if(nowState === 'tooClose'){
-        _eye111UpdateDot('#ef4444', '너무 가까움 · ' + dist + 'cm');  // 빨간 점
+        _eye111UpdateDot('#ef4444', _ekf(10678,'너무 가까움 · {0}cm', dist));  // 빨간 점
         _eye111BlockQuestion(true, _ek(10637,'너무 가깝습니다'), _ek(10638,'30~40cm 로 떨어져 주세요'));
       } else if(nowState === 'tooFar'){
-        _eye111UpdateDot('#ef4444', '너무 멈 · ' + dist + 'cm');  // 빨간 점
+        _eye111UpdateDot('#ef4444', _ekf(10679,'너무 멂 · {0}cm', dist));  // 빨간 점
         _eye111BlockQuestion(true, _ek(10639,'너무 멉니다'), _ek(10640,'30~40cm 로 가까이 와 주세요'));
       } else {
-        _eye111UpdateDot('#666', '측정 중...');
+        _eye111UpdateDot('#666', _ek(10680,'측정 중…'));
         _eye111BlockQuestion(false);
       }
 
@@ -716,12 +718,12 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       if(nowState !== prevState && nowState !== 'unknown'){
         if(nowState === 'ok'){
           eyeBeepDistOK();
-          eyeDebug('🔔 딩동댕 — 거리 ' + dist + 'cm OK');
+          eyeDebug(_ekf(10671,'🔔 거리 {0}cm OK', dist));
           s108.lastBeepTime = now;
         } else {
           eyeBeepDistWarn();
           var msg = nowState === 'tooClose' ? _ek(10637,'너무 가깝습니다') : _ek(10639,'너무 멉니다');
-          eyeDebug('⚠️ ' + msg + ' — 현재 ' + dist + 'cm');
+          eyeDebug(_ekf(10672,'⚠️ {0} — 현재 {1}cm', msg, dist));
           s108.lastBeepTime = now;
         }
         s108.distState = nowState;
@@ -730,7 +732,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
         if(now - s108.lastBeepTime > 3000){
           eyeBeepDistWarn();
           var msg2 = nowState === 'tooClose' ? _ek(10637,'너무 가깝습니다') : _ek(10639,'너무 멉니다');
-          eyeDebug('⚠️ ' + msg2 + ' — 현재 ' + dist + 'cm (반복)');
+          eyeDebug(_ekf(10673,'⚠️ {0} — 현재 {1}cm (반복)', msg2, dist));
           s108.lastBeepTime = now;
         }
       }
@@ -769,7 +771,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
         var capCtx = capCv.getContext('2d');
         capCtx.drawImage(capV, 0, 0, 320, 240);
         eyePhotoDataUrl = capCv.toDataURL('image/jpeg', 0.85);
-        eyeDebug('📸 눈 사진 캡처 완료 (320x240 · 로컬만)');
+        eyeDebug(_ek(10674,'📸 눈 사진 캡처 완료 (320×240 · 기기 안에만)'));
       }
     } catch(e){ console.warn('[박입 117] 사진 캡처 실패:', e); }
 
@@ -1081,7 +1083,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     }
     var statusEl = document.getElementById('eye-side-status');
     if(statusEl){
-      statusEl.innerHTML = _cgoT('한쪽 눈 선택 후 측정 시작 가능');
+      statusEl.textContent = _ek(10494,'한쪽 눈 선택 후 측정 시작 가능');
       statusEl.style.color = '#0f766e';
     }
     var startBtn = document.getElementById('eye-start-btn');
@@ -1096,7 +1098,7 @@ function _ek(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       var el = document.getElementById(id);
       if(el) el.textContent = '--';
     });
-    eyeDebug('👁️ 측정 대기 중... 눈 선택 후 시작');
+    eyeDebug(_ek(10675,'👁️ 측정 대기 중… 눈을 고른 뒤 시작'));
   };
 
   // ── AI 챗 ───────────────────────────────────────────────
