@@ -222,6 +222,8 @@ function _ekf(n, f){ var s=_ek(n,f); for(var i=2;i<arguments.length;i++){ s=s.sp
   };
 
   window.eyeStartMeasure = function(){
+    /* ★ 2026.09.10 — 눈 건강은 기본도 500 유료. 등급 카드에서 결제했으면 1회 소진, 아니면 기본 결제를 묻고 성공 시 다시 시작 */
+    if(window.cgoPaidBasicGate && !window.cgoPaidBasicGate('eye', window.eyeStartMeasure)) return;
     if(eyeState.started){
       eyeDebug(_ek(10618,'이미 측정 중...'));
       return;
