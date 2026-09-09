@@ -42,6 +42,8 @@ window.CGO_TIER_COST = window.CGO_TIER_COST || {
   tvy:    {pro:1500, max:3000},   /* 숙소·여행지 · 기본 무료 · 고급 1,500원 · 최고급 3,000원 */
   shop:   {pro:1500, max:3000},   /* 오행 맞춤 쇼핑 · 기본 무료 하루5회 · 고급 1,500원 · 최고급 3,000원 */
   sleep:  {pro:500,  max:1000},   /* 좋은 수면 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
+  gws:    {pro:500,  max:1000},   /* 관상·혀·손금 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
+  skm:    {pro:500,  max:1000},   /* 두피 케어 · 기본 무료 하루1회 · 고급 500원 · 최고급 1,000원 */
   def:    {pro:100,  max:500}
 };
 /* 별을 깎는다. 부족하면 false — 문구는 사전 16796 을 쓴다 (20개 언어) */
@@ -9573,6 +9575,24 @@ window.cgoCardDeepRun=function(){
 };
 function cgoFaceVisionAnalysis(){
   window._cgoVisionMode = 'face';
+  window.gwsSetTier=window.gwsSetTier||function(t,el){
+    var map={basic:'basic',adv:'advanced',prem:'premium'};
+    if(!window.cgoTierBuy('gws', t==='prem'?'max':(t==='adv'?'pro':'basic'))) return;
+    try{ if(window.cgoSetAiTier) window.cgoSetAiTier(map[t]||'basic'); }catch(e){}
+    window._gwsTier=t;
+    if(el && el.parentElement){ var sib=el.parentElement.children;
+      for(var i=0;i<sib.length;i++){ sib[i].style.borderColor='rgba(184,134,11,.22)'; }
+      el.style.borderColor='#b8860b'; }
+  };
+  window.skmSetTier=window.skmSetTier||function(t,el){
+    var map={basic:'basic',adv:'advanced',prem:'premium'};
+    if(!window.cgoTierBuy('skm', t==='prem'?'max':(t==='adv'?'pro':'basic'))) return;
+    try{ if(window.cgoSetAiTier) window.cgoSetAiTier(map[t]||'basic'); }catch(e){}
+    window._skmTier=t;
+    if(el && el.parentElement){ var sib=el.parentElement.children;
+      for(var i=0;i<sib.length;i++){ sib[i].style.borderColor='rgba(184,134,11,.22)'; }
+      el.style.borderColor='#b8860b'; }
+  };
   _cgoVisionPopup((window._LANG&&window._LANG!=='ko')?'Face measurement':_gwT(16780,'얼굴 측정'), '#93c5fd', '🧖');
   var guide = document.getElementById('cgo-vision-guide');
   if(guide) guide.innerHTML = _gwT(16781,'편안하게 자세를 잡아주세요 😊<br>')+_gwT(16782,'얼굴이 화면에 들어오면 자동으로 시작돼요')+'<br><span style="color:rgba(252,211,77,.7);">'+_gwT(16783,'밝은 곳에서 정면을 바라봐 주시면 더 또렷해요')+'</span><br><span style="font-size:10px;color:rgba(255,255,255,.45);">'+_gwT(16784,'웰니스 참고용 · 판독용 사진 1장만 전송 후 폐기')+'</span>';
@@ -10776,6 +10796,7 @@ function _cgoVisionShoot(preB64){
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+        kind:'gws',
         messages:[{role:'system',content:step2Sys},{role:'user',content:step2Prompt}],
         max_tokens:3500,temperature:0.85,
         response_format:{type:'json_object'}})});
@@ -11318,6 +11339,7 @@ try{
  window.qtTier='basic';
  window.qtPickTier=function(t,el){
   window.qtTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   try{ document.querySelectorAll('#page-tarot .qt-tier').forEach(function(e){ e.style.boxShadow=''; e.style.transform=''; }); }catch(e){}
   if(el){ el.style.boxShadow='0 0 0 2px #0d9488'; el.style.transform='translateY(-2px)'; }
  };
@@ -11422,6 +11444,7 @@ try{
   window.CGN_TIER='basic';
   window.cgnPickTier=function(t,el){
     CGN_TIER=t;
+    try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='prem'?'premium':'advanced')); }catch(e){}
     var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.borderColor='rgba(184,134,11,.22)'; c.style.background='#fff'; });
     if(el){ el.style.borderColor='#0f172a'; el.style.background='#f0fdf9'; }
   };
@@ -11801,7 +11824,7 @@ try{
   }
   window.cgpPickSchool=function(k){ CGP_SEL=(CGP_SEL===k)?null:k; cgp3Render(); };
   window.cgpSetMode=function(m){ CGP_MODE=(CGP_MODE===m&&m!=='pure')?'pure':m; cgp3Render(); };
-  window.cgpSetTier=function(t){ CGP_TIER=t; cgp3Render(); };
+  window.cgpSetTier=function(t){ CGP_TIER=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){} cgp3Render(); };
 
   /* ── 갈래별 몸통 ── */
   function bodyPerson(){
@@ -12624,10 +12647,12 @@ try{
   if(!reg()){ var _c=0, t=setInterval(function(){ if(document.hidden) return; if(reg()||++_c>75) clearInterval(t); },400); setTimeout(function(){ clearInterval(t); },15000); }
 })();
 window.f3PickTier=function(t,el){
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   try{ var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.outline=''; });
     if(el) el.style.outline='2px solid #b8860b'; window._f3Tier=t; }catch(e){}
 };
 window.tnPickTier=function(t,el){
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   try{
     var p=el&&el.parentNode; if(p) [].slice.call(p.children).forEach(function(c){ c.style.outline=''; });
     if(el) el.style.outline='2px solid #b8860b';
@@ -13016,7 +13041,7 @@ try{
 try{
 
 window._iqTier='basic';
-window.iqPickTier=function(t){ window._iqTier=t; try{ localStorage.setItem('cgo_iq_tier',t); }catch(_){} };
+window.iqPickTier=function(t){ window._iqTier=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){} try{ localStorage.setItem('cgo_iq_tier',t); }catch(_){} };
 try{ var _it=localStorage.getItem('cgo_iq_tier'); if(_it) window._iqTier=_it; }catch(_){}
 
 
@@ -13055,7 +13080,7 @@ window.scFold=function(id){
   if(a) a.textContent=open?'▼':'▲';
   if(!open){ try{ if(window.cgoCullScan) cgoCullScan(b); }catch(_){} }
 };
-window.scPickTier=function(t){ window._sc.tier=t; try{ localStorage.setItem('cgo_sc_tier',t); }catch(_){} };
+window.scPickTier=function(t){ window._sc.tier=t; try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){} try{ localStorage.setItem('cgo_sc_tier',t); }catch(_){} };
 window.scStep=function(n){ window._sc.step=n; };
 window.scChat=function(){ try{ if(window.cgoOpenAIChat) cgoOpenAIChat('scalp'); }catch(_){} };
 window.scStart=function(){
@@ -13099,6 +13124,7 @@ window._c39={course:10};
 /* 인지 건강 — 등급과 종합 관리 카드 */
 window._c39Tier='basic';
 window.c39PickTier=function(t){ window._c39Tier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   try{ localStorage.setItem('cgo_c39_tier',t); }catch(_){}
 };
 try{ var _ct=localStorage.getItem('cgo_c39_tier'); if(_ct) window._c39Tier=_ct; }catch(_){}
@@ -22541,7 +22567,8 @@ function cgoTfAiChat(){
       window._tfH.push({role:'user',content:txt});
       if(window._tfH.length>16) window._tfH=window._tfH.slice(-16);
       var m=[{role:'system',content:sys}].concat(window._tfH);
-      return JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,messages:m,max_tokens:800,temperature:0.7});
+      var _kindMap={pure:'c14', realtime:'realtime', rppg:'rppg'};
+      return JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,kind:_kindMap[currentMode]||'c14',messages:m,max_tokens:800,temperature:0.7});
     })()
     }).then(function(res){return res.json();}).then(function(d){
       var box=document.getElementById(msgsId);
@@ -22692,6 +22719,7 @@ try{
 window.C14_TIER='basic';
 window.c14SetTier=function(t,el){
   window.C14_TIER=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   var box=el.parentElement;
   for(var i=0;i<box.children.length;i++){
     var c=box.children[i];
@@ -26192,15 +26220,17 @@ window.CGO_AI = window.CGO_AI || {
           if(m.role==='system') sys+=(sys?'\n':'')+String(m.content||'');
           else pr+=(pr?'\n\n':'')+(m.role==='user'?'[사용자] ':'[상담사] ')+String(m.content||'');
         });
+        /* ★ KD 가 정의된 적이 없어 매번 참조오류로 catch에 걸려 원래 groq 로 남던 자리 —
+           body 에 kind 가 실려 있으면 그 kind로, 없으면 null(공용 tier)로 간다. */
+        var KD = j.kind ? { k: j.kind, won: j.kindWon || 0 } : null;
         target='/api/claude';
         o2=Object.assign({}, o2, {body:JSON.stringify({
-          tier: KD ? 'premium' : (tier==='pro'?'advanced':'premium'),
+          tier: KD ? (KD.k==='report'||KD.k==='naming'||KD.k==='photo'||KD.k==='med' ? 'premium' : (tier==='pro'?'advanced':'premium')) : (tier==='pro'?'advanced':'premium'),
           kind: KD ? KD.k : null,
           system:sys, prompt:pr,
-          max_tokens: KD ? ({report:6000,naming:4200,photo:1600,med:1800})[KD.k]
-                         : Math.max(j.max_tokens||600, tier==='max'?2000:1100),
+          max_tokens: (KD && ({report:6000,naming:4200,photo:1600,med:1800})[KD.k]) || Math.max(j.max_tokens||600, tier==='max'?2000:1100),
           temperature:(typeof j.temperature==='number')?j.temperature:0.75, cacheable:true })});
-        if(KD) window.cgoWalletSpend(KD.won);
+        if(KD && KD.won) window.cgoWalletSpend(KD.won);
         else window.cgoWalletSpend(tier==='pro'?10:63);
       }catch(e){ target=u; }
     }
@@ -51725,6 +51755,7 @@ function bizSetTier(t){
     if(!ok){ try{ window.cgoTierNote('biz-tier-note', need+'⭐'); }catch(e){} return; }
   }
   window._bizTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t==='basic'?'basic':(t==='pro'?'premium':'advanced')); }catch(e){}
   ['basic','std','pro'].forEach(function(x){
     var el=document.getElementById('biz-tier-'+x);
     if(el) el.style.borderColor=(x===t)?'#34d399':'#e6eef0';
@@ -54269,6 +54300,7 @@ window.tvySetTier = function(t){
     if(!ok){ try{ window.cgoTierNote('tvy-tier-note', need+'⭐'); }catch(e){} return; }
   }
   window._tvyTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
   ['basic','pro','max'].forEach(function(x){
     var el=document.getElementById('tvy-tier-'+x);
     if(el) el.style.borderColor=(x===t)?'#34d399':'#e6eef0';
@@ -55905,6 +55937,7 @@ window.shopSetTier = function(t){
     if(!ok){ try{ window.cgoTierNote('shop-tier-note', need+'⭐'); }catch(e){} return; }
   }
   window._shopTier=t;
+  try{ if(window.cgoSetAiTier) window.cgoSetAiTier(t); }catch(e){}
   ['basic','pro','max'].forEach(function(x){
     var el=document.getElementById('shop-tier-'+x);
     if(el) el.style.borderColor=(x===t)?'#34d399':'#e6eef0';
