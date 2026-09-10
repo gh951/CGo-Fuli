@@ -26721,7 +26721,7 @@ window.cgoAiFeat = window.cgoAiFeat || function(){
       var fr=_isTr ? '' : (window.cgoAiFrame(body, tier) + (window.cgoAiKernel? window.cgoAiKernel(body) : ''));
       /* 주식 물음일 때만 기사를 얹는다 — 켠 갈래가 있을 때만 덩이가 나온다 */
       try{ if(/주식|종목|티커|거래소|섹터/.test(body) && window.cgoNewsBlock) fr += window.cgoNewsBlock(); }catch(e){}
-      var cap=({basic:900, pro:1500, max:3200})[tier]||900;   /* ★ 2026.09.11 — 기본 420→900: 400자 답이 토큰에서 잘리지 않게 */   /* ★ 2026.09.10 — 1,000자≈1,500토큰 · 2,500자≈3,200토큰 (한국어·일본어 기준) */
+      var cap=_isTr ? 4000 : (({basic:900, pro:1500, max:3200})[tier]||900);   /* ★ 2026.09.11 — 기본 420→900: 400자 답이 토큰에서 잘리지 않게 · 번역 전용은 상한을 두지 않는다(잘리면 반쪽 번역) */   /* ★ 2026.09.10 — 1,000자≈1,500토큰 · 2,500자≈3,200토큰 (한국어·일본어 기준) */
       if(jb.messages && jb.messages.length){
         var si=-1;
         for(var mi=0; mi<jb.messages.length; mi++){ if(jb.messages[mi].role==='system'){ si=mi; break; } }
@@ -49124,18 +49124,18 @@ window._cosmicRelang = function(){
     var apply=function(){ nodes.forEach(function(nd){ var k=nd.nodeValue.trim(); if(cache[k]){ nd.nodeValue=nd.nodeValue.replace(k, cache[k]); } }); };
     if(!uniq.length){ apply(); return; }
     /* 60문장씩 묶어 보낸다 — 번호 붙인 줄 → 같은 번호로 돌려받아 대응 */
-    var chunks=[]; for(var i=0;i<uniq.length;i+=60) chunks.push(uniq.slice(i,i+60));
+    var chunks=[]; for(var i=0;i<uniq.length;i+=20) chunks.push(uniq.slice(i,i+20));   /* 20줄씩 — 응답이 잘리지 않게 */
     var done=0;
     chunks.forEach(function(ch){
-      var numbered=ch.map(function(x,i){ return (i+1)+'\t'+x; }).join('\n');
-      var sys='[번역 전용] You are a translator. Translate each numbered Korean line into '+LN+'. Return ONLY the same numbered lines in the same order, one per line, format "N<TAB>translation". Keep emoji, numbers, symbols (%, °, +, −, ·, ×), Chinese characters (e.g. 甲子, 壬寅, 日柱) and proper nouns (NASA, CGO-FULI) unchanged. Do not add or drop lines. Do not explain.';
+      var numbered=ch.map(function(x,i){ return (i+1)+' | '+x; }).join('\n');
+      var sys='[번역 전용] You are a translator. Translate each numbered Korean line into '+LN+'. Return ONLY the same numbered lines in the same order, one per line, format "N | translation". Keep emoji, numbers, symbols (%, °, +, −, ·, ×), Chinese characters (e.g. 甲子, 壬寅, 日柱) and proper nouns (NASA, CGO-FULI) unchanged. Do not add or drop lines. Do not explain.';
       fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:3600,temperature:0.1,messages:[{role:'system',content:sys},{role:'user',content:numbered}]})})
         .then(function(r){ return r.json(); })
         .then(function(j){
           var txt=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||(j&&j.text)||'';
-          txt.split(/\n/).forEach(function(line){ var m=line.match(/^\s*(\d+)\s*[\t.:)\-]\s*(.+)$/); if(m){ var idx=parseInt(m[1],10)-1; if(ch[idx] && m[2].trim()) cache[ch[idx]]=m[2].trim(); } });
+          txt.split(/\n/).forEach(function(line){ var m=line.match(/^\s*(\d+)\s*[|\t.:)\-]+\s*(.+)$/); if(m){ var idx=parseInt(m[1],10)-1; if(ch[idx] && m[2].trim()) cache[ch[idx]]=m[2].trim(); } });
         }).catch(function(){}).then(function(){
-          done++; if(done===chunks.length){ try{ localStorage.setItem('cgo_cosmic_tr_'+L, JSON.stringify(cache)); }catch(e){} if((window._LANG||'ko')===L) apply(); }
+          done++; try{ localStorage.setItem('cgo_cosmic_tr_'+L, JSON.stringify(cache)); }catch(e){} if((window._LANG||'ko')===L) apply();   /* 묶음이 하나 올 때마다 바로 끼운다 */
         });
     });
   }catch(e){}
@@ -49217,7 +49217,7 @@ function receiveCosmicOrder() {
   var sajeMode = r.domOh || '목';
   var ohK   = {목:'木',화:'火',토:'土',금:'金',수:'水'};
   var ohEng = {목:'Wood',화:'Fire',토:'Earth',금:'Metal',수:'Water'};
-  var _cL=(window._LANG&&window._LANG!=='ko'); var _ohD=function(k){return _cL?(ohEng[k]||k):k;}; var _dirEn={'동':'East','남':'South','서':'West','북':'North','동남':'Southeast','동북':'Northeast','서남':'Southwest','서북':'Northwest'}; var _dirW=function(x){return _cL?(_dirEn[x]||x):(x+'쪽');}; var _dirW2=function(x){return _cL?(_dirEn[x]||x):x;};
+  var _cL=false; /* ★ 2026.09.11 — 리포트는 늘 한국어로 조립한다. 낱말만 영어(Wood·South·pts)로 바뀌어 섞이던 것을 없애고, 번역은 _cosmicRelang 이 통째로 맡는다 */ var _ohD=function(k){return _cL?(ohEng[k]||k):k;}; var _dirEn={'동':'East','남':'South','서':'West','북':'North','동남':'Southeast','동북':'Northeast','서남':'Southwest','서북':'Northwest'}; var _dirW=function(x){return _cL?(_dirEn[x]||x):(x+'쪽');}; var _dirW2=function(x){return _cL?(_dirEn[x]||x):x;};
   var ohColor = {목:'#34d399',화:'#f87171',토:'#fbbf24',금:'#d4a843',수:'#38bdf8'};
   // 일진 — 실제 60갑자 역법 (기준: 2020-01-07 = 甲子일, 검증된 역법 기준점)
   // 모든 사용자 동일 날짜 = 동일 일진 (생일 무관)
