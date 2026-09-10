@@ -26497,7 +26497,7 @@ window.cgoAiKernel = function(body){
 };
 /* ★ 이 파일이 새 것인지 한 번에 알아보는 자리.
    콘솔에 cgoVer() 를 치면 뜬다. 폰이 옛 파일을 쓰고 있으면 날짜가 다르다. */
-window.CGO_VER='2026.09.11-f';   /* f = Fable 작업분(가격표·문지기·20개국어·등급 27개) */
+window.CGO_VER='2026.09.11-g';   /* f = Fable 작업분(가격표·문지기·20개국어·등급 27개) */
 window.cgoVer=function(){
   return {버전:window.CGO_VER,
     조각찾기:typeof window._stkFrag,
@@ -49120,6 +49120,13 @@ window._cosmicRelang = function(){
     var cache={}; try{ cache=JSON.parse(localStorage.getItem('cgo_cosmic_tr_'+L)||'{}')||{}; }catch(e){}
     var walker=document.createTreeWalker(wrap,NodeFilter.SHOW_TEXT,null), nodes=[], n;
     while((n=walker.nextNode())){ var t=n.nodeValue; if(/[가-힣]/.test(t) && t.trim().length>0){ nodes.push(n); } }
+    /* ★ 자체 사전(dash6) 먼저 — 한국어 문장이 20개국 사전에 통째로 있으면 값 0원·즉시. 없는 문장만 AI 로. 받은 번역은 기기에 남아 자체 DB 로 자란다 */
+    try{
+      var D=window._cgoDash||{}; var Dk=D.ko||{}, Dl=D[L]||{};
+      if(!window._cosmicRev||window._cosmicRev.lang!==L){ var rv={}; for(var kk in Dk){ if(typeof Dk[kk]==='string' && Dl[kk] && !(Dk[kk] in rv)) rv[Dk[kk]]=Dl[kk]; } window._cosmicRev={lang:L,map:rv}; }
+      var RV=window._cosmicRev.map;
+      nodes.forEach(function(nd){ var k=nd.nodeValue.trim(); if(!cache[k]){ var hit=Dl[k]||RV[k]; if(hit && hit!==k) cache[k]=hit; } });
+    }catch(e){}
     var uniq=[]; nodes.forEach(function(nd){ var k=nd.nodeValue.trim(); if(!cache[k] && uniq.indexOf(k)<0) uniq.push(k); });
     var apply=function(){ nodes.forEach(function(nd){ var k=nd.nodeValue.trim(); if(cache[k]){ nd.nodeValue=nd.nodeValue.replace(k, cache[k]); } }); };
     if(!uniq.length){ apply(); return; }
@@ -49129,11 +49136,16 @@ window._cosmicRelang = function(){
     chunks.forEach(function(ch){
       var numbered=ch.map(function(x,i){ return (i+1)+' | '+x; }).join('\n');
       var sys='[번역 전용] You are a translator. Translate each numbered Korean line into '+LN+'. Return ONLY the same numbered lines in the same order, one per line, format "N | translation". Keep emoji, numbers, symbols (%, °, +, −, ·, ×), Chinese characters (e.g. 甲子, 壬寅, 日柱) and proper nouns (NASA, CGO-FULI) unchanged. Do not add or drop lines. Do not explain.';
+      var parse=function(txt){ var got=0; String(txt||'').split(/\n/).forEach(function(line){ var m=line.match(/^\s*(\d+)\s*[|\t.:)\-]+\s*(.+)$/); if(m){ var idx=parseInt(m[1],10)-1; if(ch[idx] && m[2].trim()){ cache[ch[idx]]=m[2].trim(); got++; } } }); return got; };
       fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:3600,temperature:0.1,messages:[{role:'system',content:sys},{role:'user',content:numbered}]})})
         .then(function(r){ return r.json(); })
         .then(function(j){
           var txt=(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||(j&&j.text)||'';
-          txt.split(/\n/).forEach(function(line){ var m=line.match(/^\s*(\d+)\s*[|\t.:)\-]+\s*(.+)$/); if(m){ var idx=parseInt(m[1],10)-1; if(ch[idx] && m[2].trim()) cache[ch[idx]]=m[2].trim(); } });
+          if(parse(txt) < Math.ceil(ch.length*0.6)){
+            /* ★ Groq 이 형식을 어기거나 비면 Sonnet 으로 한 번 더 (번역 전용 · 짧은 묶음이라 값이 작다) */
+            return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tier:'advanced',feat:'def',system:sys,prompt:numbered,max_tokens:3000,temperature:0.1})})
+              .then(function(r2){ return r2.json(); }).then(function(j2){ parse((j2&&j2.text)||''); });
+          }
         }).catch(function(){}).then(function(){
           done++; try{ localStorage.setItem('cgo_cosmic_tr_'+L, JSON.stringify(cache)); }catch(e){} if((window._LANG||'ko')===L) apply();   /* 묶음이 하나 올 때마다 바로 끼운다 */
         });
