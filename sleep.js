@@ -613,8 +613,12 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
       h+='<div class="slp-qpart">'+_SQ()[p].hd+'<span class="leg">'+_SQ()[p].leg+'</span></div>';
       for(var i=0;i<_SQ()[p].items.length;i++){
         n++; var it=_SQ()[p].items[i]; var opts=(it[1]==='n5')?['0','1','2','3','4']:it[1]; var num=(it[1]==='n5');
-        h+='<div class="slp-q" id="slp-q-'+n+'"><div class="slp-q-t">'+n+'. '+it[0]+'</div><div class="slp-q-opts '+(num?'numrow':'labrow')+'">';
-        for(var o=0;o<opts.length;o++) h+='<button class="'+(num?'num':'')+'" onclick="__slpAns('+n+','+o+',this)">'+(num?opts[o]:opts[o])+'</button>';
+        /* ★ 2026.09.11 — 숫자 버튼 아래에 뜻을 함께 쓴다(0 전혀 · 1 가끔 …). PART 범례 문장을 잘라 쓰므로 20개 언어 그대로 따라온다.
+           범례가 5조각으로 안 잘리는 언어는 예전처럼 숫자만. 손님이 15문항 내려가면 위 범례가 안 보여 「0이 뭐지」가 되던 자리 */
+        var legLabs=null;
+        if(num){ try{ var _lg=String(_SQ()[p].leg||''); var _ps=_lg.split(/\s*[·•|\/]\s*/).map(function(x){ return x.replace(/^\s*\d\s*/,'').trim(); }).filter(Boolean); if(_ps.length===5) legLabs=_ps; }catch(e){} }
+        h+='<div class="slp-q" id="slp-q-'+n+'"><div class="slp-q-t">'+n+'. '+it[0]+'</div><div class="slp-q-opts '+(num?'numrow':'labrow')+(legLabs?' withlab':'')+'">';
+        for(var o=0;o<opts.length;o++) h+='<button class="'+(num?'num':'')+'" onclick="__slpAns('+n+','+o+',this)">'+(num?(legLabs?('<b>'+opts[o]+'</b><small>'+legLabs[o]+'</small>'):opts[o]):opts[o])+'</button>';
         h+='</div></div>';
       }
     }
