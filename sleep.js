@@ -672,8 +672,15 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     var ac=$('slp-acc-self'); if(ac) ac.open=false;
     var host=$('slp-data-host'); if(host) host.scrollIntoView({behavior:'smooth',block:'start'});
     var pg=$('page-cgo-sleep'); if(pg) pg.scrollTop=0;
-    try{ sessionStorage.setItem('cgo_sleep_check', JSON.stringify({t:Date.now(),isi:isi,band:isiBand,pct:pct,burden:burden,flags:flags.map(function(x){return x[0];})})); }catch(e){}
+    /* ★ 2026.09.11 — AI 풀이 자리. 규칙 문장은 그대로(즉시 보임), 이 칸은 /api 로 받아 채운다 */
+    h+='<div style="margin-top:14px;padding:14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:14px;">'
+      +'<div style="font-size:13px;font-weight:900;color:#5b21b6;margin-bottom:6px;">'+_sk(10710,'🤖 AI 수면 풀이')+'</div>'
+      +'<div id="slp-ai-text" style="font-size:12px;color:#334155;line-height:1.75;white-space:pre-wrap;">'+_sk(10685,'AI가 측정값을 읽고 있습니다…')+'</div></div>';
+    /* 라벨형 문항(입면 시간·수면 시간·만족도·질·활력) 답도 함께 남긴다 — AI 가 수치를 실제로 인용하게 */
+    var labAns={}; try{ var fl=_flat(); for(var q=1;q<=TOTALQ;q++){ var itq=fl[q-1]; if(itq[1]!=='n5' && sAns[q]!=null){ var lab=Array.isArray(itq[1])?itq[1][sAns[q]]:sAns[q]; labAns[String(itq[0]).replace(/\(.*?\)/g,'').trim().slice(0,40)]=lab; } } }catch(e){}
+    try{ sessionStorage.setItem('cgo_sleep_check', JSON.stringify({t:Date.now(),isi:isi,band:isiBand,pct:pct,burden:burden,apnea:apnea,rls:rls,circ:circ,mood:(mq?Math.round(mood/mq*10)/10:null),flags:flags.map(function(x){return x[0];}),lab:labAns})); }catch(e){}
     $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide">'+h+'</div>';   /* 방금 낸 전체 결과(원인 설명·마음 돌봄 포함)를 그대로 얹는다 — 요약판(cgoSlpData)으로 덮지 않는다 */
+    try{ cgoSlpAiAnalyze(); }catch(e){}
   };
   window.cgoSlpData=function(){
     var h='<div class="slp-badge">MY SLEEP DATA</div><h2 class="slp-h">'+_sk(11710,'나의 수면 데이터')+'</h2><p class="slp-sub" style="margin-bottom:14px;">'+_sk(11711,'기기 안에서만 모은 최근 기록이에요.')+'<br>'+_sk(11712,'(저장 제로 · 서버 0 · 외부 전송 없음)')+'</p>';
@@ -707,6 +714,30 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     if(rppg){ h+='<div class="slp-rcard"><div class="slp-rrow"><span>'+_sk(11719,'최근 측정')+'</span><b>'+ago(rppg.t)+'</b></div>'+(rppg.bpm?'<div class="slp-rrow"><span>'+_sk(11460,'활력 박자')+'</span><b>'+rppg.bpm+' bpm</b></div>':'')+(rppg.hrv!=null?'<div class="slp-rrow"><span>내면 탄력</span><b>'+rppg.hrv+' </b></div>':'')+(rppg.stress!=null?'<div class="slp-rrow"><span>'+_sk(11464,'긴장도')+'</span><b>'+rppg.stress+'</b></div>':'')+'</div>'; }
     $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide" style="max-width:100%;">'+h+'</div>';
   };
+  /* ★ 2026.09.11 — 점검 결과·측정값을 한 문장 요약으로. 결과 자동 풀이와 상담 채팅이 같이 쓴다 */
+  function _slpSummary(){
+    var chk=null,rppg=null; try{chk=JSON.parse(sessionStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(sessionStorage.getItem('cgo_sleep_rppg'));}catch(e){}
+    var t='';
+    if(chk){
+      t+='\n[수면 자가점검 100문항] 수면부담지수(ISI형) '+chk.isi+'/28 ('+chk.band+') · 종합부담 '+chk.pct+'% ('+chk.burden+')';
+      if(chk.apnea!=null) t+=' · 호흡·코골이 '+chk.apnea+' · 다리불편 '+chk.rls+' · 생체리듬 '+chk.circ+(chk.mood!=null?' · 기분평균 '+chk.mood+'/4':'');
+      if(chk.flags&&chk.flags.length) t+=' · 경고: '+chk.flags.join(', ');
+      if(chk.lab){ var ks=Object.keys(chk.lab); if(ks.length){ t+='\n[주요 답변] '+ks.map(function(k){ return k+' → '+chk.lab[k]; }).join(' / '); } }
+    }
+    if(rppg) t+='\n[rPPG 측정] bpm '+rppg.bpm+' · hrv '+rppg.hrv;
+    return t;
+  }
+  window.cgoSlpAiAnalyze=function(){
+    var box=$('slp-ai-text'); if(!box) return;
+    var sum=_slpSummary(); if(!sum){ box.textContent=''; return; }
+    var _tt=(window._slpTier==='prem'?'premium':window._slpTier==='adv'?'advanced':'basic');
+    var sys='CGO-FULI 수면 AI 상담사. 아래 자가점검 수치만 근거로 오늘의 수면 컨디션을 따뜻하고 구체적으로 풀어 준다. 수치를 실제로 인용하고, 생활 습관(취침 시각·빛·카페인·호흡·환경)까지만 권한다. 진단·병명·처방은 절대 쓰지 않는다. [수면 본풀이 · 분석 지침: 5~7문장, 항목마다 수치 인용]';
+    var body={ kind:'sleep', feat:'sleep', tier:_tt, system:sys, prompt:'이 결과로 오늘의 수면 컨디션을 풀어 주세요.'+sum, max_tokens:(_tt==='premium'?3200:(_tt==='advanced'?1500:900)), temperature:0.6 };
+    fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ var el=$('slp-ai-text'); if(!el) return; var txt=(j&&(j.text||j.reply||j.message))||''; el.textContent=txt||_sk(10686,'AI 풀이를 불러오지 못했습니다 — 위 분석을 참고하세요'); })
+      .catch(function(){ var el=$('slp-ai-text'); if(el) el.textContent=_sk(10686,'AI 풀이를 불러오지 못했습니다 — 위 분석을 참고하세요'); });
+  };
   window.cgoSlpAiSend=function(){
     if(window.cgoChatGate && !window.cgoChatGate('sleep')) return;   /* ★ 2026.09.11 AI 상담 문지기 */
     var el=$('slp-ai-in'); if(!el) return;
@@ -717,12 +748,11 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     var waitId='slp-ai-wait-'+Date.now();
     box.innerHTML+='<div id="'+waitId+'" style="align-self:flex-start;background:#f1f5f9;padding:8px 12px;border-radius:10px;max-width:80%;font-size:13px;word-break:break-word;">…</div>';
     box.scrollTop=box.scrollHeight;
-    var chk=null,rppg=null; try{chk=JSON.parse(sessionStorage.getItem('cgo_sleep_check'));}catch(e){} try{rppg=JSON.parse(sessionStorage.getItem('cgo_sleep_rppg'));}catch(e){}
-    var resultTxt=''; if(chk) resultTxt+='\n[수면 자가점검] ISI '+chk.isi+'/28, 종합부담 '+chk.pct+'%'; if(rppg) resultTxt+='\n[rPPG] bpm '+rppg.bpm+', hrv '+rppg.hrv;
-    var sys='CGO-FULI 수면 AI 상담사. 사용자의 수면 관련 질문에 참고용으로만 답한다. 진단·처방 표현은 쓰지 않는다.'+resultTxt;
+    var resultTxt=_slpSummary();   /* ★ 2026.09.11 — 100문항 요약·주요 답변·rPPG 를 상담에도 그대로 */
+    var sys='CGO-FULI 수면 AI 상담사. 사용자의 수면 관련 질문에 참고용으로만 답한다. 아래 점검 결과를 알고 있는 상태로 그 수치를 바탕으로 답한다. 진단·처방 표현은 쓰지 않는다. [수면 상담]'+resultTxt;
     /* ★ 2026.09.10 — feat:'sleep' 을 보내 서버 FEAT 표(고급 Sonnet · 최고급 Opus)를 타게 한다. 길이도 등급대로 연다 */
     var _tt=(window._slpTier==='prem'?'premium':window._slpTier==='adv'?'advanced':'basic');
-    var body={ kind:'sleep', feat:'sleep', tier:_tt, system:sys, prompt:t, max_tokens:(_tt==='premium'?3200:(_tt==='advanced'?1500:500)), temperature:0.6 };
+    var body={ kind:'sleep', feat:'sleep', tier:_tt, system:sys, prompt:t, max_tokens:(_tt==='premium'?3200:(_tt==='advanced'?1500:900)), temperature:0.6 };
     fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
       .then(function(r){ return r.json(); })
       .then(function(j){
