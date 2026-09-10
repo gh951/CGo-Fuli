@@ -41,7 +41,8 @@ const FEAT = {
   navi:  {               advanced:SONNET, premium:SONNET },  // ⑰ 오행 길방
   cgp:   {               advanced:SONNET, premium:OPUS   },  // ⑱ 사진 색·기운 — 기본 무료(Groq) · 500 · 1,000 (2026.09.10 결정: 색 셈은 기기 안, AI 는 글만)
   gws:   {               advanced:SONNET, premium:OPUS   },  // ⑲⑳ 관상·손금
-  dash:  {               advanced:SONNET, premium:OPUS   },  // ㉑~㉕ 꿈해몽·천지인·순수역학·실시간·rPPG (대시보드 역학 카드)
+  dash:  {               advanced:SONNET, premium:OPUS   },  // ㉑~㉕ 꿈해몽·순수역학·실시간·rPPG (대시보드 역학 카드)
+  cji:   {               advanced:SONNET, premium:OPUS   },  // 천지인 에너지 (2026.09.11 분리 · 1,000/2,000)
   fsc:   {               advanced:SONNET, premium:OPUS   },  // ㉗ 풍수 카메라
   cpl:   {               advanced:SONNET, premium:OPUS   },  // ㉘ 커플 궁합
   nm:    {               advanced:OPUS,   premium:OPUS   },  // ㉙ 작명 — 표준·고급·명작명 전부 Opus
