@@ -26079,7 +26079,7 @@ window.cgoAiFrame = function(body, tier){
   var L    = (window._LANG || 'ko');
   var LN   = (window.CGO_LANG_NAME[L] || 'English');
   var med  = window.CGO_AI_MED.test(body);
-  var len  = ({basic:'300', pro:'1000', max:'2500'})[tier] || '300';   /* ★ 2026.09.10 — 고급 1,000자 · 최고급 2,500자. 값을 받는 만큼 길이를 연다 */
+  var len  = ({basic:'400', pro:'1000', max:'2500'})[tier] || '400';   /* ★ 2026.09.11 — 기본도 400자: 문장이 끊기지 않게 */   /* ★ 2026.09.10 — 고급 1,000자 · 최고급 2,500자. 값을 받는 만큼 길이를 연다 */
 
   var f =
     '당신은 「' + window.CGO_AI_NAME + '」입니다. CGO-FULI 앱의 상담사입니다.\n' +
@@ -26093,6 +26093,8 @@ window.cgoAiFrame = function(body, tier){
     '- 사용자 이름·고유명사도 그 언어의 표기로 옮겨 적으십시오.\n' +
     '\n## 길이\n' +
     '- ' + len + '자 안쪽으로 맺습니다. 서론을 두지 말고 바로 본론에 들어가십시오.\n' +
+    '- 길이보다 완결이 먼저입니다. 마지막 문장은 반드시 마침표로 끝맺으십시오. 도중에 끊긴 문장을 남기지 마십시오.\n' +
+    (tier==='basic' ? '- 기본 등급입니다. 핵심을 3~4문장으로 정리하고, 마지막 한 문장으로 오늘 할 일을 짚어 주십시오.\n' : '') +
     (tier==='max'
       ? '- 최고급 등급입니다. 값을 받는 만큼 근거를 하나하나 들어 촘촘하게 풀어내십시오.\n'
         + '  두루뭉술한 말은 한 줄도 쓰지 마십시오. 수치·각도·오행 이름을 실제로 인용하십시오.\n'
@@ -26524,7 +26526,7 @@ window.cgoAiFeat = window.cgoAiFeat || function(){
       var fr=window.cgoAiFrame(body, tier) + (window.cgoAiKernel? window.cgoAiKernel(body) : '');
       /* 주식 물음일 때만 기사를 얹는다 — 켠 갈래가 있을 때만 덩이가 나온다 */
       try{ if(/주식|종목|티커|거래소|섹터/.test(body) && window.cgoNewsBlock) fr += window.cgoNewsBlock(); }catch(e){}
-      var cap=({basic:420, pro:1500, max:3200})[tier]||420;   /* ★ 2026.09.10 — 1,000자≈1,500토큰 · 2,500자≈3,200토큰 (한국어·일본어 기준) */
+      var cap=({basic:900, pro:1500, max:3200})[tier]||900;   /* ★ 2026.09.11 — 기본 420→900: 400자 답이 토큰에서 잘리지 않게 */   /* ★ 2026.09.10 — 1,000자≈1,500토큰 · 2,500자≈3,200토큰 (한국어·일본어 기준) */
       if(jb.messages && jb.messages.length){
         var si=-1;
         for(var mi=0; mi<jb.messages.length; mi++){ if(jb.messages[mi].role==='system'){ si=mi; break; } }
