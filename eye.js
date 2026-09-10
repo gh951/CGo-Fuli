@@ -1147,6 +1147,7 @@ function _ekf(n, f){ var s=_ek(n,f); for(var i=2;i<arguments.length;i++){ s=s.sp
     });
   };
   window.eyeChatSend = function(){
+    if(window.cgoChatGate && !window.cgoChatGate('eye')) return;   /* ★ 2026.09.11 AI 상담 문지기 */
     var input = document.getElementById('eye-chat-input');
     var msg = input.value.trim();
     if(!msg) return;

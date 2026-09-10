@@ -704,6 +704,7 @@ function _sk(n, f){ try{ var v = window.K && window.K(n); return (v && v !== Str
     $('slp-data-host').innerHTML='<div class="slp-q-wrap slp-result-wide" style="max-width:100%;">'+h+'</div>';
   };
   window.cgoSlpAiSend=function(){
+    if(window.cgoChatGate && !window.cgoChatGate('sleep')) return;   /* ★ 2026.09.11 AI 상담 문지기 */
     var el=$('slp-ai-in'); if(!el) return;
     var t=(el.value||'').trim(); if(!t) return;
     el.value='';
