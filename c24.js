@@ -67,7 +67,10 @@ window.cgoFitBeepReset = function(tag){
 /* ★ C-72: 실측 중 초시계 틱 — 눈·혀처럼 미세하게 흔들리는 부위는 "띵 띵 띵" 한 번으로는
    지금 맞는지 계속 알 수 없어 불편하다는 지적. 맞는 동안 짧은 틱이 계속 돌고,
    어긋나면 그 프레임에 바로 끊긴다 — 소리 자체가 실시간 정렬 신호가 되도록.
-   setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다. */
+   setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다.
+   ★ C-74: square파+exponentialRamp는 배음이 많고 감쇠가 완만해 "모터 풀리는 소리"처럼
+   들린다는 지적 — sine파(배음 없음) + linear 급감쇠(수직에 가깝게 뚝 끊김)로 교체해
+   실제 초시계 '똑' 소리에 가깝게 만든다. */
 window._cgoTickOn = false;
 window.cgoFitTick = function(shouldTick){
   try{
@@ -80,13 +83,14 @@ window.cgoFitTick = function(shouldTick){
     if(ac.state === 'suspended') ac.resume();
     var t = ac.currentTime;
     var o = ac.createOscillator(), g = ac.createGain();
-    o.type = 'square';
-    o.frequency.value = 1800;               /* 초시계 특유의 딱딱한 고음 */
+    o.type = 'sine';                        /* 배음 없는 맑은 톤 — square의 웅웅거림 제거 */
+    o.frequency.value = 2200;               /* 초시계 특유의 짧고 건조한 고음 */
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.16, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);  /* 아주 짧게 — '틱' */
+    g.gain.linearRampToValueAtTime(0.14, t + 0.002);   /* 즉시 시작 */
+    g.gain.setValueAtTime(0.14, t + 0.012);            /* 잠깐 유지 */
+    g.gain.linearRampToValueAtTime(0.0001, t + 0.016); /* 수직에 가깝게 뚝 — 여운 없음 */
     o.connect(g); g.connect(ac.destination);
-    o.start(t); o.stop(t + 0.04);
+    o.start(t); o.stop(t + 0.02);
     o.onended = function(){
       window._cgoTickOn = false;
       /* 다음 프레임에서도 여전히 맞으면 cgoFitTick(true)가 다시 호출돼 이어진다 */
@@ -504,17 +508,31 @@ function _c24EnvRead(){
   return e;
 }
 
-/* 기온 보정 — 여름·겨울 차이를 되돌린다 */
-function _c24EnvAdjust(bpm, mode){
+/* ★ HAZ-003 대응 — 기온으로 실측 BPM 원본을 직접 변형(bpm - d)하던 방식을 폐기한다.
+   Gemini(구글) 검증 결과: 원본 생체 신호를 조용히 바꾸는 것은 "데이터 왜곡"으로
+   의료기기 심사에서 반려 사유가 된다는 지적을 반영 — 카메라 실측값은 절대 건드리지 않고,
+   기온은 오직 "이 조건에서 신뢰할 만한가"만 판정하는 용도로 쓴다(값을 만들지 않음).
+   참고용 보정 추정치(bpmEnvRef)는 화면 주 표시와 별도로만 계산해 둔다. */
+function _c24EnvAdvisory(bpm, mode){
   var e = window._c24Env;
-  if(!isFinite(bpm) || bpm <= 0 || e.tempC == null) return bpm;
-  /* 기준 22도. 1도 오를 때 약 0.35bpm 빨라진다 (일반적 관찰 범위) */
+  var out = { lowConfidence:false, note:null, refBpm:null };
+  if(!isFinite(bpm) || bpm <= 0 || e.tempC == null) return out;
+  /* 극단적 기온 — 말초/안면 혈류 자체가 생리적으로 변해 rPPG 신호 대표성이 낮아지는 구간.
+     값을 깎지 않고, 사용자에게 낮은 신뢰도만 알린다. */
+  if(e.tempC <= 10 || e.tempC >= 35){
+    out.lowConfidence = true;
+    out.note = e.tempC <= 10
+      ? '주변 기온이 낮아 말초 혈류가 줄어듭니다 — 따뜻한 곳에서 다시 측정하면 더 정확합니다'
+      : '주변 기온이 높아 혈류가 평소보다 빠를 수 있습니다 — 참고용으로만 보세요';
+  }
+  /* 참고용 추정치 — 화면 주 표시가 아니라 부가 정보로만 노출한다 */
   var d = (e.tempC - 22) * 0.35;
-  /* 손은 기온에 더 민감하다 */
   if(mode === 'hand' || mode === 'hand_back' || mode === 'hand_palm') d *= 1.6;
-  var out = bpm - d;
-  return Math.round(Math.max(40, Math.min(180, out)));
+  out.refBpm = Math.round(Math.max(40, Math.min(180, bpm - d)));
+  return out;
 }
+/* 구 함수명 호환 — 다른 곳에서 실수로 다시 부르더라도 원본을 그대로 반환해 값 훼손이 재발하지 않게 한다 */
+function _c24EnvAdjust(bpm, mode){ return bpm; }
 
 /* ══════════════════════════════════════════════════════════════
    측정 품질 엔진 — 거리 · 조도 · 흔들림 · 생리 구속 · 측정 원장
@@ -985,7 +1003,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#38bdf8;">'+_cK(8607,'얼굴 — 60초')+'</span>'
     +'<span style="font-size:10px;color:rgba(56,189,248,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8609,'카메라와 <b style="color:#fff;">30~40cm</b> 거리 유지')+'<br>'
+    +_cK(8609,'화면을 보며 스마트폰을 앞뒤로 움직여 원이 초록색이 되면 멈추세요')+'<br>'
     +_cK(8610,'밝은 정면 조명 · 안경·모자 제거 · 무표정 유지')+'<br>'
     +'<span style="color:#38bdf8;">'+_cK(8611,'화면 하단 호흡 타임라인을 따라 4-7-8 호흡 1회')+'</span></div></div>'
 
@@ -996,7 +1014,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#f87171;">'+_cK(8612,'혀 — 20초')+'</span>'
     +'<span style="font-size:10px;color:rgba(248,113,113,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8613,'카메라와 <b style="color:#fff;">15~20cm</b> 거리 유지')+'<br>'
+    +_cK(8613,'화면을 보며 스마트폰을 앞뒤로 움직여 혀가 원에 딱 맞으면 멈추세요')+'<br>'
     +_cK(8614,'혀를 최대한 내밀어 혀 전체가 보이도록')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8615,'식사 30분 후 측정 권장')+'</span></div></div>'
 
@@ -1007,7 +1025,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#38bdf8;">'+_cK(8616,'눈 — 20초')+'</span>'
     +'<span style="font-size:10px;color:rgba(56,189,248,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8613,'카메라와 <b style="color:#fff;">15~20cm</b> 거리 유지')+'<br>'
+    +_cK(90001,'화면을 보며 스마트폰을 앞뒤로 움직여 눈 점 두 개가 잘 보이면 멈추세요')+'<br>'
     +_cK(8617,'위를 약간 봐서 흰자가 잘 보이게')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8618,'콘택트렌즈 제거 권장')+'</span></div></div>'
 
@@ -1018,7 +1036,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#f472b6;">'+_cK(8619,'피부 — 30초')+'</span>'
     +'<span style="font-size:10px;color:rgba(244,114,182,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8620,'카메라와 <b style="color:#fff;">10~15cm</b> 거리 유지')+'<br>'
+    +_cK(8620,'화면을 보며 스마트폰을 앞뒤로 움직여 피부가 원을 채우면 멈추세요')+'<br>'
     +_cK(8621,'이마 또는 뺨 맨피부를 카메라에 가까이')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8622,'크림·화장 없는 상태 권장')+'</span></div></div>'
 
@@ -1029,7 +1047,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#34d399;">'+_cK(8623,'손등 — 15초')+'</span>'
     +'<span style="font-size:10px;color:rgba(52,211,153,.5);margin-left:auto;">'+_cK(8624,'📷 후면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8625,'카메라와 <b style="color:#fff;">20~25cm</b> 거리 유지')+'<br>'
+    +_cK(8625,'화면을 보며 스마트폰을 앞뒤로 움직여 손이 박스에 딱 맞으면 멈추세요')+'<br>'
     +_cK(8626,'손톱이 잘 보이도록 손등을 카메라 정면으로')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8627,'매니큐어 제거 권장')+'</span></div></div>'
 
@@ -1040,7 +1058,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#34d399;">'+_cK(8628,'손바닥 — 15초')+'</span>'
     +'<span style="font-size:10px;color:rgba(52,211,153,.5);margin-left:auto;">'+_cK(8624,'📷 후면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8625,'카메라와 <b style="color:#fff;">20~25cm</b> 거리 유지')+'<br>'
+    +_cK(8625,'화면을 보며 스마트폰을 앞뒤로 움직여 손이 박스에 딱 맞으면 멈추세요')+'<br>'
     +_cK(8629,'손바닥을 평평하게 펼쳐 카메라 정면으로')+'<br>'
     +_cK(8630,'손금이 잘 보이도록 조명 확인')+'</div></div>'
     +'</div>'
@@ -1050,6 +1068,8 @@ function _c24CompStart(){
     +'<div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:5px;">'+_cK(8631,'⚠️ 공통 주의사항')+'</div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;">'
     +_cK(8632,'• 밝은 곳에서 측정할수록 정확도가 높아집니다')+'<br>'
+    +_cK(8638,'• 측정 중 똑딱 소리가 나면 거리가 맞다는 뜻입니다')+'<br>'
+    +_cK(8639,'• 소리가 끊기면 스마트폰을 앞뒤로 움직여 다시 맞춰주세요')+'<br>'
     +_cK(8633,'• 각 단계는 자동으로 순서대로 진행됩니다')+'<br>'
     +_cK(8634,'• 측정 중 흔들리면 해당 단계가 다시 시작됩니다')+'<br>'
     +_cK(8635,'• 본 분석은 참고용이며 의학적 진단을 대체하지 않습니다')
@@ -1105,7 +1125,11 @@ function _c24CompShowResult(ai){
   var sec=document.getElementById('c24-result-section');
   if(!sec) return;
 
-  var gradeC={A:'#34d399',B:'#fbbf24',C:'#f87171',D:'#ef4444'}[ai.종합등급||'B']||'#fbbf24';
+  /* ★ C-75: 분석 실패 시 종합점수·등급이 없으면 75점/B등급을 기본값으로 채워
+     넣던 방식은, 실패를 마치 정상 결과처럼 보이게 하는 위험한 폴백이었다.
+     실패 시(종합점수===0 또는 미지정) "측정 실패"를 있는 그대로 보여준다. */
+  var _failed = !ai.종합점수 || ai.종합등급==='?';
+  var gradeC = _failed ? '#94a3b8' : ({A:'#34d399',B:'#fbbf24',C:'#f87171',D:'#ef4444'}[ai.종합등급]||'#fbbf24');
   var s=_c24CompState;
 
   var div=document.createElement('div');
@@ -1114,8 +1138,8 @@ function _c24CompShowResult(ai){
     // 헤더
     '<div style="text-align:center;padding:16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:14px;margin-bottom:14px;">'
     +'<div style="font-size:11px;color:rgba(52,211,153,.6);margin-bottom:4px;">🔬 6부위 종합 건강 분석</div>'
-    +'<div style="font-size:44px;font-weight:900;color:'+gradeC+';font-family:Orbitron,sans-serif;">'+(ai.종합점수||75)+'</div>'
-    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+( ai.종합등급||'B')+' 등급</div>'
+    +'<div style="font-size:44px;font-weight:900;color:'+gradeC+';font-family:Orbitron,sans-serif;">'+(_failed?'--':ai.종합점수)+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+(_failed?'분석 실패':(ai.종합등급+' 등급'))+'</div>'
     +'</div>'
     // 6부위 스냅샷
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">'
@@ -1149,6 +1173,8 @@ function _c24CompShowResult(ai){
     +(ai.식이_가이드?'<div style="padding:13px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:10px;">'
     +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">🥗 오행 식이 가이드</div>'
     +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.식이_가이드+'</div></div>':'')
+    /* ★ C-75: 분석 실패 시 재시도 버튼 — 사진은 이미 있으니 재촬영 없이 AI 호출만 다시 */
+    +(_failed?'<button onclick="this.closest(\'div[style*=\\\'margin-top:8px\\\']\').remove();_c24CompFinalAnalyze();" style="width:100%;padding:13px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.5);border-radius:12px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;">🔄 다시 분석하기</button>':'')
     +'<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:8px;">CGO-FULI 6부위 종합 건강 분석</div>';
 
   sec.insertBefore(div, sec.firstChild);
@@ -1268,9 +1294,19 @@ function _c24CompFinalAnalyze(){
     loading.style.cssText = 'padding:20px;text-align:center;';
     loading.innerHTML =
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
-      +'<div style="color:#34d399;font-size:13px;font-weight:700;margin-top:12px;">✨ C-24가 6부위 종합 건강 분석 중...</div>'
-      +'<div style="font-size:11px;color:rgba(52,211,153,.5);margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>';
+      +'<div id="c24-loading-stage" style="color:#34d399;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
+      +'<div style="font-size:11px;color:rgba(52,211,153,.5);margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>'
+      +'<div style="font-size:10px;color:rgba(52,211,153,.35);margin-top:6px;">정확도를 위해 한 부위씩 순서대로 분석합니다 · 약 20~30초</div>';
     sec.insertBefore(loading, sec.firstChild);
+    /* ★ C-77: 20~30초가 걸리는 동안 "멈췄나?" 불안하지 않도록 점(...)이 계속 움직인다.
+       결과가 뜨거나(성공/실패 불문) loading 요소가 제거되면 인터벌도 함께 멈춘다. */
+    var _dotN = 0;
+    var _dotTimer = setInterval(function(){
+      var dEl = document.getElementById('c24-loading-dots');
+      if(!dEl){ clearInterval(_dotTimer); return; }
+      _dotN = (_dotN % 3) + 1;
+      dEl.textContent = '.'.repeat(_dotN);
+    }, 450);
   }
 
   // 각 이미지 Vision AI 분석
@@ -1289,20 +1325,42 @@ function _c24CompFinalAnalyze(){
     }).catch(function(){return '';});
   };
 
-  Promise.all([
-    _analyzeImg(s.images.face,
-      '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}','face'),
-    _analyzeImg(s.images.tongue,
-      '이 혀 사진을 관찰. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음"}','tongue'),
-    _analyzeImg(s.images.eye,
-      '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}','eye'),
-    _analyzeImg(s.images.skin,
-      '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}','skin'),
-    _analyzeImg(s.images.hand_back,
-      '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}','hand_back'),
-    _analyzeImg(s.images.hand_palm,
-      '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}','hand_palm')
-  ]).then(function(results){
+  /* ★ C-76: Promise.all로 6장을 동시에 쏘던 방식은 Anthropic API의 분당 요청수(RPM)
+     제한에 매우 취약하다 — 이미지 6개 + 통합분석 1개, 총 7건이 짧은 시간에 몰려서
+     "요청이 너무 잦습니다" rate-limit 에러가 반복 발생했다(Groq는 같은 문제가 없었으나
+     이는 공급자별 rate limit 정책 차이 — 프론트 구조 자체의 문제였다).
+     동시 호출을 순차 호출로 바꿔 한 번에 최대 1건만 나가도록 한다. */
+  var _seq = Promise.resolve('');
+  var _imgJobs = [
+    ['얼굴', s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
+    ['혀', s.images.tongue, '이 혀 사진을 관찰. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음"}'],
+    ['눈', s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
+    ['피부', s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
+    ['손등', s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
+    ['손바닥', s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
+  ];
+  var _imgResults = [];
+  /* ★ C-77: 지금 몇 번째 부위를 분석 중인지 로딩 문구에 실시간 표시 — 20~30초 동안
+     "멈췄나?" 불안을 없앤다. 결과 텍스트 자체는 아직 없으니 진행 단계 이름만 보여준다. */
+  _imgJobs.forEach(function(job, idx){
+    _seq = _seq.then(function(){
+      try{
+        var stEl = document.getElementById('c24-loading-stage');
+        if(stEl) stEl.childNodes[0].nodeValue = '✨ '+job[0]+' 분석 중 ('+(idx+1)+'/6)';
+      }catch(_e){}
+      return _analyzeImg(job[1], job[2]);
+    }).then(function(r){ _imgResults.push(r); });
+  });
+  _seq.then(function(){
+    /* ★ C-76: 6번째 개별 분석과 7번째(통합) 분석 사이에도 짧은 여유를 둔다 —
+       바로 이어붙이면 여전히 짧은 시간에 몰릴 수 있다 */
+    try{
+      var stEl2 = document.getElementById('c24-loading-stage');
+      if(stEl2) stEl2.childNodes[0].nodeValue = '✨ 전체 결과 종합 중';
+    }catch(_e){}
+    return new Promise(function(res){ setTimeout(res, 400); });
+  }).then(function(){
+    var results = _imgResults;
     var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
     var face=_parse(results[0]);
     var tongue=_parse(results[1]);
@@ -1352,14 +1410,26 @@ function _c24CompFinalAnalyze(){
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
-    /* ★ AI가 JSON이 아닌 형식으로 답했거나 파싱이 실패하면, 조용히 빈 결과({})로
-       넘어가 점수만 뜨고 텍스트가 통째로 사라졌었다. 최소한 받은 원문이라도 보여준다. */
-    if(!ai || Object.keys(ai).length===0){
-      ai = t.trim() ? {핵심발견:t.trim()} : {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
+    /* ★ C-75: JSON 파싱 실패 시 AI 서버 원문(t)을 그대로 "핵심발견"에 넣던 방식은
+       치명적 버그였다 — "요청이 너무 잦습니다" 같은 서버 rate-limit 에러 문구가
+       그대로 건강 소견인 것처럼 사용자에게 노출됨. 유료 결제 후 이 화면을 받으면
+       분석이 실패한 줄도 모른 채 이상한 문구만 받게 된다.
+       이제는 파싱 실패 시 원문을 절대 쓰지 않고, 항상 명확한 실패 안내로 통일한다. */
+    if(!ai || Object.keys(ai).length===0 || !ai.핵심발견){
+      ai = {
+        종합등급:'?', 종합점수:0,
+        핵심발견:'⚠️ 지금은 분석 서버가 혼잡해 결과를 받지 못했습니다. 사진은 모두 저장되어 있으니, 잠시 후(약 1분) 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
+      };
+      try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
     }
     _c24CompShowResult(ai);
   })
-  .catch(function(){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요.'}); });
+  .catch(function(){
+    _c24CompShowResult({
+      종합등급:'?', 종합점수:0,
+      핵심발견:'⚠️ 네트워크 오류로 분석에 실패했습니다. 사진은 모두 저장되어 있으니, 잠시 후 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
+    });
+  });
 };
 
 function _c24UpdateBanner(){
@@ -1922,13 +1992,10 @@ function _c24DrawGuide(skinRatio){
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    // 원안에원 — 혀·눈은 안쪽 작은 원 (더 가까이 유도)
-    if(mode==='tongue'||mode==='eye'){
-      ctx.beginPath();
-      ctx.ellipse(cx2,cy2,ex*0.5,ey*0.5,0,0,Math.PI*2);
-      ctx.strokeStyle=_fcol; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
-      ctx.stroke(); ctx.setLineDash([]);
-    }
+    /* ★ C-74: 혀·눈의 '안쪽 작은 원'을 없앤다 — 여기 맞추려다 오히려 거리가 안 맞는다는 지적.
+       이 작은 원은 판정 로직(far/near/ok)에 전혀 쓰이지 않던 순수 안내선이었다 —
+       실제 판정은 바깥 큰 원의 색(_fcol)뿐이므로 제거해도 동작은 그대로다.
+       이제 안내는 "큰 원 색깔 + 스마트폰 앞뒤로" 텍스트 하나로 단순해진다. */
     // 코너 강조
     var corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
     corners.forEach(function(c3){
@@ -2006,8 +2073,12 @@ function _c24DrawGuide(skinRatio){
       ctx.fillText(_lbl, 12, 80);
       /* ★ C-69: 실측 기준점 마스크 — 거리 계산에 실제로 쓰는 좌표를 화면에 점으로 찍는다.
          사용자가 "지금 이 두 점 사이로 거리를 재는구나"를 눈으로 확인 → 스스로 정렬 가능.
-         FaceMesh가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음. */
-      if(_isFM && _c24._faceLms){
+         FaceMesh가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음.
+         ★ C-74: 눈 모드는 ROI 소스가 항상 'inner-circle'(2477행)이라 _isFM이 결코 참이 될 수
+         없다 — 그래서 눈 마스크가 한 번도 안 그려졌다(점 크기 문제가 아니라 조건 자체가 막힘).
+         랜드마크 신선도(_lmsFresh)만으로 판정하도록 분리 — ROI 소스와 무관하게 그려진다. */
+      if(_c24._faceLms && (mode==='face'||mode==='skin'||mode==='eye') &&
+         (performance.now()-(_c24._faceLmsTime||0) < 700)){
         try{
           var _L2=_c24._faceLms;
           function _mp(i){ var p=_L2[i]; if(!p) return null;
@@ -2016,18 +2087,22 @@ function _c24DrawGuide(skinRatio){
             return {x:px, y:py};
           }
           var _dots=[];
+          var _dotR=4;   /* 기본 점 반지름 */
           if(mode==='face'||mode==='skin'){
             _dots=[_mp(468), _mp(473)];               /* 좌우 홍채 중심 — 거리 자(eyeRulerCm)와 동일 기준점 */
           } else if(mode==='eye'){
             _dots=[_mp(33), _mp(133)];                /* ★ C-73: 왼쪽 눈 눈꼬리(33)~눈머리(133) — 지금 화면에 확대해 보이는 그 눈 자체의 폭. 얼굴 모드의 '양눈 사이' 좌표(468·473)와는 다른 자 */
+            _dotR=7;     /* ★ C-74: 눈은 화면에 확대돼 보이므로 점도 더 크게 — '잘 안 보인다' 지적 반영 */
           }
           _dots.forEach(function(_d){
             if(!_d) return;
             ctx.beginPath();
-            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
+            if(mode==='eye'){ ctx.shadowColor='rgba(52,211,153,.9)'; ctx.shadowBlur=10; }   /* 발광으로 확실히 띄움 */
+            ctx.arc(_d.x,_d.y,_dotR,0,Math.PI*2);
             ctx.fillStyle='rgba(52,211,153,.95)';
             ctx.fill();
-            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(6,78,59,.9)'; ctx.stroke();
+            ctx.shadowBlur=0;
+            ctx.lineWidth=(mode==='eye')?2:1.5; ctx.strokeStyle='rgba(6,78,59,.9)'; ctx.stroke();
           });
           if(_dots.length===2 && _dots[0] && _dots[1]){
             ctx.beginPath();
@@ -2558,6 +2633,7 @@ function _c24CompStartStep(needBack){
   _c24.rawR=[]; _c24.rawG=[]; _c24.rawB=[];
   _c24.chromSig=[]; _c24.bpZS=[0,0];
   _c24.bpm=0; _c24.hrv=0; _c24.fci=0;
+  _c24.envAdvisory=null;
   _c24.sec=0; _c24.prevR=0; _c24.prevG=0;
   _c24.capturedImage=null;
   _c24.faceOK=false;
@@ -2782,9 +2858,10 @@ function _c24Loop(){
           var v2=_c24CalcVitals();
           if(v2){
             _c24.gotVitals=true; /* B-1: 진짜 맥동 신호 획득 */
-            /* 환경 보정 → 생리 구속 → 교차검증 순서 */
-            var _bp = _c24EnvAdjust(v2.bpm, _c24.mode);
-            _c24.bpm = _c24Physio(_bp);
+            /* ★ HAZ-003: 원본 실측(v2.bpm) → 생리 구속만 적용 → 이것이 화면·저장·리포트의 유일한 BPM.
+               기온은 값을 바꾸지 않고 신뢰도 판정(advisory)만 별도로 남긴다. */
+            _c24.bpm = _c24Physio(v2.bpm);
+            _c24.envAdvisory = _c24EnvAdvisory(v2.bpm, _c24.mode);
             try{
               _c24Agree();
               window._c24Sig.snr = _c24SNR(_c24.chromSig);
