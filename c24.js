@@ -1973,6 +1973,7 @@ function _c24DrawGuide(skinRatio){
 window._c24ShowChatGuide = function(idx){
   var stale = document.getElementById('c24-chat-guide');
   if(stale) stale.remove();
+  window._c24LastGuideIdx = idx;   /* ★ 언어 전환 시 같은 단계로 다시 그리기 위해 기억 */
   var stepInfo = [
     {emoji:'👤', title:'얼굴 측정', sec:60, msgs:[
       _cK(8642,'안녕하세요! 6부위 종합 검사 함께 시작할게요 🌸'),
@@ -2718,3 +2719,31 @@ window._c24Cancel = function(){
   try{ if(typeof _c24BreathStop==='function') _c24BreathStop(); }catch(e){}
   try{ var p=document.getElementById('page-algo'); if(p) p.classList.remove('c24-scanning'); }catch(e){}
 };
+
+/* ══ 언어 전환 시 카메라 안내창 다시 그리기 ══
+   다른 화면(타로·여행 등)은 cgoRepaintOn 에 등록되어 언어를 바꾸면 자동으로 다시 그려지는데,
+   c24 채팅형 안내창(c24-chat-guide)은 등록이 안 되어 있어 언어를 바꾸면
+   이미 그려진 이전 언어 문장이 그대로 남아 새 언어와 섞여 보였다.
+   지금 그 팝업이 열려 있으면, 같은 단계(idx) 그대로 지우고 다시 그린다. */
+(function(){
+  function _c24RepaintGuide(){
+    try{
+      var pop = document.getElementById('c24-chat-guide');
+      if(!pop) return;   /* 안내창이 안 떠 있으면 손대지 않는다 */
+      var idx = window._c24LastGuideIdx || 0;
+      if(typeof window._c24ShowChatGuide === 'function') window._c24ShowChatGuide(idx);
+    }catch(e){}
+  }
+  function reg(){
+    if(typeof window.cgoRepaintOn === 'function'){ window.cgoRepaintOn(_c24RepaintGuide); return true; }
+    return false;
+  }
+  if(!reg()){
+    var _c24RepaintTry = 0;
+    var _c24RepaintTimer = setInterval(function(){
+      if(document.hidden) return;
+      if(reg() || ++_c24RepaintTry > 75) clearInterval(_c24RepaintTimer);
+    }, 400);
+    setTimeout(function(){ clearInterval(_c24RepaintTimer); }, 15000);
+  }
+})();
