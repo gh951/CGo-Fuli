@@ -1096,7 +1096,7 @@ var _c24BreathElapsed = 0;
 var _c24BreathPhase = 0;
 var _c24BreathPhaseTime = [4, 7, 8];
 var _c24BreathColors = ['#38bdf8', '#fbbf24', '#34d399'];
-var _c24BreathTexts = ['🫁 들이쉬기', '⏸ 멈추기', '💨 내쉬기'];
+var _c24BreathTexts = [_cK(8128,'🫁 들이쉬기'), _cK(90002,'⏸ 멈추기'), _cK(90003,'💨 내쉬기')];
 var _c24r = window._c24||{}, _bsr=window.BS||{};
 var _c24d = window._c24||{};
 var _c24r = window._c24||{};
@@ -1444,7 +1444,7 @@ function _c24UpdateBanner(){
   var bprog  = document.getElementById('c24-banner-prog');
   if(!banner) return;
   banner.style.display='block';
-  if(btitle) btitle.textContent = _cgoT(card.title).replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' '+_cgoT('검사 중');
+  if(btitle) btitle.textContent = _cgoT(card.title).replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' '+_cK(90006,'검사 중');
   if(bstep)  bstep.textContent = flow.total>1 ? (st.stepIdx+1)+'/'+flow.total+' 단계' : '단일 검사';
   if(bguide){
     var modeNames={face:'👤 얼굴을 카메라에 비추고 앞뒤로 움직여 맞춰 주세요',tongue:'👅 혀를 최대한 내밀고 카메라를 앞뒤로 움직여 맞춰 주세요',hand:'✋ 손바닥을 펴서 후면 카메라를 앞뒤로 움직여 맞춰 주세요',eye:'👁️ 눈 흰자가 잘 보이도록 위를 약간 보며 카메라를 앞뒤로 움직여 맞춰 주세요',skin:'🎨 측정할 피부 부위에 카메라를 앞뒤로 움직여 맞춰 주세요'};
@@ -1576,7 +1576,7 @@ function _c24BreathTick(){
   var bar = document.getElementById('c24-breath-bar');
   var txt = document.getElementById('c24-breath-text');
   var cnt = document.getElementById('c24-breath-count');
-  if(txt) { txt.textContent = _cgoT(_c24BreathTexts[_c24BreathPhase]); txt.style.color = _c24BreathColors[_c24BreathPhase]; }
+  if(txt) { txt.textContent = _c24BreathTexts[_c24BreathPhase]; txt.style.color = _c24BreathColors[_c24BreathPhase]; }
   if(bar) bar.style.background = _c24BreathColors[_c24BreathPhase];
 
   _c24BreathTimer = setInterval(function(){
@@ -1591,9 +1591,9 @@ function _c24BreathTick(){
       if(_c24BreathPhase === 0){
         // ★ 1사이클 완료 → 멈추고 완료 메시지 표시
         _c24CompState.breathData.cycles = 1;
-        if(txt){ txt.textContent = _cgoT('✅ 호흡 완료 — 편안하게 정면을 바라봐 주세요'); txt.style.color = '#34d399'; }
+        if(txt){ txt.textContent = _cK(90004,'✅ 호흡 완료 — 편안하게 정면을 바라봐 주세요'); txt.style.color = '#34d399'; }
         if(bar){ bar.style.width = '100%'; bar.style.background = '#34d399'; }
-        if(cnt){ cnt.textContent = _cgoT('1 사이클 완료'); }
+        if(cnt){ cnt.textContent = _cK(90005,'1 사이클 완료'); }
         // 5초 후 오버레이 자연스럽게 사라짐
         setTimeout(function(){
           var ov = document.getElementById('c24-breath-overlay');
@@ -1801,7 +1801,7 @@ function _c24DiseaseNextStep(){
     var bprog = document.getElementById('c24-banner-prog');
     var bstep = document.getElementById('c24-banner-step');
     if(bprog) bprog.style.width='100%';
-    if(bstep){ bstep.textContent=_cgoT('✅ 완료'); bstep.style.color='#34d399'; }
+    if(bstep){ bstep.textContent=_cK(90007,'✅ 완료'); bstep.style.color='#34d399'; }
     var btitle = document.getElementById('c24-banner-title');
     if(btitle) btitle.textContent = _c24Cards[st.key].title.replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' 검사 완료!';
     st.active = false;
@@ -2402,7 +2402,7 @@ function _c24Finish(){
   var idle=document.getElementById('c24-idle-overlay');
   var badge=document.getElementById('c24-live-badge');
   var lb=document.getElementById('c24-live-bpm');
-  if(startBtn){startBtn.style.display='block';startBtn.textContent=_cgoT('▶ 다시 측정');}
+  if(startBtn){startBtn.style.display='block';startBtn.textContent=_cK(90008,'▶ 다시 측정');}
   if(stopBtn){stopBtn.style.display='none';}
   if(idle){idle.style.display='none';}
   if(badge){badge.style.display='none';}
