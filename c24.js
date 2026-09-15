@@ -1423,7 +1423,7 @@ function _c24BreathTick(){
   var bar = document.getElementById('c24-breath-bar');
   var txt = document.getElementById('c24-breath-text');
   var cnt = document.getElementById('c24-breath-count');
-  if(txt) { txt.textContent = _c24BreathTexts[_c24BreathPhase]; txt.style.color = _c24BreathColors[_c24BreathPhase]; }
+  if(txt) { txt.textContent = _cgoT(_c24BreathTexts[_c24BreathPhase]); txt.style.color = _c24BreathColors[_c24BreathPhase]; }
   if(bar) bar.style.background = _c24BreathColors[_c24BreathPhase];
 
   _c24BreathTimer = setInterval(function(){
