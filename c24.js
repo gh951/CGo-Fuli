@@ -502,15 +502,41 @@ window._c24Q = {
 /* ── 거리 — 눈 사이 픽셀로 cm 추정 ──
    사람 눈 사이는 평균 6.3cm 로 거의 일정하다. 화면에서 그 폭이
    몇 픽셀인지 보면 거리가 나온다. 사용자가 팔만 움직이면 고칠 수 있으므로
-   이것만 막는다(원 빨강 · 타임바 정지). */
+   이것만 막는다(원 빨강 · 타임바 정지).
+   ★ C-69: eye.js의 eyeRulerCm()과 같은 화각 역산 방식으로 교체 — 화면 폭 근사 대신
+   실제 카메라 화각(~68°)으로 초점거리를 구해 오차를 줄인다. 사용자 실측 IPD가
+   있으면(cgoIpdMm) 6.3cm 평균값 대신 그 값을 쓴다 — eye.js와 동일 로직이라
+   두 기능 사이 결과가 일관된다. */
 function _c24Distance(lms, vw){
   if(!lms || !lms[33] || !lms[263]) return 0;
   var dx = (lms[263].x - lms[33].x) * vw;
   var dy = (lms[263].y - lms[33].y) * vw;
   var px = Math.sqrt(dx*dx + dy*dy);
   if(px < 1) return 0;
-  /* 초점거리를 화면 폭으로 근사 — 기기가 달라도 비율은 유지된다 */
-  return Math.round((6.3 * vw) / px);
+  var ipdCm = 6.3;
+  try{ var _m = window.cgoIpdMm ? cgoIpdMm() : null; if(_m) ipdCm = _m/10; }catch(_e){}
+  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);   /* 폰 전면 카메라 화각 ~68° — eyeRulerCm과 동일 */
+  var cm = (ipdCm * f) / px;
+  if(!isFinite(cm) || cm <= 0) return 0;
+  return Math.round(cm);
+}
+
+/* ── 손 거리 — 손허리뼈 폭 픽셀로 cm 추정 (★ C-70) ──
+   검지 뿌리(5)↔새끼 뿌리(17) 폭은 성인 평균 약 8.0cm로 자세(주먹·펼침)에
+   거의 흔들리지 않는다. _c24Distance와 같은 화각 역산 — 손 모드에서
+   지금까지 비어 있던 _q.distCm을 채워 ±40% cm 판정(C-69)을 살린다.
+   (후면 카메라 화각도 68° 근사 — 기존 코드와 동일 기준) */
+function _c24HandDistance(lms, vw){
+  if(!lms || !lms[5] || !lms[17]) return 0;
+  var dx = (lms[17].x - lms[5].x) * vw;
+  var dy = (lms[17].y - lms[5].y) * vw;
+  var px = Math.sqrt(dx*dx + dy*dy);
+  if(px < 1) return 0;
+  var knCm = 8.0;
+  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);
+  var cm = (knCm * f) / px;
+  if(!isFinite(cm) || cm <= 0) return 0;
+  return Math.round(cm);
 }
 
 /* ── 조도 — 밝기를 없애고 비율만 남긴다 ──
@@ -775,6 +801,9 @@ function _c24CompStartReal(){
   try{ if(typeof _c24Chime==='function') _c24Chime(); }catch(e){}
   // AR-1: FaceMesh 정밀 인터록 준비 (실패 시 살색비율 폴백)
   try{ if(typeof _c24EnsureFM==='function') _c24EnsureFM(); }catch(e){}
+  /* ★ C-70: Hands 스크립트도 지금 미리 받는다 — 4·5단계(손) 도달 전에 준비.
+     그래프 생성은 손 단계 첫 프레임에서만 하므로 지금은 메모리 0 */
+  try{ if(typeof _c24EnsureHands==='function') _c24EnsureHands(); }catch(e){}
   // 1단계: 얼굴 60초
   _c24CompDoStep(0);
 };
@@ -1271,9 +1300,15 @@ function _c24CompFinalAnalyze(){
   })
   .then(function(r3){return r3.json();})
   .then(function(d3){
-    var t=d3.text||'{}';
+    var t=d3.text||'';
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
-    var ai=m?JSON.parse(m[0]):{};
+    var ai=null;
+    if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
+    /* ★ AI가 JSON이 아닌 형식으로 답했거나 파싱이 실패하면, 조용히 빈 결과({})로
+       넘어가 점수만 뜨고 텍스트가 통째로 사라졌었다. 최소한 받은 원문이라도 보여준다. */
+    if(!ai || Object.keys(ai).length===0){
+      ai = t.trim() ? {핵심발견:t.trim()} : {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
+    }
     _c24CompShowResult(ai);
   })
   .catch(function(){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요.'}); });
@@ -1921,6 +1956,77 @@ function _c24DrawGuide(skinRatio){
       ctx.fillRect(6,66,_tw,20);
       ctx.fillStyle=_isFM?'#34d399':'#fbbf24';
       ctx.fillText(_lbl, 12, 80);
+      /* ★ C-69: 실측 기준점 마스크 — 거리 계산에 실제로 쓰는 좌표를 화면에 점으로 찍는다.
+         사용자가 "지금 이 두 점 사이로 거리를 재는구나"를 눈으로 확인 → 스스로 정렬 가능.
+         FaceMesh가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음. */
+      if(_isFM && _c24._faceLms){
+        try{
+          var _L2=_c24._faceLms;
+          function _mp(i){ var p=_L2[i]; if(!p) return null;
+            var px=p.x*v.videoWidth*_sc+_ox, py=p.y*v.videoHeight*_sc+_oy;
+            px = cv.width - px;   /* 거울 보정 */
+            return {x:px, y:py};
+          }
+          var _dots=[];
+          if(mode==='face'||mode==='skin'){
+            _dots=[_mp(468), _mp(473)];               /* 좌우 홍채 중심 — 거리 자(eyeRulerCm)와 동일 기준점 */
+          } else if(mode==='eye'){
+            _dots=[_mp(468), _mp(473)];
+          } else if(mode==='tongue'){
+            _dots=[_mp(61), _mp(291)];                /* ★ C-70: 좌우 입꼬리 — 혀의 뿌리를 잡는 앵커. 입 폭이 거리 자가 된다 */
+          }
+          _dots.forEach(function(_d){
+            if(!_d) return;
+            ctx.beginPath();
+            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
+            ctx.fillStyle='rgba(52,211,153,.95)';
+            ctx.fill();
+            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(6,78,59,.9)'; ctx.stroke();
+          });
+          if(_dots.length===2 && _dots[0] && _dots[1]){
+            ctx.beginPath();
+            ctx.moveTo(_dots[0].x,_dots[0].y); ctx.lineTo(_dots[1].x,_dots[1].y);
+            ctx.strokeStyle='rgba(52,211,153,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+            ctx.stroke(); ctx.setLineDash([]);
+          }
+        }catch(_e){}
+      }
+      /* ★ C-70: 손 좌표 마스크 — 손목(0) + 가장 긴 손가락 끝 1점. 눈 마스크(C-69)와 동일 패턴.
+         Hands가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음.
+         후면 카메라는 scaleX(1)이라 거울 반전 금지 — 실제 적용된 transform을 보고 판단한다. */
+      if(isHandMode && _c24._handLms && (performance.now()-(_c24._handLmsTime||0) < 700)){
+        try{
+          var _HL=_c24._handLms;
+          var _mirH=((v.style.transform||'').indexOf('scaleX(-1)')>=0);
+          function _hp(i){ var p=_HL[i]; if(!p) return null;
+            var px=p.x*v.videoWidth*_sc+_ox, py=p.y*v.videoHeight*_sc+_oy;
+            if(_mirH) px = cv.width - px;
+            return {x:px, y:py};
+          }
+          /* 가장 긴 손가락 = 손목에서 가장 먼 손끝 (엄지4·검지8·중지12·약지16·새끼20) */
+          var _wr=_HL[0], _tipIdx=12, _bestD=-1;
+          [4,8,12,16,20].forEach(function(ti){
+            var tp=_HL[ti]; if(!tp||!_wr) return;
+            var d=(tp.x-_wr.x)*(tp.x-_wr.x)+(tp.y-_wr.y)*(tp.y-_wr.y);
+            if(d>_bestD){ _bestD=d; _tipIdx=ti; }
+          });
+          var _hd=[_hp(0), _hp(_tipIdx)];
+          _hd.forEach(function(_d){
+            if(!_d) return;
+            ctx.beginPath();
+            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
+            ctx.fillStyle='rgba(251,191,36,.95)';   /* 손 단계 색(amber) — stepColors와 통일 */
+            ctx.fill();
+            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(69,26,3,.9)'; ctx.stroke();
+          });
+          if(_hd[0] && _hd[1]){
+            ctx.beginPath();
+            ctx.moveTo(_hd[0].x,_hd[0].y); ctx.lineTo(_hd[1].x,_hd[1].y);
+            ctx.strokeStyle='rgba(251,191,36,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+            ctx.stroke(); ctx.setLineDash([]);
+          }
+        }catch(_e){}
+      }
       /* ★ C-63: FaceMesh 진단 (콘솔 없이 확인) — 전송/응답/검출 */
       /* ★ C-63: 진단 배지는 개발/검증용 → 언어 무관하게 영어 고정 (단독 '응답','검출'을
          전역 사전에 넣으면 다른 화면에서 오역될 위험이 있음 — C-60 용어집 경고) */
@@ -2604,6 +2710,7 @@ function _c24Loop(){
       var _band = _c24FitBand(_c24.mode);
       var _skinFit = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
       try{ if((_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'||_c24.mode==='eye')) _c24SendFM(document.getElementById('c24-video')); }catch(e){} /* ★ C-63: skin·eye도 FaceMesh 사용 */
+      try{ if((_c24.mode==='hand'||_c24.mode==='hand_back'||_c24.mode==='hand_palm')) _c24SendHands(document.getElementById('c24-video')); }catch(e){} /* ★ C-70: 손 모드는 Hands 교체구동 — FaceMesh와 동시 구동 없음 */
       var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'); /* ★ C-63: skin도 FaceMesh 판정 */
       var _lmsFresh = !!(_c24._faceLms && (performance.now()-(_c24._faceLmsTime||0) < 700));
       /* ★ C-63 fix: ROI가 이마·볼 3패치로 정밀해지면서 그 안은 거의 100% 피부가 된다.
@@ -2634,6 +2741,13 @@ function _c24Loop(){
           var _d = _c24Distance(_c24._faceLms, _vw);
           if(_d > 0) _q.distCm = _d;
         }
+        /* ★ C-70: 손 모드는 얼굴 좌표가 없어 distCm이 비어 있었다 — Hands 좌표로 채워
+           아래 ±40% cm 판정(C-69)이 손에서도 살아난다 → 거리 오차 감소 */
+        var _hdFresh = !!(_c24._handLms && (performance.now()-(_c24._handLmsTime||0) < 700));
+        if(!_lmsFresh && _hdFresh){
+          var _dh = _c24HandDistance(_c24._handLms, _vw);
+          if(_dh > 0) _q.distCm = _dh;
+        }
         /* ★ cm 대신 화면 채움 비율로 판정한다.
            폰마다 렌즈 화각이 달라 같은 거리에서도 눈 사이 화소가 다르게 나왔다.
            얼굴 너비가 화면 폭의 45~85%면 어느 폰에서도 신호가 충분하다.
@@ -2649,6 +2763,15 @@ function _c24Loop(){
           (window._c24CompState && window._c24CompState.step) || 0] || 'face';
         _q.part = _part;
         var _st = window.cgoFitState ? cgoFitState(_fill, _part) : 'ok';
+        /* ★ C-69: 화면 채움 비율(_fill)만으로는 "9cm인데 25cm로 통과" 같은 개인차 오차가 남는다.
+           _c24Distance()가 실측한 cm(_q.distCm)을 함께 검증 — 부위별 기준 cm의 ±40% 밖이면
+           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다. */
+        if(_q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
+          var _bandCm = window.CGO_FIT[_part].cm;
+          var _lo = _bandCm * 0.6, _hi = _bandCm * 1.4;
+          if(_q.distCm < _lo) _st = 'near';
+          else if(_q.distCm > _hi) _st = 'far';
+        }
         _q.distOK = (_st === 'ok' || _st === 'none');
         /* 딱 맞으면 띵 띵 띵 — 화면을 못 봐도 귀로 안다 */
         if(_st === 'ok' && window.cgoFitBeep) cgoFitBeep('c24-' + _part);
@@ -2701,6 +2824,62 @@ function _c24SendFM(v){
     if(p&&p.then){ p.then(function(){_c24._fmSending=false;}).catch(function(){_c24._fmSending=false;}); }
     else { _c24._fmSending=false; }
   }catch(e){ _c24._fmSending=false; }
+}
+
+/* ══ MediaPipe Hands — 손등·손바닥 좌표 마스크 ══
+   손 모드일 때 FaceMesh는 꺼져 있으므로(교체구동, _fmActive 참조)
+   Hands를 추가해도 발열·부하가 겹치지 않는다. FaceMesh와 동일 패턴:
+   CDN 지연 로드 → 4프레임마다 송신 → 결과를 _c24._handLms에 저장. */
+function _c24InitHands(){
+  try{
+    if(_c24.hands) return;
+    _c24.hands=new Hands({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f;}});
+    _c24.hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:0.6,minTrackingConfidence:0.6}); /* complexity 0 = 보급폰 우선 */
+    _c24.hands.onResults(function(r){
+      try{
+        _c24._hdRecv=(_c24._hdRecv||0)+1;
+        if(r && r.multiHandLandmarks && r.multiHandLandmarks.length>0){
+          _c24._handLms=r.multiHandLandmarks[0]; _c24._handLmsTime=performance.now();
+          _c24._hdHit=(_c24._hdHit||0)+1;
+        } else { _c24._handLms=null; }
+      }catch(e){}
+    });
+  }catch(e){ _c24.hands=null; }
+}
+
+function _c24EnsureHands(){
+  /* 스크립트만 미리 내려받는다 — 그래프 생성(메모리 점유)은 첫 send 때(_c24SendHands) */
+  try{
+    if(_c24.hands || _c24._hdLoading) return;
+    if(typeof Hands!=='undefined') return;
+    _c24._hdLoading=true;
+    if(!document.querySelector('script[data-c24-hands]')){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+      s.setAttribute('data-c24-hands','1'); s.crossOrigin='anonymous';
+      s.onload=function(){ _c24._hdLoading=false; };
+      s.onerror=function(){ _c24._hdLoading=false; };
+      document.head.appendChild(s);
+    } else { _c24._hdLoading=false; }
+  }catch(e){ _c24._hdLoading=false; }
+}
+
+function _c24SendHands(v){
+  try{
+    if(!v || !v.videoWidth) return;
+    if(!_c24.hands){
+      if(typeof Hands==='undefined'){ _c24EnsureHands(); return; } /* 스크립트 미도착 → 폴백(살색비율) 유지 */
+      _c24InitHands();
+      if(!_c24.hands) return;
+    }
+    if(_c24._hdSending) return;
+    _c24._hdFrame=(_c24._hdFrame||0)+1;
+    if(_c24._hdFrame%4!==0) return; /* 4프레임마다 (CPU 절약 — FaceMesh와 동일) */
+    _c24._hdSending=true;
+    var p=_c24.hands.send({image:v});
+    if(p&&p.then){ p.then(function(){_c24._hdSending=false;}).catch(function(){_c24._hdSending=false;}); }
+    else { _c24._hdSending=false; }
+  }catch(e){ _c24._hdSending=false; }
 }
 
 
