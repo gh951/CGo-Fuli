@@ -63,6 +63,36 @@ window.cgoFitBeep = function(tag){
 window.cgoFitBeepReset = function(tag){
   try{ if(window._cgoBeeped) delete window._cgoBeeped[tag]; }catch(e){}
 };
+
+/* ★ C-72: 실측 중 초시계 틱 — 눈·혀처럼 미세하게 흔들리는 부위는 "띵 띵 띵" 한 번으로는
+   지금 맞는지 계속 알 수 없어 불편하다는 지적. 맞는 동안 짧은 틱이 계속 돌고,
+   어긋나면 그 프레임에 바로 끊긴다 — 소리 자체가 실시간 정렬 신호가 되도록.
+   setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다. */
+window._cgoTickOn = false;
+window.cgoFitTick = function(shouldTick){
+  try{
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!shouldTick){ window._cgoTickOn = false; return; }
+    if(window._cgoTickOn) return;   /* 이미 돌고 있으면 재시작하지 않음 — 겹침 방지 */
+    window._cgoTickOn = true;
+    var ac = window._cgoAC || (window._cgoAC = new AC());
+    if(ac.state === 'suspended') ac.resume();
+    var t = ac.currentTime;
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'square';
+    o.frequency.value = 1800;               /* 초시계 특유의 딱딱한 고음 */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);  /* 아주 짧게 — '틱' */
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.04);
+    o.onended = function(){
+      window._cgoTickOn = false;
+      /* 다음 프레임에서도 여전히 맞으면 cgoFitTick(true)가 다시 호출돼 이어진다 */
+    };
+  }catch(e){ window._cgoTickOn = false; }
+};
 function _cK(n,f){try{var v=window.K&&window.K(n);return (v&&v!==String(n))?v:f;}catch(e){return f;}}
 
 /* ══ 측정 상태 — 구 CGO에서 그대로 가져온다. 이것이 없어 카메라가 시작되지 않았다 ══ */
@@ -535,6 +565,24 @@ function _c24HandDistance(lms, vw){
   var knCm = 8.0;
   var f = (vw / 2) / Math.tan(68 * Math.PI / 360);
   var cm = (knCm * f) / px;
+  if(!isFinite(cm) || cm <= 0) return 0;
+  return Math.round(cm);
+}
+
+/* ── 눈 거리 — 한쪽 눈 폭 픽셀로 cm 추정 (★ C-73) ──
+   눈 검사는 한쪽 눈만 화면 가득 확대해서 본다 — 반대쪽 눈은 프레임 밖일 수 있어
+   기존 _c24Distance(양눈 사이 6.3cm 자)를 그대로 쓰면 33·263 중 하나가 안 잡히거나
+   왜곡돼 오차가 커진다. 왼쪽 눈 눈꼬리(33)~눈머리(133) 폭(성인 평균 약 3.0cm)을
+   자로 써서 같은 화각 역산 방식으로 계산 — 마스크(C-73 점선)와 동일 기준점이라 일치한다. */
+function _c24EyeDistance(lms, vw){
+  if(!lms || !lms[33] || !lms[133]) return 0;
+  var dx = (lms[133].x - lms[33].x) * vw;
+  var dy = (lms[133].y - lms[33].y) * vw;
+  var px = Math.sqrt(dx*dx + dy*dy);
+  if(px < 1) return 0;
+  var eyeCm = 3.0;
+  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);
+  var cm = (eyeCm * f) / px;
   if(!isFinite(cm) || cm <= 0) return 0;
   return Math.round(cm);
 }
@@ -1971,9 +2019,7 @@ function _c24DrawGuide(skinRatio){
           if(mode==='face'||mode==='skin'){
             _dots=[_mp(468), _mp(473)];               /* 좌우 홍채 중심 — 거리 자(eyeRulerCm)와 동일 기준점 */
           } else if(mode==='eye'){
-            _dots=[_mp(468), _mp(473)];
-          } else if(mode==='tongue'){
-            _dots=[_mp(61), _mp(291)];                /* ★ C-70: 좌우 입꼬리 — 혀의 뿌리를 잡는 앵커. 입 폭이 거리 자가 된다 */
+            _dots=[_mp(33), _mp(133)];                /* ★ C-73: 왼쪽 눈 눈꼬리(33)~눈머리(133) — 지금 화면에 확대해 보이는 그 눈 자체의 폭. 얼굴 모드의 '양눈 사이' 좌표(468·473)와는 다른 자 */
           }
           _dots.forEach(function(_d){
             if(!_d) return;
@@ -1989,6 +2035,30 @@ function _c24DrawGuide(skinRatio){
             ctx.strokeStyle='rgba(52,211,153,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
             ctx.stroke(); ctx.setLineDash([]);
           }
+        }catch(_e){}
+      }
+      /* ★ C-71: 혀 앞(끝)·뒤(입 안쪽) 좌표 마스크 — FaceMesh 랜드마크가 아니라
+         프레임 루프에서 혀색 픽셀을 직접 찾은 실측 좌표(_c24._tgFront/_tgBack)를 그린다.
+         object-fit:cover 보정(_sc,_ox,_oy)은 위쪽 얼굴/눈 마스크와 동일 수식 사용. */
+      if(mode==='tongue' && _c24._tgFront && _c24._tgBack && (performance.now()-(_c24._tgTime||0) < 500)){
+        try{
+          function _tp(pt){
+            var px=pt.x*_sc+_ox, py=pt.y*_sc+_oy;
+            px = cv.width - px;   /* 전면 카메라 거울 보정 — 얼굴/눈 마스크와 동일 */
+            return {x:px, y:py};
+          }
+          var _tf=_tp(_c24._tgFront), _tb=_tp(_c24._tgBack);
+          [_tf,_tb].forEach(function(_d){
+            ctx.beginPath();
+            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
+            ctx.fillStyle='rgba(248,113,113,.95)';   /* 혀 단계 색 — stepColors와 통일 */
+            ctx.fill();
+            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(69,10,10,.9)'; ctx.stroke();
+          });
+          ctx.beginPath();
+          ctx.moveTo(_tf.x,_tf.y); ctx.lineTo(_tb.x,_tb.y);
+          ctx.strokeStyle='rgba(248,113,113,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+          ctx.stroke(); ctx.setLineDash([]);
         }catch(_e){}
       }
       /* ★ C-70: 손 좌표 마스크 — 손목(0) + 가장 긴 손가락 끝 1점. 눈 마스크(C-69)와 동일 패턴.
@@ -2674,12 +2744,33 @@ function _c24Loop(){
       }
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
       var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
+      /* ★ C-71: 혀 모드 전용 — 64x48 버퍼(=안쪽 원 확대 영역) 안에서 혀색 픽셀의
+         맨 위 행(입 안쪽 = 혀 뒤)과 맨 아래 행(카메라 쪽으로 내민 끝 = 혀 앞)을 찾는다.
+         패치 분할이 없을 때만 유효(_roi.patches면 좌표계가 갈라지므로 스킵). */
+      var _tgTop=-1, _tgBot=-1, _tgTopX=0, _tgBotX=0;
+      var _tgTrack = (_c24.mode==='tongue' && !(_roi.patches && _roi.patches.length>=2));
       for(var i=0;i<px.length;i+=4){
         var pr=px[i],pg=px[i+1],pb=px[i+2];
         rSum+=pr; gSum+=pg; bSum+=pb; cnt++;
         var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
         var sv=mx2>0?(mx2-mn2)/mx2:0;
+        var _isTongue = pr>90&&pr>pg&&pr>pb&&(pr-pb)>15&&sv>0.12&&sv<0.75; /* 혀=붉은살색, 배경보다 넓게 잡음 */
         if(pr>70&&pg>40&&pb>20&&pr>pg&&pr>pb&&(pr-pg)>10&&sv>0.15&&sv<0.7) skinCnt++;
+        if(_tgTrack && _isTongue){
+          var _row=Math.floor((i/4)/64), _col=(i/4)%64;
+          if(_tgTop<0){ _tgTop=_row; _tgTopX=_col; }
+          _tgBot=_row; _tgBotX=_col;   /* 마지막까지 갱신되므로 순회 끝나면 최댓값이 남는다 */
+        }
+      }
+      /* ★ C-71: 64x48 버퍼 좌표 → 원본 비디오 픽셀 좌표로 역산해 저장.
+         _roi(sx,sy,sw,sh)는 이 프레임에서 오프스크린에 그려 넣은 실제 원본 영역이므로
+         버퍼의 (col,row)를 그 비율만큼 되돌리면 비디오 위 실좌표가 나온다. */
+      if(_tgTrack && _tgTop>=0 && _tgBot>=0){
+        _c24._tgFront={ x: sx + (_tgBotX/64)*sw, y: sy + (_tgBot/48)*sh };  /* 아래쪽=카메라 가까이=혀 끝 */
+        _c24._tgBack ={ x: sx + (_tgTopX/64)*sw, y: sy + (_tgTop/48)*sh };  /* 위쪽=입 안쪽=혀 뒤 */
+        _c24._tgTime = performance.now();
+      } else if(_c24.mode==='tongue'){
+        _c24._tgFront=null; _c24._tgBack=null;
       }
       var _skinNeed=(_c24.mode==='face'||_c24.mode==='tongue')?0.18:0.15; /* B-1: 얼굴/혀만 강화 */
       /* ★ C-63: 정밀 ROI(3패치)는 거의 순수 피부 → 하한만 의미 있음. 상한 판정 없음 */
@@ -2741,6 +2832,12 @@ function _c24Loop(){
           var _d = _c24Distance(_c24._faceLms, _vw);
           if(_d > 0) _q.distCm = _d;
         }
+        /* ★ C-73: 눈 모드는 한쪽 눈만 확대해 찍으므로 양눈 사이 자(_c24Distance)가
+           부정확하다 — 한쪽 눈 폭 자(_c24EyeDistance)로 덮어써서 마스크와 판정을 일치시킨다 */
+        if(_lmsFresh && _c24.mode==='eye'){
+          var _de = _c24EyeDistance(_c24._faceLms, _vw);
+          if(_de > 0) _q.distCm = _de;
+        }
         /* ★ C-70: 손 모드는 얼굴 좌표가 없어 distCm이 비어 있었다 — Hands 좌표로 채워
            아래 ±40% cm 판정(C-69)이 손에서도 살아난다 → 거리 오차 감소 */
         var _hdFresh = !!(_c24._handLms && (performance.now()-(_c24._handLmsTime||0) < 700));
@@ -2775,6 +2872,8 @@ function _c24Loop(){
         _q.distOK = (_st === 'ok' || _st === 'none');
         /* 딱 맞으면 띵 띵 띵 — 화면을 못 봐도 귀로 안다 */
         if(_st === 'ok' && window.cgoFitBeep) cgoFitBeep('c24-' + _part);
+        /* ★ C-72: 실측 중엔 초시계 틱으로 실시간 정렬 신호 — 맞으면 계속, 어긋나면 이 프레임에 바로 끊김 */
+        if(window.cgoFitTick) cgoFitTick(_st === 'ok');
 
         /* 조도 — 막지 않는다. 밝기를 없애고 비율만 남겨 앱이 고친다 */
         var _il = _c24Illum(cnt?rSum/cnt:0, cnt?gSum/cnt:0, cnt?bSum/cnt:0);
@@ -2896,6 +2995,7 @@ window._c24Cancel = function(){
     if(s.stream){ try{ s.stream.getTracks().forEach(function(t){t.stop();}); }catch(e){} s.stream=null; }
   } }catch(e){}
   try{ if(typeof _c24BreathStop==='function') _c24BreathStop(); }catch(e){}
+  try{ if(window.cgoFitTick) cgoFitTick(false); }catch(e){}   /* ★ C-72: 측정 취소 시 틱 확실히 정지 */
   try{ var p=document.getElementById('page-algo'); if(p) p.classList.remove('c24-scanning'); }catch(e){}
 };
 
