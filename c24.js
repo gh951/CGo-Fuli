@@ -853,8 +853,14 @@ function _c24StartDisease(key){
 };
 
 function _c24CompStart(){
-  /* ★ 결제 없이 측정이 시작되던 자리 — 등급을 실제로 결제해야만 스캔이 열린다 */
-  if(!window._c24TierPaid){
+  /* ★ 결제 없이 측정이 시작되던 자리 — 등급을 실제로 결제해야만 스캔이 열린다
+     ★ 매니저는 결제 체크를 건너뛴다 (다른 기능들과 동일한 패턴)
+     ★ 부매니저는 c24PickTier(등급 선택) 단계에서 이미 med_basic/med_pro/med_max로
+       하루 1회씩 걸려 있고, 통과하면 window._c24TierPaid=true 가 세팅된다.
+       여기서는 매니저만 추가로 봐주면 된다 — 부매니저는 그 결과(_c24TierPaid)를 그대로 따른다. */
+  var _isMgr = false;
+  try{ _isMgr = !!(window.cgoIsManager && window.cgoIsManager()); }catch(e){}
+  if(!_isMgr && !window._c24TierPaid){
     try{ if(window.cgoToast) window.cgoToast(window._L8?window._L8('24035','먼저 분석 등급을 선택해 주세요'):'먼저 분석 등급을 선택해 주세요'); }catch(e){}
     try{ var host=document.getElementById('c24-tier-basic')||document.getElementById('c24-tier-note'); if(host) host.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
     return;
@@ -2364,7 +2370,11 @@ function _c24ChromStep(r, g, b){
 function _c24CompStartStep(needBack){
   try{ if(window.cgoFitBeepReset){ ['face','tongue','eye','skin','hand'].forEach(function(p){ cgoFitBeepReset('c24-'+p); }); } }catch(e){}
   if(_c24.isRunning) return;
-  if(!window._c24TierPaid){
+  var _isMgr2 = false;
+  try{ _isMgr2 = !!(window.cgoIsManager && window.cgoIsManager()); }catch(e){}
+  /* ★ 부매니저는 c24PickTier(등급 선택) 단계에서 이미 하루 1회 체크를 통과해
+     window._c24TierPaid=true 로 넘어온다 — 여기선 매니저만 별도로 봐주면 된다. */
+  if(!_isMgr2 && !window._c24TierPaid){
     try{ if(window.cgoToast) window.cgoToast(window._L8?window._L8('24035','먼저 분석 등급을 선택해 주세요'):'먼저 분석 등급을 선택해 주세요'); }catch(e){}
     return;
   }
