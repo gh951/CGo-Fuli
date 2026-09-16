@@ -1169,29 +1169,29 @@ function _c24CompShowResult(ai){
         +'<div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">'+x[1]+'</div></div>';
     }).join('')+'</div>'
     // 핵심 발견
-    +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:5px;">🔍 핵심 발견</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:1.8;">'+ai.핵심발견+'</div></div>':'')
+    +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.85);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
+    +'<div style="font-size:12px;color:'+gradeC+';font-weight:800;margin-bottom:6px;">🔍 핵심 발견</div>'
+    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.핵심발견+'</div></div>':'')
     // 각 진단 항목
-    +['심장활력','소화기','순환계','신경계','오행_건강'].map(function(k){
+    +['심장활력','소화기','순환계','신경계'].map(function(k){
       if(!ai[k]) return '';
-      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',오행_건강:'☯️'};
-      return '<div style="padding:12px;background:rgba(0,0,0,.2);border-left:3px solid rgba(52,211,153,.3);border-radius:0 10px 10px 0;margin-bottom:8px;">'
-        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">'+(ic[k]||'•')+' '+k.replace('_',' ')+'</div>'
-        +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai[k]+'</div></div>';
+      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠'};
+      return '<div style="padding:12px;background:rgba(0,0,0,.85);border-left:3px solid rgba(52,211,153,.6);border-radius:0 10px 10px 0;margin-bottom:8px;">'
+        +'<div style="font-size:12px;color:#34d399;font-weight:800;margin-bottom:5px;">'+(ic[k]||'•')+' '+k.replace('_',' ')+'</div>'
+        +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai[k]+'</div></div>';
     }).join('')
     // 주의 신호
-    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:4px;">⚠️ 주의 신호</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.주의_신호+'</div></div>':'')
+    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(60,10,10,.9);border:1px solid rgba(248,113,113,.6);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:12px;color:#fca5a5;font-weight:800;margin-bottom:5px;">⚠️ 주의 신호</div>'
+    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.주의_신호+'</div></div>':'')
     // 당장 조언
-    +(ai.당장_조언?'<div style="padding:13px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:4px;">💡 오늘 당장 실천</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.당장_조언+'</div></div>':'')
+    +(ai.당장_조언?'<div style="padding:13px;background:rgba(55,40,5,.9);border:1px solid rgba(251,191,36,.6);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:12px;color:#fde047;font-weight:800;margin-bottom:5px;">💡 오늘 당장 실천</div>'
+    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.당장_조언+'</div></div>':'')
     // 식이 처방
-    +(ai.식이_가이드?'<div style="padding:13px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">🥗 오행 식이 가이드</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.식이_가이드+'</div></div>':'')
+    +(ai.식이_가이드?'<div style="padding:13px;background:rgba(3,40,30,.9);border:1px solid rgba(52,211,153,.6);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:12px;color:#6ee7b7;font-weight:800;margin-bottom:5px;">🥗 오늘의 식사 가이드</div>'
+    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.식이_가이드+'</div></div>':'')
     /* ★ C-75: 분석 실패 시 재시도 버튼 — 사진은 이미 있으니 재촬영 없이 AI 호출만 다시 */
     +(_failed?'<button onclick="this.closest(\'div[style*=\\\'margin-top:8px\\\']\').remove();_c24CompFinalAnalyze();" style="width:100%;padding:13px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.5);border-radius:12px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;">🔄 다시 분석하기</button>':'')
     +'<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:8px;">CGO-FULI 6부위 종합 건강 분석</div>';
@@ -1308,9 +1308,7 @@ function _c24CompFinalAnalyze(){
 
   var s = _c24CompState;
   var r = window.calcResult||{};
-  var oh = r.domOh||'토';
   var name = r.name||'사용자';
-  var ohK = {목:'木',화:'火',토:'土',금:'金',수:'水'};
 
   var old = document.getElementById('c24-comp-next');
   if(old) old.remove();
@@ -1432,11 +1430,13 @@ function _c24CompFinalAnalyze(){
     _setStage('전체 결과 종합 중');
     var breath = s.breathData;
 
-    var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
-      +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
+    var sysPrompt = '당신은 웰니스 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
+      +'실측 데이터와 사진 관찰 특징만 근거로, 참고용 웰니스 정보를 현실적·구체적으로 안내하세요. JSON만 반환. 코드블록 금지. '
+      +'질병명·의학적 진단 표현은 절대 쓰지 마세요("~병", "~염", "~증후군" 등 금지). '
+      +'"~한 편입니다", "~로 보입니다", "참고해 보세요" 같은 참고용 표현만 쓰세요. '
       +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
 
-    var userPrompt = '분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')\n'
+    var userPrompt = '분석 대상: '+name+'님\n'
       +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
       +'478호흡: 완료사이클='+breath.cycles+'회\n'
       +'얼굴 관찰: '+JSON.stringify(results.face)+'\n'
@@ -1446,19 +1446,18 @@ function _c24CompFinalAnalyze(){
       +'손등 관찰: '+JSON.stringify(results.hand_back)+'\n'
       +'손바닥 관찰: '+JSON.stringify(results.hand_palm)+'\n\n'
       +'아래 JSON으로 반환:\n'
-      +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
+      +'{"종합등급":"A(컨디션 매우 좋음)/B(컨디션 양호)/C(컨디션 주의 필요)/D(휴식과 관리 권장) 중 하나",'
       +'"종합점수":점수(40~98),'
-      +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 3문장",'
-      +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 3문장",'
-      +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 3문장",'
-      +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 3문장",'
-      +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
-      +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션. 3문장",'
-      +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 건강 상태. 3문장",'
-      +'"오행_건강":"오행('+oh+') 기준 현재 기운의 흐름. 어떤 부분을 돌보면 좋은지. 3문장",'
-      +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
+      +'"핵심발견":"6부위에서 발견한 가장 중요한 웰니스 신호. 실제 관찰 특징 언급. 참고용 표현으로. 3문장",'
+      +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태(참고용). 3문장",'
+      +'"소화기":"손바닥색+혀설태+설색으로 본 소화 관련 컨디션(참고용). 3문장",'
+      +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환 컨디션(참고용). 3문장",'
+      +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성(참고용). 3문장",'
+      +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션(참고용). 3문장",'
+      +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 컨디션(참고용). 3문장",'
+      +'"당장_조언":"오늘 당장 실천해볼 만한 생활 습관 3가지. 구체적으로.",'
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-      +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
+      +'"식이_가이드":"관찰된 컨디션을 참고했을 때 오늘 챙기면 좋을 음식과 피하면 좋을 음식(참고용). 3문장"}';
 
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
