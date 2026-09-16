@@ -64,16 +64,15 @@ window.cgoFitBeepReset = function(tag){
   try{ if(window._cgoBeeped) delete window._cgoBeeped[tag]; }catch(e){}
 };
 
-/* ★ C-72: 실측 중 초시계 틱 — 눈·혀처럼 미세하게 흔들리는 부위는 "띵 띵 띵" 한 번으로는
+/* ★ C-72→C-80: 실측 중 초시계 틱 — 눈·혀처럼 미세하게 흔들리는 부위는 "띵 띵 띵" 한 번으로는
    지금 맞는지 계속 알 수 없어 불편하다는 지적. 맞는 동안 짧은 틱이 계속 돌고,
    어긋나면 그 프레임에 바로 끊긴다 — 소리 자체가 실시간 정렬 신호가 되도록.
    setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다.
-   ★ C-78: sine파 순음 지속(16ms)도 여전히 "태엽 풀리는 소리"처럼 들린다는 지적 —
-   실제 손목시계 초침 소리는 순음이 아니라 톱니바퀴가 부딪히는 짧은 기계적 충격(노이즈)이다.
-   AudioBuffer로 아주 짧은(3ms) 화이트노이즈 버스트를 만들고 고역만 남겨(하이패스) 순수한
-   '딱' 클릭음으로 교체한다 — 여운·톤 느낌 자체를 없앤다. */
+   ★ C-80: sine 순음도, 노이즈 클릭도 둘 다 "이상하게 들린다"는 지적 — 원래부터 있던
+   cgoFitBeep(880Hz sine + exponentialRamp, 아래 참조)의 톤이 편안하다고 하셨으니,
+   그 파형·주파수·감쇠 곡선을 그대로 가져오고 길이만 짧게(120ms→90ms) 줄여
+   반복 재생에 맞춘다. 새 소리를 만들지 않고 기존 소리를 재사용하는 방향으로 변경. */
 window._cgoTickOn = false;
-window._cgoTickBuf = null;
 window.cgoFitTick = function(shouldTick){
   try{
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -83,24 +82,16 @@ window.cgoFitTick = function(shouldTick){
     window._cgoTickOn = true;
     var ac = window._cgoAC || (window._cgoAC = new AC());
     if(ac.state === 'suspended') ac.resume();
-    /* 3ms 화이트노이즈 버퍼 — 한 번만 만들어 재사용(매번 새로 만들면 GC 부담) */
-    if(!window._cgoTickBuf || window._cgoTickBuf._ctx !== ac){
-      var len = Math.max(1, Math.floor(ac.sampleRate * 0.003));
-      var buf = ac.createBuffer(1, len, ac.sampleRate);
-      var d = buf.getChannelData(0);
-      for(var i=0;i<len;i++){ d[i] = (Math.random()*2-1) * (1 - i/len); }  /* 뒤로 갈수록 감쇠 — 여운 없이 뚝 */
-      buf._ctx = ac;
-      window._cgoTickBuf = buf;
-    }
-    var src = ac.createBufferSource();
-    src.buffer = window._cgoTickBuf;
-    var hp = ac.createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = 3000;   /* 저역 제거 — 웅웅거림·잔향 완전 차단, 딱딱한 고역 클릭만 */
-    var g = ac.createGain();
-    g.gain.value = 0.5;
-    src.connect(hp); hp.connect(g); g.connect(ac.destination);
-    src.start();
-    src.onended = function(){
+    var t = ac.currentTime;
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';                                   /* cgoFitBeep과 동일 파형 */
+    o.frequency.value = 880;                            /* cgoFitBeep과 동일 음높이 — 그 부드러운 톤 그대로 */
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.20, t + 0.01);   /* cgoFitBeep과 동일한 지수 상승 곡선 */
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09); /* 반복 재생을 위해 감쇠만 90ms로 단축(원래 130ms) */
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.1);
+    o.onended = function(){
       window._cgoTickOn = false;
       /* 다음 프레임에서도 여전히 맞으면 cgoFitTick(true)가 다시 호출돼 이어진다 */
     };
@@ -1105,7 +1096,11 @@ var _c24BreathElapsed = 0;
 var _c24BreathPhase = 0;
 var _c24BreathPhaseTime = [4, 7, 8];
 var _c24BreathColors = ['#38bdf8', '#fbbf24', '#34d399'];
-var _c24BreathTexts = [_cK(8128,'🫁 들이쉬기'), _cK(90002,'⏸ 멈추기'), _cK(90003,'💨 내쉬기')];
+/* ★ C-81: 예전엔 var _c24BreathTexts=[...] 배열로 만들어서, c24.js가 처음 로드되는
+   순간의 언어로 고정돼 버렸다 — 이후 언어를 바꿔도 이 배열은 다시 안 만들어져
+   "멈추기·내쉬기만 계속 한글"로 남는 회귀 실패의 정체였다. 함수로 바꿔 호출 시점마다
+   그때그때의 언어로 새로 계산되게 한다. */
+function _c24BreathTextsNow(){ return [_cK(8128,'🫁 들이쉬기'), _cK(90002,'⏸ 멈추기'), _cK(90003,'💨 내쉬기')]; }
 var _c24r = window._c24||{}, _bsr=window.BS||{};
 var _c24d = window._c24||{};
 var _c24r = window._c24||{};
@@ -1153,10 +1148,25 @@ function _c24CompShowResult(ai){
     // 6부위 스냅샷
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">'
     +[['face','👤'],['tongue','👅'],['eye','👁️'],['skin','🎨'],['hand_back','🤚'],['hand_palm','✋']].map(function(x){
-      return s.images[x[0]]
-        ?'<div style="text-align:center;"><img src="data:image/jpeg;base64,'+s.images[x[0]]+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid rgba(52,211,153,.3);">'
-        +'<div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">'+x[1]+'</div></div>'
-        :'';
+      if(!s.images[x[0]]) return '';
+      /* ★ C-82: 혀 이미지만 — AI가 캡처 사진에서 직접 읽어낸 좌표(백분율)로 점 2개를
+         오버레이한다. 실시간 색상 추적 대신 완료 후 정확한 AI 판독을 쓰는 1안. */
+      var _tgOverlay = '';
+      if(x[0]==='tongue' && ai.혀끝좌표 && ai.혀뿌리좌표){
+        var _tf=ai.혀끝좌표, _tb=ai.혀뿌리좌표;
+        _tgOverlay =
+          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">'
+          +'<line x1="'+_tb.x+'" y1="'+_tb.y+'" x2="'+_tf.x+'" y2="'+_tf.y+'" stroke="#f87171" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.7"/>'
+          +'<circle cx="'+_tf.x+'" cy="'+_tf.y+'" r="3" fill="#f87171" stroke="#450a0a" stroke-width="0.6"/>'
+          +'<circle cx="'+_tb.x+'" cy="'+_tb.y+'" r="3" fill="#f87171" stroke="#450a0a" stroke-width="0.6"/>'
+          +'</svg>';
+      }
+      return '<div style="text-align:center;position:relative;">'
+        +'<div style="position:relative;">'
+        +'<img src="data:image/jpeg;base64,'+s.images[x[0]]+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid rgba(52,211,153,.3);display:block;">'
+        +_tgOverlay
+        +'</div>'
+        +'<div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">'+x[1]+'</div></div>';
     }).join('')+'</div>'
     // 핵심 발견
     +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
@@ -1342,7 +1352,7 @@ function _c24CompFinalAnalyze(){
   var _seq = Promise.resolve('');
   var _imgJobs = [
     ['얼굴', s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
-    ['혀', s.images.tongue, '이 혀 사진을 관찰. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음"}'],
+    ['혀', s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
     ['눈', s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
     ['피부', s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
     ['손등', s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
@@ -1431,6 +1441,17 @@ function _c24CompFinalAnalyze(){
       };
       try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
     }
+    /* ★ C-82: 혀 좌표(1안) — 통합분석(2차 AI 호출)이 새로 만드는 JSON에는 좌표가
+       없으므로, 1차 개별분석(tongue)에서 받은 좌표를 최종 ai 객체에 옮겨 담는다.
+       통합분석이 실패해도(위 폴백 ai) 좌표는 살아있으면 그대로 붙여 화면에 점은 뜨게 한다. */
+    try{
+      if(tongue && tongue.혀끝좌표 && typeof tongue.혀끝좌표.x==='number' && typeof tongue.혀끝좌표.y==='number'){
+        ai.혀끝좌표 = tongue.혀끝좌표;
+      }
+      if(tongue && tongue.혀뿌리좌표 && typeof tongue.혀뿌리좌표.x==='number' && typeof tongue.혀뿌리좌표.y==='number'){
+        ai.혀뿌리좌표 = tongue.혀뿌리좌표;
+      }
+    }catch(_e){}
     _c24CompShowResult(ai);
   })
   .catch(function(){
@@ -1585,7 +1606,7 @@ function _c24BreathTick(){
   var bar = document.getElementById('c24-breath-bar');
   var txt = document.getElementById('c24-breath-text');
   var cnt = document.getElementById('c24-breath-count');
-  if(txt) { txt.textContent = _c24BreathTexts[_c24BreathPhase]; txt.style.color = _c24BreathColors[_c24BreathPhase]; }
+  if(txt) { txt.textContent = _c24BreathTextsNow()[_c24BreathPhase]; txt.style.color = _c24BreathColors[_c24BreathPhase]; }
   if(bar) bar.style.background = _c24BreathColors[_c24BreathPhase];
 
   _c24BreathTimer = setInterval(function(){
@@ -2121,30 +2142,12 @@ function _c24DrawGuide(skinRatio){
           }
         }catch(_e){}
       }
-      /* ★ C-71: 혀 앞(끝)·뒤(입 안쪽) 좌표 마스크 — FaceMesh 랜드마크가 아니라
-         프레임 루프에서 혀색 픽셀을 직접 찾은 실측 좌표(_c24._tgFront/_tgBack)를 그린다.
-         object-fit:cover 보정(_sc,_ox,_oy)은 위쪽 얼굴/눈 마스크와 동일 수식 사용. */
-      if(mode==='tongue' && _c24._tgFront && _c24._tgBack && (performance.now()-(_c24._tgTime||0) < 500)){
-        try{
-          function _tp(pt){
-            var px=pt.x*_sc+_ox, py=pt.y*_sc+_oy;
-            px = cv.width - px;   /* 전면 카메라 거울 보정 — 얼굴/눈 마스크와 동일 */
-            return {x:px, y:py};
-          }
-          var _tf=_tp(_c24._tgFront), _tb=_tp(_c24._tgBack);
-          [_tf,_tb].forEach(function(_d){
-            ctx.beginPath();
-            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
-            ctx.fillStyle='rgba(248,113,113,.95)';   /* 혀 단계 색 — stepColors와 통일 */
-            ctx.fill();
-            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(69,10,10,.9)'; ctx.stroke();
-          });
-          ctx.beginPath();
-          ctx.moveTo(_tf.x,_tf.y); ctx.lineTo(_tb.x,_tb.y);
-          ctx.strokeStyle='rgba(248,113,113,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
-          ctx.stroke(); ctx.setLineDash([]);
-        }catch(_e){}
-      }
+      /* ★ C-82: 실시간 혀 색상 추적 마스크(C-71~C-79)를 완전히 제거했다 — 64x48 초경량
+         버퍼에서는 혀 유두 질감이 물리적으로 뭉개져, 색상만으로는 입술·피부와 구분이
+         안 되고 계속 엉뚱한 위치에 점이 찍혔다("혀가 지맘대로" 지적).
+         대신 측정 완료 후 캡처된 원본 해상도 사진을 AI(_analyzeImg)에 보낼 때
+         혀 앞/뒤 좌표도 함께 요청해서, 결과 화면에 정확한 점을 찍는 방식(1안)으로 전환.
+         실측 중에는 큰 원(가이드)만 보여주고 점은 찍지 않는다. */
       /* ★ C-70: 손 좌표 마스크 — 손목(0) + 가장 긴 손가락 끝 1점. 눈 마스크(C-69)와 동일 패턴.
          Hands가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음.
          후면 카메라는 scaleX(1)이라 거울 반전 금지 — 실제 적용된 transform을 보고 판단한다. */
@@ -2829,52 +2832,17 @@ function _c24Loop(){
       }
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
       var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
-      /* ★ C-71→C-79: 혀 모드 전용 — 64x48 버퍼(=안쪽 원 확대 영역) 안에서 혀색 픽셀을 찾는다.
-         패치 분할이 없을 때만 유효(_roi.patches면 좌표계가 갈라지므로 스킵).
-         ★ C-79: "맨 위/맨 아래 딱 1픽셀"만 보던 방식은 노이즈 픽셀 하나에도 흔들렸다
-         ("혀가 지맘대로" 지적) — 조건에 맞는 모든 픽셀의 평균 위치로 바꿔 노이즈에 강하게.
-         색 조건도 좁힌다: 혀는 입술보다 밝고(밝기 상한 有) 채도가 낮은 편이라 그 특성을 반영. */
-      var _tgSumTopX=0,_tgSumTopY=0,_tgSumBotX=0,_tgSumBotY=0,_tgCntTop=0,_tgCntBot=0;
-      var _tgTrack = (_c24.mode==='tongue' && !(_roi.patches && _roi.patches.length>=2));
-      var _tgMidRow = 24; /* 64x48 버퍼 세로 중앙 — 위/아래 절반으로 나눠 각각 평균낸다 */
+      /* ★ C-82: 혀 색상 실시간 추적(C-71~C-79)을 제거했다 — 64x48 초경량 버퍼에서는
+         혀 유두 질감이 물리적으로 뭉개져 색상만으로 입술·피부와 구분이 안 됐다.
+         측정 완료 후 캡처된 원본 해상도 사진을 AI에 보내 좌표를 받는 방식(1안)으로 전환.
+         이 루프는 rSum/gSum/bSum(CHROM rPPG 입력)과 skinCnt(정렬 판정)만 계속 계산한다 —
+         실제 측정(맥박·설색 판정)은 이 값들로 이루어지므로 그대로 둔다. */
       for(var i=0;i<px.length;i+=4){
         var pr=px[i],pg=px[i+1],pb=px[i+2];
         rSum+=pr; gSum+=pg; bSum+=pb; cnt++;
         var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
         var sv=mx2>0?(mx2-mn2)/mx2:0;
-        /* ★ C-79: pr<230(과다노출 방지) 추가, 채도 상한을 0.55로 좁혀 진한 입술색 배제,
-           최소 밝기 110으로 올려 어두운 배경 살빛 오검출 감소 */
-        var _isTongue = pr>110&&pr<230&&pr>pg&&pr>pb&&(pr-pb)>15&&(pr-pb)<110&&sv>0.10&&sv<0.55;
         if(pr>70&&pg>40&&pb>20&&pr>pg&&pr>pb&&(pr-pg)>10&&sv>0.15&&sv<0.7) skinCnt++;
-        if(_tgTrack && _isTongue){
-          var _row=Math.floor((i/4)/64), _col=(i/4)%64;
-          if(_row < _tgMidRow){ _tgSumTopX+=_col; _tgSumTopY+=_row; _tgCntTop++; }
-          else { _tgSumBotX+=_col; _tgSumBotY+=_row; _tgCntBot++; }
-        }
-      }
-      /* ★ C-79: 위/아래 각각 최소 6픽셀(64x48 중 극소수 노이즈 배제) 이상 모였을 때만
-         평균 좌표를 신뢰한다 — 노이즈 한두 점으로는 마스크가 안 뜬다(잘못된 확신 방지) */
-      var _tgTopX = _tgCntTop>=6 ? _tgSumTopX/_tgCntTop : -1;
-      var _tgTop  = _tgCntTop>=6 ? _tgSumTopY/_tgCntTop : -1;
-      var _tgBotX = _tgCntBot>=6 ? _tgSumBotX/_tgCntBot : -1;
-      var _tgBot  = _tgCntBot>=6 ? _tgSumBotY/_tgCntBot : -1;
-      /* ★ C-71: 64x48 버퍼 좌표 → 원본 비디오 픽셀 좌표로 역산해 저장.
-         _roi(sx,sy,sw,sh)는 이 프레임에서 오프스크린에 그려 넣은 실제 원본 영역이므로
-         버퍼의 (col,row)를 그 비율만큼 되돌리면 비디오 위 실좌표가 나온다. */
-      if(_tgTrack && _tgTop>=0 && _tgBot>=0){
-        var _newFront = { x: sx + (_tgBotX/64)*sw, y: sy + (_tgBot/48)*sh };  /* 아래쪽=카메라 가까이=혀 끝 */
-        var _newBack  = { x: sx + (_tgTopX/64)*sw, y: sy + (_tgTop/48)*sh };  /* 위쪽=입 안쪽=혀 뒤 */
-        /* ★ C-79: EMA(지수이동평균)로 부드럽게 — 매 프레임 튀는 좌표를 완화해
-           점이 화면에서 덜덜 떨지 않게 한다. 새 값 35% + 기존 값 65%. */
-        if(_c24._tgFront && _c24._tgBack){
-          _c24._tgFront = { x: _c24._tgFront.x*0.65 + _newFront.x*0.35, y: _c24._tgFront.y*0.65 + _newFront.y*0.35 };
-          _c24._tgBack  = { x: _c24._tgBack.x*0.65  + _newBack.x*0.35,  y: _c24._tgBack.y*0.65  + _newBack.y*0.35  };
-        } else {
-          _c24._tgFront = _newFront; _c24._tgBack = _newBack;
-        }
-        _c24._tgTime = performance.now();
-      } else if(_c24.mode==='tongue'){
-        _c24._tgFront=null; _c24._tgBack=null;
       }
       var _skinNeed=(_c24.mode==='face'||_c24.mode==='tongue')?0.18:0.15; /* B-1: 얼굴/혀만 강화 */
       /* ★ C-63: 정밀 ROI(3패치)는 거의 순수 피부 → 하한만 의미 있음. 상한 판정 없음 */
