@@ -95,6 +95,18 @@ export default async function handler(req, res) {
         error: (j && j.error && j.error.message) || String(r.status)
       });
     }
+    /* ★ 2026.09.17 — r.ok(200)인데도 choices가 비어있거나 message.content가
+       없는 경우가 실제로 발생했다(사용자가 "오류 상세: 서버로부터 이유를 받지
+       못했습니다"를 실제로 봄 — 즉 error 필드도 없이 그냥 빈 응답만 왔었다는 뜻).
+       Groq이 200을 주고도 내용이 비어있는 케이스를 여기서 잡아 error를 붙인다. */
+    const _content = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    if (!_content) {
+      console.warn('[groq] 200이지만 응답 내용 없음:', JSON.stringify(j).slice(0, 200));
+      return res.status(200).json({
+        choices: [{ message: { content: '' } }],
+        error: 'empty_response: ' + (j && j.error ? JSON.stringify(j.error) : JSON.stringify(j).slice(0, 150))
+      });
+    }
     return res.status(200).json(j);
   } catch (e) {
     console.warn('[groq] ' + e);
