@@ -1315,7 +1315,7 @@ function _c24CompFinalAnalyze(){
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
       +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
       +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>'
-      +'<div style="font-size:10px;color:#334155;margin-top:6px;">정확도를 위해 한 부위씩 순서대로 분석합니다 · 약 20~40초</div>';
+      +'<div style="font-size:10px;color:#334155;margin-top:6px;">서버 요청 제한을 지키며 한 부위씩 순서대로 분석합니다 · 약 1분 30초~2분</div>';
     sec.insertBefore(loading, sec.firstChild);
     /* ★ C-77: 20~30초가 걸리는 동안 "멈췄나?" 불안하지 않도록 점(...)이 계속 움직인다.
        결과가 뜨거나(성공/실패 불문) loading 요소가 제거되면 인터벌도 함께 멈춘다. */
@@ -1350,41 +1350,37 @@ function _c24CompFinalAnalyze(){
     }).catch(function(){return '';});
   };
 
-  /* ★ C-76: Promise.all로 6장을 동시에 쏘던 방식은 Anthropic API의 분당 요청수(RPM)
-     제한에 매우 취약하다 — 이미지 6개 + 통합분석 1개, 총 7건이 짧은 시간에 몰려서
-     "요청이 너무 잦습니다" rate-limit 에러가 반복 발생했다(Groq는 같은 문제가 없었으나
-     이는 공급자별 rate limit 정책 차이 — 프론트 구조 자체의 문제였다).
-     동시 호출을 순차 호출로 바꿔 한 번에 최대 1건만 나가도록 한다. */
+  /* ★ C-100: C-98에서 "이제는 /api/groq를 직접 부르므로 rate-limit 문제가
+     무관하다"고 판단해 병렬로 되돌린 게 틀렸다 — /api/groq도 groq.js 안에서
+     rateCheck(req,'basic')을 그대로 거친다. _limit.js의 basic 갈래는 분당
+     3회인데, 병렬로 6장을 한꺼번에 쏘면 3건은 통과하고 나머지 3건은 즉시
+     429에 걸린다. 이게 "사진은 다 보이는데 분석만 실패"의 진짜 원인이었다.
+     순차 처리로 되돌리되, 재시도 로직 없이(구 파일에 없던 기능) 각 요청
+     사이에 아주 짧은 간격만 두어 분당 3회 한도 안에 들어오게 한다. */
   var _seq = Promise.resolve('');
-  var _imgJobs = [
-    ['얼굴', s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
-    ['혀', s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
-    ['눈', s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
-    ['피부', s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
-    ['손등', s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
-    ['손바닥', s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
-  ];
   var _imgResults = [];
-  /* ★ C-77: 지금 몇 번째 부위를 분석 중인지 로딩 문구에 실시간 표시 — 20~30초 동안
-     "멈췄나?" 불안을 없앤다. 결과 텍스트 자체는 아직 없으니 진행 단계 이름만 보여준다. */
-  _imgJobs.forEach(function(job, idx){
+  [
+    [s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
+    [s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
+    [s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
+    [s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
+    [s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
+    [s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
+  ].forEach(function(job, idx){
     _seq = _seq.then(function(){
       try{
         var stEl = document.getElementById('c24-loading-stage');
-        if(stEl) stEl.childNodes[0].nodeValue = '✨ '+job[0]+' 분석 중 ('+(idx+1)+'/6)';
+        if(stEl && stEl.childNodes[0]) stEl.childNodes[0].nodeValue = '✨ 분석 중 ('+(idx+1)+'/6)';
       }catch(_e){}
-      return _analyzeImg(job[1], job[2]);
-    }).then(function(r){ _imgResults.push(r); });
+      return _analyzeImg(job[0], job[1]);
+    }).then(function(r){
+      _imgResults.push(r);
+      /* basic 갈래 분당 3회 제한 — 여유 있게 매 요청 사이 15초 정도 두면
+         분당 3회 이하로 확실히 유지된다(6개×15초=90초, 조금 걸려도 확실히 성공). */
+      return new Promise(function(res){ setTimeout(res, 15000); });
+    });
   });
   _seq.then(function(){
-    /* ★ C-76: 6번째 개별 분석과 7번째(통합) 분석 사이에도 짧은 여유를 둔다 —
-       바로 이어붙이면 여전히 짧은 시간에 몰릴 수 있다 */
-    try{
-      var stEl2 = document.getElementById('c24-loading-stage');
-      if(stEl2) stEl2.childNodes[0].nodeValue = '✨ 전체 결과 종합 중';
-    }catch(_e){}
-    return new Promise(function(res){ setTimeout(res, 400); });
-  }).then(function(){
     var results = _imgResults;
     var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
     var face=_parse(results[0]);
@@ -1434,6 +1430,14 @@ function _c24CompFinalAnalyze(){
   })
   .then(function(r3){return r3.json();})
   .then(function(d3){
+    /* ★ C-99: /api/groq는 실패해도 항상 200 + {error:'이유'} 형태로 응답한다
+       (서버 코드 확인됨). 즉 지금까지 뜬 "네트워크 오류"는 사실 fetch 자체의
+       실패가 아니라, 정상 응답 안에 담긴 error 필드를 무시하고 빈 content만
+       보다가 그 뒤 로직에서 예외가 나 최종 catch로 떨어졌을 가능성이 높다.
+       error 필드가 있으면 그 내용을 그대로 화면에 보여준다. */
+    if(d3 && d3.error){
+      throw new Error('groq: '+d3.error);
+    }
     var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'';
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=null;
@@ -1479,10 +1483,15 @@ function _c24CompFinalAnalyze(){
     }catch(_e){}
     _c24CompShowResult(ai);
   })
-  .catch(function(){
+  .catch(function(err){
+    /* ★ C-99: "네트워크 오류"라고만 뜨면 다음에 또 같은 증상이어도 원인을 알 수 없다.
+       실제 JS 에러 메시지를 화면에 그대로 보여줘서, 스크린샷 한 장으로 정확한 원인
+       (에러 종류·메시지)을 바로 알 수 있게 한다. */
+    var _errMsg = '';
+    try{ _errMsg = (err && (err.message||String(err))) || '알 수 없음'; }catch(_e){}
     _c24CompShowResult({
       종합등급:'?', 종합점수:0,
-      핵심발견:'⚠️ 네트워크 오류로 분석에 실패했습니다. 사진은 모두 저장되어 있으니, 잠시 후 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
+      핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니, 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+_errMsg
     });
   });
 };
