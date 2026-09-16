@@ -1331,47 +1331,23 @@ function _c24CompFinalAnalyze(){
   // 각 이미지 Vision AI 분석
   var analyses = {};
 
-  /* ★ C-94: fetch에 타임아웃이 전혀 없어서, 서버가 어떤 이유로든 응답을 안 주면
-     로딩 화면이 영원히 돌았다("3분 기다려도 계속 로딩, Vercel 로그엔 요청 자체가 없음"
-     — 요청이 서버까지 못 갔거나 응답을 영원히 못 받은 상태로 브라우저가 무한 대기).
-     30초 타임아웃을 걸어 최소한 "실패"로라도 넘어가게 한다. */
-  var _fetchTimeout = function(url, opts, ms){
-    var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-    var opts2 = Object.assign({}, opts, ctrl ? {signal: ctrl.signal} : {});
-    var timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, ms||30000) : null;
-    return fetch(url, opts2).finally(function(){ if(timer) clearTimeout(timer); });
-  };
-
-  /* ★ C-95: 원래(구 파일) 방식으로 되돌린다 — kind:'med'로 /api/claude를 거쳐
-     서버가 내부적으로 groq()를 호출하는 복잡한 경로 자체가 실패 원인의 핵심이었다.
-     구 파일은 처음부터 /api/groq를 "직접" 불렀고, 이 경로는 rateCheck(req,'basic')
-     (분당 3회·하루 40회)만 거치지 kind:'med' 전용의 가혹한 제한(분당 1회)을 아예
-     타지 않는다. 원본 그대로 되돌리되, 이미 단종된 모델명(llama-4-scout)만
-     Groq 공식 비전 문서가 명시한 현재 모델(qwen/qwen3.6-27b)로 교체한다. */
-  var _analyzeImg = function(b64, prompt, key, _isRetry){
+  /* ★ C-95→C-97: 구 파일과 완전히 동일하게 되돌린다. 재시도 로직도 검증 안 된
+     추가 기능이었으므로 걷어내고, 원본처럼 한 번 시도해서 실패하면 빈 문자열을
+     반환하는 가장 단순한 구조로 만든다. 죽은 모델명(llama-4-scout)만
+     Groq 공식 비전 문서가 명시한 현재 모델(qwen/qwen3.6-27b)로 교체. */
+  var _analyzeImg = function(b64, prompt, key){
     if(!b64) return Promise.resolve('');
-    return _fetchTimeout('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'qwen/qwen3.6-27b',
         messages:[{role:'user',content:[
           {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
           {type:'text',text:prompt}
-        ]}],max_tokens:300,temperature:0.3})}, 30000)
+        ]}],max_tokens:300,temperature:0.3})})
     .then(function(r2){return r2.json();})
     .then(function(d){
       var t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
-      t = t.replace(/```json|```/g,'').trim();
-      if(!t && !_isRetry){
-        return new Promise(function(res){ setTimeout(res, 1500); })
-          .then(function(){ return _analyzeImg(b64, prompt, key, true); });
-      }
-      return t;
-    }).catch(function(){
-      if(!_isRetry){
-        return new Promise(function(res){ setTimeout(res, 1500); })
-          .then(function(){ return _analyzeImg(b64, prompt, key, true); });
-      }
-      return '';
-    });
+      return t.replace(/```json|```/g,'').trim();
+    }).catch(function(){return '';});
   };
 
   /* ★ C-76: Promise.all로 6장을 동시에 쏘던 방식은 Anthropic API의 분당 요청수(RPM)
@@ -1448,33 +1424,17 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    /* ★ C-95: 구 파일 원본 방식대로 되돌린다 — /api/groq를 직접 호출하고
-       openai/gpt-oss-20b(살아있는 모델)와 reasoning_effort:'low'를 그대로 쓴다.
-       kind:'med'로 /api/claude를 거치던 경로 자체가 실패 원인이었다. */
-    var _finalBody = JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+    /* ★ C-95→C-97: 구 파일 원본과 완전히 동일하게 되돌린다 — /api/groq를 직접
+       호출하고 openai/gpt-oss-20b(살아있는 모델)와 reasoning_effort:'low'를 그대로
+       쓴다. 재시도 로직도 검증 안 된 추가 기능이므로 걷어내고 원본처럼 단순화. */
+    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
-        max_tokens:2500,temperature:0.6});
-    var _tryFinal = function(isRetry){
-      return _fetchTimeout('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:_finalBody}, 30000)
-        .then(function(r3){return r3.json();})
-        .then(function(d3){
-          var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'';
-          if(!t.trim() && !isRetry){
-            return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return _tryFinal(true); });
-          }
-          return {text:t};   /* 아래 .then(function(d3){ var t=d3.text... 와 형태 맞춤 */
-        })
-        .catch(function(err){
-          if(!isRetry){
-            return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return _tryFinal(true); });
-          }
-          throw err;
-        });
-    };
-    return _tryFinal(false);
+        max_tokens:2500,temperature:0.6})});
   })
+  .then(function(r3){return r3.json();})
   .then(function(d3){
-    var t=d3.text||'';
+    var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'';
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
