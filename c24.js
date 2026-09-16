@@ -1331,20 +1331,35 @@ function _c24CompFinalAnalyze(){
   // 각 이미지 Vision AI 분석
   var analyses = {};
 
-  /* ★ C-84: 개별 요청이 실패하면 조용히 빈 문자열로 넘어가던 방식은, 6개 중 단 하나만
-     순간적인 rate-limit·네트워크 튐으로 실패해도 전체 분석이 부실해지는 원인이었다.
-     3분을 기다린 사용자가 "분석 실패"만 받는 건 특히 나머지 5~6개가 이미 성공한
-     상태에서 벌어지는 낭비다. 실패 시 1.5초 후 자동으로 1회만 재시도한다
-     (사용자가 알아채기도 전에 스스로 복구 — 별도 조작 불필요). */
+  /* ★ C-94: fetch에 타임아웃이 전혀 없어서, 서버가 어떤 이유로든 응답을 안 주면
+     로딩 화면이 영원히 돌았다("3분 기다려도 계속 로딩, Vercel 로그엔 요청 자체가 없음"
+     — 요청이 서버까지 못 갔거나 응답을 영원히 못 받은 상태로 브라우저가 무한 대기).
+     30초 타임아웃을 걸어 최소한 "실패"로라도 넘어가게 한다. */
+  var _fetchTimeout = function(url, opts, ms){
+    var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+    var opts2 = Object.assign({}, opts, ctrl ? {signal: ctrl.signal} : {});
+    var timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, ms||30000) : null;
+    return fetch(url, opts2).finally(function(){ if(timer) clearTimeout(timer); });
+  };
+
+  /* ★ C-95: 원래(구 파일) 방식으로 되돌린다 — kind:'med'로 /api/claude를 거쳐
+     서버가 내부적으로 groq()를 호출하는 복잡한 경로 자체가 실패 원인의 핵심이었다.
+     구 파일은 처음부터 /api/groq를 "직접" 불렀고, 이 경로는 rateCheck(req,'basic')
+     (분당 3회·하루 40회)만 거치지 kind:'med' 전용의 가혹한 제한(분당 1회)을 아예
+     타지 않는다. 원본 그대로 되돌리되, 이미 단종된 모델명(llama-4-scout)만
+     Groq 공식 비전 문서가 명시한 현재 모델(qwen/qwen3.6-27b)로 교체한다. */
   var _analyzeImg = function(b64, prompt, key, _isRetry){
     if(!b64) return Promise.resolve('');
-    var _tier = window._c24Tier || 'basic';
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:_tier,
-        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
+    return _fetchTimeout('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'qwen/qwen3.6-27b',
+        messages:[{role:'user',content:[
+          {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
+          {type:'text',text:prompt}
+        ]}],max_tokens:300,temperature:0.3})}, 30000)
     .then(function(r2){return r2.json();})
     .then(function(d){
-      var t=(d.text||'').replace(/```json|```/g,'').trim();
+      var t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
+      t = t.replace(/```json|```/g,'').trim();
       if(!t && !_isRetry){
         return new Promise(function(res){ setTimeout(res, 1500); })
           .then(function(){ return _analyzeImg(b64, prompt, key, true); });
@@ -1433,19 +1448,21 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    /* ★ C-84: 개별 이미지 6장이 다 성공했는데 마지막 통합분석(7번째) 하나가
-       순간적인 오류로 실패하면 전체가 "분석 실패"로 떨어졌다 — 여기도 1회 자동 재시도. */
-    var _finalBody = JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
-        system:sysPrompt, prompt:userPrompt, max_tokens:2500, temperature:0.6});
+    /* ★ C-95: 구 파일 원본 방식대로 되돌린다 — /api/groq를 직접 호출하고
+       openai/gpt-oss-20b(살아있는 모델)와 reasoning_effort:'low'를 그대로 쓴다.
+       kind:'med'로 /api/claude를 거치던 경로 자체가 실패 원인이었다. */
+    var _finalBody = JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
+        messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
+        max_tokens:2500,temperature:0.6});
     var _tryFinal = function(isRetry){
-      return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:_finalBody})
+      return _fetchTimeout('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:_finalBody}, 30000)
         .then(function(r3){return r3.json();})
         .then(function(d3){
-          var hasText = d3 && d3.text && d3.text.trim();
-          if(!hasText && !isRetry){
+          var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'';
+          if(!t.trim() && !isRetry){
             return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return _tryFinal(true); });
           }
-          return d3;
+          return {text:t};   /* 아래 .then(function(d3){ var t=d3.text... 와 형태 맞춤 */
         })
         .catch(function(err){
           if(!isRetry){

@@ -60,6 +60,7 @@ export default async function handler(req, res) {
     temperature: typeof b.temperature === 'number' ? b.temperature : 0.7
   };
   if (b.reasoning_effort) body.reasoning_effort = b.reasoning_effort;
+  if (typeof b.include_reasoning === 'boolean') body.include_reasoning = b.include_reasoning;
   if (b.response_format) body.response_format = b.response_format;
 
   try {
