@@ -1318,6 +1318,7 @@ function _c24CompFinalAnalyze(){
   /* ── 결과를 담을 그릇 — 전부 함수 최상위에서 선언 ── */
   var results = {face:null, tongue:null, eye:null, skin:null, hand_back:null, hand_palm:null};
   var finalAi = null;
+  var _failReasons = [];   /* ★ C-105: 개별 사진 실패 원인을 모아뒀다가, 완전 실패 시 화면에 보여준다 */
 
   /* ── 로딩 화면 ── */
   var sec = document.getElementById('c24-result-section');
@@ -1364,8 +1365,10 @@ function _c24CompFinalAnalyze(){
   function _wait(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
 
   /* ── 사진 1장을 Vision AI에게 보낸다. 실패해도 절대 예외를 던지지 않고
-     빈 문자열을 돌려준다 — 한 장의 실패가 나머지를 막지 않게 한다. ── */
-  function _analyzeOne(b64, prompt){
+     빈 문자열을 돌려준다 — 한 장의 실패가 나머지를 막지 않게 한다.
+     ★ C-105: 실패 원인을 콘솔에만 남기지 않고 _failReasons에도 기록해서
+     화면에 "왜 실패했는지"를 보여줄 수 있게 한다. ── */
+  function _analyzeOne(partName, b64, prompt){
     if(!b64) return Promise.resolve('');
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'qwen/qwen3.6-27b',
@@ -1375,11 +1378,21 @@ function _c24CompFinalAnalyze(){
         ]}],max_tokens:300,temperature:0.3})})
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if(d && d.error){ try{ console.warn('[c24] 개별분석 실패:', d.error); }catch(_e){} return ''; }
+        if(d && d.error){
+          var msg = partName+': '+String(d.error);
+          try{ console.warn('[c24] 개별분석 실패:', msg); }catch(_e){}
+          _failReasons.push(msg);
+          return '';
+        }
         var t = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
         return t.replace(/```json|```/g,'').trim();
       })
-      .catch(function(err){ try{ console.warn('[c24] 개별분석 예외:', err); }catch(_e){} return ''; });
+      .catch(function(err){
+        var msg = partName+': '+((err && err.message) || String(err));
+        try{ console.warn('[c24] 개별분석 예외:', msg); }catch(_e){}
+        _failReasons.push(msg);
+        return '';
+      });
   }
 
   function _parseJson(t){
@@ -1409,7 +1422,7 @@ function _c24CompFinalAnalyze(){
   _jobs.forEach(function(job){
     var _key = job[0], _label = job[1], _b64 = job[2], _prompt = job[3];
     _chain = _chain
-      .then(function(){ _setStage(_label); return _analyzeOne(_b64, _prompt); })
+      .then(function(){ _setStage(_label); return _analyzeOne(_key, _b64, _prompt); })
       .then(function(text){ results[_key] = _parseJson(text); })
       .then(function(){ return _wait(15000); });
   });
@@ -1477,10 +1490,14 @@ function _c24CompFinalAnalyze(){
         };
         try{ if(window.cgoToast) window.cgoToast('종합 소견 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
       } else {
+        /* ★ C-105: serverErr(통합분석 자체 에러)가 없어도, 개별 사진들이 왜
+           실패했는지(_failReasons)가 있으면 그것을 보여준다 — "오류 상세" 없이
+           그냥 "분석 실패"만 뜨던 문제(개별 6장이 다 조용히 실패한 경우)를 없앤다. */
+        var _errDetail = serverErr || (_failReasons.length ? _failReasons.join(' / ') : '');
         finalAi = {
           종합등급:'?', 종합점수:0,
           핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.'
-            +(serverErr ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+serverErr) : '')
+            +(_errDetail ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+_errDetail) : '<br><br>오류 상세: 서버로부터 이유를 받지 못했습니다(네트워크 상태를 확인해 주세요)')
         };
         try{ if(window.cgoToast) window.cgoToast('분석 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
       }
