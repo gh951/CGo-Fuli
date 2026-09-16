@@ -1329,8 +1329,6 @@ function _c24CompFinalAnalyze(){
   }
 
   // 각 이미지 Vision AI 분석
-  var analyses = {};
-
   /* ★ C-95→C-97: 구 파일과 완전히 동일하게 되돌린다. 재시도 로직도 검증 안 된
      추가 기능이었으므로 걷어내고, 원본처럼 한 번 시도해서 실패하면 빈 문자열을
      반환하는 가장 단순한 구조로 만든다. 죽은 모델명(llama-4-scout)만
@@ -1345,6 +1343,7 @@ function _c24CompFinalAnalyze(){
         ]}],max_tokens:300,temperature:0.3})})
     .then(function(r2){return r2.json();})
     .then(function(d){
+      if(d && d.error){ try{ console.warn('[c24 개별분석 실패]', prompt.slice(0,10), d.error); }catch(_e){} }
       var t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
       return t.replace(/```json|```/g,'').trim();
     }).catch(function(){return '';});
@@ -1380,15 +1379,22 @@ function _c24CompFinalAnalyze(){
       return new Promise(function(res){ setTimeout(res, 15000); });
     });
   });
+  /* ★ C-101: face/tongue/eye/skin/hBack/hPalm을 여기(함수 최상위)에 선언해야
+     아래쪽 마지막 .then(function(d3){...}) 콜백에서도 접근할 수 있다.
+     Promise 체이닝에서 .then() 각각은 독립된 함수 스코프라, 이전 .then() 안의
+     var로는 다음 .then()에서 안 보인다 — "face is not defined"의 정체였다.
+     개별관찰 폴백 기능(C-93)을 넣으면서 이 스코프 문제를 놓친 게 실수였다. */
+  var face, tongue, eye, skin, hBack, hPalm;
+
   _seq.then(function(){
     var results = _imgResults;
     var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
-    var face=_parse(results[0]);
-    var tongue=_parse(results[1]);
-    var eye=_parse(results[2]);
-    var skin=_parse(results[3]);
-    var hBack=_parse(results[4]);
-    var hPalm=_parse(results[5]);
+    face=_parse(results[0]);
+    tongue=_parse(results[1]);
+    eye=_parse(results[2]);
+    skin=_parse(results[3]);
+    hBack=_parse(results[4]);
+    hPalm=_parse(results[5]);
     var breath=s.breathData;
 
     // 통합 AI 분석
@@ -1430,15 +1436,14 @@ function _c24CompFinalAnalyze(){
   })
   .then(function(r3){return r3.json();})
   .then(function(d3){
-    /* ★ C-99: /api/groq는 실패해도 항상 200 + {error:'이유'} 형태로 응답한다
-       (서버 코드 확인됨). 즉 지금까지 뜬 "네트워크 오류"는 사실 fetch 자체의
-       실패가 아니라, 정상 응답 안에 담긴 error 필드를 무시하고 빈 content만
-       보다가 그 뒤 로직에서 예외가 나 최종 catch로 떨어졌을 가능성이 높다.
-       error 필드가 있으면 그 내용을 그대로 화면에 보여준다. */
-    if(d3 && d3.error){
-      throw new Error('groq: '+d3.error);
-    }
-    var t=(d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'';
+    /* ★ C-99→C-102: /api/groq는 실패해도 항상 200 + {error:'이유'} 형태로 응답한다
+       (서버 코드 확인됨). 처음엔 이 error를 throw해서 화면에 보여줬는데, 그러면
+       바로 .catch()로 건너뛰어 아래 "개별 관찰 결과라도 보여주자"는 폴백(C-93)이
+       실행되지 않는 부작용이 있었다 — 개별 6장이 다 성공해도 통합분석 하나만
+       실패하면 완전 실패 화면만 떴다. throw 대신 t를 빈 문자열로 두어 아래
+       폴백 로직까지 자연스럽게 이어지게 하고, 에러 내용은 별도로 기억해둔다. */
+    var _groqErr = (d3 && d3.error) ? String(d3.error) : '';
+    var t = _groqErr ? '' : ((d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'');
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
@@ -1466,6 +1471,7 @@ function _c24CompFinalAnalyze(){
         ai = {
           종합등급:'?', 종합점수:0,
           핵심발견:'⚠️ 지금은 분석 서버가 혼잡해 결과를 받지 못했습니다. 사진은 모두 저장되어 있으니, 잠시 후(약 1분) 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
+            +(_groqErr?('<br><br>오류 상세(문의 시 함께 알려주세요): '+_groqErr):'')
         };
         try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
       }
