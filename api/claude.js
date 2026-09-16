@@ -63,11 +63,15 @@ const COST = { [HAIKU]:10, [SONNET]:63, [OPUS]:375 };
 //   report 리포트     — 16장을 한 번에 낸다. 길고 촘촘해야 한다.
 //   naming 명작명     — 글자를 만들어 내는 일이다. 근거가 흔들리면 안 된다.
 //   med    6부위 건강 — 의료 근사 판독. 조심할 자리라 가장 좋은 눈을 쓴다.
+// ★ 2026.09.16: med 의 통합분석(6부위 요약+종합점수+오행식이가이드+혀좌표)이
+//   2500 토큰을 요청하는데 1800으로 깎여 JSON이 중간에 잘리는 사례가 확인됨
+//   (서버 로그: Anthropic 200 성공인데 프론트가 "핵심발견" 필드를 못 찾아 실패 처리).
+//   개별 이미지 6장(300 요청)엔 영향 없고, 통합분석만 잘리던 문제라 3000으로 올림.
 const KIND = {
   photo : { model:SONNET, max:1600, cost:63  },
   report: { model:SONNET, max:6000, cost:210 },
   naming: { model:OPUS,   max:4200, cost:900 },   // ★ 정책표 ㉙ — 작명은 Opus
-  med   : { model:SONNET, max:1800, cost:63  }
+  med   : { model:SONNET, max:3000, cost:80  }
 };
 // Opus 는 FEAT 표가 정한 자리(역학 풀이·작명 등 문장력이 값인 곳)에서만 쓴다. 실패하면 Sonnet 으로 한 번 더 간다 — 최고급 값을 받고 Groq 답을 내지 않는다.
 
