@@ -68,10 +68,12 @@ window.cgoFitBeepReset = function(tag){
    지금 맞는지 계속 알 수 없어 불편하다는 지적. 맞는 동안 짧은 틱이 계속 돌고,
    어긋나면 그 프레임에 바로 끊긴다 — 소리 자체가 실시간 정렬 신호가 되도록.
    setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다.
-   ★ C-74: square파+exponentialRamp는 배음이 많고 감쇠가 완만해 "모터 풀리는 소리"처럼
-   들린다는 지적 — sine파(배음 없음) + linear 급감쇠(수직에 가깝게 뚝 끊김)로 교체해
-   실제 초시계 '똑' 소리에 가깝게 만든다. */
+   ★ C-78: sine파 순음 지속(16ms)도 여전히 "태엽 풀리는 소리"처럼 들린다는 지적 —
+   실제 손목시계 초침 소리는 순음이 아니라 톱니바퀴가 부딪히는 짧은 기계적 충격(노이즈)이다.
+   AudioBuffer로 아주 짧은(3ms) 화이트노이즈 버스트를 만들고 고역만 남겨(하이패스) 순수한
+   '딱' 클릭음으로 교체한다 — 여운·톤 느낌 자체를 없앤다. */
 window._cgoTickOn = false;
+window._cgoTickBuf = null;
 window.cgoFitTick = function(shouldTick){
   try{
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -81,17 +83,24 @@ window.cgoFitTick = function(shouldTick){
     window._cgoTickOn = true;
     var ac = window._cgoAC || (window._cgoAC = new AC());
     if(ac.state === 'suspended') ac.resume();
-    var t = ac.currentTime;
-    var o = ac.createOscillator(), g = ac.createGain();
-    o.type = 'sine';                        /* 배음 없는 맑은 톤 — square의 웅웅거림 제거 */
-    o.frequency.value = 2200;               /* 초시계 특유의 짧고 건조한 고음 */
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.14, t + 0.002);   /* 즉시 시작 */
-    g.gain.setValueAtTime(0.14, t + 0.012);            /* 잠깐 유지 */
-    g.gain.linearRampToValueAtTime(0.0001, t + 0.016); /* 수직에 가깝게 뚝 — 여운 없음 */
-    o.connect(g); g.connect(ac.destination);
-    o.start(t); o.stop(t + 0.02);
-    o.onended = function(){
+    /* 3ms 화이트노이즈 버퍼 — 한 번만 만들어 재사용(매번 새로 만들면 GC 부담) */
+    if(!window._cgoTickBuf || window._cgoTickBuf._ctx !== ac){
+      var len = Math.max(1, Math.floor(ac.sampleRate * 0.003));
+      var buf = ac.createBuffer(1, len, ac.sampleRate);
+      var d = buf.getChannelData(0);
+      for(var i=0;i<len;i++){ d[i] = (Math.random()*2-1) * (1 - i/len); }  /* 뒤로 갈수록 감쇠 — 여운 없이 뚝 */
+      buf._ctx = ac;
+      window._cgoTickBuf = buf;
+    }
+    var src = ac.createBufferSource();
+    src.buffer = window._cgoTickBuf;
+    var hp = ac.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 3000;   /* 저역 제거 — 웅웅거림·잔향 완전 차단, 딱딱한 고역 클릭만 */
+    var g = ac.createGain();
+    g.gain.value = 0.5;
+    src.connect(hp); hp.connect(g); g.connect(ac.destination);
+    src.start();
+    src.onended = function(){
       window._cgoTickOn = false;
       /* 다음 프레임에서도 여전히 맞으면 cgoFitTick(true)가 다시 호출돼 이어진다 */
     };
@@ -1068,7 +1077,7 @@ function _c24CompStart(){
     +'<div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:5px;">'+_cK(8631,'⚠️ 공통 주의사항')+'</div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;">'
     +_cK(8632,'• 밝은 곳에서 측정할수록 정확도가 높아집니다')+'<br>'
-    +_cK(8638,'• 측정 중 똑딱 소리가 나면 거리가 맞다는 뜻입니다')+'<br>'
+    +_cK(8638,'• 스마트폰을 화면 속 원(또는 박스)에 맞추면 똑딱 소리가 납니다 — 소리가 나는 동안이 정확히 맞는 거리입니다')+'<br>'
     +_cK(8639,'• 소리가 끊기면 스마트폰을 앞뒤로 움직여 다시 맞춰주세요')+'<br>'
     +_cK(8633,'• 각 단계는 자동으로 순서대로 진행됩니다')+'<br>'
     +_cK(8634,'• 측정 중 흔들리면 해당 단계가 다시 시작됩니다')+'<br>'
@@ -2820,30 +2829,49 @@ function _c24Loop(){
       }
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
       var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
-      /* ★ C-71: 혀 모드 전용 — 64x48 버퍼(=안쪽 원 확대 영역) 안에서 혀색 픽셀의
-         맨 위 행(입 안쪽 = 혀 뒤)과 맨 아래 행(카메라 쪽으로 내민 끝 = 혀 앞)을 찾는다.
-         패치 분할이 없을 때만 유효(_roi.patches면 좌표계가 갈라지므로 스킵). */
-      var _tgTop=-1, _tgBot=-1, _tgTopX=0, _tgBotX=0;
+      /* ★ C-71→C-79: 혀 모드 전용 — 64x48 버퍼(=안쪽 원 확대 영역) 안에서 혀색 픽셀을 찾는다.
+         패치 분할이 없을 때만 유효(_roi.patches면 좌표계가 갈라지므로 스킵).
+         ★ C-79: "맨 위/맨 아래 딱 1픽셀"만 보던 방식은 노이즈 픽셀 하나에도 흔들렸다
+         ("혀가 지맘대로" 지적) — 조건에 맞는 모든 픽셀의 평균 위치로 바꿔 노이즈에 강하게.
+         색 조건도 좁힌다: 혀는 입술보다 밝고(밝기 상한 有) 채도가 낮은 편이라 그 특성을 반영. */
+      var _tgSumTopX=0,_tgSumTopY=0,_tgSumBotX=0,_tgSumBotY=0,_tgCntTop=0,_tgCntBot=0;
       var _tgTrack = (_c24.mode==='tongue' && !(_roi.patches && _roi.patches.length>=2));
+      var _tgMidRow = 24; /* 64x48 버퍼 세로 중앙 — 위/아래 절반으로 나눠 각각 평균낸다 */
       for(var i=0;i<px.length;i+=4){
         var pr=px[i],pg=px[i+1],pb=px[i+2];
         rSum+=pr; gSum+=pg; bSum+=pb; cnt++;
         var mx2=Math.max(pr,pg,pb),mn2=Math.min(pr,pg,pb);
         var sv=mx2>0?(mx2-mn2)/mx2:0;
-        var _isTongue = pr>90&&pr>pg&&pr>pb&&(pr-pb)>15&&sv>0.12&&sv<0.75; /* 혀=붉은살색, 배경보다 넓게 잡음 */
+        /* ★ C-79: pr<230(과다노출 방지) 추가, 채도 상한을 0.55로 좁혀 진한 입술색 배제,
+           최소 밝기 110으로 올려 어두운 배경 살빛 오검출 감소 */
+        var _isTongue = pr>110&&pr<230&&pr>pg&&pr>pb&&(pr-pb)>15&&(pr-pb)<110&&sv>0.10&&sv<0.55;
         if(pr>70&&pg>40&&pb>20&&pr>pg&&pr>pb&&(pr-pg)>10&&sv>0.15&&sv<0.7) skinCnt++;
         if(_tgTrack && _isTongue){
           var _row=Math.floor((i/4)/64), _col=(i/4)%64;
-          if(_tgTop<0){ _tgTop=_row; _tgTopX=_col; }
-          _tgBot=_row; _tgBotX=_col;   /* 마지막까지 갱신되므로 순회 끝나면 최댓값이 남는다 */
+          if(_row < _tgMidRow){ _tgSumTopX+=_col; _tgSumTopY+=_row; _tgCntTop++; }
+          else { _tgSumBotX+=_col; _tgSumBotY+=_row; _tgCntBot++; }
         }
       }
+      /* ★ C-79: 위/아래 각각 최소 6픽셀(64x48 중 극소수 노이즈 배제) 이상 모였을 때만
+         평균 좌표를 신뢰한다 — 노이즈 한두 점으로는 마스크가 안 뜬다(잘못된 확신 방지) */
+      var _tgTopX = _tgCntTop>=6 ? _tgSumTopX/_tgCntTop : -1;
+      var _tgTop  = _tgCntTop>=6 ? _tgSumTopY/_tgCntTop : -1;
+      var _tgBotX = _tgCntBot>=6 ? _tgSumBotX/_tgCntBot : -1;
+      var _tgBot  = _tgCntBot>=6 ? _tgSumBotY/_tgCntBot : -1;
       /* ★ C-71: 64x48 버퍼 좌표 → 원본 비디오 픽셀 좌표로 역산해 저장.
          _roi(sx,sy,sw,sh)는 이 프레임에서 오프스크린에 그려 넣은 실제 원본 영역이므로
          버퍼의 (col,row)를 그 비율만큼 되돌리면 비디오 위 실좌표가 나온다. */
       if(_tgTrack && _tgTop>=0 && _tgBot>=0){
-        _c24._tgFront={ x: sx + (_tgBotX/64)*sw, y: sy + (_tgBot/48)*sh };  /* 아래쪽=카메라 가까이=혀 끝 */
-        _c24._tgBack ={ x: sx + (_tgTopX/64)*sw, y: sy + (_tgTop/48)*sh };  /* 위쪽=입 안쪽=혀 뒤 */
+        var _newFront = { x: sx + (_tgBotX/64)*sw, y: sy + (_tgBot/48)*sh };  /* 아래쪽=카메라 가까이=혀 끝 */
+        var _newBack  = { x: sx + (_tgTopX/64)*sw, y: sy + (_tgTop/48)*sh };  /* 위쪽=입 안쪽=혀 뒤 */
+        /* ★ C-79: EMA(지수이동평균)로 부드럽게 — 매 프레임 튀는 좌표를 완화해
+           점이 화면에서 덜덜 떨지 않게 한다. 새 값 35% + 기존 값 65%. */
+        if(_c24._tgFront && _c24._tgBack){
+          _c24._tgFront = { x: _c24._tgFront.x*0.65 + _newFront.x*0.35, y: _c24._tgFront.y*0.65 + _newFront.y*0.35 };
+          _c24._tgBack  = { x: _c24._tgBack.x*0.65  + _newBack.x*0.35,  y: _c24._tgBack.y*0.65  + _newBack.y*0.35  };
+        } else {
+          _c24._tgFront = _newFront; _c24._tgBack = _newBack;
+        }
         _c24._tgTime = performance.now();
       } else if(_c24.mode==='tongue'){
         _c24._tgFront=null; _c24._tgBack=null;
