@@ -1326,6 +1326,26 @@ function _c24CompFinalAnalyze(){
       _dotN = (_dotN % 3) + 1;
       dEl.textContent = '.'.repeat(_dotN);
     }, 450);
+
+    /* ★ C-104: 타 AI 검증 반영 — 90초 이상 걸리는 이 작업 동안 카카오톡 인앱
+       브라우저 등에서 화면을 벗어나면(백그라운드 전환) 타이머가 지연되거나
+       페이지가 정리될 위험이 있다는 지적. beforeunload는 인앱 브라우저에서
+       지원이 불확실하고 예상 못한 동작(강제 팝업 등)을 일으킬 수 있어 피하고,
+       더 안전한 visibilitychange로 "화면을 벗어나지 말아달라"는 안내만 추가한다. */
+    var _visHandler = function(){
+      if(document.hidden){
+        try{ if(window.cgoToast) window.cgoToast('⚠️ 분석 중에는 화면을 벗어나지 말아주세요'); }catch(_e){}
+      }
+    };
+    document.addEventListener('visibilitychange', _visHandler);
+    /* 로딩이 끝나면(성공/실패 불문) 리스너도 함께 정리 — loading 요소가 사라지는
+       시점(_dotTimer가 스스로 멈추는 시점과 동일)에 맞춰 제거한다 */
+    var _visCleanupTimer = setInterval(function(){
+      if(!document.getElementById('c24-comp-loading')){
+        document.removeEventListener('visibilitychange', _visHandler);
+        clearInterval(_visCleanupTimer);
+      }
+    }, 1000);
   }
 
   // 각 이미지 Vision AI 분석
@@ -1357,23 +1377,31 @@ function _c24CompFinalAnalyze(){
      순차 처리로 되돌리되, 재시도 로직 없이(구 파일에 없던 기능) 각 요청
      사이에 아주 짧은 간격만 두어 분당 3회 한도 안에 들어오게 한다. */
   var _seq = Promise.resolve('');
-  var _imgResults = [];
+  /* ★ C-103: 타 AI 검증 반영 — 배열 인덱스(results[0], results[1]...)로 결과를
+     해석하면, 실행 순서가 항상 고정된다는 전제가 깨지는 순간(재시도·건너뛰기
+     추가 시) 엉뚱한 값이 엉뚱한 부위에 들어간다. 이름(key) 기반으로 바꾼다. */
+  var _imgResults = {};
   [
-    [s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
-    [s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
-    [s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
-    [s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
-    [s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
-    [s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
+    ['face', s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
+    ['tongue', s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
+    ['eye', s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
+    ['skin', s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
+    ['hand_back', s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
+    ['hand_palm', s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
   ].forEach(function(job, idx){
+    var _key = job[0];
     _seq = _seq.then(function(){
       try{
         var stEl = document.getElementById('c24-loading-stage');
         if(stEl && stEl.childNodes[0]) stEl.childNodes[0].nodeValue = '✨ 분석 중 ('+(idx+1)+'/6)';
       }catch(_e){}
-      return _analyzeImg(job[0], job[1]);
+      /* ★ C-103: _analyzeImg는 이미 내부에서 .catch(function(){return '';})로
+         실패를 흡수하므로 여기까지 reject가 올라오지 않는다 — 한 장이 실패해도
+         체인이 끊기지 않고 다음 장으로 이어진다(타 AI가 지적한 위험을 이미
+         피하고 있었음, 다만 이름 기반 저장으로 안전성을 한 번 더 높인다). */
+      return _analyzeImg(job[1], job[2]);
     }).then(function(r){
-      _imgResults.push(r);
+      _imgResults[_key] = r;
       /* basic 갈래 분당 3회 제한 — 여유 있게 매 요청 사이 15초 정도 두면
          분당 3회 이하로 확실히 유지된다(6개×15초=90초, 조금 걸려도 확실히 성공). */
       return new Promise(function(res){ setTimeout(res, 15000); });
@@ -1387,14 +1415,14 @@ function _c24CompFinalAnalyze(){
   var face, tongue, eye, skin, hBack, hPalm;
 
   _seq.then(function(){
-    var results = _imgResults;
     var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
-    face=_parse(results[0]);
-    tongue=_parse(results[1]);
-    eye=_parse(results[2]);
-    skin=_parse(results[3]);
-    hBack=_parse(results[4]);
-    hPalm=_parse(results[5]);
+    /* ★ C-103: 인덱스(results[0])가 아니라 이름(key)으로 꺼낸다 */
+    face=_parse(_imgResults.face||'');
+    tongue=_parse(_imgResults.tongue||'');
+    eye=_parse(_imgResults.eye||'');
+    skin=_parse(_imgResults.skin||'');
+    hBack=_parse(_imgResults.hand_back||'');
+    hPalm=_parse(_imgResults.hand_palm||'');
     var breath=s.breathData;
 
     // 통합 AI 분석
