@@ -1290,23 +1290,38 @@ function _c24StartDisease(key){
   document.body.appendChild(pop);
 };
 
+/* ══════════════════════════════════════════════════════════════
+   6부위 종합 스캔 — AI 분석 엔진 (2026.09.16 전면 재작성)
+   지금까지의 실패에서 확인된 함정을 전부 피해서 처음부터 새로 짰다:
+   ① 결과는 배열 인덱스가 아니라 이름(key)으로만 관리한다.
+   ② 죽은 모델명을 쓰지 않는다 — qwen/qwen3.6-27b(이미지), openai/gpt-oss-20b(텍스트).
+   ③ 서버 문지기(basic 갈래 분당 3회)를 넘지 않도록 요청 사이 15초 간격을 둔다.
+   ④ 모든 변수는 함수 최상위에서 선언한다 — Promise 체인 중간에서 var로
+      선언하면 다음 .then()에서 안 보인다("face is not defined" 버그의 원인).
+   ⑤ 실패하면 사용자에게 실제 이유를 그대로 보여준다 — 뭉뚱그리지 않는다.
+   ⑥ 개별 사진 하나가 실패해도 나머지는 계속 진행한다.
+   ══════════════════════════════════════════════════════════════ */
 function _c24CompFinalAnalyze(){
   try{var _pR=document.getElementById('page-algo');if(_pR)_pR.classList.remove('c24-scanning');}catch(e){}
-  try{ if(typeof _c24ChimeDone==='function') _c24ChimeDone(); }catch(e){} // 완료 차임 (B-2b)
-  // C-60: 모든 사진(손바닥 포함) 캡처 완료 후 5카드 재동기화 — 손바닥 빈칸 버그 수정
+  try{ if(typeof _c24ChimeDone==='function') _c24ChimeDone(); }catch(e){}
   try{ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }catch(e){}
+
   var s = _c24CompState;
   var r = window.calcResult||{};
   var oh = r.domOh||'토';
   var name = r.name||'사용자';
   var ohK = {목:'木',화:'火',토:'土',금:'金',수:'水'};
 
-  // 유도 버튼 제거
   var old = document.getElementById('c24-comp-next');
   if(old) old.remove();
 
-  // 결과 섹션에 로딩 추가
+  /* ── 결과를 담을 그릇 — 전부 함수 최상위에서 선언 ── */
+  var results = {face:null, tongue:null, eye:null, skin:null, hand_back:null, hand_palm:null};
+  var finalAi = null;
+
+  /* ── 로딩 화면 ── */
   var sec = document.getElementById('c24-result-section');
+  var _dotTimer = null, _visHandler = null;
   if(sec){
     var loading = document.createElement('div');
     loading.id = 'c24-comp-loading';
@@ -1314,46 +1329,43 @@ function _c24CompFinalAnalyze(){
     loading.innerHTML =
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
       +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
-      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>'
-      +'<div style="font-size:10px;color:#334155;margin-top:6px;">서버 요청 제한을 지키며 한 부위씩 순서대로 분석합니다 · 약 1분 30초~2분</div>';
+      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·혀·눈·피부·손등·손바닥 순서대로 분석합니다</div>'
+      +'<div style="font-size:10px;color:#334155;margin-top:6px;">서버 요청 제한을 지키기 위해 시간이 걸립니다 · 약 1분 30초~2분</div>';
     sec.insertBefore(loading, sec.firstChild);
-    /* ★ C-77: 20~30초가 걸리는 동안 "멈췄나?" 불안하지 않도록 점(...)이 계속 움직인다.
-       결과가 뜨거나(성공/실패 불문) loading 요소가 제거되면 인터벌도 함께 멈춘다. */
+
     var _dotN = 0;
-    var _dotTimer = setInterval(function(){
+    _dotTimer = setInterval(function(){
       var dEl = document.getElementById('c24-loading-dots');
       if(!dEl){ clearInterval(_dotTimer); return; }
       _dotN = (_dotN % 3) + 1;
       dEl.textContent = '.'.repeat(_dotN);
     }, 450);
 
-    /* ★ C-104: 타 AI 검증 반영 — 90초 이상 걸리는 이 작업 동안 카카오톡 인앱
-       브라우저 등에서 화면을 벗어나면(백그라운드 전환) 타이머가 지연되거나
-       페이지가 정리될 위험이 있다는 지적. beforeunload는 인앱 브라우저에서
-       지원이 불확실하고 예상 못한 동작(강제 팝업 등)을 일으킬 수 있어 피하고,
-       더 안전한 visibilitychange로 "화면을 벗어나지 말아달라"는 안내만 추가한다. */
-    var _visHandler = function(){
+    _visHandler = function(){
       if(document.hidden){
         try{ if(window.cgoToast) window.cgoToast('⚠️ 분석 중에는 화면을 벗어나지 말아주세요'); }catch(_e){}
       }
     };
     document.addEventListener('visibilitychange', _visHandler);
-    /* 로딩이 끝나면(성공/실패 불문) 리스너도 함께 정리 — loading 요소가 사라지는
-       시점(_dotTimer가 스스로 멈추는 시점과 동일)에 맞춰 제거한다 */
-    var _visCleanupTimer = setInterval(function(){
-      if(!document.getElementById('c24-comp-loading')){
-        document.removeEventListener('visibilitychange', _visHandler);
-        clearInterval(_visCleanupTimer);
-      }
-    }, 1000);
   }
 
-  // 각 이미지 Vision AI 분석
-  /* ★ C-95→C-97: 구 파일과 완전히 동일하게 되돌린다. 재시도 로직도 검증 안 된
-     추가 기능이었으므로 걷어내고, 원본처럼 한 번 시도해서 실패하면 빈 문자열을
-     반환하는 가장 단순한 구조로 만든다. 죽은 모델명(llama-4-scout)만
-     Groq 공식 비전 문서가 명시한 현재 모델(qwen/qwen3.6-27b)로 교체. */
-  var _analyzeImg = function(b64, prompt, key){
+  function _setStage(msg){
+    try{
+      var stEl = document.getElementById('c24-loading-stage');
+      if(stEl && stEl.childNodes[0]) stEl.childNodes[0].nodeValue = '✨ '+msg;
+    }catch(_e){}
+  }
+
+  function _cleanupLoading(){
+    try{ if(_dotTimer) clearInterval(_dotTimer); }catch(_e){}
+    try{ if(_visHandler) document.removeEventListener('visibilitychange', _visHandler); }catch(_e){}
+  }
+
+  function _wait(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+  /* ── 사진 1장을 Vision AI에게 보낸다. 실패해도 절대 예외를 던지지 않고
+     빈 문자열을 돌려준다 — 한 장의 실패가 나머지를 막지 않게 한다. ── */
+  function _analyzeOne(b64, prompt){
     if(!b64) return Promise.resolve('');
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'qwen/qwen3.6-27b',
@@ -1361,71 +1373,52 @@ function _c24CompFinalAnalyze(){
           {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
           {type:'text',text:prompt}
         ]}],max_tokens:300,temperature:0.3})})
-    .then(function(r2){return r2.json();})
-    .then(function(d){
-      if(d && d.error){ try{ console.warn('[c24 개별분석 실패]', prompt.slice(0,10), d.error); }catch(_e){} }
-      var t=(d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'';
-      return t.replace(/```json|```/g,'').trim();
-    }).catch(function(){return '';});
-  };
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.error){ try{ console.warn('[c24] 개별분석 실패:', d.error); }catch(_e){} return ''; }
+        var t = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
+        return t.replace(/```json|```/g,'').trim();
+      })
+      .catch(function(err){ try{ console.warn('[c24] 개별분석 예외:', err); }catch(_e){} return ''; });
+  }
 
-  /* ★ C-100: C-98에서 "이제는 /api/groq를 직접 부르므로 rate-limit 문제가
-     무관하다"고 판단해 병렬로 되돌린 게 틀렸다 — /api/groq도 groq.js 안에서
-     rateCheck(req,'basic')을 그대로 거친다. _limit.js의 basic 갈래는 분당
-     3회인데, 병렬로 6장을 한꺼번에 쏘면 3건은 통과하고 나머지 3건은 즉시
-     429에 걸린다. 이게 "사진은 다 보이는데 분석만 실패"의 진짜 원인이었다.
-     순차 처리로 되돌리되, 재시도 로직 없이(구 파일에 없던 기능) 각 요청
-     사이에 아주 짧은 간격만 두어 분당 3회 한도 안에 들어오게 한다. */
-  var _seq = Promise.resolve('');
-  /* ★ C-103: 타 AI 검증 반영 — 배열 인덱스(results[0], results[1]...)로 결과를
-     해석하면, 실행 순서가 항상 고정된다는 전제가 깨지는 순간(재시도·건너뛰기
-     추가 시) 엉뚱한 값이 엉뚱한 부위에 들어간다. 이름(key) 기반으로 바꾼다. */
-  var _imgResults = {};
-  [
-    ['face', s.images.face, '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
-    ['tongue', s.images.tongue, '이 혀 사진을 관찰. 이 이미지가 정중앙 기준으로 정사각형으로 잘린다고 가정하고(가로가 세로보다 길면 좌우 여백 제외, 세로가 길면 상하 여백 제외), 그 정사각형 안에서 혀 끝(카메라와 가장 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
-    ['eye', s.images.eye, '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
-    ['skin', s.images.skin, '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
-    ['hand_back', s.images.hand_back, '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
-    ['hand_palm', s.images.hand_palm, '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
-  ].forEach(function(job, idx){
-    var _key = job[0];
-    _seq = _seq.then(function(){
-      try{
-        var stEl = document.getElementById('c24-loading-stage');
-        if(stEl && stEl.childNodes[0]) stEl.childNodes[0].nodeValue = '✨ 분석 중 ('+(idx+1)+'/6)';
-      }catch(_e){}
-      /* ★ C-103: _analyzeImg는 이미 내부에서 .catch(function(){return '';})로
-         실패를 흡수하므로 여기까지 reject가 올라오지 않는다 — 한 장이 실패해도
-         체인이 끊기지 않고 다음 장으로 이어진다(타 AI가 지적한 위험을 이미
-         피하고 있었음, 다만 이름 기반 저장으로 안전성을 한 번 더 높인다). */
-      return _analyzeImg(job[1], job[2]);
-    }).then(function(r){
-      _imgResults[_key] = r;
-      /* basic 갈래 분당 3회 제한 — 여유 있게 매 요청 사이 15초 정도 두면
-         분당 3회 이하로 확실히 유지된다(6개×15초=90초, 조금 걸려도 확실히 성공). */
-      return new Promise(function(res){ setTimeout(res, 15000); });
-    });
+  function _parseJson(t){
+    if(!t) return {};
+    try{ var m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : {}; }
+    catch(e){ return {}; }
+  }
+
+  /* ── 6장을 이름 기반으로 순서대로 분석. 요청 사이 15초 간격
+     (서버 문지기 basic 갈래 분당 3회 제한을 확실히 지키기 위함). ── */
+  var _jobs = [
+    ['face', '👤 (1/6) 얼굴 분석 중', s.images.face,
+      '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
+    ['tongue', '👅 (2/6) 혀 분석 중', s.images.tongue,
+      '이 혀 사진을 관찰. 이 이미지가 정중앙 기준 정사각형으로 잘린다고 가정하고, 그 안에서 혀 끝(카메라에 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
+    ['eye', '👁️ (3/6) 눈 분석 중', s.images.eye,
+      '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
+    ['skin', '🎨 (4/6) 피부 분석 중', s.images.skin,
+      '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
+    ['hand_back', '🤚 (5/6) 손등 분석 중', s.images.hand_back,
+      '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
+    ['hand_palm', '✋ (6/6) 손바닥 분석 중', s.images.hand_palm,
+      '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
+  ];
+
+  var _chain = Promise.resolve();
+  _jobs.forEach(function(job){
+    var _key = job[0], _label = job[1], _b64 = job[2], _prompt = job[3];
+    _chain = _chain
+      .then(function(){ _setStage(_label); return _analyzeOne(_b64, _prompt); })
+      .then(function(text){ results[_key] = _parseJson(text); })
+      .then(function(){ return _wait(15000); });
   });
-  /* ★ C-101: face/tongue/eye/skin/hBack/hPalm을 여기(함수 최상위)에 선언해야
-     아래쪽 마지막 .then(function(d3){...}) 콜백에서도 접근할 수 있다.
-     Promise 체이닝에서 .then() 각각은 독립된 함수 스코프라, 이전 .then() 안의
-     var로는 다음 .then()에서 안 보인다 — "face is not defined"의 정체였다.
-     개별관찰 폴백 기능(C-93)을 넣으면서 이 스코프 문제를 놓친 게 실수였다. */
-  var face, tongue, eye, skin, hBack, hPalm;
 
-  _seq.then(function(){
-    var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
-    /* ★ C-103: 인덱스(results[0])가 아니라 이름(key)으로 꺼낸다 */
-    face=_parse(_imgResults.face||'');
-    tongue=_parse(_imgResults.tongue||'');
-    eye=_parse(_imgResults.eye||'');
-    skin=_parse(_imgResults.skin||'');
-    hBack=_parse(_imgResults.hand_back||'');
-    hPalm=_parse(_imgResults.hand_palm||'');
-    var breath=s.breathData;
+  /* ── 6장이 다 끝나면 통합 소견 요청 ── */
+  _chain.then(function(){
+    _setStage('전체 결과 종합 중');
+    var breath = s.breathData;
 
-    // 통합 AI 분석
     var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
       +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
       +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
@@ -1433,12 +1426,12 @@ function _c24CompFinalAnalyze(){
     var userPrompt = '분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')\n'
       +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
       +'478호흡: 완료사이클='+breath.cycles+'회\n'
-      +'얼굴 관찰: '+JSON.stringify(face)+'\n'
-      +'혀 관찰: '+JSON.stringify(tongue)+'\n'
-      +'눈 관찰: '+JSON.stringify(eye)+'\n'
-      +'피부 관찰: '+JSON.stringify(skin)+'\n'
-      +'손등 관찰: '+JSON.stringify(hBack)+'\n'
-      +'손바닥 관찰: '+JSON.stringify(hPalm)+'\n\n'
+      +'얼굴 관찰: '+JSON.stringify(results.face)+'\n'
+      +'혀 관찰: '+JSON.stringify(results.tongue)+'\n'
+      +'눈 관찰: '+JSON.stringify(results.eye)+'\n'
+      +'피부 관찰: '+JSON.stringify(results.skin)+'\n'
+      +'손등 관찰: '+JSON.stringify(results.hand_back)+'\n'
+      +'손바닥 관찰: '+JSON.stringify(results.hand_palm)+'\n\n'
       +'아래 JSON으로 반환:\n'
       +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
       +'"종합점수":점수(40~98),'
@@ -1454,81 +1447,69 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    /* ★ C-95→C-97: 구 파일 원본과 완전히 동일하게 되돌린다 — /api/groq를 직접
-       호출하고 openai/gpt-oss-20b(살아있는 모델)와 reasoning_effort:'low'를 그대로
-       쓴다. 재시도 로직도 검증 안 된 추가 기능이므로 걷어내고 원본처럼 단순화. */
     return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
         messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
         max_tokens:2500,temperature:0.6})});
   })
-  .then(function(r3){return r3.json();})
-  .then(function(d3){
-    /* ★ C-99→C-102: /api/groq는 실패해도 항상 200 + {error:'이유'} 형태로 응답한다
-       (서버 코드 확인됨). 처음엔 이 error를 throw해서 화면에 보여줬는데, 그러면
-       바로 .catch()로 건너뛰어 아래 "개별 관찰 결과라도 보여주자"는 폴백(C-93)이
-       실행되지 않는 부작용이 있었다 — 개별 6장이 다 성공해도 통합분석 하나만
-       실패하면 완전 실패 화면만 떴다. throw 대신 t를 빈 문자열로 두어 아래
-       폴백 로직까지 자연스럽게 이어지게 하고, 에러 내용은 별도로 기억해둔다. */
-    var _groqErr = (d3 && d3.error) ? String(d3.error) : '';
-    var t = _groqErr ? '' : ((d3.choices&&d3.choices[0]&&d3.choices[0].message&&d3.choices[0].message.content)||'');
-    var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
-    var ai=null;
-    if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
-    /* ★ C-93: 통합분석(7번째 요청) 하나가 실패하면, 이미 성공한 개별분석 6장의
-       데이터가 전부 버려지고 "분석 실패"만 뜨는 게 가장 큰 낭비였다. 통합분석이
-       실패해도 개별 관찰값(face/tongue/eye/skin/hBack/hPalm)이 하나라도 있으면
-       그것만으로 최소한의 결과를 자동으로 구성해 보여준다 — 완전 실패보다 낫다. */
-    if(!ai || Object.keys(ai).length===0 || !ai.핵심발견){
-      var _parts = [];
-      if(face && face.안색) _parts.push('얼굴: 안색 '+face.안색+(face.생기?(' · 생기 '+face.생기):''));
-      if(tongue && tongue.설색) _parts.push('혀: 설색 '+tongue.설색+(tongue.설태?(' · 설태 '+tongue.설태):''));
-      if(eye && eye.눈가톤) _parts.push('눈: '+eye.눈가톤+(eye.흰자톤?(' · 흰자 '+eye.흰자톤):''));
-      if(skin && skin.피부톤) _parts.push('피부: '+skin.피부톤+(skin.탄력?(' · 탄력 '+skin.탄력):''));
-      if(hBack && hBack.손톱톤) _parts.push('손등: 손톱 '+hBack.손톱톤);
-      if(hPalm && hPalm.손바닥톤) _parts.push('손바닥: '+hPalm.손바닥톤);
-      if(_parts.length >= 3){
-        /* 개별 관찰이 절반 이상 살아있으면 그것만으로 최소 결과를 만든다 */
-        ai = {
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var serverErr = (d && d.error) ? String(d.error) : '';
+    var text = serverErr ? '' : ((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '');
+    finalAi = _parseJson(text);
+
+    if(!finalAi || Object.keys(finalAi).length===0 || !finalAi.핵심발견){
+      /* 통합 소견 실패 — 개별 관찰이 3개 이상 살아있으면 그것만으로 최소 결과 구성 */
+      var parts = [];
+      var f=results.face, tg=results.tongue, ey=results.eye, sk=results.skin, hb=results.hand_back, hp=results.hand_palm;
+      if(f && f.안색) parts.push('얼굴: 안색 '+f.안색+(f.생기?(' · 생기 '+f.생기):''));
+      if(tg && tg.설색) parts.push('혀: 설색 '+tg.설색+(tg.설태?(' · 설태 '+tg.설태):''));
+      if(ey && ey.눈가톤) parts.push('눈: '+ey.눈가톤+(ey.흰자톤?(' · 흰자 '+ey.흰자톤):''));
+      if(sk && sk.피부톤) parts.push('피부: '+sk.피부톤+(sk.탄력?(' · 탄력 '+sk.탄력):''));
+      if(hb && hb.손톱톤) parts.push('손등: 손톱 '+hb.손톱톤);
+      if(hp && hp.손바닥톤) parts.push('손바닥: '+hp.손바닥톤);
+
+      if(parts.length >= 3){
+        finalAi = {
           종합등급:'?', 종합점수:0,
-          핵심발견:'⚠️ 종합 분석 문장은 서버 혼잡으로 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+_parts.join('<br>· '),
+          핵심발견:'⚠️ 종합 소견은 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+parts.join('<br>· '),
           bpm:_c24.bpm, hrv:_c24.hrv, fci:_c24.fci
         };
-        try{ if(window.cgoToast) window.cgoToast('종합 문장 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
+        try{ if(window.cgoToast) window.cgoToast('종합 소견 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
       } else {
-        ai = {
+        finalAi = {
           종합등급:'?', 종합점수:0,
-          핵심발견:'⚠️ 지금은 분석 서버가 혼잡해 결과를 받지 못했습니다. 사진은 모두 저장되어 있으니, 잠시 후(약 1분) 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
-            +(_groqErr?('<br><br>오류 상세(문의 시 함께 알려주세요): '+_groqErr):'')
+          핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.'
+            +(serverErr ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+serverErr) : '')
         };
-        try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
+        try{ if(window.cgoToast) window.cgoToast('분석 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
       }
     }
-    /* ★ C-82: 혀 좌표(1안) — 통합분석(2차 AI 호출)이 새로 만드는 JSON에는 좌표가
-       없으므로, 1차 개별분석(tongue)에서 받은 좌표를 최종 ai 객체에 옮겨 담는다.
-       통합분석이 실패해도(위 폴백 ai) 좌표는 살아있으면 그대로 붙여 화면에 점은 뜨게 한다. */
+
+    /* 혀 좌표를 최종 결과에 붙인다(있으면) */
     try{
-      if(tongue && tongue.혀끝좌표 && typeof tongue.혀끝좌표.x==='number' && typeof tongue.혀끝좌표.y==='number'){
-        ai.혀끝좌표 = tongue.혀끝좌표;
+      var tg2 = results.tongue;
+      if(tg2 && tg2.혀끝좌표 && typeof tg2.혀끝좌표.x==='number' && typeof tg2.혀끝좌표.y==='number'){
+        finalAi.혀끝좌표 = tg2.혀끝좌표;
       }
-      if(tongue && tongue.혀뿌리좌표 && typeof tongue.혀뿌리좌표.x==='number' && typeof tongue.혀뿌리좌표.y==='number'){
-        ai.혀뿌리좌표 = tongue.혀뿌리좌표;
+      if(tg2 && tg2.혀뿌리좌표 && typeof tg2.혀뿌리좌표.x==='number' && typeof tg2.혀뿌리좌표.y==='number'){
+        finalAi.혀뿌리좌표 = tg2.혀뿌리좌표;
       }
     }catch(_e){}
-    _c24CompShowResult(ai);
+
+    _cleanupLoading();
+    _c24CompShowResult(finalAi);
   })
   .catch(function(err){
-    /* ★ C-99: "네트워크 오류"라고만 뜨면 다음에 또 같은 증상이어도 원인을 알 수 없다.
-       실제 JS 에러 메시지를 화면에 그대로 보여줘서, 스크린샷 한 장으로 정확한 원인
-       (에러 종류·메시지)을 바로 알 수 있게 한다. */
-    var _errMsg = '';
-    try{ _errMsg = (err && (err.message||String(err))) || '알 수 없음'; }catch(_e){}
+    var msg = '';
+    try{ msg = (err && (err.message || String(err))) || '알 수 없음'; }catch(_e){}
+    _cleanupLoading();
     _c24CompShowResult({
       종합등급:'?', 종합점수:0,
-      핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니, 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+_errMsg
+      핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+msg
     });
   });
-};
+}
 
 function _c24UpdateBanner(){
   var st = _c24DiseaseState;
