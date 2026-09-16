@@ -74,7 +74,7 @@ const KIND = {
   photo : { model:SONNET, max:1600, cost:63  },
   report: { model:SONNET, max:6000, cost:210 },
   naming: { model:OPUS,   max:4200, cost:900 },   // ★ 정책표 ㉙ — 작명은 Opus
-  med   : { model:SONNET, max:3000, cost:80  }    // ★ 지금은 안 씀 — med는 handler 최상단에서 groq으로 직행
+  med   : { model:SONNET, max:3000, cost:80  }    // ★ 2026.09.17 다시 사용 — Claude로 복귀
 };
 // Opus 는 FEAT 표가 정한 자리(역학 풀이·작명 등 문장력이 값인 곳)에서만 쓴다. 실패하면 Sonnet 으로 한 번 더 간다 — 최고급 값을 받고 Groq 답을 내지 않는다.
 
@@ -90,13 +90,12 @@ export default async function handler(req, res) {
   const kind = b.kind && KIND[b.kind] ? b.kind : null;
   const feat = (b.feat && FEAT[b.feat]) ? b.feat : 'def';
 
-  // ★ 2026.09.16 — med(나의 건강 밸런스)는 Claude로 반복 실패(토큰 잘림·간헐적
-  //   오류 등 원인 불명확)해 결제만 되고 결과가 안 나오는 사고가 이어졌다.
-  //   "정확성 위해 Claude를 썼는데 결과 자체가 안 나오면 의미 없다"는 판단—
-  //   확실히 작동하던 Groq으로 되돌린다. 다른 기능(kind/feat)은 그대로 Claude.
-  if (kind === 'med') {
-    return groq(b, res);
-  }
+  // ★ 2026.09.17 — med(나의 건강 밸런스)를 다시 Claude로 되돌린다.
+  //   어제(2026.09.16) Groq으로 우회시켰던 이유는 "원인 불명확한 반복 실패"였는데,
+  //   실제 원인을 다 찾아 이미 고쳤다: ① rate limit(_limit.js med 갈래 상향)
+  //   ② 토큰 한도 부족(KIND.med.max 1800→3000) ③ 통합분석 JSON 파싱 실패 시
+  //   개별관찰 폴백 추가. Groq 대체 모델(qwen/qwen3.6-27b)이 Preview 등급이라
+  //   오히려 더 불안정한 것으로 확인되어(Gemini 교차검증), Claude로 복귀한다.
 
   // ── 모델 고르기 — kind 표 > FEAT 표(기능×등급) ───────
   //    FEAT 에 그 등급 모델이 없으면(기본이 무료인 기능의 basic) Groq 으로.

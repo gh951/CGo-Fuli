@@ -1291,11 +1291,14 @@ function _c24StartDisease(key){
 };
 
 /* ══════════════════════════════════════════════════════════════
-   6부위 종합 스캔 — AI 분석 엔진 (2026.09.16 전면 재작성)
+   6부위 종합 스캔 — AI 분석 엔진 (2026.09.16 전면 재작성, 2026.09.17 Claude 복귀)
    지금까지의 실패에서 확인된 함정을 전부 피해서 처음부터 새로 짰다:
    ① 결과는 배열 인덱스가 아니라 이름(key)으로만 관리한다.
-   ② 죽은 모델명을 쓰지 않는다 — qwen/qwen3.6-27b(이미지), openai/gpt-oss-20b(텍스트).
-   ③ 서버 문지기(basic 갈래 분당 3회)를 넘지 않도록 요청 사이 15초 간격을 둔다.
+   ② /api/claude(kind:'med')로 Claude Sonnet을 쓴다 — Groq 대체 모델
+      (qwen/qwen3.6-27b)이 Preview 등급이라 더 불안정한 것으로 확인되어(Gemini
+      교차검증) 원래대로 Claude로 복귀. 서버(claude.js) 토큰한도 3000,
+      rate limit(_limit.js) med 갈래 분당10회로 이미 넉넉하게 설정됨.
+   ③ 서버 문지기를 넘지 않도록 요청 사이 15초 간격을 둔다.
    ④ 모든 변수는 함수 최상위에서 선언한다 — Promise 체인 중간에서 var로
       선언하면 다음 .then()에서 안 보인다("face is not defined" 버그의 원인).
    ⑤ 실패하면 사용자에게 실제 이유를 그대로 보여준다 — 뭉뚱그리지 않는다.
@@ -1368,22 +1371,19 @@ function _c24CompFinalAnalyze(){
      화면에 "왜 실패했는지"를 보여줄 수 있게 한다. ── */
   function _analyzeOne(partName, b64, prompt){
     if(!b64) return Promise.resolve('');
-    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'qwen/qwen3.6-27b',
-        messages:[{role:'user',content:[
-          {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}},
-          {type:'text',text:prompt}
-        ]}],max_tokens:300,temperature:0.3})})
+    var _tier = window._c24Tier || 'basic';
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:_tier,
+        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if(d && d.error){
-          var msg = partName+': '+String(d.error);
+        if(!d || !d.text || !d.text.trim()){
+          var msg = partName+': 빈 응답(서버에서 텍스트를 못 받음)';
           try{ console.warn('[c24] 개별분석 실패:', msg); }catch(_e){}
           _failReasons.push(msg);
           return '';
         }
-        var t = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
-        return t.replace(/```json|```/g,'').trim();
+        return d.text.replace(/```json|```/g,'').trim();
       })
       .catch(function(err){
         var msg = partName+': '+((err && err.message) || String(err));
@@ -1459,15 +1459,13 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"관찰된 컨디션을 참고했을 때 오늘 챙기면 좋을 음식과 피하면 좋을 음식(참고용). 3문장"}';
 
-    return fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'openai/gpt-oss-20b',reasoning_effort:'low',include_reasoning:false,
-        messages:[{role:'system',content:sysPrompt},{role:'user',content:userPrompt}],
-        max_tokens:2500,temperature:0.6})});
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
+        system:sysPrompt, prompt:userPrompt, max_tokens:2500, temperature:0.6})});
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
-    var serverErr = (d && d.error) ? String(d.error) : '';
-    var text = serverErr ? '' : ((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '');
+    var text = (d && d.text) ? d.text : '';
     finalAi = _parseJson(text);
 
     if(!finalAi || Object.keys(finalAi).length===0 || !finalAi.핵심발견){
@@ -1489,10 +1487,9 @@ function _c24CompFinalAnalyze(){
         };
         try{ if(window.cgoToast) window.cgoToast('종합 소견 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
       } else {
-        /* ★ C-105: serverErr(통합분석 자체 에러)가 없어도, 개별 사진들이 왜
-           실패했는지(_failReasons)가 있으면 그것을 보여준다 — "오류 상세" 없이
-           그냥 "분석 실패"만 뜨던 문제(개별 6장이 다 조용히 실패한 경우)를 없앤다. */
-        var _errDetail = serverErr || (_failReasons.length ? _failReasons.join(' / ') : '');
+        /* ★ C-105: 개별 사진들이 왜 실패했는지(_failReasons)가 있으면 그것을
+           보여준다 — "오류 상세" 없이 그냥 "분석 실패"만 뜨던 문제를 없앤다. */
+        var _errDetail = _failReasons.length ? _failReasons.join(' / ') : '';
         finalAi = {
           종합등급:'?', 종합점수:0,
           핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.'
