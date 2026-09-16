@@ -1313,9 +1313,9 @@ function _c24CompFinalAnalyze(){
     loading.style.cssText = 'padding:20px;text-align:center;';
     loading.innerHTML =
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
-      +'<div id="c24-loading-stage" style="color:#34d399;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
-      +'<div style="font-size:11px;color:rgba(52,211,153,.5);margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>'
-      +'<div style="font-size:10px;color:rgba(52,211,153,.35);margin-top:6px;">정확도를 위해 한 부위씩 순서대로 분석합니다 · 약 20~30초</div>';
+      +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
+      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>'
+      +'<div style="font-size:10px;color:#334155;margin-top:6px;">정확도를 위해 한 부위씩 순서대로 분석합니다 · 약 20~40초</div>';
     sec.insertBefore(loading, sec.firstChild);
     /* ★ C-77: 20~30초가 걸리는 동안 "멈췄나?" 불안하지 않도록 점(...)이 계속 움직인다.
        결과가 뜨거나(성공/실패 불문) loading 요소가 제거되면 인터벌도 함께 멈춘다. */
@@ -1331,7 +1331,12 @@ function _c24CompFinalAnalyze(){
   // 각 이미지 Vision AI 분석
   var analyses = {};
 
-  var _analyzeImg = function(b64, prompt, key){
+  /* ★ C-84: 개별 요청이 실패하면 조용히 빈 문자열로 넘어가던 방식은, 6개 중 단 하나만
+     순간적인 rate-limit·네트워크 튐으로 실패해도 전체 분석이 부실해지는 원인이었다.
+     3분을 기다린 사용자가 "분석 실패"만 받는 건 특히 나머지 5~6개가 이미 성공한
+     상태에서 벌어지는 낭비다. 실패 시 1.5초 후 자동으로 1회만 재시도한다
+     (사용자가 알아채기도 전에 스스로 복구 — 별도 조작 불필요). */
+  var _analyzeImg = function(b64, prompt, key, _isRetry){
     if(!b64) return Promise.resolve('');
     var _tier = window._c24Tier || 'basic';
     return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -1339,9 +1344,19 @@ function _c24CompFinalAnalyze(){
         images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
     .then(function(r2){return r2.json();})
     .then(function(d){
-      var t=d.text||'';
-      return t.replace(/```json|```/g,'').trim();
-    }).catch(function(){return '';});
+      var t=(d.text||'').replace(/```json|```/g,'').trim();
+      if(!t && !_isRetry){
+        return new Promise(function(res){ setTimeout(res, 1500); })
+          .then(function(){ return _analyzeImg(b64, prompt, key, true); });
+      }
+      return t;
+    }).catch(function(){
+      if(!_isRetry){
+        return new Promise(function(res){ setTimeout(res, 1500); })
+          .then(function(){ return _analyzeImg(b64, prompt, key, true); });
+      }
+      return '';
+    });
   };
 
   /* ★ C-76: Promise.all로 6장을 동시에 쏘던 방식은 Anthropic API의 분당 요청수(RPM)
@@ -1418,12 +1433,29 @@ function _c24CompFinalAnalyze(){
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
       +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
-        system:sysPrompt, prompt:userPrompt,
-        max_tokens:2500, temperature:0.6})});
+    /* ★ C-84: 개별 이미지 6장이 다 성공했는데 마지막 통합분석(7번째) 하나가
+       순간적인 오류로 실패하면 전체가 "분석 실패"로 떨어졌다 — 여기도 1회 자동 재시도. */
+    var _finalBody = JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
+        system:sysPrompt, prompt:userPrompt, max_tokens:2500, temperature:0.6});
+    var _tryFinal = function(isRetry){
+      return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:_finalBody})
+        .then(function(r3){return r3.json();})
+        .then(function(d3){
+          var hasText = d3 && d3.text && d3.text.trim();
+          if(!hasText && !isRetry){
+            return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return _tryFinal(true); });
+          }
+          return d3;
+        })
+        .catch(function(err){
+          if(!isRetry){
+            return new Promise(function(res){ setTimeout(res, 2000); }).then(function(){ return _tryFinal(true); });
+          }
+          throw err;
+        });
+    };
+    return _tryFinal(false);
   })
-  .then(function(r3){return r3.json();})
   .then(function(d3){
     var t=d3.text||'';
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
@@ -2926,6 +2958,15 @@ function _c24Loop(){
         if(_lmsFresh && _c24._faceLms && _c24._faceLms.length){
           var _xs = _c24._faceLms.map(function(p){ return p.x; });
           _fill = Math.max.apply(null,_xs) - Math.min.apply(null,_xs);
+        } else if(_ratioFit > 0){
+          /* ★ C-83: 눈 모드는 카메라를 눈 하나에 바짝 대는 특성상 FaceMesh가 자주
+             "얼굴이 아니다"로 판단해 랜드마크 인식에 실패한다(_lmsFresh=false).
+             그러면 _fill이 계속 0으로 남아 cgoFitState가 'none'을 반환하고,
+             'none'은 화면상 "확인 불가"로 통과되지만 완료 소리(_st==='ok'만 확인)는
+             절대 울리지 않았다 — "눈 검사 중 소리가 안 난다" 지적의 정체.
+             FaceMesh가 실패해도 이미 매 프레임 계산되는 살색비율(_ratioFit)을
+             폴백으로 써서 거리 판정과 소리가 계속 살아있게 한다. */
+          _fill = _ratioFit;
         }
         _q.fill = _fill;
         /* ★ 지금 재는 부위에 맞는 잣대를 쓴다 — 얼굴 15cm · 혀 9cm · 눈 7cm · 피부 8cm · 손 20cm */
