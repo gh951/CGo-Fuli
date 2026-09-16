@@ -2591,10 +2591,16 @@ function _c24RoiRect(v){
         }
       }
     }
-    /* ── 혀/눈: 가이드 안쪽 작은 원 영역 (DrawGuide의 ex*0.5, ey*0.5와 동일) ── */
+    /* ── 혀/눈: 가이드 원 안쪽 판정 영역 ──
+       ★ C-85: 예전엔 이 영역이 화면에 작은 원(ex*0.5)으로 표시돼 사용자가 거기 맞췄는데,
+       지난 세션에 "그 작은 원에 맞추려다 오히려 안 맞는다"는 지적으로 화면 표시만 없앴다.
+       그런데 판정 기준 자체는 그대로 절반 크기로 남아 있어서, 사용자는 큰 원(화면에 보이는
+       전체 가이드)에 맞췄다고 생각해도 실제 판정은 그보다 훨씬 좁은 중앙만 보고 있었다
+       ("혀를 더 당겨야 하나" 혼란의 정체). 큰 원과 거의 같은 크기(0.34/0.38 — 살짝만
+       여유를 남김)로 넓혀 화면에 보이는 대로 판정되게 한다. */
     if(mode==='tongue' || mode==='eye'){
       var cx=vw*0.5, cy=vh*0.48;
-      var ex=vw*0.38*0.5, ey=vh*0.42*0.5;
+      var ex=vw*0.34, ey=vh*0.38;
       return {sx:Math.floor(cx-ex), sy:Math.floor(cy-ey), sw:Math.floor(ex*2), sh:Math.floor(ey*2), src:'inner-circle'};
     }
     /* ── 손등/손바닥: 사각 가이드 내부 (DrawGuide 0.1/0.15/0.8/0.7) ── */
@@ -2976,8 +2982,13 @@ function _c24Loop(){
         var _st = window.cgoFitState ? cgoFitState(_fill, _part) : 'ok';
         /* ★ C-69: 화면 채움 비율(_fill)만으로는 "9cm인데 25cm로 통과" 같은 개인차 오차가 남는다.
            _c24Distance()가 실측한 cm(_q.distCm)을 함께 검증 — 부위별 기준 cm의 ±40% 밖이면
-           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다. */
-        if(_q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
+           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다.
+           ★ C-85: 눈 모드는 이 이중검증에서 계속 걸려 타임바가 전혀 진행되지 않았다 —
+           눈 전용 cm 자(_c24EyeDistance, 성인 평균 눈 폭 3.0cm)는 사람마다 실제 눈 크기
+           편차가 커서, 화면 채움 비율은 정상인데도 cm 재검증에서 반복적으로 near/far로
+           되돌려졌다("5분 해도 타임바가 안 감" 지적). 눈 모드만 이 재검증을 건너뛰고
+           화면 채움 비율(_fill) 판정만 신뢰한다. */
+        if(_part!=='eye' && _q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
           var _bandCm = window.CGO_FIT[_part].cm;
           var _lo = _bandCm * 0.6, _hi = _bandCm * 1.4;
           if(_q.distCm < _lo) _st = 'near';
