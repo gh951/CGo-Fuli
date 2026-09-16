@@ -208,8 +208,14 @@ async function groq(b, res) {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
       body: JSON.stringify({
+        /* ★ 2026.09.16 — meta-llama/llama-4-scout-17b-16e-instruct는 Groq 공식
+           단종 공지(console.groq.com/docs/deprecations, 2026.06.17)로 이미 죽어있었다.
+           이게 6부위 스캔 개별 이미지 분석이 반복 실패한 진짜 원인이었을 가능성이 높다.
+           Groq 공식 비전 문서(console.groq.com/docs/vision)가 명시한 현재 이미지 모델인
+           qwen/qwen3.6-27b로 교체 — 이 문서는 "최대 3장까지 처리 가능"도 명시하는데,
+           우리는 이미지 1장씩만 보내므로(images:[b64]) 이 제한과도 무관하게 안전하다. */
         model: hasImg
-          ? 'meta-llama/llama-4-scout-17b-16e-instruct'
+          ? 'qwen/qwen3.6-27b'
           : 'openai/gpt-oss-20b',
         max_tokens: Math.min(b.max_tokens || 1200, 4000),
         temperature: typeof b.temperature === 'number' ? b.temperature : 0.7,
