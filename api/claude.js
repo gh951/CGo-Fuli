@@ -66,12 +66,15 @@ const COST = { [HAIKU]:10, [SONNET]:63, [OPUS]:375 };
 // ★ 2026.09.16: med 의 통합분석(6부위 요약+종합점수+오행식이가이드+혀좌표)이
 //   2500 토큰을 요청하는데 1800으로 깎여 JSON이 중간에 잘리는 사례가 확인됨
 //   (서버 로그: Anthropic 200 성공인데 프론트가 "핵심발견" 필드를 못 찾아 실패 처리).
-//   개별 이미지 6장(300 요청)엔 영향 없고, 통합분석만 잘리던 문제라 3000으로 올림.
+//   개별 이미지 6장(300 요청)엔 영향 없고, 통합분석만 잘리던 문제라 3000으로 올렸으나
+//   그 후에도 원인 불명확한 실패가 반복되어, med는 위 handler 최상단에서 곧바로
+//   Groq으로 보내도록 바꿨다(★ 2026.09.16 두 번째 결정). 이 med 항목은 지금
+//   도달하지 않는 설정값이지만, 나중에 Claude로 되돌릴 때 참고하도록 지우지 않고 남긴다.
 const KIND = {
   photo : { model:SONNET, max:1600, cost:63  },
   report: { model:SONNET, max:6000, cost:210 },
   naming: { model:OPUS,   max:4200, cost:900 },   // ★ 정책표 ㉙ — 작명은 Opus
-  med   : { model:SONNET, max:3000, cost:80  }
+  med   : { model:SONNET, max:3000, cost:80  }    // ★ 지금은 안 씀 — med는 handler 최상단에서 groq으로 직행
 };
 // Opus 는 FEAT 표가 정한 자리(역학 풀이·작명 등 문장력이 값인 곳)에서만 쓴다. 실패하면 Sonnet 으로 한 번 더 간다 — 최고급 값을 받고 Groq 답을 내지 않는다.
 
@@ -86,6 +89,14 @@ export default async function handler(req, res) {
   const tier = b.tier || 'basic';
   const kind = b.kind && KIND[b.kind] ? b.kind : null;
   const feat = (b.feat && FEAT[b.feat]) ? b.feat : 'def';
+
+  // ★ 2026.09.16 — med(나의 건강 밸런스)는 Claude로 반복 실패(토큰 잘림·간헐적
+  //   오류 등 원인 불명확)해 결제만 되고 결과가 안 나오는 사고가 이어졌다.
+  //   "정확성 위해 Claude를 썼는데 결과 자체가 안 나오면 의미 없다"는 판단—
+  //   확실히 작동하던 Groq으로 되돌린다. 다른 기능(kind/feat)은 그대로 Claude.
+  if (kind === 'med') {
+    return groq(b, res);
+  }
 
   // ── 모델 고르기 — kind 표 > FEAT 표(기능×등급) ───────
   //    FEAT 에 그 등급 모델이 없으면(기본이 무료인 기능의 basic) Groq 으로.

@@ -1461,17 +1461,33 @@ function _c24CompFinalAnalyze(){
     var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
-    /* ★ C-75: JSON 파싱 실패 시 AI 서버 원문(t)을 그대로 "핵심발견"에 넣던 방식은
-       치명적 버그였다 — "요청이 너무 잦습니다" 같은 서버 rate-limit 에러 문구가
-       그대로 건강 소견인 것처럼 사용자에게 노출됨. 유료 결제 후 이 화면을 받으면
-       분석이 실패한 줄도 모른 채 이상한 문구만 받게 된다.
-       이제는 파싱 실패 시 원문을 절대 쓰지 않고, 항상 명확한 실패 안내로 통일한다. */
+    /* ★ C-93: 통합분석(7번째 요청) 하나가 실패하면, 이미 성공한 개별분석 6장의
+       데이터가 전부 버려지고 "분석 실패"만 뜨는 게 가장 큰 낭비였다. 통합분석이
+       실패해도 개별 관찰값(face/tongue/eye/skin/hBack/hPalm)이 하나라도 있으면
+       그것만으로 최소한의 결과를 자동으로 구성해 보여준다 — 완전 실패보다 낫다. */
     if(!ai || Object.keys(ai).length===0 || !ai.핵심발견){
-      ai = {
-        종합등급:'?', 종합점수:0,
-        핵심발견:'⚠️ 지금은 분석 서버가 혼잡해 결과를 받지 못했습니다. 사진은 모두 저장되어 있으니, 잠시 후(약 1분) 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
-      };
-      try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
+      var _parts = [];
+      if(face && face.안색) _parts.push('얼굴: 안색 '+face.안색+(face.생기?(' · 생기 '+face.생기):''));
+      if(tongue && tongue.설색) _parts.push('혀: 설색 '+tongue.설색+(tongue.설태?(' · 설태 '+tongue.설태):''));
+      if(eye && eye.눈가톤) _parts.push('눈: '+eye.눈가톤+(eye.흰자톤?(' · 흰자 '+eye.흰자톤):''));
+      if(skin && skin.피부톤) _parts.push('피부: '+skin.피부톤+(skin.탄력?(' · 탄력 '+skin.탄력):''));
+      if(hBack && hBack.손톱톤) _parts.push('손등: 손톱 '+hBack.손톱톤);
+      if(hPalm && hPalm.손바닥톤) _parts.push('손바닥: '+hPalm.손바닥톤);
+      if(_parts.length >= 3){
+        /* 개별 관찰이 절반 이상 살아있으면 그것만으로 최소 결과를 만든다 */
+        ai = {
+          종합등급:'?', 종합점수:0,
+          핵심발견:'⚠️ 종합 분석 문장은 서버 혼잡으로 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+_parts.join('<br>· '),
+          bpm:_c24.bpm, hrv:_c24.hrv, fci:_c24.fci
+        };
+        try{ if(window.cgoToast) window.cgoToast('종합 문장 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
+      } else {
+        ai = {
+          종합등급:'?', 종합점수:0,
+          핵심발견:'⚠️ 지금은 분석 서버가 혼잡해 결과를 받지 못했습니다. 사진은 모두 저장되어 있으니, 잠시 후(약 1분) 다시 시도해 주세요. 재시도 후에도 계속되면 고객센터로 문의해 주세요.'
+        };
+        try{ if(window.cgoToast) window.cgoToast('분석 서버 응답 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
+      }
     }
     /* ★ C-82: 혀 좌표(1안) — 통합분석(2차 AI 호출)이 새로 만드는 JSON에는 좌표가
        없으므로, 1차 개별분석(tongue)에서 받은 좌표를 최종 ai 객체에 옮겨 담는다.
