@@ -1466,13 +1466,19 @@ function _c24CompFinalAnalyze(){
   .then(function(r){ return r.json(); })
   .then(function(d){
     var text = (d && d.text) ? d.text : '';
-    if(!text && d && d.error){
-      _failReasons.push('통합분석: '+String(d.error));
+    if(!text){
+      var _raw = '';
+      try{ _raw = JSON.stringify(d).slice(0, 200); }catch(_e){ _raw = String(d); }
+      _failReasons.push('통합분석: '+(d && d.error ? String(d.error) : ('응답 형태 이상 — '+_raw)));
     }
     finalAi = _parseJson(text);
 
     if(!finalAi || Object.keys(finalAi).length===0 || !finalAi.핵심발견){
-      /* 통합 소견 실패 — 개별 관찰이 3개 이상 살아있으면 그것만으로 최소 결과 구성 */
+      /* 통합 소견 실패 — text는 왔는데 JSON 파싱/필드가 이상했던 경우도 기록 */
+      if(text && (!finalAi || !finalAi.핵심발견)){
+        _failReasons.push('통합분석: 응답은 왔으나 형식이 예상과 다름 — '+text.slice(0,150));
+      }
+      /* 개별 관찰이 3개 이상 살아있으면 그것만으로 최소 결과 구성 */
       var parts = [];
       var f=results.face, tg=results.tongue, ey=results.eye, sk=results.skin, hb=results.hand_back, hp=results.hand_palm;
       if(f && f.안색) parts.push('얼굴: 안색 '+f.안색+(f.생기?(' · 생기 '+f.생기):''));
