@@ -1378,7 +1378,7 @@ function _c24CompFinalAnalyze(){
       .then(function(r){ return r.json(); })
       .then(function(d){
         if(!d || !d.text || !d.text.trim()){
-          var msg = partName+': 빈 응답(서버에서 텍스트를 못 받음)';
+          var msg = partName+': '+(d && d.error ? String(d.error) : '빈 응답(서버에서 텍스트를 못 받음)');
           try{ console.warn('[c24] 개별분석 실패:', msg); }catch(_e){}
           _failReasons.push(msg);
           return '';
@@ -1466,6 +1466,9 @@ function _c24CompFinalAnalyze(){
   .then(function(r){ return r.json(); })
   .then(function(d){
     var text = (d && d.text) ? d.text : '';
+    if(!text && d && d.error){
+      _failReasons.push('통합분석: '+String(d.error));
+    }
     finalAi = _parseJson(text);
 
     if(!finalAi || Object.keys(finalAi).length===0 || !finalAi.핵심발견){
@@ -1480,9 +1483,10 @@ function _c24CompFinalAnalyze(){
       if(hp && hp.손바닥톤) parts.push('손바닥: '+hp.손바닥톤);
 
       if(parts.length >= 3){
+        var _foMsg = _failReasons.length ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+_failReasons.join(' / ')) : '';
         finalAi = {
           종합등급:'?', 종합점수:0,
-          핵심발견:'⚠️ 종합 소견은 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+parts.join('<br>· '),
+          핵심발견:'⚠️ 종합 소견은 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+parts.join('<br>· ')+_foMsg,
           bpm:_c24.bpm, hrv:_c24.hrv, fci:_c24.fci
         };
         try{ if(window.cgoToast) window.cgoToast('종합 소견 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
