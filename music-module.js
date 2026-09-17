@@ -1037,18 +1037,20 @@
 
     // ── init ────────────────────────────────────────────────────
     init() {
-      // ① CSS + DOM 뼈대만 즉시 (동기, 빠름)
+      // ① 잔상(ghost) 방지: 페이지 DOM보다 먼저 팝업을 body에 직접 주입
+      // cgoGoPage()가 #page-music을 보이게 한 직후 init()이 호출되므로
+      // 팝업을 가장 먼저 그려야 페이지 내용이 그 뒤에 보임
+      this._buildIntroPopup();
+
+      // ② CSS + DOM 뼈대 (동기, 빠름)
       injectCSS();
       this._buildDOM();
 
-      // ② 보이는 것만 살린다 — 나머지는 idle 후 순차 실행
+      // ③ 보이는 것만 살린다 — 나머지는 idle 후 순차 실행
       // requestIdleCallback 없는 환경 대비 fallback
       const idle = window.requestIdleCallback
         ? (fn, ms) => requestIdleCallback(fn, { timeout: ms })
         : (fn, ms) => setTimeout(fn, ms);
-
-      // 팝업 — DOM 직후 즉시 (잔상 방지: 페이지보다 먼저)
-      this._buildIntroPopup();
 
       // 배경 캔버스
       idle(() => this._startBgCanvas(), 200);
@@ -1297,12 +1299,22 @@
         logoEl.addEventListener('click', () => {
           fadeOut();
           setTimeout(() => {
-            try { window.cgoGoPage('dashboard'); } catch(e) {
-              // fallback: 대시보드 버튼 직접 클릭
-              const btn = document.querySelector('[onclick*="cgoGoPage(\'dashboard\')"], [onclick*="dashboard"]');
-              if (btn) btn.click();
+            // 모든 가능한 방법 순서대로 시도
+            const nav = window.cgoGoPage || (typeof global !== 'undefined' && global.cgoGoPage)
+                     || window.top && window.top.cgoGoPage;
+            if (typeof nav === 'function') {
+              try { nav('dashboard'); return; } catch(e) {}
             }
-          }, 200);
+            // fallback 1: 대시보드 onclick 속성 버튼
+            const btn = document.querySelector('[onclick*="dashboard"]');
+            if (btn) { btn.click(); return; }
+            // fallback 2: data-page="dashboard" 속성
+            const pg = document.querySelector('[data-page="dashboard"], .nav-dashboard, #nav-dashboard');
+            if (pg) { pg.click(); return; }
+            // fallback 3: 헤더 홈 아이콘
+            const home = document.querySelector('.cgo-mhdr-back, #cgo-mhdr-back');
+            if (home) home.click();
+          }, 250);
         });
       }
     }
@@ -1329,7 +1341,13 @@
       `;
       this.root.appendChild(hdr);
       hdr.querySelector('#cgo-mhdr-back').addEventListener('click', () => {
-        if (typeof global.cgoGoPage === 'function') global.cgoGoPage('home');
+        const nav = window.cgoGoPage || (typeof global !== 'undefined' && global.cgoGoPage);
+        if (typeof nav === 'function') {
+          try { nav('dashboard'); } catch(e) {
+            const btn = document.querySelector('[onclick*="dashboard"]');
+            if (btn) btn.click();
+          }
+        }
       });
 
       // ─ 탭 ─
@@ -2107,6 +2125,18 @@
       top.appendChild(hero4Wrap);
       p.appendChild(top);
 
+      // ── 현재 설정 미리보기 (freq 탭 내 결과 카드) ───────────────
+      const freqResultSec = document.createElement('div');
+      freqResultSec.className = 'cgo-msec';
+      freqResultSec.style.cssText = 'margin-top:10px;';
+      freqResultSec.innerHTML = `<div class="cgo-msec-title" style="font-size:11px;">⚡ 현재 설정 미리보기</div>`;
+      const freqResultCard = document.createElement('div');
+      freqResultCard.className = 'cgo-result-card';
+      freqResultSec.appendChild(freqResultCard);
+      p.appendChild(freqResultSec);
+      // 즉시 채우기
+      setTimeout(() => this._updateResult(), 0);
+
       // ── 구분선 ───────────────────────────────────────────────
       const div = document.createElement('div');
       div.className = 'cgo-fmaster-divider';
@@ -2436,8 +2466,9 @@
 
     // ── 결과 카드 업데이트 ───────────────────────────────────────
     _updateResult() {
-      const card = this.root.querySelector('#cgo-result-card');
-      if (!card) return;
+      // 결과 카드는 여러 곳에 있을 수 있음 (freq 탭 + make 탭)
+      const cards = this.root.querySelectorAll('.cgo-result-card');
+      if (!cards.length) return;
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === this.selectedFreq) || FREQ_OPTIONS[3];
       const tempo = bpmToStage(this.tempoBpm);
       // 선택된 장르 태그
@@ -2448,7 +2479,7 @@
         const gc = grp ? grp.color : '#a855f7';
         return `<span class="cgo-result-tag" style="color:${gc};border-color:${gc}40;">${genre.flag} ${genre.name}</span>`;
       }).join('');
-      card.innerHTML = `
+      const html = `
         <div style="font-size:12px;color:#9d8ec4;margin-bottom:8px;" data-k="24068">${t(24068)}</div>
         <div class="cgo-result-tags">
           <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${this.tempoBpm}BPM</span>
@@ -2459,6 +2490,8 @@
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
       `;
+      // 모든 결과 카드(freq 탭 + make 탭 등) 동시 업데이트
+      cards.forEach(c => { c.innerHTML = html; });
     }
 
     // ── 주파수 선택 ─────────────────────────────────────────────
