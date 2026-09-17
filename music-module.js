@@ -1143,26 +1143,23 @@
       // inset:0 + transform:none → ancestor transform 영향 완전 차단
       // will-change:transform → 독립 레이어로 분리 (stacking context 생성)
       pop.style.cssText = [
-        'display:block;position:fixed;',
+        'display:block!important;position:fixed!important;',
         'top:0!important;left:0!important;right:0!important;bottom:0!important;',
-        'inset:0!important;',
-        'width:100vw!important;height:100vh!important;',
-        'max-width:100vw!important;max-height:100vh!important;',
-        'min-width:0!important;min-height:0!important;',
-        'z-index:2147483647;margin:0!important;padding:0!important;border:0!important;',
-        'transform:none!important;will-change:transform;',
-        'background:#f0fdf9;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;',
-        'font-family:inherit;box-sizing:border-box;',
-        'contain:strict;isolation:isolate;'
+        'width:100%!important;height:100%!important;',
+        'z-index:2147483647!important;',
+        'margin:0!important;padding:0!important;border:none!important;',
+        'transform:none!important;',
+        'background:#f0fdf9!important;',
+        'overflow-y:auto!important;overflow-x:hidden!important;',
+        '-webkit-overflow-scrolling:touch;',
+        'font-family:inherit;box-sizing:border-box!important;',
       ].join('');
 
       pop.innerHTML = `
 <style>
-#cgo-music-intro-pop{text-align:left;display:block;width:100%;height:100%;}
+#cgo-music-intro-pop{text-align:left;}
 #cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
-/* 스크롤 전체 페이지 중앙 정렬 wrapper */
-.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 16px 90px;display:block;}
-/* sticky 헤더 — left/right 은 sticky에선 무의미, 제거 */
+.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 16px 90px;}
 .mip-top{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(240,253,249,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(20,184,166,.14);}
 .mip-top-logo{font-size:12px;font-weight:900;color:#0d9488;letter-spacing:.04em;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s;}
 .mip-top-logo:hover{background:rgba(20,184,166,.12);}
@@ -1312,27 +1309,11 @@
   </div>
 </div>`;
 
-      document.body.appendChild(pop);
-
-      // 위치 보정: RAF 후 실제 렌더링 위치 확인 및 강제 조정
-      // ancestor에 transform이 있어 fixed가 깨지는 경우 대비
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try {
-            const r = pop.getBoundingClientRect();
-            // 팝업이 viewport와 다른 위치에 있으면 강제 보정
-            if (r.left !== 0 || r.top !== 0) {
-              pop.style.setProperty('left', '0px', 'important');
-              pop.style.setProperty('top', '0px', 'important');
-              pop.style.setProperty('right', '0px', 'important');
-              pop.style.setProperty('bottom', '0px', 'important');
-              pop.style.setProperty('transform', 'none', 'important');
-              pop.style.setProperty('margin-left', '0px', 'important');
-              pop.style.setProperty('margin-top', '0px', 'important');
-            }
-          } catch(e) {}
-        });
-      });
+      // body 대신 documentElement(html)에 append
+      // → body의 overflow:hidden, flex layout, transform 영향을 완전히 차단
+      // position:fixed는 viewport 기준이지만 body 자식이면 body의 stacking context에 묶임
+      // html 자식으로 올리면 최상위 stacking context에서 독립적으로 렌더링됨
+      document.documentElement.appendChild(pop);
 
       // 페이드 아웃 후 제거
       const fadeOut = () => {
