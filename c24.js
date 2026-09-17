@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-56';
+window.CGO_VER = 'cgo-57';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
@@ -1115,26 +1115,26 @@ function _c24CompShowResult(ai){
     +(ai.핵심발견?'<div style="padding:14px 14px 6px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:8px;">🔍 핵심 발견</div>'
     +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+_c24SentToPara(ai.핵심발견)+'</div></div>':'')
-    // 각 진단 항목
+    // 각 진단 항목 — 배경 rgba(0,0,0,.45) 고정으로 밝은 앱 배경에서도 글자 보임
     +['심장활력','소화기','순환계','신경계','눈_건강','피부_건강'].map(function(k){
       if(!ai[k]) return '';
       var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',눈_건강:'👁️',피부_건강:'🎨'};
-      return '<div style="padding:14px 14px 6px;background:rgba(255,255,255,.08);border-left:3px solid rgba(52,211,153,.4);border-radius:0 10px 10px 0;margin-bottom:10px;">'
+      return '<div style="padding:14px 14px 6px;background:rgba(0,0,0,.45);border-left:3px solid rgba(52,211,153,.6);border-radius:0 10px 10px 0;margin-bottom:10px;">'
         +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:8px;">'+(ic[k]||'•')+' '+k.replace(/_/g,' ')+'</div>'
-        +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+_c24SentToPara(ai[k])+'</div></div>';
+        +'<div style="font-size:13px;color:#f0f0f0;line-height:1.9;">'+_c24SentToPara(ai[k])+'</div></div>';
     }).join('')
     // 주의 신호
-    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:14px 14px 6px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:12px;">'
+    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:14px 14px 6px;background:rgba(80,0,0,.5);border:1px solid rgba(248,113,113,.4);border-radius:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:8px;">⚠️ 주의 신호</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.주의_신호)+'</div></div>':'')
+    +'<div style="font-size:12px;color:#f0e0e0;line-height:1.9;">'+_c24SentToPara(ai.주의_신호)+'</div></div>':'')
     // 당장 조언
-    +(ai.당장_조언?'<div style="padding:14px 14px 6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;margin-bottom:12px;">'
+    +(ai.당장_조언?'<div style="padding:14px 14px 6px;background:rgba(60,40,0,.5);border:1px solid rgba(251,191,36,.4);border-radius:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:8px;">💡 오늘 당장 실천</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.당장_조언)+'</div></div>':'')
+    +'<div style="font-size:12px;color:#f5ecd0;line-height:1.9;">'+_c24SentToPara(ai.당장_조언)+'</div></div>':'')
     // 식이 처방
-    +(ai.식이_가이드?'<div style="padding:14px 14px 6px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:12px;">'
+    +(ai.식이_가이드?'<div style="padding:14px 14px 6px;background:rgba(0,40,20,.5);border:1px solid rgba(52,211,153,.4);border-radius:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:8px;">🥗 오행 식이 가이드</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.식이_가이드)+'</div></div>':'')
+    +'<div style="font-size:12px;color:#d0f0e0;line-height:1.9;">'+_c24SentToPara(ai.식이_가이드)+'</div></div>':'')
     +(ai._retry?'<div style="text-align:center;padding:12px;">'
     +'<button onclick="_c24CompStartReal()" style="padding:12px 28px;background:rgba(52,211,153,.2);border:1.5px solid rgba(52,211,153,.6);border-radius:12px;color:#34d399;font-size:14px;font-weight:700;cursor:pointer;">🔄 다시 분석하기</button>'
     +'</div>':'')
@@ -1142,6 +1142,9 @@ function _c24CompShowResult(ai){
 
   sec.insertBefore(div, sec.firstChild);
   div.scrollIntoView({behavior:'smooth'});
+
+  // 융합 라이프 인덱싱 AI 연동 — 스캔 완료 후 바이오 카드 동기화
+  try{ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }catch(_e){}
 };
 
 function _c24DiseaseRealStart(key){
