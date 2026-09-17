@@ -1043,14 +1043,49 @@
       this._renderPresets();
       this._renderChart();
       this._updateResult();
-      // 🎵 입구 팝업 매뉴얼 (최초 1회만)
+      // 🎵 입구 팝업 매뉴얼 — 첫 진입 즉시 표시
       this._buildIntroPopup();
+      // 🎵 뮤직 탭 재진입 시마다 팝업 재표시 (MutationObserver)
+      this._watchMusicPage();
       // 🎵 피아노·플루트·바이올린 사전 로드 (첫 재생 딜레이 최소화)
       setTimeout(() => {
         loadSoundfont(0).catch(()=>{});   // Grand Piano
         loadSoundfont(73).catch(()=>{});  // Flute
         loadSoundfont(40).catch(()=>{});  // Violin
       }, 2000);
+    }
+
+    // ── 뮤직 탭 재진입 감지 → 팝업 재표시 ─────────────────────
+    _watchMusicPage() {
+      // index.html의 탭 전환은 페이지 컨테이너의 display 또는 class를 변경함
+      // container 의 가장 가까운 페이지 래퍼를 찾아서 감시
+      const pageEl = this.container.closest('[id^="page-"]')
+                  || this.container.closest('.page')
+                  || this.container.parentElement;
+      if (!pageEl) return;
+
+      let _wasHidden = true; // 최초에는 팝업을 init()에서 이미 띄웠으므로 숨김 상태로 간주
+
+      const obs = new MutationObserver(() => {
+        const style = window.getComputedStyle(pageEl);
+        const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
+
+        if (isVisible && _wasHidden) {
+          // 페이지가 다시 보여졌다 → 팝업 표시
+          _wasHidden = false;
+          // 기존 팝업이 남아있으면 제거 후 재표시
+          const old = document.getElementById('cgo-music-intro-pop');
+          if (old) try { old.remove(); } catch(e) {}
+          setTimeout(() => this._buildIntroPopup(), 80);
+        } else if (!isVisible) {
+          _wasHidden = true;
+        }
+      });
+
+      obs.observe(pageEl, {
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
     }
 
     // ── 입구 팝업 매뉴얼 ────────────────────────────────────────
