@@ -1,25 +1,60 @@
 // ══════════════════════════════════════════════════════════════════
-//  CGO 주파수 뮤직  v2.0  — 서브 홈페이지 구조
+//  CGO 주파수 뮤직  v2.1  — 서브 홈페이지 구조 + 20개국어 번역
 //  위성 × 생체 × 역학 × 주파수 · 세계 최초 AI 치료 음악
 //  View-Only Active · Strict Destroy
+//  번역 키: 24042 ~ 24075
 // ══════════════════════════════════════════════════════════════════
 (function (global) {
   'use strict';
 
+  // ── 번역 헬퍼 (dash6 딕셔너리 사용) ───────────────────────────
+  // index.html의 cgoT() 함수를 사용하거나, 없으면 한국어 폴백
+  function t(key) {
+    if (typeof global.cgoT === 'function') return global.cgoT(key);
+    // 폴백: 한국어 하드코딩 (dash6 로드 전 or 독립 실행 시)
+    const KO = {
+      24042:'CGO 주파수 뮤직', 24043:'위성 × 생체 × 역학 × 주파수',
+      24044:'세계 최초 AI 치료 음악', 24045:'추첨통', 24046:'차트',
+      24047:'주파수', 24048:'프리셋', 24049:'조성/음계', 24050:'박자',
+      24051:'장르', 24052:'보컬', 24053:'세계 악기', 24054:'🎲 추첨 시작',
+      24055:'✨ AI로 음악 생성', 24056:'자연 공명 · 안정', 24057:'DNA 회복 · 사랑',
+      24058:'지구 뇌파 동조', 24059:'슈만공명', 24060:'순수 음악',
+      24061:'힐링 주파수', 24062:'인기 차트 TOP 5', 24063:'내 프리셋',
+      24064:'프리셋 저장', 24065:'하루 1회 · 10원', 24066:'● LIVE AI 생성 중',
+      24067:'생성 완료! 재생해보세요', 24068:'현재 설정', 24069:'432Hz 자연 공명의 신비',
+      24070:'528Hz DNA 회복 주파수', 24071:'7.83Hz 슈만공명 · 지구의 맥박',
+      24072:'프리셋 이름', 24073:'저장된 프리셋 없음', 24074:'프리셋 최대 10개',
+      24075:'뒤로'
+    };
+    return KO[key] || String(key);
+  }
+
   // ── 슬롯 데이터 ──────────────────────────────────────────────────
+  // ── 템포 데이터 (박자 → 레인보우 바로 분리) ────────────────────
+  const TEMPO_STEPS = [
+    { bpm:50,  name:'Largo',   desc:'명상 · 깊은 힐링 · 432/528Hz 최적',   color:'#6366f1', dot:'#818cf8' },
+    { bpm:60,  name:'Adagio',  desc:'차분 · 발라드 · 샹송',                color:'#3b82f6', dot:'#60a5fa' },
+    { bpm:80,  name:'Andante', desc:'대중적 · 편안한 스탠다드',              color:'#10b981', dot:'#34d399' },
+    { bpm:110, name:'Allegro', desc:'리드미컬 · 경쾌',                      color:'#f59e0b', dot:'#fcd34d' },
+    { bpm:140, name:'Presto',  desc:'에너지 · 드라이브감',                   color:'#ef4444', dot:'#f87171' }
+  ];
+  // 슬라이더 값 0~4 → TEMPO_STEPS 인덱스
+  const TEMPO_DEFAULT_IDX = 2; // Andante
+
+  // SLOT_DATA — time(박자) 제거, 레인보우 바로 대체
+  // label은 렌더 시 t() 호출로 대체 (labelKey 참조)
   const SLOT_DATA = {
-    key:        { label:'조성/음계', emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] },
-    time:       { label:'박자',     emoji:'⏱', items:['4/4','3/4','6/8','12/8','2/4','5/4','7/8','9/8'] },
-    genre:      { label:'장르',     emoji:'🎭', items:['샹송(Chanson)','칸소네(Canzone)','국악','앰비언트','팝','발라드','재즈','보사노바','플라멩코','켈틱','아프로비트','인도 라가','아랍 마캄','탱고','힐링'] },
-    vocal:      { label:'보컬',     emoji:'🎤', items:['남성(Male)','여성(Female)','혼성(Duet)','무보컬(BGM)','어린이','합창(Choir)'] },
-    instrument: { label:'세계 악기', emoji:'🪕', items:['가야금(한국)','해금(한국)','아코디언(프랑스)','만돌린(이탈리아)','우드(중동)','칼림바(아프리카)','팬플루트(안데스)','시타르(인도)','케나(페루)','딤베(서아프리카)','비파(중국)','사미센(일본)','두둑(아르메니아)','오카리나','하프','첼로'] }
+    key:        { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] },
+    genre:      { label:'장르',     labelKey:24051, emoji:'🎭', items:['샹송(Chanson)','칸소네(Canzone)','국악','앰비언트','팝','발라드','재즈','보사노바','플라멩코','켈틱','아프로비트','인도 라가','아랍 마캄','탱고','힐링'] },
+    vocal:      { label:'보컬',     labelKey:24052, emoji:'🎤', items:['남성(Male)','여성(Female)','혼성(Duet)','무보컬(BGM)','어린이','합창(Choir)'] },
+    instrument: { label:'세계 악기', labelKey:24053, emoji:'🪕', items:['가야금(한국)','해금(한국)','아코디언(프랑스)','만돌린(이탈리아)','우드(중동)','칼림바(아프리카)','팬플루트(안데스)','시타르(인도)','케나(페루)','딤베(서아프리카)','비파(중국)','사미센(일본)','두둑(아르메니아)','오카리나','하프','첼로'] }
   };
 
   const FREQ_OPTIONS = [
-    { hz:432,  label:'432Hz',  desc:'자연 공명·안정',  color:'#f59e0b' },
-    { hz:528,  label:'528Hz',  desc:'DNA 회복·사랑',    color:'#10b981' },
-    { hz:7.83, label:'슈만공명', desc:'지구 뇌파 동조', color:'#3b82f6' },
-    { hz:0,    label:'OFF',    desc:'순수 음악',         color:'#6b7280' }
+    { hz:432,  label:'432Hz',       descKey:24056, desc:'자연 공명·안정',  color:'#f59e0b' },
+    { hz:528,  label:'528Hz',       descKey:24057, desc:'DNA 회복·사랑',    color:'#10b981' },
+    { hz:7.83, labelKey:24059, label:'슈만공명', descKey:24058, desc:'지구 뇌파 동조', color:'#3b82f6' },
+    { hz:0,    label:'OFF',         descKey:24060, desc:'순수 음악',         color:'#6b7280' }
   ];
 
   // ── NOTE → 주파수 맵 (Web Audio API용) ──────────────────────────
@@ -77,6 +112,47 @@
 .cgo-slot-canvas-wrap{flex:1;height:42px;overflow:hidden;border-radius:8px;background:rgba(10,0,21,.6);}
 .cgo-slot-canvas-wrap canvas{width:100%;height:42px;}
 .cgo-slot-row-val{font-size:11px;font-weight:700;color:#f0abfc;width:90px;text-align:right;flex-shrink:0;line-height:1.3;}
+
+/* ─── 박자(템포) 레인보우 바 ─── */
+.cgo-tempo-wrap{background:rgba(20,5,40,.7);border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:14px 14px 16px;cursor:default;}
+.cgo-tempo-label{font-size:11px;color:#9d8ec4;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.cgo-tempo-label b{font-size:12.5px;color:#d8b4fe;font-weight:700;}
+.cgo-tempo-rainbow{position:relative;margin-bottom:10px;}
+.cgo-tempo-rainbow input[type=range]{
+  width:100%;height:10px;border-radius:5px;outline:none;border:none;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background:linear-gradient(to right,
+    #6366f1 0%,        /* Largo 50bpm — 딥 인디고 */
+    #3b82f6 25%,       /* Adagio 60bpm — 블루 */
+    #10b981 50%,       /* Andante 80bpm — 그린 */
+    #f59e0b 75%,       /* Allegro 110bpm — 골든 */
+    #ef4444 100%       /* Presto 140bpm — 레드 */
+  );
+  box-shadow:0 0 8px rgba(168,85,247,.3);
+}
+.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:#fff;border:3px solid #a855f7;
+  box-shadow:0 0 10px rgba(168,85,247,.6),0 2px 6px rgba(0,0,0,.4);
+  cursor:pointer;transition:transform .15s;
+}
+.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25);}
+.cgo-tempo-rainbow input[type=range]::-moz-range-thumb{
+  width:22px;height:22px;border-radius:50%;
+  background:#fff;border:3px solid #a855f7;
+  box-shadow:0 0 10px rgba(168,85,247,.6);cursor:pointer;
+}
+.cgo-tempo-ticks{display:flex;justify-content:space-between;padding:0 2px;margin-bottom:8px;}
+.cgo-tempo-tick{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
+.cgo-tempo-tick-dot{width:6px;height:6px;border-radius:50%;transition:transform .2s;}
+.cgo-tempo-tick-name{font-size:8.5px;font-weight:700;color:#7c6fa8;transition:color .2s;white-space:nowrap;}
+.cgo-tempo-tick.active .cgo-tempo-tick-name{color:#f0abfc;}
+.cgo-tempo-tick.active .cgo-tempo-tick-dot{transform:scale(1.5);}
+.cgo-tempo-display{display:flex;align-items:center;justify-content:space-between;background:rgba(10,0,21,.6);border-radius:10px;padding:10px 14px;}
+.cgo-tempo-bpm{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}
+.cgo-tempo-info{text-align:right;}
+.cgo-tempo-info-name{font-size:12px;font-weight:800;color:#f0abfc;}
+.cgo-tempo-info-desc{font-size:10px;color:#9d8ec4;margin-top:2px;}
 
 /* ─── 스핀 버튼 ─── */
 .cgo-spin-wrap{padding:14px 14px 4px;display:flex;gap:8px;}
@@ -174,6 +250,7 @@
         this.slotTargets[k] = 0;
       });
 
+      this.tempoIdx = TEMPO_DEFAULT_IDX;
       this.selectedFreq = 432;
       this.presets = this._loadPresets();
       this.particles = [];
@@ -219,11 +296,11 @@
         <div class="cgo-mhdr-logo">
           <div class="cgo-mhdr-logo-ico">🎵</div>
           <div>
-            <div class="cgo-mhdr-title">CGO 주파수 뮤직</div>
-            <div class="cgo-mhdr-sub">위성 × 생체 × 역학 × 주파수</div>
+            <div class="cgo-mhdr-title" data-k="24042">${t(24042)}</div>
+            <div class="cgo-mhdr-sub" data-k="24043">${t(24043)}</div>
           </div>
         </div>
-        <div class="cgo-mhdr-badge">세계 최초</div>
+        <div class="cgo-mhdr-badge" data-k="24044">${t(24044)}</div>
       `;
       this.root.appendChild(hdr);
       hdr.querySelector('#cgo-mhdr-back').addEventListener('click', () => {
@@ -234,10 +311,10 @@
       const tabs = document.createElement('nav');
       tabs.className = 'cgo-mtabs';
       tabs.innerHTML = `
-        <div class="cgo-mtab active" data-tab="make"><span class="cgo-mtab-ico">🎰</span>추첨통</div>
-        <div class="cgo-mtab" data-tab="chart"><span class="cgo-mtab-ico">📊</span>차트</div>
-        <div class="cgo-mtab" data-tab="freq"><span class="cgo-mtab-ico">🌊</span>주파수</div>
-        <div class="cgo-mtab" data-tab="preset"><span class="cgo-mtab-ico">⭐</span>프리셋</div>
+        <div class="cgo-mtab active" data-tab="make"><span class="cgo-mtab-ico">🎰</span><span data-k="24045">${t(24045)}</span></div>
+        <div class="cgo-mtab" data-tab="chart"><span class="cgo-mtab-ico">📊</span><span data-k="24046">${t(24046)}</span></div>
+        <div class="cgo-mtab" data-tab="freq"><span class="cgo-mtab-ico">🌊</span><span data-k="24047">${t(24047)}</span></div>
+        <div class="cgo-mtab" data-tab="preset"><span class="cgo-mtab-ico">⭐</span><span data-k="24048">${t(24048)}</span></div>
       `;
       this.root.appendChild(tabs);
       tabs.querySelectorAll('.cgo-mtab').forEach(t => {
@@ -250,14 +327,14 @@
       hero.className = 'cgo-mhero';
       hero.innerHTML = `
         <canvas class="cgo-mhero-canvas" id="cgo-bg-canvas"></canvas>
-        <div class="cgo-mhero-tag">🛰️ CGO-FULI · 세계 최초</div>
-        <h2 class="cgo-mhero-h1"><span>위성×생체×역학×주파수</span></h2>
-        <p class="cgo-mhero-desc">당신의 사주·생체 데이터와 위성 주파수를 결합해<br>세상에 없던 나만의 치료 음악을 만듭니다</p>
+        <div class="cgo-mhero-tag">🛰️ CGO-FULI · <span data-k="24044">${t(24044)}</span></div>
+        <h2 class="cgo-mhero-h1"><span data-k="24043">${t(24043)}</span></h2>
+        <p class="cgo-mhero-desc" data-k="24044">${t(24044)}</p>
         <div class="cgo-mhero-chips">
           <span class="cgo-mhero-chip" style="color:#f59e0b;border-color:rgba(245,158,11,.4);">432Hz</span>
           <span class="cgo-mhero-chip" style="color:#10b981;border-color:rgba(16,185,129,.4);">528Hz</span>
-          <span class="cgo-mhero-chip" style="color:#3b82f6;border-color:rgba(59,130,246,.4);">슈만공명</span>
-          <span class="cgo-mhero-chip" style="color:#a855f7;border-color:rgba(168,85,247,.4);">하루 1회·10원</span>
+          <span class="cgo-mhero-chip" style="color:#3b82f6;border-color:rgba(59,130,246,.4);" data-k="24059">${t(24059)}</span>
+          <span class="cgo-mhero-chip" style="color:#a855f7;border-color:rgba(168,85,247,.4);" data-k="24065">${t(24065)}</span>
         </div>
       `;
       this.root.appendChild(hero);
@@ -306,10 +383,17 @@
     _buildMakePanel() {
       const p = this.panels.make;
 
+      // 섹션: 박자(템포) 레인보우 바 — 추첨통 앞에 배치
+      const tempoSec = document.createElement('div');
+      tempoSec.className = 'cgo-msec';
+      tempoSec.innerHTML = `<div class="cgo-msec-title">🎼 <span data-k="24050">${t(24050)}</span></div>`;
+      tempoSec.appendChild(this._buildTempoBar());
+      p.appendChild(tempoSec);
+
       // 섹션: 슬롯
       const slotSec = document.createElement('div');
       slotSec.className = 'cgo-msec';
-      slotSec.innerHTML = '<div class="cgo-msec-title">🎰 슬롯 추첨통</div>';
+      slotSec.innerHTML = `<div class="cgo-msec-title">🎰 <span data-k="24045">${t(24045)}</span></div>`;
       const grid = document.createElement('div');
       grid.className = 'cgo-slot-grid';
       slotSec.appendChild(grid);
@@ -320,7 +404,7 @@
         const row = document.createElement('div');
         row.className = 'cgo-slot-row';
         row.innerHTML = `
-          <div class="cgo-slot-row-label"><b>${info.emoji} ${info.label}</b></div>
+          <div class="cgo-slot-row-label"><b>${info.emoji} <span data-k="${info.labelKey}">${t(info.labelKey)}</span></b></div>
           <div class="cgo-slot-canvas-wrap"><canvas id="cgo-sc-${k}"></canvas></div>
           <div class="cgo-slot-row-val" id="cgo-val-${k}">${this.selected[k]}</div>
         `;
@@ -338,8 +422,8 @@
       const spinWrap = document.createElement('div');
       spinWrap.className = 'cgo-spin-wrap';
       spinWrap.innerHTML = `
-        <button class="cgo-spin-btn" id="cgo-spin-btn">🎰 SPIN · 추첨</button>
-        <button class="cgo-play-btn" id="cgo-quick-play" title="미리 듣기">▶</button>
+        <button class="cgo-spin-btn" id="cgo-spin-btn" data-k="24054">🎲 ${t(24045)}</button>
+        <button class="cgo-play-btn" id="cgo-quick-play" title="▶">▶</button>
       `;
       p.appendChild(spinWrap);
       spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => this._spinAll());
@@ -354,7 +438,7 @@
       // 결과 카드
       const resSec = document.createElement('div');
       resSec.className = 'cgo-msec';
-      resSec.innerHTML = '<div class="cgo-msec-title">🎼 선택된 조합</div>';
+      resSec.innerHTML = `<div class="cgo-msec-title">🎼 <span data-k="24068">${t(24068)}</span></div>`;
       const resCard = document.createElement('div');
       resCard.className = 'cgo-result-card';
       resCard.id = 'cgo-result-card';
@@ -364,7 +448,7 @@
       // 주파수 빠른 선택 (make 탭 안)
       const fqSec = document.createElement('div');
       fqSec.className = 'cgo-msec';
-      fqSec.innerHTML = '<div class="cgo-msec-title">🌊 치료 주파수</div>';
+      fqSec.innerHTML = `<div class="cgo-msec-title">🌊 <span data-k="24061">${t(24061)}</span></div>`;
       const fqGrid = document.createElement('div');
       fqGrid.className = 'cgo-freq-grid';
       fqGrid.id = 'cgo-fq-make';
@@ -373,7 +457,9 @@
         btn.className = 'cgo-freq-btn' + (opt.hz === this.selectedFreq ? ' active' : '');
         btn.style.color = opt.color;
         btn.dataset.hz = opt.hz;
-        btn.innerHTML = `<b>${opt.label}</b>${opt.desc}`;
+        const lbl = opt.labelKey ? t(opt.labelKey) : opt.label;
+        const dsc = opt.descKey  ? t(opt.descKey)  : opt.desc;
+        btn.innerHTML = `<b>${lbl}</b>${dsc}`;
         btn.addEventListener('click', () => this._selectFreq(opt.hz));
         fqGrid.appendChild(btn);
       });
@@ -383,9 +469,104 @@
       // 생성 버튼
       const genWrap = document.createElement('div');
       genWrap.className = 'cgo-gen-wrap';
-      genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn">✨ AI 음악 생성하기 · 하루 1회 10원</button>`;
+      genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+    }
+
+    // ── 박자 레인보우 바 빌드 ───────────────────────────────────
+    _buildTempoBar() {
+      const wrap = document.createElement('div');
+      wrap.className = 'cgo-tempo-wrap';
+
+      // 라벨
+      const lbl = document.createElement('div');
+      lbl.className = 'cgo-tempo-label';
+      lbl.innerHTML = `<b>🥁 <span data-k="24050">${t(24050)}</span></b>`;
+      wrap.appendChild(lbl);
+
+      // 레인보우 슬라이더
+      const rainbowDiv = document.createElement('div');
+      rainbowDiv.className = 'cgo-tempo-rainbow';
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = '4';
+      slider.step = '1';
+      slider.value = String(this.tempoIdx);
+      rainbowDiv.appendChild(slider);
+      wrap.appendChild(rainbowDiv);
+
+      // 5개 틱 도트 + 이름 (슬라이더 아래)
+      const ticksDiv = document.createElement('div');
+      ticksDiv.className = 'cgo-tempo-ticks';
+      ticksDiv.id = 'cgo-tempo-ticks';
+      TEMPO_STEPS.forEach((step, i) => {
+        const tick = document.createElement('div');
+        tick.className = 'cgo-tempo-tick' + (i === this.tempoIdx ? ' active' : '');
+        tick.dataset.idx = String(i);
+        tick.innerHTML = `
+          <div class="cgo-tempo-tick-dot" style="background:${step.dot};"></div>
+          <div class="cgo-tempo-tick-name">${step.name}</div>
+        `;
+        tick.addEventListener('click', () => {
+          slider.value = String(i);
+          this._onTempoChange(i);
+        });
+        ticksDiv.appendChild(tick);
+      });
+      wrap.appendChild(ticksDiv);
+
+      // BPM 표시 카드
+      const dispDiv = document.createElement('div');
+      dispDiv.className = 'cgo-tempo-display';
+      dispDiv.id = 'cgo-tempo-display';
+      dispDiv.innerHTML = this._tempoDisplayHTML(this.tempoIdx);
+      wrap.appendChild(dispDiv);
+
+      // 슬라이더 이벤트
+      slider.addEventListener('input', () => {
+        const idx = parseInt(slider.value, 10);
+        this._onTempoChange(idx);
+      });
+
+      this._tempoSlider = slider;
+      this._tempoTicksEl = ticksDiv;
+      this._tempoDispEl = dispDiv;
+
+      return wrap;
+    }
+
+    _tempoDisplayHTML(idx) {
+      const step = TEMPO_STEPS[idx];
+      return `
+        <div>
+          <div class="cgo-tempo-bpm" style="color:${step.color};">${step.bpm} <span style="font-size:12px;font-weight:500;color:#9d8ec4;">BPM</span></div>
+        </div>
+        <div class="cgo-tempo-info">
+          <div class="cgo-tempo-info-name" style="color:${step.dot};">${step.name}</div>
+          <div class="cgo-tempo-info-desc">${step.desc}</div>
+        </div>
+      `;
+    }
+
+    _onTempoChange(idx) {
+      this.tempoIdx = idx;
+      // 슬라이더 동기화
+      if (this._tempoSlider) this._tempoSlider.value = String(idx);
+      // 틱 active 클래스
+      if (this._tempoTicksEl) {
+        this._tempoTicksEl.querySelectorAll('.cgo-tempo-tick').forEach((el, i) => {
+          el.classList.toggle('active', i === idx);
+        });
+      }
+      // BPM 표시 업데이트
+      if (this._tempoDispEl) {
+        this._tempoDispEl.innerHTML = this._tempoDisplayHTML(idx);
+      }
+      // 결과 카드 업데이트
+      this._updateResult();
     }
 
     // ── 주파수 패널 ─────────────────────────────────────────────
@@ -393,23 +574,23 @@
       const p = this.panels.freq;
       p.innerHTML = `
         <div class="cgo-msec">
-          <div class="cgo-msec-title">🌊 치료 주파수 안내</div>
+          <div class="cgo-msec-title">🌊 <span data-k="24061">${t(24061)}</span></div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#f59e0b;">432Hz — 자연 공명</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">자연의 진동수. 심신 안정·스트레스 해소·집중력 향상. 귀에 부드럽고 자연스럽게 느껴지는 주파수.</div>
+              <div style="font-size:14px;font-weight:800;color:#f59e0b;" data-k="24069">${t(24069)}</div>
+              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24056">${t(24056)}</div>
             </div>
             <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#10b981;">528Hz — DNA 회복</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">솔페지오 주파수. 세포 재생·면역력 강화·사랑과 치유의 주파수라 불림. 아침 명상에 적합.</div>
+              <div style="font-size:14px;font-weight:800;color:#10b981;" data-k="24070">${t(24070)}</div>
+              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24057">${t(24057)}</div>
             </div>
             <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#3b82f6;">7.83Hz — 슈만공명</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">지구 자기장의 기본 주파수. 뇌파(알파파) 동조·수면 유도·불안 감소. CGO 위성 데이터와 연동.</div>
+              <div style="font-size:14px;font-weight:800;color:#3b82f6;" data-k="24071">${t(24071)}</div>
+              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24058">${t(24058)}</div>
             </div>
             <div style="background:rgba(107,114,128,.1);border:1px solid rgba(107,114,128,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#9ca3af;">OFF — 순수 음악</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">치료 주파수 없이 선택한 조성·장르·악기만으로 순수하게 즐기는 음악 모드.</div>
+              <div style="font-size:14px;font-weight:800;color:#9ca3af;">OFF — <span data-k="24060">${t(24060)}</span></div>
+              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24060">${t(24060)}</div>
             </div>
           </div>
         </div>
@@ -419,7 +600,7 @@
     // ── 프리셋 패널 ─────────────────────────────────────────────
     _buildPresetPanel() {
       const p = this.panels.preset;
-      p.innerHTML = `<div class="cgo-msec"><div class="cgo-msec-title">⭐ 저장된 조합</div><div id="cgo-preset-list"></div></div>`;
+      p.innerHTML = `<div class="cgo-msec"><div class="cgo-msec-title">⭐ <span data-k="24063">${t(24063)}</span></div><div id="cgo-preset-list"></div></div>`;
     }
 
     // ── 차트 렌더 ───────────────────────────────────────────────
@@ -427,7 +608,7 @@
       const p = this.panels.chart;
       const sec = document.createElement('div');
       sec.className = 'cgo-msec';
-      sec.innerHTML = '<div class="cgo-msec-title">📊 주파수 음악 차트 TOP 5</div>';
+      sec.innerHTML = `<div class="cgo-msec-title">📊 <span data-k="24062">${t(24062)}</span></div>`;
       const list = document.createElement('div');
       list.className = 'cgo-chart-list';
       DEMO_CHART.forEach(item => {
@@ -549,7 +730,7 @@
       if (this.isSpinning) return;
       this.isSpinning = true;
       const spinBtn = this.root.querySelector('#cgo-spin-btn');
-      if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = '⏳ 추첨 중…'; }
+      if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = '⏳…'; }
       let done = 0;
       this.slotKeys.forEach((k, i) => {
         setTimeout(() => {
@@ -557,7 +738,7 @@
             done++;
             if (done === this.slotKeys.length) {
               this.isSpinning = false;
-              if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = '🎰 SPIN · 추첨'; }
+              if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = t(24054); }
               this._updateResult();
               this._setStatus('✨ 추첨 완료! 음악 생성 버튼을 눌러보세요.');
             }
@@ -602,9 +783,11 @@
       const card = this.root.querySelector('#cgo-result-card');
       if (!card) return;
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === this.selectedFreq) || FREQ_OPTIONS[3];
+      const tempo = TEMPO_STEPS[this.tempoIdx];
       card.innerHTML = `
-        <div style="font-size:12px;color:#9d8ec4;margin-bottom:8px;">현재 선택</div>
+        <div style="font-size:12px;color:#9d8ec4;margin-bottom:8px;" data-k="24068">${t(24068)}</div>
         <div class="cgo-result-tags">
+          <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${tempo.bpm}BPM</span>
           ${this.slotKeys.map(k => `<span class="cgo-result-tag">${SLOT_DATA[k].emoji} ${this.selected[k]}</span>`).join('')}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
@@ -742,18 +925,19 @@
 
     // ── AI 음악 생성 ────────────────────────────────────────────
     _onGenerate() {
-      const combo = { key:this.selected.key, time:this.selected.time, genre:this.selected.genre, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
-      this._setStatus('🤖 AI 음악 생성 요청 중…');
+      const tempo = TEMPO_STEPS[this.tempoIdx];
+      const combo = { key:this.selected.key, bpm:tempo.bpm, tempoName:tempo.name, genre:this.selected.genre, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
+      this._setStatus(t(24066));
       const genBtn = this.root && this.root.querySelector('#cgo-gen-btn');
-      if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ 생성 중…'; }
+      if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ ' + t(24066); }
       if (typeof this.onGenerate === 'function') {
         this.onGenerate(combo);
       } else {
         // 데모: 미리 듣기 + 상태 메시지
         this._startAudio();
         setTimeout(() => {
-          this._setStatus('✅ AI 음악 생성 완료! (데모 — Groq 연동 후 실제 MIDI 출력)');
-          if (genBtn) { genBtn.disabled = false; genBtn.textContent = '✨ AI 음악 생성하기 · 하루 1회 10원'; }
+          this._setStatus('✅ ' + t(24067));
+          if (genBtn) { genBtn.disabled = false; genBtn.textContent = t(24055) + ' · ' + t(24065); }
         }, 2000);
       }
     }
@@ -776,7 +960,7 @@
       if (!listEl) return;
       listEl.innerHTML = '';
       if (!this.presets.length) {
-        listEl.innerHTML = '<p style="font-size:12px;color:#7c6fa8;padding:0 14px;">저장된 조합이 없습니다.<br>추첨통에서 조합을 만들고 저장해보세요.</p>';
+        listEl.innerHTML = `<p style="font-size:12px;color:#7c6fa8;padding:0 14px;" data-k="24073">${t(24073)}</p>`;
         return;
       }
       const bar = document.createElement('div');
@@ -801,7 +985,8 @@
       });
       const saveBtn = document.createElement('button');
       saveBtn.className = 'cgo-preset-save';
-      saveBtn.textContent = '+ 현재 조합 저장';
+      saveBtn.setAttribute('data-k', '24064');
+      saveBtn.textContent = '+ ' + t(24064);
       saveBtn.addEventListener('click', () => this._savePreset());
       bar.appendChild(saveBtn);
       listEl.appendChild(bar);
