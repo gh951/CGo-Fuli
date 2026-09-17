@@ -691,8 +691,8 @@
       tabs.className = 'cgo-mtabs';
       tabs.innerHTML = `
         <div class="cgo-mtab active" data-tab="make"><span class="cgo-mtab-ico">🎰</span><span data-k="24045">${t(24045)}</span></div>
-        <div class="cgo-mtab" data-tab="chart"><span class="cgo-mtab-ico">📊</span><span data-k="24046">${t(24046)}</span></div>
         <div class="cgo-mtab" data-tab="freq"><span class="cgo-mtab-ico">🌊</span><span data-k="24047">${t(24047)}</span></div>
+        <div class="cgo-mtab" data-tab="chart"><span class="cgo-mtab-ico">📊</span><span data-k="24046">${t(24046)}</span></div>
         <div class="cgo-mtab" data-tab="preset"><span class="cgo-mtab-ico">⭐</span><span data-k="24048">${t(24048)}</span></div>
       `;
       this.root.appendChild(tabs);
@@ -761,9 +761,6 @@
     // ── 추첨통 패널 ─────────────────────────────────────────────
     _buildMakePanel() {
       const p = this.panels.make;
-
-      // ★ 섹션: 200-주파수 마스터 가이드 — 모든 것 앞에 배치
-      p.appendChild(this._buildFreqMasterSection());
 
       // 섹션: 박자(템포) 레인보우 바 — 추첨통 앞에 배치
       const tempoSec = document.createElement('div');
@@ -859,51 +856,11 @@
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
     }
 
-    // ── 200-주파수 마스터 가이드 섹션 ───────────────────────────
+    // ── 200-주파수 마스터 가이드 섹션 (군집 탭+카드만) ────────────
+    // freq 탭의 4개 카드 아래에 배치됨
     _buildFreqMasterSection() {
       const wrap = document.createElement('div');
       wrap.className = 'cgo-fmaster-wrap';
-
-      // 타이틀
-      const title = document.createElement('div');
-      title.className = 'cgo-fmaster-title';
-      title.innerHTML = '🌊 200가지 주파수 마스터 가이드 <span style="font-size:9px;font-weight:600;color:#7c6fa8;margin-left:auto;">세계 최초</span>';
-      wrap.appendChild(title);
-
-      // ── 대표 4개 (항상 보임) ──────────────────────────────────
-      const heroGrid = document.createElement('div');
-      heroGrid.className = 'cgo-fmaster-top';
-      heroGrid.id = 'cgo-fmaster-top';
-      const HERO_FREQS = [
-        { hz: 432,  ico: '💛', label: '432Hz', desc: '자연 공명', color: '#f59e0b' },
-        { hz: 528,  ico: '💚', label: '528Hz', desc: 'DNA 회복',  color: '#10b981' },
-        { hz: 7.83, ico: '🌍', label: '슈만공명', desc: '지구 뇌파', color: '#3b82f6' },
-        { hz: 0,    ico: '🎵', label: 'OFF',    desc: '순수 음악', color: '#6b7280' },
-      ];
-      HERO_FREQS.forEach(hf => {
-        const btn = document.createElement('button');
-        btn.className = 'cgo-fmaster-hero' + (this.selectedFreq === hf.hz ? ' active' : '');
-        btn.style.setProperty('--fh-c', hf.color);
-        btn.style.borderColor = this.selectedFreq === hf.hz ? hf.color : '';
-        btn.dataset.fhz = hf.hz;
-        btn.innerHTML = `<span class="cgo-fmaster-hero-ico">${hf.ico}</span><span class="cgo-fmaster-hero-hz" style="color:${hf.color}">${hf.label}</span><div class="cgo-fmaster-hero-desc">${hf.desc}</div>`;
-        btn.addEventListener('click', () => {
-          this._selectFreq(hf.hz);
-          heroGrid.querySelectorAll('.cgo-fmaster-hero').forEach(b => {
-            const isThis = Number(b.dataset.fhz) === hf.hz;
-            b.classList.toggle('active', isThis);
-            b.style.borderColor = isThis ? hf.color : '';
-          });
-        });
-        heroGrid.appendChild(btn);
-      });
-      wrap.appendChild(heroGrid);
-
-      // ── 구분선 ───────────────────────────────────────────────
-      const divider = document.createElement('div');
-      divider.className = 'cgo-fmaster-divider';
-      divider.innerHTML = '<div class="cgo-fmaster-divider-line"></div><div class="cgo-fmaster-divider-txt">✦ 200가지 세부 주파수 선택 ✦</div><div class="cgo-fmaster-divider-line"></div>';
-      wrap.appendChild(divider);
 
       // ── 군집 탭 ──────────────────────────────────────────────
       const tabBar = document.createElement('div');
@@ -984,7 +941,7 @@
         if (!isNaN(numHz)) {
           this._selectFreq(numHz);
           // 대표 4개 버튼 상태도 업데이트
-          const heroGrid = this._fmasterWrap && this._fmasterWrap.querySelector('#cgo-fmaster-top');
+          const heroGrid = document.getElementById('cgo-freq-hero4');
           if (heroGrid) {
             heroGrid.querySelectorAll('.cgo-fmaster-hero').forEach(b => {
               const match = Number(b.dataset.fhz) === numHz;
@@ -1277,29 +1234,51 @@
     // ── 주파수 패널 ─────────────────────────────────────────────
     _buildFreqPanel() {
       const p = this.panels.freq;
-      p.innerHTML = `
-        <div class="cgo-msec">
-          <div class="cgo-msec-title">🌊 <span data-k="24061">${t(24061)}</span></div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#f59e0b;" data-k="24069">${t(24069)}</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24056">${t(24056)}</div>
-            </div>
-            <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#10b981;" data-k="24070">${t(24070)}</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24057">${t(24057)}</div>
-            </div>
-            <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#3b82f6;" data-k="24071">${t(24071)}</div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24058">${t(24058)}</div>
-            </div>
-            <div style="background:rgba(107,114,128,.1);border:1px solid rgba(107,114,128,.3);border-radius:14px;padding:16px;">
-              <div style="font-size:14px;font-weight:800;color:#9ca3af;">OFF — <span data-k="24060">${t(24060)}</span></div>
-              <div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;" data-k="24060">${t(24060)}</div>
-            </div>
-          </div>
-        </div>
-      `;
+
+      // ── 대표 4개 카드 ─────────────────────────────────────────
+      const top = document.createElement('div');
+      top.className = 'cgo-msec';
+      top.innerHTML = `<div class="cgo-msec-title">🌊 <span data-k="24061">${t(24061)}</span></div>`;
+      const HERO4 = [
+        { hz:432,  color:'#f59e0b', titleKey:24069, descKey:24056, title:t(24069), desc:t(24056) },
+        { hz:528,  color:'#10b981', titleKey:24070, descKey:24057, title:t(24070), desc:t(24057) },
+        { hz:7.83, color:'#3b82f6', titleKey:24071, descKey:24058, title:t(24071), desc:t(24058) },
+        { hz:0,    color:'#9ca3af', title:'OFF — ' + t(24060), desc:t(24060) },
+      ];
+      const hero4Wrap = document.createElement('div');
+      hero4Wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+      hero4Wrap.id = 'cgo-freq-hero4';
+      HERO4.forEach(hf => {
+        const card = document.createElement('div');
+        card.style.cssText = `background:${hf.color}1a;border:2px solid ${hf.color}4d;border-radius:14px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s;`;
+        card.dataset.fhz = hf.hz;
+        if (this.selectedFreq === hf.hz) {
+          card.style.borderColor = hf.color;
+          card.style.background = hf.color + '33';
+        }
+        card.innerHTML = `<div style="font-size:14px;font-weight:800;color:${hf.color};">${hf.title}</div><div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">${hf.desc}</div>`;
+        card.addEventListener('click', () => {
+          this._selectFreq(hf.hz);
+          hero4Wrap.querySelectorAll('[data-fhz]').forEach(c => {
+            const isThis = Number(c.dataset.fhz) === hf.hz;
+            c.style.borderColor = isThis ? hf.color : hf.color + '4d';
+            c.style.background  = isThis ? hf.color + '33' : hf.color + '1a';
+          });
+        });
+        hero4Wrap.appendChild(card);
+      });
+      top.appendChild(hero4Wrap);
+      p.appendChild(top);
+
+      // ── 구분선 ───────────────────────────────────────────────
+      const div = document.createElement('div');
+      div.className = 'cgo-fmaster-divider';
+      div.style.cssText = 'margin:4px 14px 0;';
+      div.innerHTML = '<div class="cgo-fmaster-divider-line"></div><div class="cgo-fmaster-divider-txt">✦ 200가지 세부 주파수 선택 ✦</div><div class="cgo-fmaster-divider-line"></div>';
+      p.appendChild(div);
+
+      // ── 200가지 마스터 가이드 ─────────────────────────────────
+      p.appendChild(this._buildFreqMasterSection());
     }
 
     // ── 프리셋 패널 ─────────────────────────────────────────────
