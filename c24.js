@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-49';
+window.CGO_VER = 'cgo-51';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
@@ -1066,6 +1066,20 @@ function _c24ChimeDone(){
   }catch(e){}
 };
 
+// 문장을 단락으로 나누기 — "가. 나. 다." → 각 문장을 블록으로
+function _c24SentToPara(txt){
+  if(!txt) return '';
+  // 마침표+공백 또는 마침표+끝 기준으로 문장 분리
+  var sents = txt.split(/(?<=\.)\s+(?=[가-힣①-⑳➀-➉A-Z가-힣])/);
+  if(sents.length<=1){
+    // 분리 안 됐으면 '. ' 기준으로 재시도
+    sents = txt.replace(/\.\s+(?=[가-힣A-Z①-⑳])/g, '.\n').split('\n');
+  }
+  return sents.filter(function(s){return s.trim();})
+    .map(function(s){return '<p style="margin:0 0 8px 0;padding:0;">'+s.trim()+'</p>';})
+    .join('');
+}
+
 function _c24CompShowResult(ai){
   var loading=document.getElementById('c24-comp-loading');
   if(loading) loading.remove();
@@ -1073,17 +1087,21 @@ function _c24CompShowResult(ai){
   var sec=document.getElementById('c24-result-section');
   if(!sec) return;
 
+  // 자유 확대(pinch-zoom) 허용 — 부모 체인에 touch-action 강제
+  sec.style.touchAction='auto';
+  sec.style.webkitOverflowScrolling='touch';
+
   var gradeC={A:'#34d399',B:'#fbbf24',C:'#f87171',D:'#ef4444'}[ai.종합등급||'B']||'#fbbf24';
   var s=_c24CompState;
 
   var div=document.createElement('div');
-  div.style.cssText='margin-top:8px;';
+  div.style.cssText='margin-top:8px;touch-action:auto;';
   div.innerHTML=
     // 헤더
     '<div style="text-align:center;padding:16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:14px;margin-bottom:14px;">'
     +'<div style="font-size:11px;color:rgba(52,211,153,.6);margin-bottom:4px;">🔬 6부위 종합 건강 분석</div>'
     +'<div style="font-size:44px;font-weight:900;color:'+gradeC+';font-family:Orbitron,sans-serif;">'+(ai.종합점수||75)+'</div>'
-    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+( ai.종합등급||'B')+' 등급</div>'
+    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+(ai.종합등급||'B')+' 등급</div>'
     +'</div>'
     // 6부위 스냅샷
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">'
@@ -1094,29 +1112,29 @@ function _c24CompShowResult(ai){
         :'';
     }).join('')+'</div>'
     // 핵심 발견
-    +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:5px;">🔍 핵심 발견</div>'
-    +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+ai.핵심발견+'</div></div>':'')
+    +(ai.핵심발견?'<div style="padding:14px 14px 6px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:12px;">'
+    +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:8px;">🔍 핵심 발견</div>'
+    +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+_c24SentToPara(ai.핵심발견)+'</div></div>':'')
     // 각 진단 항목
     +['심장활력','소화기','순환계','신경계','눈_건강','피부_건강'].map(function(k){
       if(!ai[k]) return '';
       var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',눈_건강:'👁️',피부_건강:'🎨'};
-      return '<div style="padding:12px;background:rgba(255,255,255,.08);border-left:3px solid rgba(52,211,153,.4);border-radius:0 10px 10px 0;margin-bottom:8px;">'
-        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">'+(ic[k]||'•')+' '+k.replace(/_/g,' ')+'</div>'
-        +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+ai[k]+'</div></div>';
+      return '<div style="padding:14px 14px 6px;background:rgba(255,255,255,.08);border-left:3px solid rgba(52,211,153,.4);border-radius:0 10px 10px 0;margin-bottom:10px;">'
+        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:8px;">'+(ic[k]||'•')+' '+k.replace(/_/g,' ')+'</div>'
+        +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+_c24SentToPara(ai[k])+'</div></div>';
     }).join('')
     // 주의 신호
-    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:4px;">⚠️ 주의 신호</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.주의_신호+'</div></div>':'')
+    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:14px 14px 6px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:12px;">'
+    +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:8px;">⚠️ 주의 신호</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.주의_신호)+'</div></div>':'')
     // 당장 조언
-    +(ai.당장_조언?'<div style="padding:13px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:4px;">💡 오늘 당장 실천</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.당장_조언+'</div></div>':'')
+    +(ai.당장_조언?'<div style="padding:14px 14px 6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;margin-bottom:12px;">'
+    +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:8px;">💡 오늘 당장 실천</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.당장_조언)+'</div></div>':'')
     // 식이 처방
-    +(ai.식이_가이드?'<div style="padding:13px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">🥗 오행 식이 가이드</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.식이_가이드+'</div></div>':'')
+    +(ai.식이_가이드?'<div style="padding:14px 14px 6px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:12px;">'
+    +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:8px;">🥗 오행 식이 가이드</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.식이_가이드)+'</div></div>':'')
     +'<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:8px;">CGO-FULI 6부위 종합 건강 분석</div>';
 
   sec.insertBefore(div, sec.firstChild);
@@ -1256,7 +1274,8 @@ function _c24CompFinalAnalyze(){
 
   var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
     +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
-    +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
+    +'반드시 100% 순수한 한국어로만 작성하세요. 영어 단어 절대 사용 금지. '
+    +'한자·한문·중국어 절대 사용 금지(示唆·示峻·推進 등 모든 한자 포함). 오직 순수 한글만 사용하세요.';
 
   var userPrompt = '이미지 순서: 1=얼굴, 2=혀, 3=눈, 4=피부, 5=손등, 6=손바닥\n'
     +'(없는 이미지는 건너뜀)\n\n'
@@ -1280,7 +1299,7 @@ function _c24CompFinalAnalyze(){
   fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({kind:'med', tier:_tier,
       system:sysPrompt, prompt:userPrompt,
-      images:imgs, max_tokens:5000, temperature:0.6})})
+      images:imgs, temperature:0.6})})
   .then(function(r){return r.json();})
   .then(function(d){
     var t=d.text||'';
