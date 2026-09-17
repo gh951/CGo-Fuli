@@ -1316,10 +1316,7 @@ function _c24CompFinalAnalyze(){
   var old = document.getElementById('c24-comp-next');
   if(old) old.remove();
 
-  /* ── 결과를 담을 그릇 — 전부 함수 최상위에서 선언 ── */
-  var results = {face:null, tongue:null, eye:null, skin:null, hand_back:null, hand_palm:null};
   var finalAi = null;
-  var _failReasons = [];   /* ★ C-105: 개별 사진 실패 원인을 모아뒀다가, 완전 실패 시 화면에 보여준다 */
 
   /* ── 로딩 화면 ── */
   var sec = document.getElementById('c24-result-section');
@@ -1330,9 +1327,9 @@ function _c24CompFinalAnalyze(){
     loading.style.cssText = 'padding:20px;text-align:center;';
     loading.innerHTML =
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
-      +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 분석 준비 중<span id="c24-loading-dots">.</span></div>'
-      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·혀·눈·피부·손등·손바닥 순서대로 분석합니다</div>'
-      +'<div style="font-size:10px;color:#334155;margin-top:6px;">서버 요청 제한을 지키기 위해 시간이 걸립니다 · 약 1분 30초~2분</div>';
+      +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 6부위를 한 번에 분석 중<span id="c24-loading-dots">.</span></div>'
+      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·혀·눈·피부·손등·손바닥</div>'
+      +'<div style="font-size:10px;color:#334155;margin-top:6px;">약 20~40초 정도 걸립니다</div>';
     sec.insertBefore(loading, sec.firstChild);
 
     var _dotN = 0;
@@ -1351,46 +1348,9 @@ function _c24CompFinalAnalyze(){
     document.addEventListener('visibilitychange', _visHandler);
   }
 
-  function _setStage(msg){
-    try{
-      var stEl = document.getElementById('c24-loading-stage');
-      if(stEl && stEl.childNodes[0]) stEl.childNodes[0].nodeValue = '✨ '+msg;
-    }catch(_e){}
-  }
-
   function _cleanupLoading(){
     try{ if(_dotTimer) clearInterval(_dotTimer); }catch(_e){}
     try{ if(_visHandler) document.removeEventListener('visibilitychange', _visHandler); }catch(_e){}
-  }
-
-  function _wait(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
-
-  /* ── 사진 1장을 Vision AI에게 보낸다. 실패해도 절대 예외를 던지지 않고
-     빈 문자열을 돌려준다 — 한 장의 실패가 나머지를 막지 않게 한다.
-     ★ C-105: 실패 원인을 콘솔에만 남기지 않고 _failReasons에도 기록해서
-     화면에 "왜 실패했는지"를 보여줄 수 있게 한다. ── */
-  function _analyzeOne(partName, b64, prompt){
-    if(!b64) return Promise.resolve('');
-    var _tier = window._c24Tier || 'basic';
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:_tier,
-        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if(!d || !d.text || !d.text.trim()){
-          var msg = partName+': '+(d && d.error ? String(d.error) : '빈 응답(서버에서 텍스트를 못 받음)');
-          try{ console.warn('[c24] 개별분석 실패:', msg); }catch(_e){}
-          _failReasons.push(msg);
-          return '';
-        }
-        return d.text.replace(/```json|```/g,'').trim();
-      })
-      .catch(function(err){
-        var msg = partName+': '+((err && err.message) || String(err));
-        try{ console.warn('[c24] 개별분석 예외:', msg); }catch(_e){}
-        _failReasons.push(msg);
-        return '';
-      });
   }
 
   function _parseJson(t){
@@ -1399,139 +1359,117 @@ function _c24CompFinalAnalyze(){
     catch(e){ return {}; }
   }
 
-  /* ── 6장을 이름 기반으로 순서대로 분석. 요청 사이 15초 간격
-     (서버 문지기 basic 갈래 분당 3회 제한을 확실히 지키기 위함). ── */
-  var _jobs = [
-    ['face', '👤 (1/6) 얼굴 분석 중', s.images.face,
-      '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}'],
-    ['tongue', '👅 (2/6) 혀 분석 중', s.images.tongue,
-      '이 혀 사진을 관찰. 이 이미지가 정중앙 기준 정사각형으로 잘린다고 가정하고, 그 안에서 혀 끝(카메라에 가까운 지점)과 혀 뿌리 쪽(입 안쪽) 위치를 백분율(0~100, 왼쪽위가 0,0)로 추정. 혀가 안 보이면 좌표는 null. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}}'],
-    ['eye', '👁️ (3/6) 눈 분석 중', s.images.eye,
-      '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}'],
-    ['skin', '🎨 (4/6) 피부 분석 중', s.images.skin,
-      '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}'],
-    ['hand_back', '🤚 (5/6) 손등 분석 중', s.images.hand_back,
-      '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}'],
-    ['hand_palm', '✋ (6/6) 손바닥 분석 중', s.images.hand_palm,
-      '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}']
-  ];
+  /* ★ C-106: Gemini 교차검증으로 확인된 구조 개선 — 6장을 각각 15초 간격으로
+     7번(개별 6+통합 1) 나눠 보내던 방식은 rate limit은 피했지만, Claude 자체
+     응답이 느릴 때(17초+) 6번 누적되어 총 10분까지 걸리는 사고로 이어졌다.
+     Anthropic은 한 요청에 이미지 최대 100장까지 지원하고, 서버(claude.js
+     119번째 줄)도 이미 최대 6장을 받도록 되어 있었다 — 이 능력을 안 쓰고
+     있었을 뿐이다. 6장 + 관찰 지시 + 종합 소견 요청을 한 번의 요청에 다
+     담아서, API 호출을 7번에서 1번으로 줄인다. */
+  var breath = s.breathData;
 
-  var _chain = Promise.resolve();
-  _jobs.forEach(function(job){
-    var _key = job[0], _label = job[1], _b64 = job[2], _prompt = job[3];
-    _chain = _chain
-      .then(function(){ _setStage(_label); return _analyzeOne(_key, _b64, _prompt); })
-      .then(function(text){ results[_key] = _parseJson(text); })
-      .then(function(){ return _wait(15000); });
+  var sysPrompt = '당신은 웰니스 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
+    +'실측 데이터와 사진 관찰 특징만 근거로, 참고용 웰니스 정보를 현실적·구체적으로 안내하세요. JSON만 반환. 코드블록 금지. '
+    +'질병명·의학적 진단 표현은 절대 쓰지 마세요("~병", "~염", "~증후군" 등 금지). '
+    +'"~한 편입니다", "~로 보입니다", "참고해 보세요" 같은 참고용 표현만 쓰세요. '
+    +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
+
+  /* 이미지는 순서대로 1)얼굴 2)혀 3)눈 4)피부 5)손등 6)손바닥 — 이 순서를
+     프롬프트에서도 그대로 알려줘서 AI가 몇 번째 사진이 무엇인지 헷갈리지 않게 한다. */
+  var _imgOrder = [
+    ['face', s.images.face, '1번째: 얼굴'],
+    ['tongue', s.images.tongue, '2번째: 혀'],
+    ['eye', s.images.eye, '3번째: 눈'],
+    ['skin', s.images.skin, '4번째: 피부'],
+    ['hand_back', s.images.hand_back, '5번째: 손등'],
+    ['hand_palm', s.images.hand_palm, '6번째: 손바닥']
+  ];
+  var _images = [];
+  var _presentKeys = [];
+  _imgOrder.forEach(function(o){
+    if(o[1]){ _images.push(o[1]); _presentKeys.push(o[0]); }
   });
 
-  /* ── 6장이 다 끝나면 통합 소견 요청 ── */
-  _chain.then(function(){
-    _setStage('전체 결과 종합 중');
-    var breath = s.breathData;
+  var userPrompt = '아래 사진은 순서대로 '+_imgOrder.map(function(o){return o[2];}).filter(function(_,i){return _images[i]!==undefined;}).join(', ')+'입니다(실제로 첨부된 사진 순서와 동일).\n'
+    +'분석 대상: '+name+'님\n'
+    +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
+    +'478호흡: 완료사이클='+breath.cycles+'회\n\n'
+    +'각 사진을 관찰하고, 아래 JSON 하나로 반환하세요(코드블록 금지):\n'
+    +'{"관찰":{'
+    +'"얼굴":{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움"},'
+    +'"혀":{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}},'
+    +'"눈":{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐"},'
+    +'"피부":{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성"},'
+    +'"손등":{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함"},'
+    +'"손바닥":{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬"}'
+    +'},'
+    +'"종합등급":"A(컨디션 매우 좋음)/B(컨디션 양호)/C(컨디션 주의 필요)/D(휴식과 관리 권장) 중 하나",'
+    +'"종합점수":점수(40~98),'
+    +'"핵심발견":"6부위에서 발견한 가장 중요한 웰니스 신호. 실제 관찰 특징 언급. 참고용 표현으로. 3문장",'
+    +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태(참고용). 3문장",'
+    +'"소화기":"손바닥색+혀설태+설색으로 본 소화 관련 컨디션(참고용). 3문장",'
+    +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환 컨디션(참고용). 3문장",'
+    +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성(참고용). 3문장",'
+    +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션(참고용). 3문장",'
+    +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 컨디션(참고용). 3문장",'
+    +'"당장_조언":"오늘 당장 실천해볼 만한 생활 습관 3가지. 구체적으로.",'
+    +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
+    +'"식이_가이드":"관찰된 컨디션을 참고했을 때 오늘 챙기면 좋을 음식과 피하면 좋을 음식(참고용). 3문장"}\n'
+    +'※ 사진이 없는 부위는 "관찰" 안에서 생략하고, 그 부위를 근거로 쓰는 항목(예: 사진이 없는데 "혀"를 근거로 든 문장)은 다른 근거로 대체하세요.';
 
-    var sysPrompt = '당신은 웰니스 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
-      +'실측 데이터와 사진 관찰 특징만 근거로, 참고용 웰니스 정보를 현실적·구체적으로 안내하세요. JSON만 반환. 코드블록 금지. '
-      +'질병명·의학적 진단 표현은 절대 쓰지 마세요("~병", "~염", "~증후군" 등 금지). '
-      +'"~한 편입니다", "~로 보입니다", "참고해 보세요" 같은 참고용 표현만 쓰세요. '
-      +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
+  var _tier = window._c24Tier || 'basic';
 
-    var userPrompt = '분석 대상: '+name+'님\n'
-      +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
-      +'478호흡: 완료사이클='+breath.cycles+'회\n'
-      +'얼굴 관찰: '+JSON.stringify(results.face)+'\n'
-      +'혀 관찰: '+JSON.stringify(results.tongue)+'\n'
-      +'눈 관찰: '+JSON.stringify(results.eye)+'\n'
-      +'피부 관찰: '+JSON.stringify(results.skin)+'\n'
-      +'손등 관찰: '+JSON.stringify(results.hand_back)+'\n'
-      +'손바닥 관찰: '+JSON.stringify(results.hand_palm)+'\n\n'
-      +'아래 JSON으로 반환:\n'
-      +'{"종합등급":"A(컨디션 매우 좋음)/B(컨디션 양호)/C(컨디션 주의 필요)/D(휴식과 관리 권장) 중 하나",'
-      +'"종합점수":점수(40~98),'
-      +'"핵심발견":"6부위에서 발견한 가장 중요한 웰니스 신호. 실제 관찰 특징 언급. 참고용 표현으로. 3문장",'
-      +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태(참고용). 3문장",'
-      +'"소화기":"손바닥색+혀설태+설색으로 본 소화 관련 컨디션(참고용). 3문장",'
-      +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환 컨디션(참고용). 3문장",'
-      +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성(참고용). 3문장",'
-      +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션(참고용). 3문장",'
-      +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 컨디션(참고용). 3문장",'
-      +'"당장_조언":"오늘 당장 실천해볼 만한 생활 습관 3가지. 구체적으로.",'
-      +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-      +'"식이_가이드":"관찰된 컨디션을 참고했을 때 오늘 챙기면 좋을 음식과 피하면 좋을 음식(참고용). 3문장"}';
-
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
-        system:sysPrompt, prompt:userPrompt, max_tokens:2500, temperature:0.6})});
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    var text = (d && d.text) ? d.text : '';
-    if(!text){
-      var _raw = '';
-      try{ _raw = JSON.stringify(d).slice(0, 200); }catch(_e){ _raw = String(d); }
-      _failReasons.push('통합분석: '+(d && d.error ? String(d.error) : ('응답 형태 이상 — '+_raw)));
-    }
-    finalAi = _parseJson(text);
-
-    if(!finalAi || Object.keys(finalAi).length===0 || !finalAi.핵심발견){
-      /* 통합 소견 실패 — text는 왔는데 JSON 파싱/필드가 이상했던 경우도 기록 */
-      if(text && (!finalAi || !finalAi.핵심발견)){
-        _failReasons.push('통합분석: 응답은 왔으나 형식이 예상과 다름 — '+text.slice(0,150));
+  fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({kind:'med', tier:_tier,
+      system:sysPrompt, prompt:userPrompt, images:_images,
+      max_tokens:3000, temperature:0.6})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var text = (d && d.text) ? d.text : '';
+      var errReason = '';
+      if(!text){
+        var _raw = '';
+        try{ _raw = JSON.stringify(d).slice(0, 200); }catch(_e){ _raw = String(d); }
+        errReason = d && d.error ? String(d.error) : ('응답 형태 이상 — '+_raw);
       }
-      /* 개별 관찰이 3개 이상 살아있으면 그것만으로 최소 결과 구성 */
-      var parts = [];
-      var f=results.face, tg=results.tongue, ey=results.eye, sk=results.skin, hb=results.hand_back, hp=results.hand_palm;
-      if(f && f.안색) parts.push('얼굴: 안색 '+f.안색+(f.생기?(' · 생기 '+f.생기):''));
-      if(tg && tg.설색) parts.push('혀: 설색 '+tg.설색+(tg.설태?(' · 설태 '+tg.설태):''));
-      if(ey && ey.눈가톤) parts.push('눈: '+ey.눈가톤+(ey.흰자톤?(' · 흰자 '+ey.흰자톤):''));
-      if(sk && sk.피부톤) parts.push('피부: '+sk.피부톤+(sk.탄력?(' · 탄력 '+sk.탄력):''));
-      if(hb && hb.손톱톤) parts.push('손등: 손톱 '+hb.손톱톤);
-      if(hp && hp.손바닥톤) parts.push('손바닥: '+hp.손바닥톤);
+      var parsed = _parseJson(text);
 
-      if(parts.length >= 3){
-        var _foMsg = _failReasons.length ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+_failReasons.join(' / ')) : '';
-        finalAi = {
-          종합등급:'?', 종합점수:0,
-          핵심발견:'⚠️ 종합 소견은 만들지 못했지만, 6부위 개별 관찰 결과는 아래와 같습니다.<br><br>· '+parts.join('<br>· ')+_foMsg,
-          bpm:_c24.bpm, hrv:_c24.hrv, fci:_c24.fci
-        };
-        try{ if(window.cgoToast) window.cgoToast('종합 소견 생성 실패 — 개별 관찰 결과만 표시합니다'); }catch(_e){}
-      } else {
-        /* ★ C-105: 개별 사진들이 왜 실패했는지(_failReasons)가 있으면 그것을
-           보여준다 — "오류 상세" 없이 그냥 "분석 실패"만 뜨던 문제를 없앤다. */
-        var _errDetail = _failReasons.length ? _failReasons.join(' / ') : '';
+      if(!parsed || Object.keys(parsed).length===0 || !parsed.핵심발견){
+        if(text && !errReason){
+          errReason = '응답은 왔으나 형식이 예상과 다름 — '+text.slice(0,150);
+        }
         finalAi = {
           종합등급:'?', 종합점수:0,
           핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.'
-            +(_errDetail ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+_errDetail) : '<br><br>오류 상세: 서버로부터 이유를 받지 못했습니다(네트워크 상태를 확인해 주세요)')
+            +(errReason ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+errReason) : '<br><br>오류 상세: 서버로부터 이유를 받지 못했습니다(네트워크 상태를 확인해 주세요)')
         };
         try{ if(window.cgoToast) window.cgoToast('분석 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
+      } else {
+        finalAi = parsed;
+        /* 혀 좌표를 관찰 하위 객체에서 최상위로 끌어올린다(화면 렌더링이 최상위에서 읽음) */
+        try{
+          var tgObs = parsed.관찰 && parsed.관찰.혀;
+          if(tgObs && tgObs.혀끝좌표 && typeof tgObs.혀끝좌표.x==='number' && typeof tgObs.혀끝좌표.y==='number'){
+            finalAi.혀끝좌표 = tgObs.혀끝좌표;
+          }
+          if(tgObs && tgObs.혀뿌리좌표 && typeof tgObs.혀뿌리좌표.x==='number' && typeof tgObs.혀뿌리좌표.y==='number'){
+            finalAi.혀뿌리좌표 = tgObs.혀뿌리좌표;
+          }
+        }catch(_e){}
       }
-    }
 
-    /* 혀 좌표를 최종 결과에 붙인다(있으면) */
-    try{
-      var tg2 = results.tongue;
-      if(tg2 && tg2.혀끝좌표 && typeof tg2.혀끝좌표.x==='number' && typeof tg2.혀끝좌표.y==='number'){
-        finalAi.혀끝좌표 = tg2.혀끝좌표;
-      }
-      if(tg2 && tg2.혀뿌리좌표 && typeof tg2.혀뿌리좌표.x==='number' && typeof tg2.혀뿌리좌표.y==='number'){
-        finalAi.혀뿌리좌표 = tg2.혀뿌리좌표;
-      }
-    }catch(_e){}
-
-    _cleanupLoading();
-    _c24CompShowResult(finalAi);
-  })
-  .catch(function(err){
-    var msg = '';
-    try{ msg = (err && (err.message || String(err))) || '알 수 없음'; }catch(_e){}
-    _cleanupLoading();
-    _c24CompShowResult({
-      종합등급:'?', 종합점수:0,
-      핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+msg
+      _cleanupLoading();
+      _c24CompShowResult(finalAi);
+    })
+    .catch(function(err){
+      var msg = '';
+      try{ msg = (err && (err.message || String(err))) || '알 수 없음'; }catch(_e){}
+      _cleanupLoading();
+      _c24CompShowResult({
+        종합등급:'?', 종합점수:0,
+        핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+msg
+      });
     });
-  });
 }
 
 function _c24UpdateBanner(){
