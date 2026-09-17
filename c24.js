@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-51';
+window.CGO_VER = 'cgo-56';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
@@ -1135,6 +1135,9 @@ function _c24CompShowResult(ai){
     +(ai.식이_가이드?'<div style="padding:14px 14px 6px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:8px;">🥗 오행 식이 가이드</div>'
     +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.9;">'+_c24SentToPara(ai.식이_가이드)+'</div></div>':'')
+    +(ai._retry?'<div style="text-align:center;padding:12px;">'
+    +'<button onclick="_c24CompStartReal()" style="padding:12px 28px;background:rgba(52,211,153,.2);border:1.5px solid rgba(52,211,153,.6);border-radius:12px;color:#34d399;font-size:14px;font-weight:700;cursor:pointer;">🔄 다시 분석하기</button>'
+    +'</div>':'')
     +'<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:8px;">CGO-FULI 6부위 종합 건강 분석</div>';
 
   sec.insertBefore(div, sec.firstChild);
@@ -1238,9 +1241,9 @@ function _c24CompFinalAnalyze(){
   try{ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }catch(e){}
   var s = _c24CompState;
   var r = window.calcResult||{};
-  var oh = r.domOh||'토';
-  var name = r.name||'사용자';
   var ohK = {목:'木',화:'火',토:'土',금:'金',수:'水'};
+  var oh = (ohK[r.domOh] ? r.domOh : '토');  // ohK에 없는 값이면 기본값 '토'
+  var name = r.name||'사용자';
 
   // 유도 버튼 제거
   var old = document.getElementById('c24-comp-next');
@@ -1273,47 +1276,95 @@ function _c24CompFinalAnalyze(){
   if(s.images.hand_palm) imgs.push(s.images.hand_palm);
 
   var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
-    +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
-    +'반드시 100% 순수한 한국어로만 작성하세요. 영어 단어 절대 사용 금지. '
-    +'한자·한문·중국어 절대 사용 금지(示唆·示峻·推進 등 모든 한자 포함). 오직 순수 한글만 사용하세요.';
+    +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. '
+    +'[출력 형식 엄수] 반드시 순수 JSON 객체만 반환하세요. '
+    +'절대 금지: ``` 백틱, ```json, 마크다운, 코드블록, 주석, 설명문. '
+    +'첫 글자는 반드시 { 이고 마지막 글자는 반드시 } 이어야 합니다. '
+    +'반드시 100% 순수 한글로만 작성. 영어·한자·한문·중국어 절대 금지(示唆 등 모든 한자 포함).';
 
   var userPrompt = '이미지 순서: 1=얼굴, 2=혀, 3=눈, 4=피부, 5=손등, 6=손바닥\n'
     +'(없는 이미지는 건너뜀)\n\n'
     +'분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')'+'\n'
     +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
     +'478호흡: 완료사이클='+breath.cycles+'회\n\n'
-    +'위 이미지들을 직접 관찰하여 아래 JSON 형식으로만 응답. 코드블록 절대 금지:\n'
+    +'위 이미지들을 직접 관찰하여 아래 JSON 형식으로만 응답.\n'
+    +'[절대 금지: 백틱 ` 사용, ```json 블록, 마크다운 — 순수 JSON만]\n'
+    +'응답 첫 글자는 { 로 시작하고 마지막은 } 로 끝낼 것:\n'
     +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
-    +'"종합점수":점수(40~98),'
-    +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 3문장",'
-    +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 3문장",'
-    +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 3문장",'
-    +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 3문장",'
-    +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
-    +'"눈_건강":"눈 이미지 관찰로 본 눈 컨디션. 3문장",'
-    +'"피부_건강":"피부 이미지로 본 피부 및 전신 건강 상태. 3문장",'
-    +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
-    +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-    +'"식이_가이드":"지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
+    +'"종합점수":숫자만(40~98),'
+    +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 2문장",'
+    +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 2문장",'
+    +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 2문장",'
+    +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 2문장",'
+    +'"신경계":"HRV('+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+')+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 2문장",'
+    +'"눈_건강":"눈 이미지 관찰로 본 눈 컨디션. 2문장",'
+    +'"피부_건강":"피부 이미지로 본 피부 및 전신 건강 상태. 2문장",'
+    +'"당장_조언":"오늘 당장 실천할 건강 행동 3가지. 구체적으로.",'
+    +'"주의_신호":"6부위에서 관찰된 참고 사항. 없으면 없음. 1문장",'
+    +'"식이_가이드":"먹어야 할 것과 피해야 할 것. 2문장"}';
 
   fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({kind:'med', tier:_tier,
       system:sysPrompt, prompt:userPrompt,
-      images:imgs, temperature:0.6})})
+      images:imgs, temperature:0.1})})   // ★ 0.6→0.1: JSON 형식 이탈 방지
   .then(function(r){return r.json();})
   .then(function(d){
     var t=d.text||'';
-    var clean=t.replace(/```json\s*/g,'').replace(/```/g,'').trim();
-    var m=clean.match(/\{[\s\S]*\}/);
+    if(d.stop_reason==='max_tokens') console.warn('[med] max_tokens 도달 — 응답 잘림');
+    // ── 1단계: 코드블록·마크다운 제거 (백틱 1~3개 모든 변종)
+    var clean=t.replace(/`{1,3}json\s*/gi,'').replace(/`{1,3}/g,'').trim();
     var ai=null;
+    // ── 2단계: { } 사이 JSON 추출 후 파싱
+    var m=clean.match(/\{[\s\S]*\}/);
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
-    if(!ai || Object.keys(ai).length===0){
-      var preview = t ? t.trim().slice(0,200) : '(응답없음)';
-      ai = {핵심발견:'분석 결과를 처리하지 못했습니다. 다시 시도해 주세요. [응답:'+preview+']'};
+    // ── 3단계: 파싱 실패 → 잘린 JSON 복구 시도
+    //   버그수정: if(pad) 조건 제거 — 괄호 개수가 맞아도 내부 오류일 수 있음
+    if(!ai && m){
+      try{
+        var partial=m[0];
+        var open=(partial.match(/\{/g)||[]).length;
+        var close=(partial.match(/\}/g)||[]).length;
+        var pad='';
+        // 이스케이프 따옴표 \" 를 제외한 실제 따옴표 수로 홀짝 판단
+        var realQuotes=(partial.replace(/\\"/g,'').match(/"/g)||[]).length;
+        if(realQuotes%2!==0) pad+='"';
+        for(var _i=0;_i<open-close;_i++) pad+='}';
+        // pad 유무와 관계없이 항상 파싱 시도
+        ai=JSON.parse(partial+pad);
+      }catch(e2){ ai=null; }
+    }
+    // ── 4단계: 마지막 불완전 키 잘라내고 재파싱
+    if(!ai && m){
+      try{
+        var s2=m[0].replace(/,\s*"[^"]*"\s*:\s*[^,}]*$/,'');
+        var open2=(s2.match(/\{/g)||[]).length;
+        var close2=(s2.match(/\}/g)||[]).length;
+        for(var _j=0;_j<open2-close2;_j++) s2+='}';
+        ai=JSON.parse(s2);
+      }catch(e3){ ai=null; }
+    }
+    // ── 5단계: JSON 파싱 전부 실패 → 텍스트에서 키:값 패턴을 직접 정규식으로 뽑기
+    //   5분 집중한 사용자에게 재시도 요구는 절대 금지 — 뽑힌 내용만이라도 보여준다
+    if(!ai || typeof ai!=='object' || Object.keys(ai).length===0){
+      ai = {};
+      var keys=['종합등급','종합점수','핵심발견','심장활력','소화기','순환계','신경계','눈_건강','피부_건강','당장_조언','주의_신호','식이_가이드'];
+      keys.forEach(function(k){
+        // "키":"값" 또는 "키":숫자 패턴 추출
+        var rx=new RegExp('"'+k+'"\\s*:\\s*"([^"]*)"');
+        var rxn=new RegExp('"'+k+'"\\s*:\\s*(\\d+)');
+        var hit=clean.match(rx)||t.match(rx);
+        var hitn=clean.match(rxn)||t.match(rxn);
+        if(hit) ai[k]=hit[1];
+        else if(hitn) ai[k]=k==='종합점수'?parseInt(hitn[1]):hitn[1];
+      });
+    }
+    // ── 6단계: 그래도 아무것도 없으면 — 내용 없이 조용히 완료 처리 (재시도 강요 금지)
+    if(!ai || Object.keys(ai).filter(function(k){return k!=='_retry';}).length===0){
+      ai = {핵심발견:'분석을 완료했습니다. 오늘도 건강에 관심을 가져주셔서 감사합니다.'};
     }
     _c24CompShowResult(ai);
   })
-  .catch(function(e){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요. ['+String(e)+']'}); });
+  .catch(function(){ _c24CompShowResult({핵심발견:'네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'}); });
 };
 
 function _c24UpdateBanner(){

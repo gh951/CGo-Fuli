@@ -163,10 +163,20 @@ export default async function handler(req, res) {
       return groq(b, res);                // 실패하면 Groq 으로 — 화면이 비지 않게
     }
 
-    const text = (j.content || [])
+    let text = (j.content || [])
       .filter(c => c.type === 'text')
       .map(c => c.text)
       .join('\n');
+
+    // ★ kind==='med'(건강분석) 는 JSON만 반환해야 한다.
+    //   AI가 코드블록으로 감싸는 경우가 있어 서버에서 완전히 제거한 뒤 전송.
+    //   클라이언트가 받는 text 는 항상 { 로 시작하는 순수 JSON 문자열이 된다.
+    if (kind === 'med') {
+      text = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+      // { 로 시작하지 않으면 첫 { 위치부터 자른다
+      const brace = text.indexOf('{');
+      if (brace > 0) text = text.slice(brace);
+    }
 
     // stop_reason: 'end_turn'(정상 종료) / 'max_tokens'(토큰 부족으로 잘림) 구분 — 실패 진단용
     return res.status(200).json({ text, model: usedModel, tier, feat, kind: kind || null, stop_reason: j.stop_reason || null });
