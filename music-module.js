@@ -1037,22 +1037,40 @@
 
     // ── init ────────────────────────────────────────────────────
     init() {
+      // ① CSS + DOM 뼈대만 즉시 (동기, 빠름)
       injectCSS();
       this._buildDOM();
-      this._startBgCanvas();
-      this._renderPresets();
-      this._renderChart();
-      this._updateResult();
-      // 🎵 입구 팝업 매뉴얼 — 첫 진입 즉시 표시
-      this._buildIntroPopup();
-      // 🎵 뮤직 탭 재진입 시마다 팝업 재표시 (MutationObserver)
-      this._watchMusicPage();
-      // 🎵 피아노·플루트·바이올린 사전 로드 (첫 재생 딜레이 최소화)
-      setTimeout(() => {
+
+      // ② 보이는 것만 살린다 — 나머지는 idle 후 순차 실행
+      // requestIdleCallback 없는 환경 대비 fallback
+      const idle = window.requestIdleCallback
+        ? (fn, ms) => requestIdleCallback(fn, { timeout: ms })
+        : (fn, ms) => setTimeout(fn, ms);
+
+      // 배경 캔버스 — 시각적으로 보여야 하니 빠르게
+      idle(() => this._startBgCanvas(), 200);
+
+      // 프리셋·차트·결과 — 탭 안 내용, 약간 뒤에
+      idle(() => {
+        this._renderPresets();
+        this._renderChart();
+        this._updateResult();
+      }, 400);
+
+      // 팝업 — 페이지 준비 후
+      idle(() => this._buildIntroPopup(), 600);
+
+      // 재진입 감지 옵저버
+      idle(() => this._watchMusicPage(), 800);
+
+      // soundfont 사전 로드 — 완전히 유휴 상태일 때만 (특허: 보이는 것만)
+      idle(() => {
         loadSoundfont(0).catch(()=>{});   // Grand Piano
+      }, 3000);
+      idle(() => {
         loadSoundfont(73).catch(()=>{});  // Flute
         loadSoundfont(40).catch(()=>{});  // Violin
-      }, 2000);
+      }, 5000);
     }
 
     // ── 뮤직 탭 재진입 감지 → 팝업 재표시 ─────────────────────
@@ -1095,6 +1113,9 @@
         const t = localStorage.getItem('cgoMusicIntroHide');
         if (t && Date.now() - Number(t) < 86400000) return;
       } catch(e) {}
+
+      // 이미 팝업이 열려있으면 중복 생성 방지
+      if (document.getElementById('cgo-music-intro-pop')) return;
 
       const pop = document.createElement('div');
       pop.id = 'cgo-music-intro-pop';
@@ -1267,11 +1288,11 @@
       };
 
       // ✕ · 시작 버튼: 그냥 닫기 (다음에 또 표시)
-      document.getElementById('cgo-mip-close').addEventListener('click', fadeOut);
-      document.getElementById('cgo-mip-start').addEventListener('click', fadeOut);
+      pop.querySelector('#cgo-mip-close').addEventListener('click', fadeOut);
+      pop.querySelector('#cgo-mip-start').addEventListener('click', fadeOut);
 
       // 오늘 하루 닫기: 24시간 동안 스킵
-      document.getElementById('cgo-mip-today').addEventListener('click', () => {
+      pop.querySelector('#cgo-mip-today').addEventListener('click', () => {
         try { localStorage.setItem('cgoMusicIntroHide', String(Date.now())); } catch(e) {}
         fadeOut();
       });
@@ -1285,7 +1306,6 @@
             if (typeof window.cgoGoPage === 'function') window.cgoGoPage('home');
             else if (typeof global !== 'undefined' && typeof global.cgoGoPage === 'function') global.cgoGoPage('home');
             else {
-              // 직접 홈 링크 시도
               const homeBtn = document.querySelector('[data-page="home"],[href*="home"],#nav-home,.nav-home');
               if (homeBtn) homeBtn.click();
             }
