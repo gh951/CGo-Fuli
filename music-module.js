@@ -117,6 +117,246 @@
     instrument: { label:'세계 악기', labelKey:24053, emoji:'🪕', items:['가야금(한국)','해금(한국)','아코디언(프랑스)','만돌린(이탈리아)','우드(중동)','칼림바(아프리카)','팬플루트(안데스)','시타르(인도)','케나(페루)','딤베(서아프리카)','비파(중국)','사미센(일본)','두둑(아르메니아)','오카리나','하프','첼로'] }
   };
 
+  // ── 200-주파수 마스터 군집 데이터 ────────────────────────────────
+  const FREQ_CLUSTERS = [
+    {
+      id: 'c1', emoji: '🧠', label: '뇌파 동조',
+      desc: '집중·수면·스트레스 해소 / 0.1~40Hz 마인드 컨트롤',
+      items: [
+        { hz:'0.1Hz', ico:'🌙', desc:'극저주파 · 엔돌핀 분비 · 내장 안정' },
+        { hz:'0.5Hz', ico:'💤', desc:'델타파 · 세포 재생 · 면역력 강화' },
+        { hz:'0.8Hz', ico:'🔄', desc:'뇌하수체 자극 · 생체 리듬 초기화' },
+        { hz:'1.0Hz', ico:'🌊', desc:'깊은 무의식 · 호르몬 균형' },
+        { hz:'1.5Hz', ico:'🌿', desc:'성장 호르몬 HGH · 피로 회복' },
+        { hz:'2.0Hz', ico:'🕊️', desc:'신경계 안정 · 만성 통증 완화' },
+        { hz:'2.5Hz', ico:'😌', desc:'엔도르핀 · 코르티솔 감소' },
+        { hz:'3.0Hz', ico:'🛌', desc:'NREM 수면 유도 · 뇌 휴식' },
+        { hz:'3.4Hz', ico:'💭', desc:'REM 안정 · 꿈 심리 치유' },
+        { hz:'4.0Hz', ico:'✨', desc:'세타파 진입 · 감정 정화 · 기억 정돈' },
+        { hz:'4.5Hz', ico:'🔮', desc:'영적 통찰 · 자아 성찰' },
+        { hz:'5.0Hz', ico:'📡', desc:'직관력 향상 · 세타파 명상' },
+        { hz:'5.5Hz', ico:'🌸', desc:'내면의 평화 · 상상력 증폭' },
+        { hz:'6.0Hz', ico:'🧬', desc:'장기 기억 저장 · 시냅스 활성화' },
+        { hz:'6.3Hz', ico:'🎯', desc:'불안 해소 · 감정 균형 회복' },
+        { hz:'7.83Hz', ico:'🌍', desc:'슈만공명 · 지구 뇌파 동조 · 접지 효과' },
+        { hz:'8.0Hz', ico:'📚', desc:'학습 능력 극대화 · 정보 흡수' },
+        { hz:'8.3Hz', ico:'💡', desc:'시각화 향상 · 창의 아이디어' },
+        { hz:'9.0Hz', ico:'🌌', desc:'의식·무의식 경계 · 영감' },
+        { hz:'10.0Hz', ico:'⭐', desc:'알파파 황금률 · 기억력 · 스트레스 해소' },
+        { hz:'10.5Hz', ico:'🛡️', desc:'면역 시스템 자극 · 치유 에너지' },
+        { hz:'11.0Hz', ico:'🔆', desc:'이완 속 각성 · 명확한 의식' },
+        { hz:'12.0Hz', ico:'📖', desc:'차분한 집중 · 독서·학업 최적화' },
+        { hz:'13.0Hz', ico:'🏃', desc:'활기찬 일상 · 저강도 베타파' },
+        { hz:'14.0Hz', ico:'🧩', desc:'문제 해결 · 논리적 사고' },
+        { hz:'18.0Hz', ico:'💻', desc:'주간 집중 · 업무·코딩 몰입' },
+        { hz:'20.0Hz', ico:'⚡', desc:'에너지 활성화 · 졸음 방지' },
+        { hz:'25.0Hz', ico:'🏋️', desc:'운동 지구력 · 퍼포먼스 향상' },
+        { hz:'30.0Hz', ico:'🎯', desc:'고강도 집중 · 멀티태스킹' },
+        { hz:'35.0Hz', ico:'🔥', desc:'신경계 고속 활성화 · 대뇌 자극' },
+        { hz:'40.0Hz', ico:'🧠', desc:'감마파 · 초고도 집중 · 치매 예방' },
+      ]
+    },
+    {
+      id: 'c2', emoji: '🔬', label: '솔페지오',
+      desc: '고대 솔페지오 · DNA 회복 · 차크라 각성 / 174~963Hz',
+      items: [
+        { hz:'174Hz', ico:'🦶', desc:'천연 마취제 · 통증 완화 · 안전감' },
+        { hz:'285Hz', ico:'🔮', desc:'조직 재생 · 피부·뼈 회복 · 오라 보호' },
+        { hz:'396Hz', ico:'🗝️', desc:'해방 · 두려움·죄책감 제거' },
+        { hz:'417Hz', ico:'🌀', desc:'변화 · 트라우마 클렌징 · 부정성 타파' },
+        { hz:'432Hz', ico:'💛', desc:'우주의 심장 · 자연 공명 · 힐링 표준' },
+        { hz:'528Hz', ico:'💚', desc:'DNA 회복 · 기적 창조 · 무조건적 사랑' },
+        { hz:'639Hz', ico:'🤝', desc:'관계 회복 · 소통 증진 · 유대감 강화' },
+        { hz:'741Hz', ico:'👁️', desc:'직관 각성 · 독소 배출 · 문제 해결력' },
+        { hz:'852Hz', ico:'🌟', desc:'영적 질서 · 고차원 의식 연결' },
+        { hz:'963Hz', ico:'👑', desc:'송과선 활성화 · 우주적 의식 합일' },
+        { hz:'111Hz', ico:'🎭', desc:'엔도르핀 · 뇌세포 자극 · 카타르시스' },
+        { hz:'222Hz', ico:'☯️', desc:'균형과 조화 · 음양 조율' },
+        { hz:'333Hz', ico:'🔱', desc:'삼위일체 · 영혼·육체·정신 통합' },
+        { hz:'444Hz', ico:'😇', desc:'천상의 가이드 · 두려움 소멸' },
+        { hz:'555Hz', ico:'🚀', desc:'변화 가속화 · 새로운 시작 에너지' },
+        { hz:'666Hz', ico:'⚖️', desc:'물질·정신 조화 · 현실 균형점' },
+        { hz:'777Hz', ico:'🍀', desc:'행운 · 영적 성장 · 직관 극대화' },
+        { hz:'888Hz', ico:'💰', desc:'풍요 · 무한 에너지 · 금전적 풍요' },
+        { hz:'999Hz', ico:'🕊️', desc:'완성·해탈 · 영혼 정화 · 사이클 마무리' },
+      ]
+    },
+    {
+      id: 'c3', emoji: '🪐', label: '코스믹·행성',
+      desc: '우주 천체 주파수 · 행성 에너지 지구 음계 환산',
+      items: [
+        { hz:'126.22Hz', ico:'☀️', desc:'태양 · 생명력 · 자아실현 · 리더십' },
+        { hz:'136.10Hz', ico:'🕉️', desc:'옴(Om)/지구공전 · 요가·명상 기본' },
+        { hz:'141.27Hz', ico:'☿️', desc:'수성 · 지적 능력 · 언어·커뮤니케이션' },
+        { hz:'172.06Hz', ico:'🌀', desc:'플라톤의 해 · 정신 명료함 · 카르마 정화' },
+        { hz:'183.58Hz', ico:'♃', desc:'목성 · 행운·확장 · 낙관·성공 에너지' },
+        { hz:'194.18Hz', ico:'🌏', desc:'지구 자전 · 그라운딩 · 생체 시계 조율' },
+        { hz:'210.42Hz', ico:'🌙', desc:'달 · 감정 정화 · 여성성 · 무의식 탐구' },
+        { hz:'221.23Hz', ico:'♀️', desc:'금성 · 사랑·미적 감각 · 예술적 영감' },
+        { hz:'227.43Hz', ico:'♄', desc:'토성 · 인내·집중 · 책임감·구조적 사고' },
+        { hz:'241.56Hz', ico:'♂️', desc:'화성 · 열정·용기 · 신체 에너지·추진력' },
+        { hz:'272.20Hz', ico:'⚡', desc:'천왕성 · 혁신·돌파구 · 변화 수용' },
+        { hz:'281.20Hz', ico:'🌊', desc:'해왕성 · 영감·예술 감수성 · 꿈 현실화' },
+        { hz:'289.44Hz', ico:'🔥', desc:'명왕성 · 대변혁 · 새로운 자아 탄생' },
+        { hz:'147.85Hz', ico:'🌕', desc:'달 공전 궤도 · 감정 기복 완화 · 평정' },
+      ]
+    },
+    {
+      id: 'c4', emoji: '🫀', label: '인체 장기',
+      desc: '바이오소닉스 · 장기 고유 진동수 · 자연 치유력 유도',
+      items: [
+        { hz:'72.0Hz', ico:'🫄', desc:'대장 활성화 · 소화기 노폐물 배출' },
+        { hz:'80.0Hz', ico:'🫁', desc:'폐·호흡기 정화 · 깊은 호흡 유도' },
+        { hz:'90.0Hz', ico:'🍽️', desc:'위장·췌장 자극 · 대사 능력 촉진' },
+        { hz:'100.0Hz', ico:'🫀', desc:'심장 안정 · 혈액순환 · 정서적 안정' },
+        { hz:'110.0Hz', ico:'🟤', desc:'간 기능 회복 · 피로 해독 지원' },
+        { hz:'120.0Hz', ico:'💧', desc:'신장·방광 정화 · 체내 수분 밸런스' },
+        { hz:'130.0Hz', ico:'🦋', desc:'갑상선 호르몬 균형 · 신진대사 조절' },
+        { hz:'140.0Hz', ico:'🛡️', desc:'면역 세포 활성화 · 림프 순환 촉진' },
+        { hz:'150.0Hz', ico:'🦴', desc:'척추·골격 자극 · 자세 교정 · 근육 이완' },
+        { hz:'160.0Hz', ico:'👁️', desc:'시신경·안구 피로 회복 · 시력 보호' },
+        { hz:'200.0Hz', ico:'⚡', desc:'전신 세포막 진동 · 생체 에너지 재충전' },
+        { hz:'250.0Hz', ico:'✨', desc:'피부 탄력 회복 · 항노화 세션' },
+      ]
+    },
+    {
+      id: 'c5', emoji: '🧘‍♀️', label: '차크라 7',
+      desc: '인체 7 에너지 센터 · 생명력과 영적 각성 유도',
+      items: [
+        { hz:'194.18Hz', ico:'🔴', desc:'1차 뿌리차크라 · 생존·안전·그라운딩' },
+        { hz:'210.42Hz', ico:'🟠', desc:'2차 천골차크라 · 창의력·감정 표현' },
+        { hz:'126.22Hz', ico:'🟡', desc:'3차 태양신경총 · 자신감·의지력·에너지' },
+        { hz:'136.10Hz', ico:'💚', desc:'4차 심장차크라 · 사랑·용서·연민' },
+        { hz:'141.27Hz', ico:'🩵', desc:'5차 목차크라 · 소통·표현력·목소리' },
+        { hz:'221.23Hz', ico:'💜', desc:'6차 제3의 눈 · 직관·통찰·지혜' },
+        { hz:'172.06Hz', ico:'🔮', desc:'7차 정수리차크라 · 우주 합일·영적 깨달음' },
+      ]
+    },
+    {
+      id: 'c6', emoji: '🌿', label: '자연 테라피',
+      desc: '백색·컬러 소음 결합 자연 사운드 · 심신 안정',
+      items: [
+        { hz:'핑크 노이즈', ico:'🌧️', desc:'깊은 수면 유도 · 빗소리 같은 포근함' },
+        { hz:'브라운 노이즈', ico:'🌊', desc:'폭포수 저음 · ADHD 집중 · 불안 차단' },
+        { hz:'그린 노이즈', ico:'🌲', desc:'숲속 바람 · 심장 안정 · 자연 회복력' },
+        { hz:'블루 노이즈', ico:'💙', desc:'고음 정화 · 소음 보완 · 날카로운 산뜻함' },
+        { hz:'바이올렛 노이즈', ico:'💜', desc:'이명 완화 · 신경계 자극 치료' },
+        { hz:'해변 파도', ico:'🏖️', desc:'0.2Hz 파도 진동 · 세로토닌 분비' },
+        { hz:'시냇물 소리', ico:'🏞️', desc:'알파파 유도 · 스트레스 이완' },
+        { hz:'봄비 소리', ico:'☔', desc:'감성 안정 · 우울증 완화 · 멜랑콜리 해소' },
+        { hz:'모닥불 소리', ico:'🔥', desc:'심리적 포근함 · 외로움 해소 · 아늑한 휴식' },
+        { hz:'귀뚜라미 소리', ico:'🦗', desc:'여름밤 정취 · 깊은 수면 유도' },
+        { hz:'새소리 오케스트라', ico:'🐦', desc:'아침 활력 · 도파민 분비 자극' },
+        { hz:'천둥 저주파', ico:'⛈️', desc:'웅장한 저음 · 잡념 제거 · 딥슬립' },
+        { hz:'고래의 노래', ico:'🐳', desc:'해양 저주파 공명 · 심해 같은 평온함' },
+        { hz:'돌고래 초음파', ico:'🐬', desc:'뇌파 정화 · 긍정 에너지 충전' },
+        { hz:'대초원 바람', ico:'🌾', desc:'몽골풍 앰비언트 · 광활한 해방감' },
+        { hz:'티베트 사원 종', ico:'🔔', desc:'탁한 기운 정화 · 정신 번쩍 · 고주파 클렌징' },
+      ]
+    },
+    {
+      id: 'c7', emoji: '🎯', label: '목적별 100가지',
+      desc: '상황·감정·업무·신체·영성 맞춤 마이크로 주파수 아카이브',
+      subcats: [
+        {
+          label: '📚 학습·업무 몰입 (101~115)',
+          items: [
+            { hz:'14.1Hz', ico:'📝', desc:'시험 전 긴장 완화 · 순발력 극대화' },
+            { hz:'15.0Hz', ico:'🗣️', desc:'장시간 암기 · 단어 외우기 최적화' },
+            { hz:'16.0Hz', ico:'🎧', desc:'외국어 리스닝 · 발음 교정 집중' },
+            { hz:'17.3Hz', ico:'📐', desc:'수학·논리 문제 해결 능력 촉진' },
+            { hz:'19.0Hz', ico:'💬', desc:'브레인스토밍 · 아이디어 회의 활성화' },
+            { hz:'21.0Hz', ico:'✍️', desc:'글쓰기·창작·카피라이팅 몰입' },
+            { hz:'22.5Hz', ico:'🖥️', desc:'코딩·디버깅 집중 상태 유지' },
+            { hz:'24.0Hz', ico:'⏱️', desc:'마감 직전 초고속 업무 처리' },
+            { hz:'26.0Hz', ico:'🎤', desc:'프레젠테이션 전 자신감 충전' },
+            { hz:'28.0Hz', ico:'☕', desc:'반복 업무 졸음 방지 · 각성' },
+            { hz:'32.0Hz', ico:'📊', desc:'데이터 분석·통계 작업 몰입' },
+            { hz:'36.0Hz', ico:'🔀', desc:'멀티태스킹 조율 · 우선순위 정립' },
+            { hz:'38.0Hz', ico:'👑', desc:'리더십·결단력 강화 · 대뇌 자극' },
+            { hz:'12.5Hz', ico:'📚', desc:'스터디 알파파 · 독서실 백색소음 대체' },
+            { hz:'10.8Hz', ico:'📋', desc:'서류 검토·결재 처리 · 차분한 마인드' },
+          ]
+        },
+        {
+          label: '😴 수면·휴식 (116~130)',
+          items: [
+            { hz:'1.2Hz', ico:'🌑', desc:'불면증 극복 · 강제 딥슬립 유도' },
+            { hz:'2.2Hz', ico:'😰', desc:'가위눌림 방지 · 신경 안정' },
+            { hz:'3.2Hz', ico:'⏰', desc:'5분 만에 잠드는 수면 진입' },
+            { hz:'3.6Hz', ico:'🌈', desc:'악몽 방지 · 평안한 무의식 유지' },
+            { hz:'4.2Hz', ico:'🌅', desc:'상쾌한 기상 · 렘수면 마무리' },
+            { hz:'2.8Hz', ico:'🌙', desc:'야간 교대 근무자 생체 리듬 보호' },
+            { hz:'3.8Hz', ico:'✈️', desc:'시차 적응 · 멜라토닌 분비 촉진' },
+            { hz:'1.8Hz', ico:'🌌', desc:'암흑 명상 수면 · 백색소음 결합형' },
+            { hz:'2.5Hz', ico:'👶', desc:'갓난아이·반려동물 안정 슬립 주파수' },
+            { hz:'4.8Hz', ico:'⚡', desc:'파워냅 20분 · 최대 피로 회복' },
+            { hz:'3.5Hz', ico:'💚', desc:'숙면 중 자가 치유 극대화' },
+            { hz:'2.0Hz', ico:'😤', desc:'코골이 완화 · 호흡 안정 세션' },
+            { hz:'1.5Hz', ico:'🧠', desc:'과로 뇌의 완전한 다운타임 제공' },
+            { hz:'4.0Hz', ico:'⏰', desc:'기상 직전 뇌를 서서히 깨우는 알람' },
+            { hz:'3.1Hz', ico:'🗂️', desc:'수면 중 기억 통합 프로세스 지원' },
+          ]
+        },
+        {
+          label: '💙 감정 치유·멘탈 (131~150)',
+          items: [
+            { hz:'432+396Hz', ico:'😔', desc:'우울증 초기 완화 · 슬픔 극복' },
+            { hz:'528+417Hz', ico:'💔', desc:'이별 상처 치유 · 미련 끊어내기' },
+            { hz:'639+528Hz', ico:'💖', desc:'자존감 회복 · 스스로 사랑하기' },
+            { hz:'174+285Hz', ico:'😡', desc:'분노 조절 · 즉각 진정 세션' },
+            { hz:'7.83+432Hz', ico:'😰', desc:'공황발작 초기 안정 · 사회적 불안' },
+            { hz:'396+741Hz', ico:'🛡️', desc:'타인 비판으로부터 상처받은 마음 보호' },
+            { hz:'417+852Hz', ico:'⏰', desc:'과거 후회·죄책감에서 현재 집중' },
+            { hz:'528+963Hz', ico:'🔥', desc:'번아웃 극복 · 영혼의 재충전' },
+            { hz:'285+639Hz', ico:'🤗', desc:'외로움·고립감 달래는 따뜻한 위로' },
+            { hz:'174+432Hz', ico:'💪', desc:'만성 피로·무기력증 탈출 부스터' },
+            { hz:'396+528Hz', ico:'🌱', desc:'질투심 정화 · 마음의 여유 찾기' },
+            { hz:'417+741Hz', ico:'🎯', desc:'강박·완벽주의 스트레스 내려놓기' },
+            { hz:'639+852Hz', ico:'👥', desc:'대인기피 마음 치유 · 관계 상처 회복' },
+            { hz:'741+963Hz', ico:'🌊', desc:'영적 성장통 · 권태기·슬럼프 극복' },
+            { hz:'432+528Hz', ico:'☀️', desc:'매일 아침 긍정 에너지 모닝 세션' },
+            { hz:'3.0+432Hz', ico:'🌆', desc:'퇴근길 지친 심신 힐링 아로마 공명' },
+            { hz:'7.83+528Hz', ico:'🧘', desc:'주말 명상·요가 세션' },
+            { hz:'174+396Hz', ico:'🎒', desc:'마음의 짐 내려놓기 디톡스' },
+            { hz:'285+417Hz', ico:'🌸', desc:'갈등 직후 앙금 씻어내기' },
+            { hz:'639+963Hz', ico:'🌍', desc:'지구촌 평화 · 자비·사랑 명상' },
+          ]
+        },
+        {
+          label: '💼 비즈니스·영성 (151~200)',
+          items: [
+            { hz:'174+528Hz', ico:'🦴', desc:'관절·근육통 완화 마사지 공명' },
+            { hz:'285+528Hz', ico:'🏥', desc:'수술 후 회복 · 상처 치유 지원' },
+            { hz:'432+7.83Hz', ico:'💓', desc:'혈압 안정 · 맥박수 정상화' },
+            { hz:'100+528Hz', ico:'🍽️', desc:'소화 불량·체한 완화 복부 힐링' },
+            { hz:'110+432Hz', ico:'🤕', desc:'두통·편두통 완화 · 뇌혈류 안정' },
+            { hz:'40+528Hz', ico:'💼', desc:'중요 계약·협상 전 초고도 집중' },
+            { hz:'183.58+528Hz', ico:'🌟', desc:'사업 번창 · 매출 상승 · 행운 유도' },
+            { hz:'126.22+432Hz', ico:'👑', desc:'리더 카리스마 · 프로젝트 성공' },
+            { hz:'888+528Hz', ico:'💰', desc:'재정적 풍요 · 금전적 안정 마인드셋' },
+            { hz:'20+432Hz', ico:'🚀', desc:'출근길 활력 충전 · 비즈니스 마인드' },
+            { hz:'963+852Hz', ico:'👁️', desc:'제3의 눈 완전 개방 · 직관 극대화' },
+            { hz:'528+963Hz', ico:'🌌', desc:'우주적 사랑·자비 에너지 체험' },
+            { hz:'432+963Hz', ico:'🎵', desc:'천상계와 지상 자연의 완전한 조화' },
+            { hz:'7.83+963Hz', ico:'🌐', desc:'지구와 우주 의식 연결 · 코스믹 그라운딩' },
+            { hz:'136.10+963Hz', ico:'🧘', desc:'고난도 명상 삼매(Samadhi) 진입' },
+            { hz:'172.06+852Hz', ico:'♾️', desc:'카르마 정화 · 이번 생 카르마 해소' },
+            { hz:'210.42+639Hz', ico:'🌙', desc:'달 에너지 · 여성성 · 내면의 신성 안식' },
+            { hz:'221.23+528Hz', ico:'📚', desc:'아카식 레코드 접근 · 전생 지혜 탐구' },
+            { hz:'289.44+963Hz', ico:'🦋', desc:'영혼의 대전환 · 새로운 차원 도약' },
+            { hz:'111+963Hz', ico:'😇', desc:'뇌세포 이완 · 황홀한 명상 카타르시스' },
+            { hz:'222+432Hz', ico:'🔥', desc:'쌍둥이 불꽃(Twin Flame) 에너지 공명' },
+            { hz:'333+528Hz', ico:'천사', desc:'마스터 넘버 · 고차원 천사와 교신' },
+            { hz:'444+852Hz', ico:'🛡️', desc:'영적 보호막 · 어두운 에너지 차단' },
+            { hz:'777+963Hz', ico:'🍀', desc:'행운·영적 지혜 · 인생의 진리 깨달음' },
+            { hz:'999+963Hz', ico:'🕊️', desc:'모든 번뇌 소멸 · 완전한 해탈과 평화' },
+          ]
+        }
+      ]
+    }
+  ];
+
   const FREQ_OPTIONS = [
     { hz:432,  label:'432Hz',       descKey:24056, desc:'자연 공명·안정',  color:'#f59e0b' },
     { hz:528,  label:'528Hz',       descKey:24057, desc:'DNA 회복·사랑',    color:'#10b981' },
@@ -304,6 +544,45 @@
 .cgo-preset-bar::-webkit-scrollbar{display:none;}
 .cgo-preset-chip{flex-shrink:0;padding:6px 12px;border-radius:999px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c084fc;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
 .cgo-preset-save{flex-shrink:0;padding:6px 12px;border-radius:999px;background:transparent;border:1px solid rgba(168,85,247,.2);color:#7c6fa8;font-size:11px;cursor:pointer;font-family:inherit;}
+
+/* ─── 200Hz 마스터 가이드 ─── */
+.cgo-fmaster-wrap{padding:16px 14px 4px;}
+.cgo-fmaster-title{font-size:13px;font-weight:800;color:#c084fc;margin:0 0 10px;display:flex;align-items:center;gap:6px;}
+.cgo-fmaster-title::before{content:'';width:4px;height:16px;border-radius:2px;background:linear-gradient(180deg,#a855f7,#7c3aed);}
+/* 대표 4개 */
+.cgo-fmaster-top{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.cgo-fmaster-hero{border-radius:12px;padding:10px 6px;background:rgba(20,5,40,.8);border:2px solid rgba(100,60,180,.25);cursor:pointer;text-align:center;transition:all .18s;-webkit-tap-highlight-color:transparent;}
+.cgo-fmaster-hero:active{transform:scale(.95);}
+.cgo-fmaster-hero.active{border-color:var(--fh-c);background:rgba(30,8,60,.95);box-shadow:0 0 14px color-mix(in srgb,var(--fh-c) 35%,transparent);}
+.cgo-fmaster-hero-ico{font-size:18px;display:block;margin-bottom:4px;}
+.cgo-fmaster-hero-hz{font-size:11px;font-weight:900;color:#f0abfc;display:block;line-height:1.2;}
+.cgo-fmaster-hero-desc{font-size:8.5px;color:#7c6fa8;margin-top:3px;line-height:1.4;}
+/* 구분선 */
+.cgo-fmaster-divider{display:flex;align-items:center;gap:8px;margin:4px 0 10px;}
+.cgo-fmaster-divider-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.4),transparent);}
+.cgo-fmaster-divider-txt{font-size:9.5px;font-weight:700;color:#7c3aed;white-space:nowrap;}
+/* 군집 탭 */
+.cgo-fmaster-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px;padding-bottom:2px;}
+.cgo-fmaster-tabs::-webkit-scrollbar{display:none;}
+.cgo-fmaster-tab{flex-shrink:0;padding:5px 10px;border-radius:999px;background:rgba(20,5,40,.7);border:1.5px solid rgba(100,60,180,.2);color:#7c6fa8;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .18s;font-family:inherit;}
+.cgo-fmaster-tab.active{background:rgba(30,8,60,.95);border-color:#a855f7;color:#c084fc;box-shadow:0 0 8px rgba(168,85,247,.25);}
+/* 군집 패널 */
+.cgo-fmaster-panel{display:none;}
+.cgo-fmaster-panel.active{display:block;}
+.cgo-fmaster-panel-desc{font-size:10px;color:#7c6fa8;margin-bottom:8px;line-height:1.5;padding:0 2px;}
+/* 주파수 카드 그리드 */
+.cgo-fmaster-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(168,85,247,.3) transparent;padding-right:2px;}
+.cgo-fmaster-grid::-webkit-scrollbar{width:3px;}
+.cgo-fmaster-grid::-webkit-scrollbar-thumb{background:rgba(168,85,247,.35);border-radius:2px;}
+.cgo-fmaster-card{border-radius:9px;padding:8px 9px;background:rgba(20,5,40,.7);border:1.5px solid rgba(100,60,180,.18);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;display:flex;align-items:flex-start;gap:6px;}
+.cgo-fmaster-card:active{transform:scale(.96);}
+.cgo-fmaster-card.active{border-color:#a855f7;background:rgba(30,8,60,.9);box-shadow:0 0 8px rgba(168,85,247,.2);}
+.cgo-fmaster-card-ico{font-size:14px;flex-shrink:0;line-height:1;margin-top:1px;}
+.cgo-fmaster-card-body{min-width:0;}
+.cgo-fmaster-card-hz{font-size:10.5px;font-weight:900;color:#f0abfc;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cgo-fmaster-card-desc{font-size:8.5px;color:#7c6fa8;margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* 군집7 서브카테고리 */
+.cgo-fmaster-subcat{font-size:9.5px;font-weight:800;color:#9d8ec4;margin:8px 0 4px;padding:4px 8px;background:rgba(168,85,247,.08);border-radius:6px;border-left:3px solid #7c3aed;}
 `;
     document.head.appendChild(s);
   }
@@ -483,6 +762,9 @@
     _buildMakePanel() {
       const p = this.panels.make;
 
+      // ★ 섹션: 200-주파수 마스터 가이드 — 모든 것 앞에 배치
+      p.appendChild(this._buildFreqMasterSection());
+
       // 섹션: 박자(템포) 레인보우 바 — 추첨통 앞에 배치
       const tempoSec = document.createElement('div');
       tempoSec.className = 'cgo-msec';
@@ -575,6 +857,154 @@
       genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+    }
+
+    // ── 200-주파수 마스터 가이드 섹션 ───────────────────────────
+    _buildFreqMasterSection() {
+      const wrap = document.createElement('div');
+      wrap.className = 'cgo-fmaster-wrap';
+
+      // 타이틀
+      const title = document.createElement('div');
+      title.className = 'cgo-fmaster-title';
+      title.innerHTML = '🌊 200가지 주파수 마스터 가이드 <span style="font-size:9px;font-weight:600;color:#7c6fa8;margin-left:auto;">세계 최초</span>';
+      wrap.appendChild(title);
+
+      // ── 대표 4개 (항상 보임) ──────────────────────────────────
+      const heroGrid = document.createElement('div');
+      heroGrid.className = 'cgo-fmaster-top';
+      heroGrid.id = 'cgo-fmaster-top';
+      const HERO_FREQS = [
+        { hz: 432,  ico: '💛', label: '432Hz', desc: '자연 공명', color: '#f59e0b' },
+        { hz: 528,  ico: '💚', label: '528Hz', desc: 'DNA 회복',  color: '#10b981' },
+        { hz: 7.83, ico: '🌍', label: '슈만공명', desc: '지구 뇌파', color: '#3b82f6' },
+        { hz: 0,    ico: '🎵', label: 'OFF',    desc: '순수 음악', color: '#6b7280' },
+      ];
+      HERO_FREQS.forEach(hf => {
+        const btn = document.createElement('button');
+        btn.className = 'cgo-fmaster-hero' + (this.selectedFreq === hf.hz ? ' active' : '');
+        btn.style.setProperty('--fh-c', hf.color);
+        btn.style.borderColor = this.selectedFreq === hf.hz ? hf.color : '';
+        btn.dataset.fhz = hf.hz;
+        btn.innerHTML = `<span class="cgo-fmaster-hero-ico">${hf.ico}</span><span class="cgo-fmaster-hero-hz" style="color:${hf.color}">${hf.label}</span><div class="cgo-fmaster-hero-desc">${hf.desc}</div>`;
+        btn.addEventListener('click', () => {
+          this._selectFreq(hf.hz);
+          heroGrid.querySelectorAll('.cgo-fmaster-hero').forEach(b => {
+            const isThis = Number(b.dataset.fhz) === hf.hz;
+            b.classList.toggle('active', isThis);
+            b.style.borderColor = isThis ? hf.color : '';
+          });
+        });
+        heroGrid.appendChild(btn);
+      });
+      wrap.appendChild(heroGrid);
+
+      // ── 구분선 ───────────────────────────────────────────────
+      const divider = document.createElement('div');
+      divider.className = 'cgo-fmaster-divider';
+      divider.innerHTML = '<div class="cgo-fmaster-divider-line"></div><div class="cgo-fmaster-divider-txt">✦ 200가지 세부 주파수 선택 ✦</div><div class="cgo-fmaster-divider-line"></div>';
+      wrap.appendChild(divider);
+
+      // ── 군집 탭 ──────────────────────────────────────────────
+      const tabBar = document.createElement('div');
+      tabBar.className = 'cgo-fmaster-tabs';
+      const panelContainer = document.createElement('div');
+      let activeCluster = 'c1';
+
+      FREQ_CLUSTERS.forEach((cluster, ci) => {
+        // 탭 버튼
+        const tab = document.createElement('button');
+        tab.className = 'cgo-fmaster-tab' + (ci === 0 ? ' active' : '');
+        tab.dataset.cid = cluster.id;
+        tab.textContent = `${cluster.emoji} ${cluster.label}`;
+        tab.addEventListener('click', () => {
+          tabBar.querySelectorAll('.cgo-fmaster-tab').forEach(t => t.classList.remove('active'));
+          panelContainer.querySelectorAll('.cgo-fmaster-panel').forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          panelContainer.querySelector(`#cgo-fcp-${cluster.id}`).classList.add('active');
+          activeCluster = cluster.id;
+        });
+        tabBar.appendChild(tab);
+
+        // 패널
+        const panel = document.createElement('div');
+        panel.className = 'cgo-fmaster-panel' + (ci === 0 ? ' active' : '');
+        panel.id = `cgo-fcp-${cluster.id}`;
+
+        const pdesc = document.createElement('div');
+        pdesc.className = 'cgo-fmaster-panel-desc';
+        pdesc.textContent = cluster.desc;
+        panel.appendChild(pdesc);
+
+        // 군집 7: 서브카테고리 구조
+        if (cluster.subcats) {
+          cluster.subcats.forEach(sub => {
+            const subLabel = document.createElement('div');
+            subLabel.className = 'cgo-fmaster-subcat';
+            subLabel.textContent = sub.label;
+            panel.appendChild(subLabel);
+
+            const grid = document.createElement('div');
+            grid.className = 'cgo-fmaster-grid';
+            sub.items.forEach(item => {
+              grid.appendChild(this._makeFmasterCard(item));
+            });
+            panel.appendChild(grid);
+          });
+        } else {
+          const grid = document.createElement('div');
+          grid.className = 'cgo-fmaster-grid';
+          cluster.items.forEach(item => {
+            grid.appendChild(this._makeFmasterCard(item));
+          });
+          panel.appendChild(grid);
+        }
+
+        panelContainer.appendChild(panel);
+      });
+
+      wrap.appendChild(tabBar);
+      wrap.appendChild(panelContainer);
+
+      this._fmasterWrap = wrap;
+      return wrap;
+    }
+
+    // ── 주파수 마스터 카드 생성 헬퍼 ──────────────────────────────
+    _makeFmasterCard(item) {
+      const card = document.createElement('div');
+      card.className = 'cgo-fmaster-card';
+      // 현재 선택된 것과 숫자 비교 (hz 문자열이면 첫 숫자 파싱)
+      const numHz = parseFloat(item.hz);
+      const isActive = !isNaN(numHz) && numHz === this.selectedFreq;
+      if (isActive) card.classList.add('active');
+      card.innerHTML = `<div class="cgo-fmaster-card-ico">${item.ico}</div><div class="cgo-fmaster-card-body"><div class="cgo-fmaster-card-hz">${item.hz}</div><div class="cgo-fmaster-card-desc">${item.desc}</div></div>`;
+      card.addEventListener('click', () => {
+        // 숫자 Hz만 선택 가능 (노이즈 타입은 레이블로 구분)
+        if (!isNaN(numHz)) {
+          this._selectFreq(numHz);
+          // 대표 4개 버튼 상태도 업데이트
+          const heroGrid = this._fmasterWrap && this._fmasterWrap.querySelector('#cgo-fmaster-top');
+          if (heroGrid) {
+            heroGrid.querySelectorAll('.cgo-fmaster-hero').forEach(b => {
+              const match = Number(b.dataset.fhz) === numHz;
+              b.classList.toggle('active', match);
+              // 색상 초기화
+              const color = match ? b.querySelector('.cgo-fmaster-hero-hz').style.color : '';
+              b.style.borderColor = color;
+            });
+          }
+        } else {
+          // 자연 소리는 OFF(0)로 설정 + 레이블 표시
+          this._selectFreq(0);
+          this._setStatus(`🌿 ${item.hz} 선택됨`);
+        }
+        // 카드 active 토글 (현재 패널 안)
+        const panel = card.closest('.cgo-fmaster-panel');
+        if (panel) panel.querySelectorAll('.cgo-fmaster-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+      return card;
     }
 
     // ── 장르 선택 카드 섹션 ─────────────────────────────────────
