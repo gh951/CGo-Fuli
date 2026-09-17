@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-45';
+window.CGO_VER = 'cgo-46';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
