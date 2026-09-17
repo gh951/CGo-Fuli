@@ -605,6 +605,49 @@
 .cgo-fmaster-card:hover .cgo-fmaster-card-desc{color:#fff;text-shadow:0 0 7px rgba(220,180,255,.5);}
 /* 군집7 서브카테고리 */
 .cgo-fmaster-subcat{font-size:9.5px;font-weight:800;color:#e9d5ff;margin:8px 0 4px;padding:4px 8px;background:rgba(168,85,247,.12);border-radius:6px;border-left:3px solid #a855f7;}
+
+/* ─── 음악 편집 탭 ─── */
+.cgo-edit-notice{display:flex;gap:12px;align-items:flex-start;background:rgba(20,5,40,.7);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:14px;margin-bottom:14px;}
+.cgo-edit-notice-ico{font-size:28px;flex-shrink:0;}
+.cgo-edit-notice-txt{font-size:11px;color:#d4c4f0;font-weight:600;line-height:1.7;}
+.cgo-edit-notice-txt b{color:#fff;font-size:12px;}
+.cgo-edit-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.cgo-edit-step{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(20,5,40,.6);border:1px solid rgba(100,60,180,.2);border-radius:10px;}
+.cgo-edit-step-num{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 8px rgba(168,85,247,.3);}
+.cgo-edit-step-txt{font-size:11px;color:#d4c4f0;font-weight:600;line-height:1.5;}
+.cgo-edit-step-txt b{color:#fff;}
+.cgo-edit-score-placeholder{background:rgba(10,2,25,.8);border:1px solid rgba(100,60,180,.25);border-radius:14px;padding:20px 16px 12px;text-align:center;}
+.cgo-edit-score-staff{position:relative;height:80px;background:repeating-linear-gradient(180deg,transparent 0,transparent 13px,rgba(168,85,247,.18) 13px,rgba(168,85,247,.18) 14px) center/100% 70px no-repeat;margin-bottom:10px;}
+.cgo-edit-score-clef{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:42px;color:rgba(192,132,252,.6);line-height:1;}
+.cgo-edit-score-lines{position:absolute;inset:0;}
+.cgo-edit-score-note{position:absolute;font-size:22px;color:#c084fc;opacity:.7;text-shadow:0 0 8px rgba(192,132,252,.5);}
+.cgo-edit-score-label{font-size:10px;color:#7c6fa8;font-weight:600;}
+
+/* ─── 다운로드 탭 ─── */
+.cgo-dl-info{font-size:11.5px;color:#d4c4f0;font-weight:600;line-height:1.7;margin-bottom:14px;padding:12px 14px;background:rgba(20,5,40,.6);border:1px solid rgba(168,85,247,.2);border-radius:12px;}
+.cgo-dl-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.cgo-dl-card{background:rgba(20,5,40,.8);border:1.5px solid rgba(100,60,180,.25);border-radius:14px;padding:14px 12px;text-align:center;transition:all .18s;}
+.cgo-dl-card:hover{border-color:rgba(168,85,247,.5);box-shadow:0 0 12px rgba(168,85,247,.2);}
+.cgo-dl-card-ico{font-size:28px;margin-bottom:6px;}
+.cgo-dl-card-label{font-size:12px;font-weight:800;color:#fff;margin-bottom:4px;}
+.cgo-dl-card-desc{font-size:10px;color:#c4b5e8;font-weight:600;line-height:1.5;margin-bottom:10px;}
+.cgo-dl-btn{width:100%;padding:8px 0;border-radius:999px;background:rgba(168,85,247,.2);border:1.5px solid rgba(168,85,247,.4);color:#e9d5ff;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;}
+.cgo-dl-btn:hover{background:rgba(168,85,247,.35);color:#fff;box-shadow:0 0 10px rgba(168,85,247,.3);text-shadow:0 0 8px rgba(240,171,252,.4);}
+.cgo-dl-btn.pdf{background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(168,85,247,.2));border-color:rgba(168,85,247,.5);}
+.cgo-dl-btn.pdf:hover{background:linear-gradient(135deg,rgba(124,58,237,.5),rgba(168,85,247,.4));box-shadow:0 0 14px rgba(168,85,247,.35);}
+/* PDF 리포트 미리보기 */
+.cgo-dl-report-preview{background:rgba(255,255,255,.03);border:1px solid rgba(168,85,247,.2);border-radius:14px;overflow:hidden;}
+.cgo-dl-report-hdr{background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(168,85,247,.15));padding:12px 14px;border-bottom:1px solid rgba(168,85,247,.2);}
+.cgo-dl-report-title{font-size:12px;font-weight:800;color:#fff;margin-bottom:2px;}
+.cgo-dl-report-sub{font-size:10px;color:#c4b5e8;font-weight:600;}
+.cgo-dl-report-body{padding:12px 14px;}
+.cgo-dl-report-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(168,85,247,.08);}
+.cgo-dl-report-k{font-size:10px;color:#c4b5e8;font-weight:700;}
+.cgo-dl-report-v{font-size:10.5px;color:#fff;font-weight:800;text-align:right;}
+.cgo-dl-report-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.3),transparent);margin:10px 0;}
+.cgo-dl-report-analysis{font-size:10.5px;color:#d4c4f0;font-weight:600;line-height:1.8;}
+.cgo-dl-report-analysis b{color:#fff;}
+.cgo-dl-report-footer{padding:10px 14px;background:rgba(10,2,25,.5);font-size:9.5px;color:#7c6fa8;font-weight:600;text-align:center;border-top:1px solid rgba(168,85,247,.12);}
 `;
     document.head.appendChild(s);
   }
@@ -662,7 +705,7 @@
       this.playProgress = 0;
 
       // 현재 탭
-      this.activeTab = 'make';
+      this.activeTab = 'freq';
 
       // BPM 리듬 엔진
       this.rhythmTimerId = null;
@@ -712,10 +755,10 @@
       const tabs = document.createElement('nav');
       tabs.className = 'cgo-mtabs';
       tabs.innerHTML = `
-        <div class="cgo-mtab active" data-tab="make"><span class="cgo-mtab-ico">🎰</span><span data-k="24045">${t(24045)}</span></div>
-        <div class="cgo-mtab" data-tab="freq"><span class="cgo-mtab-ico">🌊</span><span data-k="24047">${t(24047)}</span></div>
-        <div class="cgo-mtab" data-tab="chart"><span class="cgo-mtab-ico">📊</span><span data-k="24046">${t(24046)}</span></div>
-        <div class="cgo-mtab" data-tab="preset"><span class="cgo-mtab-ico">⭐</span><span data-k="24048">${t(24048)}</span></div>
+        <div class="cgo-mtab active" data-tab="freq"><span class="cgo-mtab-ico">🌊</span><span data-k="24047">${t(24047)}</span></div>
+        <div class="cgo-mtab" data-tab="make"><span class="cgo-mtab-ico">🎰</span><span data-k="24045">${t(24045)}</span></div>
+        <div class="cgo-mtab" data-tab="edit"><span class="cgo-mtab-ico">🎼</span><span>음악 편집</span></div>
+        <div class="cgo-mtab" data-tab="download"><span class="cgo-mtab-ico">⬇️</span><span>다운로드</span></div>
       `;
       this.root.appendChild(tabs);
       tabs.querySelectorAll('.cgo-mtab').forEach(t => {
@@ -746,10 +789,10 @@
 
       // ─ 탭 콘텐츠 패널들 ─
       this.panels = {};
-      ['make','chart','freq','preset'].forEach(tab => {
+      ['freq','make','chart','preset','edit','download'].forEach(tab => {
         const panel = document.createElement('div');
         panel.id = `cgo-panel-${tab}`;
-        panel.style.display = tab === 'make' ? 'block' : 'none';
+        panel.style.display = tab === 'freq' ? 'block' : 'none';
         this.root.appendChild(panel);
         this.panels[tab] = panel;
       });
@@ -757,6 +800,8 @@
       this._buildMakePanel();
       this._buildFreqPanel();
       this._buildPresetPanel();
+      this._buildEditPanel();
+      this._buildDownloadPanel();
 
       // ─ 하단 플레이어 ─
       const player = document.createElement('div');
@@ -1309,6 +1354,130 @@
       p.innerHTML = `<div class="cgo-msec"><div class="cgo-msec-title">⭐ <span data-k="24063">${t(24063)}</span></div><div id="cgo-preset-list"></div></div>`;
     }
 
+    // ── 음악 편집 패널 ──────────────────────────────────────────
+    _buildEditPanel() {
+      const p = this.panels.edit;
+      p.innerHTML = `
+        <div class="cgo-msec">
+          <div class="cgo-msec-title">🎼 음악 편집</div>
+          <div class="cgo-edit-notice">
+            <div class="cgo-edit-notice-ico">🎼</div>
+            <div class="cgo-edit-notice-txt">
+              <b>AI 악보 편집 (준비 중)</b><br>
+              추첨통에서 생성된 음악을 악보로 시각화하고<br>
+              음표·박자·화음을 직접 수정할 수 있습니다.
+            </div>
+          </div>
+          <div class="cgo-edit-steps">
+            <div class="cgo-edit-step">
+              <div class="cgo-edit-step-num">1</div>
+              <div class="cgo-edit-step-txt"><b>주파수 선택</b> → 힐링 주파수로 기본 음계 세팅</div>
+            </div>
+            <div class="cgo-edit-step">
+              <div class="cgo-edit-step-num">2</div>
+              <div class="cgo-edit-step-txt"><b>추첨통 생성</b> → AI가 장르·악기·보컬 자동 조합</div>
+            </div>
+            <div class="cgo-edit-step">
+              <div class="cgo-edit-step-num">3</div>
+              <div class="cgo-edit-step-txt"><b>악보 편집</b> → 음표·박자·화음 세부 조정</div>
+            </div>
+            <div class="cgo-edit-step">
+              <div class="cgo-edit-step-num">4</div>
+              <div class="cgo-edit-step-txt"><b>다운로드</b> → MP3 + PDF 분석 리포트 저장</div>
+            </div>
+          </div>
+          <div class="cgo-edit-score-placeholder">
+            <div class="cgo-edit-score-staff">
+              <div class="cgo-edit-score-clef">𝄞</div>
+              <div class="cgo-edit-score-lines">
+                <div class="cgo-edit-score-note" style="left:18%;top:28%;">♩</div>
+                <div class="cgo-edit-score-note" style="left:34%;top:38%;">♪</div>
+                <div class="cgo-edit-score-note" style="left:50%;top:22%;">♩</div>
+                <div class="cgo-edit-score-note" style="left:66%;top:32%;">♫</div>
+                <div class="cgo-edit-score-note" style="left:82%;top:26%;">♩</div>
+              </div>
+            </div>
+            <div class="cgo-edit-score-label">🚧 Stage 3 · VexFlow 악보 렌더링 준비 중</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── 다운로드 패널 ────────────────────────────────────────────
+    _buildDownloadPanel() {
+      const p = this.panels.download;
+      p.innerHTML = `
+        <div class="cgo-msec">
+          <div class="cgo-msec-title">⬇️ 다운로드 &amp; PDF 리포트</div>
+          <div class="cgo-dl-info">
+            음악 생성 후 최종 분석 리포트를 PDF로 다운로드하세요.<br>
+            <span style="color:#c4b5e8;font-size:10px;">보관 기능 없음 · 생성 즉시 다운로드 권장</span>
+          </div>
+          <div class="cgo-dl-cards">
+            <div class="cgo-dl-card" id="cgo-dl-mp3">
+              <div class="cgo-dl-card-ico">🎵</div>
+              <div class="cgo-dl-card-label">MP3 음악 파일</div>
+              <div class="cgo-dl-card-desc">생성된 힐링 음악을 MP3로 저장</div>
+              <button class="cgo-dl-btn" onclick="this.closest('.cgo-dl-card').style.opacity='.5'">⬇ MP3 다운로드</button>
+            </div>
+            <div class="cgo-dl-card" id="cgo-dl-pdf">
+              <div class="cgo-dl-card-ico">📄</div>
+              <div class="cgo-dl-card-label">PDF 분석 리포트</div>
+              <div class="cgo-dl-card-desc">주파수 · 악보 · 힐링 효과 종합 분석</div>
+              <button class="cgo-dl-btn pdf" id="cgo-dl-pdf-btn">📥 PDF 리포트 생성</button>
+            </div>
+          </div>
+          <div class="cgo-dl-report-preview" id="cgo-dl-report">
+            <div class="cgo-dl-report-hdr">
+              <div class="cgo-dl-report-title">🎵 CGO 주파수 뮤직 — 음악 분석 리포트</div>
+              <div class="cgo-dl-report-sub" id="cgo-dl-report-date"></div>
+            </div>
+            <div class="cgo-dl-report-body" id="cgo-dl-report-body">
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">선택 주파수</span><span class="cgo-dl-report-v" id="cgo-rpt-freq">432Hz</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">힐링 효과</span><span class="cgo-dl-report-v">자연 공명 · 세포 재생 · 안정감</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">BPM</span><span class="cgo-dl-report-v" id="cgo-rpt-bpm">—</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">장르 믹스</span><span class="cgo-dl-report-v" id="cgo-rpt-genre">—</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">조성/음계</span><span class="cgo-dl-report-v" id="cgo-rpt-key">—</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">보컬</span><span class="cgo-dl-report-v" id="cgo-rpt-vocal">—</span></div>
+              <div class="cgo-dl-report-row"><span class="cgo-dl-report-k">악기</span><span class="cgo-dl-report-v" id="cgo-rpt-inst">—</span></div>
+              <div class="cgo-dl-report-divider"></div>
+              <div class="cgo-dl-report-analysis">
+                <b>AI 힐링 분석</b><br>
+                선택하신 <span id="cgo-rpt-freq2">432Hz</span> 주파수는 자연 공명 주파수로,
+                뇌파를 알파파(8~13Hz) 상태로 유도하여 깊은 이완과 창의력 증진에 효과적입니다.
+                CGO 위성 × 생체 × 역학 데이터와 결합된 이 음악은 개인 맞춤형 힐링을 제공합니다.
+              </div>
+            </div>
+            <div class="cgo-dl-report-footer">
+              🛰️ CGO-FULI · 세계 최초 AI 치료 음악 · 하루 1회 10원
+            </div>
+          </div>
+        </div>
+      `;
+      // 날짜 삽입
+      const d = new Date();
+      const el = p.querySelector('#cgo-dl-report-date');
+      if (el) el.textContent = d.toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'}) + ' 생성';
+      // PDF 버튼 (미구현 - 안내)
+      const pdfBtn = p.querySelector('#cgo-dl-pdf-btn');
+      if (pdfBtn) pdfBtn.addEventListener('click', () => {
+        this._updateReportFields();
+        this._setStatus('📄 PDF 리포트 준비 중… (Stage 4 구현 예정)');
+      });
+    }
+
+    // ── 리포트 필드 갱신 ────────────────────────────────────────
+    _updateReportFields() {
+      const set = (id, v) => { const el = this.root && this.root.querySelector(id); if(el) el.textContent = v; };
+      set('#cgo-rpt-freq', this.selectedFreq ? this.selectedFreq + 'Hz' : '—');
+      set('#cgo-rpt-freq2', this.selectedFreq ? this.selectedFreq + 'Hz' : '—');
+      set('#cgo-rpt-bpm', this.tempoBpm + ' BPM');
+      set('#cgo-rpt-genre', [...this.selectedGenres].join(', ') || '—');
+      const keyRow = this.selected['key']; set('#cgo-rpt-key', keyRow ? keyRow.label : '—');
+      const vocalRow = this.selected['vocal']; set('#cgo-rpt-vocal', vocalRow ? vocalRow.label : '—');
+      const instRow = this.selected['instrument']; set('#cgo-rpt-inst', instRow ? instRow.label : '—');
+    }
+
     // ── 차트 렌더 ───────────────────────────────────────────────
     _renderChart() {
       const p = this.panels.chart;
@@ -1768,7 +1937,7 @@
           });
           this._updateResult();
           this._setStatus('⭐ 프리셋 불러옴: ' + p.label);
-          this._switchTab('make');
+          this._switchTab('freq');
         });
         bar.appendChild(chip);
       });
