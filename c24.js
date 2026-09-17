@@ -2765,10 +2765,15 @@ function _c24Loop(){
           (window._c24CompState && window._c24CompState.step) || 0] || 'face';
         _q.part = _part;
 
-        /* 거리 — 부위별 잣대(눈 사이 / 입꼬리 폭 / 눈 폭)로 실측 cm 계산 */
-        if(_lmsFresh){
+        /* 거리 — 부위별 잣대(눈 사이 / 입꼬리 폭 / 눈 폭)로 실측 cm 계산.
+           ★ 손등·손바닥은 얼굴 랜드마크로 잴 수 있는 대상이 아니다 — 화면에 얼굴이
+           없거나 이전 프레임의 얼굴 좌표가 남아있으면 엉뚱한 cm이 나와 계속 far/near로
+           튕긴다. 손 모드에서는 이 실측 cm 검증 자체를 건너뛰고 살색 비율(_skinFit)만 쓴다. */
+        if(_lmsFresh && _part!=='hand'){
           var _d = _c24Distance(_c24._faceLms, _vw, _part);
           if(_d > 0) _q.distCm = _d;
+        } else {
+          _q.distCm = 0;
         }
         /* ★ C-70: 채움 비율도 부위별로 "그 부위 자체"를 잰다.
            예전에는 혀·눈 단계에서도 항상 얼굴 전체 좌우 폭(모든 랜드마크의 x 범위)을 썼다.
@@ -2789,19 +2794,27 @@ function _c24Loop(){
           }
         }
         _q.fill = _fill;
-        var _st = window.cgoFitState ? cgoFitState(_fill, _part) : 'ok';
-        /* ★ C-69: 화면 채움 비율(_fill)만으로는 "9cm인데 25cm로 통과" 같은 개인차 오차가 남는다.
-           _c24Distance()가 실측한 cm(_q.distCm)을 함께 검증 — 부위별 기준 cm의 ±40% 밖이면
-           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다. */
-        if(_q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
-          var _bandCm = window.CGO_FIT[_part].cm;
-          var _lo = _bandCm * 0.6, _hi = _bandCm * 1.4;
-          if(_q.distCm < _lo) _st = 'near';
-          else if(_q.distCm > _hi) _st = 'far';
+        /* ★ 손등·손바닥은 이 채움/거리 자 자체가 얼굴 랜드마크 기반이라 손에는 안 맞는다.
+           위(2746~2755줄)에서 이미 살색 비율로 fitOK/fitState를 정확히 계산해 뒀으니,
+           손 모드에서는 그 값을 그대로 쓰고 아래 cm 재검증으로 덮어쓰지 않는다.
+           (전에는 이 재검증이 손에도 걸려서 몇 분을 맞춰도 far/near로 계속 튕겼다) */
+        if(_part==='hand'){
+          _q.distOK = true;   /* 살색 비율 판정(_c24.fitOK)을 그대로 신뢰 */
+        } else {
+          var _st = window.cgoFitState ? cgoFitState(_fill, _part) : 'ok';
+          /* ★ C-69: 화면 채움 비율(_fill)만으로는 "9cm인데 25cm로 통과" 같은 개인차 오차가 남는다.
+             _c24Distance()가 실측한 cm(_q.distCm)을 함께 검증 — 부위별 기준 cm의 ±40% 밖이면
+             채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다. */
+          if(_q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
+            var _bandCm = window.CGO_FIT[_part].cm;
+            var _lo = _bandCm * 0.6, _hi = _bandCm * 1.4;
+            if(_q.distCm < _lo) _st = 'near';
+            else if(_q.distCm > _hi) _st = 'far';
+          }
+          _q.distOK = (_st === 'ok' || _st === 'none');
+          /* 딱 맞으면 띵 띵 띵 — 화면을 못 봐도 귀로 안다 */
+          if(_st === 'ok' && window.cgoFitBeep) cgoFitBeep('c24-' + _part);
         }
-        _q.distOK = (_st === 'ok' || _st === 'none');
-        /* 딱 맞으면 띵 띵 띵 — 화면을 못 봐도 귀로 안다 */
-        if(_st === 'ok' && window.cgoFitBeep) cgoFitBeep('c24-' + _part);
 
         /* 조도 — 막지 않는다. 밝기를 없애고 비율만 남겨 앱이 고친다 */
         var _il = _c24Illum(cnt?rSum/cnt:0, cnt?gSum/cnt:0, cnt?bSum/cnt:0);
@@ -2814,7 +2827,7 @@ function _c24Loop(){
           if(_q.motionPx > 9){ _q.dropped++; }
         }
 
-        /* 거리가 어긋나면 원이 빨개지고 타임바가 멈춘다 */
+        /* 거리가 어긋나면 원이 빨개지고 타임바가 멈춘다 — 손 모드는 위에서 항상 distOK=true라 여기 안 걸림 */
         if(!_q.distOK){
           _c24.fitOK = false;
           _c24.fitState = (window.cgoFitState ? cgoFitState(_q.fill, _q.part||'face') : 'far');
