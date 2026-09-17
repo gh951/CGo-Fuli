@@ -228,12 +228,20 @@
   // 카테고리 그룹 (UI 필터용)
   const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아'];
 
-  // SLOT_DATA — genre 제거 (장르는 카드 선택기로 대체)
+  // SLOT_DATA — 추첨통 랜덤 슬롯: 조성/음계만 (보컬·악기는 독립 카드 선택)
   const SLOT_DATA = {
-    key:        { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] },
-    vocal:      { label:'보컬',     labelKey:24052, emoji:'🎤', items:['남성(Male)','여성(Female)','혼성(Duet)','무보컬(BGM)','어린이','합창(Choir)'] },
-    instrument: { label:'세계 악기', labelKey:24053, emoji:'🪕', items:['가야금(한국)','해금(한국)','아코디언(프랑스)','만돌린(이탈리아)','우드(중동)','칼림바(아프리카)','팬플루트(안데스)','시타르(인도)','케나(페루)','딤베(서아프리카)','비파(중국)','사미센(일본)','두둑(아르메니아)','오카리나','하프','첼로'] }
+    key: { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] }
   };
+
+  // 보컬 선택 데이터 (독립 카드)
+  const VOCAL_OPTIONS = [
+    { id:'male',   emoji:'👨', label:'남성',   desc:'Male · 두텁고 깊은 울림',       color:'#60a5fa' },
+    { id:'female', emoji:'👩', label:'여성',   desc:'Female · 맑고 섬세한 음색',     color:'#f472b6' },
+    { id:'duet',   emoji:'👫', label:'혼성',   desc:'Duet · 남녀 하모니',            color:'#a78bfa' },
+    { id:'bgm',    emoji:'🎵', label:'무보컬', desc:'BGM · 순수 기악 연주',          color:'#34d399' },
+    { id:'child',  emoji:'👶', label:'어린이', desc:'Child · 동심 어린 맑은 목소리', color:'#fbbf24' },
+    { id:'choir',  emoji:'🎭', label:'합창',   desc:'Choir · 웅장한 합창단',         color:'#f97316' },
+  ];
 
   // ── 200-주파수 마스터 군집 데이터 ────────────────────────────────
   const FREQ_CLUSTERS = [
@@ -484,6 +492,163 @@
 
   // ── NOTE → 주파수 맵 (Web Audio API용) ──────────────────────────
   const NOTE_FREQ = { C:261.63,'C#':277.18,D:293.66,'D#':311.13,E:329.63,F:349.23,'F#':369.99,G:392,'G#':415.3,A:440,'A#':466.16,B:493.88 };
+
+  // ── Soundfont-Player (GM 악기 실제 사운드) ───────────────────────
+  // CDN: gleitz/midi-js-soundfonts (GitHub Pages) — 서버리스, 무료
+  // 로딩 전략: 악기 선택 시 lazy-load, AudioContext 공유
+  const SF_BASE = 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/';
+  const SF_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+  // GM 번호 → soundfont 파일명 매핑
+  function gmToSfName(gm) {
+    const names = [
+      'acoustic_grand_piano','bright_acoustic_piano','electric_grand_piano','honkytonk_piano',
+      'electric_piano_1','electric_piano_2','harpsichord','clavinet',
+      'celesta','glockenspiel','music_box','vibraphone',
+      'marimba','xylophone','tubular_bells','dulcimer',
+      'drawbar_organ','percussive_organ','rock_organ','church_organ',
+      'reed_organ','accordion','harmonica','tango_accordion',
+      'acoustic_guitar_nylon','acoustic_guitar_steel','electric_guitar_jazz','electric_guitar_clean',
+      'electric_guitar_muted','overdriven_guitar','distortion_guitar','guitar_harmonics',
+      'acoustic_bass','electric_bass_finger','electric_bass_pick','fretless_bass',
+      'slap_bass_1','slap_bass_2','synth_bass_1','synth_bass_2',
+      'violin','viola','cello','contrabass',
+      'tremolo_strings','pizzicato_strings','orchestral_harp','timpani',
+      'string_ensemble_1','string_ensemble_2','synthstrings_1','synthstrings_2',
+      'choir_aahs','voice_oohs','synth_voice','orchestra_hit',
+      'trumpet','trombone','tuba','muted_trumpet',
+      'french_horn','brass_section','synth_brass_1','synth_brass_2',
+      'soprano_sax','alto_sax','tenor_sax','baritone_sax',
+      'oboe','english_horn','bassoon','clarinet',
+      'piccolo','flute','recorder','pan_flute',
+      'blown_bottle','shakuhachi','whistle','ocarina',
+      'lead_1_square','lead_2_sawtooth','lead_3_calliope','lead_4_chiff',
+      'lead_5_charang','lead_6_voice','lead_7_fifths','lead_8_bass_lead',
+      'pad_1_new_age','pad_2_warm','pad_3_polysynth','pad_4_choir',
+      'pad_5_bowed','pad_6_metallic','pad_7_halo','pad_8_sweep',
+      'fx_1_rain','fx_2_soundtrack','fx_3_crystal','fx_4_atmosphere',
+      'fx_5_brightness','fx_6_goblins','fx_7_echoes','fx_8_sci_fi',
+      'sitar','banjo','shamisen','koto',
+      'kalimba','bag_pipe','fiddle','shanai',
+      'tinkle_bell','agogo','steel_drums','woodblock',
+      'taiko_drum','melodic_tom','synth_drum','reverse_cymbal',
+      'guitar_fret_noise','breath_noise','seashore','bird_tweet',
+      'telephone_ring','helicopter','applause','gunshot'
+    ];
+    return names[gm] || 'acoustic_grand_piano';
+  }
+
+  // 캐시: { sfName: { [note]: AudioBuffer } }
+  const sfCache = {};
+  // 로딩 중 promise 캐시
+  const sfLoading = {};
+
+  // 단일 AudioContext (글로벌 공유)
+  let sfAudioCtx = null;
+  function getSfCtx() {
+    if (!sfAudioCtx || sfAudioCtx.state === 'closed') {
+      sfAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (sfAudioCtx.state === 'suspended') sfAudioCtx.resume();
+    return sfAudioCtx;
+  }
+
+  // Base64 데이터URI → ArrayBuffer
+  function b64ToArrayBuffer(b64) {
+    const bin = atob(b64);
+    const buf = new ArrayBuffer(bin.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+    return buf;
+  }
+
+  // soundfont JSON 로드 + 캐싱
+  async function loadSoundfont(gm) {
+    const sfName = gmToSfName(gm);
+    if (sfCache[sfName]) return sfCache[sfName];
+    if (sfLoading[sfName]) return sfLoading[sfName];
+
+    sfLoading[sfName] = (async () => {
+      try {
+        const url = `${SF_BASE}${sfName}-mp3.js`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('fetch fail');
+        const text = await res.text();
+        // midi-js-soundfonts 형식: MIDI.Soundfont.xxx = { "C4": "data:audio/mp3;base64,..." }
+        const match = text.match(/=\s*(\{[\s\S]*?\})\s*;?\s*$/);
+        if (!match) throw new Error('parse fail');
+        const raw = JSON.parse(match[1]);
+        const ctx = getSfCtx();
+        const buffers = {};
+        await Promise.all(Object.entries(raw).map(async ([note, dataUri]) => {
+          try {
+            const b64 = dataUri.split(',')[1];
+            const ab = b64ToArrayBuffer(b64);
+            buffers[note] = await ctx.decodeAudioData(ab);
+          } catch(e) {}
+        }));
+        sfCache[sfName] = buffers;
+        return buffers;
+      } catch(e) {
+        console.warn('[CGO-SF] 로드 실패:', sfName, e.message);
+        sfCache[sfName] = {};
+        return {};
+      }
+    })();
+
+    return sfLoading[sfName];
+  }
+
+  // 특정 GM 악기로 노트 재생 (duration초)
+  async function playSfNote(gm, noteName, duration = 1.2, volumeGain = 0.7) {
+    try {
+      const buffers = await loadSoundfont(gm);
+      const ctx = getSfCtx();
+      // 노트명 정규화: 'C4', 'A4' 등
+      const key = buffers[noteName] ? noteName
+        : buffers[noteName + '4'] ? noteName + '4'
+        : Object.keys(buffers)[0];
+      if (!key || !buffers[key]) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buffers[key];
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(volumeGain, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(ctx.currentTime);
+      src.stop(ctx.currentTime + duration);
+    } catch(e) {
+      console.warn('[CGO-SF] 재생 실패:', e.message);
+    }
+  }
+
+  // 코드 진행 재생 (선택된 악기 조합으로 짧은 시연)
+  async function playSfChord(gmList, keyName, durationEach = 0.8) {
+    // keyName 예: 'C Major', 'A Minor'
+    const root = keyName ? keyName.split(' ')[0] : 'C';
+    const isMinor = keyName && keyName.includes('Minor');
+    // 트라이어드 노트 (C4 기준)
+    const majorScale = ['C4','E4','G4','C5'];
+    const minorScale = ['C4','D#4','G4','C5'];
+    const notes = isMinor ? minorScale : majorScale;
+    // 루트 이조
+    const rootIdx = SF_NOTE_NAMES.indexOf(root);
+    const shiftedNotes = notes.map(n => {
+      const nm = n.replace(/[0-9]/g,'');
+      const oct = parseInt(n.replace(/[^0-9]/g,''));
+      const base = SF_NOTE_NAMES.indexOf(nm);
+      const shifted = (base + rootIdx) % 12;
+      const newOct = oct + Math.floor((base + rootIdx) / 12);
+      return SF_NOTE_NAMES[shifted] + newOct;
+    });
+
+    // 최대 4개 악기만 동시에 (성능)
+    const gmSlice = gmList.slice(0, 4);
+    await Promise.all(gmSlice.map((gm, i) =>
+      playSfNote(gm, shiftedNotes[i % shiftedNotes.length], durationEach, 0.6)
+    ));
+  }
 
   // ── CSS ─────────────────────────────────────────────────────────
   function injectCSS() {
@@ -840,6 +1005,7 @@
         this.slotTargets[k] = 0;
       });
 
+      this.selected.vocal = 'bgm';               // 보컬 기본값: 무보컬(BGM)
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
       this.selectedFreq = 432;
@@ -877,6 +1043,12 @@
       this._renderPresets();
       this._renderChart();
       this._updateResult();
+      // 🎵 피아노·플루트·바이올린 사전 로드 (첫 재생 딜레이 최소화)
+      setTimeout(() => {
+        loadSoundfont(0).catch(()=>{});   // Grand Piano
+        loadSoundfont(73).catch(()=>{});  // Flute
+        loadSoundfont(40).catch(()=>{});  // Violin
+      }, 2000);
     }
 
     // ── DOM 빌드 ────────────────────────────────────────────────
@@ -1014,12 +1186,17 @@
         this._buildInstrumentSection(body);
       }, false));
 
-      // ② 박자 (기본 닫힘)
+      // ② 보컬 선택 (기본 닫힘)
+      p.appendChild(mkAccordion('🎤', '보컬 선택', (body) => {
+        this._buildVocalSection(body);
+      }, false));
+
+      // ③ 박자 (기본 닫힘)
       p.appendChild(mkAccordion('🎼', t(24050), (body) => {
         body.appendChild(this._buildTempoBar());
       }, false));
 
-      // ③ 추첨통 슬롯 (기본 닫힘)
+      // ④ 추첨통 슬롯 — 🎲 조성/음계 랜덤 (기본 닫힘)
       p.appendChild(mkAccordion('🎰', t(24045), (body) => {
         const grid = document.createElement('div');
         grid.className = 'cgo-slot-grid';
@@ -1056,12 +1233,12 @@
         spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => this._quickPlay());
       }, false));
 
-      // ④ 장르 (기본 닫힘)
+      // ⑤ 장르 (기본 닫힘)
       p.appendChild(mkAccordion('🌍', t(24051), (body) => {
         body.appendChild(this._buildGenreSection());
       }, false));
 
-      // ⑤ 현재 설정 결과 카드 (기본 닫힘)
+      // ⑥ 현재 설정 결과 카드 (기본 닫힘)
       p.appendChild(mkAccordion('🎼', t(24068), (body) => {
         const resCard = document.createElement('div');
         resCard.className = 'cgo-result-card';
@@ -1081,6 +1258,34 @@
       genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+    }
+
+    // ── 보컬 선택 섹션 (독립 카드 선택) ─────────────────────────
+    _buildVocalSection(body) {
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 14px 10px;';
+      body.appendChild(grid);
+
+      const render = () => {
+        grid.innerHTML = '';
+        VOCAL_OPTIONS.forEach(opt => {
+          const card = document.createElement('div');
+          const isSel = this.selected.vocal === opt.id;
+          card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:1.5px solid ${isSel ? opt.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .2s;${isSel ? `box-shadow:0 0 10px ${opt.color}40;` : ''}`;
+          card.innerHTML = `
+            <span style="font-size:22px">${opt.emoji}</span>
+            <span style="font-size:11px;font-weight:800;color:${isSel ? '#fff' : '#e9d5ff'}">${opt.label}</span>
+            <span style="font-size:9px;color:${isSel ? opt.color : '#9d8ec8'};text-align:center;line-height:1.3">${opt.desc}</span>
+          `;
+          card.addEventListener('click', () => {
+            this.selected.vocal = opt.id;
+            render();
+            this._updateResult && this._updateResult();
+          });
+          grid.appendChild(card);
+        });
+      };
+      render();
     }
 
     // ── 악기 선택 섹션 (추첨통 탭 첫 번째 아코디언) ─────────────
@@ -1171,11 +1376,15 @@
           card.title = `${ins.en} | GM:${ins.gm} | ${ins.genres.join(', ')}`;
           if (!maxed) {
             card.addEventListener('click', () => {
-              if (this.selectedInstrIds.has(ins.id)) {
+              const wasSelected = this.selectedInstrIds.has(ins.id);
+              if (wasSelected) {
                 this.selectedInstrIds.delete(ins.id);
               } else {
                 if (this.selectedInstrIds.size >= MAX_INSTR) return;
                 this.selectedInstrIds.add(ins.id);
+                // 🔊 악기 선택 시 미리듣기 (soundfont)
+                const keyName = this.selected.key || 'C Major';
+                playSfNote(ins.gm, 'C4', 1.5, 0.65).catch(()=>{});
               }
               renderGrid();
               renderSelected();
@@ -1978,6 +2187,8 @@
           <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${this.tempoBpm}BPM</span>
           ${genreTags}
           ${this.slotKeys.map(k => `<span class="cgo-result-tag">${SLOT_DATA[k].emoji} ${this.selected[k]}</span>`).join('')}
+          ${(() => { const v = VOCAL_OPTIONS.find(o => o.id === this.selected.vocal); return v ? `<span class="cgo-result-tag" style="color:${v.color};border-color:${v.color}40;">${v.emoji} ${v.label}</span>` : ''; })()}
+          ${this.selectedInstrIds.size ? `<span class="cgo-result-tag">🎸 악기 ${this.selectedInstrIds.size}개</span>` : ''}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
       `;
@@ -2189,19 +2400,45 @@
     _onGenerate() {
       const tempoStage = bpmToStage(this.tempoBpm);
       const genreList = [...this.selectedGenres].map(id => GENRE_MAP[id]).filter(Boolean);
-      const combo = { key:this.selected.key, bpm:this.tempoBpm, tempoName:tempoStage.name, tempoNameEn:tempoStage.nameEn, genres:genreList.map(g=>g.nameEn), genresMix:genreList.length > 1, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
+      // 선택된 악기 GM 번호 목록
+      const instrGmList = [...this.selectedInstrIds].map(id => {
+        const ins = INSTRUMENT_DATA.find(x => x.id === id);
+        return ins ? ins.gm : null;
+      }).filter(v => v !== null);
+
+      const combo = {
+        key: this.selected.key, bpm: this.tempoBpm,
+        tempoName: tempoStage.name, tempoNameEn: tempoStage.nameEn,
+        genres: genreList.map(g=>g.nameEn), genresMix: genreList.length > 1,
+        vocal: this.selected.vocal,
+        instrument: this.selected.instrument,
+        instrGmList,
+        freq: this.selectedFreq
+      };
+
       this._setStatus(t(24066));
       const genBtn = this.root && this.root.querySelector('#cgo-gen-btn');
       if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ ' + t(24066); }
+
       if (typeof this.onGenerate === 'function') {
         this.onGenerate(combo);
       } else {
-        // 데모: 미리 듣기 + 상태 메시지
+        // 🎵 데모: soundfont 코드 + 힐링 오실레이터 동시 재생
+        const keyName = this.selected.key || 'C Major';
+        if (instrGmList.length > 0) {
+          // 선택 악기로 코드 미리듣기
+          playSfChord(instrGmList, keyName, 1.5).catch(()=>{});
+          this._setStatus(`🎵 ${instrGmList.length}개 악기 · ${keyName} · ${tempoStage.name}`);
+        } else {
+          // 악기 미선택 시 기본 피아노(GM 0)로
+          playSfChord([0], keyName, 1.5).catch(()=>{});
+        }
+        // 힐링 주파수 오실레이터도 함께
         this._startAudio();
         setTimeout(() => {
           this._setStatus('✅ ' + t(24067));
           if (genBtn) { genBtn.disabled = false; genBtn.textContent = t(24055) + ' · ' + t(24065); }
-        }, 2000);
+        }, 2500);
       }
     }
 
@@ -2298,6 +2535,12 @@
       if (this.root && this.root.parentNode) { this.root.parentNode.removeChild(this.root); }
       this.root = null;
       this.particles = [];
+
+      // 7. Soundfont AudioContext 정리 (모듈 종료 시)
+      if (sfAudioCtx && sfAudioCtx.state !== 'closed') {
+        try { sfAudioCtx.close(); } catch(e){}
+        sfAudioCtx = null;
+      }
 
       console.log('[Destroy] CGO 주파수 뮤직 메모리 완전 정화됨 ✅');
     }
