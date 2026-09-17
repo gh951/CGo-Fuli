@@ -30,16 +30,36 @@
   }
 
   // ── 슬롯 데이터 ──────────────────────────────────────────────────
-  // ── 템포 데이터 (박자 → 레인보우 바로 분리) ────────────────────
-  const TEMPO_STEPS = [
-    { bpm:50,  name:'Largo',   desc:'명상 · 깊은 힐링 · 432/528Hz 최적',   color:'#6366f1', dot:'#818cf8' },
-    { bpm:60,  name:'Adagio',  desc:'차분 · 발라드 · 샹송',                color:'#3b82f6', dot:'#60a5fa' },
-    { bpm:80,  name:'Andante', desc:'대중적 · 편안한 스탠다드',              color:'#10b981', dot:'#34d399' },
-    { bpm:110, name:'Allegro', desc:'리드미컬 · 경쾌',                      color:'#f59e0b', dot:'#fcd34d' },
-    { bpm:140, name:'Presto',  desc:'에너지 · 드라이브감',                   color:'#ef4444', dot:'#f87171' }
+  // ── 템포 데이터 (250단계 연속 슬라이더) ─────────────────────────
+  // 슬라이더: 0~249 → BPM 50~140 연속 매핑
+  const TEMPO_MIN_BPM = 50;
+  const TEMPO_MAX_BPM = 140;
+  const TEMPO_STEPS_COUNT = 250; // 0~249
+  // 슬라이더 값 → BPM
+  function sliderToBpm(v) {
+    return Math.round(TEMPO_MIN_BPM + (v / (TEMPO_STEPS_COUNT - 1)) * (TEMPO_MAX_BPM - TEMPO_MIN_BPM));
+  }
+  // BPM → 슬라이더 값
+  function bpmToSlider(bpm) {
+    return Math.round((bpm - TEMPO_MIN_BPM) / (TEMPO_MAX_BPM - TEMPO_MIN_BPM) * (TEMPO_STEPS_COUNT - 1));
+  }
+  // BPM → 단계 정보 (5구간)
+  const TEMPO_STAGES = [
+    { bpmMax:57,  name:'아주 느리게', nameEn:'Largo',   desc:'명상 · 깊은 힐링 · 432/528Hz 최적', color:'#6366f1', dot:'#818cf8' },
+    { bpmMax:70,  name:'느리게',     nameEn:'Adagio',  desc:'차분 · 감성적인 발라드 · 샹송',      color:'#3b82f6', dot:'#60a5fa' },
+    { bpmMax:95,  name:'보통',       nameEn:'Andante', desc:'대중적 · 편안하게 듣기 좋은 스탠다드', color:'#10b981', dot:'#34d399' },
+    { bpmMax:125, name:'빠르게',     nameEn:'Allegro', desc:'리드미컬 · 경쾌한 분위기',            color:'#f59e0b', dot:'#fcd34d' },
+    { bpmMax:140, name:'아주 빠르게', nameEn:'Presto',  desc:'에너지 · 드라이브감 있는 고속',       color:'#ef4444', dot:'#f87171' }
   ];
-  // 슬라이더 값 0~4 → TEMPO_STEPS 인덱스
-  const TEMPO_DEFAULT_IDX = 2; // Andante
+  function bpmToStage(bpm) {
+    for (const s of TEMPO_STAGES) { if (bpm <= s.bpmMax) return s; }
+    return TEMPO_STAGES[TEMPO_STAGES.length - 1];
+  }
+  // 5개 틱의 슬라이더 위치 (%)
+  const TEMPO_TICK_BPMS = [50, 60, 80, 110, 140];
+  // 기본값: Andante 80BPM
+  const TEMPO_DEFAULT_BPM = 80;
+  const TEMPO_DEFAULT_SLIDER = bpmToSlider(TEMPO_DEFAULT_BPM);
 
   // SLOT_DATA — time(박자) 제거, 레인보우 바로 대체
   // label은 렌더 시 t() 호출로 대체 (labelKey 참조)
@@ -117,42 +137,49 @@
 .cgo-tempo-wrap{background:rgba(20,5,40,.7);border:1px solid rgba(168,85,247,.2);border-radius:14px;padding:14px 14px 16px;cursor:default;}
 .cgo-tempo-label{font-size:11px;color:#9d8ec4;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .cgo-tempo-label b{font-size:12.5px;color:#d8b4fe;font-weight:700;}
-.cgo-tempo-rainbow{position:relative;margin-bottom:10px;}
+.cgo-tempo-rainbow{position:relative;padding-top:28px;margin-bottom:4px;}
+/* BPM 말풍선 — 썸 위에 떠있음 */
+.cgo-tempo-bubble{position:absolute;top:0;transform:translateX(-50%);background:rgba(168,85,247,.95);color:#fff;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap;transition:left .05s;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.cgo-tempo-bubble::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:rgba(168,85,247,.95);}
 .cgo-tempo-rainbow input[type=range]{
-  width:100%;height:10px;border-radius:5px;outline:none;border:none;cursor:pointer;
+  width:100%;height:12px;border-radius:6px;outline:none;border:none;cursor:pointer;
   -webkit-appearance:none;appearance:none;
   background:linear-gradient(to right,
-    #6366f1 0%,        /* Largo 50bpm — 딥 인디고 */
-    #3b82f6 25%,       /* Adagio 60bpm — 블루 */
-    #10b981 50%,       /* Andante 80bpm — 그린 */
-    #f59e0b 75%,       /* Allegro 110bpm — 골든 */
-    #ef4444 100%       /* Presto 140bpm — 레드 */
+    #6366f1 0%,
+    #3b82f6 22%,
+    #10b981 50%,
+    #f59e0b 77%,
+    #ef4444 100%
   );
-  box-shadow:0 0 8px rgba(168,85,247,.3);
+  box-shadow:0 0 10px rgba(168,85,247,.35);
 }
 .cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
   background:#fff;border:3px solid #a855f7;
-  box-shadow:0 0 10px rgba(168,85,247,.6),0 2px 6px rgba(0,0,0,.4);
-  cursor:pointer;transition:transform .15s;
+  box-shadow:0 0 14px rgba(168,85,247,.7),0 2px 8px rgba(0,0,0,.5);
+  cursor:pointer;transition:transform .1s;
 }
-.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:active{transform:scale(1.25);}
+.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .cgo-tempo-rainbow input[type=range]::-moz-range-thumb{
-  width:22px;height:22px;border-radius:50%;
+  width:26px;height:26px;border-radius:50%;
   background:#fff;border:3px solid #a855f7;
-  box-shadow:0 0 10px rgba(168,85,247,.6);cursor:pointer;
+  box-shadow:0 0 14px rgba(168,85,247,.7);cursor:pointer;
 }
-.cgo-tempo-ticks{display:flex;justify-content:space-between;padding:0 2px;margin-bottom:8px;}
-.cgo-tempo-tick{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;}
-.cgo-tempo-tick-dot{width:6px;height:6px;border-radius:50%;transition:transform .2s;}
-.cgo-tempo-tick-name{font-size:8.5px;font-weight:700;color:#7c6fa8;transition:color .2s;white-space:nowrap;}
+/* 틱 마커 (5개 고정 위치) */
+.cgo-tempo-ticks{position:relative;height:28px;margin-top:4px;margin-bottom:6px;}
+.cgo-tempo-tick{position:absolute;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+.cgo-tempo-tick-dot{width:5px;height:5px;border-radius:50%;transition:transform .2s,box-shadow .2s;}
+.cgo-tempo-tick-name{font-size:9px;font-weight:700;color:#7c6fa8;transition:color .2s;white-space:nowrap;text-align:center;line-height:1.2;}
 .cgo-tempo-tick.active .cgo-tempo-tick-name{color:#f0abfc;}
-.cgo-tempo-tick.active .cgo-tempo-tick-dot{transform:scale(1.5);}
-.cgo-tempo-display{display:flex;align-items:center;justify-content:space-between;background:rgba(10,0,21,.6);border-radius:10px;padding:10px 14px;}
-.cgo-tempo-bpm{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}
+.cgo-tempo-tick.active .cgo-tempo-tick-dot{transform:scale(1.6);box-shadow:0 0 6px currentColor;}
+/* 하단 정보 카드 */
+.cgo-tempo-display{display:flex;align-items:center;justify-content:space-between;background:rgba(10,0,21,.6);border-radius:10px;padding:10px 14px;margin-top:6px;}
+.cgo-tempo-bpm{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}
+.cgo-tempo-bpm-unit{font-size:12px;font-weight:500;color:#9d8ec4;margin-left:3px;}
 .cgo-tempo-info{text-align:right;}
-.cgo-tempo-info-name{font-size:12px;font-weight:800;color:#f0abfc;}
-.cgo-tempo-info-desc{font-size:10px;color:#9d8ec4;margin-top:2px;}
+.cgo-tempo-info-name{font-size:13px;font-weight:800;}
+.cgo-tempo-info-en{font-size:10px;color:#7c6fa8;margin-top:1px;}
+.cgo-tempo-info-desc{font-size:10px;color:#9d8ec4;margin-top:3px;max-width:160px;line-height:1.4;}
 
 /* ─── 스핀 버튼 ─── */
 .cgo-spin-wrap{padding:14px 14px 4px;display:flex;gap:8px;}
@@ -250,7 +277,7 @@
         this.slotTargets[k] = 0;
       });
 
-      this.tempoIdx = TEMPO_DEFAULT_IDX;
+      this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedFreq = 432;
       this.presets = this._loadPresets();
       this.particles = [];
@@ -474,7 +501,7 @@
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
     }
 
-    // ── 박자 레인보우 바 빌드 ───────────────────────────────────
+    // ── 박자 레인보우 바 빌드 (250단계 연속) ───────────────────
     _buildTempoBar() {
       const wrap = document.createElement('div');
       wrap.className = 'cgo-tempo-wrap';
@@ -485,87 +512,161 @@
       lbl.innerHTML = `<b>🥁 <span data-k="24050">${t(24050)}</span></b>`;
       wrap.appendChild(lbl);
 
-      // 레인보우 슬라이더
+      // 슬라이더 영역 (말풍선 + range 입력)
       const rainbowDiv = document.createElement('div');
       rainbowDiv.className = 'cgo-tempo-rainbow';
 
+      // BPM 말풍선 (썸 위에 표시)
+      const bubble = document.createElement('div');
+      bubble.className = 'cgo-tempo-bubble';
+      bubble.id = 'cgo-tempo-bubble';
+      bubble.textContent = this.tempoBpm + ' BPM';
+      rainbowDiv.appendChild(bubble);
+
+      // 슬라이더: 0~249 (250단계)
       const slider = document.createElement('input');
       slider.type = 'range';
       slider.min = '0';
-      slider.max = '4';
+      slider.max = String(TEMPO_STEPS_COUNT - 1);
       slider.step = '1';
-      slider.value = String(this.tempoIdx);
+      slider.value = String(bpmToSlider(this.tempoBpm));
       rainbowDiv.appendChild(slider);
       wrap.appendChild(rainbowDiv);
 
-      // 5개 틱 도트 + 이름 (슬라이더 아래)
+      // 5개 틱 마커 (절대 위치)
       const ticksDiv = document.createElement('div');
       ticksDiv.className = 'cgo-tempo-ticks';
       ticksDiv.id = 'cgo-tempo-ticks';
-      TEMPO_STEPS.forEach((step, i) => {
+      TEMPO_TICK_BPMS.forEach(bpm => {
+        const pct = ((bpm - TEMPO_MIN_BPM) / (TEMPO_MAX_BPM - TEMPO_MIN_BPM) * 100).toFixed(2);
+        const stage = bpmToStage(bpm);
+        const isActive = this.tempoBpm === bpm;
         const tick = document.createElement('div');
-        tick.className = 'cgo-tempo-tick' + (i === this.tempoIdx ? ' active' : '');
-        tick.dataset.idx = String(i);
+        tick.className = 'cgo-tempo-tick' + (isActive ? ' active' : '');
+        tick.dataset.bpm = String(bpm);
+        tick.style.left = pct + '%';
         tick.innerHTML = `
-          <div class="cgo-tempo-tick-dot" style="background:${step.dot};"></div>
-          <div class="cgo-tempo-tick-name">${step.name}</div>
+          <div class="cgo-tempo-tick-dot" style="background:${stage.dot};color:${stage.dot};"></div>
+          <div class="cgo-tempo-tick-name">${stage.name}<br><span style="color:#6b7280;font-size:8px;">${stage.nameEn}</span></div>
         `;
         tick.addEventListener('click', () => {
-          slider.value = String(i);
-          this._onTempoChange(i);
+          this._onTempoChange(bpm);
         });
         ticksDiv.appendChild(tick);
       });
       wrap.appendChild(ticksDiv);
 
-      // BPM 표시 카드
+      // 하단 정보 카드
       const dispDiv = document.createElement('div');
       dispDiv.className = 'cgo-tempo-display';
       dispDiv.id = 'cgo-tempo-display';
-      dispDiv.innerHTML = this._tempoDisplayHTML(this.tempoIdx);
+      dispDiv.innerHTML = this._tempoDisplayHTML(this.tempoBpm);
       wrap.appendChild(dispDiv);
 
-      // 슬라이더 이벤트
+      // 슬라이더 이벤트: 드래그 중에는 말풍선만, 놓으면 카드 업데이트
       slider.addEventListener('input', () => {
-        const idx = parseInt(slider.value, 10);
-        this._onTempoChange(idx);
+        const bpm = sliderToBpm(parseInt(slider.value, 10));
+        this.tempoBpm = bpm;
+        this._updateTempoBubble(slider, bubble, bpm);
+        this._updateTempoTicks(ticksDiv, bpm);
+        // 드래그 중: 카드 색상만 실시간 업데이트 (부드럽게)
+        this._updateTempoDisplayLive(dispDiv, bpm);
+      });
+      slider.addEventListener('change', () => {
+        // 손 뗐을 때: 전체 카드 + 결과 카드 업데이트
+        const bpm = sliderToBpm(parseInt(slider.value, 10));
+        this.tempoBpm = bpm;
+        dispDiv.innerHTML = this._tempoDisplayHTML(bpm);
+        this._updateResult();
       });
 
+      // 초기 말풍선 위치
+      requestAnimationFrame(() => this._updateTempoBubble(slider, bubble, this.tempoBpm));
+
       this._tempoSlider = slider;
+      this._tempoBubble = bubble;
       this._tempoTicksEl = ticksDiv;
       this._tempoDispEl = dispDiv;
 
       return wrap;
     }
 
-    _tempoDisplayHTML(idx) {
-      const step = TEMPO_STEPS[idx];
+    // 말풍선 위치 계산 (썸 중앙 기준)
+    _updateTempoBubble(slider, bubble, bpm) {
+      if (!slider || !bubble) return;
+      const min = parseInt(slider.min, 10);
+      const max = parseInt(slider.max, 10);
+      const val = bpmToSlider(bpm);
+      const pct = (val - min) / (max - min);
+      const thumbW = 26;
+      const trackW = slider.offsetWidth || slider.parentElement.offsetWidth || 200;
+      const left = pct * (trackW - thumbW) + thumbW / 2;
+      bubble.style.left = left + 'px';
+      bubble.textContent = bpm + ' BPM';
+      const stage = bpmToStage(bpm);
+      bubble.style.background = stage.color;
+      bubble.style.setProperty('--bc', stage.color);
+      // 말풍선 꼬리 색상도 업데이트
+      bubble.style.cssText = `
+        position:absolute;top:0;transform:translateX(-50%);
+        background:${stage.color};color:#fff;
+        font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;
+        padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap;
+        left:${left}px;box-shadow:0 2px 8px rgba(0,0,0,.4);
+      `;
+    }
+
+    // 드래그 중 카드 실시간(색상+BPM 숫자) 업데이트
+    _updateTempoDisplayLive(dispDiv, bpm) {
+      if (!dispDiv) return;
+      const stage = bpmToStage(bpm);
+      const bpmEl = dispDiv.querySelector('.cgo-tempo-bpm');
+      if (bpmEl) {
+        bpmEl.style.color = stage.color;
+        const numNode = bpmEl.childNodes[0];
+        if (numNode && numNode.nodeType === Node.TEXT_NODE) numNode.textContent = bpm;
+        else bpmEl.innerHTML = bpm + `<span class="cgo-tempo-bpm-unit">BPM</span>`;
+      }
+      const nameEl = dispDiv.querySelector('.cgo-tempo-info-name');
+      if (nameEl) { nameEl.textContent = stage.name; nameEl.style.color = stage.dot; }
+      const enEl = dispDiv.querySelector('.cgo-tempo-info-en');
+      if (enEl) enEl.textContent = stage.nameEn;
+    }
+
+    // 틱 active 상태 업데이트
+    _updateTempoTicks(ticksDiv, bpm) {
+      if (!ticksDiv) return;
+      const stage = bpmToStage(bpm);
+      ticksDiv.querySelectorAll('.cgo-tempo-tick').forEach(el => {
+        const tb = parseInt(el.dataset.bpm, 10);
+        const ts = bpmToStage(tb);
+        const isActive = ts.name === stage.name;
+        el.classList.toggle('active', isActive);
+      });
+    }
+
+    _tempoDisplayHTML(bpm) {
+      const stage = bpmToStage(bpm);
       return `
         <div>
-          <div class="cgo-tempo-bpm" style="color:${step.color};">${step.bpm} <span style="font-size:12px;font-weight:500;color:#9d8ec4;">BPM</span></div>
+          <div class="cgo-tempo-bpm" style="color:${stage.color};">${bpm}<span class="cgo-tempo-bpm-unit">BPM</span></div>
         </div>
         <div class="cgo-tempo-info">
-          <div class="cgo-tempo-info-name" style="color:${step.dot};">${step.name}</div>
-          <div class="cgo-tempo-info-desc">${step.desc}</div>
+          <div class="cgo-tempo-info-name" style="color:${stage.dot};">${stage.name}</div>
+          <div class="cgo-tempo-info-en">${stage.nameEn}</div>
+          <div class="cgo-tempo-info-desc">${stage.desc}</div>
         </div>
       `;
     }
 
-    _onTempoChange(idx) {
-      this.tempoIdx = idx;
-      // 슬라이더 동기화
-      if (this._tempoSlider) this._tempoSlider.value = String(idx);
-      // 틱 active 클래스
-      if (this._tempoTicksEl) {
-        this._tempoTicksEl.querySelectorAll('.cgo-tempo-tick').forEach((el, i) => {
-          el.classList.toggle('active', i === idx);
-        });
+    _onTempoChange(bpm) {
+      this.tempoBpm = bpm;
+      if (this._tempoSlider) this._tempoSlider.value = String(bpmToSlider(bpm));
+      if (this._tempoBubble && this._tempoSlider) {
+        this._updateTempoBubble(this._tempoSlider, this._tempoBubble, bpm);
       }
-      // BPM 표시 업데이트
-      if (this._tempoDispEl) {
-        this._tempoDispEl.innerHTML = this._tempoDisplayHTML(idx);
-      }
-      // 결과 카드 업데이트
+      if (this._tempoTicksEl) this._updateTempoTicks(this._tempoTicksEl, bpm);
+      if (this._tempoDispEl) this._tempoDispEl.innerHTML = this._tempoDisplayHTML(bpm);
       this._updateResult();
     }
 
@@ -783,11 +884,11 @@
       const card = this.root.querySelector('#cgo-result-card');
       if (!card) return;
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === this.selectedFreq) || FREQ_OPTIONS[3];
-      const tempo = TEMPO_STEPS[this.tempoIdx];
+      const tempo = bpmToStage(this.tempoBpm);
       card.innerHTML = `
         <div style="font-size:12px;color:#9d8ec4;margin-bottom:8px;" data-k="24068">${t(24068)}</div>
         <div class="cgo-result-tags">
-          <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${tempo.bpm}BPM</span>
+          <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${this.tempoBpm}BPM</span>
           ${this.slotKeys.map(k => `<span class="cgo-result-tag">${SLOT_DATA[k].emoji} ${this.selected[k]}</span>`).join('')}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
@@ -925,8 +1026,8 @@
 
     // ── AI 음악 생성 ────────────────────────────────────────────
     _onGenerate() {
-      const tempo = TEMPO_STEPS[this.tempoIdx];
-      const combo = { key:this.selected.key, bpm:tempo.bpm, tempoName:tempo.name, genre:this.selected.genre, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
+      const tempoStage = bpmToStage(this.tempoBpm);
+      const combo = { key:this.selected.key, bpm:this.tempoBpm, tempoName:tempoStage.name, tempoNameEn:tempoStage.nameEn, genre:this.selected.genre, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
       this._setStatus(t(24066));
       const genBtn = this.root && this.root.querySelector('#cgo-gen-btn');
       if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ ' + t(24066); }
