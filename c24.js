@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-46';
+window.CGO_VER = 'cgo-48';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
@@ -1096,14 +1096,14 @@ function _c24CompShowResult(ai){
     // 핵심 발견
     +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
     +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:5px;">🔍 핵심 발견</div>'
-    +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:1.8;">'+ai.핵심발견+'</div></div>':'')
+    +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+ai.핵심발견+'</div></div>':'')
     // 각 진단 항목
-    +['심장활력','소화기','순환계','신경계','오행_건강'].map(function(k){
+    +['심장활력','소화기','순환계','신경계','눈_건강','피부_건강'].map(function(k){
       if(!ai[k]) return '';
-      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',오행_건강:'☯️'};
-      return '<div style="padding:12px;background:rgba(0,0,0,.2);border-left:3px solid rgba(52,211,153,.3);border-radius:0 10px 10px 0;margin-bottom:8px;">'
-        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">'+(ic[k]||'•')+' '+k.replace('_',' ')+'</div>'
-        +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai[k]+'</div></div>';
+      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',눈_건강:'👁️',피부_건강:'🎨'};
+      return '<div style="padding:12px;background:rgba(255,255,255,.08);border-left:3px solid rgba(52,211,153,.4);border-radius:0 10px 10px 0;margin-bottom:8px;">'
+        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">'+(ic[k]||'•')+' '+k.replace(/_/g,' ')+'</div>'
+        +'<div style="font-size:13px;color:#ffffff;line-height:1.9;">'+ai[k]+'</div></div>';
     }).join('')
     // 주의 신호
     +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:10px;">'
@@ -1304,10 +1304,9 @@ function _c24CompFinalAnalyze(){
       +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
       +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션. 3문장",'
       +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 건강 상태. 3문장",'
-      +'"오행_건강":"오행('+oh+') 기준 현재 기운의 흐름. 어떤 부분을 돌보면 좋은지. 3문장",'
       +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
       +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-      +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
+      +'"식이_가이드":"지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
     return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
@@ -1317,13 +1316,13 @@ function _c24CompFinalAnalyze(){
   .then(function(r3){return r3.json();})
   .then(function(d3){
     var t=d3.text||'';
-    var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    // 코드블록 마커 제거 후 JSON 파싱
+    var clean=t.replace(/```json\s*/g,'').replace(/```/g,'').trim();
+    var m=clean.match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
-    /* ★ AI가 JSON이 아닌 형식으로 답했거나 파싱이 실패하면, 조용히 빈 결과({})로
-       넘어가 점수만 뜨고 텍스트가 통째로 사라졌었다. 최소한 받은 원문이라도 보여준다. */
     if(!ai || Object.keys(ai).length===0){
-      ai = t.trim() ? {핵심발견:t.trim()} : {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
+      ai = {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
     }
     _c24CompShowResult(ai);
   })
