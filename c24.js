@@ -1355,8 +1355,14 @@ function _c24CompFinalAnalyze(){
 
   function _parseJson(t){
     if(!t) return {};
-    try{ var m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : {}; }
-    catch(e){ return {}; }
+    var cleaned = t.replace(/```json|```/g,'').trim();
+    try{
+      var m = cleaned.match(/\{[\s\S]*\}/);
+      return m ? JSON.parse(m[0]) : {};
+    }catch(e){
+      try{ console.warn('[c24] JSON 파싱 실패:', e.message, '| 원문 앞부분:', cleaned.slice(0,300)); }catch(_e){}
+      return {};
+    }
   }
 
   /* ★ C-106: Gemini 교차검증으로 확인된 구조 개선 — 6장을 각각 15초 간격으로
@@ -1436,7 +1442,9 @@ function _c24CompFinalAnalyze(){
 
       if(!parsed || Object.keys(parsed).length===0 || !parsed.핵심발견){
         if(text && !errReason){
-          errReason = '응답은 왔으나 형식이 예상과 다름 — '+text.slice(0,150);
+          var _endsOk = /\}\s*$/.test(text.trim());
+          errReason = '응답 길이 '+text.length+'자, 끝맺음 '+(_endsOk?'정상(}로 끝남)':'비정상(중간에 끊긴 것으로 보임)')
+            +' — 앞부분: '+text.slice(0,400)+(text.length>400?' …(중략)… ':'')+(text.length>400?text.slice(-200):'');
         }
         finalAi = {
           종합등급:'?', 종합점수:0,
