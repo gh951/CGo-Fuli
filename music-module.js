@@ -1047,30 +1047,19 @@
         ? (fn, ms) => requestIdleCallback(fn, { timeout: ms })
         : (fn, ms) => setTimeout(fn, ms);
 
-      // 배경 캔버스 — 시각적으로 보여야 하니 빠르게
+      // 팝업 — DOM 직후 즉시 (잔상 방지: 페이지보다 먼저)
+      this._buildIntroPopup();
+
+      // 배경 캔버스
       idle(() => this._startBgCanvas(), 200);
 
-      // 프리셋·차트·결과 — 탭 안 내용, 약간 뒤에
-      idle(() => {
-        this._renderPresets();
-        this._renderChart();
-        this._updateResult();
-      }, 400);
-
-      // 팝업 — 페이지 준비 후
-      idle(() => this._buildIntroPopup(), 600);
+      // freq 탭 결과 업데이트
+      idle(() => this._updateResult(), 400);
 
       // 재진입 감지 옵저버
-      idle(() => this._watchMusicPage(), 800);
+      idle(() => this._watchMusicPage(), 600);
 
-      // soundfont 사전 로드 — 완전히 유휴 상태일 때만 (특허: 보이는 것만)
-      idle(() => {
-        loadSoundfont(0).catch(()=>{});   // Grand Piano
-      }, 3000);
-      idle(() => {
-        loadSoundfont(73).catch(()=>{});  // Flute
-        loadSoundfont(40).catch(()=>{});  // Violin
-      }, 5000);
+      // soundfont는 사전 로드 안 함 — 재생 버튼 클릭 시점에만 로드 (보이는 것만 살린다)
     }
 
     // ── 뮤직 탭 재진입 감지 → 팝업 재표시 ─────────────────────
@@ -1089,14 +1078,19 @@
         const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
 
         if (isVisible && _wasHidden) {
-          // 페이지가 다시 보여졌다 → 팝업 표시
+          // 페이지가 다시 보여졌다 → 팝업 표시 + 캔버스 재시작
           _wasHidden = false;
-          // 기존 팝업이 남아있으면 제거 후 재표시
+          if (!this.bgAnimId) this._startBgCanvas(); // 캔버스 루프 재시작
           const old = document.getElementById('cgo-music-intro-pop');
           if (old) try { old.remove(); } catch(e) {}
           setTimeout(() => this._buildIntroPopup(), 80);
         } else if (!isVisible) {
           _wasHidden = true;
+          // 페이지 숨겨지면 캔버스 루프 중단 (CPU 절약)
+          if (this.bgAnimId) {
+            cancelAnimationFrame(this.bgAnimId);
+            this.bgAnimId = null;
+          }
         }
       });
 
@@ -1297,17 +1291,16 @@
         fadeOut();
       });
 
-      // 🏠 로고 클릭 → 대시보드(홈) 이동
+      // 🏠 로고 클릭 → 대시보드 이동
       const logoEl = pop.querySelector('.mip-top-logo');
       if (logoEl) {
         logoEl.addEventListener('click', () => {
           fadeOut();
           setTimeout(() => {
-            if (typeof window.cgoGoPage === 'function') window.cgoGoPage('home');
-            else if (typeof global !== 'undefined' && typeof global.cgoGoPage === 'function') global.cgoGoPage('home');
-            else {
-              const homeBtn = document.querySelector('[data-page="home"],[href*="home"],#nav-home,.nav-home');
-              if (homeBtn) homeBtn.click();
+            try { window.cgoGoPage('dashboard'); } catch(e) {
+              // fallback: 대시보드 버튼 직접 클릭
+              const btn = document.querySelector('[onclick*="cgoGoPage(\'dashboard\')"], [onclick*="dashboard"]');
+              if (btn) btn.click();
             }
           }, 200);
         });
@@ -1375,8 +1368,10 @@
       this._resizeBg();
       window.addEventListener('resize', this._onResize);
 
-      // ─ 탭 콘텐츠 패널들 ─
+      // ─ 탭 콘텐츠 패널들 (빈 껍데기만 생성) ─
+      // 보이는 것만 살린다: 첫 탭(freq)만 즉시 빌드, 나머지는 클릭 시 lazy 빌드
       this.panels = {};
+      this._panelBuilt = {};  // 탭별 빌드 여부 추적
       ['freq','make','chart','preset','edit','download'].forEach(tab => {
         const panel = document.createElement('div');
         panel.id = `cgo-panel-${tab}`;
@@ -1385,11 +1380,9 @@
         this.panels[tab] = panel;
       });
 
-      this._buildMakePanel();
+      // 첫 화면에 보이는 freq 탭만 즉시 빌드
       this._buildFreqPanel();
-      this._buildPresetPanel();
-      this._buildEditPanel();
-      this._buildDownloadPanel();
+      this._panelBuilt['freq'] = true;
 
       // ─ 하단 플레이어 ─
       const player = document.createElement('div');
@@ -2288,7 +2281,7 @@
       p.appendChild(notice);
     }
 
-    // ── 탭 전환 ─────────────────────────────────────────────────
+    // ── 탭 전환 (보이는 것만 살린다 — lazy 빌드) ───────────────────
     _switchTab(tab) {
       this.activeTab = tab;
       this.tabsEl.querySelectorAll('.cgo-mtab').forEach(t => {
@@ -2297,6 +2290,17 @@
       Object.keys(this.panels).forEach(k => {
         this.panels[k].style.display = k === tab ? 'block' : 'none';
       });
+
+      // 해당 탭이 처음 열리는 경우에만 빌드 (lazy)
+      if (!this._panelBuilt[tab]) {
+        this._panelBuilt[tab] = true;
+        if (tab === 'make')     this._buildMakePanel();
+        if (tab === 'chart')    this._renderChart();
+        if (tab === 'preset')   { this._buildPresetPanel(); this._renderPresets(); }
+        if (tab === 'edit')     this._buildEditPanel();
+        if (tab === 'download') this._buildDownloadPanel();
+        this._updateResult();
+      }
     }
 
     // ── 슬롯 그리기 ─────────────────────────────────────────────
