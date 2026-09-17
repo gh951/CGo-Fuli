@@ -15,10 +15,14 @@ window.cgoFaceFill = function(lms){
 /* ★ 부위마다 대는 거리가 다르다 — 그 거리에서 화면이 얼마나 차는지로 판정한다.
    얼굴 15cm · 혀 9cm · 눈 7cm · 피부 8cm · 손 20cm(안쪽 상자)
    폰 화각이 달라도 채움 비율은 같은 뜻이라 한 잣대로 맞는다. */
+/* ★ C-70: tongue·eye는 더 이상 "얼굴 전체 폭"이 아니라
+   "그 부위 자체의 폭"(입꼬리 61-291 / 눈 좌우 33-133)을 재므로
+   기준값도 그 잣대에 맞게 다시 잡았다. 목표거리 ±40%에서의 실측 비율 기준.
+   face·skin·hand·scalp는 기존대로 얼굴 전체(또는 살색 ROI) 폭 기준 유지. */
 window.CGO_FIT = {
   face:  { lo:0.68, hi:0.98, cm:15 },   /* 얼굴 — 가이드 원을 거의 채운다 */
-  tongue:{ lo:0.22, hi:0.60, cm:9  },   /* 혀 — 내민 혀가 화면 가운데 */
-  eye:   { lo:0.20, hi:0.55, cm:7  },   /* 눈 — 흰자가 보이게 바짝 */
+  tongue:{ lo:0.32, hi:0.75, cm:9  },   /* 혀 — 입꼬리 폭 기준, 9cm(±40%)에서 화면을 채운다 */
+  eye:   { lo:0.22, hi:0.53, cm:7  },   /* 눈 — 한쪽 눈 폭 기준, 7cm(±40%)에서 화면을 채운다 */
   skin:  { lo:0.55, hi:1.00, cm:8  },   /* 피부 — 살갗이 화면을 덮는다 */
   hand:  { lo:0.45, hi:0.95, cm:20 },   /* 손등·손바닥 — 안쪽 상자에 맞춘다 */
   scalp: { lo:0.50, hi:1.00, cm:8  }    /* 두피 — 가르마가 화면을 덮는다 */
@@ -62,40 +66,6 @@ window.cgoFitBeep = function(tag){
 };
 window.cgoFitBeepReset = function(tag){
   try{ if(window._cgoBeeped) delete window._cgoBeeped[tag]; }catch(e){}
-};
-
-/* ★ C-72→C-80: 실측 중 초시계 틱 — 눈·혀처럼 미세하게 흔들리는 부위는 "띵 띵 띵" 한 번으로는
-   지금 맞는지 계속 알 수 없어 불편하다는 지적. 맞는 동안 짧은 틱이 계속 돌고,
-   어긋나면 그 프레임에 바로 끊긴다 — 소리 자체가 실시간 정렬 신호가 되도록.
-   setInterval 없이 매 프레임 호출(cgoFitTick(true/false))만으로 스스로 시작·정지한다.
-   ★ C-80: sine 순음도, 노이즈 클릭도 둘 다 "이상하게 들린다"는 지적 — 원래부터 있던
-   cgoFitBeep(880Hz sine + exponentialRamp, 아래 참조)의 톤이 편안하다고 하셨으니,
-   그 파형·주파수·감쇠 곡선을 그대로 가져오고 길이만 짧게(120ms→90ms) 줄여
-   반복 재생에 맞춘다. 새 소리를 만들지 않고 기존 소리를 재사용하는 방향으로 변경. */
-window._cgoTickOn = false;
-window.cgoFitTick = function(shouldTick){
-  try{
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if(!AC) return;
-    if(!shouldTick){ window._cgoTickOn = false; return; }
-    if(window._cgoTickOn) return;   /* 이미 돌고 있으면 재시작하지 않음 — 겹침 방지 */
-    window._cgoTickOn = true;
-    var ac = window._cgoAC || (window._cgoAC = new AC());
-    if(ac.state === 'suspended') ac.resume();
-    var t = ac.currentTime;
-    var o = ac.createOscillator(), g = ac.createGain();
-    o.type = 'sine';                                   /* cgoFitBeep과 동일 파형 */
-    o.frequency.value = 880;                            /* cgoFitBeep과 동일 음높이 — 그 부드러운 톤 그대로 */
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.20, t + 0.01);   /* cgoFitBeep과 동일한 지수 상승 곡선 */
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09); /* 반복 재생을 위해 감쇠만 90ms로 단축(원래 130ms) */
-    o.connect(g); g.connect(ac.destination);
-    o.start(t); o.stop(t + 0.1);
-    o.onended = function(){
-      window._cgoTickOn = false;
-      /* 다음 프레임에서도 여전히 맞으면 cgoFitTick(true)가 다시 호출돼 이어진다 */
-    };
-  }catch(e){ window._cgoTickOn = false; }
 };
 function _cK(n,f){try{var v=window.K&&window.K(n);return (v&&v!==String(n))?v:f;}catch(e){return f;}}
 
@@ -158,7 +128,7 @@ var _c24Cards = {
     title:'💓 마음의 파도 & 생기 리듬',
     content:
     _c24Guide('248,113,113',
-      ['밝은 곳에서 정면을 바라봐 주세요','화면을 보며 스마트폰을 앞뒤로 움직여 원이 초록색이 되면 멈추기','안경·모자 등 제거 후 촬영','무표정으로 눈을 정면으로 응시','60초간 얼굴을 고정해 주세요'],
+      ['밝은 곳에서 정면을 바라봐 주세요','카메라와 얼굴 거리 30~50cm 유지','안경·모자 등 제거 후 촬영','무표정으로 눈을 정면으로 응시','60초간 얼굴을 고정해 주세요'],
       '얼굴의 핏기와 미세한 떨림을 인식해 지금의 생기 에너지와 마음 텐션을 읽어냅니다')+
     '<b style="color:#f87171">📷 측정 부위:</b> 👤 얼굴 모드 선택 후 측정<br><br>'+
     '<b style="color:#f87171">카메라로 관찰 가능한 지표:</b><br>'+
@@ -173,7 +143,7 @@ var _c24Cards = {
     title:'💗 혈기(血氣) 에너지 & 톤 밸런스',
     content:
     _c24Guide('251,191,36',
-      ['밝은 자연광 또는 형광등 아래에서 측정하세요','얼굴 측정: 화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기','손 측정: 손바닥을 카메라 정면으로 향하게 펴 주세요','화장·손톱 매니큐어 제거 후 측정 권장','45초간 얼굴 고정, 이후 손 15초 자동 전환'],
+      ['밝은 자연광 또는 형광등 아래에서 측정하세요','얼굴 측정: 카메라와 30~50cm 거리 유지','손 측정: 손바닥을 카메라 정면으로 향하게 펴 주세요','화장·손톱 매니큐어 제거 후 측정 권장','45초간 얼굴 고정, 이후 손 15초 자동 전환'],
       '얼굴과 손바닥에 감도는 미세한 생기 톤을 종합해 활력 흐름을 읽어냅니다')+
     '<b style="color:#fbbf24">📷 측정 부위:</b> 👤 얼굴 또는 ✋ 손 모드 선택<br><br>'+
     '<b style="color:#fbbf24">카메라로 관찰 가능한 지표:</b><br>'+
@@ -188,7 +158,7 @@ var _c24Cards = {
     title:'⚡ 활력 엔진 & 불꽃 밸런스',
     content:
     _c24Guide('167,139,250',
-      ['밝은 곳에서 정면을 바라봐 주세요','화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기','안경 제거, 목 부위가 보이도록 옷깃 낮추기','무표정으로 정면 응시, 목을 편하게 유지','45초간 얼굴 고정, 이후 눈 15초 자동 전환'],
+      ['밝은 곳에서 정면을 바라봐 주세요','카메라와 얼굴 거리 30~50cm 유지','안경 제거, 목 부위가 보이도록 옷깃 낮추기','무표정으로 정면 응시, 목을 편하게 유지','45초간 얼굴 고정, 이후 눈 15초 자동 전환'],
       '얼굴의 생기와 눈빛의 집중도를 함께 보면 지금의 에너지 상태를 더 정확히 읽어낼 수 있어요')+
     '<b style="color:#a78bfa">📷 측정 부위:</b> 👤 얼굴 모드 (추가로 👁️ 눈 모드 권장)<br><br>'+
     '<b style="color:#a78bfa">카메라로 관찰 가능한 지표:</b><br>'+
@@ -203,7 +173,7 @@ var _c24Cards = {
     title:'🫀 신체 정화(클린) 리듬',
     content:
     _c24Guide('52,211,153',
-      ['밝은 곳에서 눈 흰자가 잘 보이도록 위를 약간 봐 주세요','화면을 보며 앞뒤로 움직여 눈 점 두 개가 잘 보이면 멈추기','렌즈 착용 시 제거 권장','눈을 크게 뜨고 흰자 부분이 화면에 잘 보이도록 조절','20초간 눈 고정, 이후 피부 20초 자동 전환'],
+      ['밝은 곳에서 눈 흰자가 잘 보이도록 위를 약간 봐 주세요','카메라와 눈 거리 20~30cm 유지','렌즈 착용 시 제거 권장','눈을 크게 뜨고 흰자 부분이 화면에 잘 보이도록 조절','20초간 눈 고정, 이후 피부 20초 자동 전환'],
       '눈빛의 투명함과 안색의 맑은 정도를 종합해 몸속 정화 에너지 리듬을 읽어냅니다')+
     '<b style="color:#34d399">📷 측정 부위:</b> 👁️ 눈 또는 🎨 피부 모드 선택<br><br>'+
     '<b style="color:#34d399">카메라로 관찰 가능한 지표:</b><br>'+
@@ -233,7 +203,7 @@ var _c24Cards = {
     title:'🧠 멘탈 에너지 & 마음 방어막',
     content:
     _c24Guide('244,114,182',
-      ['밝은 곳에서 편안하게 앉아 정면을 바라봐 주세요','화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기','측정 전 1~2분 안정을 취한 후 시작하세요','무표정으로 코로 천천히 호흡하며 측정','60초간 얼굴을 고정, 호흡을 자연스럽게 유지'],
+      ['밝은 곳에서 편안하게 앉아 정면을 바라봐 주세요','카메라와 얼굴 거리 30~50cm 유지','측정 전 1~2분 안정을 취한 후 시작하세요','무표정으로 코로 천천히 호흡하며 측정','60초간 얼굴을 고정, 호흡을 자연스럽게 유지'],
       'HRV는 안정 상태에서 측정해야 정확합니다. 운동 직후는 피해 주세요')+
     '<b style="color:#f472b6">📷 측정 부위:</b> 👤 얼굴 모드 선택 (가장 효과적)<br><br>'+
     '<b style="color:#f472b6">카메라로 관찰 가능한 지표:</b><br>'+
@@ -248,7 +218,7 @@ var _c24Cards = {
     title:'🫁 숨결 리듬 & 청명 에너지',
     content:
     _c24Guide('96,165,250',
-      ['밝은 곳에서 입술이 잘 보이도록 정면을 바라봐 주세요','화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기','입술에 립스틱·립밤 제거 후 측정 권장','입술 색이 화면에 선명히 보이도록 조명 조절','45초간 얼굴 고정, 이후 손 15초 자동 전환'],
+      ['밝은 곳에서 입술이 잘 보이도록 정면을 바라봐 주세요','카메라와 얼굴 거리 20~40cm 유지','입술에 립스틱·립밤 제거 후 측정 권장','입술 색이 화면에 선명히 보이도록 조명 조절','45초간 얼굴 고정, 이후 손 15초 자동 전환'],
       '입술과 손끝에 감도는 맑은 안색과 기운의 톤을 종합해 활력 순환 흐름을 읽어냅니다')+
     '<b style="color:#60a5fa">📷 측정 부위:</b> 👤 얼굴 또는 ✋ 손 모드 선택<br><br>'+
     '<b style="color:#60a5fa">카메라로 관찰 가능한 지표:</b><br>'+
@@ -263,7 +233,7 @@ var _c24Cards = {
     title:'👅 혀 색·태 관찰',
     content:
     _c24Guide('212,168,67',
-      ['밝은 곳에서 입을 크게 벌려 혀를 최대한 내밀어 주세요','화면을 보며 앞뒤로 움직여 혀가 원에 딱 맞으면 멈추기','혀 전체(끝·중간·뿌리)가 화면에 보이도록 조절','혀를 최대한 평평하게 펴 주세요','20초간 혀를 내밀고 고정해 주세요'],
+      ['밝은 곳에서 입을 크게 벌려 혀를 최대한 내밀어 주세요','카메라와 혀 거리 15~25cm 유지','혀 전체(끝·중간·뿌리)가 화면에 보이도록 조절','혀를 최대한 평평하게 펴 주세요','20초간 혀를 내밀고 고정해 주세요'],
       '혀 색깔과 태(苔)가 정확히 찍혀야 관찰이 가능합니다. 식사 직후는 피해 주세요')+
     '<b style="color:#d4a843">📷 측정 부위:</b> 👅 혀 모드 선택 (필수)<br><br>'+
     '<b style="color:#d4a843">카메라로 관찰 가능한 지표:</b><br>'+
@@ -280,7 +250,7 @@ var _c24Cards = {
     title:'😴 밤샘 데미지 & 충전 배터리',
     content:
     _c24Guide('129,140,248',
-      ['밝은 곳에서 정면을 바라봐 주세요','화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기','눈 밑 다크서클이 잘 보이도록 조명 조절','안경 제거 후 측정 권장','45초간 얼굴을 고정, 자연스럽게 눈을 떠 주세요'],
+      ['밝은 곳에서 정면을 바라봐 주세요','카메라와 얼굴 거리 30~50cm 유지','눈 밑 다크서클이 잘 보이도록 조명 조절','안경 제거 후 측정 권장','45초간 얼굴을 고정, 자연스럽게 눈을 떠 주세요'],
       '피로도 측정은 아침 기상 직후 또는 저녁 취침 전 측정이 가장 정확합니다')+
     '<b style="color:#818cf8">📷 측정 부위:</b> 👤 얼굴 모드 선택<br><br>'+
     '<b style="color:#818cf8">카메라로 관찰 가능한 지표:</b><br>'+
@@ -295,7 +265,7 @@ var _c24Cards = {
     title:'🧬 피부 생기(生氣) 광채 & 안색 톤',
     content:
     _c24Guide('52,211,153',
-      ['측정할 피부 부위(이마·뺨·손등)를 밝은 곳에 노출해 주세요','화면을 보며 앞뒤로 움직여 피부가 원을 채우면 멈추기','크림·화장품 없는 맨 피부 상태 권장','피부 전체가 화면에 균일하게 보이도록 조절','20초간 피부 고정, 이후 얼굴 20초 자동 전환'],
+      ['측정할 피부 부위(이마·뺨·손등)를 밝은 곳에 노출해 주세요','카메라와 피부 거리 10~20cm 유지','크림·화장품 없는 맨 피부 상태 권장','피부 전체가 화면에 균일하게 보이도록 조절','20초간 피부 고정, 이후 얼굴 20초 자동 전환'],
       '자연광 또는 백색 형광등 아래에서 측정해야 피부색이 정확히 측정됩니다')+
     '<b style="color:#34d399">📷 측정 부위:</b> 🎨 피부 또는 👤 얼굴 모드 선택<br><br>'+
     '<b style="color:#34d399">카메라로 관찰 가능한 지표:</b><br>'+
@@ -347,13 +317,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -367,7 +337,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -508,31 +478,17 @@ function _c24EnvRead(){
   return e;
 }
 
-/* ★ HAZ-003 대응 — 기온으로 실측 BPM 원본을 직접 변형(bpm - d)하던 방식을 폐기한다.
-   Gemini(구글) 검증 결과: 원본 생체 신호를 조용히 바꾸는 것은 "데이터 왜곡"으로
-   의료기기 심사에서 반려 사유가 된다는 지적을 반영 — 카메라 실측값은 절대 건드리지 않고,
-   기온은 오직 "이 조건에서 신뢰할 만한가"만 판정하는 용도로 쓴다(값을 만들지 않음).
-   참고용 보정 추정치(bpmEnvRef)는 화면 주 표시와 별도로만 계산해 둔다. */
-function _c24EnvAdvisory(bpm, mode){
+/* 기온 보정 — 여름·겨울 차이를 되돌린다 */
+function _c24EnvAdjust(bpm, mode){
   var e = window._c24Env;
-  var out = { lowConfidence:false, note:null, refBpm:null };
-  if(!isFinite(bpm) || bpm <= 0 || e.tempC == null) return out;
-  /* 극단적 기온 — 말초/안면 혈류 자체가 생리적으로 변해 rPPG 신호 대표성이 낮아지는 구간.
-     값을 깎지 않고, 사용자에게 낮은 신뢰도만 알린다. */
-  if(e.tempC <= 10 || e.tempC >= 35){
-    out.lowConfidence = true;
-    out.note = e.tempC <= 10
-      ? '주변 기온이 낮아 말초 혈류가 줄어듭니다 — 따뜻한 곳에서 다시 측정하면 더 정확합니다'
-      : '주변 기온이 높아 혈류가 평소보다 빠를 수 있습니다 — 참고용으로만 보세요';
-  }
-  /* 참고용 추정치 — 화면 주 표시가 아니라 부가 정보로만 노출한다 */
+  if(!isFinite(bpm) || bpm <= 0 || e.tempC == null) return bpm;
+  /* 기준 22도. 1도 오를 때 약 0.35bpm 빨라진다 (일반적 관찰 범위) */
   var d = (e.tempC - 22) * 0.35;
+  /* 손은 기온에 더 민감하다 */
   if(mode === 'hand' || mode === 'hand_back' || mode === 'hand_palm') d *= 1.6;
-  out.refBpm = Math.round(Math.max(40, Math.min(180, bpm - d)));
-  return out;
+  var out = bpm - d;
+  return Math.round(Math.max(40, Math.min(180, out)));
 }
-/* 구 함수명 호환 — 다른 곳에서 실수로 다시 부르더라도 원본을 그대로 반환해 값 훼손이 재발하지 않게 한다 */
-function _c24EnvAdjust(bpm, mode){ return bpm; }
 
 /* ══════════════════════════════════════════════════════════════
    측정 품질 엔진 — 거리 · 조도 · 흔들림 · 생리 구속 · 측정 원장
@@ -555,52 +511,33 @@ window._c24Q = {
    실제 카메라 화각(~68°)으로 초점거리를 구해 오차를 줄인다. 사용자 실측 IPD가
    있으면(cgoIpdMm) 6.3cm 평균값 대신 그 값을 쓴다 — eye.js와 동일 로직이라
    두 기능 사이 결과가 일관된다. */
-function _c24Distance(lms, vw){
-  if(!lms || !lms[33] || !lms[263]) return 0;
-  var dx = (lms[263].x - lms[33].x) * vw;
-  var dy = (lms[263].y - lms[33].y) * vw;
+/* ★ C-70: 부위마다 "무엇을 자로 쓸지"가 다르다.
+   예전에는 혀·눈 단계에서도 항상 눈 사이 간격(33·263)만 재서,
+   "얼굴이 적당히 떨어져 있으면" 통과해버리고 정작 혀·눈 자체는
+   작게 찍혔다. 이제 부위별로 실제 그 부위의 폭을 재고,
+   그 폭에 맞는 실측 기준 길이(ipdCm 대신 부위별 상수)로 환산한다. */
+window.CGO_RULER = {
+  face:  { a:33,  b:263, cm:6.3  },  /* 눈 사이 간격(안와 간 거리) — 성인 평균 */
+  tongue:{ a:61,  b:291, cm:5.5  },  /* 입꼬리 좌우 폭 — 혀 내밀 때 입이 벌어진 폭 근사 */
+  eye:   { a:33,  b:133, cm:3.0  },  /* 한쪽 눈(왼쪽) 좌우 폭 — 눈 자체 크기 */
+  skin:  { a:33,  b:263, cm:6.3  },
+  hand:  { a:33,  b:263, cm:6.3  },
+  scalp: { a:33,  b:263, cm:6.3  }
+};
+function _c24Distance(lms, vw, part){
+  var r = window.CGO_RULER[part||'face'] || window.CGO_RULER.face;
+  if(!lms || !lms[r.a] || !lms[r.b]) return 0;
+  var dx = (lms[r.b].x - lms[r.a].x) * vw;
+  var dy = (lms[r.b].y - lms[r.a].y) * vw;
   var px = Math.sqrt(dx*dx + dy*dy);
   if(px < 1) return 0;
-  var ipdCm = 6.3;
-  try{ var _m = window.cgoIpdMm ? cgoIpdMm() : null; if(_m) ipdCm = _m/10; }catch(_e){}
-  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);   /* 폰 전면 카메라 화각 ~68° — eyeRulerCm과 동일 */
-  var cm = (ipdCm * f) / px;
-  if(!isFinite(cm) || cm <= 0) return 0;
-  return Math.round(cm);
-}
-
-/* ── 손 거리 — 손허리뼈 폭 픽셀로 cm 추정 (★ C-70) ──
-   검지 뿌리(5)↔새끼 뿌리(17) 폭은 성인 평균 약 8.0cm로 자세(주먹·펼침)에
-   거의 흔들리지 않는다. _c24Distance와 같은 화각 역산 — 손 모드에서
-   지금까지 비어 있던 _q.distCm을 채워 ±40% cm 판정(C-69)을 살린다.
-   (후면 카메라 화각도 68° 근사 — 기존 코드와 동일 기준) */
-function _c24HandDistance(lms, vw){
-  if(!lms || !lms[5] || !lms[17]) return 0;
-  var dx = (lms[17].x - lms[5].x) * vw;
-  var dy = (lms[17].y - lms[5].y) * vw;
-  var px = Math.sqrt(dx*dx + dy*dy);
-  if(px < 1) return 0;
-  var knCm = 8.0;
-  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);
-  var cm = (knCm * f) / px;
-  if(!isFinite(cm) || cm <= 0) return 0;
-  return Math.round(cm);
-}
-
-/* ── 눈 거리 — 한쪽 눈 폭 픽셀로 cm 추정 (★ C-73) ──
-   눈 검사는 한쪽 눈만 화면 가득 확대해서 본다 — 반대쪽 눈은 프레임 밖일 수 있어
-   기존 _c24Distance(양눈 사이 6.3cm 자)를 그대로 쓰면 33·263 중 하나가 안 잡히거나
-   왜곡돼 오차가 커진다. 왼쪽 눈 눈꼬리(33)~눈머리(133) 폭(성인 평균 약 3.0cm)을
-   자로 써서 같은 화각 역산 방식으로 계산 — 마스크(C-73 점선)와 동일 기준점이라 일치한다. */
-function _c24EyeDistance(lms, vw){
-  if(!lms || !lms[33] || !lms[133]) return 0;
-  var dx = (lms[133].x - lms[33].x) * vw;
-  var dy = (lms[133].y - lms[33].y) * vw;
-  var px = Math.sqrt(dx*dx + dy*dy);
-  if(px < 1) return 0;
-  var eyeCm = 3.0;
-  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);
-  var cm = (eyeCm * f) / px;
+  var refCm = r.cm;
+  /* 얼굴 전체 잣대(눈 사이)에서만 개인 실측값(cgoIpdMm)을 우선 적용 — 혀·눈 잣대는 표준값 사용 */
+  if((part||'face')==='face'){
+    try{ var _m = window.cgoIpdMm ? cgoIpdMm() : null; if(_m) refCm = _m/10; }catch(_e){}
+  }
+  var f = (vw / 2) / Math.tan(68 * Math.PI / 360);   /* 폰 전면 카메라 화각 ~68° */
+  var cm = (refCm * f) / px;
   if(!isFinite(cm) || cm <= 0) return 0;
   return Math.round(cm);
 }
@@ -712,13 +649,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -732,7 +669,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -798,13 +735,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -818,7 +755,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -867,9 +804,6 @@ function _c24CompStartReal(){
   try{ if(typeof _c24Chime==='function') _c24Chime(); }catch(e){}
   // AR-1: FaceMesh 정밀 인터록 준비 (실패 시 살색비율 폴백)
   try{ if(typeof _c24EnsureFM==='function') _c24EnsureFM(); }catch(e){}
-  /* ★ C-70: Hands 스크립트도 지금 미리 받는다 — 4·5단계(손) 도달 전에 준비.
-     그래프 생성은 손 단계 첫 프레임에서만 하므로 지금은 메모리 0 */
-  try{ if(typeof _c24EnsureHands==='function') _c24EnsureHands(); }catch(e){}
   // 1단계: 얼굴 60초
   _c24CompDoStep(0);
 };
@@ -893,13 +827,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -913,7 +847,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -1003,7 +937,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#38bdf8;">'+_cK(8607,'얼굴 — 60초')+'</span>'
     +'<span style="font-size:10px;color:rgba(56,189,248,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8609,'화면을 보며 스마트폰을 앞뒤로 움직여 원이 초록색이 되면 멈추세요')+'<br>'
+    +_cK(8609,'카메라와 <b style="color:#fff;">30~40cm</b> 거리 유지')+'<br>'
     +_cK(8610,'밝은 정면 조명 · 안경·모자 제거 · 무표정 유지')+'<br>'
     +'<span style="color:#38bdf8;">'+_cK(8611,'화면 하단 호흡 타임라인을 따라 4-7-8 호흡 1회')+'</span></div></div>'
 
@@ -1014,7 +948,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#f87171;">'+_cK(8612,'혀 — 20초')+'</span>'
     +'<span style="font-size:10px;color:rgba(248,113,113,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8613,'화면을 보며 스마트폰을 앞뒤로 움직여 혀가 원에 딱 맞으면 멈추세요')+'<br>'
+    +_cK(8613,'카메라와 <b style="color:#fff;">15~20cm</b> 거리 유지')+'<br>'
     +_cK(8614,'혀를 최대한 내밀어 혀 전체가 보이도록')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8615,'식사 30분 후 측정 권장')+'</span></div></div>'
 
@@ -1025,7 +959,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#38bdf8;">'+_cK(8616,'눈 — 20초')+'</span>'
     +'<span style="font-size:10px;color:rgba(56,189,248,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(90001,'화면을 보며 스마트폰을 앞뒤로 움직여 눈 점 두 개가 잘 보이면 멈추세요')+'<br>'
+    +_cK(8613,'카메라와 <b style="color:#fff;">15~20cm</b> 거리 유지')+'<br>'
     +_cK(8617,'위를 약간 봐서 흰자가 잘 보이게')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8618,'콘택트렌즈 제거 권장')+'</span></div></div>'
 
@@ -1036,7 +970,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#f472b6;">'+_cK(8619,'피부 — 30초')+'</span>'
     +'<span style="font-size:10px;color:rgba(244,114,182,.5);margin-left:auto;">'+_cK(8608,'📱 전면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8620,'화면을 보며 스마트폰을 앞뒤로 움직여 피부가 원을 채우면 멈추세요')+'<br>'
+    +_cK(8620,'카메라와 <b style="color:#fff;">10~15cm</b> 거리 유지')+'<br>'
     +_cK(8621,'이마 또는 뺨 맨피부를 카메라에 가까이')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8622,'크림·화장 없는 상태 권장')+'</span></div></div>'
 
@@ -1047,7 +981,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#34d399;">'+_cK(8623,'손등 — 15초')+'</span>'
     +'<span style="font-size:10px;color:rgba(52,211,153,.5);margin-left:auto;">'+_cK(8624,'📷 후면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8625,'화면을 보며 스마트폰을 앞뒤로 움직여 손이 박스에 딱 맞으면 멈추세요')+'<br>'
+    +_cK(8625,'카메라와 <b style="color:#fff;">20~25cm</b> 거리 유지')+'<br>'
     +_cK(8626,'손톱이 잘 보이도록 손등을 카메라 정면으로')+'<br>'
     +'<span style="color:#fbbf24;">'+_cK(8627,'매니큐어 제거 권장')+'</span></div></div>'
 
@@ -1058,7 +992,7 @@ function _c24CompStart(){
     +'<span style="font-size:12px;font-weight:800;color:#34d399;">'+_cK(8628,'손바닥 — 15초')+'</span>'
     +'<span style="font-size:10px;color:rgba(52,211,153,.5);margin-left:auto;">'+_cK(8624,'📷 후면 카메라')+'</span></div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.8;padding-left:26px;">'
-    +_cK(8625,'화면을 보며 스마트폰을 앞뒤로 움직여 손이 박스에 딱 맞으면 멈추세요')+'<br>'
+    +_cK(8625,'카메라와 <b style="color:#fff;">20~25cm</b> 거리 유지')+'<br>'
     +_cK(8629,'손바닥을 평평하게 펼쳐 카메라 정면으로')+'<br>'
     +_cK(8630,'손금이 잘 보이도록 조명 확인')+'</div></div>'
     +'</div>'
@@ -1068,8 +1002,6 @@ function _c24CompStart(){
     +'<div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:5px;">'+_cK(8631,'⚠️ 공통 주의사항')+'</div>'
     +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;">'
     +_cK(8632,'• 밝은 곳에서 측정할수록 정확도가 높아집니다')+'<br>'
-    +_cK(8638,'• 스마트폰을 화면 속 원(또는 박스)에 맞추면 똑딱 소리가 납니다 — 소리가 나는 동안이 정확히 맞는 거리입니다')+'<br>'
-    +_cK(8639,'• 소리가 끊기면 스마트폰을 앞뒤로 움직여 다시 맞춰주세요')+'<br>'
     +_cK(8633,'• 각 단계는 자동으로 순서대로 진행됩니다')+'<br>'
     +_cK(8634,'• 측정 중 흔들리면 해당 단계가 다시 시작됩니다')+'<br>'
     +_cK(8635,'• 본 분석은 참고용이며 의학적 진단을 대체하지 않습니다')
@@ -1096,11 +1028,7 @@ var _c24BreathElapsed = 0;
 var _c24BreathPhase = 0;
 var _c24BreathPhaseTime = [4, 7, 8];
 var _c24BreathColors = ['#38bdf8', '#fbbf24', '#34d399'];
-/* ★ C-81: 예전엔 var _c24BreathTexts=[...] 배열로 만들어서, c24.js가 처음 로드되는
-   순간의 언어로 고정돼 버렸다 — 이후 언어를 바꿔도 이 배열은 다시 안 만들어져
-   "멈추기·내쉬기만 계속 한글"로 남는 회귀 실패의 정체였다. 함수로 바꿔 호출 시점마다
-   그때그때의 언어로 새로 계산되게 한다. */
-function _c24BreathTextsNow(){ return [_cK(8128,'🫁 들이쉬기'), _cK(90002,'⏸ 멈추기'), _cK(90003,'💨 내쉬기')]; }
+var _c24BreathTexts = ['🫁 들이쉬기', '⏸ 멈추기', '💨 내쉬기'];
 var _c24r = window._c24||{}, _bsr=window.BS||{};
 var _c24d = window._c24||{};
 var _c24r = window._c24||{};
@@ -1129,11 +1057,7 @@ function _c24CompShowResult(ai){
   var sec=document.getElementById('c24-result-section');
   if(!sec) return;
 
-  /* ★ C-75: 분석 실패 시 종합점수·등급이 없으면 75점/B등급을 기본값으로 채워
-     넣던 방식은, 실패를 마치 정상 결과처럼 보이게 하는 위험한 폴백이었다.
-     실패 시(종합점수===0 또는 미지정) "측정 실패"를 있는 그대로 보여준다. */
-  var _failed = !ai.종합점수 || ai.종합등급==='?';
-  var gradeC = _failed ? '#94a3b8' : ({A:'#34d399',B:'#fbbf24',C:'#f87171',D:'#ef4444'}[ai.종합등급]||'#fbbf24');
+  var gradeC={A:'#34d399',B:'#fbbf24',C:'#f87171',D:'#ef4444'}[ai.종합등급||'B']||'#fbbf24';
   var s=_c24CompState;
 
   var div=document.createElement('div');
@@ -1142,58 +1066,41 @@ function _c24CompShowResult(ai){
     // 헤더
     '<div style="text-align:center;padding:16px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);border-radius:14px;margin-bottom:14px;">'
     +'<div style="font-size:11px;color:rgba(52,211,153,.6);margin-bottom:4px;">🔬 6부위 종합 건강 분석</div>'
-    +'<div style="font-size:44px;font-weight:900;color:'+gradeC+';font-family:Orbitron,sans-serif;">'+(_failed?'--':ai.종합점수)+'</div>'
-    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+(_failed?'분석 실패':(ai.종합등급+' 등급'))+'</div>'
+    +'<div style="font-size:44px;font-weight:900;color:'+gradeC+';font-family:Orbitron,sans-serif;">'+(ai.종합점수||75)+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:'+gradeC+';margin-top:4px;">'+( ai.종합등급||'B')+' 등급</div>'
     +'</div>'
     // 6부위 스냅샷
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">'
     +[['face','👤'],['tongue','👅'],['eye','👁️'],['skin','🎨'],['hand_back','🤚'],['hand_palm','✋']].map(function(x){
-      if(!s.images[x[0]]) return '';
-      /* ★ C-82: 혀 이미지만 — AI가 캡처 사진에서 직접 읽어낸 좌표(백분율)로 점 2개를
-         오버레이한다. 실시간 색상 추적 대신 완료 후 정확한 AI 판독을 쓰는 1안. */
-      var _tgOverlay = '';
-      if(x[0]==='tongue' && ai.혀끝좌표 && ai.혀뿌리좌표){
-        var _tf=ai.혀끝좌표, _tb=ai.혀뿌리좌표;
-        _tgOverlay =
-          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">'
-          +'<line x1="'+_tb.x+'" y1="'+_tb.y+'" x2="'+_tf.x+'" y2="'+_tf.y+'" stroke="#f87171" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.7"/>'
-          +'<circle cx="'+_tf.x+'" cy="'+_tf.y+'" r="3" fill="#f87171" stroke="#450a0a" stroke-width="0.6"/>'
-          +'<circle cx="'+_tb.x+'" cy="'+_tb.y+'" r="3" fill="#f87171" stroke="#450a0a" stroke-width="0.6"/>'
-          +'</svg>';
-      }
-      return '<div style="text-align:center;position:relative;">'
-        +'<div style="position:relative;">'
-        +'<img src="data:image/jpeg;base64,'+s.images[x[0]]+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid rgba(52,211,153,.3);display:block;">'
-        +_tgOverlay
-        +'</div>'
-        +'<div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">'+x[1]+'</div></div>';
+      return s.images[x[0]]
+        ?'<div style="text-align:center;"><img src="data:image/jpeg;base64,'+s.images[x[0]]+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid rgba(52,211,153,.3);">'
+        +'<div style="font-size:10px;color:rgba(52,211,153,.5);margin-top:2px;">'+x[1]+'</div></div>'
+        :'';
     }).join('')+'</div>'
     // 핵심 발견
-    +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.85);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
-    +'<div style="font-size:12px;color:'+gradeC+';font-weight:800;margin-bottom:6px;">🔍 핵심 발견</div>'
-    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.핵심발견+'</div></div>':'')
+    +(ai.핵심발견?'<div style="padding:13px;background:rgba(0,0,0,.3);border-left:3px solid '+gradeC+';border-radius:0 12px 12px 0;margin-bottom:10px;">'
+    +'<div style="font-size:10px;color:'+gradeC+';font-weight:700;margin-bottom:5px;">🔍 핵심 발견</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.9);line-height:1.8;">'+ai.핵심발견+'</div></div>':'')
     // 각 진단 항목
-    +['심장활력','소화기','순환계','신경계'].map(function(k){
+    +['심장활력','소화기','순환계','신경계','오행_건강'].map(function(k){
       if(!ai[k]) return '';
-      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠'};
-      return '<div style="padding:12px;background:rgba(0,0,0,.85);border-left:3px solid rgba(52,211,153,.6);border-radius:0 10px 10px 0;margin-bottom:8px;">'
-        +'<div style="font-size:12px;color:#34d399;font-weight:800;margin-bottom:5px;">'+(ic[k]||'•')+' '+k.replace('_',' ')+'</div>'
-        +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai[k]+'</div></div>';
+      var ic={심장활력:'❤️',소화기:'🫃',순환계:'💗',신경계:'🧠',오행_건강:'☯️'};
+      return '<div style="padding:12px;background:rgba(0,0,0,.2);border-left:3px solid rgba(52,211,153,.3);border-radius:0 10px 10px 0;margin-bottom:8px;">'
+        +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">'+(ic[k]||'•')+' '+k.replace('_',' ')+'</div>'
+        +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai[k]+'</div></div>';
     }).join('')
     // 주의 신호
-    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(60,10,10,.9);border:1px solid rgba(248,113,113,.6);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:12px;color:#fca5a5;font-weight:800;margin-bottom:5px;">⚠️ 주의 신호</div>'
-    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.주의_신호+'</div></div>':'')
+    +(ai.주의_신호&&ai.주의_신호!=='없음'?'<div style="padding:12px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;color:#f87171;font-weight:700;margin-bottom:4px;">⚠️ 주의 신호</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.주의_신호+'</div></div>':'')
     // 당장 조언
-    +(ai.당장_조언?'<div style="padding:13px;background:rgba(55,40,5,.9);border:1px solid rgba(251,191,36,.6);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:12px;color:#fde047;font-weight:800;margin-bottom:5px;">💡 오늘 당장 실천</div>'
-    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.당장_조언+'</div></div>':'')
+    +(ai.당장_조언?'<div style="padding:13px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;color:#fbbf24;font-weight:700;margin-bottom:4px;">💡 오늘 당장 실천</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.당장_조언+'</div></div>':'')
     // 식이 처방
-    +(ai.식이_가이드?'<div style="padding:13px;background:rgba(3,40,30,.9);border:1px solid rgba(52,211,153,.6);border-radius:12px;margin-bottom:10px;">'
-    +'<div style="font-size:12px;color:#6ee7b7;font-weight:800;margin-bottom:5px;">🥗 오늘의 식사 가이드</div>'
-    +'<div style="font-size:14px;color:#ffffff;line-height:1.85;font-weight:500;">'+ai.식이_가이드+'</div></div>':'')
-    /* ★ C-75: 분석 실패 시 재시도 버튼 — 사진은 이미 있으니 재촬영 없이 AI 호출만 다시 */
-    +(_failed?'<button onclick="this.closest(\'div[style*=\\\'margin-top:8px\\\']\').remove();_c24CompFinalAnalyze();" style="width:100%;padding:13px;background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.5);border-radius:12px;color:#34d399;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;">🔄 다시 분석하기</button>':'')
+    +(ai.식이_가이드?'<div style="padding:13px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);border-radius:12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;">🥗 오행 식이 가이드</div>'
+    +'<div style="font-size:12px;color:rgba(240,230,200,.85);line-height:1.8;">'+ai.식이_가이드+'</div></div>':'')
     +'<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.15);margin-top:8px;">CGO-FULI 6부위 종합 건강 분석</div>';
 
   sec.insertBefore(div, sec.firstChild);
@@ -1236,13 +1143,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -1256,7 +1163,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -1290,195 +1197,122 @@ function _c24StartDisease(key){
   document.body.appendChild(pop);
 };
 
-/* ══════════════════════════════════════════════════════════════
-   6부위 종합 스캔 — AI 분석 엔진 (2026.09.16 전면 재작성, 2026.09.17 Claude 복귀)
-   지금까지의 실패에서 확인된 함정을 전부 피해서 처음부터 새로 짰다:
-   ① 결과는 배열 인덱스가 아니라 이름(key)으로만 관리한다.
-   ② /api/claude(kind:'med')로 Claude Sonnet을 쓴다 — Groq 대체 모델
-      (qwen/qwen3.6-27b)이 Preview 등급이라 더 불안정한 것으로 확인되어(Gemini
-      교차검증) 원래대로 Claude로 복귀. 서버(claude.js) 토큰한도 3000,
-      rate limit(_limit.js) med 갈래 분당10회로 이미 넉넉하게 설정됨.
-   ③ 서버 문지기를 넘지 않도록 요청 사이 15초 간격을 둔다.
-   ④ 모든 변수는 함수 최상위에서 선언한다 — Promise 체인 중간에서 var로
-      선언하면 다음 .then()에서 안 보인다("face is not defined" 버그의 원인).
-   ⑤ 실패하면 사용자에게 실제 이유를 그대로 보여준다 — 뭉뚱그리지 않는다.
-   ⑥ 개별 사진 하나가 실패해도 나머지는 계속 진행한다.
-   ══════════════════════════════════════════════════════════════ */
 function _c24CompFinalAnalyze(){
   try{var _pR=document.getElementById('page-algo');if(_pR)_pR.classList.remove('c24-scanning');}catch(e){}
-  try{ if(typeof _c24ChimeDone==='function') _c24ChimeDone(); }catch(e){}
+  try{ if(typeof _c24ChimeDone==='function') _c24ChimeDone(); }catch(e){} // 완료 차임 (B-2b)
+  // C-60: 모든 사진(손바닥 포함) 캡처 완료 후 5카드 재동기화 — 손바닥 빈칸 버그 수정
   try{ if(typeof hltSyncBioCards==='function') hltSyncBioCards(); }catch(e){}
-
   var s = _c24CompState;
   var r = window.calcResult||{};
+  var oh = r.domOh||'토';
   var name = r.name||'사용자';
+  var ohK = {목:'木',화:'火',토:'土',금:'金',수:'水'};
 
+  // 유도 버튼 제거
   var old = document.getElementById('c24-comp-next');
   if(old) old.remove();
 
-  var finalAi = null;
-
-  /* ── 로딩 화면 ── */
+  // 결과 섹션에 로딩 추가
   var sec = document.getElementById('c24-result-section');
-  var _dotTimer = null, _visHandler = null;
   if(sec){
     var loading = document.createElement('div');
     loading.id = 'c24-comp-loading';
     loading.style.cssText = 'padding:20px;text-align:center;';
     loading.innerHTML =
       '<div style="font-size:36px;animation:spin 1s linear infinite;">🔬</div>'
-      +'<div id="c24-loading-stage" style="color:#059669;font-size:13px;font-weight:700;margin-top:12px;">✨ 6부위를 한 번에 분석 중<span id="c24-loading-dots">.</span></div>'
-      +'<div style="font-size:11px;color:#334155;margin-top:4px;">얼굴·혀·눈·피부·손등·손바닥</div>'
-      +'<div style="font-size:10px;color:#334155;margin-top:6px;">약 20~40초 정도 걸립니다</div>';
+      +'<div style="color:#34d399;font-size:13px;font-weight:700;margin-top:12px;">✨ C-24가 6부위 종합 건강 분석 중...</div>'
+      +'<div style="font-size:11px;color:rgba(52,211,153,.5);margin-top:4px;">얼굴·손등·손바닥·혀 통합 스캔</div>';
     sec.insertBefore(loading, sec.firstChild);
-
-    var _dotN = 0;
-    _dotTimer = setInterval(function(){
-      var dEl = document.getElementById('c24-loading-dots');
-      if(!dEl){ clearInterval(_dotTimer); return; }
-      _dotN = (_dotN % 3) + 1;
-      dEl.textContent = '.'.repeat(_dotN);
-    }, 450);
-
-    _visHandler = function(){
-      if(document.hidden){
-        try{ if(window.cgoToast) window.cgoToast('⚠️ 분석 중에는 화면을 벗어나지 말아주세요'); }catch(_e){}
-      }
-    };
-    document.addEventListener('visibilitychange', _visHandler);
   }
 
-  function _cleanupLoading(){
-    try{ if(_dotTimer) clearInterval(_dotTimer); }catch(_e){}
-    try{ if(_visHandler) document.removeEventListener('visibilitychange', _visHandler); }catch(_e){}
-  }
+  // 각 이미지 Vision AI 분석
+  var analyses = {};
 
-  function _parseJson(t){
-    if(!t) return {};
-    var cleaned = t.replace(/```json|```/g,'').trim();
-    try{
-      var m = cleaned.match(/\{[\s\S]*\}/);
-      return m ? JSON.parse(m[0]) : {};
-    }catch(e){
-      try{ console.warn('[c24] JSON 파싱 실패:', e.message, '| 원문 앞부분:', cleaned.slice(0,300)); }catch(_e){}
-      return {};
-    }
-  }
-
-  /* ★ C-106: Gemini 교차검증으로 확인된 구조 개선 — 6장을 각각 15초 간격으로
-     7번(개별 6+통합 1) 나눠 보내던 방식은 rate limit은 피했지만, Claude 자체
-     응답이 느릴 때(17초+) 6번 누적되어 총 10분까지 걸리는 사고로 이어졌다.
-     Anthropic은 한 요청에 이미지 최대 100장까지 지원하고, 서버(claude.js
-     119번째 줄)도 이미 최대 6장을 받도록 되어 있었다 — 이 능력을 안 쓰고
-     있었을 뿐이다. 6장 + 관찰 지시 + 종합 소견 요청을 한 번의 요청에 다
-     담아서, API 호출을 7번에서 1번으로 줄인다. */
-  var breath = s.breathData;
-
-  var sysPrompt = '당신은 웰니스 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
-    +'실측 데이터와 사진 관찰 특징만 근거로, 참고용 웰니스 정보를 현실적·구체적으로 안내하세요. JSON만 반환. 코드블록 금지. '
-    +'질병명·의학적 진단 표현은 절대 쓰지 마세요("~병", "~염", "~증후군" 등 금지). '
-    +'"~한 편입니다", "~로 보입니다", "참고해 보세요" 같은 참고용 표현만 쓰세요. '
-    +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
-
-  /* 이미지는 순서대로 1)얼굴 2)혀 3)눈 4)피부 5)손등 6)손바닥 — 이 순서를
-     프롬프트에서도 그대로 알려줘서 AI가 몇 번째 사진이 무엇인지 헷갈리지 않게 한다. */
-  var _imgOrder = [
-    ['face', s.images.face, '1번째: 얼굴'],
-    ['tongue', s.images.tongue, '2번째: 혀'],
-    ['eye', s.images.eye, '3번째: 눈'],
-    ['skin', s.images.skin, '4번째: 피부'],
-    ['hand_back', s.images.hand_back, '5번째: 손등'],
-    ['hand_palm', s.images.hand_palm, '6번째: 손바닥']
-  ];
-  var _images = [];
-  var _presentKeys = [];
-  _imgOrder.forEach(function(o){
-    if(o[1]){ _images.push(o[1]); _presentKeys.push(o[0]); }
-  });
-
-  var userPrompt = '아래 사진은 순서대로 '+_imgOrder.map(function(o){return o[2];}).filter(function(_,i){return _images[i]!==undefined;}).join(', ')+'입니다(실제로 첨부된 사진 순서와 동일).\n'
-    +'분석 대상: '+name+'님\n'
-    +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
-    +'478호흡: 완료사이클='+breath.cycles+'회\n\n'
-    +'각 사진을 관찰하고, 아래 JSON 하나로 반환하세요(코드블록 금지):\n'
-    +'{"관찰":{'
-    +'"얼굴":{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움"},'
-    +'"혀":{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀끝좌표":{"x":50,"y":70},"혀뿌리좌표":{"x":50,"y":30}},'
-    +'"눈":{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐"},'
-    +'"피부":{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성"},'
-    +'"손등":{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함"},'
-    +'"손바닥":{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬"}'
-    +'},'
-    +'"종합등급":"A(컨디션 매우 좋음)/B(컨디션 양호)/C(컨디션 주의 필요)/D(휴식과 관리 권장) 중 하나",'
-    +'"종합점수":점수(40~98),'
-    +'"핵심발견":"6부위에서 발견한 가장 중요한 웰니스 신호. 실제 관찰 특징 언급. 참고용 표현으로. 3문장",'
-    +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태(참고용). 3문장",'
-    +'"소화기":"손바닥색+혀설태+설색으로 본 소화 관련 컨디션(참고용). 3문장",'
-    +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환 컨디션(참고용). 3문장",'
-    +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성(참고용). 3문장",'
-    +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션(참고용). 3문장",'
-    +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 컨디션(참고용). 3문장",'
-    +'"당장_조언":"오늘 당장 실천해볼 만한 생활 습관 3가지. 구체적으로.",'
-    +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-    +'"식이_가이드":"관찰된 컨디션을 참고했을 때 오늘 챙기면 좋을 음식과 피하면 좋을 음식(참고용). 3문장"}\n'
-    +'※ 사진이 없는 부위는 "관찰" 안에서 생략하고, 그 부위를 근거로 쓰는 항목(예: 사진이 없는데 "혀"를 근거로 든 문장)은 다른 근거로 대체하세요.';
-
-  var _tier = window._c24Tier || 'basic';
-
-  fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({kind:'med', tier:_tier,
-      system:sysPrompt, prompt:userPrompt, images:_images,
-      max_tokens:5000, temperature:0.6})})
-    .then(function(r){ return r.json(); })
+  var _analyzeImg = function(b64, prompt, key){
+    if(!b64) return Promise.resolve('');
+    var _tier = window._c24Tier || 'basic';
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:_tier,
+        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
+    .then(function(r2){return r2.json();})
     .then(function(d){
-      var text = (d && d.text) ? d.text : '';
-      var errReason = '';
-      if(!text){
-        var _raw = '';
-        try{ _raw = JSON.stringify(d).slice(0, 200); }catch(_e){ _raw = String(d); }
-        errReason = d && d.error ? String(d.error) : ('응답 형태 이상 — '+_raw);
-      }
-      var parsed = _parseJson(text);
+      var t=d.text||'';
+      return t.replace(/```json|```/g,'').trim();
+    }).catch(function(){return '';});
+  };
 
-      if(!parsed || Object.keys(parsed).length===0 || !parsed.핵심발견){
-        if(text && !errReason){
-          var _endsOk = /\}\s*$/.test(text.trim());
-          errReason = '응답 길이 '+text.length+'자, 끝맺음 '+(_endsOk?'정상(}로 끝남)':'비정상(중간에 끊긴 것으로 보임)')
-            +' — 앞부분: '+text.slice(0,400)+(text.length>400?' …(중략)… ':'')+(text.length>400?text.slice(-200):'');
-        }
-        finalAi = {
-          종합등급:'?', 종합점수:0,
-          핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.'
-            +(errReason ? ('<br><br>오류 상세(문의 시 함께 알려주세요): '+errReason) : '<br><br>오류 상세: 서버로부터 이유를 받지 못했습니다(네트워크 상태를 확인해 주세요)')
-        };
-        try{ if(window.cgoToast) window.cgoToast('분석 실패 — 잠시 후 다시 시도해 주세요'); }catch(_e){}
-      } else {
-        finalAi = parsed;
-        /* 혀 좌표를 관찰 하위 객체에서 최상위로 끌어올린다(화면 렌더링이 최상위에서 읽음) */
-        try{
-          var tgObs = parsed.관찰 && parsed.관찰.혀;
-          if(tgObs && tgObs.혀끝좌표 && typeof tgObs.혀끝좌표.x==='number' && typeof tgObs.혀끝좌표.y==='number'){
-            finalAi.혀끝좌표 = tgObs.혀끝좌표;
-          }
-          if(tgObs && tgObs.혀뿌리좌표 && typeof tgObs.혀뿌리좌표.x==='number' && typeof tgObs.혀뿌리좌표.y==='number'){
-            finalAi.혀뿌리좌표 = tgObs.혀뿌리좌표;
-          }
-        }catch(_e){}
-      }
+  Promise.all([
+    _analyzeImg(s.images.face,
+      '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}','face'),
+    _analyzeImg(s.images.tongue,
+      '이 혀 사진을 관찰. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음"}','tongue'),
+    _analyzeImg(s.images.eye,
+      '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}','eye'),
+    _analyzeImg(s.images.skin,
+      '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}','skin'),
+    _analyzeImg(s.images.hand_back,
+      '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}','hand_back'),
+    _analyzeImg(s.images.hand_palm,
+      '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}','hand_palm')
+  ]).then(function(results){
+    var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
+    var face=_parse(results[0]);
+    var tongue=_parse(results[1]);
+    var eye=_parse(results[2]);
+    var skin=_parse(results[3]);
+    var hBack=_parse(results[4]);
+    var hPalm=_parse(results[5]);
+    var breath=s.breathData;
 
-      _cleanupLoading();
-      _c24CompShowResult(finalAi);
-    })
-    .catch(function(err){
-      var msg = '';
-      try{ msg = (err && (err.message || String(err))) || '알 수 없음'; }catch(_e){}
-      _cleanupLoading();
-      _c24CompShowResult({
-        종합등급:'?', 종합점수:0,
-        핵심발견:'⚠️ 분석에 실패했습니다. 사진은 모두 저장되어 있으니 잠시 후 다시 시도해 주세요.<br><br>오류 상세(문의 시 함께 알려주세요): '+msg
-      });
-    });
-}
+    // 통합 AI 분석
+    var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
+      +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
+      +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
+
+    var userPrompt = '분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')\n'
+      +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
+      +'478호흡: 완료사이클='+breath.cycles+'회\n'
+      +'얼굴 관찰: '+JSON.stringify(face)+'\n'
+      +'혀 관찰: '+JSON.stringify(tongue)+'\n'
+      +'눈 관찰: '+JSON.stringify(eye)+'\n'
+      +'피부 관찰: '+JSON.stringify(skin)+'\n'
+      +'손등 관찰: '+JSON.stringify(hBack)+'\n'
+      +'손바닥 관찰: '+JSON.stringify(hPalm)+'\n\n'
+      +'아래 JSON으로 반환:\n'
+      +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
+      +'"종합점수":점수(40~98),'
+      +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 3문장",'
+      +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 3문장",'
+      +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 3문장",'
+      +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 3문장",'
+      +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
+      +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션. 3문장",'
+      +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 건강 상태. 3문장",'
+      +'"오행_건강":"오행('+oh+') 기준 현재 기운의 흐름. 어떤 부분을 돌보면 좋은지. 3문장",'
+      +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
+      +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
+      +'"식이_가이드":"오행('+oh+') 기준 지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
+
+    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
+        system:sysPrompt, prompt:userPrompt,
+        max_tokens:2500, temperature:0.6})});
+  })
+  .then(function(r3){return r3.json();})
+  .then(function(d3){
+    var t=d3.text||'';
+    var m=t.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    var ai=null;
+    if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
+    /* ★ AI가 JSON이 아닌 형식으로 답했거나 파싱이 실패하면, 조용히 빈 결과({})로
+       넘어가 점수만 뜨고 텍스트가 통째로 사라졌었다. 최소한 받은 원문이라도 보여준다. */
+    if(!ai || Object.keys(ai).length===0){
+      ai = t.trim() ? {핵심발견:t.trim()} : {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
+    }
+    _c24CompShowResult(ai);
+  })
+  .catch(function(){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요.'}); });
+};
 
 function _c24UpdateBanner(){
   var st = _c24DiseaseState;
@@ -1492,10 +1326,10 @@ function _c24UpdateBanner(){
   var bprog  = document.getElementById('c24-banner-prog');
   if(!banner) return;
   banner.style.display='block';
-  if(btitle) btitle.textContent = _cgoT(card.title).replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' '+_cK(90006,'검사 중');
+  if(btitle) btitle.textContent = _cgoT(card.title).replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' '+_cgoT('검사 중');
   if(bstep)  bstep.textContent = flow.total>1 ? (st.stepIdx+1)+'/'+flow.total+' 단계' : '단일 검사';
   if(bguide){
-    var modeNames={face:'👤 얼굴을 카메라에 비추고 앞뒤로 움직여 맞춰 주세요',tongue:'👅 혀를 최대한 내밀고 카메라를 앞뒤로 움직여 맞춰 주세요',hand:'✋ 손바닥을 펴서 후면 카메라를 앞뒤로 움직여 맞춰 주세요',eye:'👁️ 눈 흰자가 잘 보이도록 위를 약간 보며 카메라를 앞뒤로 움직여 맞춰 주세요',skin:'🎨 측정할 피부 부위에 카메라를 앞뒤로 움직여 맞춰 주세요'};
+    var modeNames={face:'👤 얼굴을 카메라 정면 30~50cm에 맞춰 주세요',tongue:'👅 혀를 최대한 내밀어 카메라에 가까이 대 주세요',hand:'✋ 손바닥을 펴서 후면 카메라 앞 20~30cm에 대 주세요',eye:'👁️ 눈 흰자가 잘 보이도록 위를 약간 보며 카메라 가까이 대 주세요',skin:'🎨 측정할 피부 부위를 카메라 10~20cm 앞에 대 주세요'};
     bguide.textContent = (modeNames[flow.steps[st.stepIdx]]||'') + ' — '+(flow.times?flow.times[st.stepIdx]:90)+'초간 고정해 주세요';
   }
   if(bprog) bprog.style.width = ((st.stepIdx/flow.total)*100)+'%';
@@ -1535,13 +1369,13 @@ function _c24StartDisease(key){
   // 단계별 안내 생성
   var stepColors = {face:'56,189,248', tongue:'248,113,113', eye:'52,211,153', skin:'244,114,182', hand:'251,191,36', hand_back:'251,191,36', hand_palm:'251,191,36'};
   var stepGuides = {
-    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
-    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
-    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
-    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'앞뒤로', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
-    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
-    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'앞뒤로', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
+    face:  {ico:'👤', name:'얼굴', cam:_cK(8608,'📱 전면 카메라'), dist:'30~40cm', tips:['밝은 정면 조명', '안경·모자 제거', '무표정으로 정면 응시']},
+    tongue:{ico:'👅', name:'혀',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['혀를 최대한 내밀기', '혀 전체가 화면에 보이도록', '식사 30분 후 권장']},
+    eye:   {ico:'👁️', name:'눈',   cam:_cK(8608,'📱 전면 카메라'), dist:'15~20cm', tips:['위를 약간 봐서 흰자 노출', '렌즈 제거 권장', '눈을 크게 뜨기']},
+    skin:  {ico:'🎨', name:'피부', cam:_cK(8608,'📱 전면 카메라'), dist:'10~15cm', tips:['맨 피부 상태 권장', '크림·화장 없이', '자연광 또는 백색등']},
+    hand:  {ico:'✋', name:'손',   cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손가락 가지런히 펴기', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_back: {ico:'🤚', name:'손등', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손톱 잘 보이게', _cK(8627,'매니큐어 제거 권장'), '손 흔들지 않기']},
+    hand_palm: {ico:'✋', name:'손바닥', cam:_cK(8624,'📷 후면 카메라'), dist:'20~25cm', tips:['손바닥 평평하게 펼치기', '손금이 보이도록', '손 흔들지 않기']}
   };
 
   var totalSec = (flow.times||[]).reduce(function(a,b){return a+b;},0);
@@ -1555,7 +1389,7 @@ function _c24StartDisease(key){
       +'<span style="font-size:12px;font-weight:800;color:rgba('+c+',1);">'+(i+1)+'단계 · '+g.name+' — '+t+'초</span>'
       +'<span style="font-size:10px;color:rgba('+c+',.5);margin-left:auto;">'+g.cam+'</span></div>'
       +'<div style="font-size:11px;color:rgba(240,230,200,.8);line-height:1.9;padding-left:26px;">'
-      +'📏 화면을 보며 스마트폰을 <b style="color:#fff;">앞뒤로</b> 움직여 맞춰주세요<br>'
+      +'📏 카메라와 <b style="color:#fff;">'+g.dist+'</b> 거리 유지<br>'
       +g.tips.map(function(t){return '• '+t;}).join('<br>')
       +'</div></div>';
   }).join('');
@@ -1624,7 +1458,7 @@ function _c24BreathTick(){
   var bar = document.getElementById('c24-breath-bar');
   var txt = document.getElementById('c24-breath-text');
   var cnt = document.getElementById('c24-breath-count');
-  if(txt) { txt.textContent = _c24BreathTextsNow()[_c24BreathPhase]; txt.style.color = _c24BreathColors[_c24BreathPhase]; }
+  if(txt) { txt.textContent = _cgoT(_c24BreathTexts[_c24BreathPhase]); txt.style.color = _c24BreathColors[_c24BreathPhase]; }
   if(bar) bar.style.background = _c24BreathColors[_c24BreathPhase];
 
   _c24BreathTimer = setInterval(function(){
@@ -1639,9 +1473,9 @@ function _c24BreathTick(){
       if(_c24BreathPhase === 0){
         // ★ 1사이클 완료 → 멈추고 완료 메시지 표시
         _c24CompState.breathData.cycles = 1;
-        if(txt){ txt.textContent = _cK(90004,'✅ 호흡 완료 — 편안하게 정면을 바라봐 주세요'); txt.style.color = '#34d399'; }
+        if(txt){ txt.textContent = _cgoT('✅ 호흡 완료 — 편안하게 정면을 바라봐 주세요'); txt.style.color = '#34d399'; }
         if(bar){ bar.style.width = '100%'; bar.style.background = '#34d399'; }
-        if(cnt){ cnt.textContent = _cK(90005,'1 사이클 완료'); }
+        if(cnt){ cnt.textContent = _cgoT('1 사이클 완료'); }
         // 5초 후 오버레이 자연스럽게 사라짐
         setTimeout(function(){
           var ov = document.getElementById('c24-breath-overlay');
@@ -1849,7 +1683,7 @@ function _c24DiseaseNextStep(){
     var bprog = document.getElementById('c24-banner-prog');
     var bstep = document.getElementById('c24-banner-step');
     if(bprog) bprog.style.width='100%';
-    if(bstep){ bstep.textContent=_cK(90007,'✅ 완료'); bstep.style.color='#34d399'; }
+    if(bstep){ bstep.textContent=_cgoT('✅ 완료'); bstep.style.color='#34d399'; }
     var btitle = document.getElementById('c24-banner-title');
     if(btitle) btitle.textContent = _c24Cards[st.key].title.replace(/[💓🩸🦋🫀🍬🧠🫁👅😴🧬]/u,'').trim()+' 검사 완료!';
     st.active = false;
@@ -2007,7 +1841,36 @@ function _c24DrawGuide(skinRatio){
   var ok = _c24.faceOK;
   var _fs = _c24.fitState || (ok?'ok':'far');
   var _fcol = _fs==='ok'?'rgba(52,211,153,.92)':_fs==='near'?'rgba(251,191,36,.95)':'rgba(248,113,113,.85)';
-  var _hint = _fs==='ok'?_cK(8762,'✅ 딱 맞아요 — 측정 중'):_fs==='near'?_cK(8763,'➡️ 조금 멀어지세요'):_cK(8764,'⬅️ 더 가까이 · 원 안에 맞춰주세요');
+  /* ★ C-71: 부위별로 "무엇을, 어떻게" 하라고 직접 지시 — 원 안에 맞추라는 추상적 안내 대신 */
+  var _hint;
+  if(mode==='tongue'){
+    _hint = _fs==='ok'?_cK(8770,'✅ 딱 맞아요 — 측정 중'):_fs==='near'?_cK(8771,'➡️ 혀를 조금 넣으세요(너무 가까워요)'):_cK(8772,'👅 혀를 내밀어 타원 안에 맞춰주세요');
+  } else if(mode==='eye'){
+    _hint = _fs==='ok'?_cK(8773,'✅ 딱 맞아요 — 측정 중'):_fs==='near'?_cK(8774,'➡️ 조금 멀어지세요(너무 가까워요)'):_cK(8775,'👁 눈을 크게 뜨고 타원 안에 맞춰주세요');
+  } else {
+    _hint = _fs==='ok'?_cK(8762,'✅ 딱 맞아요 — 측정 중'):_fs==='near'?_cK(8763,'➡️ 조금 멀어지세요'):_cK(8764,'⬅️ 더 가까이 · 원 안에 맞춰주세요');
+  }
+
+  /* ★ C-71: 화면 픽셀 ↔ 비디오 픽셀 변환(object-fit:cover 보정 + 거울 보정) —
+     아래쪽 ROI 표시부에서 쓰던 것과 동일한 공식. 랜드마크를 화면에 그릴 때도 이걸 쓴다. */
+  var _v2c = null;
+  if(v.videoWidth){
+    var _sc0=Math.max(cv.width/v.videoWidth, cv.height/v.videoHeight);
+    var _ox0=(cv.width - v.videoWidth*_sc0)/2, _oy0=(cv.height - v.videoHeight*_sc0)/2;
+    _v2c = function(nx, ny){   /* nx,ny: FaceMesh 정규화 좌표(0~1) */
+      var px = nx*v.videoWidth*_sc0+_ox0, py = ny*v.videoHeight*_sc0+_oy0;
+      px = cv.width - px;   /* 거울 보정 */
+      return [px, py];
+    };
+  }
+
+  /* ★ C-71: 혀·눈은 화면 중앙 고정 원이 아니라, 지금 인식된 입/눈 위치를 그대로 따라다니는
+     타원을 그린다. 사용자가 얼굴을 어디에 두든 "이 모양 안에 그 부위를 맞추면 끝"이 되도록.
+     FaceMesh가 아직 못 잡았을 때만 화면 중앙 고정 타원으로 대신한다(완전히 못 쓰게 되는 것 방지). */
+  var _lm2 = _c24._faceLms;
+  var _canTrack = (mode==='tongue'||mode==='eye') && _lm2 && _v2c &&
+    ((mode==='tongue' && _lm2[61] && _lm2[291] && _lm2[13] && _lm2[14]) ||
+     (mode==='eye' && _lm2[33] && _lm2[133] && _lm2[159] && _lm2[145]));
 
   if(isHandMode){
     // 손 모드: 사각형 가이드
@@ -2018,8 +1881,33 @@ function _c24DrawGuide(skinRatio){
     ctx.setLineDash([8,4]);
     ctx.strokeRect(rx,ry,rw,rh);
     ctx.setLineDash([]);
+  } else if(_canTrack){
+    // ★ C-71: 입/눈을 실시간으로 따라다니는 타원 — 위치는 항상 맞고, 거리(크기)만 조절하면 된다
+    var _cx3, _cy3, _rx3, _ry3;
+    if(mode==='tongue'){
+      var _a=_v2c(_lm2[61].x,_lm2[61].y), _b=_v2c(_lm2[291].x,_lm2[291].y);
+      var _t=_v2c(_lm2[13].x,_lm2[13].y), _u=_v2c(_lm2[14].x,_lm2[14].y); /* 윗입술·아랫입술 안쪽 */
+      _cx3=(_a[0]+_b[0])/2; _cy3=((_t[1]+_u[1])/2)+ (cv.height*0.02); /* 입 살짝 아래로 — 혀 내밀 공간 */
+      var _mouthW=Math.abs(_b[0]-_a[0]);
+      _rx3=Math.max(_mouthW*0.85, cv.width*0.12);
+      _ry3=_rx3*0.72;   /* 가로로 넓적한 입 모양 타원 */
+    } else {
+      var _e1=_v2c(_lm2[33].x,_lm2[33].y), _e2=_v2c(_lm2[133].x,_lm2[133].y);
+      var _e3=_v2c(_lm2[159].x,_lm2[159].y), _e4=_v2c(_lm2[145].x,_lm2[145].y); /* 윗눈꺼풀·아랫눈꺼풀 */
+      _cx3=(_e1[0]+_e2[0])/2; _cy3=(_e3[1]+_e4[1])/2;
+      var _eyeW=Math.abs(_e2[0]-_e1[0]);
+      _rx3=Math.max(_eyeW*0.95, cv.width*0.10);
+      _ry3=_rx3*0.55;   /* 좌우로 납작한 눈 모양 타원 */
+    }
+    ctx.beginPath();
+    ctx.ellipse(_cx3,_cy3,_rx3,_ry3,0,0,Math.PI*2);
+    ctx.strokeStyle=_fcol; ctx.lineWidth=3;
+    ctx.setLineDash(_fs==='ok'?[]:[6,4]);
+    if(_fs==='ok'){ ctx.shadowColor=_fcol; ctx.shadowBlur=14; }
+    ctx.stroke();
+    ctx.shadowBlur=0; ctx.setLineDash([]);
   } else {
-    // 얼굴/혀 모드: 타원 가이드
+    // 얼굴 모드(또는 FaceMesh 아직 못 잡았을 때 혀·눈 폴백): 화면 중앙 고정 타원
     var cx2=cv.width*0.5, cy2=cv.height*0.48;
     var ex=cv.width*0.38, ey=cv.height*0.42;
     /* ★ C-63: 원이 곧 FaceMesh 상태 표시기 — 얼굴 인식되면 초록 실선 + 발광 */
@@ -2040,10 +1928,6 @@ function _c24DrawGuide(skinRatio){
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    /* ★ C-74: 혀·눈의 '안쪽 작은 원'을 없앤다 — 여기 맞추려다 오히려 거리가 안 맞는다는 지적.
-       이 작은 원은 판정 로직(far/near/ok)에 전혀 쓰이지 않던 순수 안내선이었다 —
-       실제 판정은 바깥 큰 원의 색(_fcol)뿐이므로 제거해도 동작은 그대로다.
-       이제 안내는 "큰 원 색깔 + 스마트폰 앞뒤로" 텍스트 하나로 단순해진다. */
     // 코너 강조
     var corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
     corners.forEach(function(c3){
@@ -2121,12 +2005,8 @@ function _c24DrawGuide(skinRatio){
       ctx.fillText(_lbl, 12, 80);
       /* ★ C-69: 실측 기준점 마스크 — 거리 계산에 실제로 쓰는 좌표를 화면에 점으로 찍는다.
          사용자가 "지금 이 두 점 사이로 거리를 재는구나"를 눈으로 확인 → 스스로 정렬 가능.
-         FaceMesh가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음.
-         ★ C-74: 눈 모드는 ROI 소스가 항상 'inner-circle'(2477행)이라 _isFM이 결코 참이 될 수
-         없다 — 그래서 눈 마스크가 한 번도 안 그려졌다(점 크기 문제가 아니라 조건 자체가 막힘).
-         랜드마크 신선도(_lmsFresh)만으로 판정하도록 분리 — ROI 소스와 무관하게 그려진다. */
-      if(_c24._faceLms && (mode==='face'||mode==='skin'||mode==='eye') &&
-         (performance.now()-(_c24._faceLmsTime||0) < 700)){
+         FaceMesh가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음. */
+      if(_isFM && _c24._faceLms){
         try{
           var _L2=_c24._faceLms;
           function _mp(i){ var p=_L2[i]; if(!p) return null;
@@ -2135,69 +2015,23 @@ function _c24DrawGuide(skinRatio){
             return {x:px, y:py};
           }
           var _dots=[];
-          var _dotR=4;   /* 기본 점 반지름 */
           if(mode==='face'||mode==='skin'){
             _dots=[_mp(468), _mp(473)];               /* 좌우 홍채 중심 — 거리 자(eyeRulerCm)와 동일 기준점 */
           } else if(mode==='eye'){
-            _dots=[_mp(33), _mp(133)];                /* ★ C-73: 왼쪽 눈 눈꼬리(33)~눈머리(133) — 지금 화면에 확대해 보이는 그 눈 자체의 폭. 얼굴 모드의 '양눈 사이' 좌표(468·473)와는 다른 자 */
-            _dotR=7;     /* ★ C-74: 눈은 화면에 확대돼 보이므로 점도 더 크게 — '잘 안 보인다' 지적 반영 */
+            _dots=[_mp(468), _mp(473)];
           }
           _dots.forEach(function(_d){
             if(!_d) return;
             ctx.beginPath();
-            if(mode==='eye'){ ctx.shadowColor='rgba(52,211,153,.9)'; ctx.shadowBlur=10; }   /* 발광으로 확실히 띄움 */
-            ctx.arc(_d.x,_d.y,_dotR,0,Math.PI*2);
+            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
             ctx.fillStyle='rgba(52,211,153,.95)';
             ctx.fill();
-            ctx.shadowBlur=0;
-            ctx.lineWidth=(mode==='eye')?2:1.5; ctx.strokeStyle='rgba(6,78,59,.9)'; ctx.stroke();
+            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(6,78,59,.9)'; ctx.stroke();
           });
           if(_dots.length===2 && _dots[0] && _dots[1]){
             ctx.beginPath();
             ctx.moveTo(_dots[0].x,_dots[0].y); ctx.lineTo(_dots[1].x,_dots[1].y);
             ctx.strokeStyle='rgba(52,211,153,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
-            ctx.stroke(); ctx.setLineDash([]);
-          }
-        }catch(_e){}
-      }
-      /* ★ C-82: 실시간 혀 색상 추적 마스크(C-71~C-79)를 완전히 제거했다 — 64x48 초경량
-         버퍼에서는 혀 유두 질감이 물리적으로 뭉개져, 색상만으로는 입술·피부와 구분이
-         안 되고 계속 엉뚱한 위치에 점이 찍혔다("혀가 지맘대로" 지적).
-         대신 측정 완료 후 캡처된 원본 해상도 사진을 AI(_analyzeImg)에 보낼 때
-         혀 앞/뒤 좌표도 함께 요청해서, 결과 화면에 정확한 점을 찍는 방식(1안)으로 전환.
-         실측 중에는 큰 원(가이드)만 보여주고 점은 찍지 않는다. */
-      /* ★ C-70: 손 좌표 마스크 — 손목(0) + 가장 긴 손가락 끝 1점. 눈 마스크(C-69)와 동일 패턴.
-         Hands가 이미 매 프레임 계산해 둔 좌표를 그리기만 하므로 연산 부담 없음.
-         후면 카메라는 scaleX(1)이라 거울 반전 금지 — 실제 적용된 transform을 보고 판단한다. */
-      if(isHandMode && _c24._handLms && (performance.now()-(_c24._handLmsTime||0) < 700)){
-        try{
-          var _HL=_c24._handLms;
-          var _mirH=((v.style.transform||'').indexOf('scaleX(-1)')>=0);
-          function _hp(i){ var p=_HL[i]; if(!p) return null;
-            var px=p.x*v.videoWidth*_sc+_ox, py=p.y*v.videoHeight*_sc+_oy;
-            if(_mirH) px = cv.width - px;
-            return {x:px, y:py};
-          }
-          /* 가장 긴 손가락 = 손목에서 가장 먼 손끝 (엄지4·검지8·중지12·약지16·새끼20) */
-          var _wr=_HL[0], _tipIdx=12, _bestD=-1;
-          [4,8,12,16,20].forEach(function(ti){
-            var tp=_HL[ti]; if(!tp||!_wr) return;
-            var d=(tp.x-_wr.x)*(tp.x-_wr.x)+(tp.y-_wr.y)*(tp.y-_wr.y);
-            if(d>_bestD){ _bestD=d; _tipIdx=ti; }
-          });
-          var _hd=[_hp(0), _hp(_tipIdx)];
-          _hd.forEach(function(_d){
-            if(!_d) return;
-            ctx.beginPath();
-            ctx.arc(_d.x,_d.y,4,0,Math.PI*2);
-            ctx.fillStyle='rgba(251,191,36,.95)';   /* 손 단계 색(amber) — stepColors와 통일 */
-            ctx.fill();
-            ctx.lineWidth=1.5; ctx.strokeStyle='rgba(69,26,3,.9)'; ctx.stroke();
-          });
-          if(_hd[0] && _hd[1]){
-            ctx.beginPath();
-            ctx.moveTo(_hd[0].x,_hd[0].y); ctx.lineTo(_hd[1].x,_hd[1].y);
-            ctx.strokeStyle='rgba(251,191,36,.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
             ctx.stroke(); ctx.setLineDash([]);
           }
         }catch(_e){}
@@ -2218,7 +2052,7 @@ function _c24DrawGuide(skinRatio){
       if((mode==='face'||mode==='skin')){
         _sym = _isFM ? _cK(8755,'✅ 얼굴 인식됨 — 그대로 유지하세요')
              : (_c24._fmHit>0 ? _cK(8756,'🔍 얼굴을 다시 화면 중앙으로')
-                              : _cK(8757,'💡 얼굴이 안 잡혀요 — 조명을 밝게 · 카메라를 앞뒤로 움직여보세요'));
+                              : _cK(8757,'💡 얼굴이 안 잡혀요 — 조명을 밝게 · 카메라와 40~60cm'));
       } else {
         _sym={tongue:_cK(8758,'👅 혀를 작은 원 중앙에'),
               eye:_cK(8759,'👁️ 눈을 작은 원 중앙에'),
@@ -2259,37 +2093,37 @@ window._c24ShowChatGuide = function(idx){
     {emoji:'👤', title:'얼굴 측정', sec:60, msgs:[
       _cK(8642,'안녕하세요! 6부위 종합 검사 함께 시작할게요 🌸'),
       _cK(8643,'먼저 *얼굴*부터 측정해요'),
-      _cK(8644,'화면을 보며 앞뒤로 움직여 원이 초록색이 되면 멈추기 + 무표정 + 정면 조명'),
+      _cK(8644,'카메라와 30~40cm 거리 유지 + 무표정 + 정면 조명'),
       _cK(8645,'안경·모자 제거하시고, 화면 아래 4-7-8 호흡 타임라인을 따라 호흡해주세요')
     ], tip:_cK(8646,'준비되면 [네, 시작할게요] 버튼을 눌러주세요. 카메라 켜진 후 *5초 위치 조정 시간*이 있어요')},
     {emoji:'👅', title:'혀 관찰 측정', sec:20, msgs:[
       _cK(8700,'잘하셨어요! 얼굴 측정 완료 ✓'),
       _cK(8701,'이제 *혀*를 보여주실 차례예요'),
-      _cK(8702,'화면을 보며 앞뒤로 움직여 *혀가 원에 딱 맞으면* 멈춰주세요'),
+      _cK(8702,'카메라 15~20cm 거리에 혀를 *최대한 내밀어* 전체가 보이게 해주세요'),
       _cK(8703,'식사 30분 후가 가장 정확합니다')
     ], tip:_cK(8704,'혀를 카메라에 가져다 댄 후 [네, 시작할게요] 눌러주세요')},
     {emoji:'👁️', title:'눈 측정', sec:20, msgs:[
       _cK(8705,'좋아요! 혀 측정 완료 ✓'),
       _cK(8706,'다음은 *눈* 차례예요'),
-      _cK(8707,'화면을 보며 앞뒤로 움직여 *눈 점 두 개가 잘 보이면* 멈춰주세요'),
+      _cK(8707,'카메라 15~20cm 거리에서 *위를 약간 봐서* 흰자가 잘 보이게'),
       _cK(8708,'콘택트렌즈는 제거해주시면 더 정확해요')
     ], tip:_cK(8709,'눈 위치 잡으신 후 [네, 시작할게요] 눌러주세요')},
     {emoji:'🎨', title:'피부 측정', sec:30, msgs:[
       _cK(8710,'훌륭해요! 눈 측정 완료 ✓'),
       _cK(8711,'이제 *피부* 차례예요'),
-      _cK(8712,'화면을 보며 앞뒤로 움직여 *피부가 원을 채우면* 멈춰주세요'),
+      _cK(8712,'카메라 10~15cm 거리에 *이마 또는 뺨 맨피부*를 가까이'),
       _cK(8713,'크림·화장 없는 상태가 가장 정확합니다')
     ], tip:_cK(8714,'피부 위치 잡으신 후 [네, 시작할게요] 눌러주세요')},
     {emoji:'🤚', title:'손등 측정', sec:15, msgs:[
       _cK(8715,'좋습니다! 피부 측정 완료 ✓'),
       _cK(8716,'*손등*을 측정할게요. 이번엔 *후면 카메라* 사용'),
-      _cK(8717,'화면을 보며 앞뒤로 움직여 *손이 박스에 딱 맞으면* 멈춰주세요'),
+      _cK(8717,'카메라 20~25cm 거리에 *손톱이 잘 보이도록* 손등을 정면으로'),
       _cK(8627,'매니큐어 제거 권장')
     ], tip:_cK(8718,'손등 위치 잡으신 후 [네, 시작할게요] 눌러주세요')},
     {emoji:'✋', title:'손바닥 측정 (마지막!)', sec:15, msgs:[
       _cK(8720,'거의 다 왔어요! 손등 측정 완료 ✓'),
       _cK(8721,'*마지막* — 손바닥 차례예요'),
-      _cK(8722,'화면을 보며 앞뒤로 움직여 *손이 박스에 딱 맞으면* 멈춰주세요'),
+      _cK(8722,'카메라 20~25cm 거리에 손바닥을 *평평하게 펼쳐* 정면으로'),
       _cK(8723,'조명이 잘 비추는 곳에서 측정하세요')
     ], tip:_cK(8724,'손바닥 위치 잡으신 후 [네, 시작할게요] 눌러주세요. 측정 완료까지 잠시!')}
   ];
@@ -2432,7 +2266,7 @@ function _c24Finish(){
   var idle=document.getElementById('c24-idle-overlay');
   var badge=document.getElementById('c24-live-badge');
   var lb=document.getElementById('c24-live-bpm');
-  if(startBtn){startBtn.style.display='block';startBtn.textContent=_cK(90008,'▶ 다시 측정');}
+  if(startBtn){startBtn.style.display='block';startBtn.textContent=_cgoT('▶ 다시 측정');}
   if(stopBtn){stopBtn.style.display='none';}
   if(idle){idle.style.display='none';}
   if(badge){badge.style.display='none';}
@@ -2577,16 +2411,10 @@ function _c24RoiRect(v){
         }
       }
     }
-    /* ── 혀/눈: 가이드 원 안쪽 판정 영역 ──
-       ★ C-85: 예전엔 이 영역이 화면에 작은 원(ex*0.5)으로 표시돼 사용자가 거기 맞췄는데,
-       지난 세션에 "그 작은 원에 맞추려다 오히려 안 맞는다"는 지적으로 화면 표시만 없앴다.
-       그런데 판정 기준 자체는 그대로 절반 크기로 남아 있어서, 사용자는 큰 원(화면에 보이는
-       전체 가이드)에 맞췄다고 생각해도 실제 판정은 그보다 훨씬 좁은 중앙만 보고 있었다
-       ("혀를 더 당겨야 하나" 혼란의 정체). 큰 원과 거의 같은 크기(0.34/0.38 — 살짝만
-       여유를 남김)로 넓혀 화면에 보이는 대로 판정되게 한다. */
+    /* ── 혀/눈: 가이드 안쪽 작은 원 영역 (DrawGuide의 ex*0.5, ey*0.5와 동일) ── */
     if(mode==='tongue' || mode==='eye'){
       var cx=vw*0.5, cy=vh*0.48;
-      var ex=vw*0.34, ey=vh*0.38;
+      var ex=vw*0.38*0.5, ey=vh*0.42*0.5;
       return {sx:Math.floor(cx-ex), sy:Math.floor(cy-ey), sw:Math.floor(ex*2), sh:Math.floor(ey*2), src:'inner-circle'};
     }
     /* ── 손등/손바닥: 사각 가이드 내부 (DrawGuide 0.1/0.15/0.8/0.7) ── */
@@ -2669,7 +2497,6 @@ function _c24CompStartStep(needBack){
   _c24.rawR=[]; _c24.rawG=[]; _c24.rawB=[];
   _c24.chromSig=[]; _c24.bpZS=[0,0];
   _c24.bpm=0; _c24.hrv=0; _c24.fci=0;
-  _c24.envAdvisory=null;
   _c24.sec=0; _c24.prevR=0; _c24.prevG=0;
   _c24.capturedImage=null;
   _c24.faceOK=false;
@@ -2796,10 +2623,10 @@ function _c24CompDoStep(idx){
   // 단계별 안내 UI 표시
   var icons=['👤','👅','👁️','🎨','🤚','✋'];
   var guides=[
-    _cK(8740,'화면을 보며 카메라를 앞뒤로 움직여 원이 초록색이 되면 멈추세요\n478 호흡법을 따라 호흡해 주세요 (60초)'),
+    _cK(8740,'얼굴을 카메라 정면 30cm에 맞춰주세요\n478 호흡법을 따라 호흡해 주세요 (60초)'),
     _cK(8741,'혀를 최대한 내밀어 카메라에 가까이 대주세요 (20초)'),
     _cK(8742,'눈 흰자가 보이도록 위를 약간 보며 카메라에 대주세요 (20초)'),
-    _cK(8743,'화면을 보며 카메라를 앞뒤로 움직여 피부가 원을 채우면 멈추세요 (30초)'),
+    _cK(8743,'피부 부위를 카메라 10~20cm 앞에 고정해 주세요 (30초)'),
     _cK(8744,'손등(손톱 보이는 쪽)을 후면 카메라에 보여주세요 (15초)'),
     _cK(8745,'손바닥을 펼쳐 후면 카메라에 보여주세요 (15초)')
   ];
@@ -2856,11 +2683,6 @@ function _c24Loop(){
       }
       var px=_c24.offCtx.getImageData(0,0,64,48).data;
       var rSum=0,gSum=0,bSum=0,cnt=0,skinCnt=0;
-      /* ★ C-82: 혀 색상 실시간 추적(C-71~C-79)을 제거했다 — 64x48 초경량 버퍼에서는
-         혀 유두 질감이 물리적으로 뭉개져 색상만으로 입술·피부와 구분이 안 됐다.
-         측정 완료 후 캡처된 원본 해상도 사진을 AI에 보내 좌표를 받는 방식(1안)으로 전환.
-         이 루프는 rSum/gSum/bSum(CHROM rPPG 입력)과 skinCnt(정렬 판정)만 계속 계산한다 —
-         실제 측정(맥박·설색 판정)은 이 값들로 이루어지므로 그대로 둔다. */
       for(var i=0;i<px.length;i+=4){
         var pr=px[i],pg=px[i+1],pb=px[i+2];
         rSum+=pr; gSum+=pg; bSum+=pb; cnt++;
@@ -2878,10 +2700,9 @@ function _c24Loop(){
           var v2=_c24CalcVitals();
           if(v2){
             _c24.gotVitals=true; /* B-1: 진짜 맥동 신호 획득 */
-            /* ★ HAZ-003: 원본 실측(v2.bpm) → 생리 구속만 적용 → 이것이 화면·저장·리포트의 유일한 BPM.
-               기온은 값을 바꾸지 않고 신뢰도 판정(advisory)만 별도로 남긴다. */
-            _c24.bpm = _c24Physio(v2.bpm);
-            _c24.envAdvisory = _c24EnvAdvisory(v2.bpm, _c24.mode);
+            /* 환경 보정 → 생리 구속 → 교차검증 순서 */
+            var _bp = _c24EnvAdjust(v2.bpm, _c24.mode);
+            _c24.bpm = _c24Physio(_bp);
             try{
               _c24Agree();
               window._c24Sig.snr = _c24SNR(_c24.chromSig);
@@ -2898,7 +2719,6 @@ function _c24Loop(){
       var _band = _c24FitBand(_c24.mode);
       var _skinFit = (_ratioFit>=_band[0] && _ratioFit<=_band[1]);
       try{ if((_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'||_c24.mode==='eye')) _c24SendFM(document.getElementById('c24-video')); }catch(e){} /* ★ C-63: skin·eye도 FaceMesh 사용 */
-      try{ if((_c24.mode==='hand'||_c24.mode==='hand_back'||_c24.mode==='hand_palm')) _c24SendHands(document.getElementById('c24-video')); }catch(e){} /* ★ C-70: 손 모드는 Hands 교체구동 — FaceMesh와 동시 구동 없음 */
       var _fmActive = !!_c24.fm && (_c24.mode==='face'||_c24.mode==='tongue'||_c24.mode==='skin'); /* ★ C-63: skin도 FaceMesh 판정 */
       var _lmsFresh = !!(_c24._faceLms && (performance.now()-(_c24._faceLmsTime||0) < 700));
       /* ★ C-63 fix: ROI가 이마·볼 3패치로 정밀해지면서 그 안은 거의 100% 피부가 된다.
@@ -2924,57 +2744,40 @@ function _c24Loop(){
         _q.frames++;
         var _vw = (document.getElementById('c24-video')||{}).videoWidth || 640;
 
-        /* 거리 — 사용자가 고칠 수 있으므로 이것만 막는다 */
-        if(_lmsFresh){
-          var _d = _c24Distance(_c24._faceLms, _vw);
-          if(_d > 0) _q.distCm = _d;
-        }
-        /* ★ C-73: 눈 모드는 한쪽 눈만 확대해 찍으므로 양눈 사이 자(_c24Distance)가
-           부정확하다 — 한쪽 눈 폭 자(_c24EyeDistance)로 덮어써서 마스크와 판정을 일치시킨다 */
-        if(_lmsFresh && _c24.mode==='eye'){
-          var _de = _c24EyeDistance(_c24._faceLms, _vw);
-          if(_de > 0) _q.distCm = _de;
-        }
-        /* ★ C-70: 손 모드는 얼굴 좌표가 없어 distCm이 비어 있었다 — Hands 좌표로 채워
-           아래 ±40% cm 판정(C-69)이 손에서도 살아난다 → 거리 오차 감소 */
-        var _hdFresh = !!(_c24._handLms && (performance.now()-(_c24._handLmsTime||0) < 700));
-        if(!_lmsFresh && _hdFresh){
-          var _dh = _c24HandDistance(_c24._handLms, _vw);
-          if(_dh > 0) _q.distCm = _dh;
-        }
-        /* ★ cm 대신 화면 채움 비율로 판정한다.
-           폰마다 렌즈 화각이 달라 같은 거리에서도 눈 사이 화소가 다르게 나왔다.
-           얼굴 너비가 화면 폭의 45~85%면 어느 폰에서도 신호가 충분하다.
-           cm 숫자는 참고로만 남긴다. */
-        var _fill = 0;
-        if(_lmsFresh && _c24._faceLms && _c24._faceLms.length){
-          var _xs = _c24._faceLms.map(function(p){ return p.x; });
-          _fill = Math.max.apply(null,_xs) - Math.min.apply(null,_xs);
-        } else if(_ratioFit > 0){
-          /* ★ C-83: 눈 모드는 카메라를 눈 하나에 바짝 대는 특성상 FaceMesh가 자주
-             "얼굴이 아니다"로 판단해 랜드마크 인식에 실패한다(_lmsFresh=false).
-             그러면 _fill이 계속 0으로 남아 cgoFitState가 'none'을 반환하고,
-             'none'은 화면상 "확인 불가"로 통과되지만 완료 소리(_st==='ok'만 확인)는
-             절대 울리지 않았다 — "눈 검사 중 소리가 안 난다" 지적의 정체.
-             FaceMesh가 실패해도 이미 매 프레임 계산되는 살색비율(_ratioFit)을
-             폴백으로 써서 거리 판정과 소리가 계속 살아있게 한다. */
-          _fill = _ratioFit;
-        }
-        _q.fill = _fill;
         /* ★ 지금 재는 부위에 맞는 잣대를 쓴다 — 얼굴 15cm · 혀 9cm · 눈 7cm · 피부 8cm · 손 20cm */
         var _part = ({0:'face',1:'tongue',2:'eye',3:'skin',4:'hand',5:'hand'})[
           (window._c24CompState && window._c24CompState.step) || 0] || 'face';
         _q.part = _part;
+
+        /* 거리 — 부위별 잣대(눈 사이 / 입꼬리 폭 / 눈 폭)로 실측 cm 계산 */
+        if(_lmsFresh){
+          var _d = _c24Distance(_c24._faceLms, _vw, _part);
+          if(_d > 0) _q.distCm = _d;
+        }
+        /* ★ C-70: 채움 비율도 부위별로 "그 부위 자체"를 잰다.
+           예전에는 혀·눈 단계에서도 항상 얼굴 전체 좌우 폭(모든 랜드마크의 x 범위)을 썼다.
+           그러면 "혀가 화면을 채우는지"가 아니라 "얼굴이 적당히 떨어져 있는지"만 보게 되어,
+           얼굴 전체가 보이는 보통 거리에서 찍어도 통과해버렸다.
+           이제 혀는 입꼬리(61·291), 눈은 한쪽 눈 좌우 끝(33·133)만으로 폭을 잰다 —
+           그 부위 자체가 화면을 충분히 채워야 통과한다. */
+        var _fill = 0;
+        if(_lmsFresh && _c24._faceLms && _c24._faceLms.length){
+          var _lm = _c24._faceLms;
+          if(_part==='tongue' && _lm[61] && _lm[291]){
+            _fill = Math.abs(_lm[291].x - _lm[61].x);
+          } else if(_part==='eye' && _lm[33] && _lm[133]){
+            _fill = Math.abs(_lm[133].x - _lm[33].x);
+          } else {
+            var _xs = _lm.map(function(p){ return p.x; });
+            _fill = Math.max.apply(null,_xs) - Math.min.apply(null,_xs);
+          }
+        }
+        _q.fill = _fill;
         var _st = window.cgoFitState ? cgoFitState(_fill, _part) : 'ok';
         /* ★ C-69: 화면 채움 비율(_fill)만으로는 "9cm인데 25cm로 통과" 같은 개인차 오차가 남는다.
            _c24Distance()가 실측한 cm(_q.distCm)을 함께 검증 — 부위별 기준 cm의 ±40% 밖이면
-           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다.
-           ★ C-85: 눈 모드는 이 이중검증에서 계속 걸려 타임바가 전혀 진행되지 않았다 —
-           눈 전용 cm 자(_c24EyeDistance, 성인 평균 눈 폭 3.0cm)는 사람마다 실제 눈 크기
-           편차가 커서, 화면 채움 비율은 정상인데도 cm 재검증에서 반복적으로 near/far로
-           되돌려졌다("5분 해도 타임바가 안 감" 지적). 눈 모드만 이 재검증을 건너뛰고
-           화면 채움 비율(_fill) 판정만 신뢰한다. */
-        if(_part!=='eye' && _q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
+           채움 비율이 'ok'라도 far/near로 되돌린다. 얼굴 크기가 큰/작은 사람 모두를 잡아낸다. */
+        if(_q.distCm > 0 && window.CGO_FIT && window.CGO_FIT[_part]){
           var _bandCm = window.CGO_FIT[_part].cm;
           var _lo = _bandCm * 0.6, _hi = _bandCm * 1.4;
           if(_q.distCm < _lo) _st = 'near';
@@ -2983,8 +2786,6 @@ function _c24Loop(){
         _q.distOK = (_st === 'ok' || _st === 'none');
         /* 딱 맞으면 띵 띵 띵 — 화면을 못 봐도 귀로 안다 */
         if(_st === 'ok' && window.cgoFitBeep) cgoFitBeep('c24-' + _part);
-        /* ★ C-72: 실측 중엔 초시계 틱으로 실시간 정렬 신호 — 맞으면 계속, 어긋나면 이 프레임에 바로 끊김 */
-        if(window.cgoFitTick) cgoFitTick(_st === 'ok');
 
         /* 조도 — 막지 않는다. 밝기를 없애고 비율만 남겨 앱이 고친다 */
         var _il = _c24Illum(cnt?rSum/cnt:0, cnt?gSum/cnt:0, cnt?bSum/cnt:0);
@@ -3036,62 +2837,6 @@ function _c24SendFM(v){
   }catch(e){ _c24._fmSending=false; }
 }
 
-/* ══ MediaPipe Hands — 손등·손바닥 좌표 마스크 ══
-   손 모드일 때 FaceMesh는 꺼져 있으므로(교체구동, _fmActive 참조)
-   Hands를 추가해도 발열·부하가 겹치지 않는다. FaceMesh와 동일 패턴:
-   CDN 지연 로드 → 4프레임마다 송신 → 결과를 _c24._handLms에 저장. */
-function _c24InitHands(){
-  try{
-    if(_c24.hands) return;
-    _c24.hands=new Hands({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f;}});
-    _c24.hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:0.6,minTrackingConfidence:0.6}); /* complexity 0 = 보급폰 우선 */
-    _c24.hands.onResults(function(r){
-      try{
-        _c24._hdRecv=(_c24._hdRecv||0)+1;
-        if(r && r.multiHandLandmarks && r.multiHandLandmarks.length>0){
-          _c24._handLms=r.multiHandLandmarks[0]; _c24._handLmsTime=performance.now();
-          _c24._hdHit=(_c24._hdHit||0)+1;
-        } else { _c24._handLms=null; }
-      }catch(e){}
-    });
-  }catch(e){ _c24.hands=null; }
-}
-
-function _c24EnsureHands(){
-  /* 스크립트만 미리 내려받는다 — 그래프 생성(메모리 점유)은 첫 send 때(_c24SendHands) */
-  try{
-    if(_c24.hands || _c24._hdLoading) return;
-    if(typeof Hands!=='undefined') return;
-    _c24._hdLoading=true;
-    if(!document.querySelector('script[data-c24-hands]')){
-      var s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
-      s.setAttribute('data-c24-hands','1'); s.crossOrigin='anonymous';
-      s.onload=function(){ _c24._hdLoading=false; };
-      s.onerror=function(){ _c24._hdLoading=false; };
-      document.head.appendChild(s);
-    } else { _c24._hdLoading=false; }
-  }catch(e){ _c24._hdLoading=false; }
-}
-
-function _c24SendHands(v){
-  try{
-    if(!v || !v.videoWidth) return;
-    if(!_c24.hands){
-      if(typeof Hands==='undefined'){ _c24EnsureHands(); return; } /* 스크립트 미도착 → 폴백(살색비율) 유지 */
-      _c24InitHands();
-      if(!_c24.hands) return;
-    }
-    if(_c24._hdSending) return;
-    _c24._hdFrame=(_c24._hdFrame||0)+1;
-    if(_c24._hdFrame%4!==0) return; /* 4프레임마다 (CPU 절약 — FaceMesh와 동일) */
-    _c24._hdSending=true;
-    var p=_c24.hands.send({image:v});
-    if(p&&p.then){ p.then(function(){_c24._hdSending=false;}).catch(function(){_c24._hdSending=false;}); }
-    else { _c24._hdSending=false; }
-  }catch(e){ _c24._hdSending=false; }
-}
-
 
 /* 마크업의 onclick이 부를 수 있게 전역으로 */
 (function(){var n=["_c24CompStart","_c24Stop","_c24Start","_c24CompStartStep","_c24CompNextStep","_c24Finish"];n.forEach(function(k){try{ if(typeof eval(k)==="function") window[k]=eval(k); }catch(e){}});})();
@@ -3106,7 +2851,6 @@ window._c24Cancel = function(){
     if(s.stream){ try{ s.stream.getTracks().forEach(function(t){t.stop();}); }catch(e){} s.stream=null; }
   } }catch(e){}
   try{ if(typeof _c24BreathStop==='function') _c24BreathStop(); }catch(e){}
-  try{ if(window.cgoFitTick) cgoFitTick(false); }catch(e){}   /* ★ C-72: 측정 취소 시 틱 확실히 정지 */
   try{ var p=document.getElementById('page-algo'); if(p) p.classList.remove('c24-scanning'); }catch(e){}
 };
 
