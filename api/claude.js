@@ -74,7 +74,7 @@ const KIND = {
   photo : { model:SONNET, max:1600, cost:63  },
   report: { model:SONNET, max:6000, cost:210 },
   naming: { model:OPUS,   max:4200, cost:900 },   // ★ 정책표 ㉙ — 작명은 Opus
-  med   : { model:SONNET, max:3000, cost:80  }    // ★ 2026.09.17 다시 사용 — Claude로 복귀
+  med   : { model:SONNET, max:5000, cost:120 }    // ★ 2026.09.17 6장 통합요청으로 전환하며 응답 분량 증가 — 4000도 애매해 5000으로 재상향(중간에 JSON 잘리는 문제 확실히 방지)
 };
 // Opus 는 FEAT 표가 정한 자리(역학 풀이·작명 등 문장력이 값인 곳)에서만 쓴다. 실패하면 Sonnet 으로 한 번 더 간다 — 최고급 값을 받고 Groq 답을 내지 않는다.
 

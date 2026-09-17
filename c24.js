@@ -1422,7 +1422,7 @@ function _c24CompFinalAnalyze(){
   fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({kind:'med', tier:_tier,
       system:sysPrompt, prompt:userPrompt, images:_images,
-      max_tokens:3000, temperature:0.6})})
+      max_tokens:5000, temperature:0.6})})
     .then(function(r){ return r.json(); })
     .then(function(d){
       var text = (d && d.text) ? d.text : '';
