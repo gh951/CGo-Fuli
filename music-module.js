@@ -986,6 +986,7 @@
     constructor(container) {
       this.container = container;
       this.root = null;
+      this._pageObs = null;  // MutationObserver 참조 (destroy/재init 시 정리)
 
       // 배경 canvas
       this.bgCanvas = null;
@@ -1041,11 +1042,27 @@
     // ── init ────────────────────────────────────────────────────
     init() {
       // ─────────────────────────────────────────────────────────────
+      // 재진입 안전 (idempotent) — _cgoPageSnap이 DOM을 리셋한 뒤
+      // index.html이 init()을 다시 호출할 수 있음.
+      // 이전 상태(애니메이션, 팝업, observer)를 먼저 정리.
+      // ─────────────────────────────────────────────────────────────
+      // 기존 bgCanvas 애니메이션 정리
+      if (this.bgAnimId) {
+        cancelAnimationFrame(this.bgAnimId);
+        this.bgAnimId = null;
+      }
+      // 기존 MutationObserver 정리
+      if (this._pageObs) {
+        try { this._pageObs.disconnect(); } catch(e) {}
+        this._pageObs = null;
+      }
+      // 기존 팝업 제거 (DOM 리셋 후 재init 시 이미 사라져 있지만 혹시 남아있을 경우 대비)
+      const oldPop = document.getElementById('cgo-music-intro-pop');
+      if (oldPop) { try { oldPop.remove(); } catch(e) {} }
+
+      // ─────────────────────────────────────────────────────────────
       // 잔상(ghost) 완전 차단 전략
-      // 문제: cgoGoPage()가 #page-music.classList.add('active') 한 뒤에
-      //       init()이 호출되므로, 빈 페이지가 한 프레임 보임.
-      // 해결: init() 첫 줄에서 팝업을 document.body에 즉시 삽입.
-      //       팝업은 z-index:29000 fixed 전체화면 → 페이지 내용을 완전히 가림.
+      // 팝업을 document.body에 즉시 삽입 → z-index:29000 fixed 전체화면
       // ─────────────────────────────────────────────────────────────
       this._buildIntroPopup();   // ← 반드시 맨 처음 (동기 실행)
 
@@ -1100,6 +1117,7 @@
         }
       });
 
+      this._pageObs = obs;
       obs.observe(pageEl, { attributes: true, attributeFilter: ['style', 'class'] });
     }
 
@@ -1122,20 +1140,30 @@
 
       const pop = document.createElement('div');
       pop.id = 'cgo-music-intro-pop';
+      // inset:0 + transform:none → ancestor transform 영향 완전 차단
+      // will-change:transform → 독립 레이어로 분리 (stacking context 생성)
       pop.style.cssText = [
-        'display:block;position:fixed;top:0;left:0;right:0;bottom:0;',
-        'width:100%;height:100%;max-width:100%;max-height:100%;',
-        'z-index:29000;margin:0;padding:0;border:0;',
-        'background:#f0fdf9;overflow-y:auto;-webkit-overflow-scrolling:touch;',
-        'font-family:inherit;box-sizing:border-box;'
+        'display:block;position:fixed;',
+        'top:0!important;left:0!important;right:0!important;bottom:0!important;',
+        'inset:0!important;',
+        'width:100vw!important;height:100vh!important;',
+        'max-width:100vw!important;max-height:100vh!important;',
+        'min-width:0!important;min-height:0!important;',
+        'z-index:2147483647;margin:0!important;padding:0!important;border:0!important;',
+        'transform:none!important;will-change:transform;',
+        'background:#f0fdf9;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;',
+        'font-family:inherit;box-sizing:border-box;',
+        'contain:strict;isolation:isolate;'
       ].join('');
 
       pop.innerHTML = `
 <style>
-#cgo-music-intro-pop{text-align:left;}
+#cgo-music-intro-pop{text-align:left;display:block;width:100%;height:100%;}
 #cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
+/* 스크롤 전체 페이지 중앙 정렬 wrapper */
 .mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 16px 90px;display:block;}
-.mip-top{position:sticky;top:0;left:0;right:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(240,253,249,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(20,184,166,.14);}
+/* sticky 헤더 — left/right 은 sticky에선 무의미, 제거 */
+.mip-top{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(240,253,249,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(20,184,166,.14);}
 .mip-top-logo{font-size:12px;font-weight:900;color:#0d9488;letter-spacing:.04em;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s;}
 .mip-top-logo:hover{background:rgba(20,184,166,.12);}
 .mip-x{background:rgba(20,184,166,.1);border:1px solid rgba(20,184,166,.3);border-radius:50%;width:36px;height:36px;color:#0d9488;font-size:16px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;}
@@ -1286,6 +1314,26 @@
 
       document.body.appendChild(pop);
 
+      // 위치 보정: RAF 후 실제 렌더링 위치 확인 및 강제 조정
+      // ancestor에 transform이 있어 fixed가 깨지는 경우 대비
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            const r = pop.getBoundingClientRect();
+            // 팝업이 viewport와 다른 위치에 있으면 강제 보정
+            if (r.left !== 0 || r.top !== 0) {
+              pop.style.setProperty('left', '0px', 'important');
+              pop.style.setProperty('top', '0px', 'important');
+              pop.style.setProperty('right', '0px', 'important');
+              pop.style.setProperty('bottom', '0px', 'important');
+              pop.style.setProperty('transform', 'none', 'important');
+              pop.style.setProperty('margin-left', '0px', 'important');
+              pop.style.setProperty('margin-top', '0px', 'important');
+            }
+          } catch(e) {}
+        });
+      });
+
       // 페이드 아웃 후 제거
       const fadeOut = () => {
         pop.style.opacity = '0';
@@ -1331,6 +1379,10 @@
 
     // ── DOM 빌드 ────────────────────────────────────────────────
     _buildDOM() {
+      // 재init 시 기존 root가 container에 남아있을 경우 제거
+      const existingRoot = this.container.querySelector('#cgo-music-root');
+      if (existingRoot) { try { existingRoot.remove(); } catch(e) {} }
+
       this.root = document.createElement('div');
       this.root.id = 'cgo-music-root';
       this.container.appendChild(this.root);
@@ -2840,6 +2892,9 @@
 
       // 5. resize 리스너 제거
       if (this._onResize) { window.removeEventListener('resize', this._onResize); this._onResize = null; }
+
+      // 5-b. MutationObserver 정리
+      if (this._pageObs) { try { this._pageObs.disconnect(); } catch(e){} this._pageObs = null; }
 
       // 6. DOM 제거
       if (this.root && this.root.parentNode) { this.root.parentNode.removeChild(this.root); }
