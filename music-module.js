@@ -110,6 +110,124 @@
   const GENRE_MAP = {};
   GENRE_GROUPS.forEach(g => g.genres.forEach(genre => { GENRE_MAP[genre.id] = genre; }));
 
+  // ══════════════════════════════════════════════════════════════════
+  //  INSTRUMENT_DATA — 100개 글로벌 악기 마스터 데이터셋
+  //  Gemini × Claude 협업 제작 | CGO FULI v2.9
+  //  GM 번호: MIDI General MIDI 0-127 (N/A=에스닉 확장)
+  // ══════════════════════════════════════════════════════════════════
+  const INSTRUMENT_DATA = [
+    // ① 건반/오르간 (1~24)
+    { id:1,  ko:'그랜드 피아노',     en:'Acoustic Grand Piano', gm:0,   cat:'건반',  region:'서양',       emoji:'🎹', genres:['클래식','재즈','발라드'] },
+    { id:2,  ko:'브라이트 피아노',   en:'Bright Acoustic Piano', gm:1,  cat:'건반',  region:'서양',       emoji:'🎹', genres:['팝','록'] },
+    { id:3,  ko:'전기 그랜드',       en:'Electric Grand Piano',  gm:2,  cat:'건반',  region:'서양',       emoji:'🎹', genres:['팝','R&B'] },
+    { id:4,  ko:'혼키통크 피아노',   en:'Honky-tonk Piano',      gm:3,  cat:'건반',  region:'서양',       emoji:'🎹', genres:['레트로','컨트리'] },
+    { id:5,  ko:'로즈 일렉 피아노',  en:'Electric Piano (Rhodes)',gm:4, cat:'건반',  region:'서양',       emoji:'🎹', genres:['재즈','R&B','로파이'] },
+    { id:6,  ko:'처디 일렉 피아노',  en:'Electric Piano 2',      gm:5,  cat:'건반',  region:'서양',       emoji:'🎹', genres:['재즈','퓨전'] },
+    { id:7,  ko:'하프시코드',        en:'Harpsichord',           gm:6,  cat:'건반',  region:'서양',       emoji:'🎼', genres:['바로크','중세'] },
+    { id:8,  ko:'클라비넷',          en:'Clavinet',              gm:7,  cat:'건반',  region:'서양',       emoji:'🎹', genres:['펑크','블루스'] },
+    { id:9,  ko:'첼레스타',          en:'Celesta',               gm:8,  cat:'건반',  region:'서양',       emoji:'✨', genres:['클래식','뉴에이지'] },
+    { id:10, ko:'글록켄슈필',        en:'Glockenspiel',          gm:9,  cat:'건반',  region:'서양',       emoji:'🔔', genres:['캐럴','동화풍'] },
+    { id:11, ko:'뮤직 박스',         en:'Music Box',             gm:10, cat:'건반',  region:'서양',       emoji:'🎶', genres:['앰비언트','발라드'] },
+    { id:12, ko:'비브라폰',          en:'Vibraphone',            gm:11, cat:'건반',  region:'서양',       emoji:'🎵', genres:['재즈','룸바'] },
+    { id:13, ko:'마림바',            en:'Marimba',               gm:12, cat:'건반',  region:'아프리카/서양',emoji:'🪵',genres:['월드뮤직','라틴'] },
+    { id:14, ko:'실로폰',            en:'Xylophone',             gm:13, cat:'건반',  region:'서양',       emoji:'🪵', genres:['클래식','오케스트라'] },
+    { id:15, ko:'관악 벨',           en:'Tubular Bells',         gm:14, cat:'건반',  region:'서양',       emoji:'⛪', genres:['시네마틱','오케스트라'] },
+    { id:16, ko:'덜시머',            en:'Dulcimer',              gm:15, cat:'건반',  region:'서양/중동',  emoji:'🪕', genres:['포크','중세풍'] },
+    { id:17, ko:'드로우바 오르간',   en:'Drawbar Organ',         gm:16, cat:'오르간', region:'서양',       emoji:'⛪', genres:['재즈','록','가스펠'] },
+    { id:18, ko:'퍼커시브 오르간',   en:'Percussive Organ',      gm:17, cat:'오르간', region:'서양',       emoji:'🎹', genres:['록','팝'] },
+    { id:19, ko:'록 오르간',         en:'Rock Organ',            gm:18, cat:'오르간', region:'서양',       emoji:'🎸', genres:['하드록','팝'] },
+    { id:20, ko:'교회 오르간',       en:'Church Organ',          gm:19, cat:'오르간', region:'서양',       emoji:'⛪', genres:['클래식','찬송가','고딕'] },
+    { id:21, ko:'리드 오르간',       en:'Reed Organ',            gm:20, cat:'오르간', region:'서양',       emoji:'🪗', genres:['포크','찬송가'] },
+    { id:22, ko:'아코디언',          en:'Accordion',             gm:21, cat:'오르간', region:'유럽',       emoji:'🪗', genres:['샹송','폴카','탱고'] },
+    { id:23, ko:'하모니카',          en:'Harmonica',             gm:22, cat:'오르간', region:'서양',       emoji:'🪗', genres:['블루스','포크','컨트리'] },
+    { id:24, ko:'반도네온',          en:'Tango Accordion',       gm:23, cat:'오르간', region:'아르헨티나', emoji:'🪗', genres:['탱고','월드뮤직'] },
+    // ② 기타/베이스 (25~40)
+    { id:25, ko:'나일론 기타',       en:'Acoustic Guitar (nylon)',gm:24, cat:'기타',  region:'서양',       emoji:'🎸', genres:['클래식','보사노바','플라멩코'] },
+    { id:26, ko:'스틸 기타',         en:'Acoustic Guitar (steel)',gm:25, cat:'기타',  region:'서양',       emoji:'🎸', genres:['포크','팝','컨트리'] },
+    { id:27, ko:'재즈 기타',         en:'Electric Guitar (jazz)', gm:26, cat:'기타',  region:'서양',       emoji:'🎸', genres:['재즈','라운지'] },
+    { id:28, ko:'클린 기타',         en:'Electric Guitar (clean)',gm:27, cat:'기타',  region:'서양',       emoji:'🎸', genres:['팝','펑크'] },
+    { id:29, ko:'뮤트 기타',         en:'Electric Guitar (muted)',gm:28, cat:'기타',  region:'서양',       emoji:'🎸', genres:['펑크','팝'] },
+    { id:30, ko:'오버드라이브 기타', en:'Overdriven Guitar',     gm:29, cat:'기타',  region:'서양',       emoji:'🎸', genres:['록','하드록'] },
+    { id:31, ko:'디스토션 기타',     en:'Distortion Guitar',     gm:30, cat:'기타',  region:'서양',       emoji:'🎸', genres:['헤비메탈','록'] },
+    { id:32, ko:'기타 하모닉스',     en:'Guitar harmonics',      gm:31, cat:'기타',  region:'서양',       emoji:'🎸', genres:['앰비언트','록'] },
+    { id:33, ko:'어쿠스틱 베이스',   en:'Acoustic Bass',         gm:32, cat:'베이스', region:'서양',       emoji:'🎻', genres:['재즈','포크'] },
+    { id:34, ko:'일렉 베이스(핑거)', en:'Electric Bass (finger)', gm:33, cat:'베이스', region:'서양',       emoji:'🎸', genres:['팝','록','재즈'] },
+    { id:35, ko:'일렉 베이스(피크)', en:'Electric Bass (pick)',   gm:34, cat:'베이스', region:'서양',       emoji:'🎸', genres:['록','펑크'] },
+    { id:36, ko:'프렛리스 베이스',   en:'Fretless Bass',         gm:35, cat:'베이스', region:'서양',       emoji:'🎸', genres:['재즈 퓨전','발라드'] },
+    { id:37, ko:'슬랩 베이스 1',     en:'Slap Bass 1',           gm:36, cat:'베이스', region:'서양',       emoji:'🎸', genres:['펑크','댄스'] },
+    { id:38, ko:'슬랩 베이스 2',     en:'Slap Bass 2',           gm:37, cat:'베이스', region:'서양',       emoji:'🎸', genres:['펑크','그루브'] },
+    { id:39, ko:'신스 베이스 1',     en:'Synth Bass 1',          gm:38, cat:'베이스', region:'서양',       emoji:'🎹', genres:['일렉트로닉','댄스'] },
+    { id:40, ko:'신스 베이스 2',     en:'Synth Bass 2',          gm:39, cat:'베이스', region:'서양',       emoji:'🎹', genres:['신스웨이브','힙합'] },
+    // ③ 현악기 (41~56)
+    { id:41, ko:'바이올린',          en:'Violin',                gm:40, cat:'현악',  region:'서양',       emoji:'🎻', genres:['클래식','발라드','켈틱'] },
+    { id:42, ko:'비올라',            en:'Viola',                 gm:41, cat:'현악',  region:'서양',       emoji:'🎻', genres:['클래식','실내악'] },
+    { id:43, ko:'첼로',              en:'Cello',                 gm:42, cat:'현악',  region:'서양',       emoji:'🎻', genres:['클래식','시네마틱','발라드'] },
+    { id:44, ko:'콘트라베이스',      en:'Contrabass',            gm:43, cat:'현악',  region:'서양',       emoji:'🎻', genres:['오케스트라','재즈'] },
+    { id:45, ko:'트레몰로 스트링',   en:'Tremolo Strings',       gm:44, cat:'현악',  region:'서양',       emoji:'🎻', genres:['시네마틱','긴장감'] },
+    { id:46, ko:'피치카토 스트링',   en:'Pizzicato Strings',     gm:45, cat:'현악',  region:'서양',       emoji:'🎻', genres:['클래식','경쾌한 팝'] },
+    { id:47, ko:'오케스트라 하프',   en:'Orchestral Harp',       gm:46, cat:'현악',  region:'서양',       emoji:'🎼', genres:['뉴에이지','판타지'] },
+    { id:48, ko:'팀파니',            en:'Timpani',               gm:47, cat:'현악',  region:'서양',       emoji:'🥁', genres:['오케스트라','웅장한 곡'] },
+    { id:49, ko:'현악 앙상블 1',     en:'String Ensemble 1',     gm:48, cat:'현악',  region:'서양',       emoji:'🎻', genres:['발라드','오케스트라'] },
+    { id:50, ko:'현악 앙상블 2',     en:'String Ensemble 2',     gm:49, cat:'현악',  region:'서양',       emoji:'🎹', genres:['뉴에이지','팝'] },
+    { id:51, ko:'신스 스트링 1',     en:'SynthStrings 1',        gm:50, cat:'현악',  region:'서양',       emoji:'🎹', genres:['일렉트로닉','팝'] },
+    { id:52, ko:'신스 스트링 2',     en:'SynthStrings 2',        gm:51, cat:'현악',  region:'서양',       emoji:'🎹', genres:['앰비언트','발라드'] },
+    { id:53, ko:'합창단 콰이어',     en:'Choir Aahs',            gm:52, cat:'현악',  region:'서양',       emoji:'🗣️', genres:['오케스트라','뉴에이지'] },
+    { id:54, ko:'보이스 오스',       en:'Voice Oohs',            gm:53, cat:'현악',  region:'서양',       emoji:'🗣️', genres:['앰비언트','뉴에이지'] },
+    { id:55, ko:'신스 보이스',       en:'Synth Voice',           gm:54, cat:'현악',  region:'서양',       emoji:'🤖', genres:['일렉트로닉','팝'] },
+    { id:56, ko:'오케스트라 히트',   en:'Orchestra Hit',         gm:55, cat:'현악',  region:'서양',       emoji:'💥', genres:['힙합','웅장한 도입부'] },
+    // ④ 관악기/브라스 (57~72)
+    { id:57, ko:'트럼펫',            en:'Trumpet',               gm:56, cat:'관악',  region:'서양',       emoji:'🎺', genres:['재즈','클래식','팝 브라스'] },
+    { id:58, ko:'트롬본',            en:'Trombone',              gm:57, cat:'관악',  region:'서양',       emoji:'🎺', genres:['재즈','빅밴드','클래식'] },
+    { id:59, ko:'투바',              en:'Tuba',                  gm:58, cat:'관악',  region:'서양',       emoji:'📯', genres:['오케스트라','행진곡'] },
+    { id:60, ko:'뮤트 트럼펫',       en:'Muted Trumpet',         gm:59, cat:'관악',  region:'서양',       emoji:'🎺', genres:['재즈','느와르'] },
+    { id:61, ko:'프렌치 호른',       en:'French Horn',           gm:60, cat:'관악',  region:'서양',       emoji:'📯', genres:['시네마틱','클래식'] },
+    { id:62, ko:'브라스 섹션',       en:'Brass Section',         gm:61, cat:'관악',  region:'서양',       emoji:'🎺', genres:['펑크','팝','재즈'] },
+    { id:63, ko:'신스 브라스 1',     en:'Synth Brass 1',         gm:62, cat:'관악',  region:'서양',       emoji:'🎹', genres:['80년대 레트로','신스팝'] },
+    { id:64, ko:'신스 브라스 2',     en:'Synth Brass 2',         gm:63, cat:'관악',  region:'서양',       emoji:'🎹', genres:['일렉트로닉','EDM'] },
+    { id:65, ko:'소프라노 색소폰',   en:'Soprano Sax',           gm:64, cat:'관악',  region:'서양',       emoji:'🎷', genres:['재즈','뉴에이지'] },
+    { id:66, ko:'알토 색소폰',       en:'Alto Sax',              gm:65, cat:'관악',  region:'서양',       emoji:'🎷', genres:['재즈','발라드','R&B'] },
+    { id:67, ko:'테너 색소폰',       en:'Tenor Sax',             gm:66, cat:'관악',  region:'서양',       emoji:'🎷', genres:['재즈','블루스','팝'] },
+    { id:68, ko:'바리톤 색소폰',     en:'Baritone Sax',          gm:67, cat:'관악',  region:'서양',       emoji:'🎷', genres:['재즈 빅밴드','펑크'] },
+    { id:69, ko:'오보에',            en:'Oboe',                  gm:68, cat:'관악',  region:'서양',       emoji:'🪵', genres:['클래식','목가적 뉴에이지'] },
+    { id:70, ko:'잉글리시 호른',     en:'English Horn',          gm:69, cat:'관악',  region:'서양',       emoji:'🪵', genres:['클래식','서정적 발라드'] },
+    { id:71, ko:'바순',              en:'Bassoon',               gm:70, cat:'관악',  region:'서양',       emoji:'🪵', genres:['클래식','오케스트라'] },
+    { id:72, ko:'클라리넷',          en:'Clarinet',              gm:71, cat:'관악',  region:'서양',       emoji:'🪵', genres:['클래식','재즈'] },
+    // ⑤ 플루트/에스닉 (73~90)
+    { id:73, ko:'피콜로',            en:'Piccolo',               gm:72, cat:'플루트', region:'서양',       emoji:'🌬️', genres:['오케스트라','행진곡'] },
+    { id:74, ko:'플루트',            en:'Flute',                 gm:73, cat:'플루트', region:'서양',       emoji:'🌬️', genres:['클래식','뉴에이지','발라드'] },
+    { id:75, ko:'리코더',            en:'Recorder',              gm:74, cat:'플루트', region:'서양',       emoji:'🪈', genres:['교육용','중세풍 포크'] },
+    { id:76, ko:'팬플루트',          en:'Pan Flute',             gm:75, cat:'플루트', region:'남미/서양',  emoji:'🪈', genres:['안데스 음악','뉴에이지'] },
+    { id:77, ko:'블로운 보틀',       en:'Blown Bottle',          gm:76, cat:'플루트', region:'서양',       emoji:'🍾', genres:['실험적','앰비언트'] },
+    { id:78, ko:'샤쿠하치',          en:'Shakuhachi',            gm:77, cat:'플루트', region:'동양(일본)', emoji:'🎋', genres:['선 명상','앰비언트'] },
+    { id:79, ko:'휘슬',              en:'Whistle',               gm:78, cat:'플루트', region:'서양/켈틱',  emoji:'🌬️', genres:['켈틱 포크','아이리시'] },
+    { id:80, ko:'오카리나',          en:'Ocarina',               gm:79, cat:'플루트', region:'서양',       emoji:'🪈', genres:['게임 음악','포크','뉴에이지'] },
+    { id:81, ko:'시타르',            en:'Sitar',                 gm:104,cat:'에스닉', region:'동양(인도)', emoji:'🪕', genres:['인도 라가','월드뮤직'] },
+    { id:82, ko:'벤조',              en:'Banjo',                 gm:105,cat:'에스닉', region:'서양(미국)', emoji:'🪕', genres:['컨트리','블루그래스','포크'] },
+    { id:83, ko:'샤미센',            en:'Shamisen',              gm:106,cat:'에스닉', region:'동양(일본)', emoji:'🎸', genres:['일본 전통','현대 퓨전'] },
+    { id:84, ko:'코토',              en:'Koto',                  gm:107,cat:'에스닉', region:'동양(일본)', emoji:'🎸', genres:['일본 전통','명상 앰비언트'] },
+    { id:85, ko:'칼림바',            en:'Kalimba',               gm:108,cat:'에스닉', region:'아프리카',   emoji:'🎹', genres:['아프리카 민속','로파이','힐링'] },
+    { id:86, ko:'백파이프',          en:'Bagpipe',               gm:109,cat:'에스닉', region:'유럽(스코틀랜드)',emoji:'🏴',genres:['켈틱','스코틀랜드 전통'] },
+    { id:87, ko:'피들',              en:'Fiddle',                gm:110,cat:'에스닉', region:'유럽(아일랜드)',emoji:'🎻',genres:['켈틱 댄스','컨트리'] },
+    { id:88, ko:'샤나이',            en:'Shanai',                gm:111,cat:'에스닉', region:'동양(인도)', emoji:'🎺', genres:['인도 전통 축제'] },
+    { id:89, ko:'팅클 벨',           en:'Tinkle Bell',           gm:112,cat:'에스닉', region:'서양',       emoji:'🔔', genres:['크리스마스','동화풍'] },
+    { id:90, ko:'아고고',            en:'Agogo',                 gm:113,cat:'에스닉', region:'아프리카/라틴',emoji:'🔔',genres:['삼바','라틴 퍼커션'] },
+    // ⑥ 타악기/에스닉 확장 (91~100)
+    { id:91, ko:'스틸 드럼',         en:'Steel Drums',           gm:114,cat:'타악',   region:'카리브해',   emoji:'🛢️', genres:['레게','칼립소','트로피컬'] },
+    { id:92, ko:'우드블록',          en:'Woodblock',             gm:115,cat:'타악',   region:'서양/글로벌',emoji:'🪵', genres:['타악 리듬','민속 타악'] },
+    { id:93, ko:'타이코 드럼',       en:'Taiko Drum',            gm:116,cat:'타악',   region:'동양(일본)', emoji:'🥁', genres:['시네마틱','웅장한 전투'] },
+    // ⑥-에스닉 확장 (94~100, GM 없음 → 최근사 GM 매핑)
+    { id:94, ko:'가야금',            en:'Gayageum',              gm:107,cat:'한국',   region:'동양(한국)', emoji:'🇰🇷', genres:['국악','퓨전 힐링','앰비언트'] },
+    { id:95, ko:'해금',              en:'Haegeum',               gm:110,cat:'한국',   region:'동양(한국)', emoji:'🇰🇷', genres:['국악 발라드','애절한 시네마틱'] },
+    { id:96, ko:'고쟁',              en:'Guzheng',               gm:107,cat:'중국',   region:'동양(중국)', emoji:'🇨🇳', genres:['중국 전통','앰비언트 뉴에이지'] },
+    { id:97, ko:'우드 (루트)',        en:'Oud',                   gm:104,cat:'중동',   region:'중동',       emoji:'🪕', genres:['아랍 마캄','오리엔탈 앰비언트'] },
+    { id:98, ko:'두둑',              en:'Duduk',                 gm:69, cat:'중동',   region:'중동/유럽',  emoji:'🌬️', genres:['깊은 영혼의 선율','시네마틱'] },
+    { id:99, ko:'코라',              en:'Kora',                  gm:24, cat:'아프리카',region:'아프리카',   emoji:'🪕', genres:['서아프리카 월드뮤직','힐링'] },
+    { id:100,ko:'디저리두',          en:'Didgeridoo',            gm:76, cat:'오세아니아',region:'오세아니아',emoji:'🪵',genres:['호주 원주민','저주파 힐링','슈만공명'] },
+  ];
+
+  // 카테고리 그룹 (UI 필터용)
+  const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아'];
+
   // SLOT_DATA — genre 제거 (장르는 카드 선택기로 대체)
   const SLOT_DATA = {
     key:        { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] },
@@ -606,6 +724,40 @@
 /* 군집7 서브카테고리 */
 .cgo-fmaster-subcat{font-size:9.5px;font-weight:800;color:#e9d5ff;margin:8px 0 4px;padding:4px 8px;background:rgba(168,85,247,.12);border-radius:6px;border-left:3px solid #a855f7;}
 
+/* ─── 아코디언 섹션 ─── */
+.cgo-acc{margin:0 0 6px;border-radius:14px;overflow:hidden;border:1.5px solid rgba(100,60,180,.2);background:rgba(15,4,35,.6);}
+.cgo-acc-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none;transition:background .15s;}
+.cgo-acc-hdr:hover{background:rgba(168,85,247,.08);}
+.cgo-acc-hdr.open{background:rgba(168,85,247,.1);border-bottom:1px solid rgba(168,85,247,.2);}
+.cgo-acc-title{font-size:13px;font-weight:800;color:#e9d5ff;}
+.cgo-acc-hdr.open .cgo-acc-title{color:#fff;text-shadow:0 0 8px rgba(240,171,252,.3);}
+.cgo-acc-arrow{font-size:10px;color:#c4b5e8;transition:color .15s;}
+.cgo-acc-hdr.open .cgo-acc-arrow{color:#c084fc;}
+.cgo-acc-body{padding:12px 0 4px;}
+
+/* ─── 악기 선택 그리드 ─── */
+.cgo-instr-filter{display:flex;flex-wrap:wrap;gap:4px;padding:0 14px 10px;}
+.cgo-instr-filter-btn{padding:3px 9px;border-radius:20px;border:1px solid rgba(168,85,247,.3);background:rgba(30,10,60,.6);color:#c4b5e8;font-size:10.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+.cgo-instr-filter-btn.active{background:rgba(168,85,247,.35);border-color:#a855f7;color:#fff;}
+.cgo-instr-info{display:flex;align-items:center;justify-content:space-between;padding:0 14px 8px;font-size:11px;color:#9d8ec8;}
+.cgo-instr-info b{color:#c084fc;}
+.cgo-instr-preset-bar{display:flex;flex-wrap:wrap;gap:4px;padding:0 14px 10px;}
+.cgo-instr-preset-btn{padding:4px 10px;border-radius:20px;border:1.5px solid rgba(168,85,247,.4);background:rgba(20,5,45,.8);color:#e9d5ff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;}
+.cgo-instr-preset-btn:hover{background:rgba(168,85,247,.25);border-color:#c084fc;}
+.cgo-instr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 14px 8px;max-height:260px;overflow-y:auto;}
+.cgo-instr-card{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:1.5px solid rgba(100,60,180,.2);background:rgba(15,4,35,.7);cursor:pointer;transition:all .2s;user-select:none;}
+.cgo-instr-card:hover{border-color:rgba(168,85,247,.5);background:rgba(30,8,60,.8);}
+.cgo-instr-card.selected{border-color:#a855f7;background:rgba(168,85,247,.2);box-shadow:0 0 8px rgba(168,85,247,.3);}
+.cgo-instr-card.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
+.cgo-instr-emoji{font-size:18px;line-height:1;}
+.cgo-instr-name{font-size:9.5px;font-weight:800;color:#e9d5ff;text-align:center;line-height:1.2;}
+.cgo-instr-region{font-size:8.5px;color:#9d8ec8;text-align:center;}
+.cgo-instr-selected-list{padding:0 14px 8px;min-height:28px;}
+.cgo-instr-selected-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.cgo-instr-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;background:rgba(168,85,247,.25);border:1px solid rgba(168,85,247,.5);font-size:10px;color:#e9d5ff;font-weight:700;}
+.cgo-instr-chip-del{cursor:pointer;color:#c084fc;font-size:11px;line-height:1;}
+.cgo-instr-chip-del:hover{color:#f0abfc;}
+
 /* ─── 음악 편집 탭 ─── */
 .cgo-edit-notice{display:flex;gap:12px;align-items:flex-start;background:rgba(20,5,40,.7);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:14px;margin-bottom:14px;}
 .cgo-edit-notice-ico{font-size:28px;flex-shrink:0;}
@@ -691,6 +843,7 @@
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
       this.selectedFreq = 432;
+      this.selectedInstrIds = new Set();          // 선택된 악기 ID Set (최대 12개)
       this.presets = this._loadPresets();
       this.particles = [];
 
@@ -829,54 +982,92 @@
     _buildMakePanel() {
       const p = this.panels.make;
 
-      // 섹션: 박자(템포) 레인보우 바 — 추첨통 앞에 배치
-      const tempoSec = document.createElement('div');
-      tempoSec.className = 'cgo-msec';
-      tempoSec.innerHTML = `<div class="cgo-msec-title">🎼 <span data-k="24050">${t(24050)}</span></div>`;
-      tempoSec.appendChild(this._buildTempoBar());
-      p.appendChild(tempoSec);
+      // ── 아코디언 헬퍼: 각 섹션 독립 토글 ──────────────────────
+      const mkAccordion = (emoji, title, bodyBuilder, openByDefault = false) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'cgo-acc';
 
-      // 섹션: 슬롯
-      const slotSec = document.createElement('div');
-      slotSec.className = 'cgo-msec';
-      slotSec.innerHTML = `<div class="cgo-msec-title">🎰 <span data-k="24045">${t(24045)}</span></div>`;
-      const grid = document.createElement('div');
-      grid.className = 'cgo-slot-grid';
-      slotSec.appendChild(grid);
-      p.appendChild(slotSec);
+        const hdr = document.createElement('div');
+        hdr.className = 'cgo-acc-hdr' + (openByDefault ? ' open' : '');
+        hdr.innerHTML = `<span class="cgo-acc-title">${emoji} ${title}</span><span class="cgo-acc-arrow">${openByDefault ? '▲' : '▼'}</span>`;
 
-      this.slotKeys.forEach(k => {
-        const info = SLOT_DATA[k];
-        const row = document.createElement('div');
-        row.className = 'cgo-slot-row';
-        row.innerHTML = `
-          <div class="cgo-slot-row-label"><b>${info.emoji} <span data-k="${info.labelKey}">${t(info.labelKey)}</span></b></div>
-          <div class="cgo-slot-canvas-wrap"><canvas id="cgo-sc-${k}"></canvas></div>
-          <div class="cgo-slot-row-val" id="cgo-val-${k}">${this.selected[k]}</div>
+        const body = document.createElement('div');
+        body.className = 'cgo-acc-body';
+        body.style.display = openByDefault ? 'block' : 'none';
+
+        bodyBuilder(body);
+
+        hdr.addEventListener('click', () => {
+          const isOpen = body.style.display !== 'none';
+          body.style.display = isOpen ? 'none' : 'block';
+          hdr.classList.toggle('open', !isOpen);
+          hdr.querySelector('.cgo-acc-arrow').textContent = isOpen ? '▼' : '▲';
+        });
+
+        wrap.appendChild(hdr);
+        wrap.appendChild(body);
+        return wrap;
+      };
+
+      // ① 악기 (기본 닫힘) ← NEW FIRST
+      p.appendChild(mkAccordion('🎵', '악기 선택', (body) => {
+        this._buildInstrumentSection(body);
+      }, false));
+
+      // ② 박자 (기본 닫힘)
+      p.appendChild(mkAccordion('🎼', t(24050), (body) => {
+        body.appendChild(this._buildTempoBar());
+      }, false));
+
+      // ③ 추첨통 슬롯 (기본 닫힘)
+      p.appendChild(mkAccordion('🎰', t(24045), (body) => {
+        const grid = document.createElement('div');
+        grid.className = 'cgo-slot-grid';
+        body.appendChild(grid);
+
+        this.slotKeys.forEach(k => {
+          const info = SLOT_DATA[k];
+          const row = document.createElement('div');
+          row.className = 'cgo-slot-row';
+          row.innerHTML = `
+            <div class="cgo-slot-row-label"><b>${info.emoji} <span data-k="${info.labelKey}">${t(info.labelKey)}</span></b></div>
+            <div class="cgo-slot-canvas-wrap"><canvas id="cgo-sc-${k}"></canvas></div>
+            <div class="cgo-slot-row-val" id="cgo-val-${k}">${this.selected[k]}</div>
+          `;
+          row.addEventListener('click', () => { if (!this.isSpinning) this._spinOne(k); });
+          grid.appendChild(row);
+
+          const canvas = row.querySelector(`#cgo-sc-${k}`);
+          this.slotCanvases[k] = canvas;
+          this.slotCtxs[k] = canvas.getContext('2d');
+          this._resizeSlot(k);
+          this._drawSlot(k, 0);
+        });
+
+        // 스핀 + 플레이 버튼
+        const spinWrap = document.createElement('div');
+        spinWrap.className = 'cgo-spin-wrap';
+        spinWrap.innerHTML = `
+          <button class="cgo-spin-btn" id="cgo-spin-btn" data-k="24054">🎲 ${t(24045)}</button>
+          <button class="cgo-play-btn" id="cgo-quick-play" title="▶">▶</button>
         `;
-        row.addEventListener('click', () => { if (!this.isSpinning) this._spinOne(k); });
-        grid.appendChild(row);
+        body.appendChild(spinWrap);
+        spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => this._spinAll());
+        spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => this._quickPlay());
+      }, false));
 
-        const canvas = row.querySelector(`#cgo-sc-${k}`);
-        this.slotCanvases[k] = canvas;
-        this.slotCtxs[k] = canvas.getContext('2d');
-        this._resizeSlot(k);
-        this._drawSlot(k, 0);
-      });
+      // ④ 장르 (기본 닫힘)
+      p.appendChild(mkAccordion('🌍', t(24051), (body) => {
+        body.appendChild(this._buildGenreSection());
+      }, false));
 
-      // 스핀 + 플레이 버튼
-      const spinWrap = document.createElement('div');
-      spinWrap.className = 'cgo-spin-wrap';
-      spinWrap.innerHTML = `
-        <button class="cgo-spin-btn" id="cgo-spin-btn" data-k="24054">🎲 ${t(24045)}</button>
-        <button class="cgo-play-btn" id="cgo-quick-play" title="▶">▶</button>
-      `;
-      p.appendChild(spinWrap);
-      spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => this._spinAll());
-      spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => this._quickPlay());
-
-      // 섹션: 장르 선택 카드 (슬롯 다음, 결과 카드 위)
-      p.appendChild(this._buildGenreSection());
+      // ⑤ 현재 설정 결과 카드 (기본 닫힘)
+      p.appendChild(mkAccordion('🎼', t(24068), (body) => {
+        const resCard = document.createElement('div');
+        resCard.className = 'cgo-result-card';
+        resCard.id = 'cgo-result-card';
+        body.appendChild(resCard);
+      }, false));
 
       // 상태
       const statusEl = document.createElement('p');
@@ -884,43 +1075,157 @@
       statusEl.id = 'cgo-status';
       p.appendChild(statusEl);
 
-      // 결과 카드
-      const resSec = document.createElement('div');
-      resSec.className = 'cgo-msec';
-      resSec.innerHTML = `<div class="cgo-msec-title">🎼 <span data-k="24068">${t(24068)}</span></div>`;
-      const resCard = document.createElement('div');
-      resCard.className = 'cgo-result-card';
-      resCard.id = 'cgo-result-card';
-      resSec.appendChild(resCard);
-      p.appendChild(resSec);
-
-      // 주파수 빠른 선택 (make 탭 안)
-      const fqSec = document.createElement('div');
-      fqSec.className = 'cgo-msec';
-      fqSec.innerHTML = `<div class="cgo-msec-title">🌊 <span data-k="24061">${t(24061)}</span></div>`;
-      const fqGrid = document.createElement('div');
-      fqGrid.className = 'cgo-freq-grid';
-      fqGrid.id = 'cgo-fq-make';
-      FREQ_OPTIONS.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'cgo-freq-btn' + (opt.hz === this.selectedFreq ? ' active' : '');
-        btn.style.color = opt.color;
-        btn.dataset.hz = opt.hz;
-        const lbl = opt.labelKey ? t(opt.labelKey) : opt.label;
-        const dsc = opt.descKey  ? t(opt.descKey)  : opt.desc;
-        btn.innerHTML = `<b>${lbl}</b>${dsc}`;
-        btn.addEventListener('click', () => this._selectFreq(opt.hz));
-        fqGrid.appendChild(btn);
-      });
-      fqSec.appendChild(fqGrid);
-      p.appendChild(fqSec);
-
-      // 생성 버튼
+      // 생성 버튼 (항상 표시)
       const genWrap = document.createElement('div');
       genWrap.className = 'cgo-gen-wrap';
       genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+    }
+
+    // ── 악기 선택 섹션 (추첨통 탭 첫 번째 아코디언) ─────────────
+    _buildInstrumentSection(body) {
+      // 선택된 악기 IDs (최대 12개)
+      if (!this.selectedInstrIds) this.selectedInstrIds = new Set();
+      const MAX_INSTR = 12;
+
+      // 편성 프리셋
+      const presets = [
+        { label:'🎸 솔로 1',      ids:[1]       },
+        { label:'🎹 듀엣 2',      ids:[1,41]    },
+        { label:'🎻 챔버 4',      ids:[1,41,43,57]  },
+        { label:'🎷 앙상블 8',    ids:[1,41,43,57,65,74,47,48] },
+        { label:'🌍 글로벌',      ids:[94,95,81,78,85,76,98,99] },
+        { label:'♻️ 초기화',     ids:[]        },
+      ];
+
+      // 현재 필터 카테고리
+      let activeCat = '전체';
+
+      // ── 상단: 편성 프리셋 버튼 ──────────────────────────────
+      const presetBar = document.createElement('div');
+      presetBar.className = 'cgo-instr-preset-bar';
+      presets.forEach(pr => {
+        const btn = document.createElement('button');
+        btn.className = 'cgo-instr-preset-btn';
+        btn.textContent = pr.label;
+        btn.addEventListener('click', () => {
+          this.selectedInstrIds.clear();
+          pr.ids.forEach(id => this.selectedInstrIds.add(id));
+          renderGrid();
+          renderSelected();
+          updateInfo();
+        });
+        presetBar.appendChild(btn);
+      });
+      body.appendChild(presetBar);
+
+      // ── 카테고리 필터 탭 ─────────────────────────────────
+      const filterBar = document.createElement('div');
+      filterBar.className = 'cgo-instr-filter';
+      INSTR_CATS.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'cgo-instr-filter-btn' + (cat === '전체' ? ' active' : '');
+        btn.textContent = cat;
+        btn.addEventListener('click', () => {
+          activeCat = cat;
+          filterBar.querySelectorAll('.cgo-instr-filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderGrid();
+        });
+        filterBar.appendChild(btn);
+      });
+      body.appendChild(filterBar);
+
+      // ── 선택 정보 줄 ─────────────────────────────────────
+      const infoEl = document.createElement('div');
+      infoEl.className = 'cgo-instr-info';
+      body.appendChild(infoEl);
+
+      function updateInfo() {
+        const n = this.selectedInstrIds ? this.selectedInstrIds.size : 0;
+        infoEl.innerHTML = `선택 <b>${n}</b> / ${MAX_INSTR}개 · 클릭으로 선택/해제`;
+      }
+      updateInfo = updateInfo.bind(this);
+
+      // ── 악기 카드 그리드 ─────────────────────────────────
+      const grid = document.createElement('div');
+      grid.className = 'cgo-instr-grid';
+      body.appendChild(grid);
+
+      const renderGrid = () => {
+        grid.innerHTML = '';
+        const list = activeCat === '전체'
+          ? INSTRUMENT_DATA
+          : INSTRUMENT_DATA.filter(ins => ins.cat === activeCat);
+        list.forEach(ins => {
+          const card = document.createElement('div');
+          const isSel = this.selectedInstrIds.has(ins.id);
+          const maxed = this.selectedInstrIds.size >= MAX_INSTR && !isSel;
+          card.className = 'cgo-instr-card' + (isSel ? ' selected' : '') + (maxed ? ' disabled' : '');
+          card.innerHTML = `
+            <span class="cgo-instr-emoji">${ins.emoji}</span>
+            <span class="cgo-instr-name">${ins.ko}</span>
+            <span class="cgo-instr-region">${ins.region}</span>
+          `;
+          card.title = `${ins.en} | GM:${ins.gm} | ${ins.genres.join(', ')}`;
+          if (!maxed) {
+            card.addEventListener('click', () => {
+              if (this.selectedInstrIds.has(ins.id)) {
+                this.selectedInstrIds.delete(ins.id);
+              } else {
+                if (this.selectedInstrIds.size >= MAX_INSTR) return;
+                this.selectedInstrIds.add(ins.id);
+              }
+              renderGrid();
+              renderSelected();
+              updateInfo();
+              // selected 업데이트 (추첨통 결과 연동)
+              const names = [...this.selectedInstrIds].map(id => {
+                const f = INSTRUMENT_DATA.find(x=>x.id===id);
+                return f ? f.ko : '';
+              }).filter(Boolean);
+              this.selected.instrument = names.slice(0,3).join(', ') || '없음';
+              this._updateResult && this._updateResult();
+            });
+          }
+          grid.appendChild(card);
+        });
+      };
+
+      // ── 선택된 악기 칩 목록 ──────────────────────────────
+      const selectedList = document.createElement('div');
+      selectedList.className = 'cgo-instr-selected-list';
+      body.appendChild(selectedList);
+
+      const renderSelected = () => {
+        const chips = document.createElement('div');
+        chips.className = 'cgo-instr-selected-chips';
+        if (!this.selectedInstrIds.size) {
+          chips.innerHTML = `<span style="font-size:11px;color:#7c6fa8;">선택된 악기 없음 · 위 카드를 클릭하세요</span>`;
+        } else {
+          [...this.selectedInstrIds].forEach(id => {
+            const ins = INSTRUMENT_DATA.find(x=>x.id===id);
+            if (!ins) return;
+            const chip = document.createElement('span');
+            chip.className = 'cgo-instr-chip';
+            chip.innerHTML = `${ins.emoji} ${ins.ko}<span class="cgo-instr-chip-del" title="제거">✕</span>`;
+            chip.querySelector('.cgo-instr-chip-del').addEventListener('click', () => {
+              this.selectedInstrIds.delete(id);
+              renderGrid();
+              renderSelected();
+              updateInfo();
+            });
+            chips.appendChild(chip);
+          });
+        }
+        selectedList.innerHTML = '';
+        selectedList.appendChild(chips);
+      };
+
+      renderGrid();
+      renderSelected();
+      updateInfo();
     }
 
     // ── 200-주파수 마스터 가이드 섹션 (군집 탭+카드만) ────────────
