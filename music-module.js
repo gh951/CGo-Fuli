@@ -657,7 +657,10 @@
     s.id = 'cgo-music-css-v2';
     s.textContent = `
 /* ─── 루트 래퍼 ─── */
-#cgo-music-root{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:#06000f;color:#e8d5ff;min-height:100vh;position:relative;overflow-x:hidden;padding-bottom:90px;}
+/* 중앙 정렬: index.html의 .page 좌우 패딩을 상쇄하고 콘텐츠를 중앙에 배치 */
+#page-music{padding:0!important;margin:0!important;}
+#cgo-music-mount{width:100%;max-width:100%;margin:0;padding:0;}
+#cgo-music-root{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:#06000f;color:#e8d5ff;min-height:100vh;position:relative;overflow-x:hidden;padding-bottom:90px;width:100%;margin:0 auto;box-sizing:border-box;}
 
 /* ─── 상단 헤더 바 ─── */
 .cgo-mhdr{position:sticky;top:0;z-index:100;background:rgba(6,0,15,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(168,85,247,.2);display:flex;align-items:center;padding:0 14px;height:52px;gap:10px;}
@@ -1037,58 +1040,59 @@
 
     // ── init ────────────────────────────────────────────────────
     init() {
-      // ① 잔상(ghost) 방지: 페이지 DOM보다 먼저 팝업을 body에 직접 주입
-      // cgoGoPage()가 #page-music을 보이게 한 직후 init()이 호출되므로
-      // 팝업을 가장 먼저 그려야 페이지 내용이 그 뒤에 보임
-      this._buildIntroPopup();
+      // ─────────────────────────────────────────────────────────────
+      // 잔상(ghost) 완전 차단 전략
+      // 문제: cgoGoPage()가 #page-music.classList.add('active') 한 뒤에
+      //       init()이 호출되므로, 빈 페이지가 한 프레임 보임.
+      // 해결: init() 첫 줄에서 팝업을 document.body에 즉시 삽입.
+      //       팝업은 z-index:29000 fixed 전체화면 → 페이지 내용을 완전히 가림.
+      // ─────────────────────────────────────────────────────────────
+      this._buildIntroPopup();   // ← 반드시 맨 처음 (동기 실행)
 
-      // ② CSS + DOM 뼈대 (동기, 빠름)
+      // CSS · DOM 뼈대 (동기)
       injectCSS();
       this._buildDOM();
 
-      // ③ 보이는 것만 살린다 — 나머지는 idle 후 순차 실행
-      // requestIdleCallback 없는 환경 대비 fallback
+      // 나머지는 브라우저 유휴 시간에 순차 실행 (보이는 것만 살린다)
       const idle = window.requestIdleCallback
         ? (fn, ms) => requestIdleCallback(fn, { timeout: ms })
         : (fn, ms) => setTimeout(fn, ms);
 
-      // 배경 캔버스
       idle(() => this._startBgCanvas(), 200);
-
-      // freq 탭 결과 업데이트
-      idle(() => this._updateResult(), 400);
-
-      // 재진입 감지 옵저버
+      idle(() => this._updateResult(),  400);
       idle(() => this._watchMusicPage(), 600);
-
-      // soundfont는 사전 로드 안 함 — 재생 버튼 클릭 시점에만 로드 (보이는 것만 살린다)
     }
 
     // ── 뮤직 탭 재진입 감지 → 팝업 재표시 ─────────────────────
     _watchMusicPage() {
-      // index.html의 탭 전환은 페이지 컨테이너의 display 또는 class를 변경함
-      // container 의 가장 가까운 페이지 래퍼를 찾아서 감시
       const pageEl = this.container.closest('[id^="page-"]')
                   || this.container.closest('.page')
                   || this.container.parentElement;
       if (!pageEl) return;
 
-      let _wasHidden = true; // 최초에는 팝업을 init()에서 이미 띄웠으므로 숨김 상태로 간주
+      // 현재 실제 visibility 기준으로 초기화
+      // (init() 호출 시점에 페이지는 이미 visible 상태)
+      const checkVisible = () => {
+        const s = window.getComputedStyle(pageEl);
+        return s.display !== 'none' && s.visibility !== 'hidden' && pageEl.classList.contains('active');
+      };
+      let _wasHidden = !checkVisible(); // 현재 보이고 있으면 false
 
       const obs = new MutationObserver(() => {
-        const style = window.getComputedStyle(pageEl);
-        const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
+        const isVisible = checkVisible();
 
         if (isVisible && _wasHidden) {
-          // 페이지가 다시 보여졌다 → 팝업 표시 + 캔버스 재시작
+          // ★ 다른 탭에 갔다가 뮤직으로 돌아온 경우만 팝업 재표시
           _wasHidden = false;
-          if (!this.bgAnimId) this._startBgCanvas(); // 캔버스 루프 재시작
+          if (!this.bgAnimId) this._startBgCanvas();
+          // 기존 팝업 제거 후 새로 표시
           const old = document.getElementById('cgo-music-intro-pop');
-          if (old) try { old.remove(); } catch(e) {}
-          setTimeout(() => this._buildIntroPopup(), 80);
-        } else if (!isVisible) {
+          if (old) { try { old.remove(); } catch(e) {} }
+          setTimeout(() => this._buildIntroPopup(), 60);
+
+        } else if (!isVisible && !_wasHidden) {
+          // 페이지가 숨겨짐 → 다음 진입 시 팝업 표시 준비
           _wasHidden = true;
-          // 페이지 숨겨지면 캔버스 루프 중단 (CPU 절약)
           if (this.bgAnimId) {
             cancelAnimationFrame(this.bgAnimId);
             this.bgAnimId = null;
@@ -1096,36 +1100,42 @@
         }
       });
 
-      obs.observe(pageEl, {
-        attributes: true,
-        attributeFilter: ['style', 'class']
-      });
+      obs.observe(pageEl, { attributes: true, attributeFilter: ['style', 'class'] });
     }
 
     // ── 입구 팝업 매뉴얼 ────────────────────────────────────────
     _buildIntroPopup() {
       // 오늘 하루 닫기 체크 (24시간 기준)
       try {
-        const t = localStorage.getItem('cgoMusicIntroHide');
-        if (t && Date.now() - Number(t) < 86400000) return;
+        const ts = localStorage.getItem('cgoMusicIntroHide');
+        if (ts && Date.now() - Number(ts) < 86400000) return;
       } catch(e) {}
 
       // 이미 팝업이 열려있으면 중복 생성 방지
       if (document.getElementById('cgo-music-intro-pop')) return;
 
+      // document.body가 아직 준비 안 된 경우 대기
+      if (!document.body) {
+        document.addEventListener('DOMContentLoaded', () => this._buildIntroPopup(), { once: true });
+        return;
+      }
+
       const pop = document.createElement('div');
       pop.id = 'cgo-music-intro-pop';
       pop.style.cssText = [
-        'display:block;position:fixed;inset:0;z-index:29000;',
+        'display:block;position:fixed;top:0;left:0;right:0;bottom:0;',
+        'width:100%;height:100%;max-width:100%;max-height:100%;',
+        'z-index:29000;margin:0;padding:0;border:0;',
         'background:#f0fdf9;overflow-y:auto;-webkit-overflow-scrolling:touch;',
-        'font-family:inherit;'
+        'font-family:inherit;box-sizing:border-box;'
       ].join('');
 
       pop.innerHTML = `
 <style>
+#cgo-music-intro-pop{text-align:left;}
 #cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
-.mip-wrap{max-width:560px;margin:0 auto;padding:0 16px 90px;}
-.mip-top{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;margin:0 -16px;background:rgba(240,253,249,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(20,184,166,.14);}
+.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 16px 90px;display:block;}
+.mip-top{position:sticky;top:0;left:0;right:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(240,253,249,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(20,184,166,.14);}
 .mip-top-logo{font-size:12px;font-weight:900;color:#0d9488;letter-spacing:.04em;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s;}
 .mip-top-logo:hover{background:rgba(20,184,166,.12);}
 .mip-x{background:rgba(20,184,166,.1);border:1px solid rgba(20,184,166,.3);border-radius:50%;width:36px;height:36px;color:#0d9488;font-size:16px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;}
@@ -1296,25 +1306,25 @@
       // 🏠 로고 클릭 → 대시보드 이동
       const logoEl = pop.querySelector('.mip-top-logo');
       if (logoEl) {
-        logoEl.addEventListener('click', () => {
-          fadeOut();
-          setTimeout(() => {
-            // 모든 가능한 방법 순서대로 시도
-            const nav = window.cgoGoPage || (typeof global !== 'undefined' && global.cgoGoPage)
-                     || window.top && window.top.cgoGoPage;
-            if (typeof nav === 'function') {
-              try { nav('dashboard'); return; } catch(e) {}
+        logoEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // 1) 팝업 즉시 제거 (fadeOut 없이 바로 — 네비게이션 후 팝업이 남아있으면 이상)
+          try { pop.remove(); } catch(e2) {}
+          // 2) 대시보드 이동 (동기: 지연 없이 즉시)
+          const _navToDash = () => {
+            if (typeof window.cgoGoPage === 'function') {
+              try { window.cgoGoPage('dashboard'); return true; } catch(e2) {}
             }
-            // fallback 1: 대시보드 onclick 속성 버튼
-            const btn = document.querySelector('[onclick*="dashboard"]');
-            if (btn) { btn.click(); return; }
-            // fallback 2: data-page="dashboard" 속성
-            const pg = document.querySelector('[data-page="dashboard"], .nav-dashboard, #nav-dashboard');
-            if (pg) { pg.click(); return; }
-            // fallback 3: 헤더 홈 아이콘
-            const home = document.querySelector('.cgo-mhdr-back, #cgo-mhdr-back');
-            if (home) home.click();
-          }, 250);
+            const btn = document.querySelector('[onclick*="cgoGoPage"][onclick*="dashboard"]')
+                     || document.querySelector('[data-page="dashboard"]')
+                     || document.querySelector('.nav-btn[data-page="dashboard"]');
+            if (btn) { btn.click(); return true; }
+            return false;
+          };
+          if (!_navToDash()) {
+            // 마지막 수단: 50ms 후 재시도
+            setTimeout(_navToDash, 50);
+          }
         });
       }
     }
