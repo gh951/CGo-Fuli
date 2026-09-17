@@ -61,11 +61,58 @@
   const TEMPO_DEFAULT_BPM = 80;
   const TEMPO_DEFAULT_SLIDER = bpmToSlider(TEMPO_DEFAULT_BPM);
 
-  // SLOT_DATA — time(박자) 제거, 레인보우 바로 대체
-  // label은 렌더 시 t() 호출로 대체 (labelKey 참조)
+  // ── 전 세계 장르 아카이브 (구글 파트너 제공) ──────────────────
+  // 나중에 국기 이미지 추가 예정 — flag 필드에 실제 이미지 URL 삽입
+  const GENRE_GROUPS = [
+    {
+      group: '🌍 유럽',
+      color: '#3b82f6',
+      genres: [
+        { id:'chanson',   flag:'🇫🇷', name:'샹송',      nameEn:'Chanson',         country:'프랑스',       desc:'아코디언 선율과 서정적 보컬 · 파리의 낭만과 인생의 애환', bpmRange:[60,90],  wave:'sine'     },
+        { id:'canzone',   flag:'🇮🇹', name:'칸소네',     nameEn:'Canzone',          country:'이탈리아',      desc:'만돌린과 풍부한 성량 · 밝고 열정적인 지중해 감성',       bpmRange:[70,100], wave:'triangle' },
+        { id:'flamenco',  flag:'🇪🇸', name:'플라멩코',   nameEn:'Flamenco',         country:'스페인',       desc:'기타 리듬과 열정적 박수 · 집시 문화의 즉흥 정열',        bpmRange:[110,140],wave:'sawtooth' },
+        { id:'celtic',    flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', name:'켈틱',      nameEn:'Celtic',           country:'아일랜드/스코틀랜드', desc:'휘슬·하프·바이올린 · 안개 낀 초원의 치유 에너지',     bpmRange:[80,120], wave:'triangle' },
+      ]
+    },
+    {
+      group: '🌏 아시아',
+      color: '#f59e0b',
+      genres: [
+        { id:'gugak',     flag:'🇰🇷', name:'국악',       nameEn:'Korean Traditional', country:'한국',       desc:'가야금과 해금의 오음계 · 한(恨)과 흥의 깊은 명상',      bpmRange:[50,90],  wave:'sine'     },
+        { id:'raga',      flag:'🇮🇳', name:'인도 라가',   nameEn:'Indian Raga',       country:'인도',        desc:'시타르의 벤드 기법 · 차크라를 깨우는 영적 진동',         bpmRange:[60,110], wave:'sine'     },
+        { id:'chinese',   flag:'🇨🇳', name:'중국 전통',   nameEn:'Chinese Traditional',country:'중국',       desc:'비파의 청량한 음색 · 산수화 같은 동양적 풍류',           bpmRange:[60,100], wave:'sine'     },
+        { id:'japanese',  flag:'🇯🇵', name:'일본 전통',   nameEn:'Japanese Traditional',country:'일본',      desc:'사미센의 절제된 선율 · 선(Zen) 앰비언트 고요함',         bpmRange:[50,80],  wave:'sine'     },
+      ]
+    },
+    {
+      group: '🌎 아메리카·아프리카',
+      color: '#10b981',
+      genres: [
+        { id:'bossanova', flag:'🇧🇷', name:'보사노바',    nameEn:'Bossa Nova',       country:'브라질',       desc:'삼바 리듬의 나른한 재해석 · 파도 소리 같은 여유',        bpmRange:[80,110], wave:'triangle' },
+        { id:'afrobeat',  flag:'🌍', name:'아프로비트',   nameEn:'Afrobeat',         country:'서아프리카',    desc:'타악기·재즈·펑크 결합 · 원초적 생명력의 리듬 테라피',   bpmRange:[100,130],wave:'sawtooth' },
+        { id:'andean',    flag:'🇵🇪', name:'안데스',      nameEn:'Andean/Quechua',   country:'페루/안데스',   desc:'팬플루트·케나의 구슬픈 선율 · 영혼을 정화하는 고요함',   bpmRange:[60,90],  wave:'sine'     },
+        { id:'tango',     flag:'🇦🇷', name:'탱고',        nameEn:'Tango',            country:'아르헨티나',    desc:'반도네온의 반음계 선율 · 긴장과 이완의 열정 드라마',     bpmRange:[100,130],wave:'triangle' },
+        { id:'maqam',     flag:'🕌',  name:'아랍 마캄',   nameEn:'Arabian Maqam',    country:'중동',         desc:'우드(Oud)의 깊은 울림 · 미분음의 사막 밤 몽환',          bpmRange:[60,100], wave:'sine'     },
+      ]
+    },
+    {
+      group: '✨ 현대·힐링',
+      color: '#a855f7',
+      genres: [
+        { id:'ambient',   flag:'🌌', name:'앰비언트',    nameEn:'Ambient',           country:'글로벌',       desc:'패드 신디와 백색소음 · 심장박동을 안정시키는 수면·명상', bpmRange:[50,70],  wave:'sine'     },
+        { id:'pop',       flag:'🎤', name:'팝·발라드',   nameEn:'Pop & Ballad',      country:'글로벌',       desc:'친숙한 코드 진행 · 누구나 흥얼거리며 치유받는 대중성',   bpmRange:[80,120], wave:'triangle' },
+        { id:'jazz',      flag:'🎷', name:'재즈',        nameEn:'Jazz',              country:'미국/글로벌',   desc:'스윙 리듬과 즉흥 화성 · 도시적 세련됨과 감성 치유',      bpmRange:[80,120], wave:'triangle' },
+        { id:'healing',   flag:'💚', name:'힐링',        nameEn:'Healing',           country:'글로벌',       desc:'순수 치료 주파수 중심 · CGO 고유의 과학적 힐링 사운드',  bpmRange:[50,80],  wave:'sine'     },
+      ]
+    }
+  ];
+  // flat 배열 (id → genre 빠른 조회용)
+  const GENRE_MAP = {};
+  GENRE_GROUPS.forEach(g => g.genres.forEach(genre => { GENRE_MAP[genre.id] = genre; }));
+
+  // SLOT_DATA — genre 제거 (장르는 카드 선택기로 대체)
   const SLOT_DATA = {
     key:        { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] },
-    genre:      { label:'장르',     labelKey:24051, emoji:'🎭', items:['샹송(Chanson)','칸소네(Canzone)','국악','앰비언트','팝','발라드','재즈','보사노바','플라멩코','켈틱','아프로비트','인도 라가','아랍 마캄','탱고','힐링'] },
     vocal:      { label:'보컬',     labelKey:24052, emoji:'🎤', items:['남성(Male)','여성(Female)','혼성(Duet)','무보컬(BGM)','어린이','합창(Choir)'] },
     instrument: { label:'세계 악기', labelKey:24053, emoji:'🪕', items:['가야금(한국)','해금(한국)','아코디언(프랑스)','만돌린(이탈리아)','우드(중동)','칼림바(아프리카)','팬플루트(안데스)','시타르(인도)','케나(페루)','딤베(서아프리카)','비파(중국)','사미센(일본)','두둑(아르메니아)','오카리나','하프','첼로'] }
   };
@@ -232,6 +279,26 @@
 .cgo-player-btn{width:38px;height:38px;border-radius:10px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c084fc;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .cgo-player-btn.main{background:linear-gradient(135deg,#7c3aed,#a855f7);border-color:transparent;color:#fff;width:42px;height:42px;border-radius:12px;}
 
+/* ─── 장르 선택 카드 ─── */
+.cgo-genre-sec{padding:20px 14px 4px;}
+.cgo-genre-group{margin-bottom:14px;}
+.cgo-genre-group-title{font-size:11px;font-weight:800;color:#9d8ec4;margin-bottom:8px;display:flex;align-items:center;gap:6px;padding:0 2px;}
+.cgo-genre-group-line{flex:1;height:1px;background:rgba(168,85,247,.12);}
+.cgo-genre-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;}
+.cgo-genre-card{background:rgba(20,5,40,.7);border:1.5px solid rgba(100,60,180,.2);border-radius:12px;padding:10px 11px;cursor:pointer;transition:border-color .18s,background .18s,transform .12s;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+.cgo-genre-card:active{transform:scale(.97);}
+.cgo-genre-card.selected{border-color:var(--gc);background:rgba(30,8,60,.9);box-shadow:0 0 12px color-mix(in srgb, var(--gc) 30%, transparent);}
+.cgo-genre-card.selected::before{content:'✓';position:absolute;top:6px;right:8px;font-size:10px;font-weight:900;color:var(--gc);}
+.cgo-genre-flag{font-size:20px;line-height:1;margin-bottom:5px;}
+.cgo-genre-name{font-size:12px;font-weight:800;color:#e8d5ff;line-height:1.2;}
+.cgo-genre-en{font-size:9.5px;color:#7c6fa8;margin-top:1px;}
+.cgo-genre-country{font-size:9px;color:#6b7280;margin-top:2px;}
+.cgo-genre-desc{font-size:9px;color:#9d8ec4;margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* 선택 카운터 배지 */
+.cgo-genre-counter{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:#c084fc;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);border-radius:999px;padding:3px 10px;margin-bottom:10px;}
+.cgo-genre-counter-num{font-size:13px;font-weight:900;color:#f0abfc;font-variant-numeric:tabular-nums;}
+.cgo-genre-hint{font-size:10px;color:#6b7280;}
+
 /* ─── 프리셋 ─── */
 .cgo-preset-bar{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 14px 4px;}
 .cgo-preset-bar::-webkit-scrollbar{display:none;}
@@ -278,6 +345,7 @@
       });
 
       this.tempoBpm = TEMPO_DEFAULT_BPM;
+      this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
       this.selectedFreq = 432;
       this.presets = this._loadPresets();
       this.particles = [];
@@ -294,6 +362,11 @@
 
       // 현재 탭
       this.activeTab = 'make';
+
+      // BPM 리듬 엔진
+      this.rhythmTimerId = null;
+      this.beatCount = 0;
+      this.rhythmGain = null;
 
       // resize 바인딩
       this._onResize = () => this._resizeBg();
@@ -456,6 +529,9 @@
       spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => this._spinAll());
       spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => this._quickPlay());
 
+      // 섹션: 장르 선택 카드 (슬롯 다음, 결과 카드 위)
+      p.appendChild(this._buildGenreSection());
+
       // 상태
       const statusEl = document.createElement('p');
       statusEl.className = 'cgo-status';
@@ -499,6 +575,102 @@
       genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+    }
+
+    // ── 장르 선택 카드 섹션 ─────────────────────────────────────
+    _buildGenreSection() {
+      const sec = document.createElement('div');
+      sec.className = 'cgo-genre-sec';
+
+      // 헤더 + 선택 카운터
+      const hdr = document.createElement('div');
+      hdr.className = 'cgo-msec-title';
+      hdr.style.marginBottom = '8px';
+      hdr.innerHTML = `🎭 <span data-k="24051">${t(24051)}</span>`;
+      sec.appendChild(hdr);
+
+      // 카운터 배지
+      const counterWrap = document.createElement('div');
+      counterWrap.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
+      const counter = document.createElement('div');
+      counter.className = 'cgo-genre-counter';
+      counter.id = 'cgo-genre-counter';
+      counter.innerHTML = `<span class="cgo-genre-counter-num" id="cgo-genre-count">${this.selectedGenres.size}</span> / 10 선택됨`;
+      const hint = document.createElement('div');
+      hint.className = 'cgo-genre-hint';
+      hint.textContent = '최대 10개 믹서 가능';
+      counterWrap.appendChild(counter);
+      counterWrap.appendChild(hint);
+      sec.appendChild(counterWrap);
+
+      // 대륙별 그룹 렌더
+      GENRE_GROUPS.forEach(group => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'cgo-genre-group';
+
+        // 그룹 타이틀
+        const titleEl = document.createElement('div');
+        titleEl.className = 'cgo-genre-group-title';
+        titleEl.innerHTML = `<span style="color:${group.color};">${group.group}</span><div class="cgo-genre-group-line"></div>`;
+        groupEl.appendChild(titleEl);
+
+        // 카드 그리드
+        const grid = document.createElement('div');
+        grid.className = 'cgo-genre-grid';
+        group.genres.forEach(genre => {
+          const card = document.createElement('div');
+          card.className = 'cgo-genre-card' + (this.selectedGenres.has(genre.id) ? ' selected' : '');
+          card.style.setProperty('--gc', group.color);
+          card.dataset.gid = genre.id;
+          card.innerHTML = `
+            <div class="cgo-genre-flag">${genre.flag}</div>
+            <div class="cgo-genre-name">${genre.name}</div>
+            <div class="cgo-genre-en">${genre.nameEn}</div>
+            <div class="cgo-genre-country">📍 ${genre.country}</div>
+            <div class="cgo-genre-desc">${genre.desc}</div>
+          `;
+          card.addEventListener('click', () => this._toggleGenre(genre.id, group.color));
+          grid.appendChild(card);
+        });
+        groupEl.appendChild(grid);
+        sec.appendChild(groupEl);
+      });
+
+      this._genreSec = sec;
+      return sec;
+    }
+
+    // ── 장르 토글 (최대 10개) ────────────────────────────────────
+    _toggleGenre(id, groupColor) {
+      if (this.selectedGenres.has(id)) {
+        // 마지막 하나는 해제 불가
+        if (this.selectedGenres.size <= 1) {
+          this._setStatus('⚠️ 최소 1개 장르는 선택되어야 합니다.');
+          return;
+        }
+        this.selectedGenres.delete(id);
+      } else {
+        if (this.selectedGenres.size >= 10) {
+          this._setStatus('⚠️ 최대 10개까지 믹서할 수 있습니다.');
+          return;
+        }
+        this.selectedGenres.add(id);
+      }
+      // 카드 UI 업데이트
+      if (this._genreSec) {
+        this._genreSec.querySelectorAll('.cgo-genre-card').forEach(card => {
+          const gid = card.dataset.gid;
+          const grp = GENRE_GROUPS.find(g => g.genres.find(x => x.id === gid));
+          const gc = grp ? grp.color : '#a855f7';
+          card.style.setProperty('--gc', gc);
+          card.classList.toggle('selected', this.selectedGenres.has(gid));
+        });
+      }
+      // 카운터 업데이트
+      const countEl = this.root && this.root.querySelector('#cgo-genre-count');
+      if (countEl) countEl.textContent = this.selectedGenres.size;
+      // 결과 카드 업데이트
+      this._updateResult();
     }
 
     // ── 박자 레인보우 바 빌드 (250단계 연속) ───────────────────
@@ -573,11 +745,12 @@
         this._updateTempoDisplayLive(dispDiv, bpm);
       });
       slider.addEventListener('change', () => {
-        // 손 뗐을 때: 전체 카드 + 결과 카드 업데이트
+        // 손 뗐을 때: 전체 카드 + 결과 카드 업데이트 + 오디오 BPM 즉시 반영
         const bpm = sliderToBpm(parseInt(slider.value, 10));
         this.tempoBpm = bpm;
         dispDiv.innerHTML = this._tempoDisplayHTML(bpm);
         this._updateResult();
+        this._applyBpmToAudio();   // 재생 중이면 리듬 즉시 갱신
       });
 
       // 초기 말풍선 위치
@@ -668,6 +841,7 @@
       if (this._tempoTicksEl) this._updateTempoTicks(this._tempoTicksEl, bpm);
       if (this._tempoDispEl) this._tempoDispEl.innerHTML = this._tempoDisplayHTML(bpm);
       this._updateResult();
+      this._applyBpmToAudio();   // 재생 중이면 리듬 즉시 갱신
     }
 
     // ── 주파수 패널 ─────────────────────────────────────────────
@@ -885,10 +1059,19 @@
       if (!card) return;
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === this.selectedFreq) || FREQ_OPTIONS[3];
       const tempo = bpmToStage(this.tempoBpm);
+      // 선택된 장르 태그
+      const genreTags = [...this.selectedGenres].map(id => {
+        const genre = GENRE_MAP[id];
+        if (!genre) return '';
+        const grp = GENRE_GROUPS.find(g => g.genres.find(x => x.id === id));
+        const gc = grp ? grp.color : '#a855f7';
+        return `<span class="cgo-result-tag" style="color:${gc};border-color:${gc}40;">${genre.flag} ${genre.name}</span>`;
+      }).join('');
       card.innerHTML = `
         <div style="font-size:12px;color:#9d8ec4;margin-bottom:8px;" data-k="24068">${t(24068)}</div>
         <div class="cgo-result-tags">
           <span class="cgo-result-tag" style="color:${tempo.color};border-color:${tempo.color}40;">🥁 ${tempo.name} ${this.tempoBpm}BPM</span>
+          ${genreTags}
           ${this.slotKeys.map(k => `<span class="cgo-result-tag">${SLOT_DATA[k].emoji} ${this.selected[k]}</span>`).join('')}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
@@ -925,50 +1108,69 @@
         this._cleanAudioNodes();
 
         const ctx = this.audioCtx;
+
+        // ── 마스터 게인 (페이드인) ──
         this.gainNode = ctx.createGain();
         this.gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
-        this.gainNode.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 1.2);
+        this.gainNode.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + 1.5);
         this.gainNode.connect(ctx.destination);
 
-        // 조성에 따른 기본 주파수
+        // ── 리듬 게인 (BPM 펄스용 별도 게인) ──
+        this.rhythmGain = ctx.createGain();
+        this.rhythmGain.gain.setValueAtTime(1.0, ctx.currentTime);
+        this.rhythmGain.connect(this.gainNode);
+
+        // ── 조성 분석 ──
         const keyName = this.selected.key || 'A Major';
         const noteName = keyName.split(' ')[0];
         const baseHz = NOTE_FREQ[noteName] || 440;
         const isMinor = keyName.includes('Minor');
 
-        // 장르에 따른 화음 구성
+        // ── 장르에 따른 파형 선택 ──
+        const genre = this.selected.genre || '';
+        const useWave = genre.includes('재즈') || genre.includes('보사') ? 'sine'
+          : genre.includes('국악') || genre.includes('힐링') ? 'sine'
+          : 'triangle';
+
+        // ── 화음 구성 (장/단조) ──
         const intervals = isMinor
-          ? [1, 1.189, 1.498, 1.782, 2]         // 단조: 루트·단3도·5도·단7도·옥타브
-          : [1, 1.260, 1.498, 1.888, 2];         // 장조: 루트·장3도·5도·장7도·옥타브
+          ? [1, 1.189, 1.498, 1.782, 2]
+          : [1, 1.260, 1.498, 1.888, 2];
 
         intervals.forEach((ratio, i) => {
           const osc = ctx.createOscillator();
           const oscGain = ctx.createGain();
-          osc.type = i === 0 ? 'sine' : 'triangle';
+          osc.type = i === 0 ? 'sine' : useWave;
           osc.frequency.setValueAtTime(baseHz * ratio, ctx.currentTime);
-          oscGain.gain.setValueAtTime(i === 0 ? 0.6 : 0.15 - i * 0.02, ctx.currentTime);
+          oscGain.gain.setValueAtTime(i === 0 ? 0.55 : Math.max(0.03, 0.14 - i * 0.025), ctx.currentTime);
           osc.connect(oscGain);
-          oscGain.connect(this.gainNode);
+          oscGain.connect(this.rhythmGain);
           osc.start();
           this.oscNodes.push({ osc, gain: oscGain });
         });
 
-        // 치료 주파수 오버레이
+        // ── 치료 주파수 오버레이 ──
         if (this.selectedFreq > 0) {
           const hz = this.selectedFreq;
           this.healOsc  = ctx.createOscillator();
           this.healGain = ctx.createGain();
           this.healOsc.type = 'sine';
           this.healOsc.frequency.setValueAtTime(hz < 50 ? 100 + hz : hz, ctx.currentTime);
-          this.healGain.gain.setValueAtTime(hz < 50 ? 0.04 : 0.08, ctx.currentTime);
+          this.healGain.gain.setValueAtTime(hz < 50 ? 0.04 : 0.07, ctx.currentTime);
           this.healOsc.connect(this.healGain);
           this.healGain.connect(ctx.destination);
           this.healOsc.start();
         }
 
+        // ── BPM 리듬 펄스 엔진 시작 ──
+        this.beatCount = 0;
+        this._startRhythmPulse();
+
         this.isPlaying = true;
         this._updatePlayerUI(true);
-        this._setStatus('🎵 미리 듣기 중… (' + (this.selected.key || '') + ' · ' + (FREQ_OPTIONS.find(f=>f.hz===this.selectedFreq)||{label:'OFF'}).label + ')');
+        const freqLabel = (FREQ_OPTIONS.find(f => f.hz === this.selectedFreq) || {label:'OFF'}).label;
+        const stage = bpmToStage(this.tempoBpm);
+        this._setStatus(`🎵 ${this.tempoBpm}BPM · ${stage.name} · ${keyName} · ${freqLabel}`);
 
         // 30초 후 자동 페이드아웃
         this.playTimerId = setTimeout(() => this._stopAudio(), 30000);
@@ -976,7 +1178,7 @@
         // 진행바
         this.playProgress = 0;
         const startTime = Date.now();
-        const barEl = this.root.querySelector('#cgo-player-bar');
+        const barEl = this.root && this.root.querySelector('#cgo-player-bar');
         const barTick = () => {
           if (!this.isPlaying || !barEl) return;
           this.playProgress = Math.min((Date.now() - startTime) / 30000, 1);
@@ -990,6 +1192,54 @@
         console.error('[CGO-MUSIC] Audio Error:', e);
       }
     }
+
+    // ── BPM 리듬 펄스 엔진 ──────────────────────────────────────
+    // Web Audio API의 GainNode envelope를 이용해 BPM에 맞는 박자감 구현
+    // 재생 중 tempoBpm 변경 시 즉각 반응
+    _startRhythmPulse() {
+      if (!this.audioCtx || !this.rhythmGain) return;
+      clearTimeout(this.rhythmTimerId);
+
+      const tick = () => {
+        if (!this.isPlaying || !this.audioCtx || !this.rhythmGain) return;
+
+        const bpm = this.tempoBpm;
+        const beatMs = (60 / bpm) * 1000;          // 한 박자 시간 (ms)
+        const ctx = this.audioCtx;
+        const g = this.rhythmGain.gain;
+        const now = ctx.currentTime;
+
+        // 박자 엑센트: 첫 박(강박) vs 나머지
+        const isStrong = (this.beatCount % 4 === 0);  // 4/4박자 기준 강박
+        const peakGain = isStrong ? 1.0 : 0.65;
+        const attackMs = Math.min(beatMs * 0.04, 15);  // 빠른 어택 (BPM 연동)
+        const decayMs  = beatMs * 0.55;                // 디케이 (박자 안에서 자연 감쇠)
+
+        // Envelope: 빠르게 올리고 → 디케이
+        g.cancelScheduledValues(now);
+        g.setValueAtTime(0.35, now);
+        g.linearRampToValueAtTime(peakGain, now + attackMs / 1000);
+        g.exponentialRampToValueAtTime(0.35, now + decayMs / 1000);
+
+        this.beatCount++;
+
+        // 다음 박자 스케줄 (BPM이 바뀌어도 즉시 반영)
+        this.rhythmTimerId = setTimeout(tick, beatMs);
+      };
+
+      tick();
+    }
+
+    // 슬라이더 BPM 변경 시 실시간 반영
+    _applyBpmToAudio() {
+      if (!this.isPlaying) return;
+      // 리듬 펄스는 tempoBpm을 직접 읽으므로 타이머만 리셋
+      clearTimeout(this.rhythmTimerId);
+      this.beatCount = 0;
+      this._startRhythmPulse();
+      const stage = bpmToStage(this.tempoBpm);
+      this._setStatus(`🎵 ${this.tempoBpm}BPM · ${stage.name} · ${this.selected.key || ''}`);
+    }
     _stopAudio() {
       clearTimeout(this.playTimerId);
       this._cleanAudioNodes();
@@ -1000,11 +1250,17 @@
       if (barEl) barEl.style.width = '0%';
     }
     _cleanAudioNodes() {
+      // 리듬 타이머 먼저 정지
+      clearTimeout(this.rhythmTimerId);
+      this.rhythmTimerId = null;
+      this.beatCount = 0;
+      // 오실레이터 전부 정리
       this.oscNodes.forEach(n => { try { n.osc.stop(); n.osc.disconnect(); n.gain.disconnect(); } catch(e){} });
       this.oscNodes = [];
-      if (this.healOsc)  { try { this.healOsc.stop();  this.healOsc.disconnect();  } catch(e){} this.healOsc = null; }
-      if (this.healGain) { try { this.healGain.disconnect(); } catch(e){} this.healGain = null; }
-      if (this.gainNode) { try { this.gainNode.disconnect(); } catch(e){} this.gainNode = null; }
+      if (this.healOsc)   { try { this.healOsc.stop();  this.healOsc.disconnect();  } catch(e){} this.healOsc = null; }
+      if (this.healGain)  { try { this.healGain.disconnect(); } catch(e){} this.healGain = null; }
+      if (this.rhythmGain){ try { this.rhythmGain.disconnect(); } catch(e){} this.rhythmGain = null; }
+      if (this.gainNode)  { try { this.gainNode.disconnect(); } catch(e){} this.gainNode = null; }
     }
     _updatePlayerUI(playing) {
       const playerEl = this.root && this.root.querySelector('#cgo-player');
@@ -1027,7 +1283,8 @@
     // ── AI 음악 생성 ────────────────────────────────────────────
     _onGenerate() {
       const tempoStage = bpmToStage(this.tempoBpm);
-      const combo = { key:this.selected.key, bpm:this.tempoBpm, tempoName:tempoStage.name, tempoNameEn:tempoStage.nameEn, genre:this.selected.genre, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
+      const genreList = [...this.selectedGenres].map(id => GENRE_MAP[id]).filter(Boolean);
+      const combo = { key:this.selected.key, bpm:this.tempoBpm, tempoName:tempoStage.name, tempoNameEn:tempoStage.nameEn, genres:genreList.map(g=>g.nameEn), genresMix:genreList.length > 1, vocal:this.selected.vocal, instrument:this.selected.instrument, freq:this.selectedFreq };
       this._setStatus(t(24066));
       const genBtn = this.root && this.root.querySelector('#cgo-gen-btn');
       if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ ' + t(24066); }
