@@ -1,4 +1,20 @@
 
+/* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
+   콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
+   다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
+window.CGO_VER = 'cgo-45';
+try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
+try{
+  document.addEventListener('DOMContentLoaded', function(){
+    var _b = document.createElement('div');
+    _b.textContent = window.CGO_VER;
+    _b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:999999;'
+      +'background:rgba(0,0,0,.55);color:#7CFFB2;font:11px monospace;'
+      +'padding:2px 7px;border-radius:6px;pointer-events:none;letter-spacing:.5px;';
+    document.body.appendChild(_b);
+  });
+}catch(_e){}
+
 /* ══ 공용 — 카메라 앞 얼굴이 화면을 얼마나 채우는가 ══
    cm 추정을 버리고 이 잣대 하나로 통일한다. 폰 화각이 달라도 같은 결과가 나온다.
    나의 건강 · 인지 건강 · 두피 · IQ · 관상 · 손금 · AR 메이크업 · 음식 궁합 · 궁합 — 모두 이것을 쓴다. */
