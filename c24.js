@@ -2,7 +2,7 @@
 /* ══ 버전 배지 — 이 파일이 실제로 배포됐는지 눈으로 바로 확인하기 위함.
    콘솔에 항상 찍히고, 화면 좌상단에도 작게 표시된다.
    다음에 c24.js 를 고칠 때는 반드시 이 번호부터 올릴 것. ══ */
-window.CGO_VER = 'cgo-48';
+window.CGO_VER = 'cgo-49';
 try{ console.log('[CGO] c24.js 버전:', window.CGO_VER); }catch(_e){}
 try{
   document.addEventListener('DOMContentLoaded', function(){
@@ -1241,92 +1241,60 @@ function _c24CompFinalAnalyze(){
     sec.insertBefore(loading, sec.firstChild);
   }
 
-  // 각 이미지 Vision AI 분석
-  var analyses = {};
+  // ★ cgo-49: 7번 호출 → 1번 호출 통합 구조
+  //   6장 이미지를 한 번의 API 요청에 모두 담아 전송 — 중간 rate limit 충돌 없음
+  var breath = s.breathData;
+  var _tier = window._c24Tier || 'basic';
 
-  var _analyzeImg = function(b64, prompt, key){
-    if(!b64) return Promise.resolve('');
-    var _tier = window._c24Tier || 'basic';
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:_tier,
-        images:[b64], prompt:prompt, max_tokens:300, temperature:0.3})})
-    .then(function(r2){return r2.json();})
-    .then(function(d){
-      var t=d.text||'';
-      return t.replace(/```json|```/g,'').trim();
-    }).catch(function(){return '';});
-  };
+  var imgs = [];
+  if(s.images.face)      imgs.push(s.images.face);
+  if(s.images.tongue)    imgs.push(s.images.tongue);
+  if(s.images.eye)       imgs.push(s.images.eye);
+  if(s.images.skin)      imgs.push(s.images.skin);
+  if(s.images.hand_back) imgs.push(s.images.hand_back);
+  if(s.images.hand_palm) imgs.push(s.images.hand_palm);
 
-  Promise.all([
-    _analyzeImg(s.images.face,
-      '이 얼굴 사진의 색조를 관찰. JSON만(코드블록없이):\n{"안색":"밝음/붉은톤/노란톤/보통","부기":"있음/없음","다크서클":"있음/없음","생기":"밝음/중간/어두움","특이사항":"눈에 띄는 특징"}','face'),
-    _analyzeImg(s.images.tongue,
-      '이 혀 사진을 관찰. JSON만(코드블록없이):\n{"설색":"담홍/홍/암홍/창백/청자","설태":"백태/황태/흑태/없음","설형":"정상/치흔/균열/점","혀크기":"정상/크고두꺼움/작고얇음"}','tongue'),
-    _analyzeImg(s.images.eye,
-      '이 눈 사진의 색조를 관찰. JSON만(코드블록없이):\n{"눈가톤":"맑음/흐림/노란톤/붉은톤","흰자톤":"맑음/노란톤/붉은톤","눈꺼풀":"보통/부음/처짐","특이사항":"눈에 띄는 특징"}','eye'),
-    _analyzeImg(s.images.skin,
-      '이 피부 사진의 색조를 관찰. JSON만(코드블록없이):\n{"피부톤":"밝음/옅음/노란톤/붉은톤/어두운톤","탄력":"좋음/보통/저하","건조도":"보통/건조/지성","트러블":"없음/있음","특이사항":"눈에 띄는 특징"}','skin'),
-    _analyzeImg(s.images.hand_back,
-      '이 손등 사진의 색조를 관찰. JSON만(코드블록없이):\n{"손톱톤":"옅음/분홍/어두움/노란톤/보통","혈관":"선명/보통/약함","손등톤":"보통/옅음/붉은톤/노란톤","특이사항":"눈에 띄는 특징"}','hand_back'),
-    _analyzeImg(s.images.hand_palm,
-      '이 손바닥 사진을 관찰. JSON만(코드블록없이):\n{"손바닥톤":"보통/옅음/붉은톤/노란톤/어두운톤","생명선":"길고깊음/보통/짧음/사슬","감정선":"선명/보통/끊김","두뇌선":"선명/보통/끊김","손바닥두께":"두꺼움/보통/얇음"}','hand_palm')
-  ]).then(function(results){
-    var _parse = function(t){ try{var m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};} catch(e){return {};} };
-    var face=_parse(results[0]);
-    var tongue=_parse(results[1]);
-    var eye=_parse(results[2]);
-    var skin=_parse(results[3]);
-    var hBack=_parse(results[4]);
-    var hPalm=_parse(results[5]);
-    var breath=s.breathData;
+  var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
+    +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
+    +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
 
-    // 통합 AI 분석
-    var sysPrompt = '당신은 공개된 한의학·의학 문헌을 학습한 건강 정보 도우미 AI입니다. 의료인이 아니며 진단·처방을 하지 않습니다. '
-      +'실측 데이터만 근거로 현실적·구체적으로 분석하세요. JSON만 반환. 코드블록 금지. '
-      +'반드시 100% 순수한 한국어로만 작성하세요. furthermore, however, additionally 등 영어 단어 절대 사용 금지.';
+  var userPrompt = '이미지 순서: 1=얼굴, 2=혀, 3=눈, 4=피부, 5=손등, 6=손바닥\n'
+    +'(없는 이미지는 건너뜀)\n\n'
+    +'분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')'+'\n'
+    +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
+    +'478호흡: 완료사이클='+breath.cycles+'회\n\n'
+    +'위 이미지들을 직접 관찰하여 아래 JSON 형식으로만 응답. 코드블록 절대 금지:\n'
+    +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
+    +'"종합점수":점수(40~98),'
+    +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 3문장",'
+    +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 3문장",'
+    +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 3문장",'
+    +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 3문장",'
+    +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
+    +'"눈_건강":"눈 이미지 관찰로 본 눈 컨디션. 3문장",'
+    +'"피부_건강":"피부 이미지로 본 피부 및 전신 건강 상태. 3문장",'
+    +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
+    +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
+    +'"식이_가이드":"지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
 
-    var userPrompt = '분석 대상: '+name+'님 | 오행('+oh+'·'+ohK[oh]+')\n'
-      +'rPPG 실측: BPM='+_c24.bpm+' HRV='+_c24.hrv+' FCI='+_c24.fci+'%\n'
-      +'478호흡: 완료사이클='+breath.cycles+'회\n'
-      +'얼굴 관찰: '+JSON.stringify(face)+'\n'
-      +'혀 관찰: '+JSON.stringify(tongue)+'\n'
-      +'눈 관찰: '+JSON.stringify(eye)+'\n'
-      +'피부 관찰: '+JSON.stringify(skin)+'\n'
-      +'손등 관찰: '+JSON.stringify(hBack)+'\n'
-      +'손바닥 관찰: '+JSON.stringify(hPalm)+'\n\n'
-      +'아래 JSON으로 반환:\n'
-      +'{"종합등급":"A(매우건강)/B(양호)/C(주의)/D(관리필요) 중 하나",'
-      +'"종합점수":점수(40~98),'
-      +'"핵심발견":"6부위에서 발견한 가장 중요한 건강 신호. 실제 관찰 특징 언급. 3문장",'
-      +'"심장활력":"얼굴안색+손톱색+rPPG BPM으로 본 심장 활력 상태. 3문장",'
-      +'"소화기":"손바닥색+혀설태+설색으로 본 소화기(비위) 상태. 3문장",'
-      +'"순환계":"손톱색+손등혈관+얼굴혈색으로 본 혈액순환. 3문장",'
-      +'"신경계":"내면 탄력성 활력도='+(_c24.hrv>=60?'우수':_c24.hrv>=40?'양호':_c24.hrv>=20?'보통':'관리 권장')+'+안색+혀균열+478호흡('+breath.cycles+'사이클)로 본 내면 탄력성. 3문장",'
-      +'"눈_건강":"눈빛 톤 관찰로 본 눈 컨디션. 3문장",'
-      +'"피부_건강":"피부색+탄력+건조도로 본 피부 및 전신 건강 상태. 3문장",'
-      +'"당장_조언":"오늘 당장 실천해야 할 건강 행동 3가지. 구체적으로.",'
-      +'"주의_신호":"6부위에서 관찰된 컨디션 참고 사항. 없으면 없음. 2문장",'
-      +'"식이_가이드":"지금 당장 먹어야 할 것과 피해야 할 것. 3문장"}';
-
-    return fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind:'med', tier:(window._c24Tier || 'basic'),
-        system:sysPrompt, prompt:userPrompt,
-        max_tokens:2500, temperature:0.6})});
-  })
-  .then(function(r3){return r3.json();})
-  .then(function(d3){
-    var t=d3.text||'';
-    // 코드블록 마커 제거 후 JSON 파싱
+  fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({kind:'med', tier:_tier,
+      system:sysPrompt, prompt:userPrompt,
+      images:imgs, max_tokens:5000, temperature:0.6})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var t=d.text||'';
     var clean=t.replace(/```json\s*/g,'').replace(/```/g,'').trim();
     var m=clean.match(/\{[\s\S]*\}/);
     var ai=null;
     if(m){ try{ ai=JSON.parse(m[0]); }catch(e){ ai=null; } }
     if(!ai || Object.keys(ai).length===0){
-      ai = {핵심발견:'분석 결과를 가져오지 못했습니다. 다시 시도해 주세요.'};
+      var preview = t ? t.trim().slice(0,200) : '(응답없음)';
+      ai = {핵심발견:'분석 결과를 처리하지 못했습니다. 다시 시도해 주세요. [응답:'+preview+']'};
     }
     _c24CompShowResult(ai);
   })
-  .catch(function(){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요.'}); });
+  .catch(function(e){ _c24CompShowResult({핵심발견:'분석 중 오류가 발생했습니다. 다시 시도해 주세요. ['+String(e)+']'}); });
 };
 
 function _c24UpdateBanner(){
