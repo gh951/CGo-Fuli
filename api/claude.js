@@ -130,45 +130,7 @@ export default async function handler(req, res) {
       : String(b.system);
   }
 
-  // ★ 2026.09.17: 6부위 건강 밸런스(med)는 JSON 형식이 자유 텍스트라
-  //   모델이 스스로 end_turn 으로 일찍 멈추는 사고가 반복됐다.
-  //   Structured Outputs(베타)로 스키마를 강제해 형식 이탈/조기 종료를 막는다.
   const extraHeaders = { 'anthropic-version': '2023-06-01' };
-  if (kind === 'med') {
-    extraHeaders['anthropic-beta'] = 'structured-outputs-2025-11-13';
-    body.output_format = {
-      type: 'json_schema',
-      schema: {
-        type: 'object',
-        properties: {
-          종합등급: { type: 'string' },
-          종합점수: { type: 'integer' },
-          핵심발견: { type: 'string' },
-          심장활력: { type: 'string' },
-          소화기: { type: 'string' },
-          순환계: { type: 'string' },
-          신경계: { type: 'string' },
-          눈_건강: { type: 'string' },
-          피부_건강: { type: 'string' },
-          당장_조언: { type: 'string' },
-          주의_신호: { type: 'string' },
-          식이_가이드: { type: 'string' },
-          관찰: {
-            type: 'object',
-            properties: {
-              얼굴: { type: 'object' },
-              혀:  { type: 'object' },
-              눈:  { type: 'object' },
-              피부: { type: 'object' },
-              손등: { type: 'object' },
-              손바닥: { type: 'object' }
-            }
-          }
-        },
-        required: ['종합등급', '종합점수', '핵심발견']
-      }
-    };
-  }
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
