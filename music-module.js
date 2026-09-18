@@ -228,6 +228,31 @@
   // 카테고리 그룹 (UI 필터용)
   const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아'];
 
+  // 악기 ID별 미리듣기 음계 — 각 악기의 특징적인 음역
+  const INSTR_PREVIEW_NOTE = {
+    // 건반: 도레미파솔라시도 차례로 올라감
+    1:'C4', 2:'D4', 3:'E4', 4:'F4', 5:'G4', 6:'A4', 7:'B4', 8:'C5',
+    9:'E5', 10:'G5', 11:'A5', 12:'D5', 13:'F5', 14:'C6', 15:'G4', 16:'A4',
+    // 오르간: 낮은 음역 (C3~A3)
+    17:'C3', 18:'E3', 19:'G3', 20:'C3', 21:'F3', 22:'A3', 23:'G3', 24:'D3',
+    // 기타: 개방현 음역
+    25:'E3', 26:'A3', 27:'D4', 28:'G3', 29:'B3', 30:'E4', 31:'A2', 32:'E5',
+    // 베이스: 저음역
+    33:'E2', 34:'A2', 35:'D2', 36:'G2', 37:'C2', 38:'F2', 39:'A1', 40:'D2',
+    // 현악기
+    41:'A4', 42:'D4', 43:'C3', 44:'G2', 45:'E4', 46:'A3', 47:'G4', 48:'C2',
+    49:'E4', 50:'G4', 51:'A4', 52:'C5', 53:'E4', 54:'G4', 55:'C5', 56:'C3',
+    // 금관/목관
+    57:'G4', 58:'Bb3', 59:'F2', 60:'D4', 61:'C4', 62:'F4', 63:'A4', 64:'G4',
+    65:'D5', 66:'G4', 67:'C4', 68:'Bb3', 69:'A4', 70:'G4', 71:'C3', 72:'E4',
+    // 플루트/에스닉
+    73:'D6', 74:'G5', 75:'C5', 76:'A4', 77:'F4', 78:'D5', 79:'G5', 80:'E5',
+    81:'D4', 82:'G3', 83:'A3', 84:'D4', 85:'C5', 86:'G3', 87:'D4', 88:'A3',
+    89:'C6', 90:'D5', 91:'G4', 92:'C5', 93:'G3',
+    // 한국/아시아/중동
+    94:'D4', 95:'A4', 96:'G4', 97:'D4', 98:'A3', 99:'G4', 100:'C2',
+  };
+
   // SLOT_DATA — 추첨통 랜덤 슬롯: 조성/음계만 (보컬·악기는 독립 카드 선택)
   const SLOT_DATA = {
     key: { label:'조성/음계', labelKey:24049, emoji:'🎵', items:['C Major','C# Major','D Major','D# Major','E Major','F Major','F# Major','G Major','G# Major','A Major','A# Major','B Major','C Minor','C# Minor','D Minor','D# Minor','E Minor','F Minor','F# Minor','G Minor','G# Minor','A Minor','A# Minor','B Minor'] }
@@ -616,7 +641,21 @@
 
   // ── 악기별 고유 합성음 엔진 (soundfont 없을 때 Web Audio API) ──────
   // 각 악기 카테고리마다 완전히 다른 음색을 합성
-  function playOscFallback(gm, duration = 1.2, volumeGain = 0.65) {
+  // 노트명 → 주파수 변환 (예: 'C4'=261.63, 'A4'=440, 'D5'=587.33)
+  function noteNameToHz(noteName) {
+    const NOTE_MAP = { 'C':0,'C#':1,'Db':1,'D':2,'D#':3,'Eb':3,'E':4,'F':5,'F#':6,'Gb':6,'G':7,'G#':8,'Ab':8,'A':9,'A#':10,'Bb':10,'B':11 };
+    if (!noteName) return 261.63;
+    const m = noteName.match(/^([A-G][b#]?)(\d)$/);
+    if (!m) return 261.63;
+    const semi = NOTE_MAP[m[1]];
+    const oct  = parseInt(m[2]);
+    if (semi === undefined) return 261.63;
+    // A4 = 440Hz, MIDI note = (oct+1)*12 + semi, A4 = MIDI 69
+    const midi = (oct + 1) * 12 + semi;
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  function playOscFallback(gm, duration = 1.2, volumeGain = 0.65, noteName = null) {
     try {
       const ctx = getSfCtx();
       if (!ctx) return;
@@ -630,19 +669,21 @@
       const isBass     = (gm >= 32 && gm <= 39);
       const isString   = (gm >= 40 && gm <= 51);
       const isEnsemble = (gm >= 48 && gm <= 55);
-      const isWoodwind = (gm >= 64 && gm <= 79);   // 피콜로·플루트·오보에·클라리넷
+      const isWoodwind = (gm >= 64 && gm <= 79);
       const isBrass    = (gm >= 56 && gm <= 63);
       const isPad      = (gm >= 88 && gm <= 95);
       const isEthnic   = (gm >= 104 && gm <= 111) || (gm >= 94 && gm <= 103);
       const isPerc     = (gm >= 112 && gm <= 127);
       const isSax      = (gm >= 64 && gm <= 67);
 
-      // 기본 C4 주파수 (악기에 따라 옥타브 조정)
-      const C4 = 261.63, C3 = 130.81, C5 = 523.25, C2 = 65.41;
-      let baseFreq = C4;
-      if (isBass) baseFreq = C2;
-      else if (isPerc) baseFreq = 110;
-      else if (isEthnic) baseFreq = 293.66; // D4
+      // ── 기본 주파수: noteName 있으면 정확히, 없으면 카테고리 기본값 ──
+      let baseFreq;
+      if (noteName) {
+        baseFreq = noteNameToHz(noteName);
+      } else {
+        const C4 = 261.63, C3 = 130.81, C2 = 65.41;
+        baseFreq = isBass ? C2 : isPerc ? 110 : isEthnic ? 293.66 : C4;
+      }
 
       // ── 헬퍼: 오실레이터 하나 생성 ──
       const makeOsc = (type, freq, vol, attack, decay, sustainRatio = 0.3) => {
@@ -845,12 +886,12 @@
     // ① AudioContext 언락 (autoplay 정책)
     try {
       const ctx = getSfCtx();
-      if (!ctx) { playOscFallback(gm, duration, volumeGain); return; }
+      if (!ctx) { playOscFallback(gm, duration, volumeGain, noteName); return; }
       if (ctx.state === 'suspended') await ctx.resume();
     } catch(e) {}
 
-    // ② 즉시 오실레이터로 소리 냄 (지연 없음!)
-    playOscFallback(gm, duration, volumeGain);
+    // ② 즉시 오실레이터로 소리 냄 (지연 없음!) — noteName으로 정확한 음계
+    playOscFallback(gm, duration, volumeGain, noteName);
 
     // ③ soundfont 캐시가 이미 있으면 더 풍부한 소리도 겹쳐 재생
     if (gm >= 94) return; // 에스닉은 사운드폰트 없음
@@ -1920,8 +1961,9 @@
               } else {
                 if (this.selectedInstrIds.size >= MAX_INSTR) return;
                 this.selectedInstrIds.add(ins.id);
-                // 🔊 즉시 소리 (오실레이터 우선, soundfont 백그라운드)
-                playSfNote(ins.gm, 'C4', 1.5, 0.65).catch(()=>{});
+                // 🔊 즉시 소리 — 악기마다 다른 특징적 음계 (INSTR_PREVIEW_NOTE)
+                const noteToPlay = INSTR_PREVIEW_NOTE[ins.id] || 'C4';
+                playSfNote(ins.gm, noteToPlay, 1.5, 0.65).catch(()=>{});
               }
               renderGrid();
               renderSelected();
