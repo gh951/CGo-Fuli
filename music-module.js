@@ -834,7 +834,151 @@
   global._cgoStopRec     = _cgoStopRec;
   global._cgoDownloadRec = _cgoDownloadRec;
 
-  // ── cgo-68 끝 / cgo-70 녹음 엔진 끝 ─────────────────────────────────────
+  // ── cgo-72: rPPG 생체신호 엔진 ─────────────────────────────────────────────
+  // 카메라 → 얼굴 녹색 채널 변화 → 심박수 → 오행 → window._cgoOheng 자동 설정
+  // 완전 온디바이스: 서버 전송 0, 생체 데이터 외부 보존 0
+  // ★ 영업비밀 — CGO(Claude+Gemini+Owner) 三人 外 미공개
+  ;(function(){
+    var _rppg = {
+      running: false, timer: null,
+      video: null, canvas: null, ctx: null,
+      samples: [], startTs: 0,
+      SCAN_SEC: 15, SAMPLE_HZ: 15    // 15fps 샘플링 (모바일 배터리 절약)
+    };
+
+    // BPM → 오행 매핑 (비공개 CSI 역학 레이어)
+    var _BPM_OHENG = [
+      { max: 63,  o: '수', emoji: '🌊', name: '수(水)', desc: '깊은 평온 · 직관' },
+      { max: 74,  o: '목', emoji: '🌿', name: '목(木)', desc: '성장 · 치유 · 자연' },
+      { max: 90,  o: '토', emoji: '🌍', name: '토(土)', desc: '균형 · 안정 · 포근' },
+      { max: 108, o: '금', emoji: '✨', name: '금(金)', desc: '집중 · 세련 · 긴장' },
+      { max: 999, o: '화', emoji: '🔥', name: '화(火)', desc: '열정 · 에너지 · 활력' }
+    ];
+    function _bpmToOheng(bpm) {
+      for (var i = 0; i < _BPM_OHENG.length; i++) {
+        if (bpm < _BPM_OHENG[i].max) return _BPM_OHENG[i];
+      }
+      return _BPM_OHENG[2]; // 토 fallback
+    }
+
+    // 이동 평균
+    function _movAvg(arr, n) {
+      return arr.map(function(v, i) {
+        var s = Math.max(0, i - n + 1), w = arr.slice(s, i + 1);
+        return w.reduce(function(a, b){ return a + b; }, 0) / w.length;
+      });
+    }
+    // DC 제거 (디트렌드)
+    function _detrend(arr) {
+      var m = arr.reduce(function(a,b){ return a+b; }, 0) / arr.length;
+      return arr.map(function(v){ return v - m; });
+    }
+    // 피크 검출
+    function _peaks(arr, minDist) {
+      var pk = [];
+      for (var i = 1; i < arr.length - 1; i++) {
+        if (arr[i] > arr[i-1] && arr[i] > arr[i+1]) {
+          if (!pk.length || i - pk[pk.length-1] >= minDist) pk.push(i);
+        }
+      }
+      return pk;
+    }
+    // BPM 계산
+    function _calcBpm(samples, hz) {
+      if (samples.length < hz * 6) return null;
+      var sig = _movAvg(_detrend(samples), 3);
+      var minDist = Math.floor(hz * 0.33); // 최대 180 BPM
+      var pk = _peaks(sig, minDist);
+      if (pk.length < 3) return null;
+      var ivs = [];
+      for (var i = 1; i < pk.length; i++) ivs.push(pk[i] - pk[i-1]);
+      ivs.sort(function(a,b){return a-b;});
+      var med = ivs[Math.floor(ivs.length / 2)];
+      var bpm = Math.round((hz / med) * 60);
+      return (bpm >= 40 && bpm <= 180) ? bpm : null;
+    }
+
+    // 프레임 추출 → 샘플 수집
+    function _tick() {
+      if (!_rppg.running || !_rppg.video || !_rppg.ctx) return;
+      try {
+        var v = _rppg.video, c = _rppg.canvas, ctx = _rppg.ctx;
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        var cx = Math.floor(c.width/2 - 25), cy = Math.floor(c.height/2 - 25);
+        var px = ctx.getImageData(Math.max(0,cx), Math.max(0,cy), 50, 50).data;
+        var g = 0;
+        for (var i = 0; i < px.length; i += 4) g += px[i+1]; // 녹색 채널
+        _rppg.samples.push(g / (px.length/4));
+      } catch(e) {}
+
+      // 진행률 콜백
+      var prog = Math.min(1, _rppg.samples.length / (_rppg.SCAN_SEC * _rppg.SAMPLE_HZ));
+      if (typeof _rppg._onProg === 'function') _rppg._onProg(prog);
+
+      // 결과 판정 (12초 이후 매 3초마다 재계산)
+      var elapsed = (Date.now() - _rppg.startTs) / 1000;
+      if (elapsed >= 12) {
+        var bpm = _calcBpm(_rppg.samples, _rppg.SAMPLE_HZ);
+        if (bpm) {
+          var info = _bpmToOheng(bpm);
+          if (typeof _rppg._onResult === 'function') _rppg._onResult(bpm, info);
+        }
+      }
+      // SCAN_SEC 후 자동 종료
+      if (elapsed >= _rppg.SCAN_SEC) _cgoRppgStop();
+    }
+
+    function _cgoRppgStart(opts) {
+      if (_rppg.running) return;
+      opts = opts || {};
+      _rppg._onProg = opts.onProgress || null;
+      _rppg._onResult = opts.onResult || null;
+      _rppg._onError = opts.onError || null;
+      _rppg.samples = []; _rppg.running = true;
+      _rppg.startTs = Date.now();
+
+      // 오프스크린 캔버스
+      _rppg.canvas = document.createElement('canvas');
+      _rppg.canvas.width = 100; _rppg.canvas.height = 100;
+      _rppg.ctx = _rppg.canvas.getContext('2d');
+
+      // 숨김 비디오
+      _rppg.video = document.createElement('video');
+      _rppg.video.autoplay = true; _rppg.video.muted = true; _rppg.video.playsInline = true;
+      _rppg.video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:-200px;left:-200px;';
+      document.body.appendChild(_rppg.video);
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 120 }, height: { ideal: 120 }, frameRate: { ideal: 30 } }
+      }).then(function(stream) {
+        _rppg.video.srcObject = stream;
+        _rppg.video.play().then(function() {
+          _rppg.timer = setInterval(_tick, Math.floor(1000 / _rppg.SAMPLE_HZ));
+        }).catch(function(e){ _cgoRppgStop(); if(opts.onError) opts.onError(e); });
+      }).catch(function(e) {
+        _rppg.running = false;
+        if (typeof opts.onError === 'function') opts.onError(e);
+      });
+    }
+
+    function _cgoRppgStop() {
+      _rppg.running = false;
+      if (_rppg.timer) { clearInterval(_rppg.timer); _rppg.timer = null; }
+      if (_rppg.video) {
+        try {
+          var tracks = _rppg.video.srcObject && _rppg.video.srcObject.getTracks ? _rppg.video.srcObject.getTracks() : [];
+          tracks.forEach(function(t){ t.stop(); });
+        } catch(e){}
+        try { _rppg.video.remove(); } catch(e){}
+        _rppg.video = null;
+      }
+    }
+
+    global._cgoRppgStart = _cgoRppgStart;
+    global._cgoRppgStop  = _cgoRppgStop;
+    global._cgoRppgInfo  = _bpmToOheng; // 디버그용
+  })();
+  // ── cgo-68 끝 / cgo-70 녹음 엔진 끝 / cgo-72 rPPG 엔진 끝 ───────────────
 
   // 메트로놈 클릭음 (accent=1박 강조)
   function playMetroClick(accent = false) {
@@ -2261,9 +2405,104 @@
         <button class="cgo-stop-btn" id="cgo-stop-btn" style="display:none;width:100%;margin-top:8px;padding:11px;border-radius:14px;background:rgba(239,68,68,.18);border:1.5px solid rgba(239,68,68,.5);color:#fca5a5;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:background .15s;" onmouseover="this.style.background='rgba(239,68,68,.32)'" onmouseout="this.style.background='rgba(239,68,68,.18)'">⏹ 정지</button>
         <!-- cgo-70: 오디오 저장 버튼 — 녹음 완료 후 표시 -->
         <button id="cgo-audio-save-btn" style="display:none;width:100%;margin-top:8px;padding:10px;border-radius:14px;background:rgba(16,185,129,.18);border:1.5px solid rgba(16,185,129,.5);color:#6ee7b7;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:all .15s;" onmouseover="this.style.background='rgba(16,185,129,.32)'" onmouseout="this.style.background='rgba(16,185,129,.18)'">⬇️ 오디오 저장</button>
+        <!-- cgo-72: rPPG 생체신호 스캔 버튼 -->
+        <button id="cgo-rppg-btn" style="width:100%;margin-top:10px;padding:10px;border-radius:14px;background:rgba(139,92,246,.15);border:1.5px solid rgba(139,92,246,.4);color:#c4b5fd;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:all .15s;" onmouseover="this.style.background='rgba(139,92,246,.28)'" onmouseout="this.style.background='rgba(139,92,246,.15)'">🫀 내 몸 주파수 스캔</button>
+        <!-- cgo-72: rPPG 스캔 결과 패널 -->
+        <div id="cgo-rppg-panel" style="display:none;margin-top:8px;padding:12px 14px;border-radius:14px;background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.25);">
+          <div id="cgo-rppg-bar-wrap" style="display:none;margin-bottom:8px;">
+            <div style="font-size:11px;color:#a78bfa;margin-bottom:4px;text-align:center;" id="cgo-rppg-label">얼굴을 정면으로 바라봐 주세요...</div>
+            <div style="height:5px;background:rgba(139,92,246,.18);border-radius:99px;overflow:hidden;">
+              <div id="cgo-rppg-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);border-radius:99px;transition:width .5s;"></div>
+            </div>
+          </div>
+          <div id="cgo-rppg-result" style="display:none;text-align:center;">
+            <div id="cgo-rppg-bpm" style="font-size:22px;font-weight:800;color:#e9d5ff;letter-spacing:.04em;"></div>
+            <div id="cgo-rppg-oheng" style="font-size:14px;color:#c4b5fd;margin-top:2px;"></div>
+            <div id="cgo-rppg-desc" style="font-size:11px;color:#a78bfa;margin-top:4px;opacity:.8;"></div>
+          </div>
+        </div>
       `;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+
+      // ── cgo-72: rPPG 스캔 버튼 이벤트 ──────────────────────────────
+      const rppgBtn   = genWrap.querySelector('#cgo-rppg-btn');
+      const rppgPanel = genWrap.querySelector('#cgo-rppg-panel');
+      const rppgBarWrap = genWrap.querySelector('#cgo-rppg-bar-wrap');
+      const rppgLabel = genWrap.querySelector('#cgo-rppg-label');
+      const rppgBar   = genWrap.querySelector('#cgo-rppg-bar');
+      const rppgRes   = genWrap.querySelector('#cgo-rppg-result');
+      const rppgBpm   = genWrap.querySelector('#cgo-rppg-bpm');
+      const rppgOheng = genWrap.querySelector('#cgo-rppg-oheng');
+      const rppgDesc  = genWrap.querySelector('#cgo-rppg-desc');
+
+      if (rppgBtn) rppgBtn.addEventListener('click', () => {
+        // 이미 스캔 중이면 취소
+        if (rppgBtn.dataset.scanning === '1') {
+          if (typeof window._cgoRppgStop === 'function') window._cgoRppgStop();
+          rppgBtn.dataset.scanning = '0';
+          rppgBtn.textContent = '🫀 내 몸 주파수 스캔';
+          if (rppgBarWrap) rppgBarWrap.style.display = 'none';
+          return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          if (rppgPanel) { rppgPanel.style.display='block'; }
+          if (rppgLabel) rppgLabel.textContent = '❌ 카메라를 지원하지 않는 브라우저입니다.';
+          if (rppgBarWrap) rppgBarWrap.style.display = 'block';
+          return;
+        }
+        // 스캔 시작
+        rppgBtn.dataset.scanning = '1';
+        rppgBtn.textContent = '⏹ 스캔 중... (탭하면 취소)';
+        if (rppgPanel) rppgPanel.style.display = 'block';
+        if (rppgBarWrap) rppgBarWrap.style.display = 'block';
+        if (rppgRes) rppgRes.style.display = 'none';
+        if (rppgBar) rppgBar.style.width = '0%';
+        if (rppgLabel) rppgLabel.textContent = '얼굴을 정면으로 바라봐 주세요 🙂';
+
+        if (typeof window._cgoRppgStart === 'function') {
+          window._cgoRppgStart({
+            onProgress: (prog) => {
+              if (rppgBar) rppgBar.style.width = Math.round(prog * 100) + '%';
+              if (rppgLabel) {
+                var sec = Math.round((1 - prog) * 15);
+                rppgLabel.textContent = sec > 0
+                  ? '심박 측정 중... 남은 시간 ' + sec + '초 🫀'
+                  : '분석 완료 중...';
+              }
+            },
+            onResult: (bpm, info) => {
+              // 오행 자동 설정 (표면 비노출 — CSI 역학 레이어)
+              window._cgoOheng = info.o;
+              // UI 결과 표시
+              if (rppgBpm) rppgBpm.textContent = '💓 ' + bpm + ' BPM';
+              if (rppgOheng) rppgOheng.textContent = info.emoji + ' ' + info.name;
+              if (rppgDesc) rppgDesc.textContent = info.desc + ' · 내 몸에 맞는 음악 생성 중...';
+              if (rppgRes) rppgRes.style.display = 'block';
+              if (rppgBarWrap) rppgBarWrap.style.display = 'none';
+              if (rppgBtn) {
+                rppgBtn.dataset.scanning = '0';
+                rppgBtn.textContent = '🔄 다시 스캔';
+              }
+              // ★ 건강 밸런스 스캔 완료 → 음악 자동 생성 (원스텝)
+              setTimeout(() => {
+                const genBtn = genWrap.querySelector('#cgo-gen-btn');
+                if (genBtn && !genBtn.disabled) {
+                  genBtn.click();
+                  if (rppgDesc) rppgDesc.textContent = info.desc + ' · 🎵 내 몸 맞춤 음악 재생 중';
+                }
+              }, 900);
+            },
+            onError: (err) => {
+              if (rppgLabel) rppgLabel.textContent = '❌ 카메라 권한이 필요합니다. 브라우저 주소창에서 허용해 주세요.';
+              if (rppgBtn) {
+                rppgBtn.dataset.scanning = '0';
+                rppgBtn.textContent = '🫀 내 몸 주파수 스캔';
+              }
+            }
+          });
+        }
+      });
       genWrap.querySelector('#cgo-stop-btn').addEventListener('click', () => {
         // 그루브 타이머 전체 취소
         if (window._cgoGrooveTimers) {
