@@ -4275,6 +4275,9 @@
   }
 
   global.CGOMusicModule = FrequencyMusicModule;
+  // ── 사운드 함수 글로벌 노출 (index.html onGenerate 등 외부에서 사용) ──
+  global.playSfNote  = playSfNote;
+  global.playSfChord = playSfChord;
 
   // ── 첫 사용자 상호작용 시 주요 soundfont 프리로드 ───────────────
   // 피아노(0), 바이올린(40), 나일론기타(24), 플루트(73) — 가장 자주 쓰는 악기
