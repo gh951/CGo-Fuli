@@ -2795,8 +2795,9 @@
 
         <!-- 다운로드 버튼 -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button id="cgo-score-dl-midi" style="flex:1;padding:11px;background:rgba(168,85,247,.15);border:1.5px solid rgba(168,85,247,.35);border-radius:11px;color:#c084fc;font-size:12px;font-weight:800;cursor:pointer;">⬇ MIDI 다운로드</button>
-          <button id="cgo-score-dl-img" style="flex:1;padding:11px;background:rgba(20,184,166,.1);border:1.5px solid rgba(20,184,166,.3);border-radius:11px;color:#5eead4;font-size:12px;font-weight:800;cursor:pointer;">🖼 악보 이미지 저장</button>
+          <button id="cgo-score-dl-midi" style="flex:1;padding:11px;background:rgba(168,85,247,.15);border:1.5px solid rgba(168,85,247,.35);border-radius:11px;color:#c084fc;font-size:12px;font-weight:800;cursor:pointer;">⬇ MIDI</button>
+          <button id="cgo-score-dl-xml" style="flex:1;padding:11px;background:rgba(59,130,246,.12);border:1.5px solid rgba(59,130,246,.35);border-radius:11px;color:#93c5fd;font-size:12px;font-weight:800;cursor:pointer;">📄 MusicXML</button>
+          <button id="cgo-score-dl-img" style="flex:1;padding:11px;background:rgba(20,184,166,.1);border:1.5px solid rgba(20,184,166,.3);border-radius:11px;color:#5eead4;font-size:12px;font-weight:800;cursor:pointer;">🖼 악보 PNG</button>
         </div>
 
         <!-- Basic Pitch 베타 -->
@@ -3108,6 +3109,110 @@
           a.href = url; a.download = 'cgo-music.mid'; a.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch(e) { console.warn('MIDI 내보내기 오류:', e); }
+      });
+
+      // ── MusicXML 내보내기 ─────────────────────────────────────────
+      wrap.querySelector('#cgo-score-dl-xml').addEventListener('click', () => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+        try {
+          // 음표 지속시간 → MusicXML duration/type 변환
+          const DUR_XML = {
+            'w':  { type: 'whole',   div: 4 },
+            'h':  { type: 'half',    div: 2 },
+            'q':  { type: 'quarter', div: 1 },
+            '8':  { type: 'eighth',  div: 0.5 },
+            '16': { type: '16th',    div: 0.25 },
+          };
+          const DIVISIONS = 4; // 4분음표 = 4 division
+          const BPM = state.bpm || 80;
+          const TIME_NUM = state.timeNum || 4;
+          const TIME_DEN = state.timeDen || 4;
+
+          // 음표 → step/octave/alter 분해
+          const parsePitch = (pitch) => {
+            const m = pitch.match(/^([A-G])(#?)(\d)$/);
+            if (!m) return { step:'C', octave:4, alter:0 };
+            return { step: m[1], octave: parseInt(m[3]), alter: m[2] === '#' ? 1 : 0 };
+          };
+
+          // 마디 분할 (4분음표 기준 TIME_NUM 개당 1마디)
+          const BEATS_PER_MEASURE = TIME_NUM;
+          const measures = [];
+          let curMeasure = [];
+          let curBeats = 0;
+          state.notes.forEach(n => {
+            const beats = DUR_BEATS[n.duration] || 1;
+            if (curBeats + beats > BEATS_PER_MEASURE && curMeasure.length > 0) {
+              measures.push(curMeasure);
+              curMeasure = [];
+              curBeats = 0;
+            }
+            curMeasure.push(n);
+            curBeats += beats;
+          });
+          if (curMeasure.length > 0) measures.push(curMeasure);
+
+          // XML 생성
+          let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN"
+  "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.1">
+  <work><work-title>CGO Music Score</work-title></work>
+  <identification>
+    <encoding>
+      <software>CGO Music Editor</software>
+      <encoding-date>${new Date().toISOString().slice(0,10)}</encoding-date>
+    </encoding>
+  </identification>
+  <part-list>
+    <score-part id="P1">
+      <part-name>Music</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+`;
+          measures.forEach((mnotes, mi) => {
+            xml += `    <measure number="${mi + 1}">\n`;
+            if (mi === 0) {
+              xml += `      <attributes>
+        <divisions>${DIVISIONS}</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>${TIME_NUM}</beats><beat-type>${TIME_DEN}</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>\n`;
+              xml += `      <direction placement="above">
+        <direction-type>
+          <metronome parentheses="no">
+            <beat-unit>quarter</beat-unit>
+            <per-minute>${BPM}</per-minute>
+          </metronome>
+        </direction-type>
+      </direction>\n`;
+            }
+            mnotes.forEach(n => {
+              const { step, octave, alter } = parsePitch(n.pitch);
+              const dur = DUR_XML[n.duration] || DUR_XML['q'];
+              const divVal = Math.round(DIVISIONS * dur.div);
+              xml += `      <note>
+        <pitch>
+          <step>${step}</step>
+          ${alter ? `<alter>${alter}</alter>` : ''}
+          <octave>${octave}</octave>
+        </pitch>
+        <duration>${divVal}</duration>
+        <type>${dur.type}</type>
+      </note>\n`;
+            });
+            xml += `    </measure>\n`;
+          });
+          xml += `  </part>\n</score-partwise>`;
+
+          const blob = new Blob([xml], { type: 'application/vnd.recordare.musicxml+xml' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'cgo-music.musicxml'; a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch(e) { console.warn('MusicXML 내보내기 오류:', e); }
       });
 
       // ── 악보 이미지 저장 ─────────────────────────────────────────
