@@ -593,6 +593,48 @@
     } catch(e) {}
   }
 
+  // ── 리버브 마스터 버스 (ConvolverNode — 합성 IR, 외부 파일 없음) ──────
+  // cgo-63: 모든 악기음을 dry 76% + wet reverb 24% 믹스로 통과시킴
+  //         메트로놈·드럼 제외 (별도 ctx 또는 dry 유지)
+  let _sfBus = null, _sfBusCtx = null;
+  function getSfBus() {
+    const ctx = getSfCtx();
+    if (!ctx) return null;
+    if (_sfBus && _sfBusCtx === ctx) return _sfBus;
+    _sfBusCtx = ctx;
+    try {
+      // 합성 임펄스 응답 — 1.6초 실내 잔향 (Room Reverb)
+      const SR   = ctx.sampleRate;
+      const irLen = Math.floor(SR * 1.6);
+      const ir    = ctx.createBuffer(2, irLen, SR);
+      for (let c = 0; c < 2; c++) {
+        const d = ir.getChannelData(c);
+        for (let i = 0; i < irLen; i++) {
+          // 지수 감쇠 노이즈 (decay=2.4)
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 2.4);
+        }
+      }
+      const conv = ctx.createConvolver();
+      conv.buffer = ir;
+
+      // 마스터 버스: 악기 → masterBus → dry(76%) + wet(24%) → destination
+      const masterBus = ctx.createGain(); masterBus.gain.value = 1.0;
+      const dryGain   = ctx.createGain(); dryGain.gain.value   = 0.76;
+      const wetGain   = ctx.createGain(); wetGain.gain.value   = 0.24;
+
+      masterBus.connect(dryGain); dryGain.connect(ctx.destination);
+      masterBus.connect(conv);   conv.connect(wetGain); wetGain.connect(ctx.destination);
+
+      _sfBus = masterBus;
+    } catch(e) {
+      // 리버브 초기화 실패시 패스스루 노드
+      const pass = ctx.createGain(); pass.gain.value = 1.0;
+      pass.connect(ctx.destination);
+      _sfBus = pass;
+    }
+    return _sfBus;
+  }
+
   // 메트로놈 클릭음 (accent=1박 강조)
   function playMetroClick(accent = false) {
     try {
@@ -681,6 +723,7 @@
       const ctx = getSfCtx();
       if (!ctx) return;
       const now = ctx.currentTime;
+      const getBus = () => getSfBus() || ctx.destination; // 리버브 버스 (cgo-63)
 
       // ── 악기 카테고리 판별 ──
       const isPiano    = gm <= 7;
@@ -717,7 +760,7 @@
         g.gain.setValueAtTime(vol * sustainRatio, now + attack + decay);
         g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
         osc.connect(g);
-        g.connect(ctx.destination);
+        g.connect(getBus());
         osc.start(now);
         osc.stop(now + duration + 0.05);
         return { osc, g };
@@ -734,7 +777,7 @@
         for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
         const n = ctx.createBufferSource(); n.buffer = buf;
         const ng = ctx.createGain(); ng.gain.setValueAtTime(volumeGain * 0.15, now);
-        n.connect(ng); ng.connect(ctx.destination); n.start(now);
+        n.connect(ng); ng.connect(getBus()); n.start(now);
       }
       // ── 크로마틱 타악기(첼레스타·글로켄슈필·마림바): 맑은 벨 음 ──
       else if (isChrome) {
@@ -751,7 +794,7 @@
         masterGain.gain.linearRampToValueAtTime(volumeGain, now + 0.003);
         masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 1.5);
         modulator.connect(modGain); modGain.connect(carrier.frequency);
-        carrier.connect(masterGain); masterGain.connect(ctx.destination);
+        carrier.connect(masterGain); masterGain.connect(getBus());
         carrier.start(now); carrier.stop(now + duration * 1.5);
         modulator.start(now); modulator.stop(now + duration * 1.5);
       }
@@ -773,7 +816,7 @@
         g.gain.setValueAtTime(0, now);
         g.gain.linearRampToValueAtTime(volumeGain * 0.8, now + 0.003);
         g.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.7);
-        osc.connect(g); g.connect(ctx.destination);
+        osc.connect(g); g.connect(getBus());
         osc.start(now); osc.stop(now + duration);
         // 보디 공명
         makeOsc('triangle', baseFreq * 0.5, volumeGain * 0.25, 0.005, 0.02, 0.3);
@@ -802,7 +845,7 @@
         g.gain.linearRampToValueAtTime(volumeGain * 0.65, now + 0.08); // 보우 어택
         g.gain.setValueAtTime(volumeGain * 0.55, now + 0.2);
         g.gain.exponentialRampToValueAtTime(0.001, now + duration);
-        osc.connect(g); g.connect(ctx.destination);
+        osc.connect(g); g.connect(getBus());
         osc.start(now); osc.stop(now + duration);
         vib.start(now); vib.stop(now + duration);
         // 고배음 (현 색깔)
@@ -830,7 +873,7 @@
         noiseG.gain.setValueAtTime(0, now);
         noiseG.gain.linearRampToValueAtTime(volumeGain * 0.12, now + 0.06);
         noiseG.gain.exponentialRampToValueAtTime(0.001, now + duration);
-        noiseS.connect(bpf); bpf.connect(noiseG); noiseG.connect(ctx.destination);
+        noiseS.connect(bpf); bpf.connect(noiseG); noiseG.connect(getBus());
         noiseS.start(now); noiseS.stop(now + duration);
         // 메인 톤
         const isFlute = (gm >= 73 && gm <= 75);
@@ -857,7 +900,7 @@
         pluckG.gain.setValueAtTime(0, now);
         pluckG.gain.linearRampToValueAtTime(volumeGain, now + 0.004);
         pluckG.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
-        pluckOsc.connect(pluckG); pluckG.connect(ctx.destination);
+        pluckOsc.connect(pluckG); pluckG.connect(getBus());
         pluckOsc.start(now); pluckOsc.stop(now + duration);
         // 공명 배음
         makeOsc('triangle', baseFreq * 2, volumeGain * 0.3, 0.01, 0.05, 0.2);
@@ -881,7 +924,7 @@
         kickG.gain.setValueAtTime(0, now);
         kickG.gain.linearRampToValueAtTime(volumeGain, now + 0.003);
         kickG.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        kickOsc.connect(kickG); kickG.connect(ctx.destination);
+        kickOsc.connect(kickG); kickG.connect(getBus());
         kickOsc.start(now); kickOsc.stop(now + 0.4);
         // 스네어 노이즈
         const snBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.18), ctx.sampleRate);
@@ -889,7 +932,7 @@
         for (let i = 0; i < snD.length; i++) snD[i] = (Math.random() * 2 - 1) * (1 - i / snD.length);
         const snS = ctx.createBufferSource(); snS.buffer = snBuf;
         const snG = ctx.createGain(); snG.gain.setValueAtTime(volumeGain * 0.6, now);
-        snS.connect(snG); snG.connect(ctx.destination); snS.start(now);
+        snS.connect(snG); snG.connect(getBus()); snS.start(now);
       }
       // ── 기본 폴백 (분류 안 됨) ──
       else {
@@ -932,7 +975,7 @@
           const gain = ctx.createGain();
           gain.gain.setValueAtTime(volumeGain * 0.6, ctx.currentTime); // 오실레이터와 혼합
           gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-          src.connect(gain); gain.connect(ctx.destination);
+          src.connect(gain); gain.connect(getSfBus() || ctx.destination);
           src.start(ctx.currentTime); src.stop(ctx.currentTime + duration);
         }
       } catch(e) {}
@@ -3054,7 +3097,7 @@
             if (ctx) {
               const osc = ctx.createOscillator();
               const gain = ctx.createGain();
-              osc.connect(gain); gain.connect(ctx.destination);
+              osc.connect(gain); gain.connect(getSfBus() || ctx.destination);
               osc.frequency.value = freq;
               osc.type = 'triangle';
               gain.gain.setValueAtTime(0.4, ctx.currentTime);
@@ -3854,7 +3897,7 @@
         this.gainNode = ctx.createGain();
         this.gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
         this.gainNode.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + 1.5);
-        this.gainNode.connect(ctx.destination);
+        this.gainNode.connect(getSfBus() || ctx.destination);
 
         // ── 리듬 게인 (BPM 펄스용 별도 게인) ──
         this.rhythmGain = ctx.createGain();
@@ -3899,7 +3942,7 @@
           this.healOsc.frequency.setValueAtTime(hz < 50 ? 100 + hz : hz, ctx.currentTime);
           this.healGain.gain.setValueAtTime(hz < 50 ? 0.04 : 0.07, ctx.currentTime);
           this.healOsc.connect(this.healGain);
-          this.healGain.connect(ctx.destination);
+          this.healGain.connect(getSfBus() || ctx.destination);
           this.healOsc.start();
         }
 
