@@ -1136,13 +1136,21 @@
         return;
       }
 
-      // ── <dialog> 사용: 브라우저 top-layer에 렌더링 → body/html CSS 완전 무시 ──
-      const dlg = document.createElement('dialog');
+      // ── viewport px 직접 고정 방식 — overflow/transform/contain 완전 무시 ──
+      // <dialog> top-layer도 .content overflow-x:hidden에 클리핑되는 브라우저 버그 대응
+      // JS로 window.innerWidth/Height를 직접 읽어 px 단위로 박아 넣는다
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const dlg = document.createElement('div');
       dlg.id = 'cgo-music-intro-pop';
-      // ★ 인라인 style로 UA 스타일시트 100% 덮어쓰기 (specificity 문제 완전 차단)
+      // ★ position:fixed + 좌표 직접 지정 (inset 대신 top/left/width/height px 고정)
       dlg.style.cssText = [
-        'position:fixed','inset:0','width:100%','height:100%',
-        'max-width:100%','max-height:100%','min-width:0','min-height:0',
+        'position:fixed',
+        'top:0','left:0',
+        'width:' + vw + 'px',
+        'height:' + vh + 'px',
+        'max-width:none','max-height:none','min-width:0','min-height:0',
         'margin:0','padding:0','border:none','outline:none',
         'background:#f0fdf9','overflow-y:auto','overflow-x:hidden',
         '-webkit-overflow-scrolling:touch',
@@ -1150,9 +1158,16 @@
         'box-sizing:border-box','display:flex','flex-direction:column',
         'z-index:2147483647'
       ].join(';');
+
+      // resize 시 재적용
+      const _mipResize = () => {
+        dlg.style.width  = window.innerWidth  + 'px';
+        dlg.style.height = window.innerHeight + 'px';
+      };
+      window.addEventListener('resize', _mipResize);
+
       dlg.innerHTML = `
 <style>
-#cgo-music-intro-pop::backdrop{display:none!important;background:none!important}
 #cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
 /* ★ 스크롤 가능한 내용 영역 — flex:1 + overflow:auto */
 #mip-scroll-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
@@ -1278,34 +1293,14 @@
   </div>
 </div></div>`;
 
-      document.body.appendChild(dlg);
-
-      // showModal() → 브라우저 top-layer 진입 (z-index, overflow, transform 모두 무시됨)
-      // ★ showModal() 이후 브라우저가 인라인 style을 건드리지 않도록 재적용
-      const _mipForceStyle = () => {
-        dlg.style.cssText = [
-          'position:fixed','inset:0','width:100%','height:100%',
-          'max-width:100%','max-height:100%','min-width:0','min-height:0',
-          'margin:0','padding:0','border:none','outline:none',
-          'background:#f0fdf9','overflow-y:auto','overflow-x:hidden',
-          '-webkit-overflow-scrolling:touch',
-          'font-family:\'Noto Sans KR\',\'Apple SD Gothic Neo\',sans-serif',
-          'box-sizing:border-box','display:flex','flex-direction:column',
-          'z-index:2147483647'
-        ].join(';');
-      };
-      try {
-        dlg.showModal();
-        _mipForceStyle(); // showModal 후 재적용
-      } catch(e) {
-        dlg.style.display = 'flex';
-        dlg.style.flexDirection = 'column';
-      }
+      // ★ document.documentElement에 직접 붙이기 — body의 overflow:hidden 완전 우회
+      document.documentElement.appendChild(dlg);
 
       const close = () => {
+        window.removeEventListener('resize', _mipResize);
         dlg.style.opacity = '0';
         dlg.style.transition = 'opacity .3s';
-        setTimeout(() => { try { dlg.close(); dlg.remove(); } catch(e) { try { dlg.remove(); } catch(e2){} } }, 320);
+        setTimeout(() => { try { dlg.remove(); } catch(e) {} }, 320);
       };
 
       dlg.querySelector('#mip-close-btn').addEventListener('click', close);
@@ -1317,7 +1312,8 @@
       });
 
       dlg.querySelector('#mip-logo-btn').addEventListener('click', () => {
-        try { dlg.close(); dlg.remove(); } catch(e) { try { dlg.remove(); } catch(e2){} }
+        window.removeEventListener('resize', _mipResize);
+        try { dlg.remove(); } catch(e) {}
         if (typeof window.cgoGoPage === 'function') {
           try { window.cgoGoPage('dashboard'); return; } catch(e) {}
         }
