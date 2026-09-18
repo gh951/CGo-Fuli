@@ -591,6 +591,8 @@
       const ctx = getSfCtx();
       if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
     } catch(e) {}
+    // cgo-68: 첫 제스처 때 Tone.js 앙상블 엔진도 초기화
+    if (typeof Tone !== 'undefined' && _tEng === null) initToneEngine();
   }
 
   // ── 리버브 마스터 버스 (ConvolverNode — 합성 IR, 외부 파일 없음) ──────
@@ -654,6 +656,112 @@
     }
     return _sfBus;
   }
+
+  // ── cgo-68: Tone.js 앙상블 엔진 ─────────────────────────────────────────
+  // Salamander Grand Piano (실 스타인웨이 C 녹음) + PolySynth 현악기 + MembraneSynth 드럼
+  // 신호 흐름: 각 악기 → Tone.Compressor → Tone.Reverb → Tone.Limiter → Speaker
+  let _tEng = null, _tReady = false;
+  function initToneEngine() {
+    if (_tEng !== null || typeof Tone === 'undefined') return;
+    _tEng = {}; // sentinel — 중복 init 방지
+    try {
+      // ① 마스터링 체인
+      const tComp = new Tone.Compressor({ threshold: -22, ratio: 5, attack: 0.004, release: 0.22, knee: 10 });
+      const tRev  = new Tone.Reverb({ decay: 2.4, wet: 0.28 });
+      tRev.generate(); // IR 생성 (비동기지만 즉시 사용 가능)
+      const tLim  = new Tone.Limiter(-2.5);
+      tComp.connect(tRev); tRev.connect(tLim); tComp.connect(tLim); tLim.toDestination();
+
+      // ② Salamander Grand Piano — 실 스타인웨이 C 콘서트 그랜드 샘플
+      const piano = new Tone.Sampler({
+        urls: {
+          'A0':'A0.mp3','C1':'C1.mp3','D#1':'Ds1.mp3','F#1':'Fs1.mp3',
+          'A1':'A1.mp3','C2':'C2.mp3','D#2':'Ds2.mp3','F#2':'Fs2.mp3',
+          'A2':'A2.mp3','C3':'C3.mp3','D#3':'Ds3.mp3','F#3':'Fs3.mp3',
+          'A3':'A3.mp3','C4':'C4.mp3','D#4':'Ds4.mp3','F#4':'Fs4.mp3',
+          'A4':'A4.mp3','C5':'C5.mp3','D#5':'Ds5.mp3','F#5':'Fs5.mp3',
+          'A5':'A5.mp3','C6':'C6.mp3','A6':'A6.mp3','C7':'C7.mp3'
+        },
+        baseUrl: 'https://tonejs.github.io/audio/salamander/',
+        release: 1.2,
+        onload: () => { _tReady = true; console.log('[CGO-TONE] 🎹 스타인웨이 로드 완료'); }
+      }).connect(tComp);
+
+      // ③ PolySynth 현악기 (스트링 패드 — 부드러운 거치 파형)
+      const strings = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'fatsawtooth', count: 3, spread: 35 },
+        envelope:   { attack: 0.20, decay: 0.15, sustain: 0.82, release: 1.4 }
+      }).connect(tComp);
+      strings.set({ volume: -4 });
+
+      // ④ MonoSynth 베이스 (삼각파 + 필터 엔벨로프)
+      const bass = new Tone.MonoSynth({
+        oscillator:     { type: 'triangle' },
+        envelope:       { attack: 0.02, decay: 0.12, sustain: 0.68, release: 0.55 },
+        filterEnvelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5, baseFrequency: 100, octaves: 2.5 }
+      }).connect(tComp);
+
+      // ⑤ 드럼 (MembraneSynth 킥 + NoiseSynth 스네어/하이햇/크래시)
+      const kick  = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, envelope: { attack: 0.001, decay: 0.30, sustain: 0, release: 0.1 } }).connect(tComp);
+      const snHp  = new Tone.Filter({ frequency: 1800, type: 'highpass' }).connect(tComp);
+      const hatHp = new Tone.Filter({ frequency: 9000, type: 'highpass' }).connect(tComp);
+      const craHp = new Tone.Filter({ frequency: 5000, type: 'highpass' }).connect(tComp);
+      const snare = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.20, sustain: 0, release: 0.06 } }).connect(snHp);
+      const hat   = new Tone.NoiseSynth({ noise: { type: 'pink'  }, envelope: { attack: 0.001, decay: 0.028, sustain: 0, release: 0.01 } }).connect(hatHp);
+      const ohat  = new Tone.NoiseSynth({ noise: { type: 'pink'  }, envelope: { attack: 0.001, decay: 0.18, sustain: 0.05, release: 0.12 } }).connect(hatHp);
+      const crash = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.45, sustain: 0.05, release: 0.30 } }).connect(craHp);
+
+      _tEng = { piano, strings, bass, kick, snare, hat, ohat, crash };
+      console.log('[CGO-TONE] 앙상블 엔진 초기화 ✓ (스타인웨이 샘플 로딩 중...)');
+    } catch(e) {
+      console.warn('[CGO-TONE] 초기화 실패:', e.message);
+      _tEng = null; // sentinel 해제 — 다음 제스처 때 재시도
+    }
+  }
+
+  // GM 번호 → Tone.js 악기 역할 분류
+  function _gmRole(gm) {
+    if (gm <= 15) return 'piano';   // 피아노 계열 (0~15)
+    if (gm >= 32 && gm <= 39) return 'bass'; // 베이스 계열
+    return 'strings';                // 나머지 → 현악기 PolySynth
+  }
+
+  // Tone.js로 노트 재생 — playSfNote 내부에서 먼저 시도
+  function playToneNote(gm, noteName, duration, velocity) {
+    if (!_tEng || !_tEng.piano || typeof Tone === 'undefined') return false;
+    try {
+      Tone.start().catch(function() {});
+      const now  = Tone.now() + 0.01;
+      const v    = Math.min(1, Math.max(0.05, velocity || 0.7));
+      const role = _gmRole(gm);
+      if (role === 'piano') {
+        if (!_tReady) return false; // 샘플 아직 로딩 중 → 오실레이터 폴백
+        _tEng.piano.triggerAttackRelease(noteName, duration, now, v);
+      } else if (role === 'bass') {
+        _tEng.bass.triggerAttackRelease(noteName, duration, now, v);
+      } else {
+        _tEng.strings.triggerAttackRelease(noteName, duration, now, v);
+      }
+      return true;
+    } catch(e) { return false; }
+  }
+
+  // Tone.js 드럼 엔진 — index.html playDrum에서 먼저 시도, 실패 시 oscillator 폴백
+  function _toneDrum(type, vel) {
+    if (!_tEng || !_tEng.kick || typeof Tone === 'undefined') return false;
+    try {
+      Tone.start().catch(function() {});
+      const now = Tone.now() + 0.01;
+      const v   = Math.min(1, Math.max(0.05, vel || 0.7));
+      if      (type === 'kick')  _tEng.kick.triggerAttackRelease('C1', '8n',  now, v);
+      else if (type === 'snare') _tEng.snare.triggerAttackRelease('16n', now, v * 0.9);
+      else if (type === 'hat')   _tEng.hat.triggerAttackRelease('32n',  now, v * 0.5);
+      else if (type === 'ohat')  _tEng.ohat.triggerAttackRelease('8n',  now, v * 0.5);
+      else if (type === 'crash') _tEng.crash.triggerAttackRelease('2n', now, v * 0.6);
+      return true;
+    } catch(e) { return false; }
+  }
+  // ── cgo-68 끝 ─────────────────────────────────────────────────────────────
 
   // 메트로놈 클릭음 (accent=1박 강조)
   function playMetroClick(accent = false) {
@@ -965,7 +1073,7 @@
     }
   }
 
-  // 특정 GM 악기로 노트 재생 — 즉시 오실레이터 먼저, soundfont는 백그라운드 프리로드
+  // 특정 GM 악기로 노트 재생 — cgo-68: Tone.js 먼저, 없으면 오실레이터 폴백
   async function playSfNote(gm, noteName, duration = 1.2, volumeGain = 0.7) {
     // ① AudioContext 언락 (autoplay 정책)
     try {
@@ -974,7 +1082,10 @@
       if (ctx.state === 'suspended') await ctx.resume();
     } catch(e) {}
 
-    // ② 즉시 오실레이터로 소리 냄 (지연 없음!) — noteName으로 정확한 음계
+    // ② cgo-68: Tone.js 앙상블 엔진 우선 시도 (실 스타인웨이 + PolySynth)
+    if (playToneNote(gm, noteName, duration, volumeGain)) return;
+
+    // ③ 폴백: 즉시 오실레이터로 소리 냄 (지연 없음!) — noteName으로 정확한 음계
     playOscFallback(gm, duration, volumeGain, noteName);
 
     // ③ soundfont 캐시가 이미 있으면 더 풍부한 소리도 겹쳐 재생
@@ -4500,8 +4611,9 @@
 
   global.CGOMusicModule = FrequencyMusicModule;
   // ── 사운드 함수 글로벌 노출 (index.html onGenerate 등 외부에서 사용) ──
-  global.playSfNote  = playSfNote;
-  global.playSfChord = playSfChord;
+  global.playSfNote    = playSfNote;
+  global.playSfChord   = playSfChord;
+  global._cgoToneDrum  = _toneDrum;  // cgo-68: Tone.js 드럼 엔진 (index.html playDrum이 먼저 시도)
 
   // ── 첫 사용자 상호작용 시 주요 soundfont 프리로드 ───────────────
   // 피아노(0), 바이올린(40), 나일론기타(24), 플루트(73) — 가장 자주 쓰는 악기
