@@ -1148,26 +1148,86 @@
         summary:  'CGO FULI(미래 도서관)의 음악 모듈입니다. 힐링 주파수(432Hz · 528Hz · 7.83Hz)와 100가지 글로벌 악기를 AI가 자동 조합하여 나만의 치유 사운드를 만들어 드립니다. 악기 카드를 클릭하면 실제 사운드를 바로 미리 들을 수 있습니다 🔊',
         howtoLabel: '🗂️ 4단계 사용 순서',
         howto: [
-          '🌊 주파수 탭|432Hz · 528Hz · 7.83Hz 중 힐링 목적에 맞는 주파수를 먼저 선택합니다.',
-          '🎰 추첨통 탭|악기·보컬을 카드로 직접 선택하고, 조성/음계는 추첨통으로 랜덤 추첨합니다.',
-          '🎼 음악편집 탭|AI가 생성한 음악의 볼륨, 이펙트, 트랙 레이어를 세밀하게 조정합니다.',
-          '⬇️ 다운로드 탭|완성된 힐링 음악을 MP3 · WAV 파일로 내 기기에 저장합니다.'
+          '🌊 STEP 1 — 주파수 탭 (첫 번째 탭)|화면 상단의 🌊 주파수 탭을 누르면 힐링 주파수 선택 화면이 나옵니다. 432Hz(안정·평화), 528Hz(사랑·치유), 7.83Hz(슈만공명), 순수음악 중 나의 목적에 맞는 주파수 카드를 탭하여 선택하세요. 선택된 카드가 강조 표시됩니다. ✅ 반드시 이 단계부터 시작해야 합니다!',
+          '🎰 STEP 2 — 추첨통 탭 (두 번째 탭)|🎰 추첨통 탭을 누르면 6가지 아코디언 메뉴가 있습니다. ① 🎵 악기 선택 — 카드를 탭하면 소리 미리 듣기 + 선택, ② 🎤 보컬 선택 — 원하는 보컬 스타일 카드 탭, ③ 🎼 박자 — 슬라이더로 BPM(속도) 조절, ④ 🎰 추첨통 — [🎲 추첨통] 버튼으로 조성/음계 랜덤 추첨, ⑤ 🌍 장르 선택 — 국가별 장르 선택 가능. 설정 완료 후 하단의 ✨ AI로 음악 생성 버튼을 누르면 음악이 만들어집니다!',
+          '🎼 STEP 3 — 음악 편집 탭 (세 번째 탭)|🎼 음악 편집 탭은 AI 악보 편집 기능을 준비 중입니다. 현재는 생성된 음악의 악보 구성을 미리 보며 전체 흐름을 확인할 수 있습니다. 향후 음표·박자·화음을 직접 수정하는 기능이 추가될 예정입니다. 하단 플레이어의 ▶ 재생 버튼으로 생성된 음악을 지금 바로 들어볼 수 있습니다.',
+          '⬇️ STEP 4 — 다운로드 탭 (네 번째 탭)|⬇️ 다운로드 탭에서 완성된 음악을 내 기기에 저장합니다. [⬇ MP3 다운로드] — 생성된 힐링 음악을 MP3 파일로 저장, [📥 PDF 리포트 생성] — 선택한 주파수·악기·힐링 효과를 종합 분석한 PDF 리포트 생성. ⚠️ 보관 기능이 없으므로 생성 직후 바로 다운로드하세요!'
         ],
         howto2Label: '🌊 힐링 주파수 가이드',
         howto2: [
-          '432Hz 자연 공명|안정 · 평화 · 편안함 — 자연의 리듬과 공명하는 주파수',
-          '528Hz DNA 회복|사랑 · 치유 · 재생 — 세포 재생에 관여한다고 알려진 주파수',
-          '7.83Hz 슈만공명|지구 뇌파 동조 — 지구 전자기장의 고유 주파수',
-          '순수음악|힐링 없이 순수 악기 연주 — 128 GM + 에스닉 악기 7종'
+          '432Hz 자연 공명|안정 · 평화 · 편안함 — 자연의 리듬과 공명하는 주파수. 불안할 때, 잠들기 전, 명상할 때 추천',
+          '528Hz DNA 회복|사랑 · 치유 · 재생 — 세포 재생에 관여한다고 알려진 주파수. 몸과 마음의 회복이 필요할 때 추천',
+          '7.83Hz 슈만공명|지구 뇌파 동조 — 지구 전자기장의 고유 주파수. 집중력 향상, 깊은 명상, 접지 효과',
+          '순수음악|힐링 주파수 없이 순수 악기 연주만 즐기기 — 128 GM 악기 + 세계 에스닉 악기 7종 사용 가능'
         ],
-        tip: '악기 카드를 탭하면 실제 사운드를 즉시 미리 들을 수 있습니다. 저작권은 사용자에게 있으며, 상업적 이용이 가능합니다. (발생 수익의 5%는 CGO에 귀속)',
+        tip: '악기 카드를 탭하면 실제 사운드를 즉시 미리 들을 수 있습니다 🔊 · 저작권은 사용자에게 있으며 상업적 이용이 가능합니다 (발생 수익의 5%는 CGO에 귀속)',
         note: '힐링 주파수는 과학적으로 검증된 의료 효과를 주장하지 않습니다. 심신 안정을 위한 음악 감상 용도로 활용하세요.',
         btnLabel: '🎵 CGO 뮤직 시작하기',
         launch: ''   // 버튼 클릭 시 팝업 닫기만 (launch 없으면 _cgoFDIntro가 remove만 함)
       };
 
+      const _injectPromptBox = () => {
+        const pop = document.getElementById('cgo-music-intro-pop');
+        if (!pop) return;
+        // summary 카드 바로 다음에 스마트 프롬프트 박스 삽입
+        const summaryEl = pop.querySelector('div[style*="border-radius:12px"]');
+        if (!summaryEl || pop.querySelector('#cgo-smart-prompt-box')) return;
+
+        const ac = '#0d9488';
+        const promptBox = document.createElement('div');
+        promptBox.id = 'cgo-smart-prompt-box';
+        promptBox.style.cssText = 'background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(20,184,166,.05));border:1.5px solid rgba(13,148,136,.35);border-radius:14px;padding:15px 14px 14px;margin-bottom:13px;';
+        promptBox.innerHTML = `
+          <div style="font-size:11px;font-weight:800;color:#0d9488;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:15px;">💬</span>
+            <span>스마트 프롬프트 — 말 한마디로 뚝딱!</span>
+          </div>
+          <div style="font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:10px;">
+            원하는 분위기를 자유롭게 적으면 AI가 주파수·악기·박자를 자동 세팅해 드립니다.
+          </div>
+          <textarea id="cgo-prompt-input" rows="2" placeholder="예) 비 오는 밤, 마음을 차분하게 가라앉혀 주는 몽환적인 국악 힐링 곡"
+            style="width:100%;box-sizing:border-box;background:#fff;border:1.5px solid rgba(13,148,136,.3);border-radius:10px;padding:11px 12px;font-size:12px;color:#0f172a;line-height:1.65;resize:none;font-family:inherit;outline:none;transition:border-color .15s;"
+            onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='rgba(13,148,136,.3)'"></textarea>
+          <button id="cgo-prompt-go-btn"
+            style="margin-top:9px;width:100%;padding:12px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.01em;"
+            >✨ 이 분위기로 시작하기</button>
+        `;
+
+        // summary 다음에 삽입
+        summaryEl.parentNode.insertBefore(promptBox, summaryEl.nextSibling);
+
+        // 버튼 클릭 → 추후 파싱 엔진 연결 자리 (현재는 팝업 닫기 + 추첨통 탭 이동)
+        promptBox.querySelector('#cgo-prompt-go-btn').addEventListener('click', () => {
+          const txt = (document.getElementById('cgo-prompt-input') || {}).value || '';
+          // 스마트 프롬프트 텍스트를 모듈 인스턴스에 전달
+          try {
+            const mod = window._cgoMusicMod || window.CGO_MUSIC;
+            if (mod && typeof mod._applySmartPrompt === 'function') {
+              mod._applySmartPrompt(txt);
+            }
+          } catch(e) {}
+          // 오늘 하루 보지 않기 체크 반영
+          try {
+            const cb = document.getElementById('cgo-music-intro-pop-skip');
+            if (cb && cb.checked) localStorage.setItem(SKIP_KEY, '1');
+          } catch(e) {}
+          pop.remove();
+          // 추첨통 탭으로 자동 이동 (프롬프트 입력한 경우)
+          if (txt.trim()) {
+            setTimeout(() => {
+              try {
+                const mod = window._cgoMusicMod || window.CGO_MUSIC;
+                if (mod && typeof mod._switchTab === 'function') mod._switchTab('make');
+              } catch(e) {}
+            }, 80);
+          }
+        });
+      };
+
       if (typeof window._cgoFDIntro === 'function') {
         window._cgoFDIntro(cfg);
+        // 팝업 DOM이 body에 붙은 직후 프롬프트 박스 주입
+        requestAnimationFrame(() => _injectPromptBox());
       } else {
         // 폴백: 최대 10회 × 200ms 재시도
         let _tries = 0;
@@ -1177,6 +1237,7 @@
             clearInterval(_retry);
             if (!document.getElementById('cgo-music-intro-pop')) {
               window._cgoFDIntro(cfg);
+              requestAnimationFrame(() => _injectPromptBox());
             }
           } else if (_tries >= 10) {
             clearInterval(_retry);
