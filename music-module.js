@@ -4359,7 +4359,9 @@
         vocal: this.selected.vocal,
         instrument: this.selected.instrument,
         instrGmList,
-        freq: this.selectedFreq
+        freq: this.selectedFreq,
+        // cgo-69: 오행 필드 — CSI 역학 엔진이 window._cgoOheng 를 사전에 설정함
+        oheng: (typeof window !== 'undefined' && window._cgoOheng) ? window._cgoOheng : null
       };
 
       this._setStatus(t(24066));
