@@ -1093,6 +1093,10 @@
 .cgo-tempo-tick:hover .cgo-tempo-tick-name{color:#fff;text-shadow:0 0 8px rgba(192,132,252,.8);}
 .cgo-tempo-tick.active .cgo-tempo-tick-name{color:#f5d0fe;text-shadow:0 0 10px rgba(245,208,254,.6);}
 .cgo-tempo-tick.active .cgo-tempo-tick-dot{transform:scale(1.6);box-shadow:0 0 6px currentColor;}
+/* 메트로놈 안내 문구 */
+.cgo-metro-hint{display:flex;align-items:center;gap:5px;font-size:10.5px;color:#a78bca;font-weight:600;text-align:center;justify-content:center;padding:5px 8px 3px;letter-spacing:-.01em;opacity:.85;}
+.cgo-metro-hint-icon{font-size:13px;flex-shrink:0;animation:cgo-metro-pulse 1.6s ease-in-out infinite;}
+@keyframes cgo-metro-pulse{0%,100%{opacity:.6;transform:scale(1);}50%{opacity:1;transform:scale(1.18);}}
 /* 하단 정보 카드 */
 .cgo-tempo-display{display:flex;align-items:center;justify-content:space-between;background:rgba(10,0,21,.6);border-radius:10px;padding:10px 14px;margin-top:6px;}
 .cgo-tempo-bpm{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}
@@ -2312,6 +2316,12 @@
         ticksDiv.appendChild(tick);
       });
       wrap.appendChild(ticksDiv);
+
+      // 메트로놈 안내 문구
+      const hintDiv = document.createElement('div');
+      hintDiv.className = 'cgo-metro-hint';
+      hintDiv.innerHTML = `<span class="cgo-metro-hint-icon">🎵</span><span>흰 버튼을 누르고 있으면 메트로놈 소리로 속도를 체감할 수 있어요</span>`;
+      wrap.appendChild(hintDiv);
 
       // 하단 정보 카드
       const dispDiv = document.createElement('div');
