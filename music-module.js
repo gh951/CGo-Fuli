@@ -666,11 +666,18 @@
     _tEng = {}; // sentinel — 중복 init 방지
     try {
       // ① 마스터링 체인
-      const tComp = new Tone.Compressor({ threshold: -22, ratio: 5, attack: 0.004, release: 0.22, knee: 10 });
+      // cgo-71: compressor attack 1ms — 찢어짐 방지 (트랜지언트 즉시 제어)
+      const tComp = new Tone.Compressor({ threshold: -24, ratio: 6, attack: 0.001, release: 0.22, knee: 8 });
       const tRev  = new Tone.Reverb({ decay: 2.4, wet: 0.28 });
       tRev.generate(); // IR 생성 (비동기지만 즉시 사용 가능)
       const tLim  = new Tone.Limiter(-2.5);
       tComp.connect(tRev); tRev.connect(tLim); tComp.connect(tLim); tLim.toDestination();
+      // cgo-70: 마스터 아웃에서 분기 → MediaStreamDestination (녹음용)
+      try {
+        const _rd = Tone.context.rawContext.createMediaStreamDestination();
+        tLim.connect(_rd); // 리미터 → 스피커 + 녹음 동시 출력
+        _tEng._recDest = _rd;
+      } catch(e) { _tEng._recDest = null; }
 
       // ② Salamander Grand Piano — 실 스타인웨이 C 콘서트 그랜드 샘플
       const piano = new Tone.Sampler({
@@ -687,12 +694,17 @@
         onload: () => { _tReady = true; console.log('[CGO-TONE] 🎹 스타인웨이 로드 완료'); }
       }).connect(tComp);
 
-      // ③ PolySynth 현악기 (스트링 패드 — 부드러운 거치 파형)
+      // ③ PolySynth 현악기 — cgo-71: 찢어짐 수정
+      // fatsawtooth(3중 거치파) → triangle(순수 삼각파): 고조파 제거
+      // volume -4 → -12dB: 앙상블 포화 방지
+      // 저역통과필터 1100Hz: 날카로운 상단 주파수 차단
+      const strLpf = new Tone.Filter({ frequency: 1100, type: 'lowpass', rolloff: -24 }).connect(tComp);
       const strings = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'fatsawtooth', count: 3, spread: 35 },
-        envelope:   { attack: 0.20, decay: 0.15, sustain: 0.82, release: 1.4 }
-      }).connect(tComp);
-      strings.set({ volume: -4 });
+        maxPolyphony: 6,
+        oscillator: { type: 'triangle' },
+        envelope:   { attack: 0.35, decay: 0.20, sustain: 0.70, release: 2.0 }
+      }).connect(strLpf);
+      strings.set({ volume: -12 });
 
       // ④ MonoSynth 베이스 (삼각파 + 필터 엔벨로프)
       const bass = new Tone.MonoSynth({
@@ -711,7 +723,9 @@
       const ohat  = new Tone.NoiseSynth({ noise: { type: 'pink'  }, envelope: { attack: 0.001, decay: 0.18, sustain: 0.05, release: 0.12 } }).connect(hatHp);
       const crash = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.45, sustain: 0.05, release: 0.30 } }).connect(craHp);
 
-      _tEng = { piano, strings, bass, kick, snare, hat, ohat, crash };
+      // cgo-71: strLpf 포함 + _recDest 보존 (cgo-70 버그 수정)
+      _tEng = { piano, strings, strLpf, bass, kick, snare, hat, ohat, crash,
+                _recDest: _tEng._recDest || null };
       console.log('[CGO-TONE] 앙상블 엔진 초기화 ✓ (스타인웨이 샘플 로딩 중...)');
     } catch(e) {
       console.warn('[CGO-TONE] 초기화 실패:', e.message);
@@ -761,7 +775,66 @@
       return true;
     } catch(e) { return false; }
   }
-  // ── cgo-68 끝 ─────────────────────────────────────────────────────────────
+  // ── cgo-70: 오디오 녹음 / 저장 엔진 ──────────────────────────────────────
+  // MediaStreamDestination → MediaRecorder → Blob → Download
+  // 서버 비용 0원: 모든 처리 브라우저 내 완결, 외부 CDN 불필요
+
+  /** 녹음 시작 — 그루브 재생 직후 호출 */
+  function _cgoStartRec() {
+    if (!_tEng || !_tEng._recDest) return false;
+    try {
+      _tEng._recChunks = [];
+      // 브라우저 지원 MIME 우선순위 탐색
+      const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']
+        .find(m => { try { return MediaRecorder.isTypeSupported(m); } catch(e){ return false; } }) || '';
+      const opts = mimeType ? {mimeType, audioBitsPerSecond: 128000} : {audioBitsPerSecond: 128000};
+      const rec = new MediaRecorder(_tEng._recDest.stream, opts);
+      rec.ondataavailable = e => { if (e.data && e.data.size > 0) _tEng._recChunks.push(e.data); };
+      rec.start(250); // 250ms 청크
+      _tEng._recorder = rec;
+      _tEng._recBlob  = null;
+      return true;
+    } catch(e) { _tEng._recorder = null; return false; }
+  }
+
+  /** 녹음 중지 — 콜백 등록 후 stop() */
+  function _cgoStopRec(onReady) {
+    if (!_tEng || !_tEng._recorder) return;
+    const rec = _tEng._recorder;
+    if (rec.state === 'inactive') { if (typeof onReady === 'function') onReady(_tEng._recBlob); return; }
+    rec.onstop = () => {
+      try {
+        const mime = rec.mimeType || 'audio/webm';
+        _tEng._recBlob = new Blob(_tEng._recChunks || [], {type: mime});
+        _tEng._recMime = mime;
+      } catch(e) {}
+      if (typeof onReady === 'function') onReady(_tEng._recBlob);
+    };
+    try { rec.stop(); } catch(e) {}
+    _tEng._recorder = null;
+  }
+
+  /** 저장된 Blob 다운로드 */
+  function _cgoDownloadRec(fileNameBase) {
+    if (!_tEng || !_tEng._recBlob) return false;
+    try {
+      const mime = _tEng._recMime || 'audio/webm';
+      const ext  = mime.includes('ogg') ? '.ogg' : '.webm';
+      const url  = URL.createObjectURL(_tEng._recBlob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = (fileNameBase || '주파수음악-CGO') + ext;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e){} }, 15000);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  // 전역 노출 (index.html onGenerate 콜백에서 호출)
+  global._cgoStartRec    = _cgoStartRec;
+  global._cgoStopRec     = _cgoStopRec;
+  global._cgoDownloadRec = _cgoDownloadRec;
+
+  // ── cgo-68 끝 / cgo-70 녹음 엔진 끝 ─────────────────────────────────────
 
   // 메트로놈 클릭음 (accent=1박 강조)
   function playMetroClick(accent = false) {
@@ -2186,6 +2259,8 @@
       genWrap.innerHTML = `
         <button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>
         <button class="cgo-stop-btn" id="cgo-stop-btn" style="display:none;width:100%;margin-top:8px;padding:11px;border-radius:14px;background:rgba(239,68,68,.18);border:1.5px solid rgba(239,68,68,.5);color:#fca5a5;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:background .15s;" onmouseover="this.style.background='rgba(239,68,68,.32)'" onmouseout="this.style.background='rgba(239,68,68,.18)'">⏹ 정지</button>
+        <!-- cgo-70: 오디오 저장 버튼 — 녹음 완료 후 표시 -->
+        <button id="cgo-audio-save-btn" style="display:none;width:100%;margin-top:8px;padding:10px;border-radius:14px;background:rgba(16,185,129,.18);border:1.5px solid rgba(16,185,129,.5);color:#6ee7b7;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:all .15s;" onmouseover="this.style.background='rgba(16,185,129,.32)'" onmouseout="this.style.background='rgba(16,185,129,.18)'">⬇️ 오디오 저장</button>
       `;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
@@ -2206,6 +2281,8 @@
         if (stopBtn) stopBtn.style.display = 'none';
         if (genBtn)  { genBtn.disabled = false; genBtn.textContent = '✨ AI로 음악 생성'; }
         if (this._setStatus) this._setStatus('⏹ 정지됨');
+        // cgo-70: 수동 정지 시 녹음도 중단
+        if (typeof window._cgoStopRec === 'function') window._cgoStopRec(null);
       });
     }
 
