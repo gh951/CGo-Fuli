@@ -288,6 +288,10 @@
     { id:98, ko:'두둑',              en:'Duduk',                 gm:69, cat:'중동',   region:'중동/유럽',  emoji:'🌬️', genres:['깊은 영혼의 선율','시네마틱'] },
     { id:99, ko:'코라',              en:'Kora',                  gm:24, cat:'아프리카',region:'아프리카',   emoji:'🪕', genres:['서아프리카 월드뮤직','힐링'] },
     { id:100,ko:'디저리두',          en:'Didgeridoo',            gm:76, cat:'오세아니아',region:'오세아니아',emoji:'🪵',genres:['호주 원주민','저주파 힐링','슈만공명'] },
+    // ── 한국 악기 확장 — cgo-78 (오행 음색 엔진) ──────────────────────────
+    { id:101,ko:'대금',              en:'Daegeum',               gm:74, cat:'한국',   region:'동양(한국)', emoji:'🎋', genres:['국악','힐링','앰비언트'] },
+    { id:102,ko:'거문고',            en:'Geomungo',              gm:107,cat:'한국',   region:'동양(한국)', emoji:'🪕', genres:['국악','깊은 명상','앰비언트'] },
+    { id:103,ko:'단소',              en:'Danso',                 gm:75, cat:'한국',   region:'동양(한국)', emoji:'🪈', genres:['국악','청아한 명상','힐링'] },
   ];
 
   // 카테고리 그룹 (UI 필터용)
@@ -316,6 +320,7 @@
     89:'C6', 90:'D5', 91:'G4', 92:'C5', 93:'G3',
     // 한국/아시아/중동
     94:'D4', 95:'A4', 96:'G4', 97:'D4', 98:'A3', 99:'G4', 100:'C2',
+    101:'D5', 102:'G3', 103:'A5', // cgo-78: 대금·거문고·단소
   };
 
   // SLOT_DATA — 추첨통 랜덤 슬롯: 조성/음계만 (보컬·악기는 독립 카드 선택)
@@ -2682,6 +2687,12 @@
           if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           this.selectedInstrIds.clear();
           pr.ids.forEach(id => this.selectedInstrIds.add(id));
+          // cgo-78: 한국 악기 브릿지 업데이트
+          window._cgoKorInstrId = null;
+          [...this.selectedInstrIds].some(sid => {
+            const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+            if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+          });
           renderGrid();
           renderSelected();
           updateInfo();
@@ -2753,10 +2764,21 @@
               } else {
                 if (this.selectedInstrIds.size >= MAX_INSTR) return;
                 this.selectedInstrIds.add(ins.id);
-                // 🔊 즉시 소리 — 악기마다 다른 특징적 음계 (INSTR_PREVIEW_NOTE)
+                // 🔊 즉시 소리 — cgo-78: 한국 악기는 Korean synth 엔진으로 프리뷰
                 const noteToPlay = INSTR_PREVIEW_NOTE[ins.id] || 'C4';
-                playSfNote(ins.gm, noteToPlay, 1.5, 0.65).catch(()=>{});
+                if (ins.cat === '한국' && typeof window._cgoKorNote === 'function') {
+                  if (typeof window._cgoInitKorSynths === 'function') window._cgoInitKorSynths();
+                  window._cgoKorNote(ins.id, noteToPlay, 1.5, 0.65);
+                } else {
+                  playSfNote(ins.gm, noteToPlay, 1.5, 0.65).catch(()=>{});
+                }
               }
+              // cgo-78: 한국 악기 엔진 브릿지 업데이트
+              window._cgoKorInstrId = null;
+              [...this.selectedInstrIds].some(sid => {
+                const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+                if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+              });
               renderGrid();
               renderSelected();
               updateInfo();
@@ -2793,6 +2815,12 @@
             chip.innerHTML = `${ins.emoji} ${ins.ko}<span class="cgo-instr-chip-del" title="제거">✕</span>`;
             chip.querySelector('.cgo-instr-chip-del').addEventListener('click', () => {
               this.selectedInstrIds.delete(id);
+              // cgo-78: 한국 악기 브릿지 업데이트
+              window._cgoKorInstrId = null;
+              [...this.selectedInstrIds].some(sid => {
+                const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+                if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+              });
               renderGrid();
               renderSelected();
               updateInfo();
