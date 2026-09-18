@@ -2689,50 +2689,513 @@
     // ── 음악 편집 패널 ──────────────────────────────────────────
     _buildEditPanel() {
       const p = this.panels.edit;
-      p.innerHTML = `
-        <div class="cgo-msec">
-          <div class="cgo-msec-title">🎼 음악 편집</div>
-          <div class="cgo-edit-notice">
-            <div class="cgo-edit-notice-ico">🎼</div>
-            <div class="cgo-edit-notice-txt">
-              <b>AI 악보 편집 (준비 중)</b><br>
-              추첨통에서 생성된 음악을 악보로 시각화하고<br>
-              음표·박자·화음을 직접 수정할 수 있습니다.
-            </div>
+      if (p.querySelector('#cgo-score-editor')) return; // 이미 빌드됨
+
+      // ── VexFlow 로드 ─────────────────────────────────────────────
+      const _loadVexFlow = (cb) => {
+        if (window.Vex) { cb(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.2/vexflow.js';
+        s.onload = cb;
+        s.onerror = () => { console.warn('VexFlow 로드 실패'); };
+        document.head.appendChild(s);
+      };
+
+      // ── 편집기 상태 ──────────────────────────────────────────────
+      const state = {
+        notes: [], // [{pitch:'C4', duration:'q', selected:false}, ...]
+        bpm: this.tempoBpm || 80,
+        timeNum: 4, timeDen: 4,
+        selectedIdx: -1,
+        playing: false,
+        playTimer: null,
+        playIdx: 0,
+      };
+
+      // 기본 샘플 노트 (CGO 현재 설정 기반)
+      const _defaultNotes = () => {
+        const scale = {
+          'C장조':['C4','D4','E4','F4','G4','A4','B4','C5'],
+          'G장조':['G4','A4','B4','C5','D5','E5','F#5','G5'],
+          'Am단조':['A4','B4','C5','D5','E5','F5','G5','A5'],
+          'D장조':['D4','E4','F#4','G4','A4','B4','C#5','D5'],
+        };
+        const sel = this.selected && this.selected.key;
+        const arr = scale[sel] || scale['C장조'];
+        return arr.slice(0,8).map((p,i) => ({
+          pitch: p,
+          duration: i % 4 === 3 ? 'h' : 'q',
+          selected: false
+        }));
+      };
+      state.notes = _defaultNotes();
+
+      // ── UI 빌드 ──────────────────────────────────────────────────
+      p.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.id = 'cgo-score-editor';
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:12px 2px;';
+
+      // 제목 + 업로드 버튼
+      wrap.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 2px;">
+          <div style="font-size:13px;font-weight:900;color:#c084fc;display:flex;align-items:center;gap:6px;">
+            <span>🎼</span><span>악보 편집기</span>
+            <span style="font-size:9px;background:rgba(168,85,247,.2);color:#a855f7;padding:2px 7px;border-radius:20px;font-weight:700;">BETA</span>
           </div>
-          <div class="cgo-edit-steps">
-            <div class="cgo-edit-step">
-              <div class="cgo-edit-step-num">1</div>
-              <div class="cgo-edit-step-txt"><b>주파수 선택</b> → 힐링 주파수로 기본 음계 세팅</div>
-            </div>
-            <div class="cgo-edit-step">
-              <div class="cgo-edit-step-num">2</div>
-              <div class="cgo-edit-step-txt"><b>추첨통 생성</b> → AI가 장르·악기·보컬 자동 조합</div>
-            </div>
-            <div class="cgo-edit-step">
-              <div class="cgo-edit-step-num">3</div>
-              <div class="cgo-edit-step-txt"><b>악보 편집</b> → 음표·박자·화음 세부 조정</div>
-            </div>
-            <div class="cgo-edit-step">
-              <div class="cgo-edit-step-num">4</div>
-              <div class="cgo-edit-step-txt"><b>다운로드</b> → MP3 + PDF 분석 리포트 저장</div>
-            </div>
+          <label id="cgo-midi-upload-label" style="display:flex;align-items:center;gap:5px;padding:7px 12px;background:rgba(168,85,247,.15);border:1.5px solid rgba(168,85,247,.4);border-radius:20px;cursor:pointer;font-size:11px;font-weight:700;color:#c084fc;">
+            <span>📂</span><span>MIDI 업로드</span>
+            <input id="cgo-midi-file" type="file" accept=".mid,.midi" style="display:none;">
+          </label>
+        </div>
+
+        <!-- 툴바 -->
+        <div id="cgo-score-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;background:rgba(10,2,25,.6);border-radius:12px;border:1px solid rgba(168,85,247,.15);">
+          <div style="display:flex;align-items:center;gap:4px;margin-right:4px;">
+            <span style="font-size:10px;color:#7c6fa8;font-weight:600;">BPM</span>
+            <input id="cgo-score-bpm" type="number" min="40" max="200" value="${state.bpm}"
+              style="width:52px;background:rgba(20,5,40,.8);border:1px solid rgba(168,85,247,.3);border-radius:6px;color:#c084fc;font-size:12px;font-weight:700;padding:4px 6px;text-align:center;font-family:inherit;">
           </div>
-          <div class="cgo-edit-score-placeholder">
-            <div class="cgo-edit-score-staff">
-              <div class="cgo-edit-score-clef">𝄞</div>
-              <div class="cgo-edit-score-lines">
-                <div class="cgo-edit-score-note" style="left:18%;top:28%;">♩</div>
-                <div class="cgo-edit-score-note" style="left:34%;top:38%;">♪</div>
-                <div class="cgo-edit-score-note" style="left:50%;top:22%;">♩</div>
-                <div class="cgo-edit-score-note" style="left:66%;top:32%;">♫</div>
-                <div class="cgo-edit-score-note" style="left:82%;top:26%;">♩</div>
-              </div>
-            </div>
-            <div class="cgo-edit-score-label">🚧 Stage 3 · VexFlow 악보 렌더링 준비 중</div>
+          <button class="cgo-score-tool-btn" data-dur="w" title="온음표">𝅝</button>
+          <button class="cgo-score-tool-btn" data-dur="h" title="2분음표">𝅗𝅥</button>
+          <button class="cgo-score-tool-btn active" data-dur="q" title="4분음표">♩</button>
+          <button class="cgo-score-tool-btn" data-dur="8" title="8분음표">♪</button>
+          <button class="cgo-score-tool-btn" data-dur="16" title="16분음표">𝅘𝅥𝅯</button>
+          <div style="width:1px;background:rgba(168,85,247,.2);margin:0 2px;"></div>
+          <button id="cgo-score-del" title="선택 노트 삭제" style="padding:5px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:7px;color:#f87171;font-size:12px;cursor:pointer;font-weight:700;">✕ 삭제</button>
+          <button id="cgo-score-clear" title="전체 초기화" style="padding:5px 10px;background:rgba(100,60,180,.1);border:1px solid rgba(168,85,247,.2);border-radius:7px;color:#9d8ec8;font-size:11px;cursor:pointer;font-weight:700;">초기화</button>
+        </div>
+
+        <!-- 건반 + 악보 영역 -->
+        <div style="display:flex;gap:0;overflow:hidden;border-radius:12px;border:1px solid rgba(168,85,247,.2);">
+          <!-- 피아노 건반 (음 입력용) -->
+          <div id="cgo-score-keys" style="display:flex;flex-direction:column;background:rgba(10,2,25,.9);border-right:1px solid rgba(168,85,247,.15);padding:8px 0;min-width:64px;"></div>
+          <!-- 악보 캔버스 -->
+          <div id="cgo-score-canvas-wrap" style="flex:1;overflow-x:auto;background:rgba(5,0,15,.95);min-height:180px;"></div>
+        </div>
+
+        <!-- 재생 컨트롤 -->
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(10,2,25,.7);border-radius:12px;border:1px solid rgba(168,85,247,.15);">
+          <button id="cgo-score-play" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(168,85,247,.4);">▶</button>
+          <button id="cgo-score-stop" style="width:36px;height:36px;border-radius:50%;background:rgba(100,60,180,.2);border:1px solid rgba(168,85,247,.3);color:#9d8ec8;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">⏹</button>
+          <div id="cgo-score-playbar" style="flex:1;height:4px;background:rgba(168,85,247,.15);border-radius:2px;overflow:hidden;">
+            <div id="cgo-score-playfill" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a855f7);transition:width .1s;"></div>
           </div>
+          <span id="cgo-score-playtime" style="font-size:10px;color:#7c6fa8;font-weight:600;min-width:36px;text-align:right;">0:00</span>
+          <!-- 악기 선택 -->
+          <select id="cgo-score-instr" style="background:rgba(20,5,40,.8);border:1px solid rgba(168,85,247,.3);border-radius:8px;color:#c084fc;font-size:11px;padding:5px 8px;font-family:inherit;max-width:110px;">
+            <option value="0">🎹 피아노</option>
+            <option value="24">🎸 기타</option>
+            <option value="40">🎻 바이올린</option>
+            <option value="56">🎺 트럼펫</option>
+            <option value="73">🪈 플루트</option>
+            <option value="107">🪕 가야금(코토)</option>
+          </select>
+        </div>
+
+        <!-- 다운로드 버튼 -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="cgo-score-dl-midi" style="flex:1;padding:11px;background:rgba(168,85,247,.15);border:1.5px solid rgba(168,85,247,.35);border-radius:11px;color:#c084fc;font-size:12px;font-weight:800;cursor:pointer;">⬇ MIDI 다운로드</button>
+          <button id="cgo-score-dl-img" style="flex:1;padding:11px;background:rgba(20,184,166,.1);border:1.5px solid rgba(20,184,166,.3);border-radius:11px;color:#5eead4;font-size:12px;font-weight:800;cursor:pointer;">🖼 악보 이미지 저장</button>
+        </div>
+
+        <!-- Basic Pitch 베타 -->
+        <div style="padding:12px 14px;background:rgba(245,158,11,.05);border:1.5px dashed rgba(245,158,11,.3);border-radius:12px;">
+          <div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+            <span>🤖</span><span>MP3 → 악보 자동 변환</span>
+            <span style="font-size:9px;background:rgba(245,158,11,.15);padding:2px 6px;border-radius:10px;">베타</span>
+          </div>
+          <div style="font-size:10px;color:#a78bca;margin-bottom:8px;line-height:1.6;">AI가 MP3/WAV 파일을 분석해 자동으로 악보를 생성합니다. 브라우저에서 처리 — 서버 전송 없음.</div>
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(245,158,11,.1);border-radius:9px;cursor:pointer;font-size:11px;color:#fbbf24;font-weight:700;">
+            <span>📁</span><span>MP3/WAV 파일 선택하기</span>
+            <input id="cgo-bp-file" type="file" accept=".mp3,.wav,.ogg" style="display:none;">
+          </label>
+          <div id="cgo-bp-status" style="font-size:10px;color:#7c6fa8;margin-top:6px;display:none;"></div>
         </div>
       `;
+      p.appendChild(wrap);
+
+      // ── 스타일 추가 ──────────────────────────────────────────────
+      if (!document.getElementById('cgo-score-style')) {
+        const st = document.createElement('style');
+        st.id = 'cgo-score-style';
+        st.textContent = `
+          .cgo-score-tool-btn{padding:5px 9px;background:rgba(100,60,180,.1);border:1px solid rgba(168,85,247,.2);border-radius:7px;color:#9d8ec8;font-size:14px;cursor:pointer;font-weight:700;transition:all .15s;}
+          .cgo-score-tool-btn:hover,.cgo-score-tool-btn.active{background:rgba(168,85,247,.25);border-color:rgba(168,85,247,.5);color:#c084fc;}
+          .cgo-score-key{display:flex;align-items:center;justify-content:flex-end;padding-right:6px;height:22px;font-size:9.5px;font-weight:700;cursor:pointer;border-radius:0 4px 4px 0;margin:1px 0;transition:background .1s;color:#9d8ec8;}
+          .cgo-score-key:hover{background:rgba(168,85,247,.25);color:#c084fc;}
+          .cgo-score-key.black{background:rgba(30,10,60,.8);color:#7c6fa8;}
+          .cgo-score-key.black:hover{background:rgba(168,85,247,.3);}
+          #cgo-score-canvas-wrap svg{display:block;}
+          .cgo-score-note-sel rect{fill:rgba(168,85,247,.3)!important;}
+        `;
+        document.head.appendChild(st);
+      }
+
+      // ── 건반 UI 생성 (C5~C4, 흰건반만 표시) ─────────────────────
+      const PITCH_NAMES = ['C5','B4','A4','G4','F4','E4','D4','C4'];
+      const keysEl = wrap.querySelector('#cgo-score-keys');
+      PITCH_NAMES.forEach(pitch => {
+        const k = document.createElement('div');
+        k.className = 'cgo-score-key';
+        k.textContent = pitch;
+        k.dataset.pitch = pitch;
+        k.addEventListener('click', () => _addNote(pitch));
+        keysEl.appendChild(k);
+      });
+
+      // ── 현재 선택 음표 지속시간 ──────────────────────────────────
+      let currentDur = 'q';
+      wrap.querySelectorAll('.cgo-score-tool-btn[data-dur]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          wrap.querySelectorAll('.cgo-score-tool-btn[data-dur]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentDur = btn.dataset.dur;
+          // 선택된 노트 지속시간 변경
+          if (state.selectedIdx >= 0) {
+            state.notes[state.selectedIdx].duration = currentDur;
+            _renderScore();
+          }
+        });
+      });
+
+      // ── BPM 변경 ─────────────────────────────────────────────────
+      wrap.querySelector('#cgo-score-bpm').addEventListener('change', e => {
+        state.bpm = Math.max(40, Math.min(200, parseInt(e.target.value) || 80));
+      });
+
+      // ── 노트 추가 ─────────────────────────────────────────────────
+      const _addNote = (pitch) => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+        state.notes.push({ pitch, duration: currentDur, selected: false });
+        state.selectedIdx = state.notes.length - 1;
+        _renderScore();
+      };
+
+      // ── 노트 삭제 ─────────────────────────────────────────────────
+      wrap.querySelector('#cgo-score-del').addEventListener('click', () => {
+        if (state.selectedIdx >= 0) {
+          state.notes.splice(state.selectedIdx, 1);
+          state.selectedIdx = Math.min(state.selectedIdx, state.notes.length - 1);
+          _renderScore();
+        }
+      });
+
+      // ── 초기화 ───────────────────────────────────────────────────
+      wrap.querySelector('#cgo-score-clear').addEventListener('click', () => {
+        state.notes = _defaultNotes();
+        state.selectedIdx = -1;
+        _renderScore();
+      });
+
+      // ── VexFlow 악보 렌더링 ──────────────────────────────────────
+      const canvasWrap = wrap.querySelector('#cgo-score-canvas-wrap');
+      const _renderScore = () => {
+        _loadVexFlow(() => {
+          try {
+            const VF = window.Vex.Flow;
+            canvasWrap.innerHTML = '';
+            const W = Math.max(canvasWrap.offsetWidth || 320, state.notes.length * 55 + 80);
+            const renderer = new VF.Renderer(canvasWrap, VF.Renderer.Backends.SVG);
+            renderer.resize(W, 160);
+            const context = renderer.getContext();
+            context.setFont('Arial', 10);
+            // 스타브
+            const stave = new VF.Stave(10, 20, W - 20);
+            stave.addClef('treble').addTimeSignature(`${state.timeNum}/${state.timeDen}`);
+            stave.setContext(context).draw();
+            // 노트 변환
+            const vfNotes = state.notes.map((n, i) => {
+              const parts = n.pitch.match(/^([A-G]#?)(\d)$/) || [];
+              const noteName = parts[1] ? parts[1].toLowerCase() : 'c';
+              const octave = parts[2] || '4';
+              const vn = new VF.StaveNote({
+                clef: 'treble',
+                keys: [`${noteName}/${octave}`],
+                duration: n.duration
+              });
+              if (i === state.selectedIdx) {
+                vn.setStyle({ fillStyle: '#c084fc', strokeStyle: '#c084fc' });
+              }
+              if (noteName.includes('#')) vn.addModifier(new VF.Accidental('#'), 0);
+              return vn;
+            });
+            if (vfNotes.length > 0) {
+              const voice = new VF.Voice({ num_beats: state.timeNum, beat_value: state.timeDen }).setMode(VF.Voice.Mode.SOFT);
+              voice.addTickables(vfNotes);
+              new VF.Formatter().joinVoices([voice]).format([voice], W - 80);
+              voice.draw(context, stave);
+            }
+            // 노트 클릭 선택 (VexFlow 4.x: vf-stavenote 또는 g.vf-stavenote)
+            const noteEls = canvasWrap.querySelectorAll('.vf-stavenote, g[class*="stavenote"]');
+            noteEls.forEach((el, i) => {
+              el.style.cursor = 'pointer';
+              el.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                state.selectedIdx = i;
+                _renderScore();
+              });
+            });
+          } catch(e) {
+            canvasWrap.innerHTML = `<div style="padding:20px;color:#7c6fa8;font-size:11px;">악보 로딩 중... (${e.message})</div>`;
+          }
+        });
+      };
+
+      // ── 재생 (Web Audio API) ──────────────────────────────────────
+      const NOTE_FREQ = {
+        'C4':261.63,'D4':293.66,'E4':329.63,'F4':349.23,'G4':392.00,'A4':440.00,'B4':493.88,
+        'C5':523.25,'D5':587.33,'E5':659.25,'F5':698.46,'G5':783.99,'A5':880.00,'B5':987.77,
+        'F#4':369.99,'C#4':277.18,'G#4':415.30,'A#4':466.16,'D#4':311.13,
+        'F#5':739.99,'C#5':554.37
+      };
+      const DUR_BEATS = { 'w':4, 'h':2, 'q':1, '8':0.5, '16':0.25 };
+
+      const _stopPlay = () => {
+        state.playing = false;
+        state.playIdx = 0;
+        if (state.playTimer) { clearTimeout(state.playTimer); state.playTimer = null; }
+        wrap.querySelector('#cgo-score-play').textContent = '▶';
+        wrap.querySelector('#cgo-score-playfill').style.width = '0%';
+        wrap.querySelector('#cgo-score-playtime').textContent = '0:00';
+      };
+
+      wrap.querySelector('#cgo-score-stop').addEventListener('click', _stopPlay);
+
+      wrap.querySelector('#cgo-score-play').addEventListener('click', () => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+        if (state.playing) { _stopPlay(); return; }
+        if (state.notes.length === 0) return;
+        unlockAudioCtx();
+        state.playing = true;
+        state.playIdx = 0;
+        wrap.querySelector('#cgo-score-play').textContent = '⏸';
+        const totalBeats = state.notes.reduce((s, n) => s + (DUR_BEATS[n.duration] || 1), 0);
+        const secPerBeat = 60 / state.bpm;
+        const totalSec = totalBeats * secPerBeat;
+        const startTime = performance.now();
+        const _tick = () => {
+          if (!state.playing || state.playIdx >= state.notes.length) { _stopPlay(); return; }
+          const n = state.notes[state.playIdx];
+          const freq = NOTE_FREQ[n.pitch] || 440;
+          const dur = (DUR_BEATS[n.duration] || 1) * secPerBeat;
+          // 오실레이터로 소리
+          try {
+            const ctx = getSfCtx();
+            if (ctx) {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = freq;
+              osc.type = 'triangle';
+              gain.gain.setValueAtTime(0.4, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur * 0.9);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + dur);
+            }
+          } catch(e) {}
+          // 재생 표시
+          state.selectedIdx = state.playIdx;
+          _renderScore();
+          const elapsed = (performance.now() - startTime) / 1000;
+          const pct = Math.min(100, (elapsed / totalSec) * 100);
+          wrap.querySelector('#cgo-score-playfill').style.width = pct + '%';
+          const mins = Math.floor(elapsed / 60);
+          const secs = Math.floor(elapsed % 60);
+          wrap.querySelector('#cgo-score-playtime').textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+          state.playIdx++;
+          state.playTimer = setTimeout(_tick, dur * 1000);
+        };
+        _tick();
+      });
+
+      // ── MIDI 업로드 파싱 ─────────────────────────────────────────
+      wrap.querySelector('#cgo-midi-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const bytes = new Uint8Array(ev.target.result);
+            const parsed = _parseMidi(bytes);
+            if (parsed && parsed.length > 0) {
+              state.notes = parsed.slice(0, 64); // 최대 64노트
+              state.selectedIdx = -1;
+              _renderScore();
+              const label = wrap.querySelector('#cgo-midi-upload-label span:last-child');
+              if (label) label.textContent = file.name.slice(0, 16) + (file.name.length > 16 ? '…' : '');
+            }
+          } catch(err) {
+            console.warn('MIDI 파싱 오류:', err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      // ── 간단한 MIDI 파서 ─────────────────────────────────────────
+      const _parseMidi = (bytes) => {
+        // MIDI 헤더 확인
+        if (bytes[0]!==0x4D||bytes[1]!==0x54||bytes[2]!==0x68||bytes[3]!==0x64) return null;
+        const MIDI_NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+        const midiToPitch = (n) => MIDI_NOTES[n % 12] + Math.floor(n / 12 - 1);
+        const notes = [];
+        let i = 8; // 헤더 스킵
+        while (i < bytes.length - 8) {
+          // 트랙 찾기
+          if (bytes[i]===0x4D&&bytes[i+1]===0x54&&bytes[i+2]===0x72&&bytes[i+3]===0x6B) {
+            const tLen = (bytes[i+4]<<24)|(bytes[i+5]<<16)|(bytes[i+6]<<8)|bytes[i+7];
+            const tEnd = i + 8 + tLen;
+            i += 8;
+            while (i < tEnd && notes.length < 64) {
+              // 델타 타임 스킵
+              while (i < tEnd && (bytes[i] & 0x80)) i++;
+              i++;
+              if (i >= tEnd) break;
+              const evt = bytes[i++];
+              if ((evt & 0xF0) === 0x90 && i + 1 < tEnd) {
+                const note = bytes[i++];
+                const vel = bytes[i++];
+                if (vel > 0 && note >= 48 && note <= 84) {
+                  notes.push({ pitch: midiToPitch(note), duration: 'q', selected: false });
+                }
+              } else if ((evt & 0xF0) === 0x80 && i + 1 < tEnd) { i += 2; }
+              else if (evt === 0xFF && i + 1 < tEnd) { const l = bytes[i+1]; i += 2 + l; }
+              else if (i < tEnd) { i++; }
+            }
+            i = tEnd;
+          } else { i++; }
+        }
+        return notes;
+      };
+
+      // ── MIDI 내보내기 ────────────────────────────────────────────
+      wrap.querySelector('#cgo-score-dl-midi').addEventListener('click', () => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+        try {
+          const MIDI_NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+          const pitchToMidi = (p) => {
+            const m = p.match(/^([A-G]#?)(\d)$/);
+            if (!m) return 60;
+            const idx = MIDI_NOTES.indexOf(m[1]);
+            return (parseInt(m[2]) + 1) * 12 + idx;
+          };
+          const DUR_TICKS = { 'w':480*4,'h':480*2,'q':480,'8':240,'16':120 };
+          const bytes = [];
+          const wr2 = (n) => { bytes.push((n>>8)&0xFF, n&0xFF); };
+          const wr4 = (n) => { bytes.push((n>>24)&0xFF,(n>>16)&0xFF,(n>>8)&0xFF,n&0xFF); };
+          // 헤더
+          [0x4D,0x54,0x68,0x64].forEach(b=>bytes.push(b));
+          wr4(6); wr2(0); wr2(1); wr2(480);
+          // 트랙
+          const track = [];
+          const wrv = (n) => { if(n<128){track.push(n);}else if(n<16384){track.push(0x80|(n>>7),n&0x7F);}else{track.push(0x80|((n>>14)&0x7F),0x80|((n>>7)&0x7F),n&0x7F);} };
+          // 템포
+          track.push(0x00,0xFF,0x51,0x03);
+          const uspb = Math.round(60000000/state.bpm);
+          track.push((uspb>>16)&0xFF,(uspb>>8)&0xFF,uspb&0xFF);
+          state.notes.forEach(n => {
+            const midi = pitchToMidi(n.pitch);
+            const ticks = DUR_TICKS[n.duration] || 480;
+            wrv(0); track.push(0x90,midi,80);
+            wrv(ticks); track.push(0x80,midi,0);
+          });
+          track.push(0x00,0xFF,0x2F,0x00);
+          [0x4D,0x54,0x72,0x6B].forEach(b=>bytes.push(b));
+          wr4(track.length); track.forEach(b=>bytes.push(b));
+          const blob = new Blob([new Uint8Array(bytes)], {type:'audio/midi'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'cgo-music.mid'; a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch(e) { console.warn('MIDI 내보내기 오류:', e); }
+      });
+
+      // ── 악보 이미지 저장 ─────────────────────────────────────────
+      wrap.querySelector('#cgo-score-dl-img').addEventListener('click', () => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+        const svg = canvasWrap.querySelector('svg');
+        if (!svg) return;
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = svg.viewBox.baseVal.width * scale || 600;
+        canvas.height = svg.viewBox.baseVal.height * scale || 200;
+        const ctx2 = canvas.getContext('2d');
+        ctx2.fillStyle = '#ffffff';
+        ctx2.fillRect(0, 0, canvas.width, canvas.height);
+        const img = new Image();
+        img.onload = () => {
+          ctx2.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = 'cgo-score.png'; a.click();
+        };
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      });
+
+      // ── Basic Pitch 베타 (MP3 → MIDI) ────────────────────────────
+      wrap.querySelector('#cgo-bp-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const statusEl = wrap.querySelector('#cgo-bp-status');
+        statusEl.style.display = 'block';
+        statusEl.textContent = '🔄 AI 분석 중... (브라우저에서 처리 중)';
+        _runBasicPitch(file, statusEl);
+      });
+
+      const _runBasicPitch = async (file, statusEl) => {
+        try {
+          // ① AudioBuffer 디코딩
+          const arrayBuffer = await file.arrayBuffer();
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          statusEl.textContent = '⏳ AI 모델 로드 중... (처음 한 번만)';
+
+          // ② Basic Pitch ESM dynamic import (1.x 브라우저 ESM 빌드)
+          const BP_ESM = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/esm/index.js';
+          let bp_mod;
+          try {
+            bp_mod = await import(/* @vite-ignore */ BP_ESM);
+          } catch(loadErr) {
+            statusEl.textContent = '⚠️ AI 모듈 로드 실패. 인터넷 연결 또는 브라우저 설정을 확인해주세요.';
+            audioCtx.close();
+            return;
+          }
+
+          statusEl.textContent = '🎵 음정 분석 중... (파일 길이에 따라 10~60초)';
+          const { BasicPitch, noteFramesToTime, addPitchBendsToNoteEvents, outputToNotesPoly } = bp_mod;
+          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/';
+          const bp = new BasicPitch(MODEL_URL);
+          const frames = [], onsets = [], contours = [];
+          await bp.evaluateModel(
+            audioBuffer,
+            (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); },
+            (pct) => { statusEl.textContent = `🎵 분석 중... ${Math.round(pct * 100)}%`; }
+          );
+          const noteEvents = noteFramesToTime(
+            addPitchBendsToNoteEvents(contours, outputToNotesPoly(frames, onsets, 0.5, 0.3, true))
+          );
+          if (noteEvents && noteEvents.length > 0) {
+            const MIDI_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+            state.notes = noteEvents.slice(0, 48).map(ev => ({
+              pitch: MIDI_NOTE_NAMES[ev.pitchMidi % 12] + Math.floor(ev.pitchMidi / 12 - 1),
+              duration: ev.durationSeconds < 0.3 ? '8' : ev.durationSeconds < 0.6 ? 'q' : ev.durationSeconds < 1.2 ? 'h' : 'w',
+              selected: false
+            }));
+            state.selectedIdx = -1;
+            _renderScore();
+            statusEl.textContent = `✅ ${state.notes.length}개 음표 변환 완료!`;
+          } else {
+            statusEl.textContent = '⚠️ 음표를 감지하지 못했습니다. 멜로디가 명확한 파일을 사용해주세요.';
+          }
+          audioCtx.close();
+        } catch(err) {
+          statusEl.textContent = `⚠️ 변환 실패: ${err.message}`;
+        }
+      };
+
+      // ── 초기 렌더링 ──────────────────────────────────────────────
+      setTimeout(() => _renderScore(), 100);
     }
 
     // ── 다운로드 패널 ────────────────────────────────────────────
@@ -2845,6 +3308,11 @@
 
     // ── 탭 전환 (보이는 것만 살린다 — lazy 빌드) ───────────────────
     _switchTab(tab) {
+      // 편집 탭 이탈 시 재생 중이면 정지 (CGO strict destroy 원칙)
+      if (this.activeTab === 'edit' && tab !== 'edit') {
+        const stopBtn = this.panels.edit && this.panels.edit.querySelector('#cgo-score-stop');
+        if (stopBtn) stopBtn.click();
+      }
       this.activeTab = tab;
       this.tabsEl.querySelectorAll('.cgo-mtab').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tab);
