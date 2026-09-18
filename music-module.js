@@ -2040,9 +2040,30 @@
       // 생성 버튼 (항상 표시)
       const genWrap = document.createElement('div');
       genWrap.className = 'cgo-gen-wrap';
-      genWrap.innerHTML = `<button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>`;
+      genWrap.innerHTML = `
+        <button class="cgo-gen-btn" id="cgo-gen-btn" data-k="24055">${t(24055)} · ${t(24065)}</button>
+        <button class="cgo-stop-btn" id="cgo-stop-btn" style="display:none;width:100%;margin-top:8px;padding:11px;border-radius:14px;background:rgba(239,68,68,.18);border:1.5px solid rgba(239,68,68,.5);color:#fca5a5;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:background .15s;" onmouseover="this.style.background='rgba(239,68,68,.32)'" onmouseout="this.style.background='rgba(239,68,68,.18)'">⏹ 정지</button>
+      `;
       p.appendChild(genWrap);
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
+      genWrap.querySelector('#cgo-stop-btn').addEventListener('click', () => {
+        // 그루브 타이머 전체 취소
+        if (window._cgoGrooveTimers) {
+          window._cgoGrooveTimers.forEach(id => clearTimeout(id));
+          window._cgoGrooveTimers = [];
+        }
+        // 드럼 AudioContext 닫기 (진행 중인 드럼 소리 즉시 정지)
+        if (window._cgoDrumCtx) {
+          try { window._cgoDrumCtx.close(); } catch(e){}
+          window._cgoDrumCtx = null;
+        }
+        // sfAudioCtx의 진행 중인 소리는 자연히 끝남 (짧은 음)
+        const stopBtn = genWrap.querySelector('#cgo-stop-btn');
+        const genBtn  = genWrap.querySelector('#cgo-gen-btn');
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (genBtn)  { genBtn.disabled = false; genBtn.textContent = '✨ AI로 음악 생성'; }
+        if (this._setStatus) this._setStatus('⏹ 정지됨');
+      });
     }
 
     // ── 보컬 선택 섹션 (독립 카드 선택) ─────────────────────────
@@ -4299,6 +4320,16 @@
 
     // ── Destroy (탭 이탈 시 메모리 100% 해제) ───────────────────
     destroy() {
+      // 0. 그루브 타이머 전부 취소 (탭 이탈 시 음악 즉시 정지)
+      if (window._cgoGrooveTimers) {
+        window._cgoGrooveTimers.forEach(id => clearTimeout(id));
+        window._cgoGrooveTimers = [];
+      }
+      if (window._cgoDrumCtx) {
+        try { window._cgoDrumCtx.close(); } catch(e){}
+        window._cgoDrumCtx = null;
+      }
+
       // 1. 오디오 완전 정리
       clearTimeout(this.playTimerId);
       this._cleanAudioNodes();
