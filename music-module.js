@@ -690,6 +690,24 @@
 .cgo-mhero-desc{font-size:12px;color:#9d8ec4;line-height:1.6;position:relative;margin:0 auto;max-width:280px;}
 .cgo-mhero-chips{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:16px;position:relative;}
 .cgo-mhero-chip{font-size:10px;padding:4px 12px;border-radius:999px;border:1px solid;font-weight:600;}
+/* ─── 히어로 인라인 플레이어 (Suno 스타일) ─── */
+.cgo-mhero-player{margin-top:18px;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:340px;margin-left:auto;margin-right:auto;}
+.cgo-hp-controls{display:flex;align-items:center;gap:18px;}
+.cgo-hp-btn{background:none;border:none;color:rgba(255,255,255,.55);font-size:18px;cursor:pointer;padding:4px;line-height:1;transition:color .15s,transform .1s;font-family:inherit;}
+.cgo-hp-btn:hover{color:#fff;transform:scale(1.15);}
+.cgo-hp-btn:active{transform:scale(.93);}
+.cgo-hp-play{width:44px;height:44px;border-radius:50%!important;background:rgba(255,255,255,.18)!important;backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.35)!important;color:#fff!important;font-size:17px!important;display:flex;align-items:center;justify-content:center;transition:background .18s,transform .1s!important;}
+.cgo-hp-play:hover{background:rgba(255,255,255,.3)!important;}
+.cgo-hp-play.active{background:linear-gradient(135deg,rgba(13,148,136,.9),rgba(20,184,166,.8))!important;border-color:rgba(20,184,166,.6)!important;}
+.cgo-hp-btn.on{color:#14b8a6;}
+.cgo-hp-progress-row{display:flex;align-items:center;gap:8px;width:100%;}
+.cgo-hp-time{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;min-width:30px;text-align:center;}
+.cgo-hp-bar-wrap{flex:1;cursor:pointer;padding:6px 0;position:relative;}
+.cgo-hp-bar-track{height:3px;background:rgba(255,255,255,.18);border-radius:2px;position:relative;}
+.cgo-hp-bar-fill{height:100%;background:rgba(255,255,255,.8);border-radius:2px;width:0%;transition:width .25s linear;}
+.cgo-hp-bar-dot{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;top:50%;transform:translate(-50%,-50%);left:0%;box-shadow:0 0 6px rgba(255,255,255,.6);transition:left .25s linear;opacity:0;}
+.cgo-hp-bar-wrap:hover .cgo-hp-bar-dot{opacity:1;}
+.cgo-hp-bar-wrap:hover .cgo-hp-bar-track{height:4px;}
 
 /* ─── 섹션 공통 ─── */
 .cgo-msec{padding:20px 14px 4px;}
@@ -1305,11 +1323,24 @@
         <div class="cgo-mhero-tag">🛰️ CGO-FULI · <span data-k="24044">${t(24044)}</span></div>
         <h2 class="cgo-mhero-h1"><span data-k="24043">${t(24043)}</span></h2>
         <p class="cgo-mhero-desc" data-k="24044">${t(24044)}</p>
-        <div class="cgo-mhero-chips">
-          <span class="cgo-mhero-chip" style="color:#f59e0b;border-color:rgba(245,158,11,.4);">432Hz</span>
-          <span class="cgo-mhero-chip" style="color:#10b981;border-color:rgba(16,185,129,.4);">528Hz</span>
-          <span class="cgo-mhero-chip" style="color:#3b82f6;border-color:rgba(59,130,246,.4);" data-k="24059">${t(24059)}</span>
-          <span class="cgo-mhero-chip" style="color:#a855f7;border-color:rgba(168,85,247,.4);" data-k="24065">${t(24065)}</span>
+        <div class="cgo-mhero-player" id="cgo-hero-player">
+          <div class="cgo-hp-controls">
+            <button class="cgo-hp-btn" id="cgo-hp-shuffle" title="셔플">⇄</button>
+            <button class="cgo-hp-btn" id="cgo-hp-prev" title="이전">⏮</button>
+            <button class="cgo-hp-btn cgo-hp-play" id="cgo-hp-play" title="재생/일시정지">▶</button>
+            <button class="cgo-hp-btn" id="cgo-hp-next" title="다음">⏭</button>
+            <button class="cgo-hp-btn" id="cgo-hp-repeat" title="반복">↺</button>
+          </div>
+          <div class="cgo-hp-progress-row">
+            <span class="cgo-hp-time" id="cgo-hp-cur">0:00</span>
+            <div class="cgo-hp-bar-wrap" id="cgo-hp-bar-wrap">
+              <div class="cgo-hp-bar-track">
+                <div class="cgo-hp-bar-fill" id="cgo-hp-bar-fill"></div>
+                <div class="cgo-hp-bar-dot" id="cgo-hp-bar-dot"></div>
+              </div>
+            </div>
+            <span class="cgo-hp-time" id="cgo-hp-dur">0:00</span>
+          </div>
         </div>
       `;
       this.root.appendChild(hero);
@@ -1317,6 +1348,46 @@
       this.bgCtx = this.bgCanvas.getContext('2d');
       this._resizeBg();
       window.addEventListener('resize', this._onResize);
+
+      // ─ 히어로 플레이어 버튼 이벤트 ─
+      this._heroShuffle  = false;
+      this._heroRepeat   = false;
+      const hpPlay    = hero.querySelector('#cgo-hp-play');
+      const hpPrev    = hero.querySelector('#cgo-hp-prev');
+      const hpNext    = hero.querySelector('#cgo-hp-next');
+      const hpShuffle = hero.querySelector('#cgo-hp-shuffle');
+      const hpRepeat  = hero.querySelector('#cgo-hp-repeat');
+      const hpBarWrap = hero.querySelector('#cgo-hp-bar-wrap');
+
+      hpPlay.addEventListener('click', () => {
+        this._togglePlay();
+        hpPlay.classList.toggle('active', !!this.isPlaying);
+        hpPlay.textContent = this.isPlaying ? '⏸' : '▶';
+      });
+      hpPrev.addEventListener('click', () => { this._stopAudio(); this._syncHeroPlayer(0); });
+      hpNext.addEventListener('click', () => { this._stopAudio(); this._syncHeroPlayer(0); });
+      hpShuffle.addEventListener('click', () => {
+        this._heroShuffle = !this._heroShuffle;
+        hpShuffle.classList.toggle('on', this._heroShuffle);
+        hpShuffle.style.color = this._heroShuffle ? '#14b8a6' : '';
+      });
+      hpRepeat.addEventListener('click', () => {
+        this._heroRepeat = !this._heroRepeat;
+        hpRepeat.classList.toggle('on', this._heroRepeat);
+        hpRepeat.style.color = this._heroRepeat ? '#14b8a6' : '';
+      });
+      // 프로그레스바 클릭으로 탐색
+      hpBarWrap.addEventListener('click', (e) => {
+        const rect = hpBarWrap.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        this._seekAudio && this._seekAudio(ratio);
+        this._syncHeroPlayer(ratio);
+      });
+      this._hpPlayBtn = hpPlay;
+      this._hpBarFill = hero.querySelector('#cgo-hp-bar-fill');
+      this._hpBarDot  = hero.querySelector('#cgo-hp-bar-dot');
+      this._hpCurEl   = hero.querySelector('#cgo-hp-cur');
+      this._hpDurEl   = hero.querySelector('#cgo-hp-dur');
 
       // ─ 탭 콘텐츠 패널들 (빈 껍데기만 생성) ─
       // 보이는 것만 살린다: 첫 탭(freq)만 즉시 빌드, 나머지는 클릭 시 lazy 빌드
@@ -2527,10 +2598,13 @@
         this.playProgress = 0;
         const startTime = Date.now();
         const barEl = this.root && this.root.querySelector('#cgo-player-bar');
+        const TOTAL = 30; // 30초
         const barTick = () => {
           if (!this.isPlaying || !barEl) return;
-          this.playProgress = Math.min((Date.now() - startTime) / 30000, 1);
+          this.playProgress = Math.min((Date.now() - startTime) / (TOTAL * 1000), 1);
           barEl.style.width = (this.playProgress * 100) + '%';
+          // 히어로 플레이어 싱크
+          this._syncHeroPlayer(this.playProgress, Date.now() - startTime, TOTAL * 1000);
           if (this.playProgress < 1) requestAnimationFrame(barTick);
         };
         requestAnimationFrame(barTick);
@@ -2596,6 +2670,9 @@
       this._setStatus('⏹ 정지됨');
       const barEl = this.root && this.root.querySelector('#cgo-player-bar');
       if (barEl) barEl.style.width = '0%';
+      // 히어로 플레이어 리셋
+      this._syncHeroPlayer(0, 0, 0);
+      if (this._hpPlayBtn) { this._hpPlayBtn.textContent = '▶'; this._hpPlayBtn.classList.remove('active'); }
     }
     _cleanAudioNodes() {
       // 리듬 타이머 먼저 정지
@@ -2626,6 +2703,27 @@
         const playBtn = playerEl.querySelector('#cgo-player-play');
         if (playBtn) playBtn.textContent = '▶';
       }
+      // 히어로 플레이어 재생 버튼 상태 싱크
+      if (this._hpPlayBtn) {
+        this._hpPlayBtn.textContent = playing ? '⏸' : '▶';
+        this._hpPlayBtn.classList.toggle('active', !!playing);
+      }
+    }
+
+    // ── 히어로 플레이어 싱크 ────────────────────────────────────
+    _syncHeroPlayer(ratio, elapsedMs, totalMs) {
+      try {
+        if (this._hpBarFill) this._hpBarFill.style.width = (ratio * 100) + '%';
+        if (this._hpBarDot)  this._hpBarDot.style.left   = (ratio * 100) + '%';
+        if (this._hpCurEl && elapsedMs !== undefined) {
+          const s = Math.floor((elapsedMs || 0) / 1000);
+          this._hpCurEl.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+        }
+        if (this._hpDurEl && totalMs !== undefined && totalMs > 0) {
+          const s = Math.floor(totalMs / 1000);
+          this._hpDurEl.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+        }
+      } catch(e) {}
     }
 
     // ── AI 음악 생성 ────────────────────────────────────────────
@@ -2728,6 +2826,110 @@
     _setStatus(msg) {
       const el = this.root && this.root.querySelector('#cgo-status');
       if (el) el.textContent = msg;
+    }
+
+    // ── 스마트 프롬프트 파싱 & 자동 세팅 ────────────────────────
+    // 자연어 문장 → 감성 키워드 분석 → 주파수/악기/BPM 자동 세팅
+    _applySmartPrompt(txt) {
+      if (!txt || !txt.trim()) return;
+      const t = txt.toLowerCase();
+
+      // ① 주파수 매핑 ─────────────────────────────────────────────
+      // 감성/시간대/상황 키워드 → 힐링 주파수 자동 선택
+      let freqId = '432'; // 기본값: 432Hz 자연 공명
+      if (/집중|공부|업무|작업|브레인|뇌파|지구|접지|grounding|슈만|7\.83/i.test(t)) {
+        freqId = '783';  // 7.83Hz 슈만공명
+      } else if (/치유|회복|사랑|재생|dna|528|세포|힐링|상처|위로|회복|치료/i.test(t)) {
+        freqId = '528';  // 528Hz DNA 회복
+      } else if (/순수|연주|악기만|힐링없이|클래식/i.test(t)) {
+        freqId = 'pure'; // 순수 음악
+      } else {
+        freqId = '432';  // 432Hz: 안정·명상·수면·차분
+      }
+      // 주파수 카드 클릭 시뮬레이션
+      try {
+        const freqCard = this.root && this.root.querySelector(`[data-freq="${freqId}"]`);
+        if (freqCard) freqCard.click();
+        else {
+          // data-freq 셀렉터 없으면 this.selectedFreq 직접 세팅
+          this.selectedFreq = freqId;
+          this._updateResult && this._updateResult();
+        }
+      } catch(e) {}
+
+      // ② BPM 매핑 ────────────────────────────────────────────────
+      // 분위기/시간/에너지 키워드 → BPM 자동 세팅
+      let bpm = 72; // 기본 Adagio(차분)
+      if (/명상|수면|잠|깊은|고요|조용|느린|Largo|아주 느리/i.test(t)) {
+        bpm = 55;   // Largo: 명상·깊은 힐링
+      } else if (/차분|안정|저녁|밤|늦은|몽환|느긋|Adagio/i.test(t)) {
+        bpm = 65;   // Adagio: 차분·감성
+      } else if (/보통|편안|카페|일상|Andante/i.test(t)) {
+        bpm = 82;   // Andante: 편안한 스탠다드
+      } else if (/경쾌|활기|리듬|Allegro|빠른|신나/i.test(t)) {
+        bpm = 112;  // Allegro: 경쾌·리드미컬
+      } else if (/에너지|드라이브|빠르게|Presto|강렬/i.test(t)) {
+        bpm = 132;  // Presto: 고에너지
+      }
+      try {
+        this.selectedBpm = bpm;
+        // 슬라이더 UI 업데이트
+        const sliderEl = this.root && this.root.querySelector('.cgo-tempo-slider, input[type="range"]');
+        if (sliderEl) {
+          sliderEl.value = bpmToSlider(bpm);
+          sliderEl.dispatchEvent(new Event('input'));
+        }
+      } catch(e) {}
+
+      // ③ 장르/악기 힌트 저장 (추첨통 탭 빌드 후 하이라이트용)
+      // 키워드 → 장르 ID 매핑
+      const GENRE_MAP = [
+        { re:/국악|가야금|해금|판소리|한국/i,       id:'gugak'    },
+        { re:/샹송|프랑스|아코디언/i,               id:'chanson'  },
+        { re:/플라멩코|스페인|집시/i,               id:'flamenco' },
+        { re:/켈틱|아일랜드|스코틀랜드|하프/i,      id:'celtic'   },
+        { re:/보사노바|브라질|삼바/i,               id:'bossanova'},
+        { re:/아프로|아프리카|타악기/i,             id:'afrobeat' },
+        { re:/인도|라가|시타르|차크라/i,            id:'raga'     },
+        { re:/중국|비파|얼후/i,                     id:'chinese'  },
+        { re:/일본|사미센|샤쿠하치|선(Zen)?/i,      id:'japanese' },
+        { re:/탱고|아르헨티나|반도네온/i,           id:'tango'    },
+        { re:/안데스|페루|팬플루트|케나/i,          id:'andean'   },
+        { re:/아랍|중동|우드|마캄/i,               id:'maqam'    },
+        { re:/힐링|치유|앰비언트|명상음악/i,        id:'healing'  },
+        { re:/뉴에이지|피아노|현대/i,              id:'newage'   },
+      ];
+      this._promptGenreHint = null;
+      for (const g of GENRE_MAP) {
+        if (g.re.test(t)) { this._promptGenreHint = g.id; break; }
+      }
+
+      // ④ 추첨통 탭 이동 후 슬롯 자동 스핀 ──────────────────────
+      this._switchTab('make');
+      // make 패널이 빌드된 후 스핀 실행
+      setTimeout(() => {
+        try {
+          // 조성/음계 추첨통 자동 스핀
+          if (typeof this._spinAll === 'function') this._spinAll();
+          // 장르 힌트가 있으면 해당 장르 카드 하이라이트
+          if (this._promptGenreHint) {
+            const gCard = this.root && this.root.querySelector(`[data-genre="${this._promptGenreHint}"]`);
+            if (gCard) {
+              gCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              gCard.style.boxShadow = '0 0 0 2.5px #0d9488, 0 0 12px rgba(13,148,136,.4)';
+              setTimeout(() => { try { gCard.style.boxShadow = ''; } catch(e) {} }, 2500);
+            }
+          }
+        } catch(e) {}
+      }, 350);
+
+      // ⑤ 상태바 메시지
+      try {
+        const statusEl = this.root && this.root.querySelector('#cgo-status');
+        if (statusEl) {
+          statusEl.textContent = `✨ 스마트 프롬프트 적용됨 — ${bpm}BPM · ${freqId === '783' ? '7.83Hz 슈만공명' : freqId === '528' ? '528Hz DNA회복' : freqId === 'pure' ? '순수음악' : '432Hz 자연공명'}`;
+        }
+      } catch(e) {}
     }
 
     // ── Destroy (탭 이탈 시 메모리 100% 해제) ───────────────────
