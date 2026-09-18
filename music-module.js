@@ -594,8 +594,11 @@
   }
 
   // ── 리버브 마스터 버스 (ConvolverNode — 합성 IR, 외부 파일 없음) ──────
-  // cgo-63: 모든 악기음을 dry 76% + wet reverb 24% 믹스로 통과시킴
-  //         메트로놈·드럼 제외 (별도 ctx 또는 dry 유지)
+  // cgo-66: 마스터링 체인 업그레이드 — Compressor → Hall Reverb → Limiter
+  //   신호 흐름: 악기 → masterBus → Compressor → [dry65% + HallReverb35%] → Limiter → destination
+  //   · Compressor: 개별 음표가 튀지 않게 다이나믹 접착 (실로폰→앙상블)
+  //   · HallReverb: 2.4초 홀 잔향 (기존 1.6초 룸 → 넓고 깊은 공간감)
+  //   · Limiter:    클리핑 방지 + 마스터 음압 균등화
   let _sfBus = null, _sfBusCtx = null;
   function getSfBus() {
     const ctx = getSfCtx();
@@ -603,31 +606,48 @@
     if (_sfBus && _sfBusCtx === ctx) return _sfBus;
     _sfBusCtx = ctx;
     try {
-      // 합성 임펄스 응답 — 1.6초 실내 잔향 (Room Reverb)
-      const SR   = ctx.sampleRate;
-      const irLen = Math.floor(SR * 1.6);
+      const SR = ctx.sampleRate;
+
+      // ① 홀 리버브 IR — 2.4초, decay=1.8 (긴 꼬리, 공간 융합)
+      const irLen = Math.floor(SR * 2.4);
       const ir    = ctx.createBuffer(2, irLen, SR);
       for (let c = 0; c < 2; c++) {
         const d = ir.getChannelData(c);
         for (let i = 0; i < irLen; i++) {
-          // 지수 감쇠 노이즈 (decay=2.4)
-          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 2.4);
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 1.8);
         }
       }
       const conv = ctx.createConvolver();
       conv.buffer = ir;
 
-      // 마스터 버스: 악기 → masterBus → dry(76%) + wet(24%) → destination
-      const masterBus = ctx.createGain(); masterBus.gain.value = 1.0;
-      const dryGain   = ctx.createGain(); dryGain.gain.value   = 0.76;
-      const wetGain   = ctx.createGain(); wetGain.gain.value   = 0.24;
+      // ② 컴프레서 — 개별 음표 다이나믹을 눌러서 앙상블처럼 접착
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -22;  // -22dB 이상만 압축
+      comp.knee.value      = 10;   // 부드러운 니
+      comp.ratio.value     = 5;    // 5:1 (너무 세지 않게, 음악적)
+      comp.attack.value    = 0.004; // 4ms
+      comp.release.value   = 0.22;  // 220ms
 
-      masterBus.connect(dryGain); dryGain.connect(ctx.destination);
-      masterBus.connect(conv);   conv.connect(wetGain); wetGain.connect(ctx.destination);
+      // ③ 리미터 — 최종 출력 클리핑 방지
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -2.5;
+      limiter.knee.value      = 0;
+      limiter.ratio.value     = 20;
+      limiter.attack.value    = 0.001;
+      limiter.release.value   = 0.08;
+
+      // ④ 마스터버스 → 컴프 → 드라이/웻 믹스 → 리미터 → destination
+      const masterBus = ctx.createGain(); masterBus.gain.value = 1.0;
+      const dryGain   = ctx.createGain(); dryGain.gain.value   = 0.65;
+      const wetGain   = ctx.createGain(); wetGain.gain.value   = 0.35;
+
+      masterBus.connect(comp);
+      comp.connect(dryGain);  dryGain.connect(limiter);
+      comp.connect(conv);     conv.connect(wetGain); wetGain.connect(limiter);
+      limiter.connect(ctx.destination);
 
       _sfBus = masterBus;
     } catch(e) {
-      // 리버브 초기화 실패시 패스스루 노드
       const pass = ctx.createGain(); pass.gain.value = 1.0;
       pass.connect(ctx.destination);
       _sfBus = pass;
@@ -1317,6 +1337,15 @@
 .cgo-instr-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;background:rgba(168,85,247,.25);border:1px solid rgba(168,85,247,.5);font-size:10px;color:#e9d5ff;font-weight:700;}
 .cgo-instr-chip-del{cursor:pointer;color:#c084fc;font-size:11px;line-height:1;}
 .cgo-instr-chip-del:hover{color:#f0abfc;}
+
+/* ─── 빠른 악기 선택 바 (생성 버튼 위, 가로 스크롤 pill) ─── */
+.cgo-quick-bar{padding:10px 14px 4px;}
+.cgo-quick-bar-label{font-size:10px;color:#9d8ec8;font-weight:700;letter-spacing:.4px;margin-bottom:7px;}
+.cgo-quick-bar-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.cgo-quick-bar-row::-webkit-scrollbar{display:none;}
+.cgo-quick-pill{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border-radius:20px;border:1.5px solid rgba(100,60,180,.28);background:rgba(15,4,35,.8);color:#c4b5e8;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .16s;user-select:none;-webkit-tap-highlight-color:rgba(168,85,247,.2);touch-action:manipulation;flex-shrink:0;font-family:inherit;}
+.cgo-quick-pill:active{transform:scale(.94);}
+.cgo-quick-pill.on{border-color:#a855f7;background:rgba(168,85,247,.3);color:#f3e8ff;box-shadow:0 0 10px rgba(168,85,247,.4);}
 
 /* ─── 음악 편집 탭 ─── */
 .cgo-edit-notice{display:flex;gap:12px;align-items:flex-start;background:rgba(20,5,40,.7);border:1px solid rgba(168,85,247,.25);border-radius:14px;padding:14px;margin-bottom:14px;}
@@ -2031,6 +2060,9 @@
         body.appendChild(resCard);
       }, false));
 
+      // ── 빠른 악기 선택 바 (생성 버튼 바로 위) — cgo-65
+      this._buildQuickInstrBar(p);
+
       // 상태
       const statusEl = document.createElement('p');
       statusEl.className = 'cgo-status';
@@ -2128,6 +2160,7 @@
           renderGrid();
           renderSelected();
           updateInfo();
+          this._quickBarRender && this._quickBarRender(); // 퀵바 동기화
         });
         presetBar.appendChild(btn);
       });
@@ -2208,6 +2241,7 @@
               }).filter(Boolean);
               this.selected.instrument = names.slice(0,3).join(', ') || '없음';
               this._updateResult && this._updateResult();
+              this._quickBarRender && this._quickBarRender(); // 퀵바 동기화
             };
             card.addEventListener('pointerdown', handleInstrTap);
           }
@@ -2237,6 +2271,7 @@
               renderGrid();
               renderSelected();
               updateInfo();
+              this._quickBarRender && this._quickBarRender(); // 퀵바 동기화
             });
             chips.appendChild(chip);
           });
@@ -2248,6 +2283,90 @@
       renderGrid();
       renderSelected();
       updateInfo();
+    }
+
+    // ── 빠른 악기 선택 바 (생성 버튼 바로 위) ────────────────────
+    // 탭 열지 않고 가로 스크롤 pill로 악기 즉시 ON/OFF
+    _buildQuickInstrBar(parent) {
+      const QUICK = [
+        {id:1,  e:'🎹', n:'피아노'},
+        {id:5,  e:'🎹', n:'로즈'},
+        {id:11, e:'🎶', n:'뮤직박스'},
+        {id:22, e:'🪗', n:'아코디언'},
+        {id:26, e:'🎸', n:'어쿠기타'},
+        {id:27, e:'🎸', n:'재즈기타'},
+        {id:41, e:'🎻', n:'바이올린'},
+        {id:43, e:'🎻', n:'첼로'},
+        {id:47, e:'🎼', n:'하프'},
+        {id:49, e:'🎻', n:'현악앙상블'},
+        {id:57, e:'🎺', n:'트럼펫'},
+        {id:66, e:'🎷', n:'색소폰'},
+        {id:74, e:'🌬️', n:'플루트'},
+        {id:76, e:'🪈', n:'팬플루트'},
+        {id:78, e:'🎋', n:'샤쿠하치'},
+        {id:85, e:'🎹', n:'칼림바'},
+        {id:94, e:'🇰🇷', n:'가야금'},
+        {id:95, e:'🇰🇷', n:'해금'},
+        {id:98, e:'🌬️', n:'두둑'},
+        {id:99, e:'🪕', n:'코라'},
+        {id:100,e:'🪵', n:'디저리두'},
+      ];
+      const MAX = 12;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'cgo-quick-bar';
+
+      const label = document.createElement('div');
+      label.className = 'cgo-quick-bar-label';
+      label.textContent = '🎵 악기 빠른 선택  ·  탭하면 ON/OFF  ·  옆으로 밀면 더 있어요';
+      wrap.appendChild(label);
+
+      const row = document.createElement('div');
+      row.className = 'cgo-quick-bar-row';
+      wrap.appendChild(row);
+
+      const render = () => {
+        row.innerHTML = '';
+        QUICK.forEach(q => {
+          if (!this.selectedInstrIds) this.selectedInstrIds = new Set();
+          const isSel = this.selectedInstrIds.has(q.id);
+          const maxed = this.selectedInstrIds.size >= MAX && !isSel;
+          const pill = document.createElement('button');
+          pill.className = 'cgo-quick-pill' + (isSel ? ' on' : '');
+          pill.style.opacity = maxed ? '.35' : '1';
+          pill.style.pointerEvents = maxed ? 'none' : '';
+          pill.textContent = q.e + ' ' + q.n;
+          pill.title = isSel ? '탭하여 제거' : (maxed ? `최대 ${MAX}개 선택됨` : '탭하여 추가');
+          pill.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault();
+            if (maxed) return;
+            unlockAudioCtx();
+            if (isSel) {
+              this.selectedInstrIds.delete(q.id);
+            } else {
+              if (this.selectedInstrIds.size >= MAX) return;
+              this.selectedInstrIds.add(q.id);
+              // 🔊 즉시 미리듣기
+              const note = INSTR_PREVIEW_NOTE[q.id] || 'C4';
+              const ins = INSTRUMENT_DATA.find(x => x.id === q.id);
+              if (ins) playSfNote(ins.gm, note, 1.2, 0.6).catch(()=>{});
+            }
+            // 선택 악기 요약 텍스트 업데이트
+            const names = [...this.selectedInstrIds].map(id => {
+              const f = INSTRUMENT_DATA.find(x => x.id === id);
+              return f ? f.ko : '';
+            }).filter(Boolean);
+            if (this.selected) this.selected.instrument = names.slice(0,3).join(', ') || '없음';
+            this._updateResult && this._updateResult();
+            render(); // 자신 재렌더
+          });
+          row.appendChild(pill);
+        });
+      };
+
+      render();
+      this._quickBarRender = render; // 아코디언 섹션과 양방향 동기화용 훅
+      parent.appendChild(wrap);
     }
 
     // ── 200-주파수 마스터 가이드 섹션 (군집 탭+카드만) ────────────
