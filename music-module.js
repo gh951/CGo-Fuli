@@ -292,10 +292,69 @@
     { id:101,ko:'대금',              en:'Daegeum',               gm:74, cat:'한국',   region:'동양(한국)', emoji:'🎋', genres:['국악','힐링','앰비언트'] },
     { id:102,ko:'거문고',            en:'Geomungo',              gm:107,cat:'한국',   region:'동양(한국)', emoji:'🪕', genres:['국악','깊은 명상','앰비언트'] },
     { id:103,ko:'단소',              en:'Danso',                 gm:75, cat:'한국',   region:'동양(한국)', emoji:'🪈', genres:['국악','청아한 명상','힐링'] },
+    // ── 2단계: 서양/월드 악기 50개 확장 — cgo-79 ──────────────────────────
+    // ① 신스 리드 (Synth Leads) — EDM · 신스팝 · 주파수 힐링
+    { id:104,ko:'스퀘어 리드',       en:'Square Lead',           gm:80, cat:'신스',   region:'서양',         emoji:'🔲', genres:['EDM','신스팝','8비트 칩튠'] },
+    { id:105,ko:'소톱 리드',         en:'Sawtooth Lead',         gm:81, cat:'신스',   region:'서양',         emoji:'〰️', genres:['신스웨이브','일렉트로닉','EDM'] },
+    { id:106,ko:'로파이 리드',       en:'Calliope Lead',         gm:82, cat:'신스',   region:'서양',         emoji:'🎈', genres:['로파이','칠아웃','뉴에이지'] },
+    { id:107,ko:'채프 리드',         en:'Chiff Lead',            gm:83, cat:'신스',   region:'서양',         emoji:'💨', genres:['앰비언트','뉴에이지','명상'] },
+    { id:108,ko:'채랑 리드',         en:'Charang Lead',          gm:84, cat:'신스',   region:'서양',         emoji:'⚡', genres:['록 신스','퓨전','일렉트로록'] },
+    { id:109,ko:'보이스 리드',       en:'Voice Lead',            gm:85, cat:'신스',   region:'서양',         emoji:'🗣️', genres:['일렉트로닉','팝','뉴웨이브'] },
+    { id:110,ko:'피프스 리드',       en:'Fifths Lead',           gm:86, cat:'신스',   region:'서양',         emoji:'5️⃣', genres:['파워 EDM','덥스텝','신스록'] },
+    // ② 신스 패드 (Synth Pads) — 힐링 앰비언트 · 명상 · 주파수 음악
+    { id:111,ko:'판타지아 패드',     en:'Fantasia Pad',          gm:88, cat:'신스',   region:'서양',         emoji:'🌌', genres:['판타지','시네마틱','뉴에이지'] },
+    { id:112,ko:'웜 패드',           en:'Warm Pad',              gm:89, cat:'신스',   region:'서양',         emoji:'🌡️', genres:['힐링','앰비언트','432Hz 명상'] },
+    { id:113,ko:'폴리신스 패드',     en:'Polysynth Pad',         gm:90, cat:'신스',   region:'서양',         emoji:'🎛️', genres:['80년대 레트로','신스팝','시티팝'] },
+    { id:114,ko:'스페이스 코러스',   en:'Space Voice',           gm:91, cat:'신스',   region:'서양',         emoji:'🌠', genres:['앰비언트','명상','우주적 힐링'] },
+    { id:115,ko:'보우드 글래스',     en:'Bowed Glass',           gm:92, cat:'신스',   region:'서양',         emoji:'🔮', genres:['앰비언트','실험적','유리 하모니카'] },
+    { id:116,ko:'할로 패드',         en:'Halo Pad',              gm:94, cat:'신스',   region:'서양',         emoji:'💫', genres:['힐링 명상','뉴에이지','432Hz'] },
+    { id:117,ko:'스윕 패드',         en:'Sweep Pad',             gm:95, cat:'신스',   region:'서양',         emoji:'🌊', genres:['EDM','시네마틱 빌드업','드라마틱'] },
+    // ③ 신스 이펙트 (Synth FX) — 자연 주파수 · 공간음향
+    { id:118,ko:'레인 이펙트',       en:'Rain FX',               gm:96, cat:'신스',   region:'서양',         emoji:'🌧️', genres:['앰비언트','자연음','힐링 사운드스케이프'] },
+    { id:119,ko:'크리스탈 이펙트',   en:'Crystal FX',            gm:98, cat:'신스',   region:'서양',         emoji:'💎', genres:['뉴에이지','528Hz 힐링','수정명상'] },
+    { id:120,ko:'애트모스피어',      en:'Atmosphere FX',         gm:99, cat:'신스',   region:'서양',         emoji:'🌫️', genres:['앰비언트','명상','드론'] },
+    { id:121,ko:'에코스 이펙트',     en:'Echoes FX',             gm:102,cat:'신스',   region:'서양',         emoji:'🔄', genres:['앰비언트','사이키델릭','딥 스페이스'] },
+    { id:122,ko:'사이파이 이펙트',   en:'Sci-fi FX',             gm:103,cat:'신스',   region:'서양',         emoji:'🚀', genres:['사이파이','실험적','미래지향'] },
+    // ④ 특수 악기 (Special)
+    { id:123,ko:'테레민',            en:'Theremin',              gm:54, cat:'신스',   region:'서양',         emoji:'👐', genres:['사이파이','실험음악','앰비언트'] },
+    // ⑤ 월드 악기 (World Instruments) — 추첨통 글로벌 다양성
+    { id:124,ko:'만돌린',            en:'Mandolin',              gm:25, cat:'월드',   region:'유럽(이탈리아)',emoji:'🪕', genres:['이탈리안','블루그래스','포크'] },
+    { id:125,ko:'우쿨렐레',          en:'Ukulele',               gm:25, cat:'월드',   region:'하와이',       emoji:'🎸', genres:['하와이안','팝','칠아웃','서핑 팝'] },
+    { id:126,ko:'류트',              en:'Lute',                  gm:24, cat:'월드',   region:'중세 유럽',    emoji:'🎼', genres:['중세','르네상스','고전 유럽'] },
+    { id:127,ko:'발랄라이카',         en:'Balalaika',             gm:105,cat:'월드',   region:'러시아',       emoji:'🎸', genres:['러시아 민속','월드뮤직'] },
+    { id:128,ko:'부주키',            en:'Bouzouki',              gm:25, cat:'월드',   region:'그리스',       emoji:'🪕', genres:['그리스 전통','지중해','레베티카'] },
+    { id:129,ko:'차랑고',            en:'Charango',              gm:24, cat:'월드',   region:'남미(안데스)',  emoji:'🪕', genres:['안데스','라틴 아메리카','포크'] },
+    { id:130,ko:'칸텔레',            en:'Kantele',               gm:46, cat:'월드',   region:'핀란드',       emoji:'🎵', genres:['핀란드 민속','북유럽','뉴에이지'] },
+    { id:131,ko:'치터',              en:'Zither',                gm:15, cat:'월드',   region:'알프스 유럽',  emoji:'🎶', genres:['알프스','유럽 민속','힐링'] },
+    { id:132,ko:'멜로디카',          en:'Melodica',              gm:22, cat:'월드',   region:'서양',         emoji:'🪗', genres:['로파이 재즈','퓨전','칠아웃'] },
+    { id:133,ko:'집시 바이올린',     en:'Gypsy Violin',          gm:110,cat:'월드',   region:'동유럽',       emoji:'🎻', genres:['집시 재즈','플라멩코','집시스윙'] },
+    { id:134,ko:'플라멩코 기타',     en:'Flamenco Guitar',       gm:24, cat:'월드',   region:'스페인',       emoji:'🎸', genres:['플라멩코','스페인 전통'] },
+    { id:135,ko:'핸드팬',            en:'Handpan',               gm:114,cat:'월드',   region:'스위스',       emoji:'🥁', genres:['힐링','명상','뉴에이지','432Hz'] },
+    { id:136,ko:'하와이안 기타',     en:'Hawaiian Slide Guitar', gm:26, cat:'월드',   region:'하와이',       emoji:'🌺', genres:['하와이안','슬라이드 블루스'] },
+    // ⑥ 라틴·아프로 타악기 (Latin/World Percussion)
+    { id:137,ko:'잠베',              en:'Djembe',                gm:117,cat:'라틴',   region:'서아프리카',   emoji:'🥁', genres:['서아프리카','월드뮤직','힐링드럼'] },
+    { id:138,ko:'봉고',              en:'Bongo',                 gm:117,cat:'라틴',   region:'쿠바',         emoji:'🥁', genres:['쿠반 재즈','라틴','아프로쿠반'] },
+    { id:139,ko:'콩가',              en:'Conga',                 gm:118,cat:'라틴',   region:'쿠바',         emoji:'🥁', genres:['살사','라틴','아프로쿠반'] },
+    { id:140,ko:'카혼',              en:'Cajon',                 gm:116,cat:'라틴',   region:'페루/스페인',  emoji:'📦', genres:['플라멩코','어쿠스틱 팝','포크'] },
+    { id:141,ko:'타블라',            en:'Tabla',                 gm:117,cat:'라틴',   region:'인도',         emoji:'🥁', genres:['인도 클래식','퓨전','월드비트'] },
+    { id:142,ko:'다르부카',          en:'Darbuka',               gm:116,cat:'라틴',   region:'중동/터키',    emoji:'🥁', genres:['중동','아랍','벨리댄스'] },
+    { id:143,ko:'마라카스',          en:'Maracas',               gm:127,cat:'라틴',   region:'라틴아메리카', emoji:'🎶', genres:['살사','라틴','카리브해'] },
+    { id:144,ko:'클라베스',          en:'Claves',                gm:115,cat:'라틴',   region:'쿠바',         emoji:'🥢', genres:['쿠반','살사','룸바'] },
+    { id:145,ko:'카우벨',            en:'Cowbell',               gm:115,cat:'라틴',   region:'서양/라틴',    emoji:'🔔', genres:['록','라틴 펑크','그루브'] },
+    { id:146,ko:'팀발레스',          en:'Timbales',              gm:118,cat:'라틴',   region:'쿠바',         emoji:'🥁', genres:['라틴 재즈','살사','맘보'] },
+    // ⑦ 추가 관악기 (Additional Brass/Wind)
+    { id:147,ko:'코르넷',            en:'Cornet',                gm:56, cat:'관악',   region:'서양',         emoji:'🎺', genres:['재즈','뉴올리언스','딕시랜드'] },
+    { id:148,ko:'플뤼겔혼',          en:'Flugelhorn',            gm:56, cat:'관악',   region:'서양',         emoji:'🎺', genres:['재즈','스무스 재즈','발라드 브라스'] },
+    { id:149,ko:'유포니엄',          en:'Euphonium',             gm:58, cat:'관악',   region:'서양',         emoji:'📯', genres:['클래식','마칭밴드','브라스밴드'] },
+    { id:150,ko:'베이스 클라리넷',   en:'Bass Clarinet',         gm:71, cat:'관악',   region:'서양',         emoji:'🪵', genres:['재즈','클래식','현대음악'] },
+    // ⑧ 현대 전자음악 (Modern Electronic)
+    { id:151,ko:'808 베이스',        en:'808 Bass',              gm:39, cat:'신스',   region:'서양',         emoji:'💣', genres:['힙합','트랩','R&B','EDM'] },
+    { id:152,ko:'덥 베이스',         en:'Dub Bass',              gm:38, cat:'신스',   region:'서양',         emoji:'🌀', genres:['덥','레게','일렉트로닉'] },
+    { id:153,ko:'웜 신스 패드',      en:'Warm Synth Pad',        gm:89, cat:'신스',   region:'서양',         emoji:'🎇', genres:['528Hz 힐링','앰비언트','치유명상'] },
   ];
 
   // 카테고리 그룹 (UI 필터용)
-  const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아'];
+  const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아','신스','월드','라틴']; // cgo-79: 신스·월드·라틴 추가
 
   // 악기 ID별 미리듣기 음계 — 각 악기의 특징적인 음역
   const INSTR_PREVIEW_NOTE = {
@@ -321,6 +380,25 @@
     // 한국/아시아/중동
     94:'D4', 95:'A4', 96:'G4', 97:'D4', 98:'A3', 99:'G4', 100:'C2',
     101:'D5', 102:'G3', 103:'A5', // cgo-78: 대금·거문고·단소
+    // cgo-79: 2단계 서양/월드 악기 50개
+    // 신스 리드 (104-110): 높고 밝은 음
+    104:'C5', 105:'A4', 106:'G4', 107:'E5', 108:'D5', 109:'B4', 110:'G4',
+    // 신스 패드 (111-117): 낮고 풍성한 화음감
+    111:'G3', 112:'C3', 113:'E3', 114:'A3', 115:'F3', 116:'D3', 117:'C4',
+    // 신스 FX (118-122): 특성 주파수
+    118:'C4', 119:'A4', 120:'G3', 121:'E3', 122:'C5',
+    // 특수 (123): 테레민
+    123:'A4',
+    // 월드 (124-136): 각 악기 특징음
+    124:'G4', 125:'C5', 126:'E4', 127:'D4', 128:'A3', 129:'E5',
+    130:'G4', 131:'D4', 132:'C5', 133:'A4', 134:'D5', 135:'D4', 136:'G3',
+    // 라틴 타악 (137-146): 낮은 드럼 음
+    137:'C3', 138:'C3', 139:'C2', 140:'C3', 141:'C3', 142:'C3',
+    143:'C4', 144:'C4', 145:'C4', 146:'C3',
+    // 추가 관악 (147-150)
+    147:'G4', 148:'Bb3', 149:'F3', 150:'C3',
+    // 현대 전자 (151-153)
+    151:'C2', 152:'D2', 153:'G3',
   };
 
   // SLOT_DATA — 추첨통 랜덤 슬롯: 조성/음계만 (보컬·악기는 독립 카드 선택)
