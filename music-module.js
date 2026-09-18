@@ -351,10 +351,36 @@
     { id:151,ko:'808 베이스',        en:'808 Bass',              gm:39, cat:'신스',   region:'서양',         emoji:'💣', genres:['힙합','트랩','R&B','EDM'] },
     { id:152,ko:'덥 베이스',         en:'Dub Bass',              gm:38, cat:'신스',   region:'서양',         emoji:'🌀', genres:['덥','레게','일렉트로닉'] },
     { id:153,ko:'웜 신스 패드',      en:'Warm Synth Pad',        gm:89, cat:'신스',   region:'서양',         emoji:'🎇', genres:['528Hz 힐링','앰비언트','치유명상'] },
+    // ── 3단계: 보컬 파닉 엔진 — cgo-80 (F1·F2·F3 포먼트 합성 · 서버 0원) ──
+    // 한국어 7모음 (성대 파형 + 포먼트 필터로 실제 모음 색채 재현)
+    { id:154,ko:'아 보컬',           en:'Vocal Ah (아)',          gm:52, cat:'보컬',  region:'한국/글로벌',  emoji:'🗣️', genres:['국악 노래','명상 만트라','힐링 발성'] },
+    { id:155,ko:'어 보컬',           en:'Vocal Uh (어)',          gm:52, cat:'보컬',  region:'한국',         emoji:'🗣️', genres:['국악 노래','민요','시조'] },
+    { id:156,ko:'오 보컬',           en:'Vocal Oh (오)',          gm:52, cat:'보컬',  region:'한국/글로벌',  emoji:'🗣️', genres:['명상','복음','뉴에이지 보컬'] },
+    { id:157,ko:'우 보컬',           en:'Vocal Oo (우)',          gm:53, cat:'보컬',  region:'한국/글로벌',  emoji:'🗣️', genres:['발라드','힐링','앰비언트 보컬'] },
+    { id:158,ko:'이 보컬',           en:'Vocal Ee (이)',          gm:52, cat:'보컬',  region:'한국',         emoji:'🗣️', genres:['경쾌한 팝','K-팝 보컬'] },
+    { id:159,ko:'애 보컬',           en:'Vocal Eh (애)',          gm:52, cat:'보컬',  region:'한국',         emoji:'🗣️', genres:['국악','포크 민요'] },
+    { id:160,ko:'으 보컬',           en:'Vocal Eu (으)',          gm:53, cat:'보컬',  region:'한국',         emoji:'🗣️', genres:['명상','앰비언트','한국 특유 모음'] },
+    // 글로벌 보컬 (팝·클래식·재즈)
+    { id:161,ko:'팝 보컬',           en:'Pop Vocal Ah',           gm:52, cat:'보컬',  region:'서양',         emoji:'🎤', genres:['팝','R&B','발라드'] },
+    { id:162,ko:'클래식 소프라노',   en:'Classical Soprano',      gm:52, cat:'보컬',  region:'서양',         emoji:'🎤', genres:['오페라','성악','클래식'] },
+    { id:163,ko:'재즈 스캣',         en:'Jazz Scat Vocal',        gm:54, cat:'보컬',  region:'서양',         emoji:'🎤', genres:['재즈 스캣','스윙','뉴올리언스'] },
+    // 합창·앙상블
+    { id:164,ko:'합창 아',           en:'Choir Ah',               gm:52, cat:'보컬',  region:'글로벌',       emoji:'🎼', genres:['오케스트라','시네마틱 보컬','찬송'] },
+    { id:165,ko:'합창 오',           en:'Choir Oh',               gm:52, cat:'보컬',  region:'글로벌',       emoji:'🎼', genres:['뉴에이지','힐링','앰비언트 합창'] },
+    { id:166,ko:'합창 우',           en:'Choir Oo',               gm:53, cat:'보컬',  region:'글로벌',       emoji:'🎼', genres:['발라드','시네마틱','드라마틱'] },
+    // 민요·특수 보컬
+    { id:167,ko:'허밍',              en:'Humming (Mm)',            gm:53, cat:'보컬',  region:'글로벌',       emoji:'😌', genres:['로파이','칠아웃','힐링 허밍'] },
+    { id:168,ko:'라라 선율',         en:'La La Melody',           gm:54, cat:'보컬',  region:'글로벌',       emoji:'🎵', genres:['동요','포크','힐링 선율'] },
+    { id:169,ko:'야호 요들',         en:'Yodel (야호)',            gm:52, cat:'보컬',  region:'알프스',       emoji:'🏔️', genres:['요들','알프스 민요','컨트리'] },
+    { id:170,ko:'옴 명상',           en:'Om Chant (옴)',           gm:53, cat:'보컬',  region:'인도/글로벌',  emoji:'🕉️', genres:['명상 만트라','힌두','528Hz 힐링'] },
+    // 글로벌 보컬 색채
+    { id:171,ko:'아프리카 보컬',     en:'African Vocal',          gm:52, cat:'보컬',  region:'아프리카',     emoji:'🌍', genres:['아프리카 민요','월드뮤직','리듬 보컬'] },
+    { id:172,ko:'가스펠 보컬',       en:'Gospel Vocal',           gm:52, cat:'보컬',  region:'서양(미국)',   emoji:'⛪', genres:['가스펠','소울','R&B 찬양'] },
+    { id:173,ko:'에테리얼 보컬',     en:'Ethereal Voice',         gm:54, cat:'보컬',  region:'글로벌',       emoji:'🌟', genres:['앰비언트','켈틱','영적 힐링','432Hz'] },
   ];
 
   // 카테고리 그룹 (UI 필터용)
-  const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아','신스','월드','라틴']; // cgo-79: 신스·월드·라틴 추가
+  const INSTR_CATS = ['전체','건반','오르간','기타','베이스','현악','관악','플루트','에스닉','타악','한국','중국','중동','아프리카','오세아니아','신스','월드','라틴','보컬']; // cgo-79·80: 신스·월드·라틴·보컬 추가
 
   // 악기 ID별 미리듣기 음계 — 각 악기의 특징적인 음역
   const INSTR_PREVIEW_NOTE = {
@@ -399,6 +425,12 @@
     147:'G4', 148:'Bb3', 149:'F3', 150:'C3',
     // 현대 전자 (151-153)
     151:'C2', 152:'D2', 153:'G3',
+    // cgo-80: 보컬 악기 (154-173) — 노래하기 좋은 음역
+    154:'A4', 155:'G4', 156:'G4', 157:'F4', 158:'E5', 159:'D4', 160:'E4',
+    161:'A4', 162:'C5', 163:'G4',
+    164:'A4', 165:'G4', 166:'F4',
+    167:'E4', 168:'D5', 169:'A4', 170:'C3',
+    171:'A4', 172:'G4', 173:'E4',
   };
 
   // SLOT_DATA — 추첨통 랜덤 슬롯: 조성/음계만 (보컬·악기는 독립 카드 선택)
@@ -414,6 +446,42 @@
     { id:'bgm',    emoji:'🎵', label:'무보컬', desc:'BGM · 순수 기악 연주',          color:'#34d399' },
     { id:'child',  emoji:'👶', label:'어린이', desc:'Child · 동심 어린 맑은 목소리', color:'#fbbf24' },
     { id:'choir',  emoji:'🎭', label:'합창',   desc:'Choir · 웅장한 합창단',         color:'#f97316' },
+  ];
+
+  // 음악풍 선택 데이터 — cgo-81: 30 vibes (대중적 15 + CGO특화 15)
+  const VIBE_DATA = [
+    // ── 대중적 (Mainstream) ──────────────────────────────────────
+    { id:'v_cinematic',   emoji:'🎬', label:'감성 시네마틱', desc:'Emotional · 영화 같은 서사',  color:'#f87171', tier:'pop', bpm:88,  genres:['cinematic','emotional'] },
+    { id:'v_lofi',        emoji:'☕', label:'로파이 칠아웃',  desc:'Lo-Fi · 나른하고 따뜻함',      color:'#fb923c', tier:'pop', bpm:75,  genres:['lofi','chill'] },
+    { id:'v_acoustic',    emoji:'🌿', label:'어쿠스틱 따뜻',  desc:'Acoustic · 자연스러운 온기',    color:'#a3e635', tier:'pop', bpm:82,  genres:['acoustic','folk'] },
+    { id:'v_kpop',        emoji:'💃', label:'K-팝 댄서블',    desc:'K-Pop · 신나는 그루브',          color:'#f472b6', tier:'pop', bpm:128, genres:['kpop','dance'] },
+    { id:'v_jazz_lounge', emoji:'🥂', label:'재즈 라운지',    desc:'Jazz · 세련된 라운지',           color:'#fbbf24', tier:'pop', bpm:92,  genres:['jazz','lounge'] },
+    { id:'v_ballad',      emoji:'💌', label:'팝 발라드',       desc:'Ballad · 감동적 선율',           color:'#e879f9', tier:'pop', bpm:68,  genres:['ballad','pop'] },
+    { id:'v_rnb',         emoji:'🌃', label:'어반 R&B',        desc:'R&B · 도시적 감성',              color:'#818cf8', tier:'pop', bpm:96,  genres:['rnb','urban'] },
+    { id:'v_edm',         emoji:'🔊', label:'일렉 EDM',        desc:'EDM · 강렬한 클럽 에너지',       color:'#22d3ee', tier:'pop', bpm:138, genres:['electronic','dance'] },
+    { id:'v_folk',        emoji:'🌾', label:'포크 자연',       desc:'Folk · 대지의 노래',              color:'#86efac', tier:'pop', bpm:72,  genres:['folk','nature'] },
+    { id:'v_rock',        emoji:'🎸', label:'록 에너지',        desc:'Rock · 강렬한 기타 파워',        color:'#f97316', tier:'pop', bpm:120, genres:['rock','energy'] },
+    { id:'v_classical',   emoji:'🎻', label:'클래식 우아',     desc:'Classical · 유럽 고전 품격',     color:'#c084fc', tier:'pop', bpm:76,  genres:['classical','orchestral'] },
+    { id:'v_bossanova',   emoji:'🌴', label:'보사노바',         desc:'Bossa Nova · 브라질 리듬',       color:'#34d399', tier:'pop', bpm:85,  genres:['bossanova','latin'] },
+    { id:'v_country',     emoji:'🤠', label:'컨트리',           desc:'Country · 미국 대초원',           color:'#fcd34d', tier:'pop', bpm:100, genres:['country','folk'] },
+    { id:'v_gypsy',       emoji:'🪗', label:'집시 낭만',        desc:'Gypsy Jazz · 유랑의 열정',       color:'#fb7185', tier:'pop', bpm:108, genres:['gypsy','world'] },
+    { id:'v_reggae',      emoji:'🌊', label:'레게',              desc:'Reggae · 자메이카 자유',          color:'#4ade80', tier:'pop', bpm:80,  genres:['reggae','world'] },
+    // ── CGO 특화 (Signature) ─────────────────────────────────────
+    { id:'v_528',         emoji:'💚', label:'528Hz 치유',       desc:'DNA 회복 · 기적 주파수',         color:'#10b981', tier:'cgo', bpm:60,  genres:['healing','meditation'] },
+    { id:'v_432',         emoji:'💛', label:'432Hz 공명',        desc:'우주 심장 · 자연 공명',           color:'#eab308', tier:'cgo', bpm:64,  genres:['432hz','ambient'] },
+    { id:'v_citypop',     emoji:'🌆', label:'뉴트로 시티팝',    desc:'Citypop · 80s 몽환 신스',        color:'#a78bfa', tier:'cgo', bpm:90,  genres:['citypop','synthwave'] },
+    { id:'v_oheng',       emoji:'☯️', label:'오행 앰비언트',    desc:'五行 · 원시 자연 에너지',         color:'#6ee7b7', tier:'cgo', bpm:55,  genres:['ambient','ethnic'] },
+    { id:'v_schumann',    emoji:'🌍', label:'슈만공명 명상',    desc:'7.83Hz · 지구와 동기화',         color:'#5eead4', tier:'cgo', bpm:58,  genres:['meditation','ambient'] },
+    { id:'v_psychedelic', emoji:'🌀', label:'사이키델릭 앰비',  desc:'Psychedelic · 의식 확장 여행',   color:'#c026d3', tier:'cgo', bpm:70,  genres:['psychedelic','ambient'] },
+    { id:'v_nordic',      emoji:'❄️', label:'북유럽 신비',      desc:'Nordic · 피오르드 신화',          color:'#93c5fd', tier:'cgo', bpm:66,  genres:['nordic','folk'] },
+    { id:'v_arabic',      emoji:'🕌', label:'아랍 오리엔탈',    desc:'Arabian · 사막 달빛 궁전',        color:'#fde68a', tier:'cgo', bpm:95,  genres:['arabic','world'] },
+    { id:'v_raga',        emoji:'🪷', label:'인도 라가',          desc:'Raga · 요가 명상 음률',          color:'#f9a8d4', tier:'cgo', bpm:62,  genres:['indian','meditation'] },
+    { id:'v_celtic',      emoji:'🍀', label:'켈틱 몽환',         desc:'Celtic · 아일랜드 안개 숲',      color:'#86efac', tier:'cgo', bpm:74,  genres:['celtic','folk'] },
+    { id:'v_focus',       emoji:'🧠', label:'집중 모드',          desc:'Focus · 딥워크 생산성 부스터',   color:'#60a5fa', tier:'cgo', bpm:110, genres:['focus','electronic'] },
+    { id:'v_sleep',       emoji:'🌙', label:'수면 드리프트',     desc:'Sleep · 꿈으로 가는 여정',       color:'#818cf8', tier:'cgo', bpm:52,  genres:['sleep','ambient'] },
+    { id:'v_epic',        emoji:'🏔️', label:'에픽 오케스트라',  desc:'Epic · 장대한 영웅의 서사',      color:'#f43f5e', tier:'cgo', bpm:116, genres:['epic','orchestral'] },
+    { id:'v_jazzclub',    emoji:'🌙', label:'재즈 클럽 새벽',   desc:'Late Jazz · 새벽 3시 클럽',      color:'#d4a96b', tier:'cgo', bpm:88,  genres:['jazz','noir'] },
+    { id:'v_cosmic',      emoji:'🌌', label:'우주 앰비언트',     desc:'Cosmic · 별 사이의 침묵',        color:'#6366f1', tier:'cgo', bpm:50,  genres:['cosmic','ambient'] },
   ];
 
   // ── 200-주파수 마스터 군집 데이터 ────────────────────────────────
@@ -1937,6 +2005,7 @@
       });
 
       this.selected.vocal = 'bgm';               // 보컬 기본값: 무보컬(BGM)
+      this.selected.vibe = null;                 // cgo-81: 음악풍 기본값: 없음(자유)
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
       this.selectedTimeSig = [4,4];               // cgo-77: 기본 박자 4/4
@@ -2386,6 +2455,11 @@
         this._buildVocalSection(body);
       }, false));
 
+      // ③-b 음악풍 선택 (기본 닫힘) — cgo-81: VIBE_DATA 30개
+      p.appendChild(mkAccordion('🎨', '음악풍 선택', (body) => {
+        this._buildVibeSection(body);
+      }, false));
+
       // ④ 박자 (기본 닫힘) — cgo-77: 박자(Time Signature) 카드 추가
       p.appendChild(mkAccordion('🎼', t(24050), (body) => {
         body.appendChild(this._buildTempoBar());
@@ -2735,6 +2809,60 @@
       render();
     }
 
+    // ── 음악풍 선택 섹션 — cgo-81 ────────────────────────────────
+    _buildVibeSection(body) {
+      const mkGrid = (vibes) => {
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 10px 10px;';
+        body.appendChild(grid);
+        const render = () => {
+          grid.innerHTML = '';
+          vibes.forEach(opt => {
+            const isSel = this.selected.vibe === opt.id;
+            const card = document.createElement('div');
+            card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;border:1.5px solid ${isSel ? opt.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .2s;${isSel ? `box-shadow:0 0 8px ${opt.color}40;` : ''}`;
+            card.innerHTML = `
+              <span style="font-size:18px">${opt.emoji}</span>
+              <span style="font-size:10px;font-weight:800;color:${isSel ? '#fff' : '#e9d5ff'};text-align:center;line-height:1.2">${opt.label}</span>
+              <span style="font-size:8px;color:${isSel ? opt.color : '#7c6caa'};text-align:center;line-height:1.2">${opt.desc}</span>
+            `;
+            card.addEventListener('click', () => {
+              if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+              // 같은 것 클릭 → 해제 (토글)
+              this.selected.vibe = (this.selected.vibe === opt.id) ? null : opt.id;
+              renderAll();
+              this._updateResult && this._updateResult();
+            });
+            grid.appendChild(card);
+          });
+        };
+        grid._cgoRender = render;
+        render();
+        return grid;
+      };
+
+      const popGrida = mkGrid(VIBE_DATA.filter(v => v.tier === 'pop'));
+      const cgoGridEl = mkGrid(VIBE_DATA.filter(v => v.tier === 'cgo'));
+
+      // renderAll: 두 그리드 동시 재렌더 (선택 상태 동기화)
+      const renderAll = () => {
+        if (popGrida._cgoRender) popGrida._cgoRender();
+        if (cgoGridEl._cgoRender) cgoGridEl._cgoRender();
+      };
+
+      // 섹션 헤더는 그리드 앞에 삽입 (DOM 순서: hdr → grid → hdr → grid)
+      // 이미 body.appendChild로 추가됐으므로 insertBefore로 재배치
+      const hdrPop = document.createElement('div');
+      hdrPop.style.cssText = 'font-size:10px;font-weight:800;color:#fb923c;letter-spacing:.08em;padding:8px 14px 4px;';
+      hdrPop.textContent = '🎵 대중적 (Mainstream)';
+      body.insertBefore(hdrPop, popGrida);
+
+      const hdrCgo = document.createElement('div');
+      hdrCgo.style.cssText = 'font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.08em;padding:6px 14px 4px;';
+      hdrCgo.textContent = '✨ CGO 시그니처 (Special)';
+      body.insertBefore(hdrCgo, cgoGridEl);
+    }
+
     // ── 악기 선택 섹션 (추첨통 탭 첫 번째 아코디언) ─────────────
     _buildInstrumentSection(body) {
       // 선택된 악기 IDs (최대 12개)
@@ -2770,6 +2898,12 @@
           [...this.selectedInstrIds].some(sid => {
             const sf = INSTRUMENT_DATA.find(x => x.id === sid);
             if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+          });
+          // cgo-80: 보컬 악기 브릿지 업데이트
+          window._cgoVocalInstrId = null;
+          [...this.selectedInstrIds].some(sid => {
+            const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+            if (sf && sf.cat === '보컬') { window._cgoVocalInstrId = sid; return true; }
           });
           renderGrid();
           renderSelected();
@@ -2842,11 +2976,13 @@
               } else {
                 if (this.selectedInstrIds.size >= MAX_INSTR) return;
                 this.selectedInstrIds.add(ins.id);
-                // 🔊 즉시 소리 — cgo-78: 한국 악기는 Korean synth 엔진으로 프리뷰
+                // 🔊 즉시 소리 — cgo-78·80: 한국/보컬 악기는 전용 엔진으로 프리뷰
                 const noteToPlay = INSTR_PREVIEW_NOTE[ins.id] || 'C4';
                 if (ins.cat === '한국' && typeof window._cgoKorNote === 'function') {
                   if (typeof window._cgoInitKorSynths === 'function') window._cgoInitKorSynths();
                   window._cgoKorNote(ins.id, noteToPlay, 1.5, 0.65);
+                } else if (ins.cat === '보컬' && typeof window._cgoVocalNote === 'function') {
+                  window._cgoVocalNote(ins.id, noteToPlay, 1.5, 0.65); // cgo-80: 포먼트 합성 프리뷰
                 } else {
                   playSfNote(ins.gm, noteToPlay, 1.5, 0.65).catch(()=>{});
                 }
@@ -2856,6 +2992,12 @@
               [...this.selectedInstrIds].some(sid => {
                 const sf = INSTRUMENT_DATA.find(x => x.id === sid);
                 if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+              });
+              // cgo-80: 보컬 악기 브릿지 업데이트
+              window._cgoVocalInstrId = null;
+              [...this.selectedInstrIds].some(sid => {
+                const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+                if (sf && sf.cat === '보컬') { window._cgoVocalInstrId = sid; return true; }
               });
               renderGrid();
               renderSelected();
@@ -2898,6 +3040,12 @@
               [...this.selectedInstrIds].some(sid => {
                 const sf = INSTRUMENT_DATA.find(x => x.id === sid);
                 if (sf && sf.cat === '한국') { window._cgoKorInstrId = sid; return true; }
+              });
+              // cgo-80: 보컬 악기 브릿지 업데이트
+              window._cgoVocalInstrId = null;
+              [...this.selectedInstrIds].some(sid => {
+                const sf = INSTRUMENT_DATA.find(x => x.id === sid);
+                if (sf && sf.cat === '보컬') { window._cgoVocalInstrId = sid; return true; }
               });
               renderGrid();
               renderSelected();
@@ -4711,6 +4859,7 @@
           ${genreTags}
           ${this.slotKeys.map(k => `<span class="cgo-result-tag">${SLOT_DATA[k].emoji} ${this.selected[k]}</span>`).join('')}
           ${(() => { const v = VOCAL_OPTIONS.find(o => o.id === this.selected.vocal); return v ? `<span class="cgo-result-tag" style="color:${v.color};border-color:${v.color}40;">${v.emoji} ${v.label}</span>` : ''; })()}
+          ${(() => { const vb = VIBE_DATA.find(o => o.id === this.selected.vibe); return vb ? `<span class="cgo-result-tag" style="color:${vb.color};border-color:${vb.color}40;">${vb.emoji} ${vb.label}</span>` : ''; })()}
           ${this.selectedInstrIds.size ? `<span class="cgo-result-tag">🎸 악기 ${this.selectedInstrIds.size}개</span>` : ''}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
@@ -4958,11 +5107,21 @@
         return ins ? ins.gm : null;
       }).filter(v => v !== null);
 
+      // cgo-81: 음악풍 → BPM 힌트 오버레이
+      let vibeBpmHint = null;
+      let vibeGenres  = null;
+      if (this.selected.vibe) {
+        const vd = VIBE_DATA.find(v => v.id === this.selected.vibe);
+        if (vd) { vibeBpmHint = vd.bpm; vibeGenres = vd.genres; }
+      }
+
       const combo = {
-        key: this.selected.key, bpm: this.tempoBpm,
+        key: this.selected.key, bpm: vibeBpmHint || this.tempoBpm,
         tempoName: tempoStage.name, tempoNameEn: tempoStage.nameEn,
         genres: genreList.map(g=>g.nameEn), genresMix: genreList.length > 1,
         vocal: this.selected.vocal,
+        vibe: this.selected.vibe,           // cgo-81: 음악풍 ID
+        vibeGenres,                          // cgo-81: 음악풍 장르 힌트
         instrument: this.selected.instrument,
         instrGmList,
         freq: this.selectedFreq,
