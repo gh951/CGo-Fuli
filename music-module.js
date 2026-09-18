@@ -2006,6 +2006,7 @@
 
       this.selected.vocal = 'bgm';               // 보컬 기본값: 무보컬(BGM)
       this.selected.vibe = null;                 // cgo-81: 음악풍 기본값: 없음(자유)
+      this.selectedDurationSec = 60;             // cgo-82: 음악 길이 기본값: 1분
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
       this.selectedTimeSig = [4,4];               // cgo-77: 기본 박자 4/4
@@ -2460,8 +2461,9 @@
         this._buildVibeSection(body);
       }, false));
 
-      // ④ 박자 (기본 닫힘) — cgo-77: 박자(Time Signature) 카드 추가
+      // ④ 박자 (기본 닫힘) — cgo-77: 박자(Time Signature) 카드 추가 · cgo-82: 길이 칩 상단 추가
       p.appendChild(mkAccordion('🎼', t(24050), (body) => {
+        body.appendChild(this._buildDurationChips()); // cgo-82: 길이 칩 — 최상단
         body.appendChild(this._buildTempoBar());
         body.appendChild(this._buildTimeSigSection()); // cgo-77: 박자 카드
       }, false));
@@ -3352,6 +3354,52 @@
       if (countEl) countEl.textContent = this.selectedGenres.size;
       // 결과 카드 업데이트
       this._updateResult();
+    }
+
+    // ── 음악 길이 칩 — cgo-82 ─────────────────────────────────
+    _buildDurationChips() {
+      const DURATIONS = [
+        { sec:30,  emoji:'⚡', label:'30초', sub:'미리듣기',  color:'#fb7185' },
+        { sec:60,  emoji:'🎵', label:'1분',  sub:'기본 표준', color:'#60a5fa' },
+        { sec:120, emoji:'🎶', label:'2분',  sub:'풀 감상',   color:'#a78bfa' },
+        { sec:180, emoji:'🎬', label:'3분',  sub:'싱글 트랙', color:'#34d399' },
+        { sec:300, emoji:'🌊', label:'5분',  sub:'롱 플레이', color:'#fbbf24' },
+      ];
+
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'padding:10px 12px 6px;';
+
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:10px;font-weight:800;color:#9d8ec4;letter-spacing:.08em;margin-bottom:6px;';
+      lbl.textContent = '⏱ 음악 길이';
+      wrap.appendChild(lbl);
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:5px;';
+
+      const render = () => {
+        row.innerHTML = '';
+        DURATIONS.forEach(d => {
+          const isSel = this.selectedDurationSec === d.sec;
+          const chip = document.createElement('div');
+          chip.style.cssText = `flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:10px;border:1.5px solid ${isSel ? d.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.18)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .18s;${isSel ? `box-shadow:0 0 7px ${d.color}50;` : ''}`;
+          chip.innerHTML = `
+            <span style="font-size:15px">${d.emoji}</span>
+            <span style="font-size:11px;font-weight:800;color:${isSel ? d.color : '#e9d5ff'}">${d.label}</span>
+            <span style="font-size:8px;color:${isSel ? d.color : '#6b5c8c'};text-align:center;line-height:1.2">${d.sub}</span>
+          `;
+          chip.addEventListener('click', () => {
+            if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+            this.selectedDurationSec = d.sec;
+            render();
+            this._updateResult && this._updateResult();
+          });
+          row.appendChild(chip);
+        });
+      };
+      render();
+      wrap.appendChild(row);
+      return wrap;
     }
 
     // ── 박자 레인보우 바 빌드 (250단계 연속) ───────────────────
@@ -4861,6 +4909,7 @@
           ${(() => { const v = VOCAL_OPTIONS.find(o => o.id === this.selected.vocal); return v ? `<span class="cgo-result-tag" style="color:${v.color};border-color:${v.color}40;">${v.emoji} ${v.label}</span>` : ''; })()}
           ${(() => { const vb = VIBE_DATA.find(o => o.id === this.selected.vibe); return vb ? `<span class="cgo-result-tag" style="color:${vb.color};border-color:${vb.color}40;">${vb.emoji} ${vb.label}</span>` : ''; })()}
           ${this.selectedInstrIds.size ? `<span class="cgo-result-tag">🎸 악기 ${this.selectedInstrIds.size}개</span>` : ''}
+          ${(()=>{ const ds=[{sec:30,l:'30초'},{sec:60,l:'1분'},{sec:120,l:'2분'},{sec:180,l:'3분'},{sec:300,l:'5분'}]; const d=ds.find(x=>x.sec===this.selectedDurationSec); return d?`<span class="cgo-result-tag" style="color:#a78bfa;border-color:#a78bfa40;">⏱ ${d.l}</span>`:''; })()}
           <span class="cgo-result-tag" style="color:${freqOpt.color};border-color:${freqOpt.color}40;">🌊 ${freqOpt.label}</span>
         </div>
       `;
@@ -5122,6 +5171,7 @@
         vocal: this.selected.vocal,
         vibe: this.selected.vibe,           // cgo-81: 음악풍 ID
         vibeGenres,                          // cgo-81: 음악풍 장르 힌트
+        durationSec: this.selectedDurationSec || 60, // cgo-82: 목표 길이(초)
         instrument: this.selected.instrument,
         instrGmList,
         freq: this.selectedFreq,
