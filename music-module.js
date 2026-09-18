@@ -1847,54 +1847,91 @@
         spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); unlockAudioCtx(); this._spinAll(); });
         spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); unlockAudioCtx(); this._quickPlay(); });
 
-        // ── 프롬프트 생성 카드 (추첨통 아래) ──────────────────────
+        // ── 프롬프트 생성 카드 (팝업 동일 스타일) ─────────────────
         const promptCard = document.createElement('div');
         promptCard.id = 'cgo-make-prompt-card';
-        promptCard.style.cssText = 'background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(20,184,166,.05));border:1.5px solid rgba(13,148,136,.35);border-radius:14px;padding:15px 14px 14px;margin-top:14px;';
+        promptCard.style.cssText = 'margin-top:16px;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
         promptCard.innerHTML = `
-          <div style="font-size:11px;font-weight:800;color:#0d9488;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <span style="font-size:15px;">💬</span>
-            <span>스마트 프롬프트 — 말 한마디로 뚝딱!</span>
+          <!-- 헤더 그라데이션 -->
+          <div style="background:linear-gradient(135deg,#0d9488 0%,#0891b2 100%);padding:14px 16px 12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:20px;">💬</span>
+              <div>
+                <div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:-.01em;">스마트 프롬프트</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:1px;">말 한마디로 전체 세팅 완료!</div>
+              </div>
+            </div>
           </div>
-          <div style="font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:10px;">
-            원하는 분위기를 자유롭게 적으면 AI가 주파수·악기·박자를 자동 세팅해 드립니다.
+
+          <!-- 현재 설정 칩 영역 -->
+          <div style="background:rgba(13,148,136,.06);border-bottom:1px solid rgba(13,148,136,.15);padding:10px 14px;">
+            <div style="font-size:9.5px;font-weight:700;color:#0d9488;margin-bottom:7px;letter-spacing:.05em;text-transform:uppercase;">📌 현재 설정</div>
+            <div id="cgo-prompt-chips" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px;">
+              <span style="font-size:10px;color:#94a3b8;font-style:italic;">설정을 선택하면 여기에 표시됩니다</span>
+            </div>
           </div>
-          <textarea id="cgo-make-prompt-input" rows="3"
-            placeholder="예) 비 오는 밤, 마음을 차분하게 가라앉혀 주는 몽환적인 국악 힐링 곡"
-            style="width:100%;box-sizing:border-box;background:var(--cgo-bg,#fff);border:1.5px solid rgba(13,148,136,.3);border-radius:10px;padding:11px 12px;font-size:12px;color:var(--cgo-fg,#0f172a);line-height:1.65;resize:none;font-family:inherit;outline:none;transition:border-color .15s;"
-            onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='rgba(13,148,136,.3)'"></textarea>
-          <div id="cgo-make-prompt-summary" style="font-size:10px;color:#0d9488;margin-top:8px;padding:8px 10px;background:rgba(13,148,136,.06);border-radius:8px;line-height:1.7;display:none;"></div>
-          <button id="cgo-make-prompt-btn"
-            style="margin-top:9px;width:100%;padding:12px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.01em;">
-            ✨ 이 분위기로 설정하기
-          </button>
+
+          <!-- 입력 영역 -->
+          <div style="background:rgba(6,0,15,.85);padding:14px 14px 16px;">
+            <div style="font-size:10.5px;color:#94a3b8;line-height:1.6;margin-bottom:10px;">
+              원하는 분위기를 입력하면 AI가 주파수·악기·박자를 자동으로 맞춰드립니다
+            </div>
+            <textarea id="cgo-make-prompt-input" rows="3"
+              placeholder="예) 비 오는 밤, 마음을 차분하게 가라앉혀 주는 몽환적인 국악 힐링 곡"
+              style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1.5px solid rgba(13,148,136,.3);border-radius:12px;padding:11px 13px;font-size:12px;color:#e2e8f0;line-height:1.65;resize:none;font-family:inherit;outline:none;transition:border-color .2s;"></textarea>
+            <button id="cgo-make-prompt-btn"
+              style="margin-top:10px;width:100%;padding:13px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.01em;box-shadow:0 4px 14px rgba(13,148,136,.4);">
+              ✨ 이 분위기로 설정하기
+            </button>
+          </div>
         `;
+        // textarea 포커스 효과
+        const ta = promptCard.querySelector('#cgo-make-prompt-input');
+        ta.addEventListener('focus', () => { ta.style.borderColor = '#14b8a6'; ta.style.background = 'rgba(255,255,255,.08)'; });
+        ta.addEventListener('blur',  () => { ta.style.borderColor = 'rgba(13,148,136,.3)'; ta.style.background = 'rgba(255,255,255,.05)'; });
+
         body.appendChild(promptCard);
 
-        // 현재 설정 요약 자동 표시
-        const summaryDiv = promptCard.querySelector('#cgo-make-prompt-summary');
+        // ── 현재 설정 칩 실시간 업데이트 ─────────────────────────
+        const chipsEl = promptCard.querySelector('#cgo-prompt-chips');
+        const CHIP_STYLES = {
+          freq:  'background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.35);',
+          bpm:   'background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3);',
+          instr: 'background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3);',
+          vocal: 'background:rgba(236,72,153,.15);color:#f9a8d4;border:1px solid rgba(236,72,153,.3);',
+          genre: 'background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);',
+        };
+        const mkChip = (label, type) => {
+          return `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;${CHIP_STYLES[type]||CHIP_STYLES.genre}">${label}</span>`;
+        };
+
         const showSummary = () => {
           try {
-            const parts = [];
-            const freq = this.selectedFreq;
-            if (freq === '432') parts.push('432Hz 자연공명');
-            else if (freq === '528') parts.push('528Hz DNA회복');
-            else if (freq === '783') parts.push('7.83Hz 슈만공명');
-            else if (freq === 'pure') parts.push('순수음악');
-            if (this.tempoBpm) parts.push(`${this.tempoBpm}BPM`);
-            if (this.selected && this.selected.instrument && this.selected.instrument !== '없음') parts.push(this.selected.instrument);
-            if (this.selected && this.selected.vocal) parts.push(this.selected.vocal);
+            let html = '';
+            const freq = String(this.selectedFreq);
+            if (freq === '432')    html += mkChip('🌿 432Hz 자연공명', 'freq');
+            else if (freq === '528') html += mkChip('💚 528Hz DNA회복', 'freq');
+            else if (freq === '783' || freq === '7.83') html += mkChip('🌍 7.83Hz 슈만공명', 'freq');
+            else if (freq === 'pure') html += mkChip('🎵 순수음악', 'freq');
+            else if (freq && freq !== '0') html += mkChip(`${freq}Hz`, 'freq');
+
+            if (this.tempoBpm) {
+              const tempoLabel = this.tempoBpm < 70 ? '느리게' : this.tempoBpm < 100 ? '보통' : this.tempoBpm < 130 ? '빠르게' : '매우 빠르게';
+              html += mkChip(`🥁 ${tempoLabel} ${this.tempoBpm}BPM`, 'bpm');
+            }
+            if (this.selected) {
+              if (this.selected.key) html += mkChip(`🎼 ${this.selected.key}`, 'instr');
+              if (this.selected.instrument && this.selected.instrument !== '없음') html += mkChip(`🎸 ${this.selected.instrument}`, 'instr');
+              if (this.selected.vocal && this.selected.vocal !== '없음') html += mkChip(`🎤 ${this.selected.vocal}`, 'vocal');
+            }
             if (this._selectedGenreIds && this._selectedGenreIds.size > 0) {
-              const gNames = [...this._selectedGenreIds].slice(0,2).join(', ');
-              parts.push(gNames);
+              [...this._selectedGenreIds].slice(0,3).forEach(g => { html += mkChip(`🌍 ${g}`, 'genre'); });
             }
-            if (parts.length > 0) {
-              summaryDiv.textContent = '📌 현재 설정: ' + parts.join(' · ');
-              summaryDiv.style.display = 'block';
-            }
+            chipsEl.innerHTML = html || '<span style="font-size:10px;color:#94a3b8;font-style:italic;">설정을 선택하면 여기에 표시됩니다</span>';
           } catch(e) {}
         };
-        // 즉시 + 변경될 때마다 업데이트
+
+        // 즉시 실행 + _updateResult 후킹으로 변경 감지
         showSummary();
         const _origUpdateResult = this._updateResult;
         this._updateResult = function() {
@@ -1908,6 +1945,18 @@
           const txt = promptCard.querySelector('#cgo-make-prompt-input').value || '';
           if (txt.trim() && typeof this._applySmartPrompt === 'function') {
             this._applySmartPrompt(txt);
+            // 적용 후 버튼 피드백
+            const btn = promptCard.querySelector('#cgo-make-prompt-btn');
+            btn.textContent = '✅ 적용 완료!';
+            btn.style.background = 'linear-gradient(135deg,#059669,#10b981)';
+            setTimeout(() => {
+              btn.textContent = '✨ 이 분위기로 설정하기';
+              btn.style.background = 'linear-gradient(135deg,#0d9488,#14b8a6)';
+            }, 1800);
+          } else if (!txt.trim()) {
+            ta.style.borderColor = '#f87171';
+            ta.focus();
+            setTimeout(() => { ta.style.borderColor = 'rgba(13,148,136,.3)'; }, 1500);
           }
         });
       }, false));
