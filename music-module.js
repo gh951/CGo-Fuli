@@ -61,6 +61,28 @@
   const TEMPO_DEFAULT_BPM = 80;
   const TEMPO_DEFAULT_SLIDER = bpmToSlider(TEMPO_DEFAULT_BPM);
 
+  // ── 박자(Time Signature) 데이터 — cgo-77 ────────────────────────
+  const TIME_SIGS = [
+    // 단순박 (Simple Time)
+    { id:'4/4',  num:4,  den:4, name:'4/4박',  nameEn:'Common',      desc:'팝·록·재즈·K팝 표준 박자 · 가장 자연스러운 리듬',           icon:'🎵', color:'#3b82f6', group:'단순박' },
+    { id:'3/4',  num:3,  den:4, name:'3/4박',  nameEn:'Waltz',       desc:'왈츠·민요·발레 · 세 박자의 우아하고 흘러가는 흐름',          icon:'💃', color:'#8b5cf6', group:'단순박' },
+    { id:'2/4',  num:2,  den:4, name:'2/4박',  nameEn:'March',       desc:'행진곡·폴카 · 경쾌하고 단호한 두 박자 스텝',                icon:'🥁', color:'#06b6d4', group:'단순박' },
+    // 복합박 (Compound Time)
+    { id:'6/8',  num:6,  den:8, name:'6/8박',  nameEn:'Shuffle',     desc:'셔플·슬로우잼·아이리쉬 · 두 묶음의 세 박자 스윙',            icon:'🎸', color:'#10b981', group:'복합박' },
+    { id:'12/8', num:12, den:8, name:'12/8박', nameEn:'Blues 12/8',  desc:'블루스·R&B · 느리고 깊은 스윙 필 · 감성의 정수',            icon:'🎷', color:'#f59e0b', group:'복합박' },
+    { id:'9/8',  num:9,  den:8, name:'9/8박',  nameEn:'Celtic/Prog', desc:'켈틱·프로그레시브 · 세 박 세 묶음의 신비로운 흐름',          icon:'🏔️',  color:'#6366f1', group:'복합박' },
+    // 홀수박 (Asymmetric/Odd Time)
+    { id:'5/4',  num:5,  den:4, name:'5/4박',  nameEn:'Take Five',   desc:'Take Five·미션 임파서블 · 독특한 긴장감의 5박',              icon:'⚡', color:'#ef4444', group:'홀수박' },
+    { id:'7/8',  num:7,  den:8, name:'7/8박',  nameEn:'Balkan 7/8',  desc:'발칸·원더우먼·프로그록 · 2+2+3 비대칭 8분음표',             icon:'🌀', color:'#f97316', group:'홀수박' },
+    { id:'5/8',  num:5,  den:8, name:'5/8박',  nameEn:'Aksak',       desc:'아크사크·터키 리듬 · 2+3 분할의 붓점 긴장감',               icon:'🦋', color:'#ec4899', group:'홀수박' },
+    { id:'11/8', num:11, den:8, name:'11/8박', nameEn:'Complex 11',  desc:'에티오피아·마하비시누 오케스트라 · 극도의 복잡미와 도전박',    icon:'🌊', color:'#64748b', group:'홀수박' },
+  ];
+  const TIME_SIG_GROUPS = [
+    { name:'단순박', nameEn:'Simple',      color:'#3b82f6' },
+    { name:'복합박', nameEn:'Compound',    color:'#10b981' },
+    { name:'홀수박', nameEn:'Asymmetric',  color:'#ef4444' },
+  ];
+
   // ── 전 세계 장르 아카이브 (구글 파트너 제공) ──────────────────
   // 나중에 국기 이미지 추가 예정 — flag 필드에 실제 이미지 URL 삽입
   const GENRE_GROUPS = [
@@ -1627,6 +1649,30 @@
 .cgo-genre-counter-num{font-size:13px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 8px rgba(240,171,252,.5);}
 .cgo-genre-hint{font-size:10px;color:#c4b5e8;font-weight:600;}
 
+/* ─── 박자(Time Signature) 카드 — cgo-77 ─── */
+.cgo-ts-sec{padding:0 14px 4px;}
+.cgo-ts-group{margin-bottom:12px;}
+.cgo-ts-group-title{font-size:11px;font-weight:800;color:#d4c4f0;margin-bottom:8px;display:flex;align-items:center;gap:6px;padding:0 2px;}
+.cgo-ts-group-en{font-size:9px;color:#a78bfa;font-weight:700;}
+.cgo-ts-group-line{flex:1;height:1px;background:rgba(139,92,246,.18);}
+.cgo-ts-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:3px;}
+.cgo-ts-row::-webkit-scrollbar{display:none;}
+.cgo-ts-card{flex-shrink:0;width:74px;background:rgba(20,5,40,.7);border:1.5px solid rgba(100,60,180,.22);border-radius:12px;padding:9px 7px 8px;cursor:pointer;transition:border-color .18s,background .18s,transform .12s,box-shadow .18s;-webkit-tap-highlight-color:transparent;text-align:center;}
+.cgo-ts-card:hover{border-color:var(--tsc);background:rgba(30,8,60,.85);}
+.cgo-ts-card:active{transform:scale(.96);}
+.cgo-ts-card.selected{border-color:var(--tsc);background:rgba(30,8,60,.9);box-shadow:0 0 14px rgba(139,92,246,.28);}
+.cgo-ts-card.selected::before{content:'✓';position:absolute;top:6px;right:8px;font-size:9px;font-weight:900;color:var(--tsc);}
+.cgo-ts-card{position:relative;}
+.cgo-ts-icon{font-size:16px;line-height:1;margin-bottom:3px;}
+.cgo-ts-fraction{font-size:17px;font-weight:900;color:#fff;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+.cgo-ts-card.selected .cgo-ts-fraction{color:var(--tsc);}
+.cgo-ts-slash{font-size:12px;color:#c4b5e8;font-weight:600;}
+.cgo-ts-name{font-size:9px;font-weight:800;color:#e9d5ff;margin-top:4px;}
+.cgo-ts-en{font-size:8px;color:#a78bfa;font-weight:700;margin-top:1px;}
+.cgo-ts-desc{font-size:8px;color:#c4b5e8;font-weight:600;margin-top:3px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.cgo-ts-badge-wrap{padding:0 0 10px;}
+.cgo-ts-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#e9d5ff;background:rgba(139,92,246,.15);border:1px solid var(--tsc,rgba(139,92,246,.5));border-radius:999px;padding:4px 11px;line-height:1.4;}
+
 /* ─── 프리셋 ─── */
 .cgo-preset-bar{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 14px 4px;}
 .cgo-preset-bar::-webkit-scrollbar{display:none;}
@@ -1810,6 +1856,8 @@
       this.selected.vocal = 'bgm';               // 보컬 기본값: 무보컬(BGM)
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
+      this.selectedTimeSig = [4,4];               // cgo-77: 기본 박자 4/4
+      window._cgoSelectedTimeSig = [4,4];         // cgo-77: playGroove 연동용
       this.selectedFreq = 432;
       this.selectedInstrIds = new Set();          // 선택된 악기 ID Set (최대 12개)
       this.presets = this._loadPresets();
@@ -2255,9 +2303,10 @@
         this._buildVocalSection(body);
       }, false));
 
-      // ④ 박자 (기본 닫힘)
+      // ④ 박자 (기본 닫힘) — cgo-77: 박자(Time Signature) 카드 추가
       p.appendChild(mkAccordion('🎼', t(24050), (body) => {
         body.appendChild(this._buildTempoBar());
+        body.appendChild(this._buildTimeSigSection()); // cgo-77: 박자 카드
       }, false));
 
       // ⑤ 추첨통 슬롯 — 🎲 조성/음계 랜덤 (기본 닫힘)
@@ -3342,6 +3391,92 @@
       if (this._tempoDispEl) this._tempoDispEl.innerHTML = this._tempoDisplayHTML(bpm);
       this._updateResult();
       this._applyBpmToAudio();   // 재생 중이면 리듬 즉시 갱신
+    }
+
+    // ── 박자(Time Signature) 카드 섹션 — cgo-77 ─────────────────
+    _buildTimeSigSection() {
+      const sec = document.createElement('div');
+      sec.className = 'cgo-ts-sec';
+
+      // 헤더
+      const hdr = document.createElement('div');
+      hdr.className = 'cgo-msec-title';
+      hdr.style.cssText = 'margin:14px 0 8px;';
+      hdr.innerHTML = `🎼 <b>박자 (Time Signature)</b>`;
+      sec.appendChild(hdr);
+
+      // 현재 선택 배지
+      const badgeWrap = document.createElement('div');
+      badgeWrap.className = 'cgo-ts-badge-wrap';
+      badgeWrap.id = 'cgo-ts-badge-wrap';
+      badgeWrap.innerHTML = this._tsBadgeHTML();
+      sec.appendChild(badgeWrap);
+
+      // 그룹별 렌더
+      TIME_SIG_GROUPS.forEach(grp => {
+        const grpEl = document.createElement('div');
+        grpEl.className = 'cgo-ts-group';
+
+        const grpTitle = document.createElement('div');
+        grpTitle.className = 'cgo-ts-group-title';
+        grpTitle.innerHTML = `<span style="color:${grp.color};">${grp.name}</span><span class="cgo-ts-group-en">${grp.nameEn}</span><div class="cgo-ts-group-line"></div>`;
+        grpEl.appendChild(grpTitle);
+
+        const row = document.createElement('div');
+        row.className = 'cgo-ts-row';
+
+        TIME_SIGS.filter(ts => ts.group === grp.name).forEach(ts => {
+          const card = document.createElement('div');
+          const isSel = this.selectedTimeSig[0] === ts.num && this.selectedTimeSig[1] === ts.den;
+          card.className = 'cgo-ts-card' + (isSel ? ' selected' : '');
+          card.style.setProperty('--tsc', ts.color);
+          card.dataset.tsn = String(ts.num);
+          card.dataset.tsd = String(ts.den);
+          card.innerHTML = `
+            <div class="cgo-ts-icon">${ts.icon}</div>
+            <div class="cgo-ts-fraction">${ts.num}<span class="cgo-ts-slash">/</span>${ts.den}</div>
+            <div class="cgo-ts-name">${ts.name}</div>
+            <div class="cgo-ts-en">${ts.nameEn}</div>
+            <div class="cgo-ts-desc">${ts.desc}</div>
+          `;
+          card.addEventListener('click', () => {
+            if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+            this._selectTimeSig(ts.num, ts.den, ts.color);
+          });
+          row.appendChild(card);
+        });
+        grpEl.appendChild(row);
+        sec.appendChild(grpEl);
+      });
+
+      this._tsSec = sec;
+      return sec;
+    }
+
+    // ── 박자 배지 HTML ────────────────────────────────────────────
+    _tsBadgeHTML() {
+      const ts = this.selectedTimeSig;
+      const info = TIME_SIGS.find(t => t.num === ts[0] && t.den === ts[1]);
+      if (!info) return '';
+      return `<span class="cgo-ts-badge" style="--tsc:${info.color}">${info.icon} <b>${info.num}/${info.den}</b> ${info.nameEn} · ${info.desc}</span>`;
+    }
+
+    // ── 박자 선택 ────────────────────────────────────────────────
+    _selectTimeSig(num, den, color) {
+      this.selectedTimeSig = [num, den];
+      window._cgoSelectedTimeSig = [num, den]; // playGroove 엔진 연동
+      // 카드 UI 갱신
+      if (this._tsSec) {
+        this._tsSec.querySelectorAll('.cgo-ts-card').forEach(card => {
+          const n = parseInt(card.dataset.tsn, 10);
+          const d = parseInt(card.dataset.tsd, 10);
+          card.classList.toggle('selected', n === num && d === den);
+        });
+      }
+      // 배지 갱신
+      const bw = this.root && this.root.querySelector('#cgo-ts-badge-wrap');
+      if (bw) bw.innerHTML = this._tsBadgeHTML();
+      this._updateResult();
     }
 
     // ── 주파수 패널 ─────────────────────────────────────────────
