@@ -593,6 +593,27 @@
     } catch(e) {}
   }
 
+  // 메트로놈 클릭음 (accent=1박 강조)
+  function playMetroClick(accent = false) {
+    try {
+      const ctx = getSfCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const freq = accent ? 1200 : 800;
+      const vol  = accent ? 0.55 : 0.35;
+      const osc  = ctx.createOscillator();
+      const g    = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.04);
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(vol, now + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.09);
+    } catch(e) {}
+  }
+
   // Base64 데이터URI → ArrayBuffer
   function b64ToArrayBuffer(b64) {
     const bin = atob(b64);
@@ -2269,7 +2290,16 @@
           <div class="cgo-tempo-tick-name">${stage.name}<br><span style="color:#6b7280;font-size:8px;">${stage.nameEn}</span></div>
         `;
         tick.addEventListener('click', () => {
+          unlockAudioCtx();
           this._onTempoChange(bpm);
+          // 틱 클릭 시 해당 BPM으로 4박 미리듣기
+          let _tb = 0;
+          const _tms = Math.round(60000 / bpm);
+          playMetroClick(true); _tb = 1;
+          const _tid = setInterval(() => {
+            if (_tb >= 4) { clearInterval(_tid); return; }
+            playMetroClick(_tb % 4 === 0); _tb++;
+          }, _tms);
         });
         ticksDiv.appendChild(tick);
       });
@@ -2282,7 +2312,48 @@
       dispDiv.innerHTML = this._tempoDisplayHTML(this.tempoBpm);
       wrap.appendChild(dispDiv);
 
+      // ── 메트로놈 클릭 엔진 ──────────────────────────────────────
+      // 슬라이더 드래그 중 BPM에 맞춰 딸깍 소리 (딜레이 0)
+      let _metroTimer = null;
+      let _metroLastBpm = 0;
+      let _metroActive = false;
+
+      let _clickBeat = 0; // 박자 카운터 (0=1박 accent)
+      const _startMetro = (bpm) => {
+        if (_metroTimer) { clearInterval(_metroTimer); _metroTimer = null; }
+        _metroLastBpm = bpm;
+        _clickBeat = 0;
+        unlockAudioCtx();
+        playMetroClick(true); // 즉시 1박 accent
+        _clickBeat = 1;
+        const intervalMs = Math.round(60000 / bpm);
+        _metroTimer = setInterval(() => {
+          if (!_metroActive) { clearInterval(_metroTimer); _metroTimer = null; return; }
+          playMetroClick(_clickBeat % 4 === 0); // 4박마다 accent
+          _clickBeat++;
+        }, intervalMs);
+      };
+
+      const _restartMetroIfChanged = (bpm) => {
+        // BPM이 크게 바뀌었을 때만 타이머 재시작 (±3 이내는 부드럽게 유지)
+        if (Math.abs(bpm - _metroLastBpm) >= 3) {
+          _startMetro(bpm);
+        }
+      };
+
+      const _stopMetro = () => {
+        _metroActive = false;
+        if (_metroTimer) { clearInterval(_metroTimer); _metroTimer = null; }
+        _clickBeat = 0;
+      };
+
       // 슬라이더 이벤트: 드래그 중에는 말풍선만, 놓으면 카드 업데이트
+      slider.addEventListener('pointerdown', () => {
+        unlockAudioCtx();
+        _metroActive = true;
+        _startMetro(this.tempoBpm);
+      });
+
       slider.addEventListener('input', () => {
         const bpm = sliderToBpm(parseInt(slider.value, 10));
         this.tempoBpm = bpm;
@@ -2290,14 +2361,29 @@
         this._updateTempoTicks(ticksDiv, bpm);
         // 드래그 중: 카드 색상만 실시간 업데이트 (부드럽게)
         this._updateTempoDisplayLive(dispDiv, bpm);
+        // 🎵 BPM 변화 시 메트로놈 속도 갱신
+        if (_metroActive) _restartMetroIfChanged(bpm);
       });
-      slider.addEventListener('change', () => {
+
+      slider.addEventListener('pointerup', () => {
+        _stopMetro();
         // 손 뗐을 때: 전체 카드 + 결과 카드 업데이트 + 오디오 BPM 즉시 반영
         const bpm = sliderToBpm(parseInt(slider.value, 10));
         this.tempoBpm = bpm;
         dispDiv.innerHTML = this._tempoDisplayHTML(bpm);
         this._updateResult();
-        this._applyBpmToAudio();   // 재생 중이면 리듬 즉시 갱신
+        this._applyBpmToAudio();
+      });
+
+      slider.addEventListener('change', () => {
+        // 키보드/접근성 조작 대응 (pointerup 미발화 시)
+        if (!_metroActive) {
+          const bpm = sliderToBpm(parseInt(slider.value, 10));
+          this.tempoBpm = bpm;
+          dispDiv.innerHTML = this._tempoDisplayHTML(bpm);
+          this._updateResult();
+          this._applyBpmToAudio();
+        }
       });
 
       // 초기 말풍선 위치
