@@ -2107,17 +2107,44 @@
           setTimeout(() => this._buildIntroPopup(), 60);
 
         } else if (!isVisible && !_wasHidden) {
-          // 페이지가 숨겨짐 → 다음 진입 시 팝업 표시 준비
+          // 페이지가 숨겨짐 → 전체 리셋 (나갈 때마다 초기화)
           _wasHidden = true;
           if (this.bgAnimId) {
             cancelAnimationFrame(this.bgAnimId);
             this.bgAnimId = null;
           }
+          // cgo-86: 나가면 즉시 리셋 → 다시 들어올 때 새 상태로 시작
+          this._resetState();
         }
       });
 
       this._pageObs = obs;
       obs.observe(pageEl, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+
+    // ── cgo-86: 전체 상태 리셋 ────────────────────────────────
+    _resetState() {
+      // 오디오 정지
+      try { if (this.isPlaying) this._stopAudio(); } catch(e) {}
+      // 선택 상태 초기화
+      this.selectedFreq = 432;
+      try { this.selectedGenres = new Set(['ambient']); } catch(e) {}
+      this.selectedDurationSec = 60;
+      try { this.selectedInstrIds = new Set(); } catch(e) {}
+      this.selected.vocal = 'bgm';
+      this.selected.vibe = null;
+      // 슬롯 재랜덤
+      try {
+        this.slotKeys.forEach(k => {
+          const items = SLOT_DATA[k].items;
+          this.selected[k] = items[Math.floor(Math.random() * items.length)];
+        });
+      } catch(e) {}
+      // UI: 주파수 선택 초기화 → hero4 포함 시각 업데이트
+      try { this._selectFreq(432); } catch(e) {}
+      try { this._updateResult(); } catch(e) {}
+      try { this._switchTab('freq'); } catch(e) {}
+      try { this._setStatus('✨ 설정이 초기화되었습니다'); } catch(e) {}
     }
 
     // ── 입구 팝업 — _cgoFDIntro 표준 팝업 함수 사용 ─────────────
@@ -3832,7 +3859,15 @@
       const freqResultSec = document.createElement('div');
       freqResultSec.className = 'cgo-msec';
       freqResultSec.style.cssText = 'margin-top:10px;';
-      freqResultSec.innerHTML = `<div class="cgo-msec-title" style="font-size:11px;">⚡ 현재 설정 미리보기</div>`;
+      freqResultSec.innerHTML = `<div class="cgo-msec-title" style="font-size:11px;display:flex;align-items:center;justify-content:space-between;">
+        <span>⚡ 현재 설정 미리보기</span>
+        <button id="cgo-freq-reset-btn" style="font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#f87171;cursor:pointer;">🗑 초기화</button>
+      </div>`;
+      // 초기화 버튼 이벤트 (cgo-86)
+      setTimeout(() => {
+        const rb = p.querySelector('#cgo-freq-reset-btn');
+        if (rb) rb.addEventListener('click', () => { try { this._resetState(); } catch(e){} });
+      }, 0);
       const freqResultCard = document.createElement('div');
       freqResultCard.className = 'cgo-result-card';
       freqResultSec.appendChild(freqResultCard);
@@ -4930,6 +4965,18 @@
       this.root.querySelectorAll('.cgo-freq-btn').forEach(b => {
         b.classList.toggle('active', Number(b.dataset.hz) === hz);
       });
+      // cgo-86: hero4 카드(순수음악 포함) 시각 동기화
+      const _h4 = this.root && this.root.querySelector('#cgo-freq-hero4');
+      if (_h4) {
+        const _H4C = {432:'#f59e0b',528:'#10b981',7.83:'#3b82f6',0:'#9ca3af'};
+        _h4.querySelectorAll('[data-fhz]').forEach(c => {
+          const fhz = Number(c.dataset.fhz);
+          const col = _H4C[fhz] || '#9ca3af';
+          const isThis = fhz === hz || (hz === 0 && fhz === 0);
+          c.style.borderColor = isThis ? col : col + '4d';
+          c.style.background  = isThis ? col + '33' : col + '1a';
+        });
+      }
       this._updateResult();
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === hz);
       if (freqOpt) this._setStatus('🌊 ' + freqOpt.label + ' · ' + freqOpt.desc + ' 선택됨');
