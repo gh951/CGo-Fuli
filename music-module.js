@@ -1056,6 +1056,7 @@
 .cgo-tempo-rainbow input[type=range]{
   width:100%;height:12px;border-radius:6px;outline:none;border:none;cursor:pointer;
   -webkit-appearance:none;appearance:none;
+  touch-action:pan-x;
   background:linear-gradient(to right,
     #6366f1 0%,
     #3b82f6 22%,
@@ -1066,16 +1067,23 @@
   box-shadow:0 0 10px rgba(168,85,247,.35);
 }
 .cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+  -webkit-appearance:none;width:34px;height:34px;border-radius:50%;
   background:#fff;border:3px solid #a855f7;
-  box-shadow:0 0 14px rgba(168,85,247,.7),0 2px 8px rgba(0,0,0,.5);
-  cursor:pointer;transition:transform .1s;
+  box-shadow:0 0 18px rgba(168,85,247,.85),0 2px 10px rgba(0,0,0,.5);
+  cursor:pointer;transition:transform .1s,box-shadow .1s;
+  /* 클릭 영역 보장 */
+  -webkit-tap-highlight-color:transparent;
 }
-.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
+.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:hover{
+  box-shadow:0 0 24px rgba(168,85,247,1),0 0 0 6px rgba(168,85,247,.18),0 2px 10px rgba(0,0,0,.5);
+}
+.cgo-tempo-rainbow input[type=range]::-webkit-slider-thumb:active{
+  transform:scale(1.15);
+  box-shadow:0 0 28px rgba(168,85,247,1),0 0 0 10px rgba(168,85,247,.22),0 2px 10px rgba(0,0,0,.5);
+}
 .cgo-tempo-rainbow input[type=range]::-moz-range-thumb{
-  width:26px;height:26px;border-radius:50%;
-  background:#fff;border:3px solid #a855f7;
-  box-shadow:0 0 14px rgba(168,85,247,.7);cursor:pointer;
+  width:34px;height:34px;border-radius:50%;border:3px solid #a855f7;
+  background:#fff;box-shadow:0 0 18px rgba(168,85,247,.85);cursor:pointer;
 }
 /* 틱 마커 (5개 고정 위치) */
 .cgo-tempo-ticks{position:relative;height:28px;margin-top:4px;margin-bottom:6px;}
@@ -2318,39 +2326,89 @@
       let _metroLastBpm = 0;
       let _metroActive = false;
 
-      let _clickBeat = 0; // 박자 카운터 (0=1박 accent)
+      let _clickBeat = 0;
+      let _metroRafId = null; // requestAnimationFrame 기반 정밀 타이머
+      let _metroNextTime = 0; // 다음 클릭 예정 시각 (AudioContext 시간)
+
+      // Web Audio Clock 기반 메트로놈 — setInterval보다 훨씬 정밀
+      const _scheduleMetro = () => {
+        if (!_metroActive) return;
+        try {
+          const ctx = getSfCtx();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const intervalSec = 60 / _metroLastBpm;
+
+          // 다음 0.1초 안에 울려야 할 클릭음을 미리 스케줄
+          while (_metroNextTime < now + 0.1) {
+            if (_metroNextTime >= now - 0.01) { // 너무 과거는 스킵
+              const isAccent = (_clickBeat % 4 === 0);
+              // Web Audio로 정확한 시각에 예약
+              const freq = isAccent ? 1200 : 800;
+              const vol  = isAccent ? 0.55 : 0.35;
+              const osc  = ctx.createOscillator();
+              const g    = ctx.createGain();
+              osc.type = 'sine';
+              const t = Math.max(_metroNextTime, now);
+              osc.frequency.setValueAtTime(freq, t);
+              osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.04);
+              g.gain.setValueAtTime(0, t);
+              g.gain.linearRampToValueAtTime(vol, t + 0.003);
+              g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+              osc.connect(g); g.connect(ctx.destination);
+              osc.start(t); osc.stop(t + 0.09);
+            }
+            _metroNextTime += intervalSec;
+            _clickBeat++;
+          }
+        } catch(e) {}
+        _metroRafId = requestAnimationFrame(_scheduleMetro);
+      };
+
       const _startMetro = (bpm) => {
-        if (_metroTimer) { clearInterval(_metroTimer); _metroTimer = null; }
+        // 기존 스케줄 정리
+        if (_metroRafId) { cancelAnimationFrame(_metroRafId); _metroRafId = null; }
         _metroLastBpm = bpm;
         _clickBeat = 0;
-        unlockAudioCtx();
-        playMetroClick(true); // 즉시 1박 accent
-        _clickBeat = 1;
-        const intervalMs = Math.round(60000 / bpm);
-        _metroTimer = setInterval(() => {
-          if (!_metroActive) { clearInterval(_metroTimer); _metroTimer = null; return; }
-          playMetroClick(_clickBeat % 4 === 0); // 4박마다 accent
-          _clickBeat++;
-        }, intervalMs);
+        // AudioContext 언락 + 즉시 첫 클릭
+        try {
+          const ctx = getSfCtx();
+          if (ctx) {
+            ctx.resume().then(() => {
+              _metroNextTime = ctx.currentTime; // 지금 당장부터 시작
+              _metroActive = true;
+              _scheduleMetro();
+            }).catch(() => {
+              _metroNextTime = (getSfCtx() || {currentTime:0}).currentTime;
+              _metroActive = true;
+              _scheduleMetro();
+            });
+          }
+        } catch(e) {}
       };
 
       const _restartMetroIfChanged = (bpm) => {
-        // BPM이 크게 바뀌었을 때만 타이머 재시작 (±3 이내는 부드럽게 유지)
-        if (Math.abs(bpm - _metroLastBpm) >= 3) {
-          _startMetro(bpm);
+        if (Math.abs(bpm - _metroLastBpm) >= 2) {
+          // BPM 바뀌면 간격만 갱신 (beat 카운터는 유지)
+          _metroLastBpm = bpm;
+          // 다음 클릭 예정 시각을 현재 기준으로 재조정
+          try {
+            const ctx = getSfCtx();
+            if (ctx) _metroNextTime = ctx.currentTime + (60 / bpm) * 0.5;
+          } catch(e) {}
         }
       };
 
       const _stopMetro = () => {
         _metroActive = false;
-        if (_metroTimer) { clearInterval(_metroTimer); _metroTimer = null; }
+        if (_metroRafId) { cancelAnimationFrame(_metroRafId); _metroRafId = null; }
         _clickBeat = 0;
       };
 
-      // 슬라이더 이벤트: 드래그 중에는 말풍선만, 놓으면 카드 업데이트
-      slider.addEventListener('pointerdown', () => {
-        unlockAudioCtx();
-        _metroActive = true;
+      // 슬라이더 thumb 누르는 즉시 메트로놈 시작
+      slider.addEventListener('pointerdown', (e) => {
+        e.stopPropagation(); // 버블링 차단
+        _metroActive = false; // 기존 정리
         _startMetro(this.tempoBpm);
       });
 
@@ -2359,24 +2417,24 @@
         this.tempoBpm = bpm;
         this._updateTempoBubble(slider, bubble, bpm);
         this._updateTempoTicks(ticksDiv, bpm);
-        // 드래그 중: 카드 색상만 실시간 업데이트 (부드럽게)
         this._updateTempoDisplayLive(dispDiv, bpm);
-        // 🎵 BPM 변화 시 메트로놈 속도 갱신
+        // BPM 바뀌면 속도 즉시 반영
         if (_metroActive) _restartMetroIfChanged(bpm);
       });
 
-      slider.addEventListener('pointerup', () => {
+      // 손 떼면 메트로놈 멈추고 확정
+      const _onSliderRelease = () => {
         _stopMetro();
-        // 손 뗐을 때: 전체 카드 + 결과 카드 업데이트 + 오디오 BPM 즉시 반영
         const bpm = sliderToBpm(parseInt(slider.value, 10));
         this.tempoBpm = bpm;
         dispDiv.innerHTML = this._tempoDisplayHTML(bpm);
         this._updateResult();
         this._applyBpmToAudio();
-      });
+      };
+      slider.addEventListener('pointerup',     _onSliderRelease);
+      slider.addEventListener('pointercancel', _onSliderRelease);
 
       slider.addEventListener('change', () => {
-        // 키보드/접근성 조작 대응 (pointerup 미발화 시)
         if (!_metroActive) {
           const bpm = sliderToBpm(parseInt(slider.value, 10));
           this.tempoBpm = bpm;
