@@ -1642,7 +1642,7 @@
       `;
       this.root.appendChild(tabs);
       tabs.querySelectorAll('.cgo-mtab').forEach(t => {
-        t.addEventListener('click', () => this._switchTab(t.dataset.tab));
+        t.addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); this._switchTab(t.dataset.tab); });
       });
       this.tabsEl = tabs;
 
@@ -1779,6 +1779,7 @@
         bodyBuilder(body);
 
         hdr.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           const isOpen = body.style.display !== 'none';
           body.style.display = isOpen ? 'none' : 'block';
           hdr.classList.toggle('open', !isOpen);
@@ -1790,22 +1791,27 @@
         return wrap;
       };
 
-      // ① 악기 (기본 닫힘) ← NEW FIRST
+      // ① 장르 (기본 닫힘) — 악기 선택 위로 이동
+      p.appendChild(mkAccordion('🌍', t(24051), (body) => {
+        body.appendChild(this._buildGenreSection());
+      }, false));
+
+      // ② 악기 (기본 닫힘)
       p.appendChild(mkAccordion('🎵', '악기 선택', (body) => {
         this._buildInstrumentSection(body);
       }, false));
 
-      // ② 보컬 선택 (기본 닫힘)
+      // ③ 보컬 선택 (기본 닫힘)
       p.appendChild(mkAccordion('🎤', '보컬 선택', (body) => {
         this._buildVocalSection(body);
       }, false));
 
-      // ③ 박자 (기본 닫힘)
+      // ④ 박자 (기본 닫힘)
       p.appendChild(mkAccordion('🎼', t(24050), (body) => {
         body.appendChild(this._buildTempoBar());
       }, false));
 
-      // ④ 추첨통 슬롯 — 🎲 조성/음계 랜덤 (기본 닫힘)
+      // ⑤ 추첨통 슬롯 — 🎲 조성/음계 랜덤 (기본 닫힘)
       p.appendChild(mkAccordion('🎰', t(24045), (body) => {
         const grid = document.createElement('div');
         grid.className = 'cgo-slot-grid';
@@ -1838,13 +1844,72 @@
           <button class="cgo-play-btn" id="cgo-quick-play" title="▶">▶</button>
         `;
         body.appendChild(spinWrap);
-        spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => { unlockAudioCtx(); this._spinAll(); });
-        spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => { unlockAudioCtx(); this._quickPlay(); });
-      }, false));
+        spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); unlockAudioCtx(); this._spinAll(); });
+        spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); unlockAudioCtx(); this._quickPlay(); });
 
-      // ⑤ 장르 (기본 닫힘)
-      p.appendChild(mkAccordion('🌍', t(24051), (body) => {
-        body.appendChild(this._buildGenreSection());
+        // ── 프롬프트 생성 카드 (추첨통 아래) ──────────────────────
+        const promptCard = document.createElement('div');
+        promptCard.id = 'cgo-make-prompt-card';
+        promptCard.style.cssText = 'background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(20,184,166,.05));border:1.5px solid rgba(13,148,136,.35);border-radius:14px;padding:15px 14px 14px;margin-top:14px;';
+        promptCard.innerHTML = `
+          <div style="font-size:11px;font-weight:800;color:#0d9488;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:15px;">💬</span>
+            <span>스마트 프롬프트 — 말 한마디로 뚝딱!</span>
+          </div>
+          <div style="font-size:10.5px;color:#475569;line-height:1.6;margin-bottom:10px;">
+            원하는 분위기를 자유롭게 적으면 AI가 주파수·악기·박자를 자동 세팅해 드립니다.
+          </div>
+          <textarea id="cgo-make-prompt-input" rows="3"
+            placeholder="예) 비 오는 밤, 마음을 차분하게 가라앉혀 주는 몽환적인 국악 힐링 곡"
+            style="width:100%;box-sizing:border-box;background:var(--cgo-bg,#fff);border:1.5px solid rgba(13,148,136,.3);border-radius:10px;padding:11px 12px;font-size:12px;color:var(--cgo-fg,#0f172a);line-height:1.65;resize:none;font-family:inherit;outline:none;transition:border-color .15s;"
+            onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='rgba(13,148,136,.3)'"></textarea>
+          <div id="cgo-make-prompt-summary" style="font-size:10px;color:#0d9488;margin-top:8px;padding:8px 10px;background:rgba(13,148,136,.06);border-radius:8px;line-height:1.7;display:none;"></div>
+          <button id="cgo-make-prompt-btn"
+            style="margin-top:9px;width:100%;padding:12px;background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;letter-spacing:.01em;">
+            ✨ 이 분위기로 설정하기
+          </button>
+        `;
+        body.appendChild(promptCard);
+
+        // 현재 설정 요약 자동 표시
+        const summaryDiv = promptCard.querySelector('#cgo-make-prompt-summary');
+        const showSummary = () => {
+          try {
+            const parts = [];
+            const freq = this.selectedFreq;
+            if (freq === '432') parts.push('432Hz 자연공명');
+            else if (freq === '528') parts.push('528Hz DNA회복');
+            else if (freq === '783') parts.push('7.83Hz 슈만공명');
+            else if (freq === 'pure') parts.push('순수음악');
+            if (this.tempoBpm) parts.push(`${this.tempoBpm}BPM`);
+            if (this.selected && this.selected.instrument && this.selected.instrument !== '없음') parts.push(this.selected.instrument);
+            if (this.selected && this.selected.vocal) parts.push(this.selected.vocal);
+            if (this._selectedGenreIds && this._selectedGenreIds.size > 0) {
+              const gNames = [...this._selectedGenreIds].slice(0,2).join(', ');
+              parts.push(gNames);
+            }
+            if (parts.length > 0) {
+              summaryDiv.textContent = '📌 현재 설정: ' + parts.join(' · ');
+              summaryDiv.style.display = 'block';
+            }
+          } catch(e) {}
+        };
+        // 즉시 + 변경될 때마다 업데이트
+        showSummary();
+        const _origUpdateResult = this._updateResult;
+        this._updateResult = function() {
+          if (_origUpdateResult) _origUpdateResult.call(this);
+          try { showSummary(); } catch(e) {}
+        };
+
+        // 버튼 클릭 → 스마트 프롬프트 적용
+        promptCard.querySelector('#cgo-make-prompt-btn').addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+          const txt = promptCard.querySelector('#cgo-make-prompt-input').value || '';
+          if (txt.trim() && typeof this._applySmartPrompt === 'function') {
+            this._applySmartPrompt(txt);
+          }
+        });
       }, false));
 
       // ⑥ 현재 설정 결과 카드 (기본 닫힘)
@@ -1887,6 +1952,7 @@
             <span style="font-size:9px;color:${isSel ? opt.color : '#9d8ec8'};text-align:center;line-height:1.3">${opt.desc}</span>
           `;
           card.addEventListener('click', () => {
+            if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
             this.selected.vocal = opt.id;
             render();
             this._updateResult && this._updateResult();
@@ -1924,6 +1990,7 @@
         btn.className = 'cgo-instr-preset-btn';
         btn.textContent = pr.label;
         btn.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           this.selectedInstrIds.clear();
           pr.ids.forEach(id => this.selectedInstrIds.add(id));
           renderGrid();
@@ -1942,6 +2009,7 @@
         btn.className = 'cgo-instr-filter-btn' + (cat === '전체' ? ' active' : '');
         btn.textContent = cat;
         btn.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           activeCat = cat;
           filterBar.querySelectorAll('.cgo-instr-filter-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
@@ -1987,6 +2055,7 @@
             // pointerdown: 마우스/터치 모두 즉시 반응 (click 보다 빠름)
             const handleInstrTap = (e) => {
               if (e.type === 'pointerdown') e.preventDefault(); // 모바일 더블탭 방지
+              if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
               unlockAudioCtx(); // 🔓 AudioContext 언락 (제스처 직후)
               const wasSelected = this.selectedInstrIds.has(ins.id);
               if (wasSelected) {
@@ -2068,6 +2137,7 @@
         tab.dataset.cid = cluster.id;
         tab.textContent = `${cluster.emoji} ${cluster.label}`;
         tab.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           tabBar.querySelectorAll('.cgo-fmaster-tab').forEach(t => t.classList.remove('active'));
           panelContainer.querySelectorAll('.cgo-fmaster-panel').forEach(p => p.classList.remove('active'));
           tab.classList.add('active');
@@ -2130,6 +2200,7 @@
       if (isActive) card.classList.add('active');
       card.innerHTML = `<div class="cgo-fmaster-card-ico">${item.ico}</div><div class="cgo-fmaster-card-body"><div class="cgo-fmaster-card-hz">${item.hz}</div><div class="cgo-fmaster-card-desc">${item.desc}</div></div>`;
       card.addEventListener('click', () => {
+        if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
         // 숫자 Hz만 선택 가능 (노이즈 타입은 레이블로 구분)
         if (!isNaN(numHz)) {
           this._selectFreq(numHz);
@@ -2209,7 +2280,7 @@
             <div class="cgo-genre-country">📍 ${genre.country}</div>
             <div class="cgo-genre-desc">${genre.desc}</div>
           `;
-          card.addEventListener('click', () => this._toggleGenre(genre.id, group.color));
+          card.addEventListener('click', () => { if (typeof window._spd2Mark === 'function') window._spd2Mark('music'); this._toggleGenre(genre.id, group.color); });
           grid.appendChild(card);
         });
         groupEl.appendChild(grid);
@@ -2302,6 +2373,7 @@
           <div class="cgo-tempo-tick-name">${stage.name}<br><span style="color:#6b7280;font-size:8px;">${stage.nameEn}</span></div>
         `;
         tick.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           unlockAudioCtx();
           this._onTempoChange(bpm);
           // 틱 클릭 시 해당 BPM으로 4박 미리듣기
@@ -2572,6 +2644,7 @@
         }
         card.innerHTML = `<div style="font-size:14px;font-weight:800;color:${hf.color};">${hf.title}</div><div style="font-size:11.5px;color:#9d8ec4;margin-top:6px;line-height:1.6;">${hf.desc}</div>`;
         card.addEventListener('click', () => {
+          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
           this._selectFreq(hf.hz);
           hero4Wrap.querySelectorAll('[data-fhz]').forEach(c => {
             const isThis = Number(c.dataset.fhz) === hf.hz;
