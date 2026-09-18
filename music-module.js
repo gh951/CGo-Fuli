@@ -496,7 +496,7 @@
   // ── Soundfont-Player (GM 악기 실제 사운드) ───────────────────────
   // CDN: gleitz/midi-js-soundfonts (GitHub Pages) — 서버리스, 무료
   // 로딩 전략: 악기 선택 시 lazy-load, AudioContext 공유
-  const SF_BASE = 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/';
+  const SF_BASE = 'https://cdn.jsdelivr.net/gh/gleitz/midi-js-soundfonts@gh-pages/FluidR3_GM/';
   const SF_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
   // GM 번호 → soundfont 파일명 매핑
