@@ -2680,6 +2680,13 @@
         </div>
       `;
       p.appendChild(genWrap);
+
+      // cgo-84: 흰 오선지 악보 컨테이너 (그루브 전용)
+      var _sw = document.createElement('div');
+      _sw.id = 'cgo-groove-score-wrap';
+      _sw.style.cssText = 'margin:0 14px 14px;background:#fff;border-radius:10px;overflow:hidden;display:none;';
+      p.appendChild(_sw);
+
       genWrap.querySelector('#cgo-gen-btn').addEventListener('click', () => this._onGenerate());
 
       // ── cgo-72: rPPG 스캔 버튼 이벤트 ──────────────────────────────
