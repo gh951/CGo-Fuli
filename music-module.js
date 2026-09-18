@@ -599,16 +599,90 @@
     return sfLoading[sfName];
   }
 
-  // 특정 GM 악기로 노트 재생 (duration초)
-  async function playSfNote(gm, noteName, duration = 1.2, volumeGain = 0.7) {
+  // 오실레이터 폴백: soundfont 없을 때 Web Audio API로 즉시 소리
+  function playOscFallback(gm, duration = 1.2, volumeGain = 0.65) {
     try {
-      const buffers = await loadSoundfont(gm);
+      const ctx = getSfCtx();
+      const now = ctx.currentTime;
+      // GM 번호에 따라 파형·주파수 분류
+      const isString  = (gm >= 40 && gm <= 51);   // 바이올린~첼로 계열
+      const isWind    = (gm >= 64 && gm <= 79);   // 관악기
+      const isPerc    = (gm >= 112 && gm <= 127); // 타악기
+      const isBass    = (gm >= 32 && gm <= 39);   // 베이스
+      const isEthnic  = (gm >= 104 && gm <= 111) || gm >= 94; // 에스닉/패드
+      const wave = isString ? 'sawtooth' : isWind ? 'triangle' : isPerc ? 'square' : 'sine';
+      const baseFreq = isBass ? 110 : isEthnic ? 293.66 : isPerc ? 220 : 261.63; // C4=261.63Hz
+
+      // 메인 오실레이터
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      // 현악기·에스닉: 비브라토 효과
+      if (isString || isEthnic) {
+        osc.frequency.linearRampToValueAtTime(baseFreq * 1.008, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(baseFreq * 0.994, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(baseFreq * 1.005, now + 0.5);
+      }
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volumeGain, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+
+      // 화음(3도) 추가 — 더 풍성한 소리
+      if (!isPerc) {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = wave;
+        osc2.frequency.setValueAtTime(baseFreq * 1.26, now); // 단3도 위
+        gain2.gain.setValueAtTime(0, now);
+        gain2.gain.linearRampToValueAtTime(volumeGain * 0.4, now + 0.06);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now);
+        osc2.stop(now + duration);
+      }
+    } catch(e) {
+      console.warn('[CGO-SF] 폴백 오실레이터 실패:', e.message);
+    }
+  }
+
+  // 특정 GM 악기로 노트 재생 (duration초) — soundfont 실패 시 오실레이터 폴백
+  async function playSfNote(gm, noteName, duration = 1.2, volumeGain = 0.7) {
+    // AudioContext 반드시 resume (모바일/iOS 사용자 제스처 후)
+    try { const ctx = getSfCtx(); if (ctx.state === 'suspended') await ctx.resume(); } catch(e) {}
+
+    // 에스닉 악기(GM 94+)는 사운드폰트가 없으므로 즉시 오실레이터로
+    if (gm >= 94) {
+      playOscFallback(gm, duration, volumeGain);
+      return;
+    }
+
+    try {
+      // soundfont 로드 시도 (타임아웃 3초)
+      const loadPromise = loadSoundfont(gm);
+      const timeout = new Promise(resolve => setTimeout(() => resolve(null), 3000));
+      const buffers = await Promise.race([loadPromise, timeout]);
+
+      if (!buffers || !Object.keys(buffers).length) {
+        // 로드 실패 → 오실레이터 폴백
+        playOscFallback(gm, duration, volumeGain);
+        return;
+      }
+
       const ctx = getSfCtx();
       // 노트명 정규화: 'C4', 'A4' 등
       const key = buffers[noteName] ? noteName
         : buffers[noteName + '4'] ? noteName + '4'
         : Object.keys(buffers)[0];
-      if (!key || !buffers[key]) return;
+      if (!key || !buffers[key]) {
+        playOscFallback(gm, duration, volumeGain);
+        return;
+      }
       const src = ctx.createBufferSource();
       src.buffer = buffers[key];
       const gain = ctx.createGain();
@@ -619,7 +693,8 @@
       src.start(ctx.currentTime);
       src.stop(ctx.currentTime + duration);
     } catch(e) {
-      console.warn('[CGO-SF] 재생 실패:', e.message);
+      console.warn('[CGO-SF] 재생 실패 → 폴백:', e.message);
+      playOscFallback(gm, duration, volumeGain);
     }
   }
 
