@@ -1121,206 +1121,69 @@
       obs.observe(pageEl, { attributes: true, attributeFilter: ['style', 'class'] });
     }
 
-    // ── 입구 팝업 매뉴얼 ────────────────────────────────────────
+    // ── 입구 팝업 — _cgoFDIntro 표준 팝업 함수 사용 ─────────────
+    // index.html의 모든 페이지가 동일 함수로 팝업을 만든다.
+    // position:fixed + top:var(--hdrH,56px) → 헤더 아래 전체화면, 치우침 없음.
+    // 오늘 하루 보지 않기 = 체크박스, 로고 클릭 = 대시보드 이동 모두 내장됨.
     _buildIntroPopup() {
-      // 24시간 닫기 체크
-      try {
-        const ts = localStorage.getItem('cgoMusicIntroHide');
-        if (ts && Date.now() - Number(ts) < 86400000) return;
-      } catch(e) {}
+      // ── 오늘 하루 보지 않기 체크 (값 '1' 형식 — _cgoFDIntro 호환) ──
+      const SKIP_KEY = 'cgo_music_intro_v2';
+      try { if (localStorage.getItem(SKIP_KEY) === '1') return; } catch(e) {}
 
       // 중복 방지
       if (document.getElementById('cgo-music-intro-pop')) return;
-      if (!document.body) {
-        document.addEventListener('DOMContentLoaded', () => this._buildIntroPopup(), { once: true });
-        return;
+
+      // ── _cgoFDIntro 표준 함수로 팝업 생성 ──
+      // 없으면 최대 10회 재시도 (index.html이 아직 파싱 중일 때 대비)
+      const cfg = {
+        id:       'cgo-music-intro-pop',
+        skipKey:  SKIP_KEY,
+        __force:  true,   // skipKey 체크를 함수 내부가 아닌 위에서 이미 했으므로 강제 표시
+        accent:   '#0d9488',
+        accent2:  '#14b8a6',
+        ico:      '🎵',
+        badge:    '🌊 세계 최초 AI 치유 음악 생성기',
+        title:    'CGO 주파수 뮤직',
+        subtitle: '위성 × 생체 × 역학 × 힐링 주파수 × 100가지 글로벌 악기',
+        summary:  'CGO FULI(미래 도서관)의 음악 모듈입니다. 힐링 주파수(432Hz · 528Hz · 7.83Hz)와 100가지 글로벌 악기를 AI가 자동 조합하여 나만의 치유 사운드를 만들어 드립니다. 악기 카드를 클릭하면 실제 사운드를 바로 미리 들을 수 있습니다 🔊',
+        howtoLabel: '🗂️ 4단계 사용 순서',
+        howto: [
+          '🌊 주파수 탭|432Hz · 528Hz · 7.83Hz 중 힐링 목적에 맞는 주파수를 먼저 선택합니다.',
+          '🎰 추첨통 탭|악기·보컬을 카드로 직접 선택하고, 조성/음계는 추첨통으로 랜덤 추첨합니다.',
+          '🎼 음악편집 탭|AI가 생성한 음악의 볼륨, 이펙트, 트랙 레이어를 세밀하게 조정합니다.',
+          '⬇️ 다운로드 탭|완성된 힐링 음악을 MP3 · WAV 파일로 내 기기에 저장합니다.'
+        ],
+        howto2Label: '🌊 힐링 주파수 가이드',
+        howto2: [
+          '432Hz 자연 공명|안정 · 평화 · 편안함 — 자연의 리듬과 공명하는 주파수',
+          '528Hz DNA 회복|사랑 · 치유 · 재생 — 세포 재생에 관여한다고 알려진 주파수',
+          '7.83Hz 슈만공명|지구 뇌파 동조 — 지구 전자기장의 고유 주파수',
+          '순수음악|힐링 없이 순수 악기 연주 — 128 GM + 에스닉 악기 7종'
+        ],
+        tip: '악기 카드를 탭하면 실제 사운드를 즉시 미리 들을 수 있습니다. 저작권은 사용자에게 있으며, 상업적 이용이 가능합니다. (발생 수익의 5%는 CGO에 귀속)',
+        note: '힐링 주파수는 과학적으로 검증된 의료 효과를 주장하지 않습니다. 심신 안정을 위한 음악 감상 용도로 활용하세요.',
+        btnLabel: '🎵 CGO 뮤직 시작하기',
+        launch: ''   // 버튼 클릭 시 팝업 닫기만 (launch 없으면 _cgoFDIntro가 remove만 함)
+      };
+
+      if (typeof window._cgoFDIntro === 'function') {
+        window._cgoFDIntro(cfg);
+      } else {
+        // 폴백: 최대 10회 × 200ms 재시도
+        let _tries = 0;
+        const _retry = setInterval(() => {
+          _tries++;
+          if (typeof window._cgoFDIntro === 'function') {
+            clearInterval(_retry);
+            if (!document.getElementById('cgo-music-intro-pop')) {
+              window._cgoFDIntro(cfg);
+            }
+          } else if (_tries >= 10) {
+            clearInterval(_retry);
+            console.warn('[CGO-MUSIC] _cgoFDIntro 함수를 찾을 수 없습니다.');
+          }
+        }, 200);
       }
-
-      // ── viewport px 직접 고정 방식 — overflow/transform/contain 완전 무시 ──
-      // <dialog> top-layer도 .content overflow-x:hidden에 클리핑되는 브라우저 버그 대응
-      // JS로 window.innerWidth/Height를 직접 읽어 px 단위로 박아 넣는다
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-
-      const dlg = document.createElement('div');
-      dlg.id = 'cgo-music-intro-pop';
-      // ★ position:fixed + 좌표 직접 지정 (inset 대신 top/left/width/height px 고정)
-      dlg.style.cssText = [
-        'position:fixed',
-        'top:0','left:0',
-        'width:' + vw + 'px',
-        'height:' + vh + 'px',
-        'max-width:none','max-height:none','min-width:0','min-height:0',
-        'margin:0','padding:0','border:none','outline:none',
-        'background:#f0fdf9','overflow-y:auto','overflow-x:hidden',
-        '-webkit-overflow-scrolling:touch',
-        'font-family:\'Noto Sans KR\',\'Apple SD Gothic Neo\',sans-serif',
-        'box-sizing:border-box','display:flex','flex-direction:column',
-        'z-index:2147483647'
-      ].join(';');
-
-      // resize 시 재적용
-      const _mipResize = () => {
-        dlg.style.width  = window.innerWidth  + 'px';
-        dlg.style.height = window.innerHeight + 'px';
-      };
-      window.addEventListener('resize', _mipResize);
-
-      dlg.innerHTML = `
-<style>
-#cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
-/* ★ 스크롤 가능한 내용 영역 — flex:1 + overflow:auto */
-#mip-scroll-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
-.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 20px 60px;}
-.mip-top{
-  flex-shrink:0;
-  display:flex;justify-content:space-between;align-items:center;
-  padding:14px 20px;
-  background:rgba(240,253,249,.97);
-  border-bottom:1px solid rgba(20,184,166,.18);
-}
-.mip-logo{font-size:13px;font-weight:900;color:#0d9488;letter-spacing:.04em;cursor:pointer;
-  padding:6px 10px;border-radius:8px;background:rgba(20,184,166,.08);
-  border:1px solid rgba(20,184,166,.2);transition:background .15s;}
-.mip-logo:hover{background:rgba(20,184,166,.18);}
-.mip-close{
-  width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(20,184,166,.4);
-  background:rgba(20,184,166,.08);color:#0d9488;font-size:18px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  font-family:inherit;line-height:1;
-}
-.mip-close:hover{background:rgba(20,184,166,.2);}
-.mip-hero{text-align:center;padding:28px 16px 20px;}
-.mip-em{font-size:56px;display:block;margin-bottom:12px;}
-.mip-title{font-size:22px;font-weight:900;color:#0d9488;margin-bottom:6px;}
-.mip-sub{font-size:12px;color:#14b8a6;line-height:1.7;}
-.mip-sec{background:#fff;border:1px solid rgba(20,184,166,.15);
-  border-radius:16px;padding:16px;margin-bottom:12px;
-  box-shadow:0 2px 12px rgba(20,184,166,.06);}
-.mip-lbl{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
-  color:#0d9488;margin-bottom:12px;padding-bottom:10px;
-  border-bottom:1px solid rgba(20,184,166,.12);}
-.mip-sec p{font-size:13px;color:#475569;line-height:1.85;}
-.mip-step{display:flex;gap:12px;align-items:flex-start;padding:10px 0;
-  border-bottom:1px solid rgba(20,184,166,.08);}
-.mip-step:last-child{border-bottom:none;padding-bottom:0;}
-.mip-step-n{flex-shrink:0;width:30px;height:30px;border-radius:50%;
-  background:linear-gradient(135deg,#14b8a6,#0d9488);
-  color:#fff;font-size:13px;font-weight:900;
-  display:flex;align-items:center;justify-content:center;}
-.mip-step-title{font-size:13px;font-weight:800;color:#134e4a;margin-bottom:3px;}
-.mip-step-desc{font-size:11.5px;color:#5eabad;line-height:1.55;}
-.mip-freq{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
-.mip-freq-card{border-radius:14px;padding:14px 12px;text-align:center;color:#fff;}
-.mip-hz{font-size:18px;font-weight:900;letter-spacing:-0.5px;}
-.mip-hz-name{font-size:10.5px;opacity:.88;margin-top:4px;line-height:1.45;}
-.mip-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px;}
-.mip-card2{border-radius:12px;padding:12px;border:1px solid rgba(20,184,166,.2);
-  background:rgba(20,184,166,.05);}
-.mip-card2-title{font-size:12px;font-weight:700;color:#0d9488;margin-bottom:4px;}
-.mip-card2-desc{font-size:10.5px;color:#5eabad;line-height:1.6;}
-.mip-note{background:rgba(20,184,166,.07);border:1px solid rgba(20,184,166,.2);
-  border-radius:10px;padding:10px 14px;font-size:11.5px;color:#0d9488;
-  font-weight:600;line-height:1.75;margin-top:10px;}
-.mip-actions{padding:16px 0 8px;}
-.mip-btn-start{
-  width:100%;padding:17px;
-  background:linear-gradient(135deg,#0d9488,#14b8a6);
-  border:none;border-radius:16px;color:#fff;
-  font-size:15px;font-weight:900;cursor:pointer;
-  font-family:inherit;letter-spacing:.06em;
-  box-shadow:0 6px 24px rgba(20,184,166,.35);
-}
-.mip-btn-today{
-  width:100%;margin-top:10px;padding:12px;
-  background:transparent;
-  border:1.5px solid rgba(20,184,166,.3);
-  border-radius:12px;color:#0d9488;
-  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
-}
-.mip-credit{text-align:center;margin-top:12px;font-size:10px;color:#94a3b8;letter-spacing:.1em;}
-</style>
-<div class="mip-top">
-  <span class="mip-logo" id="mip-logo-btn">🎵 CGO FULI · Music</span>
-  <button class="mip-close" id="mip-close-btn">✕</button>
-</div>
-<div id="mip-scroll-body"><div class="mip-wrap">
-  <div class="mip-hero">
-    <span class="mip-em">🌊</span>
-    <div class="mip-title">CGO 주파수 뮤직</div>
-    <div class="mip-sub">세계 최초 AI 치유 음악 생성기<br>위성 × 생체 × 역학 × 힐링 주파수 × 100가지 글로벌 악기</div>
-  </div>
-
-  <div class="mip-sec">
-    <div class="mip-lbl">🌊 CGO 뮤직이란?</div>
-    <p>CGO FULI(미래 도서관)의 음악 모듈입니다. 힐링 주파수(432 · 528 · 7.83Hz)와 100가지 글로벌 악기를 AI가 자동 조합하여 나만의 치유 사운드를 만들어 드립니다.<br>
-    <span style="font-size:11px;color:#94a3b8;margin-top:4px;display:block;">※ 악기 카드를 클릭하면 실제 사운드를 바로 미리 들을 수 있습니다 🔊</span></p>
-  </div>
-
-  <div class="mip-sec">
-    <div class="mip-lbl">🗂️ 4개 탭 사용 순서</div>
-    <div class="mip-step"><div class="mip-step-n">1</div><div><div class="mip-step-title">🌊 주파수 탭</div><div class="mip-step-desc">432Hz · 528Hz · 7.83Hz 중 힐링 목적에 맞는 주파수를 먼저 선택합니다.</div></div></div>
-    <div class="mip-step"><div class="mip-step-n">2</div><div><div class="mip-step-title">🎰 추첨통 탭</div><div class="mip-step-desc">악기·보컬을 카드로 직접 선택하고, 조성/음계는 추첨통으로 랜덤 추첨합니다.</div></div></div>
-    <div class="mip-step"><div class="mip-step-n">3</div><div><div class="mip-step-title">🎼 음악편집 탭</div><div class="mip-step-desc">AI가 생성한 음악의 볼륨, 이펙트, 트랙 레이어를 세밀하게 조정합니다.</div></div></div>
-    <div class="mip-step"><div class="mip-step-n">4</div><div><div class="mip-step-title">⬇️ 다운로드 탭</div><div class="mip-step-desc">완성된 힐링 음악을 MP3 · WAV 파일로 내 기기에 저장합니다.</div></div></div>
-  </div>
-
-  <div class="mip-sec">
-    <div class="mip-lbl">🌊 힐링 주파수 가이드</div>
-    <div class="mip-freq">
-      <div class="mip-freq-card" style="background:linear-gradient(135deg,#0d9488,#0f766e)"><div class="mip-hz">432Hz</div><div class="mip-hz-name">자연 공명<br>안정 · 평화 · 편안함</div></div>
-      <div class="mip-freq-card" style="background:linear-gradient(135deg,#0369a1,#0284c7)"><div class="mip-hz">528Hz</div><div class="mip-hz-name">DNA 회복<br>사랑 · 치유 · 재생</div></div>
-      <div class="mip-freq-card" style="background:linear-gradient(135deg,#065f46,#047857)"><div class="mip-hz">7.83Hz</div><div class="mip-hz-name">슈만공명<br>지구 뇌파 동조</div></div>
-      <div class="mip-freq-card" style="background:linear-gradient(135deg,#374151,#4b5563)"><div class="mip-hz">순수음악</div><div class="mip-hz-name">힐링 없이<br>순수 악기 연주</div></div>
-    </div>
-  </div>
-
-  <div class="mip-sec">
-    <div class="mip-lbl">🎹 사운드폰트 & 저작권</div>
-    <div class="mip-grid2">
-      <div class="mip-card2"><div class="mip-card2-title">🎸 128 GM 악기</div><div class="mip-card2-desc">전 세계 표준 MIDI<br>128가지 음색 지원</div></div>
-      <div class="mip-card2"><div class="mip-card2-title">🇰🇷 에스닉 확장 7종</div><div class="mip-card2-desc">가야금·해금·고쟁<br>두둑·코라·디저리두</div></div>
-      <div class="mip-card2"><div class="mip-card2-title">🔊 즉시 미리듣기</div><div class="mip-card2-desc">악기 카드 탭 →<br>실시간 음색 재생</div></div>
-      <div class="mip-card2"><div class="mip-card2-title">📱 모바일 최적화</div><div class="mip-card2-desc">스마트폰에서도<br>끊김 없이 재생</div></div>
-    </div>
-    <div class="mip-note">©️ <strong>저작권은 사용자에게 있습니다.</strong> CGO 뮤직으로 생성한 음악은 상업적 이용이 가능합니다. 단, 발생한 수익의 <strong>5%는 CGO</strong>에 귀속됩니다.</div>
-  </div>
-
-  <div class="mip-actions">
-    <button class="mip-btn-start" id="mip-start-btn">🎵 CGO 뮤직 시작하기!</button>
-    <button class="mip-btn-today" id="mip-today-btn">오늘 하루 보지 않기</button>
-    <div class="mip-credit">CGO FULI · Future Library · AI Healing Music</div>
-  </div>
-</div></div>`;
-
-      // ★ document.documentElement에 직접 붙이기 — body의 overflow:hidden 완전 우회
-      document.documentElement.appendChild(dlg);
-
-      const close = () => {
-        window.removeEventListener('resize', _mipResize);
-        dlg.style.opacity = '0';
-        dlg.style.transition = 'opacity .3s';
-        setTimeout(() => { try { dlg.remove(); } catch(e) {} }, 320);
-      };
-
-      dlg.querySelector('#mip-close-btn').addEventListener('click', close);
-      dlg.querySelector('#mip-start-btn').addEventListener('click', close);
-
-      dlg.querySelector('#mip-today-btn').addEventListener('click', () => {
-        try { localStorage.setItem('cgoMusicIntroHide', String(Date.now())); } catch(e) {}
-        close();
-      });
-
-      dlg.querySelector('#mip-logo-btn').addEventListener('click', () => {
-        window.removeEventListener('resize', _mipResize);
-        try { dlg.remove(); } catch(e) {}
-        if (typeof window.cgoGoPage === 'function') {
-          try { window.cgoGoPage('dashboard'); return; } catch(e) {}
-        }
-        const btn = document.querySelector('[onclick*="cgoGoPage"][onclick*="dashboard"]')
-                 || document.querySelector('.nav-btn[data-page="dashboard"]');
-        if (btn) btn.click();
-      });
     }
 
     // ── DOM 빌드 ────────────────────────────────────────────────
