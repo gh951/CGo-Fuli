@@ -546,11 +546,26 @@
   // 단일 AudioContext (글로벌 공유)
   let sfAudioCtx = null;
   function getSfCtx() {
-    if (!sfAudioCtx || sfAudioCtx.state === 'closed') {
-      sfAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+      if (!sfAudioCtx || sfAudioCtx.state === 'closed') {
+        sfAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // suspended 상태면 resume() — 브라우저 autoplay 정책 대응
+      if (sfAudioCtx.state === 'suspended') {
+        sfAudioCtx.resume().catch(()=>{});
+      }
+    } catch(e) {
+      console.warn('[CGO-SF] AudioContext 생성 실패:', e.message);
+      return null;
     }
-    if (sfAudioCtx.state === 'suspended') sfAudioCtx.resume();
     return sfAudioCtx;
+  }
+  // 사용자 제스처 시 AudioContext 미리 언락 (클릭/터치 이벤트에 연결)
+  function unlockAudioCtx() {
+    try {
+      const ctx = getSfCtx();
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    } catch(e) {}
   }
 
   // Base64 데이터URI → ArrayBuffer
@@ -599,102 +614,269 @@
     return sfLoading[sfName];
   }
 
-  // 오실레이터 폴백: soundfont 없을 때 Web Audio API로 즉시 소리
+  // ── 악기별 고유 합성음 엔진 (soundfont 없을 때 Web Audio API) ──────
+  // 각 악기 카테고리마다 완전히 다른 음색을 합성
   function playOscFallback(gm, duration = 1.2, volumeGain = 0.65) {
     try {
       const ctx = getSfCtx();
+      if (!ctx) return;
       const now = ctx.currentTime;
-      // GM 번호에 따라 파형·주파수 분류
-      const isString  = (gm >= 40 && gm <= 51);   // 바이올린~첼로 계열
-      const isWind    = (gm >= 64 && gm <= 79);   // 관악기
-      const isPerc    = (gm >= 112 && gm <= 127); // 타악기
-      const isBass    = (gm >= 32 && gm <= 39);   // 베이스
-      const isEthnic  = (gm >= 104 && gm <= 111) || gm >= 94; // 에스닉/패드
-      const wave = isString ? 'sawtooth' : isWind ? 'triangle' : isPerc ? 'square' : 'sine';
-      const baseFreq = isBass ? 110 : isEthnic ? 293.66 : isPerc ? 220 : 261.63; // C4=261.63Hz
 
-      // 메인 오실레이터
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = wave;
-      osc.frequency.setValueAtTime(baseFreq, now);
-      // 현악기·에스닉: 비브라토 효과
-      if (isString || isEthnic) {
-        osc.frequency.linearRampToValueAtTime(baseFreq * 1.008, now + 0.15);
-        osc.frequency.linearRampToValueAtTime(baseFreq * 0.994, now + 0.3);
-        osc.frequency.linearRampToValueAtTime(baseFreq * 1.005, now + 0.5);
+      // ── 악기 카테고리 판별 ──
+      const isPiano    = gm <= 7;
+      const isChrome   = (gm >= 8 && gm <= 15);   // 첼레스타·글로켄슈필·비브라폰
+      const isOrgan    = (gm >= 16 && gm <= 23);
+      const isGuitar   = (gm >= 24 && gm <= 31);
+      const isBass     = (gm >= 32 && gm <= 39);
+      const isString   = (gm >= 40 && gm <= 51);
+      const isEnsemble = (gm >= 48 && gm <= 55);
+      const isWoodwind = (gm >= 64 && gm <= 79);   // 피콜로·플루트·오보에·클라리넷
+      const isBrass    = (gm >= 56 && gm <= 63);
+      const isPad      = (gm >= 88 && gm <= 95);
+      const isEthnic   = (gm >= 104 && gm <= 111) || (gm >= 94 && gm <= 103);
+      const isPerc     = (gm >= 112 && gm <= 127);
+      const isSax      = (gm >= 64 && gm <= 67);
+
+      // 기본 C4 주파수 (악기에 따라 옥타브 조정)
+      const C4 = 261.63, C3 = 130.81, C5 = 523.25, C2 = 65.41;
+      let baseFreq = C4;
+      if (isBass) baseFreq = C2;
+      else if (isPerc) baseFreq = 110;
+      else if (isEthnic) baseFreq = 293.66; // D4
+
+      // ── 헬퍼: 오실레이터 하나 생성 ──
+      const makeOsc = (type, freq, vol, attack, decay, sustainRatio = 0.3) => {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(vol, now + attack);
+        g.gain.setValueAtTime(vol * sustainRatio, now + attack + decay);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.05);
+        return { osc, g };
+      };
+
+      // ── 피아노: 빠른 어택 + 긴 서스테인 + 배음 ──
+      if (isPiano) {
+        makeOsc('triangle', baseFreq,       volumeGain * 0.7, 0.005, 0.05, 0.4);
+        makeOsc('triangle', baseFreq * 2,   volumeGain * 0.3, 0.008, 0.03, 0.2);
+        makeOsc('triangle', baseFreq * 3,   volumeGain * 0.15, 0.01, 0.02, 0.1);
+        // 피아노 특유의 짧은 클릭 노이즈
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+        const n = ctx.createBufferSource(); n.buffer = buf;
+        const ng = ctx.createGain(); ng.gain.setValueAtTime(volumeGain * 0.15, now);
+        n.connect(ng); ng.connect(ctx.destination); n.start(now);
       }
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(volumeGain, now + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + duration);
-
-      // 화음(3도) 추가 — 더 풍성한 소리
-      if (!isPerc) {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = wave;
-        osc2.frequency.setValueAtTime(baseFreq * 1.26, now); // 단3도 위
-        gain2.gain.setValueAtTime(0, now);
-        gain2.gain.linearRampToValueAtTime(volumeGain * 0.4, now + 0.06);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(now);
-        osc2.stop(now + duration);
+      // ── 크로마틱 타악기(첼레스타·글로켄슈필·마림바): 맑은 벨 음 ──
+      else if (isChrome) {
+        // FM 합성으로 금속성 벨
+        const carrier = ctx.createOscillator();
+        const modulator = ctx.createOscillator();
+        const modGain = ctx.createGain();
+        const masterGain = ctx.createGain();
+        carrier.type = 'sine'; carrier.frequency.setValueAtTime(baseFreq, now);
+        modulator.type = 'sine'; modulator.frequency.setValueAtTime(baseFreq * 3.5, now);
+        modGain.gain.setValueAtTime(baseFreq * 8, now);
+        modGain.gain.exponentialRampToValueAtTime(baseFreq * 0.1, now + 0.3);
+        masterGain.gain.setValueAtTime(0, now);
+        masterGain.gain.linearRampToValueAtTime(volumeGain, now + 0.003);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 1.5);
+        modulator.connect(modGain); modGain.connect(carrier.frequency);
+        carrier.connect(masterGain); masterGain.connect(ctx.destination);
+        carrier.start(now); carrier.stop(now + duration * 1.5);
+        modulator.start(now); modulator.stop(now + duration * 1.5);
+      }
+      // ── 오르간: 지속하는 배음 복합 ──
+      else if (isOrgan) {
+        const drawbars = [1, 2, 3, 4, 5, 6, 8];
+        drawbars.forEach((h, i) => {
+          const vol = volumeGain * [0.6,0.4,0.3,0.2,0.15,0.1,0.08][i] || 0.05;
+          makeOsc('sine', baseFreq * h, vol, 0.015, 0.01, 0.9); // 지속
+        });
+      }
+      // ── 기타: 빠른 피치 내림 + 감쇠 (플럭 소리) ──
+      else if (isGuitar) {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.998, now + 0.05);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(volumeGain * 0.8, now + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.7);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(now); osc.stop(now + duration);
+        // 보디 공명
+        makeOsc('triangle', baseFreq * 0.5, volumeGain * 0.25, 0.005, 0.02, 0.3);
+      }
+      // ── 베이스: 깊고 두꺼운 저음 ──
+      else if (isBass) {
+        makeOsc('sawtooth', baseFreq,     volumeGain * 0.7, 0.01, 0.05, 0.6);
+        makeOsc('square',   baseFreq * 2, volumeGain * 0.2, 0.01, 0.03, 0.4);
+        // 서브 베이스
+        makeOsc('sine', baseFreq * 0.5, volumeGain * 0.3, 0.02, 0.1, 0.7);
+      }
+      // ── 현악기: 비브라토 + 보우(활) 느낌 ──
+      else if (isString) {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        // 비브라토 (~5.5Hz)
+        const vib = ctx.createOscillator();
+        const vibG = ctx.createGain();
+        vib.type = 'sine'; vib.frequency.setValueAtTime(5.5, now);
+        vibG.gain.setValueAtTime(0, now);
+        vibG.gain.linearRampToValueAtTime(baseFreq * 0.012, now + 0.3); // 비브라토 서서히 증가
+        vib.connect(vibG); vibG.connect(osc.frequency);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(volumeGain * 0.65, now + 0.08); // 보우 어택
+        g.gain.setValueAtTime(volumeGain * 0.55, now + 0.2);
+        g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(now); osc.stop(now + duration);
+        vib.start(now); vib.stop(now + duration);
+        // 고배음 (현 색깔)
+        makeOsc('sawtooth', baseFreq * 2, volumeGain * 0.2, 0.1, 0.05, 0.3);
+      }
+      // ── 금관악기: 빠른 어택 + 배음 풍부 ──
+      else if (isBrass) {
+        makeOsc('sawtooth', baseFreq,     volumeGain * 0.6, 0.02, 0.05, 0.7);
+        makeOsc('sawtooth', baseFreq * 2, volumeGain * 0.3, 0.025, 0.05, 0.5);
+        makeOsc('sawtooth', baseFreq * 3, volumeGain * 0.15, 0.03, 0.04, 0.3);
+        // 브라스 특유의 "lip buzz" 느낌
+        makeOsc('square', baseFreq * 0.5, volumeGain * 0.15, 0.01, 0.08, 0.4);
+      }
+      // ── 목관악기/플루트/색소폰: 숨소리 + 순음 ──
+      else if (isWoodwind || isSax) {
+        // 브레스 노이즈
+        const bufLen = Math.floor(ctx.sampleRate * duration);
+        const noiseB = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        const nd = noiseB.getChannelData(0);
+        for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+        const noiseS = ctx.createBufferSource(); noiseS.buffer = noiseB;
+        const bpf = ctx.createBiquadFilter();
+        bpf.type = 'bandpass'; bpf.frequency.setValueAtTime(baseFreq * 4, now); bpf.Q.value = 2;
+        const noiseG = ctx.createGain();
+        noiseG.gain.setValueAtTime(0, now);
+        noiseG.gain.linearRampToValueAtTime(volumeGain * 0.12, now + 0.06);
+        noiseG.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        noiseS.connect(bpf); bpf.connect(noiseG); noiseG.connect(ctx.destination);
+        noiseS.start(now); noiseS.stop(now + duration);
+        // 메인 톤
+        const isFlute = (gm >= 73 && gm <= 75);
+        makeOsc(isFlute ? 'sine' : 'triangle', baseFreq,     volumeGain * 0.55, 0.04, 0.06, 0.75);
+        makeOsc('sine', baseFreq * 2, volumeGain * (isSax ? 0.25 : 0.1), 0.05, 0.05, 0.5);
+        if (isSax) makeOsc('triangle', baseFreq * 3, volumeGain * 0.1, 0.05, 0.04, 0.3);
+      }
+      // ── 패드/앰비언트: 느린 어택 + 스윕 ──
+      else if (isPad) {
+        makeOsc('sine',     baseFreq,         volumeGain * 0.5,  0.3, 0.2, 0.8);
+        makeOsc('sine',     baseFreq * 1.005, volumeGain * 0.4,  0.35, 0.2, 0.8); // 약간 디튠
+        makeOsc('triangle', baseFreq * 2,     volumeGain * 0.2,  0.4, 0.2, 0.6);
+        makeOsc('triangle', baseFreq * 0.5,   volumeGain * 0.15, 0.5, 0.2, 0.7);
+      }
+      // ── 에스닉 악기: 가야금/시타르/타블라 등 개성 있는 합성 ──
+      else if (isEthnic) {
+        // 풍성한 플럭+감쇠 (가야금·시타르·코토 느낌)
+        const pluckOsc = ctx.createOscillator();
+        const pluckG = ctx.createGain();
+        pluckOsc.type = 'sawtooth';
+        pluckOsc.frequency.setValueAtTime(baseFreq, now);
+        // 피치 빠른 감쇠 (플럭 특성)
+        pluckOsc.frequency.exponentialRampToValueAtTime(baseFreq * 0.97, now + 0.1);
+        pluckG.gain.setValueAtTime(0, now);
+        pluckG.gain.linearRampToValueAtTime(volumeGain, now + 0.004);
+        pluckG.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
+        pluckOsc.connect(pluckG); pluckG.connect(ctx.destination);
+        pluckOsc.start(now); pluckOsc.stop(now + duration);
+        // 공명 배음
+        makeOsc('triangle', baseFreq * 2, volumeGain * 0.3, 0.01, 0.05, 0.2);
+        makeOsc('sine',     baseFreq * 3, volumeGain * 0.15, 0.015, 0.04, 0.15);
+        // 에스닉 특유의 미세 비브라토
+        const vibEth = ctx.createOscillator();
+        const vibEthG = ctx.createGain();
+        vibEth.type = 'sine'; vibEth.frequency.setValueAtTime(7, now);
+        vibEthG.gain.setValueAtTime(baseFreq * 0.008, now);
+        vibEth.connect(vibEthG); vibEthG.connect(pluckOsc.frequency);
+        vibEth.start(now); vibEth.stop(now + duration);
+      }
+      // ── 타악기: 노이즈 버스트 + 피치 드롭 ──
+      else if (isPerc) {
+        // 킥 드럼 느낌: 빠른 피치 드롭
+        const kickOsc = ctx.createOscillator();
+        const kickG   = ctx.createGain();
+        kickOsc.type = 'sine';
+        kickOsc.frequency.setValueAtTime(baseFreq * 3, now);
+        kickOsc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.12);
+        kickG.gain.setValueAtTime(0, now);
+        kickG.gain.linearRampToValueAtTime(volumeGain, now + 0.003);
+        kickG.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        kickOsc.connect(kickG); kickG.connect(ctx.destination);
+        kickOsc.start(now); kickOsc.stop(now + 0.4);
+        // 스네어 노이즈
+        const snBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.18), ctx.sampleRate);
+        const snD = snBuf.getChannelData(0);
+        for (let i = 0; i < snD.length; i++) snD[i] = (Math.random() * 2 - 1) * (1 - i / snD.length);
+        const snS = ctx.createBufferSource(); snS.buffer = snBuf;
+        const snG = ctx.createGain(); snG.gain.setValueAtTime(volumeGain * 0.6, now);
+        snS.connect(snG); snG.connect(ctx.destination); snS.start(now);
+      }
+      // ── 기본 폴백 (분류 안 됨) ──
+      else {
+        makeOsc('triangle', baseFreq,       volumeGain * 0.6, 0.02, 0.08, 0.5);
+        makeOsc('sine',     baseFreq * 2,   volumeGain * 0.25, 0.02, 0.06, 0.3);
+        makeOsc('sine',     baseFreq * 0.5, volumeGain * 0.2,  0.03, 0.1,  0.4);
       }
     } catch(e) {
       console.warn('[CGO-SF] 폴백 오실레이터 실패:', e.message);
     }
   }
 
-  // 특정 GM 악기로 노트 재생 (duration초) — soundfont 실패 시 오실레이터 폴백
+  // 특정 GM 악기로 노트 재생 — 즉시 오실레이터 먼저, soundfont는 백그라운드 프리로드
   async function playSfNote(gm, noteName, duration = 1.2, volumeGain = 0.7) {
-    // AudioContext 반드시 resume (모바일/iOS 사용자 제스처 후)
-    try { const ctx = getSfCtx(); if (ctx.state === 'suspended') await ctx.resume(); } catch(e) {}
-
-    // 에스닉 악기(GM 94+)는 사운드폰트가 없으므로 즉시 오실레이터로
-    if (gm >= 94) {
-      playOscFallback(gm, duration, volumeGain);
-      return;
-    }
-
+    // ① AudioContext 언락 (autoplay 정책)
     try {
-      // soundfont 로드 시도 (타임아웃 3초)
-      const loadPromise = loadSoundfont(gm);
-      const timeout = new Promise(resolve => setTimeout(() => resolve(null), 3000));
-      const buffers = await Promise.race([loadPromise, timeout]);
-
-      if (!buffers || !Object.keys(buffers).length) {
-        // 로드 실패 → 오실레이터 폴백
-        playOscFallback(gm, duration, volumeGain);
-        return;
-      }
-
       const ctx = getSfCtx();
-      // 노트명 정규화: 'C4', 'A4' 등
-      const key = buffers[noteName] ? noteName
-        : buffers[noteName + '4'] ? noteName + '4'
-        : Object.keys(buffers)[0];
-      if (!key || !buffers[key]) {
-        playOscFallback(gm, duration, volumeGain);
-        return;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buffers[key];
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(volumeGain, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start(ctx.currentTime);
-      src.stop(ctx.currentTime + duration);
-    } catch(e) {
-      console.warn('[CGO-SF] 재생 실패 → 폴백:', e.message);
-      playOscFallback(gm, duration, volumeGain);
+      if (!ctx) { playOscFallback(gm, duration, volumeGain); return; }
+      if (ctx.state === 'suspended') await ctx.resume();
+    } catch(e) {}
+
+    // ② 즉시 오실레이터로 소리 냄 (지연 없음!)
+    playOscFallback(gm, duration, volumeGain);
+
+    // ③ soundfont 캐시가 이미 있으면 더 풍부한 소리도 겹쳐 재생
+    if (gm >= 94) return; // 에스닉은 사운드폰트 없음
+    const sfName = gmToSfName(gm);
+    if (sfCache[sfName] && Object.keys(sfCache[sfName]).length) {
+      // 캐시 히트 — soundfont 버퍼 추가 재생 (오실레이터 위에 레이어)
+      try {
+        const buffers = sfCache[sfName];
+        const ctx = getSfCtx();
+        if (!ctx) return;
+        const key = buffers[noteName] ? noteName
+          : buffers[noteName + '4'] ? noteName + '4'
+          : Object.keys(buffers)[0];
+        if (key && buffers[key]) {
+          const src = ctx.createBufferSource();
+          src.buffer = buffers[key];
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(volumeGain * 0.6, ctx.currentTime); // 오실레이터와 혼합
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+          src.connect(gain); gain.connect(ctx.destination);
+          src.start(ctx.currentTime); src.stop(ctx.currentTime + duration);
+        }
+      } catch(e) {}
+    } else {
+      // 캐시 미스 — 백그라운드에서 조용히 프리로드 (다음 클릭 때 즉시 사용 가능)
+      loadSoundfont(gm).catch(()=>{});
     }
   }
 
@@ -1006,12 +1188,12 @@
 .cgo-instr-preset-btn{padding:4px 10px;border-radius:20px;border:1.5px solid rgba(168,85,247,.4);background:rgba(20,5,45,.8);color:#e9d5ff;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;}
 .cgo-instr-preset-btn:hover{background:rgba(168,85,247,.25);border-color:#c084fc;}
 .cgo-instr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 14px 8px;max-height:260px;overflow-y:auto;}
-.cgo-instr-card{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:1.5px solid rgba(100,60,180,.2);background:rgba(15,4,35,.7);cursor:pointer;transition:all .2s;user-select:none;}
-.cgo-instr-card:hover{border-color:rgba(168,85,247,.5);background:rgba(30,8,60,.8);}
+.cgo-instr-card{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:10px;border:1.5px solid rgba(100,60,180,.2);background:rgba(15,4,35,.7);cursor:pointer;transition:all .2s;user-select:none;-webkit-tap-highlight-color:rgba(168,85,247,.2);touch-action:manipulation;min-height:56px;justify-content:center;}
+.cgo-instr-card:hover,.cgo-instr-card:active{border-color:rgba(168,85,247,.5);background:rgba(30,8,60,.8);}
 .cgo-instr-card.selected{border-color:#a855f7;background:rgba(168,85,247,.2);box-shadow:0 0 8px rgba(168,85,247,.3);}
 .cgo-instr-card.disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
-.cgo-instr-emoji{font-size:18px;line-height:1;}
-.cgo-instr-name{font-size:9.5px;font-weight:800;color:#e9d5ff;text-align:center;line-height:1.2;}
+.cgo-instr-emoji{font-size:20px;line-height:1;pointer-events:none;}
+.cgo-instr-name{font-size:9.5px;font-weight:800;color:#e9d5ff;text-align:center;line-height:1.2;pointer-events:none;}
 .cgo-instr-region{font-size:8.5px;color:#9d8ec8;text-align:center;}
 .cgo-instr-selected-list{padding:0 14px 8px;min-height:28px;}
 .cgo-instr-selected-chips{display:flex;flex-wrap:wrap;gap:4px;}
@@ -1435,6 +1617,7 @@
       const hpBarWrap = hero.querySelector('#cgo-hp-bar-wrap');
 
       hpPlay.addEventListener('click', () => {
+        unlockAudioCtx(); // 🔓 히어로 플레이어 클릭 시 AudioContext 언락
         this._togglePlay();
         hpPlay.classList.toggle('active', !!this.isPlaying);
         hpPlay.textContent = this.isPlaying ? '⏸' : '▶';
@@ -1498,8 +1681,8 @@
       `;
       this.root.appendChild(player);
       this.playerEl = player;
-      player.querySelector('#cgo-player-play').addEventListener('click', () => this._togglePlay());
-      player.querySelector('#cgo-player-stop').addEventListener('click', () => this._stopAudio());
+      player.querySelector('#cgo-player-play').addEventListener('click', () => { unlockAudioCtx(); this._togglePlay(); });
+      player.querySelector('#cgo-player-stop').addEventListener('click', () => { unlockAudioCtx(); this._stopAudio(); });
     }
 
     // ── 추첨통 패널 ─────────────────────────────────────────────
@@ -1581,8 +1764,8 @@
           <button class="cgo-play-btn" id="cgo-quick-play" title="▶">▶</button>
         `;
         body.appendChild(spinWrap);
-        spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => this._spinAll());
-        spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => this._quickPlay());
+        spinWrap.querySelector('#cgo-spin-btn').addEventListener('click', () => { unlockAudioCtx(); this._spinAll(); });
+        spinWrap.querySelector('#cgo-quick-play').addEventListener('click', () => { unlockAudioCtx(); this._quickPlay(); });
       }, false));
 
       // ⑤ 장르 (기본 닫힘)
@@ -1727,28 +1910,30 @@
           `;
           card.title = `${ins.en} | GM:${ins.gm} | ${ins.genres.join(', ')}`;
           if (!maxed) {
-            card.addEventListener('click', () => {
+            // pointerdown: 마우스/터치 모두 즉시 반응 (click 보다 빠름)
+            const handleInstrTap = (e) => {
+              if (e.type === 'pointerdown') e.preventDefault(); // 모바일 더블탭 방지
+              unlockAudioCtx(); // 🔓 AudioContext 언락 (제스처 직후)
               const wasSelected = this.selectedInstrIds.has(ins.id);
               if (wasSelected) {
                 this.selectedInstrIds.delete(ins.id);
               } else {
                 if (this.selectedInstrIds.size >= MAX_INSTR) return;
                 this.selectedInstrIds.add(ins.id);
-                // 🔊 악기 선택 시 미리듣기 (soundfont)
-                const keyName = this.selected.key || 'C Major';
+                // 🔊 즉시 소리 (오실레이터 우선, soundfont 백그라운드)
                 playSfNote(ins.gm, 'C4', 1.5, 0.65).catch(()=>{});
               }
               renderGrid();
               renderSelected();
               updateInfo();
-              // selected 업데이트 (추첨통 결과 연동)
               const names = [...this.selectedInstrIds].map(id => {
                 const f = INSTRUMENT_DATA.find(x=>x.id===id);
                 return f ? f.ko : '';
               }).filter(Boolean);
               this.selected.instrument = names.slice(0,3).join(', ') || '없음';
               this._updateResult && this._updateResult();
-            });
+            };
+            card.addEventListener('pointerdown', handleInstrTap);
           }
           grid.appendChild(card);
         });
@@ -2593,10 +2778,10 @@
     }
     _startAudio() {
       try {
-        if (!this.audioCtx) {
+        if (!this.audioCtx || this.audioCtx.state === 'closed') {
           this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume().catch(()=>{});
 
         // 기존 노드 정리
         this._cleanAudioNodes();
@@ -3059,4 +3244,29 @@
   }
 
   global.CGOMusicModule = FrequencyMusicModule;
+
+  // ── 첫 사용자 상호작용 시 주요 soundfont 프리로드 ───────────────
+  // 피아노(0), 바이올린(40), 나일론기타(24), 플루트(73) — 가장 자주 쓰는 악기
+  const PRELOAD_GMS = [0, 24, 40, 73];
+  let _sfPreloaded = false;
+  function _preloadCommonSoundfonts() {
+    if (_sfPreloaded) return;
+    _sfPreloaded = true;
+    // AudioContext를 먼저 언락 후 프리로드
+    setTimeout(() => {
+      try { getSfCtx(); } catch(e) {}
+      PRELOAD_GMS.forEach(gm => loadSoundfont(gm).catch(()=>{}));
+    }, 500);
+  }
+  // 첫 pointerdown/click/keydown 때 프리로드 시작
+  if (typeof document !== 'undefined') {
+    const _onFirstInteract = () => {
+      _preloadCommonSoundfonts();
+      document.removeEventListener('pointerdown', _onFirstInteract, true);
+      document.removeEventListener('keydown', _onFirstInteract, true);
+    };
+    document.addEventListener('pointerdown', _onFirstInteract, { capture: true, once: true });
+    document.addEventListener('keydown', _onFirstInteract, { capture: true, once: true });
+  }
+
 }(typeof window !== 'undefined' ? window : global));
