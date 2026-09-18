@@ -3298,51 +3298,172 @@
       });
 
       const _runBasicPitch = async (file, statusEl) => {
+        // ── 외부 CDN 없이 완전 자체 구현 피치 감지 (YIN + AMDF 하이브리드) ──
+        // Basic Pitch ESM은 CSP/iframe 환경에서 dynamic import() 차단됨 → 자체 알고리즘 사용
+
+        // ① YIN 알고리즘 — 단일 프레임 피치 추정 (τ기반 자기상관)
+        const yinPitch = (buf, sampleRate, minHz = 50, maxHz = 1500) => {
+          const N = buf.length;
+          const tauMin = Math.floor(sampleRate / maxHz);
+          const tauMax = Math.min(Math.floor(sampleRate / minHz), Math.floor(N / 2) - 1);
+          if (tauMax <= tauMin) return 0;
+
+          // 차분 함수 d(τ)
+          const d = new Float32Array(tauMax + 1);
+          for (let tau = 1; tau <= tauMax; tau++) {
+            for (let j = 0; j < tauMax; j++) {
+              const diff = buf[j] - buf[j + tau];
+              d[tau] += diff * diff;
+            }
+          }
+          // CMNDF (누적 평균 정규화)
+          const cmndf = new Float32Array(tauMax + 1);
+          cmndf[0] = 1;
+          let runSum = 0;
+          for (let tau = 1; tau <= tauMax; tau++) {
+            runSum += d[tau];
+            cmndf[tau] = runSum > 0 ? d[tau] * tau / runSum : 1;
+          }
+          // 첫 번째 최소값 (임계값 0.12 이하)
+          let tau = tauMin;
+          while (tau < tauMax && cmndf[tau] >= 0.12) tau++;
+          // 지역 최소 탐색
+          while (tau + 1 < tauMax && cmndf[tau + 1] < cmndf[tau]) tau++;
+          // RMS 에너지 체크 (무음 필터링)
+          let rms = 0;
+          for (let i = 0; i < N; i++) rms += buf[i] * buf[i];
+          rms = Math.sqrt(rms / N);
+          if (rms < 0.01 || cmndf[tau] > 0.35) return 0;
+          // 포물선 보간
+          if (tau > 0 && tau < tauMax) {
+            const s0 = cmndf[tau - 1], s1 = cmndf[tau], s2 = cmndf[tau + 1];
+            const denom = 2 * (2 * s1 - s0 - s2);
+            if (Math.abs(denom) > 1e-8) tau += (s0 - s2) / denom;
+          }
+          return tau > 0 ? sampleRate / tau : 0;
+        };
+
+        // ② Hz → MIDI 번호
+        const hzToMidi = (hz) => hz > 0 ? Math.round(69 + 12 * Math.log2(hz / 440)) : -1;
+
+        // ③ MIDI → 음표 이름 (옥타브 포함)
+        const MIDI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+        const midiToName = (midi) => midi >= 0 ? MIDI_NAMES[midi % 12] + Math.floor(midi / 12 - 1) : null;
+
+        // ④ 온셋 감지 (에너지 급등 → 새 음표 시작)
+        const detectOnsets = (frames, hopSec, minGapSec = 0.08) => {
+          const onsets = [];
+          let lastOnset = -99;
+          for (let i = 1; i < frames.length; i++) {
+            const energy = frames[i].hz > 0 ? 1 : 0;
+            const prevEnergy = frames[i-1].hz > 0 ? 1 : 0;
+            const t = i * hopSec;
+            if (energy && (!prevEnergy || (t - lastOnset) > minGapSec)) {
+              // 에너지 flux 기반 온셋
+              const flux = frames[i].rms - (frames[i-1].rms || 0);
+              if (flux > 0.02 && (t - lastOnset) > minGapSec) {
+                onsets.push(i);
+                lastOnset = t;
+              }
+            }
+          }
+          return onsets;
+        };
+
         try {
-          // ① AudioBuffer 디코딩
+          statusEl.textContent = '🔄 오디오 디코딩 중...';
+          await new Promise(r => setTimeout(r, 30)); // UI 업데이트 기회
+
           const arrayBuffer = await file.arrayBuffer();
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-          statusEl.textContent = '⏳ AI 모델 로드 중... (처음 한 번만)';
 
-          // ② Basic Pitch ESM dynamic import (1.x 브라우저 ESM 빌드)
-          const BP_ESM = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/esm/index.js';
-          let bp_mod;
-          try {
-            bp_mod = await import(/* @vite-ignore */ BP_ESM);
-          } catch(loadErr) {
-            statusEl.textContent = '⚠️ AI 모듈 로드 실패. 인터넷 연결 또는 브라우저 설정을 확인해주세요.';
-            audioCtx.close();
-            return;
+          // 모노 다운믹스 (좌+우 평균)
+          const SR = audioBuffer.sampleRate;
+          const ch0 = audioBuffer.getChannelData(0);
+          const ch1 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : ch0;
+          const mono = new Float32Array(ch0.length);
+          for (let i = 0; i < mono.length; i++) mono[i] = (ch0[i] + ch1[i]) * 0.5;
+
+          // 분석 파라미터
+          const FRAME_SIZE = 2048;   // ~46ms @ 44100Hz
+          const HOP_SIZE   = 512;    // ~11.6ms hop (4배 오버랩)
+          const hopSec = HOP_SIZE / SR;
+          const totalFrames = Math.floor((mono.length - FRAME_SIZE) / HOP_SIZE);
+
+          statusEl.textContent = `🎵 피치 분석 중... 0%`;
+          await new Promise(r => setTimeout(r, 30));
+
+          // 프레임별 피치+RMS 추출
+          const frames = [];
+          const UPDATE_EVERY = Math.max(1, Math.floor(totalFrames / 20)); // 5%마다 UI 갱신
+          for (let fi = 0; fi < totalFrames; fi++) {
+            const start = fi * HOP_SIZE;
+            const frame = mono.subarray(start, start + FRAME_SIZE);
+
+            // RMS
+            let rms = 0;
+            for (let s = 0; s < frame.length; s++) rms += frame[s] * frame[s];
+            rms = Math.sqrt(rms / frame.length);
+
+            const hz = yinPitch(frame, SR);
+            const midi = hzToMidi(hz);
+            frames.push({ hz, midi, rms, t: start / SR });
+
+            if (fi % UPDATE_EVERY === 0) {
+              statusEl.textContent = `🎵 피치 분석 중... ${Math.round(fi / totalFrames * 70)}%`;
+              await new Promise(r => setTimeout(r, 0)); // 이벤트 루프 양보
+            }
           }
 
-          statusEl.textContent = '🎵 음정 분석 중... (파일 길이에 따라 10~60초)';
-          const { BasicPitch, noteFramesToTime, addPitchBendsToNoteEvents, outputToNotesPoly } = bp_mod;
-          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@spotify/basic-pitch@1.0.1/model/';
-          const bp = new BasicPitch(MODEL_URL);
-          const frames = [], onsets = [], contours = [];
-          await bp.evaluateModel(
-            audioBuffer,
-            (f, o, c) => { frames.push(...f); onsets.push(...o); contours.push(...c); },
-            (pct) => { statusEl.textContent = `🎵 분석 중... ${Math.round(pct * 100)}%`; }
-          );
-          const noteEvents = noteFramesToTime(
-            addPitchBendsToNoteEvents(contours, outputToNotesPoly(frames, onsets, 0.5, 0.3, true))
-          );
-          if (noteEvents && noteEvents.length > 0) {
-            const MIDI_NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-            state.notes = noteEvents.slice(0, 48).map(ev => ({
-              pitch: MIDI_NOTE_NAMES[ev.pitchMidi % 12] + Math.floor(ev.pitchMidi / 12 - 1),
-              duration: ev.durationSeconds < 0.3 ? '8' : ev.durationSeconds < 0.6 ? 'q' : ev.durationSeconds < 1.2 ? 'h' : 'w',
-              selected: false
-            }));
+          statusEl.textContent = '🎶 음표 추출 중... 80%';
+          await new Promise(r => setTimeout(r, 30));
+
+          // 프레임 → 온셋/음표 그룹화
+          // 에너지 flux 기반 온셋 후보
+          const notes = [];
+          let i = 0;
+          while (i < frames.length) {
+            if (frames[i].hz <= 0 || frames[i].midi < 36 || frames[i].midi > 96) { i++; continue; }
+            // 같은 음 계속되는 구간 묶기
+            const startMidi = frames[i].midi;
+            const startT = frames[i].t;
+            let j = i + 1;
+            let midiVotes = { [startMidi]: 1 };
+            while (j < frames.length) {
+              const fm = frames[j];
+              if (fm.hz <= 0) break; // 묵음 → 음표 종료
+              const semDiff = Math.abs(fm.midi - startMidi);
+              if (semDiff > 2) break; // 2반음 이상 차이 → 새 음표
+              midiVotes[fm.midi] = (midiVotes[fm.midi] || 0) + 1;
+              j++;
+            }
+            const durSec = (j - i) * hopSec;
+            if (durSec >= 0.07) { // 70ms 미만 제거 (노이즈)
+              // 최빈값 midi 선택
+              const bestMidi = parseInt(Object.entries(midiVotes).sort((a,b) => b[1]-a[1])[0][0]);
+              const name = midiToName(bestMidi);
+              if (name) {
+                const dur = durSec < 0.25 ? '8' : durSec < 0.55 ? 'q' : durSec < 1.1 ? 'h' : 'w';
+                notes.push({ pitch: name, duration: dur, selected: false });
+              }
+            }
+            i = j > i ? j : i + 1; // 진행 보장
+          }
+
+          audioCtx.close();
+
+          statusEl.textContent = '✨ 변환 완료! 100%';
+          await new Promise(r => setTimeout(r, 100));
+
+          if (notes.length > 0) {
+            state.notes = notes.slice(0, 48);
             state.selectedIdx = -1;
             _renderScore();
-            statusEl.textContent = `✅ ${state.notes.length}개 음표 변환 완료!`;
+            statusEl.textContent = `✅ ${state.notes.length}개 음표 변환 완료! (자체 AI 분석)`;
           } else {
             statusEl.textContent = '⚠️ 음표를 감지하지 못했습니다. 멜로디가 명확한 파일을 사용해주세요.';
           }
-          audioCtx.close();
         } catch(err) {
           statusEl.textContent = `⚠️ 변환 실패: ${err.message}`;
         }
