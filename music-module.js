@@ -694,24 +694,29 @@
         onload: () => { _tReady = true; console.log('[CGO-TONE] 🎹 스타인웨이 로드 완료'); }
       }).connect(tComp);
 
-      // ③ PolySynth 현악기 — cgo-71: 찢어짐 수정
-      // fatsawtooth(3중 거치파) → triangle(순수 삼각파): 고조파 제거
-      // volume -4 → -12dB: 앙상블 포화 방지
-      // 저역통과필터 1100Hz: 날카로운 상단 주파수 차단
-      const strLpf = new Tone.Filter({ frequency: 1100, type: 'lowpass', rolloff: -24 }).connect(tComp);
+      // ③ PolySynth 현악기 — cgo-73: Chorus 공기감 + sine 부드러움
+      // sine(순정 사인파) → Chorus(1.5Hz, depth 0.3) → LPF 1100Hz → 컴프레서
+      // triangle보다 sine이 더 순수: 3배음 없음, 합창단 공기감을 Chorus가 부여
+      const strLpf    = new Tone.Filter({ frequency: 1100, type: 'lowpass', rolloff: -24 }).connect(tComp);
+      const strChorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, spread: 60, wet: 0.45 }).connect(strLpf);
+      strChorus.start();
       const strings = new Tone.PolySynth(Tone.Synth, {
         maxPolyphony: 6,
-        oscillator: { type: 'triangle' },
-        envelope:   { attack: 0.35, decay: 0.20, sustain: 0.70, release: 2.0 }
-      }).connect(strLpf);
-      strings.set({ volume: -12 });
+        oscillator: { type: 'sine' },
+        envelope:   { attack: 0.40, decay: 0.20, sustain: 0.68, release: 2.2 }
+      }).connect(strChorus);
+      strings.set({ volume: -10 });
 
-      // ④ MonoSynth 베이스 (삼각파 + 필터 엔벨로프)
+      // ④ MonoSynth 베이스 — cgo-73: sawtooth (전기 베이스 팀버)
+      // triangle은 홀수 배음만 → 얇음. sawtooth는 전 배음 → 두껍고 따뜻한 전기 베이스음
+      // filterEnvelope: baseFrequency 80Hz / octaves 3.5 → 어택 시 필터가 열려 펀치감
       const bass = new Tone.MonoSynth({
-        oscillator:     { type: 'triangle' },
-        envelope:       { attack: 0.02, decay: 0.12, sustain: 0.68, release: 0.55 },
-        filterEnvelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5, baseFrequency: 100, octaves: 2.5 }
+        oscillator:     { type: 'sawtooth' },
+        envelope:       { attack: 0.015, decay: 0.18, sustain: 0.60, release: 0.60 },
+        filterEnvelope: { attack: 0.01, decay: 0.18, sustain: 0.4, release: 0.5, baseFrequency: 80, octaves: 3.5 },
+        filter:         { Q: 3, type: 'lowpass', rolloff: -24 }
       }).connect(tComp);
+      bass.set({ volume: -8 });
 
       // ⑤ 드럼 (MembraneSynth 킥 + NoiseSynth 스네어/하이햇/크래시)
       const kick  = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, envelope: { attack: 0.001, decay: 0.30, sustain: 0, release: 0.1 } }).connect(tComp);
@@ -723,8 +728,9 @@
       const ohat  = new Tone.NoiseSynth({ noise: { type: 'pink'  }, envelope: { attack: 0.001, decay: 0.18, sustain: 0.05, release: 0.12 } }).connect(hatHp);
       const crash = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.45, sustain: 0.05, release: 0.30 } }).connect(craHp);
 
-      // cgo-71: strLpf 포함 + _recDest 보존 (cgo-70 버그 수정)
-      _tEng = { piano, strings, strLpf, bass, kick, snare, hat, ohat, crash,
+      // cgo-73: comp 노출 — 드럼 Web Audio 버스가 Tone.js 마스터 체인에 합류하기 위해 필요
+      _tEng = { piano, strings, strChorus, strLpf, bass, kick, snare, hat, ohat, crash,
+                comp: tComp, rev: tRev, lim: tLim,   // 마스터 체인 노출 (드럼 브릿지용)
                 _recDest: _tEng._recDest || null };
       console.log('[CGO-TONE] 앙상블 엔진 초기화 ✓ (스타인웨이 샘플 로딩 중...)');
     } catch(e) {
