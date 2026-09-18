@@ -1139,21 +1139,26 @@
       // ── <dialog> 사용: 브라우저 top-layer에 렌더링 → body/html CSS 완전 무시 ──
       const dlg = document.createElement('dialog');
       dlg.id = 'cgo-music-intro-pop';
+      // ★ 인라인 style로 UA 스타일시트 100% 덮어쓰기 (specificity 문제 완전 차단)
+      dlg.style.cssText = [
+        'position:fixed','inset:0','width:100%','height:100%',
+        'max-width:100%','max-height:100%','min-width:0','min-height:0',
+        'margin:0','padding:0','border:none','outline:none',
+        'background:#f0fdf9','overflow-y:auto','overflow-x:hidden',
+        '-webkit-overflow-scrolling:touch',
+        'font-family:\'Noto Sans KR\',\'Apple SD Gothic Neo\',sans-serif',
+        'box-sizing:border-box','display:flex','flex-direction:column',
+        'z-index:2147483647'
+      ].join(';');
       dlg.innerHTML = `
 <style>
-#cgo-music-intro-pop{
-  position:fixed;inset:0;width:100%;height:100%;max-width:100%;max-height:100%;
-  margin:0;padding:0;border:none;outline:none;
-  background:#f0fdf9;overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
-  box-sizing:border-box;
-}
-#cgo-music-intro-pop::backdrop{display:none}
+#cgo-music-intro-pop::backdrop{display:none!important;background:none!important}
 #cgo-music-intro-pop *{box-sizing:border-box;margin:0;padding:0;}
-.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 20px 100px;}
+/* ★ 스크롤 가능한 내용 영역 — flex:1 + overflow:auto */
+#mip-scroll-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.mip-wrap{max-width:560px;width:100%;margin:0 auto;padding:0 20px 60px;}
 .mip-top{
-  position:sticky;top:0;z-index:10;
+  flex-shrink:0;
   display:flex;justify-content:space-between;align-items:center;
   padding:14px 20px;
   background:rgba(240,253,249,.97);
@@ -1224,7 +1229,7 @@
   <span class="mip-logo" id="mip-logo-btn">🎵 CGO FULI · Music</span>
   <button class="mip-close" id="mip-close-btn">✕</button>
 </div>
-<div class="mip-wrap">
+<div id="mip-scroll-body"><div class="mip-wrap">
   <div class="mip-hero">
     <span class="mip-em">🌊</span>
     <div class="mip-title">CGO 주파수 뮤직</div>
@@ -1271,14 +1276,30 @@
     <button class="mip-btn-today" id="mip-today-btn">오늘 하루 보지 않기</button>
     <div class="mip-credit">CGO FULI · Future Library · AI Healing Music</div>
   </div>
-</div>`;
+</div></div>`;
 
       document.body.appendChild(dlg);
 
       // showModal() → 브라우저 top-layer 진입 (z-index, overflow, transform 모두 무시됨)
-      try { dlg.showModal(); } catch(e) {
-        // 구형 브라우저 fallback: div 방식
-        dlg.style.cssText = 'display:block;position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;background:#f0fdf9;overflow-y:auto;margin:0;border:none;';
+      // ★ showModal() 이후 브라우저가 인라인 style을 건드리지 않도록 재적용
+      const _mipForceStyle = () => {
+        dlg.style.cssText = [
+          'position:fixed','inset:0','width:100%','height:100%',
+          'max-width:100%','max-height:100%','min-width:0','min-height:0',
+          'margin:0','padding:0','border:none','outline:none',
+          'background:#f0fdf9','overflow-y:auto','overflow-x:hidden',
+          '-webkit-overflow-scrolling:touch',
+          'font-family:\'Noto Sans KR\',\'Apple SD Gothic Neo\',sans-serif',
+          'box-sizing:border-box','display:flex','flex-direction:column',
+          'z-index:2147483647'
+        ].join(';');
+      };
+      try {
+        dlg.showModal();
+        _mipForceStyle(); // showModal 후 재적용
+      } catch(e) {
+        dlg.style.display = 'flex';
+        dlg.style.flexDirection = 'column';
       }
 
       const close = () => {
