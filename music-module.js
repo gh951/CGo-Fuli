@@ -104,6 +104,49 @@
         { id:'jazz',      flag:'🎷', name:'재즈',        nameEn:'Jazz',              country:'미국/글로벌',   desc:'스윙 리듬과 즉흥 화성 · 도시적 세련됨과 감성 치유',      bpmRange:[80,120], wave:'triangle' },
         { id:'healing',   flag:'💚', name:'힐링',        nameEn:'Healing',           country:'글로벌',       desc:'순수 치료 주파수 중심 · CGO 고유의 과학적 힐링 사운드',  bpmRange:[50,80],  wave:'sine'     },
       ]
+    },
+    // ── cgo-75: 한국 대중음악 그룹 추가 ─────────────────────────────
+    {
+      group: '🇰🇷 K-팝 & 한국 대중음악',
+      color: '#ef4444',
+      genres: [
+        { id:'kpop',    flag:'💫', name:'K-팝',    nameEn:'K-Pop',        country:'한국',      desc:'아이돌 칼군무와 중독성 후크 · 세계를 사로잡은 한국 팝 신드롬',  bpmRange:[100,140], wave:'triangle' },
+        { id:'trot',    flag:'🎵', name:'트로트',  nameEn:'Trot',         country:'한국',      desc:'한의 꺾기와 흥의 뽕끼 · 세대를 초월한 한국 고유의 정서',       bpmRange:[110,140], wave:'triangle' },
+        { id:'rnb',     flag:'🎤', name:'K-R&B',   nameEn:'R&B / Soul',   country:'한국/미국', desc:'그루브한 리듬과 풍부한 보컬 · 감성 깊은 어반 소울 사운드',      bpmRange:[70,100],  wave:'sine'     },
+        { id:'hiphop',  flag:'🎧', name:'힙합',    nameEn:'Hip-Hop',      country:'미국/한국', desc:'808 킥과 트랩 하이햇 · 삶의 이야기를 담은 리듬과 라임',         bpmRange:[75,140],  wave:'sawtooth' },
+      ]
+    },
+    // ── cgo-75: 록 & 얼터너티브 그룹 추가 ─────────────────────────────
+    {
+      group: '🎸 록 & 얼터너티브',
+      color: '#6b7280',
+      genres: [
+        { id:'rock',    flag:'🎸', name:'팝록',    nameEn:'Pop Rock',     country:'글로벌',    desc:'일렉 기타 드라이빙 사운드 · 에너지와 감성이 교차하는 청춘 앤섬', bpmRange:[110,150], wave:'sawtooth' },
+        { id:'blues',   flag:'🎵', name:'블루스',  nameEn:'Blues',        country:'미국',      desc:'6음계 블루스 스케일 · 감정의 솔직한 표현과 영혼을 해방하는 선율', bpmRange:[60,100],  wave:'triangle' },
+        { id:'country', flag:'🤠', name:'컨트리',  nameEn:'Country',      country:'미국',      desc:'어쿠스틱 기타와 벤조 · 미국 서부 서정의 직관적 스토리텔링',      bpmRange:[90,130],  wave:'triangle' },
+      ]
+    },
+    // ── cgo-75: 댄스 & 일렉트로닉 확장 그룹 추가 ───────────────────
+    {
+      group: '💃 댄스 & 일렉트로닉',
+      color: '#06b6d4',
+      genres: [
+        { id:'disco',     flag:'🪩', name:'디스코',    nameEn:'Disco',       country:'미국',      desc:'베이스라인과 브라스 · 70년대 클럽을 지배한 화려한 춤곡의 정수', bpmRange:[110,135], wave:'sawtooth' },
+        { id:'citypop',   flag:'🌆', name:'시티팝',    nameEn:'City Pop',    country:'일본',      desc:'재즈·펑크·디스코 융합 · 80년대 도쿄 버블 경제의 세련된 도시 감성', bpmRange:[85,115], wave:'triangle' },
+        { id:'synthpop',  flag:'🔊', name:'신스팝',    nameEn:'Synth-Pop',   country:'글로벌',    desc:'전자 악기 전면 배치 · 80년대 레트로 감성의 현대적 재해석',      bpmRange:[105,130], wave:'sawtooth' },
+        { id:'lofi',      flag:'📻', name:'로파이',    nameEn:'Lo-Fi',       country:'글로벌',    desc:'빈티지 질감의 느린 비트 · 공부·카페 집중 모드의 필수 힐링 사운드', bpmRange:[65,90],  wave:'sine'     },
+        { id:'reggae',    flag:'🇯🇲', name:'레게',     nameEn:'Reggae',      country:'자메이카',  desc:'엇박자 오프비트 리듬 · 평화·저항의 자메이카 라스타 정신',        bpmRange:[65,90],   wave:'triangle' },
+      ]
+    },
+    // ── cgo-75: 클래식 & 시네마틱 그룹 추가 ────────────────────────
+    {
+      group: '🎬 클래식 & 시네마틱',
+      color: '#d97706',
+      genres: [
+        { id:'newage',    flag:'✨', name:'뉴에이지',   nameEn:'New Age',     country:'글로벌',    desc:'클래식과 팝의 경계 · 마음의 안정과 명상을 돕는 편안한 연주',     bpmRange:[55,80],   wave:'sine'     },
+        { id:'cinematic', flag:'🎬', name:'시네마틱',   nameEn:'Cinematic/OST',country:'글로벌',   desc:'영화·드라마 속 감동 서사 · 오케스트라 스케일의 몰입 배경음악',  bpmRange:[60,120],  wave:'sine'     },
+        { id:'ska',       flag:'🎺', name:'스카',       nameEn:'Ska',         country:'자메이카',  desc:'레게보다 빠른 경쾌한 엇박자 · 뿡짝뿡짝 업비트 에너지',          bpmRange:[140,180], wave:'sawtooth' },
+      ]
     }
   ];
   // flat 배열 (id → genre 빠른 조회용)
