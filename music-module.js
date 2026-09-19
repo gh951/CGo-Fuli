@@ -104,6 +104,10 @@
         { id:'raga',      flag:'🇮🇳', name:'인도 라가',   nameEn:'Indian Raga',       country:'인도',        desc:'시타르의 벤드 기법 · 차크라를 깨우는 영적 진동',         bpmRange:[60,110], wave:'sine'     },
         { id:'chinese',   flag:'🇨🇳', name:'중국 전통',   nameEn:'Chinese Traditional',country:'중국',       desc:'비파의 청량한 음색 · 산수화 같은 동양적 풍류',           bpmRange:[60,100], wave:'sine'     },
         { id:'japanese',  flag:'🇯🇵', name:'일본 전통',   nameEn:'Japanese Traditional',country:'일본',      desc:'사미센의 절제된 선율 · 선(Zen) 앰비언트 고요함',         bpmRange:[50,80],  wave:'sine'     },
+        // cgo-140: 오세아니아·중앙아시아
+        { id:'khoomei',  flag:'🇲🇳', name:'흐미(후미)',  nameEn:'Khoomei',            country:'몽골',        desc:'목구멍에서 울리는 배음 · 초원의 바람을 담은 영혼의 공명',    bpmRange:[40,70],  wave:'sine'     },
+        { id:'gamelan',  flag:'🇮🇩', name:'가멜란',    nameEn:'Gamelan',            country:'인도네시아',   desc:'청동 타악기 앙상블 · 발리 사원에서 울리는 천상의 화음',      bpmRange:[60,100], wave:'triangle' },
+        { id:'maori',    flag:'🇳🇿', name:'마오리',    nameEn:'Maori',              country:'뉴질랜드',     desc:'하카와 포이 · 자연과 조상을 잇는 뉴질랜드 원주민 선율',      bpmRange:[80,120], wave:'sawtooth' },
       ]
     },
     {
@@ -115,6 +119,9 @@
         { id:'andean',    flag:'🇵🇪', name:'안데스',      nameEn:'Andean/Quechua',   country:'페루/안데스',   desc:'팬플루트·케나의 구슬픈 선율 · 영혼을 정화하는 고요함',   bpmRange:[60,90],  wave:'sine'     },
         { id:'tango',     flag:'🇦🇷', name:'탱고',        nameEn:'Tango',            country:'아르헨티나',    desc:'반도네온의 반음계 선율 · 긴장과 이완의 열정 드라마',     bpmRange:[100,130],wave:'triangle' },
         { id:'maqam',     flag:'🕌',  name:'아랍 마캄',   nameEn:'Arabian Maqam',    country:'중동',         desc:'우드(Oud)의 깊은 울림 · 미분음의 사막 밤 몽환',          bpmRange:[60,100], wave:'sine'     },
+        // cgo-140: 라틴 신규 장르
+        { id:'salsa',    flag:'🇨🇺', name:'살사',      nameEn:'Salsa & Afro-Cuban', country:'쿠바/미국',     desc:'클라베 리듬 위의 브라스 · 몸을 저절로 움직이게 하는 카리브 열정', bpmRange:[170,220], wave:'sawtooth' },
+        { id:'mariachi', flag:'🇲🇽', name:'마리아치',  nameEn:'Mariachi',           country:'멕시코',        desc:'트럼펫·비우엘라·기타론 · 유네스코 세계유산의 멕시코 영혼',    bpmRange:[120,160], wave:'triangle' },
       ]
     },
     {
@@ -146,6 +153,9 @@
         { id:'rock',    flag:'🎸', name:'팝록',    nameEn:'Pop Rock',     country:'글로벌',    desc:'일렉 기타 드라이빙 사운드 · 에너지와 감성이 교차하는 청춘 앤섬', bpmRange:[110,150], wave:'sawtooth' },
         { id:'blues',   flag:'🎵', name:'블루스',  nameEn:'Blues',        country:'미국',      desc:'6음계 블루스 스케일 · 감정의 솔직한 표현과 영혼을 해방하는 선율', bpmRange:[60,100],  wave:'triangle' },
         { id:'country', flag:'🤠', name:'컨트리',  nameEn:'Country',      country:'미국',      desc:'어쿠스틱 기타와 벤조 · 미국 서부 서정의 직관적 스토리텔링',      bpmRange:[90,130],  wave:'triangle' },
+        // cgo-140: 록&메탈 신규 장르
+        { id:'metal',    flag:'⚡', name:'헤비메탈', nameEn:'Heavy Metal',        country:'글로벌',       desc:'튜닝 다운된 기타 리프 · 강렬한 에너지로 스트레스를 폭발 해방',   bpmRange:[140,200], wave:'sawtooth' },
+        { id:'grunge',   flag:'🛹', name:'그런지',   nameEn:'Grunge / Alt Punk',   country:'미국',         desc:'두꺼운 디스토션과 감성 가사 · 90년대 시애틀 반항의 미학',        bpmRange:[100,140], wave:'sawtooth' },
       ]
     },
     // ── cgo-75: 댄스 & 일렉트로닉 확장 그룹 추가 ───────────────────
@@ -158,6 +168,10 @@
         { id:'synthpop',  flag:'🔊', name:'신스팝',    nameEn:'Synth-Pop',   country:'글로벌',    desc:'전자 악기 전면 배치 · 80년대 레트로 감성의 현대적 재해석',      bpmRange:[105,130], wave:'sawtooth' },
         { id:'lofi',      flag:'📻', name:'로파이',    nameEn:'Lo-Fi',       country:'글로벌',    desc:'빈티지 질감의 느린 비트 · 공부·카페 집중 모드의 필수 힐링 사운드', bpmRange:[65,90],  wave:'sine'     },
         { id:'reggae',    flag:'🇯🇲', name:'레게',     nameEn:'Reggae',      country:'자메이카',  desc:'엇박자 오프비트 리듬 · 평화·저항의 자메이카 라스타 정신',        bpmRange:[65,90],   wave:'triangle' },
+        // cgo-140: 댄스&일렉 신규 장르
+        { id:'techno',   flag:'🎹', name:'테크노',    nameEn:'Techno / House',     country:'독일/미국',    desc:'4온 더 플로어 킥 · 클럽을 뒤흔드는 반복적 황홀경의 트랜스',      bpmRange:[120,150], wave:'sawtooth' },
+        { id:'edm2',     flag:'⚡', name:'EDM',        nameEn:'EDM / Future Bass',  country:'글로벌',       desc:'워블베이스와 드롭 · 스타디움을 진동시키는 퓨처 일렉트로닉',       bpmRange:[128,175], wave:'sawtooth' },
+        { id:'chiptune', flag:'👾', name:'치프튠',    nameEn:'Chiptune / 8-bit',   country:'글로벌',       desc:'8비트 레트로 게임 사운드 · 픽셀 향수와 현대 비트의 귀여운 융합',  bpmRange:[120,180], wave:'square'   },
       ]
     },
     // ── cgo-75: 클래식 & 시네마틱 그룹 추가 ────────────────────────
@@ -168,6 +182,10 @@
         { id:'newage',    flag:'✨', name:'뉴에이지',   nameEn:'New Age',     country:'글로벌',    desc:'클래식과 팝의 경계 · 마음의 안정과 명상을 돕는 편안한 연주',     bpmRange:[55,80],   wave:'sine'     },
         { id:'cinematic', flag:'🎬', name:'시네마틱',   nameEn:'Cinematic/OST',country:'글로벌',   desc:'영화·드라마 속 감동 서사 · 오케스트라 스케일의 몰입 배경음악',  bpmRange:[60,120],  wave:'sine'     },
         { id:'ska',       flag:'🎺', name:'스카',       nameEn:'Ska',         country:'자메이카',  desc:'레게보다 빠른 경쾌한 엇박자 · 뿡짝뿡짝 업비트 에너지',          bpmRange:[140,180], wave:'sawtooth' },
+        // cgo-140: 클래식 신규 장르
+        { id:'baroque',    flag:'🎼', name:'바로크',    nameEn:'Baroque',            country:'유럽',         desc:'오르간·하프시코드의 정교한 대위법 · 영혼을 정화하는 수학적 선율', bpmRange:[50,90],  wave:'sine'     },
+        { id:'orchestra',  flag:'🎻', name:'오케스트라', nameEn:'Orchestra',         country:'유럽/글로벌',  desc:'100인 심포니의 총주 · 극적 클라이맥스로 감동을 폭발시키는 선율', bpmRange:[50,120], wave:'sine'     },
+        { id:'gospel',     flag:'🇺🇸', name:'가스펠',   nameEn:'Gospel & Soul',      country:'미국',         desc:'성령의 파워와 합창 · 마음 깊은 곳을 울리는 치유의 복음 음악',   bpmRange:[70,110], wave:'triangle' },
       ]
     }
   ];
@@ -2334,6 +2352,46 @@
     _buildMakePanel() {
       const p = this.panels.make;
 
+      // cgo-138: 주파수 미니 선택 바 — make 탭 최상단
+      (()=>{
+        const FREQ_MINI = [
+          {hz:432,  label:'432Hz',  color:'#f59e0b', emoji:'✨'},
+          {hz:528,  label:'528Hz',  color:'#10b981', emoji:'💚'},
+          {hz:7.83, label:'7.83Hz', color:'#3b82f6', emoji:'🌍'},
+          {hz:0,    label:'순수음악', color:'#9ca3af', emoji:'🎵'},
+        ];
+        const freqBar = document.createElement('div');
+        freqBar.id = 'cgo-make-freq-bar';
+        freqBar.style.cssText = 'display:flex;gap:5px;padding:10px 10px 6px;flex-wrap:wrap;border-bottom:1px solid rgba(100,60,180,.15);margin-bottom:4px;';
+        // 라벨
+        const freqLbl = document.createElement('div');
+        freqLbl.style.cssText = 'width:100%;font-size:10px;font-weight:800;color:#9d8ec4;letter-spacing:.08em;margin-bottom:4px;';
+        freqLbl.textContent = '🌊 치유 주파수 선택';
+        freqBar.appendChild(freqLbl);
+        FREQ_MINI.forEach(f => {
+          const btn = document.createElement('button');
+          btn.className = 'cgo-make-freq-btn';
+          btn.dataset.mhz = f.hz;
+          const isActive = f.hz === this.selectedFreq;
+          btn.style.cssText = [
+            'flex:1;min-width:58px;padding:6px 3px;border-radius:10px;',
+            'border:1.5px solid '+(isActive?f.color:f.color+'4d')+';',
+            'background:'+(isActive?f.color+'33':'rgba(15,4,35,.7)')+';',
+            'color:'+(isActive?f.color:'#9d8ec4')+';',
+            'font-size:11px;font-weight:700;cursor:pointer;',
+            'transition:all .18s;font-family:inherit;',
+            isActive?'box-shadow:0 0 8px '+f.color+'60;':'',
+          ].join('');
+          btn.textContent = f.emoji+' '+f.label;
+          btn.addEventListener('click', () => {
+            if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
+            this._selectFreq(f.hz);
+          });
+          freqBar.appendChild(btn);
+        });
+        p.appendChild(freqBar);
+      })();
+
       // ── 아코디언 헬퍼: 각 섹션 독립 토글 ──────────────────────
       const mkAccordion = (emoji, title, bodyBuilder, openByDefault = false) => {
         const wrap = document.createElement('div');
@@ -2404,7 +2462,7 @@
             <div class="cgo-slot-canvas-wrap"><canvas id="cgo-sc-${k}"></canvas></div>
             <div class="cgo-slot-row-val" id="cgo-val-${k}">${this.selected[k]}</div>
           `;
-          row.addEventListener('click', () => { if (!this.isSpinning) this._spinOne(k); });
+          row.addEventListener('click', () => { if (!this.isSpinning) this._spinOne(k, () => { try{this._updateResult();}catch(e){} }); }); // cgo-138: 슬롯 개별 클릭시 결과카드 즉시 업데이트
           grid.appendChild(row);
 
           const canvas = row.querySelector(`#cgo-sc-${k}`);
@@ -2558,13 +2616,31 @@
         }
       });
 
-      // ⑥ 현재 설정 결과 카드 (기본 닫힘)
-      p.appendChild(mkAccordion('🎼', t(24068), (body) => {
+      // ⑥ 현재 설정 결과 카드 (cgo-138: 기본 열림 + 초기화 버튼)
+      p.appendChild(mkAccordion('🎯', t(24068), (body) => {
         const resCard = document.createElement('div');
         resCard.className = 'cgo-result-card';
         resCard.id = 'cgo-result-card';
         body.appendChild(resCard);
-      }, false));
+        // cgo-138: 초기화 버튼 추가
+        const clearWrap = document.createElement('div');
+        clearWrap.style.cssText = 'margin-top:10px;display:flex;gap:6px;';
+        const clearAllBtn = document.createElement('button');
+        clearAllBtn.style.cssText = 'flex:1;padding:9px 6px;border-radius:11px;background:rgba(239,68,68,.14);border:1.5px solid rgba(239,68,68,.35);color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;';
+        clearAllBtn.textContent = '🔄 전체 초기화';
+        clearAllBtn.onmouseover = function(){ this.style.background='rgba(239,68,68,.28)'; };
+        clearAllBtn.onmouseout  = function(){ this.style.background='rgba(239,68,68,.14)'; };
+        clearAllBtn.addEventListener('click', () => { try{this._resetState();}catch(e){} });
+        clearWrap.appendChild(clearAllBtn);
+        const clearFreqBtn = document.createElement('button');
+        clearFreqBtn.style.cssText = 'flex:1;padding:9px 6px;border-radius:11px;background:rgba(245,158,11,.14);border:1.5px solid rgba(245,158,11,.35);color:#fcd34d;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;';
+        clearFreqBtn.textContent = '🌊 주파수 초기화';
+        clearFreqBtn.onmouseover = function(){ this.style.background='rgba(245,158,11,.28)'; };
+        clearFreqBtn.onmouseout  = function(){ this.style.background='rgba(245,158,11,.14)'; };
+        clearFreqBtn.addEventListener('click', () => { try{this._selectFreq(432);}catch(e){} });
+        clearWrap.appendChild(clearFreqBtn);
+        body.appendChild(clearWrap);
+      }, true)); // cgo-138: 기본 열림
 
       // ── 빠른 악기 선택 바 (생성 버튼 바로 위) — cgo-65
       this._buildQuickInstrBar(p);
@@ -4871,6 +4947,19 @@
           c.style.background  = isThis ? col + '33' : col + '1a';
         });
       }
+      // cgo-138: make 탭 미니 freq 바 동기화
+      const _FCOLS138 = {432:'#f59e0b', 528:'#10b981', 7.83:'#3b82f6', 0:'#9ca3af'};
+      try {
+        this.root && this.root.querySelectorAll('.cgo-make-freq-btn').forEach(b => {
+          const bHz = Number(b.dataset.mhz);
+          const isThis = bHz === hz || (hz===0 && bHz===0) || (hz===7.83 && Math.abs(bHz-7.83)<0.01);
+          const col = _FCOLS138[bHz] || '#9ca3af';
+          b.style.borderColor  = isThis ? col : col+'4d';
+          b.style.background   = isThis ? col+'33' : 'rgba(15,4,35,.7)';
+          b.style.color        = isThis ? col : '#9d8ec4';
+          b.style.boxShadow    = isThis ? '0 0 8px '+col+'60' : '';
+        });
+      } catch(e) {}
       this._updateResult();
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === hz);
       if (freqOpt) this._setStatus('🌊 ' + freqOpt.label + ' · ' + freqOpt.desc + ' 선택됨');
