@@ -2061,6 +2061,7 @@ window.CGO_PERIODIC_WAVES = {
 .cgo-ts-card.selected .cgo-ts-fraction{color:var(--tsc);}
 .cgo-ts-slash{font-size:12px;color:#c4b5e8;font-weight:600;}
 .cgo-ts-name{font-size:9px;font-weight:800;color:#e9d5ff;margin-top:4px;}
+.cgo-ts-num{position:absolute;top:4px;left:5px;font-size:8px;font-weight:900;color:rgba(255,255,255,.45);line-height:1;font-variant-numeric:tabular-nums;}
 .cgo-ts-en{display:none;}
 .cgo-ts-desc{display:none;}
 /* cgo-150: JS body 팝업 (overflow 클리핑 방지) */
@@ -4114,6 +4115,9 @@ window.CGO_PERIODIC_WAVES = {
       badgeWrap.innerHTML = this._tsBadgeHTML();
       sec.appendChild(badgeWrap);
 
+      // cgo-151: 순서 번호 카운터
+      let _tsNum = 0;
+
       // 그룹별 렌더
       TIME_SIG_GROUPS.forEach(grp => {
         const grpEl = document.createElement('div');
@@ -4135,38 +4139,46 @@ window.CGO_PERIODIC_WAVES = {
         }
 
         TIME_SIGS.filter(ts => ts.group === grp.name).forEach(ts => {
+          _tsNum++;
           const card = document.createElement('div');
           const isSel = this.selectedTimeSig[0] === ts.num && this.selectedTimeSig[1] === ts.den;
           card.className = 'cgo-ts-card' + (isSel ? ' selected' : '');
           card.style.setProperty('--tsc', ts.color);
           card.dataset.tsn = String(ts.num);
           card.dataset.tsd = String(ts.den);
-          // cgo-150: 아이콘+분수+이름만 — dataset.tip 제거, JS body 팝업으로 대체
+          // cgo-151: 순서 번호뱃지 + 아이콘+분수+이름
           card.innerHTML = `
+            <div class="cgo-ts-num">${_tsNum}</div>
             <div class="cgo-ts-icon">${ts.icon}</div>
             <div class="cgo-ts-fraction">${ts.num}<span class="cgo-ts-slash">/</span>${ts.den}</div>
             <div class="cgo-ts-name">${ts.name}</div>
           `;
-          // cgo-150: JS body 팝업 이벤트 (overflow clip 우회)
-          card.addEventListener('mouseover', function(e) {
+          // cgo-151: JS body 팝업 이벤트 (overflow clip 우회, 모바일 click 지원)
+          var _tipText = _tsNum + '번 · ' + ts.num + '분의 ' + ts.den + '박자 [' + ts.nameEn + ']';
+          var _showTip = function(e) {
             var tip = document.getElementById('cgo-ts-tip');
             if (!tip) return;
-            tip.textContent = ts.num + '분의 ' + ts.den + '박자';
+            tip.textContent = _tipText;
             tip.style.display = 'block';
-            tip.style.left = (e.clientX + 12) + 'px';
-            tip.style.top = (e.clientY - 36) + 'px';
-          });
-          card.addEventListener('mousemove', function(e) {
-            var tip = document.getElementById('cgo-ts-tip');
-            if (tip && tip.style.display !== 'none') {
-              tip.style.left = (e.clientX + 12) + 'px';
-              tip.style.top = (e.clientY - 36) + 'px';
-            }
-          });
+            var cx = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
+            var cy = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+            tip.style.left = (cx + 12) + 'px';
+            tip.style.top = Math.max(10, cy - 42) + 'px';
+          };
+          card.addEventListener('mouseover', _showTip);
+          card.addEventListener('mousemove', _showTip);
           card.addEventListener('mouseout', function() {
             var tip = document.getElementById('cgo-ts-tip');
             if (tip) tip.style.display = 'none';
           });
+          card.addEventListener('touchstart', function(e) {
+            _showTip(e);
+            clearTimeout(card._tipTimer);
+            card._tipTimer = setTimeout(function() {
+              var tip = document.getElementById('cgo-ts-tip');
+              if (tip) tip.style.display = 'none';
+            }, 1800);
+          }, {passive:true});
           card.addEventListener('click', () => {
             if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
             this._selectTimeSig(ts.num, ts.den, ts.color);
