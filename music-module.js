@@ -2788,7 +2788,7 @@ window.CGO_PERIODIC_WAVES = {
         body.className = 'cgo-acc-body';
         body.style.display = openByDefault ? 'block' : 'none';
 
-        bodyBuilder(body);
+        try { bodyBuilder(body); } catch(e) { console.error('[CGO-ACC] bodyBuilder 오류:', e); }
 
         hdr.addEventListener('click', () => {
           if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
@@ -3180,7 +3180,7 @@ window.CGO_PERIODIC_WAVES = {
         VOCAL_OPTIONS.forEach(opt => {
           const card = document.createElement('div');
           const isSel = this.selected.vocal === opt.id;
-          card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:1.5px solid ${isSel ? opt.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .2s;${isSel ? `box-shadow:0 0 10px ${opt.color}40;` : ''}`;
+          card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:12px;border:1.5px solid '+(isSel ? opt.color : 'rgba(100,60,180,.2)')+';background:'+(isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)')+';cursor:pointer;transition:all .2s;'+(isSel ? 'box-shadow:0 0 10px '+opt.color+'40;' : '');
           card.innerHTML = `
             <span style="font-size:22px">${opt.emoji}</span>
             <span style="font-size:11px;font-weight:800;color:${isSel ? '#fff' : '#e9d5ff'}">${opt.label}</span>
@@ -3209,7 +3209,7 @@ window.CGO_PERIODIC_WAVES = {
           vibes.forEach(opt => {
             const isSel = this.selected.vibe === opt.id;
             const card = document.createElement('div');
-            card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;border:1.5px solid ${isSel ? opt.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .2s;${isSel ? `box-shadow:0 0 8px ${opt.color}40;` : ''}`;
+            card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;border:1.5px solid '+(isSel ? opt.color : 'rgba(100,60,180,.2)')+';background:'+(isSel ? 'rgba(168,85,247,.2)' : 'rgba(15,4,35,.7)')+';cursor:pointer;transition:all .2s;'+(isSel ? 'box-shadow:0 0 8px '+opt.color+'40;' : '');
             card.innerHTML = `
               <span style="font-size:18px">${opt.emoji}</span>
               <span style="font-size:10px;font-weight:800;color:${isSel ? '#fff' : '#e9d5ff'};text-align:center;line-height:1.2">${opt.label}</span>
@@ -3771,7 +3771,7 @@ window.CGO_PERIODIC_WAVES = {
         DURATIONS.forEach(d => {
           const isSel = this.selectedDurationSec === d.sec;
           const chip = document.createElement('div');
-          chip.style.cssText = `flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:10px;border:1.5px solid ${isSel ? d.color : 'rgba(100,60,180,.2)'};background:${isSel ? 'rgba(168,85,247,.18)' : 'rgba(15,4,35,.7)'};cursor:pointer;transition:all .18s;${isSel ? `box-shadow:0 0 7px ${d.color}50;` : ''}`;
+          chip.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px;border-radius:10px;border:1.5px solid '+(isSel ? d.color : 'rgba(100,60,180,.2)')+';background:'+(isSel ? 'rgba(168,85,247,.18)' : 'rgba(15,4,35,.7)')+';cursor:pointer;transition:all .18s;'+(isSel ? 'box-shadow:0 0 7px '+d.color+'50;' : '');
           chip.innerHTML = `
             <span style="font-size:15px">${d.emoji}</span>
             <span style="font-size:11px;font-weight:800;color:${isSel ? d.color : '#e9d5ff'}">${d.label}</span>
@@ -3995,7 +3995,7 @@ window.CGO_PERIODIC_WAVES = {
         left:${left}px;box-shadow:0 2px 10px rgba(0,0,0,.45);
         text-align:center;line-height:1.35;white-space:nowrap;min-width:56px;
       `;
-      bubble.innerHTML = \`<div style="font-size:12px;font-weight:900;">\${bpm} BPM</div>\${hint ? \`<div style="font-size:8.5px;opacity:0.92;margin-top:1px;">\${hint}</div>\` : ''}\`;
+      bubble.innerHTML = '<div style="font-size:12px;font-weight:900;">'+bpm+' BPM</div>'+(hint ? '<div style="font-size:8.5px;opacity:0.92;margin-top:1px;">'+hint+'</div>' : '');
     }
 
     // 드래그 중 카드 실시간(색상+BPM+장르힌트) 업데이트 — cgo-145
@@ -4007,7 +4007,7 @@ window.CGO_PERIODIC_WAVES = {
         bpmEl.style.color = stage.color;
         const numNode = bpmEl.childNodes[0];
         if (numNode && numNode.nodeType === Node.TEXT_NODE) numNode.textContent = bpm;
-        else bpmEl.innerHTML = bpm + \`<span class="cgo-tempo-bpm-unit">BPM</span>\`;
+        else bpmEl.innerHTML = bpm + '<span class="cgo-tempo-bpm-unit">BPM</span>';
       }
       const nameEl = dispDiv.querySelector('.cgo-tempo-info-name');
       if (nameEl) { nameEl.textContent = stage.name; nameEl.style.color = stage.dot; }
