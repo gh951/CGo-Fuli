@@ -2392,6 +2392,55 @@
         p.appendChild(freqBar);
       })();
 
+      // cgo-142: 로컬 프롬프트 입력 바 (API 없이 100% 클라이언트 처리)
+      (()=>{
+        const pBar = document.createElement('div');
+        pBar.style.cssText = 'display:flex;gap:6px;padding:6px 10px 8px;';
+        const pInp = document.createElement('input');
+        pInp.type = 'text';
+        pInp.placeholder = '💬 예: 잔잔한 재즈 단조 432hz · 신나는 K팝 · 바로크 528hz';
+        pInp.id = 'cgo-prompt-inp';
+        pInp.style.cssText = [
+          'flex:1;padding:8px 12px;border-radius:12px;',
+          'border:1.5px solid rgba(168,85,247,.3);',
+          'background:rgba(15,4,35,.75);color:#e2e8f0;',
+          'font-size:11.5px;font-family:inherit;outline:none;',
+          'transition:border-color .2s;',
+        ].join('');
+        pInp.addEventListener('focus', () => { pInp.style.borderColor='rgba(168,85,247,.7)'; });
+        pInp.addEventListener('blur',  () => { pInp.style.borderColor='rgba(168,85,247,.3)'; });
+        const pBtn = document.createElement('button');
+        pBtn.textContent = '✨';
+        pBtn.title = '자동 설정';
+        pBtn.style.cssText = [
+          'width:36px;height:36px;border-radius:12px;flex-shrink:0;',
+          'border:1.5px solid rgba(168,85,247,.5);',
+          'background:rgba(168,85,247,.18);color:#d8b4fe;',
+          'font-size:16px;cursor:pointer;transition:all .18s;font-family:inherit;',
+        ].join('');
+        pBtn.addEventListener('mouseover', () => { pBtn.style.background='rgba(168,85,247,.35)'; });
+        pBtn.addEventListener('mouseout',  () => { pBtn.style.background='rgba(168,85,247,.18)'; });
+        const doApply = () => {
+          const v = pInp.value.trim();
+          if (!v) return;
+          try {
+            const msg = this._applyPrompt(v);
+            pBtn.textContent = msg.startsWith('✅') ? '✅' : '⚠️';
+            pInp.style.borderColor = msg.startsWith('✅') ? 'rgba(16,185,129,.6)' : 'rgba(239,68,68,.6)';
+            try{ this._setStatus(msg); }catch(e){}
+            setTimeout(() => {
+              pBtn.textContent = '✨';
+              pInp.style.borderColor = 'rgba(168,85,247,.3)';
+            }, 2000);
+          } catch(e) { pBtn.textContent = '⚠️'; setTimeout(()=>{pBtn.textContent='✨';},1500); }
+        };
+        pInp.addEventListener('keydown', e => { if (e.key==='Enter') doApply(); });
+        pBtn.addEventListener('click', doApply);
+        pBar.appendChild(pInp);
+        pBar.appendChild(pBtn);
+        p.appendChild(pBar);
+      })();
+
       // ── 아코디언 헬퍼: 각 섹션 독립 토글 ──────────────────────
       const mkAccordion = (emoji, title, bodyBuilder, openByDefault = false) => {
         const wrap = document.createElement('div');
@@ -4963,6 +5012,151 @@
       this._updateResult();
       const freqOpt = FREQ_OPTIONS.find(f => f.hz === hz);
       if (freqOpt) this._setStatus('🌊 ' + freqOpt.label + ' · ' + freqOpt.desc + ' 선택됨');
+    }
+
+    // ── cgo-142: 로컬 프롬프트 파서 ───────────────────────────────
+    _applyPrompt(text) {
+      const self = this;
+      const t = (text||'').toLowerCase();
+      const applied = [];
+
+      // ── 장르 매핑 ──
+      const GMAP = [
+        { ks:['재즈','jazz','스윙','swing','bebop','비밥','bossa','보사노바','bossanova'],   id:'jazz'      },
+        { ks:['블루스','blues','blue'],                                                       id:'blues'     },
+        { ks:['힐링','healing','명상','meditation','수면','sleep'],                           id:'healing'   },
+        { ks:['k팝','kpop','k-pop','아이돌','걸그룹','보이그룹'],                            id:'kpop'      },
+        { ks:['트로트','뽕짝','트롯','trot','뽕끼'],                                         id:'trot'      },
+        { ks:['힙합','hiphop','hip hop','hip-hop','랩','rap','trap','트랩'],                  id:'hiphop'    },
+        { ks:['메탈','metal','헤비','heavy','thrash'],                                        id:'metal'     },
+        { ks:['그런지','grunge','얼터','punk','펑크'],                                        id:'grunge'    },
+        { ks:['록','rock','로큰롤'],                                                          id:'rock'      },
+        { ks:['바로크','baroque','바흐','bach','헨델','handel'],                              id:'baroque'   },
+        { ks:['오케스트라','orchestra','심포니','symphony','교향'],                           id:'orchestra' },
+        { ks:['가스펠','gospel','복음','성가','찬양'],                                        id:'gospel'    },
+        { ks:['클래식','classical','classic'],                                                id:'cinematic' },
+        { ks:['edm','일렉트로닉','electronic','future bass','퓨처'],                          id:'edm2'      },
+        { ks:['테크노','techno','하우스','house'],                                            id:'techno'    },
+        { ks:['치프튠','chiptune','8비트','8bit','픽셀','pixel','게임음악'],                  id:'chiptune'  },
+        { ks:['발라드','ballad'],                                                             id:'pop'       },
+        { ks:['팝','pop'],                                                                    id:'pop'       },
+        { ks:['앰비언트','ambient','패드','pad'],                                             id:'ambient'   },
+        { ks:['뉴에이지','newage','new age'],                                                 id:'newage'    },
+        { ks:['시네마틱','cinematic','영화음악','ost','오에스티'],                            id:'cinematic' },
+        { ks:['r&b','rnb','소울','soul','네오소울','neo soul'],                               id:'rnb'       },
+        { ks:['디스코','disco'],                                                              id:'disco'     },
+        { ks:['시티팝','citypop','city pop'],                                                 id:'citypop'   },
+        { ks:['로파이','lofi','lo-fi','lo fi'],                                              id:'lofi'      },
+        { ks:['신스팝','synthpop','synth pop','신스'],                                        id:'synthpop'  },
+        { ks:['레게','reggae','라스타','rasta'],                                              id:'reggae'    },
+        { ks:['살사','salsa','아프로쿠반','afrocuban'],                                       id:'salsa'     },
+        { ks:['마리아치','mariachi','멕시코','mexico'],                                       id:'mariachi'  },
+        { ks:['탱고','tango'],                                                               id:'tango'     },
+        { ks:['플라멩코','flamenco','집시','gypsy'],                                          id:'flamenco'  },
+        { ks:['켈틱','celtic','아이리시','irish','스코틀랜드'],                               id:'celtic'    },
+        { ks:['국악','가야금','해금','대금','판소리','사물','사물놀이'],                       id:'gugak'     },
+        { ks:['인도','raga','라가','시타르','sitar'],                                         id:'raga'      },
+        { ks:['중국','chinese','비파','pipa'],                                                id:'chinese'   },
+        { ks:['일본','japanese','샤미센','shakuhachi','사쿠하치'],                            id:'japanese'  },
+        { ks:['가멜란','gamelan','발리','bali','인도네시아','indonesia'],                      id:'gamelan'   },
+        { ks:['흐미','khoomei','호미','몽골','mongol'],                                       id:'khoomei'   },
+        { ks:['마오리','maori','뉴질랜드','zealand','하카','haka'],                           id:'maori'     },
+        { ks:['아프리카','afrobeat','afro','아프로'],                                         id:'afrobeat'  },
+        { ks:['안데스','andean','팬플루트','pan flute','케나','quena'],                        id:'andean'    },
+        { ks:['샹송','chanson','프랑스','france'],                                            id:'chanson'   },
+        { ks:['칸소네','canzone','이탈리아','italy'],                                         id:'canzone'   },
+        { ks:['컨트리','country','블루그래스','bluegrass','밴조','banjo'],                     id:'country'   },
+        { ks:['스카','ska'],                                                                  id:'ska'       },
+      ];
+
+      let detectedGenre = null;
+      for (const g of GMAP) {
+        if (g.ks.some(k => t.includes(k))) { detectedGenre = g.id; break; }
+      }
+      if (detectedGenre) {
+        self._selectedGenreIds = new Set([detectedGenre]);
+        try {
+          // 장르 버튼 시각 업데이트
+          self.root && self.root.querySelectorAll('[data-genre-id]').forEach(b => {
+            const on = b.dataset.genreId === detectedGenre;
+            b.style.opacity    = on ? '1' : '0.42';
+            b.style.boxShadow  = on ? '0 0 9px rgba(168,85,247,.7)' : '';
+            b.style.borderColor= on ? '#a855f7' : '';
+            b.style.transform  = on ? 'scale(1.05)' : 'scale(1)';
+          });
+        } catch(e){}
+        const gLabel = GENRE_MAP[detectedGenre];
+        applied.push('장르: '+(gLabel?gLabel.name:detectedGenre));
+      }
+
+      // ── BPM 감지 ──
+      let bpmNum = null;
+      const bpmDirect = t.match(/(\d{2,3})\s*bpm/);
+      if (bpmDirect) {
+        bpmNum = Math.min(220, Math.max(40, parseInt(bpmDirect[1])));
+      } else if (/매우 빠른|아주 빠른|최대|prestissimo|presto/.test(t))  bpmNum = 160;
+      else if (/빠른|신나는|활기찬|energetic|fast|업템포|allegro/.test(t)) bpmNum = 128;
+      else if (/보통|중간|moderate|moderato|andante/.test(t))             bpmNum = 96;
+      else if (/느린|잔잔한|차분한|편안한|slow|lounge|adagio|largo/.test(t)) bpmNum = 68;
+      else if (/매우 느린|아주 느린|larghissimo/.test(t))                 bpmNum = 50;
+      if (bpmNum) {
+        self.tempoBpm = bpmNum;
+        try {
+          const bi = self.root && self.root.querySelector('input[type="range"]');
+          if (bi) { bi.value = bpmNum; bi.dispatchEvent(new Event('input',{bubbles:true})); }
+          // BPM 숫자 표시 업데이트
+          self.root && self.root.querySelectorAll('.cgo-bpm-val,.cgo-tempo-val').forEach(el => {
+            el.textContent = bpmNum;
+          });
+        } catch(e){}
+        applied.push('BPM: '+bpmNum);
+      }
+
+      // ── 주파수 감지 ──
+      if (/528/.test(t))                                        { try{self._selectFreq(528);}catch(e){}   applied.push('528Hz'); }
+      else if (/432/.test(t))                                   { try{self._selectFreq(432);}catch(e){}   applied.push('432Hz'); }
+      else if (/7\.83|슈만|지구공명|earth\s*resonan|schumann/.test(t)) { try{self._selectFreq(7.83);}catch(e){} applied.push('7.83Hz'); }
+      else if (/순수|pure|주파수\s*없/.test(t))                { try{self._selectFreq(0);}catch(e){}     applied.push('순수음악'); }
+
+      // ── 조성 감지 ──
+      if (/슬픈|어두운|minor|단조|우울|sad|애수|melanchol/.test(t)) {
+        self._selectedMinor = true;
+        try {
+          self.root && self.root.querySelectorAll('[data-mode="min"],[data-key*="Minor"],[data-key*="minor"]').forEach(b => {
+            b.click && b.click();
+          });
+        } catch(e){}
+        applied.push('단조');
+      } else if (/밝은|경쾌|major|장조|happy|밝고|활발|cheerful/.test(t)) {
+        self._selectedMinor = false;
+        try {
+          self.root && self.root.querySelectorAll('[data-mode="maj"],[data-key*="Major"],[data-key*="major"]').forEach(b => {
+            b.click && b.click();
+          });
+        } catch(e){}
+        applied.push('장조');
+      }
+
+      // ── 길이 감지 ──
+      const durMMin  = t.match(/(\d+)\s*분/);
+      const durMSec  = t.match(/(\d+)\s*초/);
+      const durEMin  = t.match(/(\d+)\s*min/);
+      const durESec  = t.match(/(\d+)\s*sec/);
+      if (durMMin || durEMin) {
+        const mins = parseInt((durMMin||durEMin)[1]);
+        self._promptDurationSec = Math.min(10, Math.max(1, mins)) * 60;
+        applied.push(mins+'분');
+      } else if (durMSec || durESec) {
+        const secs = parseInt((durMSec||durESec)[1]);
+        self._promptDurationSec = Math.min(600, Math.max(10, secs));
+        applied.push(secs+'초');
+      }
+
+      try { self._updateResult(); } catch(e){}
+
+      return applied.length
+        ? '✅ ' + applied.join(' · ') + ' 자동 적용'
+        : '⚠️ 인식된 설정 없음 (예: 잔잔한 재즈 단조 432hz)';
     }
 
     // ── Web Audio: 미리 듣기 ────────────────────────────────────
