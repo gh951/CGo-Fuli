@@ -2063,10 +2063,8 @@ window.CGO_PERIODIC_WAVES = {
 .cgo-ts-name{font-size:9px;font-weight:800;color:#e9d5ff;margin-top:4px;}
 .cgo-ts-en{display:none;}
 .cgo-ts-desc{display:none;}
-/* cgo-149: 호버 팝업 */
-.cgo-ts-card{overflow:visible;}
-.cgo-ts-card::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(20,5,45,.96);color:#e9d5ff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid rgba(139,92,246,.5);pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;}
-.cgo-ts-card:hover::after{opacity:1;}
+/* cgo-150: JS body 팝업 (overflow 클리핑 방지) */
+#cgo-ts-tip{display:none;position:fixed;background:rgba(18,4,42,.97);color:#e9d5ff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:9px;border:1px solid rgba(139,92,246,.55);pointer-events:none;z-index:99999;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.55);}
 .cgo-ts-badge-wrap{padding:0 0 10px;}
 .cgo-ts-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#e9d5ff;background:rgba(139,92,246,.15);border:1px solid var(--tsc,rgba(139,92,246,.5));border-radius:999px;padding:4px 11px;line-height:1.4;}
 
@@ -4129,6 +4127,13 @@ window.CGO_PERIODIC_WAVES = {
         const row = document.createElement('div');
         row.className = 'cgo-ts-row';
 
+        // cgo-150: body 팝업 싱글턴 생성 (overflow 클리핑 방지)
+        if (!document.getElementById('cgo-ts-tip')) {
+          var _tipEl = document.createElement('div');
+          _tipEl.id = 'cgo-ts-tip';
+          document.body.appendChild(_tipEl);
+        }
+
         TIME_SIGS.filter(ts => ts.group === grp.name).forEach(ts => {
           const card = document.createElement('div');
           const isSel = this.selectedTimeSig[0] === ts.num && this.selectedTimeSig[1] === ts.den;
@@ -4136,13 +4141,32 @@ window.CGO_PERIODIC_WAVES = {
           card.style.setProperty('--tsc', ts.color);
           card.dataset.tsn = String(ts.num);
           card.dataset.tsd = String(ts.den);
-          // cgo-149: 카드는 아이콘+분수+이름만 — desc/en 제거, 호버 팝업으로 대체
-          card.dataset.tip = `${ts.num}분의 ${ts.den}박자`;
+          // cgo-150: 아이콘+분수+이름만 — dataset.tip 제거, JS body 팝업으로 대체
           card.innerHTML = `
             <div class="cgo-ts-icon">${ts.icon}</div>
             <div class="cgo-ts-fraction">${ts.num}<span class="cgo-ts-slash">/</span>${ts.den}</div>
             <div class="cgo-ts-name">${ts.name}</div>
           `;
+          // cgo-150: JS body 팝업 이벤트 (overflow clip 우회)
+          card.addEventListener('mouseover', function(e) {
+            var tip = document.getElementById('cgo-ts-tip');
+            if (!tip) return;
+            tip.textContent = ts.num + '분의 ' + ts.den + '박자';
+            tip.style.display = 'block';
+            tip.style.left = (e.clientX + 12) + 'px';
+            tip.style.top = (e.clientY - 36) + 'px';
+          });
+          card.addEventListener('mousemove', function(e) {
+            var tip = document.getElementById('cgo-ts-tip');
+            if (tip && tip.style.display !== 'none') {
+              tip.style.left = (e.clientX + 12) + 'px';
+              tip.style.top = (e.clientY - 36) + 'px';
+            }
+          });
+          card.addEventListener('mouseout', function() {
+            var tip = document.getElementById('cgo-ts-tip');
+            if (tip) tip.style.display = 'none';
+          });
           card.addEventListener('click', () => {
             if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
             this._selectTimeSig(ts.num, ts.den, ts.color);
