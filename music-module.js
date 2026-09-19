@@ -50,7 +50,7 @@ window.CGO_PERIODIC_WAVES = {
   // ── 템포 데이터 (250단계 연속 슬라이더) ─────────────────────────
   // 슬라이더: 0~249 → BPM 50~140 연속 매핑
   const TEMPO_MIN_BPM = 50;
-  const TEMPO_MAX_BPM = 140;
+  const TEMPO_MAX_BPM = 280; // cgo-145: 확장 — 살사(170-220)·메탈(140-200)·치프튠(120-180) 등 고속 장르 대응
   const TEMPO_STEPS_COUNT = 250; // 0~249
   // 슬라이더 값 → BPM
   function sliderToBpm(v) {
@@ -62,12 +62,13 @@ window.CGO_PERIODIC_WAVES = {
   }
   // BPM → 단계 정보 (5구간)
   const TEMPO_STAGES = [
-    { bpmMax:57,  name:'아주 느리게', nameEn:'Largo',   desc:'명상 · 깊은 힐링 · 432/528Hz 최적', color:'#6366f1', dot:'#818cf8' },
-    { bpmMax:70,  name:'느리게',     nameEn:'Adagio',  desc:'차분 · 감성적인 발라드 · 샹송',      color:'#3b82f6', dot:'#60a5fa' },
-    { bpmMax:95,  name:'보통',       nameEn:'Andante', desc:'대중적 · 편안하게 듣기 좋은 스탠다드', color:'#10b981', dot:'#34d399' },
-    { bpmMax:125, name:'빠르게',     nameEn:'Allegro', desc:'리드미컬 · 경쾌한 분위기',            color:'#f59e0b', dot:'#fcd34d' },
-    { bpmMax:140, name:'아주 빠르게', nameEn:'Presto',  desc:'에너지 · 드라이브감 있는 고속',       color:'#ef4444', dot:'#f87171' }
-  ];
+    { bpmMax:57,  name:'아주 느리게', nameEn:'Largo',        desc:'명상 · 깊은 힐링 · 432/528Hz 최적',           color:'#6366f1', dot:'#818cf8' },
+    { bpmMax:70,  name:'느리게',      nameEn:'Adagio',       desc:'차분 · 감성적인 발라드 · 샹송 · 국악',         color:'#3b82f6', dot:'#60a5fa' },
+    { bpmMax:95,  name:'보통',        nameEn:'Andante',      desc:'대중적 · 편안하게 듣기 좋은 스탠다드',          color:'#10b981', dot:'#34d399' },
+    { bpmMax:130, name:'빠르게',      nameEn:'Allegro',      desc:'리드미컬 · 경쾌한 분위기 · K팝 · 재즈',        color:'#f59e0b', dot:'#fcd34d' },
+    { bpmMax:160, name:'아주 빠르게', nameEn:'Presto',       desc:'에너지 · 드라이브 · 록 · 테크노 · 마리아치',   color:'#ef4444', dot:'#f87171' },
+    { bpmMax:280, name:'극한 속도',   nameEn:'Prestissimo',  desc:'살사 · EDM · 치프튠 · 메탈 · 최고속 폭발',     color:'#991b1b', dot:'#dc2626' }
+  ]; // cgo-145: 6단계로 확장 (상한 220 BPM)
   function bpmToStage(bpm) {
     for (const s of TEMPO_STAGES) { if (bpm <= s.bpmMax) return s; }
     return TEMPO_STAGES[TEMPO_STAGES.length - 1];
@@ -202,13 +203,286 @@ window.CGO_PERIODIC_WAVES = {
         // cgo-140: 클래식 신규 장르
         { id:'baroque',    flag:'🎼', name:'바로크',    nameEn:'Baroque',            country:'유럽',         desc:'오르간·하프시코드의 정교한 대위법 · 영혼을 정화하는 수학적 선율', bpmRange:[50,90],  wave:'sine'     },
         { id:'orchestra',  flag:'🎻', name:'오케스트라', nameEn:'Orchestra',         country:'유럽/글로벌',  desc:'100인 심포니의 총주 · 극적 클라이맥스로 감동을 폭발시키는 선율', bpmRange:[50,120], wave:'sine'     },
-        { id:'gospel',     flag:'🇺🇸', name:'가스펠',   nameEn:'Gospel & Soul',      country:'미국',         desc:'성령의 파워와 합창 · 마음 깊은 곳을 울리는 치유의 복음 음악',   bpmRange:[70,110], wave:'triangle' },
+        { id:'gospel',     flag:'🙏',  name:'종교음악', nameEn:'Sacred Music',       country:'글로벌',        desc:'찬송가·불교·이슬람 통합 · 파이프 오르간과 성가 합창의 경건한 치유',  bpmRange:[50,90],  wave:'sine'     },
       ]
     }
   ];
   // flat 배열 (id → genre 빠른 조회용)
   const GENRE_MAP = {};
   GENRE_GROUPS.forEach(g => g.genres.forEach(genre => { GENRE_MAP[genre.id] = genre; }));
+
+  // ══════════════════════════════════════════════════════════════════
+  //  GENRE_MUSIC_DB — 47장르 Gemini 코드 진행 데이터베이스 (cgo-147)
+  //  GENRE_ID_MAP : GENRE_GROUPS id → GENRE_MUSIC_DB id
+  // ══════════════════════════════════════════════════════════════════
+  const GENRE_ID_MAP = {
+    chanson:'chanson', canzone:'canzone', flamenco:'flamenco', celtic:'celtic',
+    gugak:'korean_traditional', raga:'indian_raga', chinese:'chinese_traditional',
+    japanese:'japanese_traditional', khoomei:'khoomei', gamelan:'gamelan', maori:'maori',
+    bossanova:'bossa_nova', afrobeat:'afrobeat', andean:'andean', tango:'tango',
+    maqam:'arabian_maqam', salsa:'salsa', mariachi:'mariachi',
+    ambient:'ambient_space', pop:'pop_ballad', jazz:'jazz', healing:'new_age',
+    kpop:'k_pop_idol', trot:'trot', rnb:'k_rnb', hiphop:'hip_hop',
+    rock:'rock_alternative', blues:'blues', country:'country', metal:'heavy_metal',
+    grunge:'grunge', disco:'disco', citypop:'city_pop', synthpop:'synth_pop',
+    lofi:'lo_fi', reggae:'reggae', techno:'techno_house', edm2:'edm',
+    chiptune:'chiptune', newage:'new_age', cinematic:'cinematic_ost',
+    ska:'ska', baroque:'baroque', orchestra:'orchestra', gospel:'sacred_music'
+  };
+  window.GENRE_ID_MAP = GENRE_ID_MAP;
+
+  // 장르별 코드 진행 데이터 (progs: Roman numeral 배열, bpm: [min,max])
+  const GENRE_MUSIC_DB = {
+    'chanson':           { progs:['I-vi-ii-V','i-iv-V7-i','I-IV-V-I'],                               bpm:[65,110] },
+    'canzone':           { progs:['I-V7-I-IV','I-vi-ii-V7','I-IV-V7-I'],                             bpm:[75,130] },
+    'flamenco':          { progs:['i-VII-VI-V','i-iv-V-i','VI-V-IV-III'],                             bpm:[90,160] },
+    'celtic':            { progs:['I-IV-v-I','i-VII-VI-VII','I-V-vi-IV'],                             bpm:[95,135] },
+    'korean_traditional':{ progs:['i-iv-v-i','I-III-IV-V','i-VI-VII-i'],                              bpm:[60,140] },
+    'chinese_traditional':{ progs:['I-II-IV-V','i-iv-v-i','I-IV-V-I'],                               bpm:[70,130] },
+    'japanese_traditional':{ progs:['i-iv-v-i','i-VI-VII-i','I-ii-V-I'],                             bpm:[65,115] },
+    'khoomei':           { progs:['i','i-iv-i','i-VII-i'],                                            bpm:[50,90]  },
+    'gamelan':           { progs:['I-II-III-V','i-iv-v-i','I-IV-V-I'],                               bpm:[80,160] },
+    'maori':             { progs:['I-IV-V-I','I-vi-IV-V','i-v-i'],                                   bpm:[100,150]},
+    'indian_raga':       { progs:['I','i-iv-v','I-V-I'],                                              bpm:[60,180] },
+    'arabian_maqam':     { progs:['i-iv-VII-i','I-V-iv-i','i-VI-V-i'],                               bpm:[70,135] },
+    'bossa_nova':        { progs:['I-iv-iii-VI7-ii-V','i-iv-bVII-Imaj7','Imaj7-ii7-V7-Imaj7'],      bpm:[90,130] },
+    'afrobeat':          { progs:['i-IV-v-i','I-iv-V-IV','i-VI-VII-i'],                              bpm:[105,125]},
+    'andean':            { progs:['i-iv-VII-III','i-v-i-IV','I-V-vi-IV'],                             bpm:[90,130] },
+    'tango':             { progs:['i-iv-V7-i','i-VI-III-V7','i-ii-V7-i'],                            bpm:[110,135]},
+    'salsa':             { progs:['i-IV-v-i','I-ii-V-I','i-VII-VI-V'],                               bpm:[160,200]},
+    'mariachi':          { progs:['I-V7-I','I-IV-V7-I','I-vi-ii-V7'],                                bpm:[130,170]},
+    'pop_ballad':        { progs:['I-V-vi-IV','i-VI-III-VII','I-vi-ii-V'],                           bpm:[60,88]  },
+    'jazz':              { progs:['ii7-V7-Imaj7','Imaj7-VI7-ii7-V7','iii7-VI7-ii7-V7'],             bpm:[90,180] },
+    'k_pop_general':     { progs:['I-vi-IV-V','i-iv-VII-III','I-IV-vi-V'],                           bpm:[110,135]},
+    'k_pop_idol':        { progs:['i-VI-III-VII','i-iv-v-i','I-iv-vi-V'],                            bpm:[120,155]},
+    'trot':              { progs:['i-v-iv-i','I-IV-V7-I','i-IV-V-i'],                                bpm:[115,140]},
+    'k_rnb':             { progs:['i7-VImaj7-III7-VII7','ii7-V7-Imaj7-vi7','i-iv-v-iv'],            bpm:[70,96]  },
+    'rnb_soul':          { progs:['I-IV-V-IV','ii7-V7-Imaj7-vi7','i-iv-VII-III'],                   bpm:[75,112] },
+    'hip_hop':           { progs:['i','i-VI-III-VII','i-iv-i-V'],                                     bpm:[75,145] },
+    'rock_alternative':  { progs:['I-VI-III-VII','I-IV-V-I','i-iv-VI-VII'],                          bpm:[110,145]},
+    'blues':             { progs:['I7-IV7-V7','i-iv-i-V7','I7-IV7-I7-V7'],                          bpm:[60,125] },
+    'country':           { progs:['I-IV-V-I','I-vi-ii-V','I-V-IV-I'],                                bpm:[100,140]},
+    'heavy_metal':       { progs:['i-VI-III-VII','i-iv-v-i','i-bII-i-V'],                            bpm:[130,210]},
+    'grunge':            { progs:['i-VI-III-VII','I-iv-v-I','i-iv-II-V'],                            bpm:[80,130] },
+    'dance_electronic':  { progs:['i-VI-III-VII','I-IV-vi-V','i-iv-v-i'],                            bpm:[120,135]},
+    'disco':             { progs:['i-iv-VII-III','I-vi-ii-V','I-IV-V-I'],                            bpm:[115,128]},
+    'city_pop':          { progs:['Imaj7-vi7-ii7-V7','ii7-V7-iii7-vi7','I-iv-iii-VI7'],             bpm:[100,122]},
+    'synth_pop':         { progs:['I-vi-IV-V','i-VI-III-VII','I-IV-ii-V'],                           bpm:[110,130]},
+    'lo_fi':             { progs:['ii7-V7-Imaj7-vi7','i7-iv7-bVII7-IIImaj7','Imaj7-iv7'],          bpm:[70,90]  },
+    'reggae':            { progs:['I-IV-V-IV','i-iv-v-i','I-vi-IV-V'],                               bpm:[68,92]  },
+    'techno_house':      { progs:['i','i-iv-i-v','i-VI-i-VII'],                                      bpm:[122,145]},
+    'edm':               { progs:['I-vi-IV-V','i-VI-III-VII','I-IV-vi-V'],                           bpm:[128,150]},
+    'chiptune':          { progs:['I-vi-IV-V','i-VI-III-VII','I-IV-V-I'],                            bpm:[110,160]},
+    'new_age':           { progs:['I-V-vi-IV','I-IV-I-V','i-VI-III-VII'],                            bpm:[55,85]  },
+    'cinematic_ost':     { progs:['i-VI-iv-V','I-bVII-IV-I','i-bVI-bIII-bVII'],                     bpm:[60,160] },
+    'ska':               { progs:['I-IV-V-I','I-vi-ii-V','i-IV-v-i'],                                bpm:[130,180]},
+    'baroque':           { progs:['I-V-vi-iii-IV-I-IV-V','i-iv-VII-III','I-iv-V-I'],                bpm:[70,140] },
+    'orchestra':         { progs:['I-vi-ii-V-I','i-iv-V-i','I-IV-V-I'],                              bpm:[50,170] },
+    'sacred_music':      { progs:['I-IV-I-V','i-iv-v-i','I-V-vi-IV'],                               bpm:[50,90]  },
+    'ambient_space':     { progs:['I-IV-I-V','i-VI-VII-i','I-V-I-IV'],                               bpm:[50,70]  }
+  };
+  window.GENRE_MUSIC_DB = GENRE_MUSIC_DB;
+
+  // ── Roman numeral 파서 (cgo-147) ─────────────────────────────────
+  // _RN_DEG: 로마 숫자 → 반음 수
+  var _RN_DEG = {
+    'VII':11,'VI':9,'IV':5,'V':7,'III':4,'II':2,'I':0,
+    'vii':11,'vi':9, 'iv':5,'v':7,'iii':4,'ii':2,'i':0
+  };
+
+  function _parseRomanToken(tok) {
+    // 괄호 안 한국어 주석 제거
+    tok = tok.replace(/\s*\([\s\S]*$/, '').trim();
+    if (!tok) return null;
+    var flat = false;
+    if (tok.charAt(0) === 'b') { flat = true; tok = tok.slice(1); }
+    var deg = -1, isUp = false, suffix = '';
+    var roms = ['VII','VI','IV','V','III','II','I','vii','vi','iv','v','iii','ii','i'];
+    for (var ri = 0; ri < roms.length; ri++) {
+      var r = roms[ri];
+      if (tok.indexOf(r) === 0) {
+        deg = _RN_DEG[r];
+        isUp = (r.charCodeAt(0) >= 65 && r.charCodeAt(0) <= 90);
+        suffix = tok.slice(r.length);
+        break;
+      }
+    }
+    if (deg < 0) return null;
+    if (flat) deg = (deg + 11) % 12;
+    // 코드 타입 결정
+    var sl = suffix.toLowerCase();
+    var ct;
+    if (sl.indexOf('maj7') >= 0 || sl.indexOf('maj9') >= 0) {
+      ct = 'maj7';
+    } else if (sl.indexOf('ø7') >= 0 || sl.indexOf('hdim') >= 0 || sl.indexOf('m7b5') >= 0) {
+      ct = 'm7b5';
+    } else if (/[79]|13/.test(suffix)) {
+      ct = isUp ? 'dom7' : 'm7';
+    } else {
+      ct = isUp ? 'maj' : 'min';
+    }
+    return [deg, ct];
+  }
+  window._parseRomanToken = _parseRomanToken;
+
+  function _buildGenreChords(progStr, barsEach) {
+    // 괄호 표현 전체 제거
+    var clean = progStr.replace(/\s*\([\s\S]*?\)\s*/g, '').trim();
+    var tokens = clean.split('-');
+    var chords = [];
+    for (var ti = 0; ti < tokens.length; ti++) {
+      var t = tokens[ti].trim();
+      if (!t) continue;
+      var parsed = _parseRomanToken(t);
+      if (parsed) chords.push([parsed[0], parsed[1], barsEach || 2]);
+    }
+    return chords;
+  }
+  window._buildGenreChords = _buildGenreChords;
+
+  function _buildGenreStruct(gmdbId) {
+    var entry = GENRE_MUSIC_DB[gmdbId];
+    if (!entry || !entry.progs || !entry.progs.length) return null;
+    var sections = [];
+    var names = ['A', 'B', 'C'];
+    for (var si = 0; si < entry.progs.length; si++) {
+      var progStr = entry.progs[si];
+      // 괄호 제거 후 토큰 수 계산
+      var cleanProg = progStr.replace(/\s*\([\s\S]*?\)\s*/g,'').trim();
+      var toks = cleanProg.split('-').filter(function(t){ return t.trim().length > 0; });
+      // 코드 수에 따라 마디 배분 (4개=2bar, 5~6개=1bar, 8개=1bar)
+      var barsEach = toks.length <= 4 ? 2 : 1;
+      var chords = _buildGenreChords(progStr, barsEach);
+      if (chords.length > 0) {
+        sections.push({ name: names[si] || ('S'+(si+1)), chords: chords });
+      }
+    }
+    return sections.length > 0 ? sections : null;
+  }
+  window._buildGenreStruct = _buildGenreStruct;
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SLOT_PRESETS + 슬롯머신 엔진 (cgo-148)
+  //  볼 6종: n=기본 r=쉼표 s=샵# f=플랫♭ w=불규칙 t=역행(retrograde)
+  //  retroSpan: 역행 적용 마디 수 (2 또는 4)
+  // ══════════════════════════════════════════════════════════════════
+  const SLOT_PRESETS = {
+    'default':            {n:65,r:12,s:7, f:7, w:5, t:4,  retroSpan:2},
+    'chanson':            {n:58,r:18,s:8, f:8, w:5, t:3,  retroSpan:2},
+    'canzone':            {n:62,r:15,s:8, f:8, w:5, t:2,  retroSpan:2},
+    'flamenco':           {n:52,r:15,s:14,f:10,w:6, t:3,  retroSpan:2},
+    'celtic':             {n:60,r:18,s:8, f:8, w:4, t:2,  retroSpan:2},
+    'korean_traditional': {n:58,r:20,s:8, f:8, w:4, t:2,  retroSpan:2},
+    'chinese_traditional':{n:62,r:16,s:8, f:7, w:5, t:2,  retroSpan:2},
+    'japanese_traditional':{n:62,r:18,s:7, f:7, w:4, t:2,  retroSpan:2},
+    'khoomei':            {n:70,r:18,s:4, f:4, w:2, t:2,  retroSpan:2},
+    'gamelan':            {n:60,r:16,s:8, f:8, w:6, t:2,  retroSpan:2},
+    'maori':              {n:62,r:16,s:8, f:8, w:4, t:2,  retroSpan:2},
+    'indian_raga':        {n:55,r:20,s:10,f:8, w:5, t:2,  retroSpan:2},
+    'arabian_maqam':      {n:52,r:18,s:12,f:12,w:4, t:2,  retroSpan:2},
+    'bossa_nova':         {n:55,r:18,s:10,f:10,w:4, t:3,  retroSpan:2},
+    'afrobeat':           {n:58,r:18,s:8, f:8, w:5, t:3,  retroSpan:2},
+    'andean':             {n:60,r:18,s:8, f:8, w:4, t:2,  retroSpan:2},
+    'tango':              {n:52,r:18,s:10,f:14,w:3, t:3,  retroSpan:2},
+    'salsa':              {n:60,r:15,s:8, f:8, w:5, t:4,  retroSpan:2},
+    'mariachi':           {n:62,r:15,s:8, f:7, w:5, t:3,  retroSpan:2},
+    'pop_ballad':         {n:72,r:14,s:5, f:5, w:2, t:2,  retroSpan:2},
+    'jazz':               {n:42,r:20,s:13,f:13,w:5, t:7,  retroSpan:4},
+    'k_pop_general':      {n:68,r:14,s:7, f:7, w:3, t:1,  retroSpan:2},
+    'k_pop_idol':         {n:65,r:14,s:8, f:8, w:4, t:1,  retroSpan:2},
+    'trot':               {n:65,r:16,s:8, f:8, w:3, t:0,  retroSpan:2},
+    'k_rnb':              {n:55,r:20,s:10,f:10,w:4, t:1,  retroSpan:2},
+    'rnb_soul':           {n:55,r:20,s:10,f:10,w:3, t:2,  retroSpan:2},
+    'hip_hop':            {n:60,r:22,s:7, f:6, w:4, t:1,  retroSpan:2},
+    'rock_alternative':   {n:65,r:14,s:10,f:8, w:2, t:1,  retroSpan:2},
+    'blues':              {n:48,r:22,s:13,f:10,w:5, t:2,  retroSpan:2},
+    'country':            {n:68,r:16,s:7, f:6, w:2, t:1,  retroSpan:2},
+    'heavy_metal':        {n:62,r:15,s:14,f:5, w:4, t:0,  retroSpan:2},
+    'grunge':             {n:62,r:18,s:10,f:7, w:3, t:0,  retroSpan:2},
+    'dance_electronic':   {n:75,r:10,s:6, f:6, w:2, t:1,  retroSpan:2},
+    'disco':              {n:72,r:12,s:7, f:6, w:2, t:1,  retroSpan:2},
+    'city_pop':           {n:58,r:15,s:11,f:11,w:3, t:2,  retroSpan:2},
+    'synth_pop':          {n:68,r:14,s:8, f:7, w:2, t:1,  retroSpan:2},
+    'lo_fi':              {n:60,r:18,s:9, f:9, w:2, t:2,  retroSpan:2},
+    'reggae':             {n:62,r:20,s:7, f:7, w:2, t:2,  retroSpan:2},
+    'techno_house':       {n:80,r:8, s:5, f:4, w:2, t:1,  retroSpan:2},
+    'edm':                {n:80,r:6, s:6, f:5, w:2, t:1,  retroSpan:2},
+    'chiptune':           {n:68,r:12,s:8, f:8, w:3, t:1,  retroSpan:2},
+    'new_age':            {n:72,r:15,s:6, f:5, w:1, t:1,  retroSpan:2},
+    'cinematic_ost':      {n:50,r:12,s:10,f:14,w:4, t:10, retroSpan:4},
+    'ska':                {n:64,r:18,s:8, f:7, w:2, t:1,  retroSpan:2},
+    'baroque':            {n:52,r:14,s:8, f:8, w:2, t:16, retroSpan:4},
+    'orchestra':          {n:52,r:14,s:9, f:11,w:2, t:12, retroSpan:4},
+    'sacred_music':       {n:70,r:15,s:5, f:5, w:2, t:3,  retroSpan:2},
+    'ambient_space':      {n:75,r:14,s:5, f:4, w:1, t:1,  retroSpan:2}
+  };
+  window.SLOT_PRESETS = SLOT_PRESETS;
+
+  // 슬롯머신: 가중 랜덤 추첨
+  function _rollSlot(cfg) {
+    var keys = ['n','r','s','f','w','t'];
+    var wts  = [cfg.n||55, cfg.r||12, cfg.s||7, cfg.f||7, cfg.w||5, cfg.t||4];
+    var tot  = wts.reduce(function(a,b){return a+b;},0);
+    var rnd  = Math.random() * tot;
+    for (var i=0; i<keys.length; i++) {
+      rnd -= wts[i];
+      if (rnd < 0) return keys[i];
+    }
+    return 'n';
+  }
+  window._rollSlot = _rollSlot;
+
+  // 슬롯머신: struct 후처리
+  // [degree, ctype, bars] → 쉼표=[null,'rest',bars] / 크로매틱=degree 변형 / 역행=N마디 역순
+  function _applySlotMachine(struct, cfg) {
+    if (!cfg || !struct) return struct;
+    var wildDeg = [1,3,6,8,10]; // 장조 밖 크로매틱 음
+    return struct.map(function(section) {
+      var src = section.chords.slice();
+      var out = [];
+      var i = 0;
+      while (i < src.length) {
+        var cd  = src[i];
+        var ball = _rollSlot(cfg);
+        if (ball === 'r') {
+          // 쉼표 — 침묵
+          out.push([null, 'rest', cd[2]||2]);
+          i++;
+        } else if (ball === 's') {
+          // 샵# — 반음 올림 크로매틱 어프로치
+          out.push([(cd[0]+1)%12, cd[1], cd[2]||2]);
+          i++;
+        } else if (ball === 'f') {
+          // 플랫♭ — 반음 내림 크로매틱 어프로치
+          out.push([(cd[0]+11)%12, cd[1], cd[2]||2]);
+          i++;
+        } else if (ball === 'w') {
+          // 불규칙 — 장르 밖 와일드카드
+          out.push([wildDeg[Math.floor(Math.random()*wildDeg.length)], 'maj', cd[2]||2]);
+          i++;
+        } else if (ball === 't') {
+          // 역행(Retrograde) — retroSpan 마디만큼 역순 재생
+          var span = cfg.retroSpan || 2;
+          var chunk = src.slice(i, Math.min(i+span, src.length));
+          chunk.slice().reverse().forEach(function(rc){ out.push(rc); });
+          i += chunk.length;
+        } else {
+          // 기본 — 그대로
+          out.push(cd);
+          i++;
+        }
+      }
+      return {
+        name: section.name, chords: out,
+        keyShift: section.keyShift, drift: section.drift, timeSig: section.timeSig
+      };
+    });
+  }
+  window._applySlotMachine = _applySlotMachine;
+
+
+
+
 
   // ══════════════════════════════════════════════════════════════════
   //  INSTRUMENT_DATA — 100개 글로벌 악기 마스터 데이터셋
@@ -501,6 +775,45 @@ window.CGO_PERIODIC_WAVES = {
     { id:'v_country',     emoji:'🤠', label:'컨트리',           desc:'Country · 미국 대초원',           color:'#fcd34d', tier:'pop', bpm:100, genres:['country','folk'] },
     { id:'v_gypsy',       emoji:'🪗', label:'집시 낭만',        desc:'Gypsy Jazz · 유랑의 열정',       color:'#fb7185', tier:'pop', bpm:108, genres:['gypsy','world'] },
     { id:'v_reggae',      emoji:'🌊', label:'레게',              desc:'Reggae · 자메이카 자유',          color:'#4ade80', tier:'pop', bpm:80,  genres:['reggae','world'] },
+    // ── cgo-144: 대중적 30 추가 (장르 45 = 음악풍 45, 시그니처 제외) ──────────
+    // 🌍 유럽
+    { id:'v_chanson',    emoji:'🇫🇷', label:'샹송 낭만',       desc:'Chanson · 파리 카페의 서정',         color:'#93c5fd', tier:'pop', bpm:80,  genres:['chanson','french']    },
+    { id:'v_canzone',    emoji:'🇮🇹', label:'이탈리아 칸소네',  desc:'Canzone · 지중해 열정 선율',         color:'#fca5a5', tier:'pop', bpm:88,  genres:['canzone','italian']   },
+    { id:'v_flamenco',   emoji:'🇪🇸', label:'플라멩코 정열',    desc:'Flamenco · 집시 기타 불꽃',          color:'#f43f5e', tier:'pop', bpm:120, genres:['flamenco','latin']    },
+    // 🌏 아시아
+    { id:'v_gugak',      emoji:'🇰🇷', label:'국악 명상',         desc:'Korean · 가야금 오음계 한(恨)',      color:'#fde68a', tier:'pop', bpm:68,  genres:['gugak','korean']      },
+    { id:'v_chinese',    emoji:'🇨🇳', label:'중국 전통',         desc:'Chinese · 비파 동양 풍류',           color:'#f87171', tier:'pop', bpm:72,  genres:['chinese','world']     },
+    { id:'v_japanese',   emoji:'🇯🇵', label:'일본 선(Zen)',      desc:'Japanese · 사미센 선 고요',          color:'#99f6e4', tier:'pop', bpm:65,  genres:['japanese','world']    },
+    { id:'v_worldbeat',  emoji:'🌏', label:'월드비트',           desc:'World · 가멜란·마오리·흐미 리듬',   color:'#86efac', tier:'pop', bpm:95,  genres:['world','ethnic']       },
+    // 🌎 아메리카·아프리카
+    { id:'v_afrobeat',   emoji:'🌍', label:'아프로비트',          desc:'Afrobeat · 서아프리카 생명력',       color:'#d97706', tier:'pop', bpm:108, genres:['afrobeat','world']    },
+    { id:'v_andean',     emoji:'🇵🇪', label:'안데스 정화',        desc:'Andean · 팬플루트 영혼 정화',        color:'#a3e635', tier:'pop', bpm:72,  genres:['andean','world']      },
+    { id:'v_tango',      emoji:'🇦🇷', label:'탱고 드라마',        desc:'Tango · 반도네온 열정 드라마',       color:'#6366f1', tier:'pop', bpm:90,  genres:['tango','latin']       },
+    { id:'v_salsa',      emoji:'🇨🇺', label:'살사 카리브',        desc:'Salsa · 카리브 브라스 열정',         color:'#f59e0b', tier:'pop', bpm:180, genres:['salsa','latin']       },
+    { id:'v_mariachi',   emoji:'🇲🇽', label:'마리아치 축제',     desc:'Mariachi · 멕시코 트럼펫 영혼',      color:'#22c55e', tier:'pop', bpm:140, genres:['mariachi','latin']    },
+    // ✨ 현대·힐링
+    { id:'v_ambient',    emoji:'🌙', label:'앰비언트 드림',       desc:'Ambient · 패드 신디 명상 공간',      color:'#818cf8', tier:'pop', bpm:60,  genres:['ambient','meditation'] },
+    { id:'v_healing_s',  emoji:'💆', label:'힐링 사운드',         desc:'Healing · 치유 주파수 사운드',       color:'#6ee7b7', tier:'pop', bpm:58,  genres:['healing','ambient']   },
+    // 🇰🇷 K-팝
+    { id:'v_trot',       emoji:'🎵', label:'트로트',               desc:'Trot · 한의 뽕끼 꺾기 정서',       color:'#f97316', tier:'pop', bpm:120, genres:['trot','kpop']         },
+    { id:'v_hiphop',     emoji:'🎧', label:'힙합',                 desc:'Hip-Hop · 808 킥 트랩 라임',       color:'#475569', tier:'pop', bpm:90,  genres:['hiphop','urban']      },
+    // 🎸 록 & 얼터너티브
+    { id:'v_blues',      emoji:'🎷', label:'블루스',               desc:'Blues · 블루스 스케일 영혼 해방',   color:'#1d4ed8', tier:'pop', bpm:76,  genres:['blues','rock']        },
+    { id:'v_metal',      emoji:'⚡', label:'헤비메탈',             desc:'Metal · 다운튜닝 폭발 에너지',      color:'#dc2626', tier:'pop', bpm:160, genres:['metal','rock']        },
+    { id:'v_grunge',     emoji:'🛹', label:'그런지',               desc:'Grunge · 시애틀 반항 디스토션',     color:'#78716c', tier:'pop', bpm:115, genres:['grunge','rock']       },
+    // 💃 댄스 & 일렉트로닉
+    { id:'v_disco',      emoji:'🪩', label:'디스코',               desc:'Disco · 70s 클럽 댄스',            color:'#e879f9', tier:'pop', bpm:118, genres:['disco','dance']       },
+    { id:'v_cpop',       emoji:'🌆', label:'시티팝',               desc:'City Pop · 80s 도쿄 버블 감성',    color:'#a78bfa', tier:'pop', bpm:92,  genres:['citypop','synthwave'] },
+    { id:'v_synthpop',   emoji:'🎹', label:'신스팝',               desc:'Synth-Pop · 레트로 전자 악기',      color:'#22d3ee', tier:'pop', bpm:118, genres:['synthpop','electronic']},
+    { id:'v_techno',     emoji:'🎛️', label:'테크노',              desc:'Techno · 클럽 황홀경 4온 플로어',  color:'#0ea5e9', tier:'pop', bpm:132, genres:['techno','electronic']  },
+    { id:'v_chiptune',   emoji:'👾', label:'치프튠',               desc:'Chiptune · 8비트 픽셀 레트로',     color:'#4ade80', tier:'pop', bpm:150, genres:['chiptune','electronic'] },
+    // 🎬 클래식 & 시네마틱
+    { id:'v_newage',     emoji:'✨', label:'뉴에이지',              desc:'New Age · 클래식×팝 명상 연주',    color:'#ddd6fe', tier:'pop', bpm:72,  genres:['newage','classical']  },
+    { id:'v_ska',        emoji:'🎺', label:'스카 업비트',           desc:'Ska · 자메이카 뿡짝 업비트',       color:'#fbbf24', tier:'pop', bpm:160, genres:['ska','reggae']        },
+    { id:'v_baroque',    emoji:'🎼', label:'바로크',                desc:'Baroque · 대위법 수학적 선율',      color:'#c084fc', tier:'pop', bpm:72,  genres:['baroque','classical'] },
+    { id:'v_orchestra',  emoji:'🎻', label:'오케스트라',             desc:'Orchestra · 100인 심포니 감동',    color:'#7c3aed', tier:'pop', bpm:84,  genres:['orchestra','classical'] },
+    { id:'v_gospel',     emoji:'🙏', label:'가스펠 & 소울',         desc:'Gospel · 성령 파워 합창 치유',     color:'#f59e0b', tier:'pop', bpm:90,  genres:['gospel','soul']       },
+    { id:'v_poprock',    emoji:'🎸', label:'팝록 에너지',            desc:'Pop Rock · 기타 드라이빙 청춘',   color:'#fb923c', tier:'pop', bpm:118, genres:['poprock','rock']      },
     // ── CGO 특화 (Signature) ─────────────────────────────────────
     { id:'v_528',         emoji:'💚', label:'528Hz 치유',       desc:'DNA 회복 · 기적 주파수',         color:'#10b981', tier:'cgo', bpm:60,  genres:['healing','meditation'] },
     { id:'v_432',         emoji:'💛', label:'432Hz 공명',        desc:'우주 심장 · 자연 공명',           color:'#eab308', tier:'cgo', bpm:64,  genres:['432hz','ambient'] },
@@ -1748,8 +2061,12 @@ window.CGO_PERIODIC_WAVES = {
 .cgo-ts-card.selected .cgo-ts-fraction{color:var(--tsc);}
 .cgo-ts-slash{font-size:12px;color:#c4b5e8;font-weight:600;}
 .cgo-ts-name{font-size:9px;font-weight:800;color:#e9d5ff;margin-top:4px;}
-.cgo-ts-en{font-size:8px;color:#a78bfa;font-weight:700;margin-top:1px;}
-.cgo-ts-desc{font-size:8px;color:#c4b5e8;font-weight:600;margin-top:3px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.cgo-ts-en{display:none;}
+.cgo-ts-desc{display:none;}
+/* cgo-149: 호버 팝업 */
+.cgo-ts-card{overflow:visible;}
+.cgo-ts-card::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(20,5,45,.96);color:#e9d5ff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid rgba(139,92,246,.5);pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;}
+.cgo-ts-card:hover::after{opacity:1;}
 .cgo-ts-badge-wrap{padding:0 0 10px;}
 .cgo-ts-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#e9d5ff;background:rgba(139,92,246,.15);border:1px solid var(--tsc,rgba(139,92,246,.5));border-radius:999px;padding:4px 11px;line-height:1.4;}
 
@@ -1938,6 +2255,7 @@ window.CGO_PERIODIC_WAVES = {
       this.selectedDurationSec = 60;             // cgo-82: 음악 길이 기본값: 1분
       this.tempoBpm = TEMPO_DEFAULT_BPM;
       this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
+      this._selectedGenreIds = new Set(['ambient']); // cgo-149: GMDB 연동 동기화용
       this.selectedTimeSig = [4,4];               // cgo-77: 기본 박자 4/4
       window._cgoSelectedTimeSig = [4,4];         // cgo-77: playGroove 연동용
       this.selectedFreq = 432;
@@ -3422,6 +3740,8 @@ window.CGO_PERIODIC_WAVES = {
       // 카운터 업데이트
       const countEl = this.root && this.root.querySelector('#cgo-genre-count');
       if (countEl) countEl.textContent = this.selectedGenres.size;
+      // cgo-149: GMDB 연동용 동기화 (index.html onGenerate에서 mod._selectedGenreIds 참조)
+      this._selectedGenreIds = new Set(this.selectedGenres);
       // 결과 카드 업데이트
       this._updateResult();
     }
@@ -3504,38 +3824,9 @@ window.CGO_PERIODIC_WAVES = {
       rainbowDiv.appendChild(slider);
       wrap.appendChild(rainbowDiv);
 
-      // 5개 틱 마커 (절대 위치)
-      const ticksDiv = document.createElement('div');
-      ticksDiv.className = 'cgo-tempo-ticks';
-      ticksDiv.id = 'cgo-tempo-ticks';
-      TEMPO_TICK_BPMS.forEach(bpm => {
-        const pct = ((bpm - TEMPO_MIN_BPM) / (TEMPO_MAX_BPM - TEMPO_MIN_BPM) * 100).toFixed(2);
-        const stage = bpmToStage(bpm);
-        const isActive = this.tempoBpm === bpm;
-        const tick = document.createElement('div');
-        tick.className = 'cgo-tempo-tick' + (isActive ? ' active' : '');
-        tick.dataset.bpm = String(bpm);
-        tick.style.left = pct + '%';
-        tick.innerHTML = `
-          <div class="cgo-tempo-tick-dot" style="background:${stage.dot};color:${stage.dot};"></div>
-          <div class="cgo-tempo-tick-name">${stage.name}<br><span style="color:#6b7280;font-size:8px;">${stage.nameEn}</span></div>
-        `;
-        tick.addEventListener('click', () => {
-          if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
-          unlockAudioCtx();
-          this._onTempoChange(bpm);
-          // 틱 클릭 시 해당 BPM으로 4박 미리듣기
-          let _tb = 0;
-          const _tms = Math.round(60000 / bpm);
-          playMetroClick(true); _tb = 1;
-          const _tid = setInterval(() => {
-            if (_tb >= 4) { clearInterval(_tid); return; }
-            playMetroClick(_tb % 4 === 0); _tb++;
-          }, _tms);
-        });
-        ticksDiv.appendChild(tick);
-      });
-      wrap.appendChild(ticksDiv);
+      // cgo-145: 틱 마커 명칭 버튼 제거 — 클릭 시 슬라이더 값 강제 변경으로 충돌 유발
+      // (Largo/Adagio/Andante/Allegro/Presto 명칭 버튼 삭제)
+      // 장르 컨텍스트는 말풍선(_bpmGenreHint)으로 대체
 
       // 메트로놈 안내 문구
       const hintDiv = document.createElement('div');
@@ -3679,13 +3970,13 @@ window.CGO_PERIODIC_WAVES = {
 
       this._tempoSlider = slider;
       this._tempoBubble = bubble;
-      this._tempoTicksEl = ticksDiv;
+      this._tempoTicksEl = null; // cgo-145: ticksDiv 제거됨
       this._tempoDispEl = dispDiv;
 
       return wrap;
     }
 
-    // 말풍선 위치 계산 (썸 중앙 기준)
+    // 말풍선 위치 계산 (썸 중앙 기준) — cgo-145: 장르 컨텍스트 표시
     _updateTempoBubble(slider, bubble, bpm) {
       if (!slider || !bubble) return;
       const min = parseInt(slider.min, 10);
@@ -3695,22 +3986,20 @@ window.CGO_PERIODIC_WAVES = {
       const thumbW = 26;
       const trackW = slider.offsetWidth || slider.parentElement.offsetWidth || 200;
       const left = pct * (trackW - thumbW) + thumbW / 2;
-      bubble.style.left = left + 'px';
-      bubble.textContent = bpm + ' BPM';
       const stage = bpmToStage(bpm);
-      bubble.style.background = stage.color;
-      bubble.style.setProperty('--bc', stage.color);
-      // 말풍선 꼬리 색상도 업데이트
+      const hint = this._bpmGenreHint ? this._bpmGenreHint(bpm) : '';
       bubble.style.cssText = `
         position:absolute;top:0;transform:translateX(-50%);
         background:${stage.color};color:#fff;
-        font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;
-        padding:2px 7px;border-radius:6px;pointer-events:none;white-space:nowrap;
-        left:${left}px;box-shadow:0 2px 8px rgba(0,0,0,.4);
+        font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;
+        padding:4px 9px;border-radius:8px;pointer-events:none;
+        left:${left}px;box-shadow:0 2px 10px rgba(0,0,0,.45);
+        text-align:center;line-height:1.35;white-space:nowrap;min-width:56px;
       `;
+      bubble.innerHTML = \`<div style="font-size:12px;font-weight:900;">\${bpm} BPM</div>\${hint ? \`<div style="font-size:8.5px;opacity:0.92;margin-top:1px;">\${hint}</div>\` : ''}\`;
     }
 
-    // 드래그 중 카드 실시간(색상+BPM 숫자) 업데이트
+    // 드래그 중 카드 실시간(색상+BPM+장르힌트) 업데이트 — cgo-145
     _updateTempoDisplayLive(dispDiv, bpm) {
       if (!dispDiv) return;
       const stage = bpmToStage(bpm);
@@ -3719,12 +4008,29 @@ window.CGO_PERIODIC_WAVES = {
         bpmEl.style.color = stage.color;
         const numNode = bpmEl.childNodes[0];
         if (numNode && numNode.nodeType === Node.TEXT_NODE) numNode.textContent = bpm;
-        else bpmEl.innerHTML = bpm + `<span class="cgo-tempo-bpm-unit">BPM</span>`;
+        else bpmEl.innerHTML = bpm + \`<span class="cgo-tempo-bpm-unit">BPM</span>\`;
       }
       const nameEl = dispDiv.querySelector('.cgo-tempo-info-name');
       if (nameEl) { nameEl.textContent = stage.name; nameEl.style.color = stage.dot; }
       const enEl = dispDiv.querySelector('.cgo-tempo-info-en');
       if (enEl) enEl.textContent = stage.nameEn;
+      // cgo-145: 드래그 중 장르 컨텍스트 실시간 업데이트
+      const hint = this._bpmGenreHint ? this._bpmGenreHint(bpm) : '';
+      const infoEl = dispDiv.querySelector('.cgo-tempo-info');
+      if (infoEl) {
+        let hintEl = infoEl.querySelector('.cgo-tempo-genre-hint');
+        if (hint) {
+          if (!hintEl) {
+            hintEl = document.createElement('div');
+            hintEl.className = 'cgo-tempo-genre-hint';
+            hintEl.style.cssText = 'margin-top:5px;font-size:10px;color:#6b7280;line-height:1.5;';
+            infoEl.appendChild(hintEl);
+          }
+          hintEl.innerHTML = '<span style="color:#9ca3af;">🎵</span> ' + hint;
+        } else if (hintEl) {
+          hintEl.textContent = '';
+        }
+      }
     }
 
     // 틱 active 상태 업데이트
@@ -3741,16 +4047,18 @@ window.CGO_PERIODIC_WAVES = {
 
     _tempoDisplayHTML(bpm) {
       const stage = bpmToStage(bpm);
-      return `
+      const hint = this._bpmGenreHint ? this._bpmGenreHint(bpm) : '';
+      return \`
         <div>
-          <div class="cgo-tempo-bpm" style="color:${stage.color};">${bpm}<span class="cgo-tempo-bpm-unit">BPM</span></div>
+          <div class="cgo-tempo-bpm" style="color:\${stage.color};">\${bpm}<span class="cgo-tempo-bpm-unit">BPM</span></div>
         </div>
         <div class="cgo-tempo-info">
-          <div class="cgo-tempo-info-name" style="color:${stage.dot};">${stage.name}</div>
-          <div class="cgo-tempo-info-en">${stage.nameEn}</div>
-          <div class="cgo-tempo-info-desc">${stage.desc}</div>
+          <div class="cgo-tempo-info-name" style="color:\${stage.dot};">\${stage.name}</div>
+          <div class="cgo-tempo-info-en">\${stage.nameEn}</div>
+          <div class="cgo-tempo-info-desc">\${stage.desc}</div>
+          \${hint ? \`<div class="cgo-tempo-genre-hint" style="margin-top:5px;font-size:10px;color:#6b7280;line-height:1.5;"><span style="color:#9ca3af;">🎵</span> \${hint}</div>\` : ''}
         </div>
-      `;
+      \`;
     }
 
     _onTempoChange(bpm) {
@@ -3763,6 +4071,30 @@ window.CGO_PERIODIC_WAVES = {
       if (this._tempoDispEl) this._tempoDispEl.innerHTML = this._tempoDisplayHTML(bpm);
       this._updateResult();
       this._applyBpmToAudio();   // 재생 중이면 리듬 즉시 갱신
+    }
+
+    // ── cgo-145: BPM 장르 컨텍스트 힌트 ─────────────────────────────
+    // BPM 값 → 그 BPM이 어느 장르 범위에 속하는지 설명 텍스트 반환
+    _bpmGenreHint(bpm) {
+      const matches = [];
+      for (const grp of GENRE_GROUPS) {
+        for (const g of grp.genres) {
+          if (bpm >= g.bpmRange[0] && bpm <= g.bpmRange[1]) matches.push(g);
+        }
+      }
+      if (matches.length > 0) {
+        const shown = matches.slice(0, 3);
+        const extra = matches.length > 3 ? ` 외 ${matches.length - 3}개` : ' 범위';
+        return shown.map(g => g.flag + ' ' + g.name).join(' · ') + extra;
+      }
+      // 범위 밖 → 가장 가까운 2개 보여주기
+      const all = [];
+      for (const grp of GENRE_GROUPS) all.push(...grp.genres);
+      const dist = g => Math.min(Math.abs(bpm - g.bpmRange[0]), Math.abs(bpm - g.bpmRange[1]));
+      all.sort((a, b) => dist(a) - dist(b));
+      if (all.length >= 2) return all[0].flag + ' ' + all[0].name + ' ↔ ' + all[1].flag + ' ' + all[1].name + ' 사이';
+      if (all.length === 1) return all[0].flag + ' ' + all[0].name + ' 근처';
+      return '';
     }
 
     // ── 박자(Time Signature) 카드 섹션 — cgo-77 ─────────────────
@@ -3804,12 +4136,12 @@ window.CGO_PERIODIC_WAVES = {
           card.style.setProperty('--tsc', ts.color);
           card.dataset.tsn = String(ts.num);
           card.dataset.tsd = String(ts.den);
+          // cgo-149: 카드는 아이콘+분수+이름만 — desc/en 제거, 호버 팝업으로 대체
+          card.dataset.tip = `${ts.num}분의 ${ts.den}박자`;
           card.innerHTML = `
             <div class="cgo-ts-icon">${ts.icon}</div>
             <div class="cgo-ts-fraction">${ts.num}<span class="cgo-ts-slash">/</span>${ts.den}</div>
             <div class="cgo-ts-name">${ts.name}</div>
-            <div class="cgo-ts-en">${ts.nameEn}</div>
-            <div class="cgo-ts-desc">${ts.desc}</div>
           `;
           card.addEventListener('click', () => {
             if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
