@@ -2253,9 +2253,9 @@ window.CGO_PERIODIC_WAVES = {
       this.selected.vibe = null;                 // cgo-81: 음악풍 기본값: 없음(자유)
       this.selectedDurationSec = 60;             // cgo-82: 음악 길이 기본값: 1분
       this.tempoBpm = TEMPO_DEFAULT_BPM;
-      this.selectedGenres = new Set(['ambient']); // 기본 선택: 앰비언트
-      this._selectedGenreIds = new Set(['ambient']); // cgo-149: GMDB 연동 동기화용
-      this.selectedTimeSig = [4,4];               // cgo-77: 기본 박자 4/4
+      this.selectedGenres = new Set(); // cgo-156: 기본 선택 없음 (사용자가 직접 선택)
+      this._selectedGenreIds = new Set(); // cgo-161: selectedGenres와 일치 (기본 선택 없음)
+      this.selectedTimeSig = null;                 // cgo-156: 기본 박자 없음 (사용자가 직접 선택)
       window._cgoSelectedTimeSig = [4,4];         // cgo-77: playGroove 연동용
       this.selectedFreq = 432;
       this.selectedInstrIds = new Set();          // 선택된 악기 ID Set (최대 12개)
@@ -2374,7 +2374,7 @@ window.CGO_PERIODIC_WAVES = {
       try { if (this.isPlaying) this._stopAudio(); } catch(e) {}
       // 선택 상태 초기화
       this.selectedFreq = 432;
-      try { this.selectedGenres = new Set(['ambient']); } catch(e) {}
+      try { this.selectedGenres = new Set(); } catch(e) {} // cgo-156: 리셋도 선택 없음
       this.selectedDurationSec = 60;
       try { this.selectedInstrIds = new Set(); } catch(e) {}
       this.selected.vocal = 'bgm';
@@ -3714,7 +3714,7 @@ window.CGO_PERIODIC_WAVES = {
     _toggleGenre(id, groupColor) {
       if (this.selectedGenres.has(id)) {
         // 마지막 하나는 해제 불가
-        if (this.selectedGenres.size <= 1) {
+        if (this.selectedGenres.size <= 0) { // cgo-156: 최소 0개 허용
           this._setStatus('⚠️ 최소 1개 장르는 선택되어야 합니다.');
           return;
         }
@@ -4047,17 +4047,17 @@ window.CGO_PERIODIC_WAVES = {
     _tempoDisplayHTML(bpm) {
       const stage = bpmToStage(bpm);
       const hint = this._bpmGenreHint ? this._bpmGenreHint(bpm) : '';
-      return \`
+      return `
         <div>
-          <div class="cgo-tempo-bpm" style="color:\${stage.color};">\${bpm}<span class="cgo-tempo-bpm-unit">BPM</span></div>
+          <div class="cgo-tempo-bpm" style="color:${stage.color};">${bpm}<span class="cgo-tempo-bpm-unit">BPM</span></div>
         </div>
         <div class="cgo-tempo-info">
-          <div class="cgo-tempo-info-name" style="color:\${stage.dot};">\${stage.name}</div>
-          <div class="cgo-tempo-info-en">\${stage.nameEn}</div>
-          <div class="cgo-tempo-info-desc">\${stage.desc}</div>
-          \${hint ? \`<div class="cgo-tempo-genre-hint" style="margin-top:5px;font-size:10px;color:#6b7280;line-height:1.5;"><span style="color:#9ca3af;">🎵</span> \${hint}</div>\` : ''}
+          <div class="cgo-tempo-info-name" style="color:${stage.dot};">${stage.name}</div>
+          <div class="cgo-tempo-info-en">${stage.nameEn}</div>
+          <div class="cgo-tempo-info-desc">${stage.desc}</div>
+          ${hint ? `<div class="cgo-tempo-genre-hint" style="margin-top:5px;font-size:10px;color:#6b7280;line-height:1.5;"><span style="color:#9ca3af;">🎵</span> ${hint}</div>` : ''}
         </div>
-      \`;
+      `;
     }
 
     _onTempoChange(bpm) {
@@ -4141,7 +4141,7 @@ window.CGO_PERIODIC_WAVES = {
         TIME_SIGS.filter(ts => ts.group === grp.name).forEach(ts => {
           _tsNum++;
           const card = document.createElement('div');
-          const isSel = this.selectedTimeSig[0] === ts.num && this.selectedTimeSig[1] === ts.den;
+          const isSel = this.selectedTimeSig && this.selectedTimeSig[0] === ts.num && this.selectedTimeSig[1] === ts.den;
           card.className = 'cgo-ts-card' + (isSel ? ' selected' : '');
           card.style.setProperty('--tsc', ts.color);
           card.dataset.tsn = String(ts.num);
@@ -4196,21 +4196,57 @@ window.CGO_PERIODIC_WAVES = {
     // ── 박자 배지 HTML ────────────────────────────────────────────
     _tsBadgeHTML() {
       const ts = this.selectedTimeSig;
+      if (!ts) return ''; // cgo-156: 선택 없을 때 빈 배지
       const info = TIME_SIGS.find(t => t.num === ts[0] && t.den === ts[1]);
       if (!info) return '';
       return `<span class="cgo-ts-badge" style="--tsc:${info.color}">${info.icon} <b>${info.num}/${info.den}</b> ${info.nameEn} · ${info.desc}</span>`;
     }
 
     // ── 박자 선택 ────────────────────────────────────────────────
+    // cgo-157: 박자별 기준 BPM 매핑 — 카드 선택 시 BPM 바 이동
+    _timeSigDefaultBpm(num, den) {
+      // 박자 id → 기준 BPM (음악적 관습 기준)
+      const map = {
+        '4/4':  120,  // Pop·Rock·K팝 표준 — 가장 익숙한 기준점
+        '3/4':  160,  // 왈츠 — 빠른 세 박자 스윙
+        '2/4':  130,  // 행진곡 — 경쾌하고 단호한
+        '6/8':   72,  // 셔플·슬로우잼 — 느린 스윙 필 (실제 박자수 2)
+        '12/8':  60,  // 블루스 — 깊고 느린 스윙
+        '9/8':   84,  // 켈틱·Prog — 세 박 세 묶음
+        '5/4':   96,  // Take Five 기준 — 96BPM 원본
+        '7/8':  112,  // 발칸 7/8 — 중간 텐션
+        '5/8':  120,  // 아크사크 — 2+3 붓점
+        '11/8':  88,  // Complex 11 — 복잡하지만 흘러야
+      };
+      const key = num + '/' + den;
+      return map[key] || 100;
+    }
+
     _selectTimeSig(num, den, color) {
-      this.selectedTimeSig = [num, den];
-      window._cgoSelectedTimeSig = [num, den]; // playGroove 엔진 연동
+      // cgo-161: 토글 — 같은 박자 재클릭 시 해제
+      const alreadySel = this.selectedTimeSig
+        && this.selectedTimeSig[0] === num
+        && this.selectedTimeSig[1] === den;
+
+      if (alreadySel) {
+        // 해제
+        this.selectedTimeSig = null;
+        window._cgoSelectedTimeSig = null;
+      } else {
+        // 선택
+        this.selectedTimeSig = [num, den];
+        window._cgoSelectedTimeSig = [num, den];
+        // cgo-157: 박자 기준 BPM으로 슬라이더 이동
+        const refBpm = this._timeSigDefaultBpm(num, den);
+        this._onTempoChange(refBpm);
+      }
+
       // 카드 UI 갱신
       if (this._tsSec) {
         this._tsSec.querySelectorAll('.cgo-ts-card').forEach(card => {
           const n = parseInt(card.dataset.tsn, 10);
           const d = parseInt(card.dataset.tsd, 10);
-          card.classList.toggle('selected', n === num && d === den);
+          card.classList.toggle('selected', !alreadySel && n === num && d === den);
         });
       }
       // 배지 갱신
@@ -5818,7 +5854,14 @@ window.CGO_PERIODIC_WAVES = {
       if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ ' + t(24066); }
 
       if (typeof this.onGenerate === 'function') {
-        this.onGenerate(combo);
+        // cgo-158: onGenerate 오류 시 버튼 복구 + 에러 표시
+        try {
+          this.onGenerate(combo);
+        } catch(e) {
+          console.error('[CGO-GEN] onGenerate 오류:', e);
+          this._setStatus('⚠️ 생성 오류: ' + (e && e.message ? e.message : String(e)));
+          if (genBtn) { genBtn.disabled = false; genBtn.textContent = t(24055) + ' · ' + t(24065); }
+        }
       } else {
         // 🎵 데모: soundfont 코드 + 힐링 오실레이터 동시 재생
         const keyName = this.selected.key || 'C Major';
