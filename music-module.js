@@ -3218,7 +3218,13 @@ window.CGO_PERIODIC_WAVES = {
             card.addEventListener('click', () => {
               if (typeof window._spd2Mark === 'function') window._spd2Mark('music');
               // 같은 것 클릭 → 해제 (토글)
-              this.selected.vibe = (this.selected.vibe === opt.id) ? null : opt.id;
+              const wasSelected = this.selected.vibe === opt.id;
+              this.selected.vibe = wasSelected ? null : opt.id;
+              // cgo-164: 비브 선택 시 BPM 슬라이더 제안 이동 (박자 카드와 동일 방식)
+              // → 생성 시 슬라이더 값이 최종 BPM (사용자가 다시 조정 가능)
+              if (!wasSelected && opt.bpm) {
+                this._onTempoChange(opt.bpm);
+              }
               renderAll();
               this._updateResult && this._updateResult();
             });
@@ -5826,16 +5832,17 @@ window.CGO_PERIODIC_WAVES = {
         return ins ? ins.gm : null;
       }).filter(v => v !== null);
 
-      // cgo-81: 음악풍 → BPM 힌트 오버레이
-      let vibeBpmHint = null;
+      // cgo-81: 음악풍 → 장르 힌트 (BPM은 슬라이더 값 최우선)
+      // cgo-164: vibeBpmHint 제거 — 비브 클릭 시 슬라이더가 이동하므로
+      //           생성 시 tempoBpm이 이미 비브 BPM을 반영하거나 사용자가 덮어씀
       let vibeGenres  = null;
       if (this.selected.vibe) {
         const vd = VIBE_DATA.find(v => v.id === this.selected.vibe);
-        if (vd) { vibeBpmHint = vd.bpm; vibeGenres = vd.genres; }
+        if (vd) { vibeGenres = vd.genres; }
       }
 
       const combo = {
-        key: this.selected.key, bpm: vibeBpmHint || this.tempoBpm,
+        key: this.selected.key, bpm: this.tempoBpm,
         tempoName: tempoStage.name, tempoNameEn: tempoStage.nameEn,
         genres: genreList.map(g=>g.nameEn), genresMix: genreList.length > 1,
         vocal: this.selected.vocal,
