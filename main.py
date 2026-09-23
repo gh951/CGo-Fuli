@@ -232,8 +232,8 @@ def render_full(req: FullReq):
 
 # ═══ v2 믹스·마스터 ═══════════════════════════════════════════════
 # 멜로디를 0 dB 기준으로 두고 나머지를 이만큼 낮춤 (값이 작을수록 뒤로 물러남)
-MIX_DB = {"melody": 0.0, "chords": -6.0, "bass": -6.0, "drums": 0.0}
-TARGET_DBFS = -8.0      # 드럼=멜로디 동일 레벨 테스트
+MIX_DB = {"melody": 3.0, "chords": 0.0, "bass": 0.0, "drums": 0.0}
+TARGET_DBFS = -8.0      # 멜로디 드럼보다 3dB 높게, 배경음=드럼 동일
 CEILING = 0.89          # 최고점 한계 (-1 dBFS)
 
 
