@@ -1,5 +1,5 @@
 """
-CGO 음악 렌더 서버 (Railway)  — cgo-297용 완성본, 이 파일 하나로 서버 전체가 동작합니다.
+CGO 음악 렌더 서버 (Railway) v2 — 멜로디 중심 믹스·음량 보강 (cgo-297용), 이 파일 하나로 서버 전체가 동작합니다.
   GET  /             : 서버 깨우기·상태 확인
   POST /render       : (기존) 멜로디 한 줄 렌더  {bpm, notes:[{n,d}], instrument}
   POST /render_full  : (신규) 멜로디·베이스·코드·드럼 한 번에 렌더 → WAV 1개
@@ -177,9 +177,9 @@ def _render_cli(req: FullReq, sf2: str) -> np.ndarray:
     return data.reshape(-1, nch).astype(np.float32) / 32768.0
 
 
-def _to_wav(pcm: np.ndarray) -> bytes:
+def _to_wav(pcm: np.ndarray, normalize: bool = True) -> bytes:
     pk = float(np.max(np.abs(pcm))) if pcm.size else 0.0
-    if pk > 1e-4:
+    if normalize and pk > 1e-4:
         pcm = pcm * (0.9 / pk)          # 피크 정규화
     i16 = np.clip(pcm * 32767, -32768, 32767).astype("<i2")
     buf = io.BytesIO()
@@ -215,12 +215,102 @@ def render_full(req: FullReq):
     if not sf2:
         raise HTTPException(500, "사운드폰트(.sf2) 없음 — CGO_SF2 환경변수로 경로 지정")
     try:
-        pcm = _render_pyfs(req, sf2)
+        import fluidsynth  # noqa
+        render_one = _render_pyfs
     except ImportError:
         if not shutil.which("fluidsynth"):
             raise HTTPException(500, "FluidSynth 엔진 없음")
-        pcm = _render_cli(req, sf2)
-    return Response(content=_to_wav(pcm), media_type="audio/wav")
+        render_one = _render_cli
+    # v2: 트랙별로 따로 렌더 → 멜로디 기준 밸런스 믹스 → 마스터(음량 키우기 + 리미터)
+    stems = []
+    for tr in req.tracks:
+        tr1 = Track(name=tr.name, instrument=tr.instrument, drum=tr.drum, volume=127, notes=tr.notes)
+        stems.append((tr, render_one(FullReq(bpm=req.bpm, tracks=[tr1]), sf2)))
+    pcm = _mix_master(stems)
+    return Response(content=_to_wav(pcm, normalize=False), media_type="audio/wav")
+
+
+# ═══ v2 믹스·마스터 ═══════════════════════════════════════════════
+# 멜로디를 0 dB 기준으로 두고 나머지를 이만큼 낮춤 (값이 작을수록 뒤로 물러남)
+MIX_DB = {"melody": 0.0, "chords": -9.0, "bass": -8.0, "drums": -15.0}
+TARGET_DBFS = -10.0     # 최종 평균 음량 (일반 음원 수준, 이전 버전보다 약 5dB 큼)
+CEILING = 0.89          # 최고점 한계 (-1 dBFS)
+
+
+def _level_db(x: np.ndarray) -> float:
+    """소리가 나는 구간만의 평균 음량(dB). 쉼표·꼬리 무음은 제외."""
+    blk = 2205  # 50ms
+    n = (len(x) // blk) * blk
+    if n == 0:
+        return -120.0
+    r = np.sqrt((x[:n].reshape(-1, blk, x.shape[1]) ** 2).mean(axis=(1, 2)))
+    r = r[r > 1e-4]
+    if r.size == 0:
+        return -120.0
+    r = np.sort(r)[len(r) // 3:]             # 조용한 1/3 제외
+    return float(20 * np.log10(np.sqrt((r ** 2).mean())))
+
+
+def _limit(x: np.ndarray, ceil: float = CEILING) -> np.ndarray:
+    """룩어헤드 리미터: 튀는 순간(킥·심벌)만 살짝 눌러서 전체를 크게 키울 수 있게 함."""
+    blk = 88  # 2ms
+    n = len(x)
+    nb = (n + blk - 1) // blk
+    pk = np.pad(np.abs(x).max(axis=1), (0, nb * blk - n)).reshape(nb, blk).max(axis=1)
+    look = np.maximum(pk, np.concatenate([pk[1:], pk[-1:]]))
+    look = np.maximum(look, np.concatenate([pk[2:], pk[-1:], pk[-1:]]))
+    g = np.minimum(1.0, ceil / np.maximum(look, 1e-9))
+    rel = np.exp(-blk / (SR * 0.05))          # 50ms 회복
+    out = np.empty_like(g)
+    cur = 1.0
+    for i in range(nb):
+        cur = g[i] if g[i] < cur else cur * rel + g[i] * (1 - rel)
+        out[i] = cur
+    gs = np.repeat(out, blk)[:n]
+    return np.clip(x * gs[:, None], -ceil, ceil)
+
+
+def _compress(x: np.ndarray, thr_db: float, ratio: float = 3.0,
+              att: float = 0.010, rel: float = 0.150) -> np.ndarray:
+    """부드러운 컴프레서: 큰 소리와 작은 소리 차이를 줄여 전체를 크게 들리게 함."""
+    blk = 220  # 5ms
+    n = len(x)
+    nb = (n + blk - 1) // blk
+    sq = np.pad((x ** 2).mean(axis=1), (0, nb * blk - n)).reshape(nb, blk).mean(axis=1)
+    lv = 10 * np.log10(np.maximum(sq, 1e-12))
+    over = np.maximum(0.0, lv - thr_db)
+    target = -over * (1 - 1 / ratio)          # dB 감쇄량
+    a_c = np.exp(-blk / (SR * att)); r_c = np.exp(-blk / (SR * rel))
+    g = np.empty_like(target); cur = 0.0
+    for i in range(nb):
+        c = a_c if target[i] < cur else r_c
+        cur = c * cur + (1 - c) * target[i]
+        g[i] = cur
+    gs = np.interp(np.arange(n), np.arange(nb) * blk + blk / 2, 10 ** (g / 20))
+    return x * gs[:, None]
+
+
+def _mix_master(stems) -> np.ndarray:
+    n = max(len(p) for _, p in stems)
+    mix = np.zeros((n, 2), dtype=np.float32)
+    for tr, p in stems:
+        if p.shape[1] == 1:
+            p = np.repeat(p, 2, axis=1)
+        name = "drums" if tr.drum else (tr.name or "melody")
+        lv = _level_db(p)
+        if lv <= -119:
+            continue
+        rel = MIX_DB.get(name, -6.0)
+        gain = 10 ** ((-20.0 + rel - lv) / 20)   # 각 트랙을 '기준 -20dB + 상대 dB'로 맞춤
+        mix[:len(p)] += (p * gain).astype(np.float32)
+    lv = _level_db(mix)
+    if lv <= -119:
+        return mix
+    mix *= 10 ** ((-18.0 - lv) / 20)          # 작업 레벨로 맞춘 뒤
+    mix = _compress(mix, thr_db=-24.0, ratio=3.0)   # 압축
+    lv = _level_db(mix)
+    mix *= 10 ** ((TARGET_DBFS - lv) / 20)    # 목표 음량까지 키우고
+    return _limit(mix)                        # 튀는 순간만 리미터로 정리
 
 
 # ── 기존 방식 호환: POST /render (음표를 순서대로 이어서 렌더) ──
