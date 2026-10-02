@@ -3018,6 +3018,8 @@ class VvipReq(BaseModel):
     vocal: str = ""  # cgo-382: male/female/duet/bgm/child/choir
     voice_mix_id: str = ""  # cgo-390: VOICE_MIX 프리셋 ID (VM0001~VM1000)
     timbre: str = ""        # cgo-444: 앱이 보낸 이름 없는 음색 묘사 (있으면 이것을 우선 사용)
+    rap_slot: str = ""      # cgo-445: 랩이 들어갈 자리 none/verse2/bridge/prechorus/intro
+    rap_timbre: str = ""    # cgo-445: 랩 음색 묘사 (이름 없음)
 
 
 @app.post("/vvip_generate")
@@ -3157,6 +3159,43 @@ def vvip_generate(req: VvipReq):
     else:
         suno_style = f"{vocal_tag}{req.style}, {req.bpm} BPM, key of {req.key}"
 
+    # ═══ cgo-445: 랩 구간 삽입 ═══
+    # 래퍼 음색만 지정해서는 Suno가 랩을 넣지 않는다. 가사에 [Rap] 구조 태그가 있어야 한다.
+    _RAP_TAG = {
+        'verse2':    ('[Verse 2]', '[Rap Verse]'),          # 2절을 통째로 랩으로
+        'bridge':    ('[Bridge]', '[Rap Break]'),           # 브릿지를 랩으로 — 발라드에 가장 잘 맞는다
+        'prechorus': ('[Pre-Chorus]', '[Rap]'),             # 후렴 직전 짧게
+        'intro':     ('[Intro]', '[Rap Intro]'),            # 곡 머리에서 치고 들어옴
+    }
+
+    def _apply_rap(lyr: str, slot: str) -> str:
+        """가사에 랩 구조 태그를 심는다. 자리가 없으면 적절한 위치에 새로 만든다."""
+        if not slot or slot == 'none' or not lyr:
+            return lyr
+        pair = _RAP_TAG.get(slot)
+        if not pair:
+            return lyr
+        want, tag = pair
+        if tag in lyr:                      # 이미 있음
+            return lyr
+        if want in lyr:                     # 기존 구간을 랩으로 바꾼다
+            return lyr.replace(want, tag, 1)
+        lines = lyr.split('\n')
+        if slot == 'intro':
+            return tag + '\n' + lyr
+        # 마지막 [Chorus] 앞에 끼워 넣는다 (브릿지·프리코러스·2절 대체 모두 여기로)
+        idx = [i for i, l in enumerate(lines) if l.strip().startswith('[Chorus')]
+        at = idx[-1] if idx else len(lines)
+        return '\n'.join(lines[:at] + [tag, ''] + lines[at:])
+
+    _rap_on = bool((req.rap_slot or '').strip()) and req.rap_slot != 'none'
+    if _rap_on:
+        # 스타일에도 랩 피처링이 있음을 알린다 (Suno가 랩 파트를 실제로 배치하도록)
+        _rt = (req.rap_timbre or '').strip()
+        suno_style = suno_style.rstrip().rstrip(',') + ', with a featured rap section'
+        if _rt:
+            suno_style += ' performed by ' + _rt
+
     # lyrics 필드: 가사 + [Verse]/[Chorus] 메타태그 삽입
     has_lyrics = bool(req.lyrics and req.lyrics.strip())
     suno_lyrics = ""
@@ -3188,6 +3227,8 @@ def vvip_generate(req: VvipReq):
                 suno_lyrics = "[Verse 1]\n" + '\n'.join(lyric_lines[:third])
                 suno_lyrics += "\n\n[Chorus]\n" + '\n'.join(lyric_lines[third:third*2])
                 suno_lyrics += "\n\n[Verse 2]\n" + '\n'.join(lyric_lines[third*2:])
+        if _rap_on:
+            suno_lyrics = _apply_rap(suno_lyrics, req.rap_slot)
 
     # ── apiframe.ai v2 API 호출 (비동기: job_id만 즉시 반환) ──
     # cgo-394: 코드진행은 Suno가 파싱 불가 → 프롬프트에서 제외
