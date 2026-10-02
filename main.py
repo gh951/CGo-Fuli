@@ -3020,6 +3020,7 @@ class VvipReq(BaseModel):
     timbre: str = ""        # cgo-444: 앱이 보낸 이름 없는 음색 묘사 (있으면 이것을 우선 사용)
     rap_slot: str = ""      # cgo-445: 랩이 들어갈 자리 none/verse2/bridge/prechorus/intro
     rap_timbre: str = ""    # cgo-445: 랩 음색 묘사 (이름 없음)
+    rap_gender: str = ""    # cgo-447: 랩 성별 male/female/duet/choir
 
 
 @app.post("/vvip_generate")
@@ -3081,7 +3082,8 @@ def vvip_generate(req: VvipReq):
     # cgo-395: VOICE_MIX 프리셋에서 이성 음색 설명 제거
     # 예: 남성 선택 시 "sticky deep husky female" 세그먼트 제거
     import re as _re395
-    if req.vocal in ("male", "female") and vocal_timbre:
+    _from_app445 = bool((req.timbre or '').strip())   # cgo-446: 앱이 만든 묘사인가
+    if (not _from_app445) and req.vocal in ("male", "female") and vocal_timbre:
         _opp = "female" if req.vocal == "male" else "male"
         _segs = [s.strip() for s in vocal_timbre.split(',') if s.strip()]
         _filtered = [s for s in _segs if not _re395.search(r'\b' + _opp + r'\b', s, _re395.IGNORECASE)]
@@ -3093,7 +3095,9 @@ def vvip_generate(req: VvipReq):
 
     # style 필드: 보컬 음색 간결화 (120자) + 장르 + BPM + key → 4~7 키워드
     timbre_short = vocal_timbre.strip().strip(',').strip()
-    if len(timbre_short) > 120:
+    # cgo-446: 앱이 보낸 묘사는 순서·분량이 비중을 뜻하므로 자르면 안 된다.
+    #          (예전에는 120자로 잘려 성별 접두사만 남고 묘사가 통째로 버려졌다.)
+    if (not _from_app445) and len(timbre_short) > 120:
         # 쉼표 기준으로 앞쪽 핵심 음색만 유지
         parts = timbre_short.split(',')
         trimmed = []
@@ -3154,6 +3158,14 @@ def vvip_generate(req: VvipReq):
                 _style_for_suno = _pattern.sub(_GENRE_DESCRIPTORS_401[_gk], _style_for_suno, count=1)
                 _genre_replaced = True
                 break
+    # cgo-447: 장르 서술로 바꾸면 "emotional emotional pop ballad"처럼 같은 낱말이
+    #          연달아 겹칠 수 있다. 붙어 있는 중복 낱말만 하나로 줄인다.
+    _style_for_suno = _re401.sub(r'\b(\w+)(\s+\1\b)+', r'\1', _style_for_suno, flags=_re401.IGNORECASE)
+    # cgo-446: 앱 묘사에는 이미 성별 문구가 들어 있다. 서버가 또 붙이면
+    #          "male vocals only … female vocals only" 처럼 모순된 지시가 되어
+    #          여성을 골라도 남성 목소리가 나왔다. 앱 묘사가 있으면 그것만 쓴다.
+    if _from_app445:
+        vocal_tag = ""
     if timbre_short:
         suno_style = f"{vocal_tag}{timbre_short}, {_style_for_suno}, {req.bpm} BPM, key of {req.key}"
     else:
@@ -3190,11 +3202,31 @@ def vvip_generate(req: VvipReq):
 
     _rap_on = bool((req.rap_slot or '').strip()) and req.rap_slot != 'none'
     if _rap_on:
-        # 스타일에도 랩 피처링이 있음을 알린다 (Suno가 랩 파트를 실제로 배치하도록)
         _rt = (req.rap_timbre or '').strip()
+        _rg = (req.rap_gender or '').strip().lower()
+
+        # cgo-447: 메인 보컬이 여성인데 랩이 남성이면(또는 그 반대),
+        # 앞쪽 "no male vocals / no female vocals"가 래퍼를 원천 금지해 버린다.
+        # 그래서 배제 문구를 '노래하는 부분에 한해서'로 범위를 좁힌다.
+        _lead = ('f' if suno_style.startswith('female vocals only')
+                 else 'm' if suno_style.startswith('male vocals only') else '')
+        _rapg = 'f' if _rg == 'female' else 'm' if _rg == 'male' else ''
+        if _lead and _rapg and _lead != _rapg:
+            suno_style = suno_style.replace(
+                'female vocals only, all female singers, no male vocals, ',
+                'female lead vocals on every sung line, all sung parts by a female singer, ', 1)
+            suno_style = suno_style.replace(
+                'male vocals only, all male singers, no female vocals, ',
+                'male lead vocals on every sung line, all sung parts by a male singer, ', 1)
+
         suno_style = suno_style.rstrip().rstrip(',') + ', with a featured rap section'
         if _rt:
             suno_style += ' performed by ' + _rt
+        if _lead and _rapg and _lead != _rapg:
+            _lw = 'female' if _lead == 'f' else 'male'
+            _rw = 'female' if _rapg == 'f' else 'male'
+            suno_style += (f'; the rap section only is rapped by a {_rw} voice'
+                           f', every other section is sung by the {_lw} lead')
 
     # lyrics 필드: 가사 + [Verse]/[Chorus] 메타태그 삽입
     has_lyrics = bool(req.lyrics and req.lyrics.strip())
