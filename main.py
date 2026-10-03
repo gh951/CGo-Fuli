@@ -343,8 +343,8 @@ def render(req: SimpleReq):
 # 지금까지는 배포가 되었는지 눈으로 알 길이 없었다. 레일웨이 화면의
 # "Deployment successful"은 '무언가'가 올라갔다는 뜻일 뿐, 그게 어느 판인지는
 # 말해주지 않는다. 이제 주소만 열면 버전이 보인다.
-CGO_SRV_VER = "cgo-468"
-CGO_SRV_NOTE = "여자 보컬+남자 랩 분리(447) · 음색 원문 보존(446) · 가사에 주제 안 섞기"
+CGO_SRV_VER = "cgo-469"
+CGO_SRV_NOTE = "가사 언어 선택 반영(469) · 여자 보컬+남자 랩 분리(447) · 음색 원문 보존(446)"
 
 
 def _cgo_key_src() -> str:
@@ -3844,8 +3844,9 @@ def generate_lyrics(body: dict):
     style = (body.get('style') or 'pop ballad').strip()
     if not topic:
         return JSONResponse(status_code=400, content={"ok": False, "error": "주제/분위기를 입력해 주세요."})
+    _lang0 = (body.get('lang') or '').strip() or 'Korean'      # cgo-469
     if body.get('local_only') or not APIFRAME_KEY:
-        return _local_lyrics_response(topic, style, '' if APIFRAME_KEY else 'API 키 미설정')
+        return _local_lyrics_response(topic, style, '' if APIFRAME_KEY else 'API 키 미설정', _lang0)
 
     # cgo-469: 노래 언어를 앱에서 받아 그 언어로 쓰게 한다.
     # 지금까지는 "Korean ... Write in Korean"이 못 박혀 있어서, 앱에서 영어를 골라도
@@ -3868,13 +3869,13 @@ def generate_lyrics(body: dict):
         if not _is_retryable(api_error):
             break              # 인증·크레딧 오류는 재시도해도 소용없다
     print(f"[generate_lyrics] Udio 최종 실패 → 로컬 폴백: {api_error}", flush=True)
-    return _local_lyrics_response(topic, style, api_error)
+    return _local_lyrics_response(topic, style, api_error, lang)   # cgo-469
 
 @app.get("/lyrics_status/{job_id}")
-def lyrics_status(job_id: str, topic: str = '', style: str = 'pop ballad'):
+def lyrics_status(job_id: str, topic: str = '', style: str = 'pop ballad', lang: str = 'Korean'):
     """(구버전 클라이언트 호환) 가사 job 상태 조회 — 실패 시 topic이 있으면 로컬 가사로 폴백"""
     if not APIFRAME_KEY:
-        return _local_lyrics_response(topic, style, 'API 키 미설정') if topic else \
+        return _local_lyrics_response(topic, style, 'API 키 미설정', lang) if topic else \
             JSONResponse(content={"ok": False, "status": "FAILED", "error": "API 키 미설정"})
     lyr, err = _poll_apiframe_job(job_id, max_wait=8.0, interval=2.0)
     if lyr:
