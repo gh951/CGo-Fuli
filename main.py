@@ -373,7 +373,8 @@ def version():
 # 원칙: 최소 2명 이상의 서로 다른 보컬리스트 조합 필수
 # ═══════════════════════════════════════════════════════════════════
 
-APIFRAME_KEY = os.environ.get('APIFRAME_KEY', 'afk_32b0a883e107754089c02eb5977a0945958096b7')
+# cgo-468: 새 키로 교체. 레일웨이 Variables에 APIFRAME_KEY를 넣으면 그쪽이 먼저다.
+APIFRAME_KEY = os.environ.get('APIFRAME_KEY', 'afk_a23fbf3d6ffe106e4a8b23827cff16864457086f')
 
 # ── 인류 역사상 최고의 보컬리스트 100명 (남50 + 여50) ──
 # 한국어(붙여쓰기+띄어쓰기) + 영문 이름 → 영어 보컬 설명
