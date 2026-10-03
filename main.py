@@ -343,7 +343,7 @@ def render(req: SimpleReq):
 # 지금까지는 배포가 되었는지 눈으로 알 길이 없었다. 레일웨이 화면의
 # "Deployment successful"은 '무언가'가 올라갔다는 뜻일 뿐, 그게 어느 판인지는
 # 말해주지 않는다. 이제 주소만 열면 버전이 보인다.
-CGO_SRV_VER = "cgo-467"
+CGO_SRV_VER = "cgo-468"
 CGO_SRV_NOTE = "여자 보컬+남자 랩 분리(447) · 음색 원문 보존(446) · 가사에 주제 안 섞기"
 
 
@@ -3733,10 +3733,61 @@ def _poll_apiframe_job(job_id: str, max_wait: float = 40.0, interval: float = 2.
         time.sleep(interval)
     return '', f"시간 초과 ({last})"
 
-def _local_lyrics_response(topic, style, api_error=''):
+# cgo-469: 앱의 '노래 언어' 15가지 — 그 나라 글자 이름을 함께 줘야 AI가 덜 헷갈린다.
+_LANG_NATIVE = {
+    'Korean': '한국어', 'English': 'English', 'Japanese': '日本語', 'Chinese': '中文',
+    'Spanish': 'Español', 'French': 'Français', 'German': 'Deutsch', 'Italian': 'Italiano',
+    'Portuguese': 'Português', 'Russian': 'Русский', 'Arabic': 'العربية', 'Hindi': 'हिन्दी',
+    'Indonesian': 'Bahasa Indonesia', 'Thai': 'ภาษาไทย', 'Vietnamese': 'Tiếng Việt',
+}
+
+
+def _is_korean_lang(lang) -> bool:
+    return (lang or 'Korean').strip().lower().startswith('korea')
+
+
+def _generate_fallback_lyrics(topic: str, style: str, lang: str) -> str:
+    """AI 가사가 실패했을 때 쓰는 비상 가사.
+    cgo-469: 예전에는 어떤 언어를 골랐든 한국어 가사가 나왔다. 영어 노래를 주문했는데
+    한국어 가사가 오는 것은 안 쓰느니만 못하다. 한국어가 아니면 영어로 돌려준다.
+    주제 글은 분위기 판별에만 쓰고 가사 줄에는 넣지 않는다(cgo-443과 같은 원칙)."""
+    if _is_korean_lang(lang):
+        return _generate_korean_lyrics(topic, style)
+    kw = (topic or '').lower()
+    sad = any(w in kw for w in ('sad', 'tear', 'lonely', 'rain', 'goodbye', 'miss', 'break',
+                                '이별', '슬픈', '눈물', '그리움', '외로'))
+    hope = any(w in kw for w in ('hope', 'dream', 'light', 'tomorrow', 'rise', 'begin',
+                                 '희망', '꿈', '빛', '시작'))
+    if sad:
+        v1 = ["The room still keeps the shape of you", "and every quiet hour knows your name.",
+              "I learned the weight of empty chairs,", "I learned that nothing stays the same."]
+        ch = ["So let the evening take me slow,", "let the streetlights blur the rest.",
+              "If I can't hold you anymore,", "I'll hold the way you left."]
+        br = ["And maybe time is not a wound,", "maybe time is only wide."]
+    elif hope:
+        v1 = ["Morning breaks against the window,", "and the dark gives up its hold.",
+              "Everything I thought was ending", "turns out to be the road."]
+        ch = ["So I'm walking into daylight,", "with my whole heart open wide.",
+              "Every step I thought would break me", "built the ground beneath my stride."]
+        br = ["I was never really falling,", "I was learning how to fly."]
+    else:
+        v1 = ["There's a song inside the quiet,", "something only we can hear.",
+              "In the space between the heartbeats,", "that's the place I find you near."]
+        ch = ["And we'll carry it together,", "through the noise and through the night.",
+              "Every ordinary moment", "turning gold against the light."]
+        br = ["Nothing lasts, and that's the beauty,", "that's the reason we hold tight."]
+    return ("[Verse]\n" + "\n".join(v1)
+            + "\n\n[Chorus]\n" + "\n".join(ch)
+            + "\n\n[Verse]\n" + "\n".join(reversed(v1))
+            + "\n\n[Bridge]\n" + "\n".join(br)
+            + "\n\n[Chorus]\n" + "\n".join(ch))
+
+
+def _local_lyrics_response(topic, style, api_error='', lang='Korean'):
     try:
-        return JSONResponse(content={"ok": True, "lyrics": _generate_korean_lyrics(topic, style),
-                                     "source": "local", "api_error": api_error,
+        return JSONResponse(content={"ok": True,
+                                     "lyrics": _generate_fallback_lyrics(topic, style, lang),
+                                     "source": "local", "api_error": api_error, "lang": lang,
                                      "reason": _why(api_error) if api_error else ''})
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "error": f"가사 생성 실패: {str(e)}", "api_error": api_error})
@@ -3796,8 +3847,15 @@ def generate_lyrics(body: dict):
     if body.get('local_only') or not APIFRAME_KEY:
         return _local_lyrics_response(topic, style, '' if APIFRAME_KEY else 'API 키 미설정')
 
-    prompt_text = (f"Korean song lyrics about: {topic}. Style: {style}. "
-                   f"Write in Korean (한국어). Include [Verse], [Chorus], [Bridge] structure tags.")[:2000]
+    # cgo-469: 노래 언어를 앱에서 받아 그 언어로 쓰게 한다.
+    # 지금까지는 "Korean ... Write in Korean"이 못 박혀 있어서, 앱에서 영어를 골라도
+    # 서버가 한국어 가사만 주문했다. 앱은 lang을 보내고 있었는데 서버가 안 읽었다.
+    lang = (body.get('lang') or '').strip() or 'Korean'
+    _nat = _LANG_NATIVE.get(lang, lang)
+    prompt_text = (f"Song lyrics in {lang} about: {topic}. Musical style: {style}. "
+                   f"Write every single line in {lang} ({_nat}) — do not use any other language. "
+                   f"Include [Verse], [Chorus], [Bridge] structure tags. "
+                   f"Output the lyrics only.")[:2000]
     api_error = ''
     WAITS = [0, 4, 9]          # 1회차 즉시, 2회차 4초 뒤, 3회차 9초 뒤
     for attempt, wait in enumerate(WAITS, start=1):
