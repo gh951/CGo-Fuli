@@ -24,6 +24,8 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
+_CGO_BOOT_TS = time.time()   # cgo-467: 이 서버가 언제 올라왔는지
+
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 router = app
@@ -337,9 +339,32 @@ def render(req: SimpleReq):
     return render_full(FullReq(bpm=req.bpm, tracks=[Track(instrument=req.instrument, notes=ns)]))
 
 
+# ── cgo-467: 서버가 자기 버전을 말하게 한다 ──────────────────────────
+# 지금까지는 배포가 되었는지 눈으로 알 길이 없었다. 레일웨이 화면의
+# "Deployment successful"은 '무언가'가 올라갔다는 뜻일 뿐, 그게 어느 판인지는
+# 말해주지 않는다. 이제 주소만 열면 버전이 보인다.
+CGO_SRV_VER = "cgo-467"
+CGO_SRV_NOTE = "여자 보컬+남자 랩 분리(447) · 음색 원문 보존(446) · 가사에 주제 안 섞기"
+
+
+def _cgo_key_src() -> str:
+    """키를 어디서 가져왔는지만 알린다. 키 자체는 절대 내보내지 않는다."""
+    return "env" if os.environ.get('APIFRAME_KEY') else "builtin"
+
+
 @app.get("/")
 def root():
-    return {"ok": True, "service": "cgo-render", "sf2": _find_sf2(), "vvip": True}
+    return {"ok": True, "service": "cgo-render", "sf2": _find_sf2(), "vvip": True,
+            "ver": CGO_SRV_VER, "key_src": _cgo_key_src()}
+
+
+@app.get("/version")
+def version():
+    """배포 확인 전용. 휴대폰 브라우저에서 열어 'ver'만 보면 된다."""
+    return {"ver": CGO_SRV_VER, "note": CGO_SRV_NOTE,
+            "key_src": _cgo_key_src(),
+            "started": time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(_CGO_BOOT_TS)) + " UTC",
+            "uptime_min": round((time.time() - _CGO_BOOT_TS) / 60, 1)}
 
 
 # ═══════════════════════════════════════════════════════════════════
