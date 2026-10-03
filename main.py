@@ -24,6 +24,8 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 
+_CGO_BOOT_TS = time.time()   # cgo-467: 이 서버가 언제 올라왔는지
+
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 router = app
@@ -337,9 +339,32 @@ def render(req: SimpleReq):
     return render_full(FullReq(bpm=req.bpm, tracks=[Track(instrument=req.instrument, notes=ns)]))
 
 
+# ── cgo-467: 서버가 자기 버전을 말하게 한다 ──────────────────────────
+# 지금까지는 배포가 되었는지 눈으로 알 길이 없었다. 레일웨이 화면의
+# "Deployment successful"은 '무언가'가 올라갔다는 뜻일 뿐, 그게 어느 판인지는
+# 말해주지 않는다. 이제 주소만 열면 버전이 보인다.
+CGO_SRV_VER = "cgo-469"
+CGO_SRV_NOTE = "가사 언어 선택 반영(469) · 여자 보컬+남자 랩 분리(447) · 음색 원문 보존(446)"
+
+
+def _cgo_key_src() -> str:
+    """키를 어디서 가져왔는지만 알린다. 키 자체는 절대 내보내지 않는다."""
+    return "env" if os.environ.get('APIFRAME_KEY') else "builtin"
+
+
 @app.get("/")
 def root():
-    return {"ok": True, "service": "cgo-render", "sf2": _find_sf2(), "vvip": True}
+    return {"ok": True, "service": "cgo-render", "sf2": _find_sf2(), "vvip": True,
+            "ver": CGO_SRV_VER, "key_src": _cgo_key_src()}
+
+
+@app.get("/version")
+def version():
+    """배포 확인 전용. 휴대폰 브라우저에서 열어 'ver'만 보면 된다."""
+    return {"ver": CGO_SRV_VER, "note": CGO_SRV_NOTE,
+            "key_src": _cgo_key_src(),
+            "started": time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(_CGO_BOOT_TS)) + " UTC",
+            "uptime_min": round((time.time() - _CGO_BOOT_TS) / 60, 1)}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -348,7 +373,8 @@ def root():
 # 원칙: 최소 2명 이상의 서로 다른 보컬리스트 조합 필수
 # ═══════════════════════════════════════════════════════════════════
 
-APIFRAME_KEY = os.environ.get('APIFRAME_KEY', 'afk_32b0a883e107754089c02eb5977a0945958096b7')
+# cgo-468: 새 키로 교체. 레일웨이 Variables에 APIFRAME_KEY를 넣으면 그쪽이 먼저다.
+APIFRAME_KEY = os.environ.get('APIFRAME_KEY', 'afk_a23fbf3d6ffe106e4a8b23827cff16864457086f')
 
 # ── 인류 역사상 최고의 보컬리스트 100명 (남50 + 여50) ──
 # 한국어(붙여쓰기+띄어쓰기) + 영문 이름 → 영어 보컬 설명
@@ -3707,10 +3733,61 @@ def _poll_apiframe_job(job_id: str, max_wait: float = 40.0, interval: float = 2.
         time.sleep(interval)
     return '', f"시간 초과 ({last})"
 
-def _local_lyrics_response(topic, style, api_error=''):
+# cgo-469: 앱의 '노래 언어' 15가지 — 그 나라 글자 이름을 함께 줘야 AI가 덜 헷갈린다.
+_LANG_NATIVE = {
+    'Korean': '한국어', 'English': 'English', 'Japanese': '日本語', 'Chinese': '中文',
+    'Spanish': 'Español', 'French': 'Français', 'German': 'Deutsch', 'Italian': 'Italiano',
+    'Portuguese': 'Português', 'Russian': 'Русский', 'Arabic': 'العربية', 'Hindi': 'हिन्दी',
+    'Indonesian': 'Bahasa Indonesia', 'Thai': 'ภาษาไทย', 'Vietnamese': 'Tiếng Việt',
+}
+
+
+def _is_korean_lang(lang) -> bool:
+    return (lang or 'Korean').strip().lower().startswith('korea')
+
+
+def _generate_fallback_lyrics(topic: str, style: str, lang: str) -> str:
+    """AI 가사가 실패했을 때 쓰는 비상 가사.
+    cgo-469: 예전에는 어떤 언어를 골랐든 한국어 가사가 나왔다. 영어 노래를 주문했는데
+    한국어 가사가 오는 것은 안 쓰느니만 못하다. 한국어가 아니면 영어로 돌려준다.
+    주제 글은 분위기 판별에만 쓰고 가사 줄에는 넣지 않는다(cgo-443과 같은 원칙)."""
+    if _is_korean_lang(lang):
+        return _generate_korean_lyrics(topic, style)
+    kw = (topic or '').lower()
+    sad = any(w in kw for w in ('sad', 'tear', 'lonely', 'rain', 'goodbye', 'miss', 'break',
+                                '이별', '슬픈', '눈물', '그리움', '외로'))
+    hope = any(w in kw for w in ('hope', 'dream', 'light', 'tomorrow', 'rise', 'begin',
+                                 '희망', '꿈', '빛', '시작'))
+    if sad:
+        v1 = ["The room still keeps the shape of you", "and every quiet hour knows your name.",
+              "I learned the weight of empty chairs,", "I learned that nothing stays the same."]
+        ch = ["So let the evening take me slow,", "let the streetlights blur the rest.",
+              "If I can't hold you anymore,", "I'll hold the way you left."]
+        br = ["And maybe time is not a wound,", "maybe time is only wide."]
+    elif hope:
+        v1 = ["Morning breaks against the window,", "and the dark gives up its hold.",
+              "Everything I thought was ending", "turns out to be the road."]
+        ch = ["So I'm walking into daylight,", "with my whole heart open wide.",
+              "Every step I thought would break me", "built the ground beneath my stride."]
+        br = ["I was never really falling,", "I was learning how to fly."]
+    else:
+        v1 = ["There's a song inside the quiet,", "something only we can hear.",
+              "In the space between the heartbeats,", "that's the place I find you near."]
+        ch = ["And we'll carry it together,", "through the noise and through the night.",
+              "Every ordinary moment", "turning gold against the light."]
+        br = ["Nothing lasts, and that's the beauty,", "that's the reason we hold tight."]
+    return ("[Verse]\n" + "\n".join(v1)
+            + "\n\n[Chorus]\n" + "\n".join(ch)
+            + "\n\n[Verse]\n" + "\n".join(reversed(v1))
+            + "\n\n[Bridge]\n" + "\n".join(br)
+            + "\n\n[Chorus]\n" + "\n".join(ch))
+
+
+def _local_lyrics_response(topic, style, api_error='', lang='Korean'):
     try:
-        return JSONResponse(content={"ok": True, "lyrics": _generate_korean_lyrics(topic, style),
-                                     "source": "local", "api_error": api_error,
+        return JSONResponse(content={"ok": True,
+                                     "lyrics": _generate_fallback_lyrics(topic, style, lang),
+                                     "source": "local", "api_error": api_error, "lang": lang,
                                      "reason": _why(api_error) if api_error else ''})
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "error": f"가사 생성 실패: {str(e)}", "api_error": api_error})
@@ -3767,11 +3844,19 @@ def generate_lyrics(body: dict):
     style = (body.get('style') or 'pop ballad').strip()
     if not topic:
         return JSONResponse(status_code=400, content={"ok": False, "error": "주제/분위기를 입력해 주세요."})
+    _lang0 = (body.get('lang') or '').strip() or 'Korean'      # cgo-469
     if body.get('local_only') or not APIFRAME_KEY:
-        return _local_lyrics_response(topic, style, '' if APIFRAME_KEY else 'API 키 미설정')
+        return _local_lyrics_response(topic, style, '' if APIFRAME_KEY else 'API 키 미설정', _lang0)
 
-    prompt_text = (f"Korean song lyrics about: {topic}. Style: {style}. "
-                   f"Write in Korean (한국어). Include [Verse], [Chorus], [Bridge] structure tags.")[:2000]
+    # cgo-469: 노래 언어를 앱에서 받아 그 언어로 쓰게 한다.
+    # 지금까지는 "Korean ... Write in Korean"이 못 박혀 있어서, 앱에서 영어를 골라도
+    # 서버가 한국어 가사만 주문했다. 앱은 lang을 보내고 있었는데 서버가 안 읽었다.
+    lang = (body.get('lang') or '').strip() or 'Korean'
+    _nat = _LANG_NATIVE.get(lang, lang)
+    prompt_text = (f"Song lyrics in {lang} about: {topic}. Musical style: {style}. "
+                   f"Write every single line in {lang} ({_nat}) — do not use any other language. "
+                   f"Include [Verse], [Chorus], [Bridge] structure tags. "
+                   f"Output the lyrics only.")[:2000]
     api_error = ''
     WAITS = [0, 4, 9]          # 1회차 즉시, 2회차 4초 뒤, 3회차 9초 뒤
     for attempt, wait in enumerate(WAITS, start=1):
@@ -3784,13 +3869,13 @@ def generate_lyrics(body: dict):
         if not _is_retryable(api_error):
             break              # 인증·크레딧 오류는 재시도해도 소용없다
     print(f"[generate_lyrics] Udio 최종 실패 → 로컬 폴백: {api_error}", flush=True)
-    return _local_lyrics_response(topic, style, api_error)
+    return _local_lyrics_response(topic, style, api_error, lang)   # cgo-469
 
 @app.get("/lyrics_status/{job_id}")
-def lyrics_status(job_id: str, topic: str = '', style: str = 'pop ballad'):
+def lyrics_status(job_id: str, topic: str = '', style: str = 'pop ballad', lang: str = 'Korean'):
     """(구버전 클라이언트 호환) 가사 job 상태 조회 — 실패 시 topic이 있으면 로컬 가사로 폴백"""
     if not APIFRAME_KEY:
-        return _local_lyrics_response(topic, style, 'API 키 미설정') if topic else \
+        return _local_lyrics_response(topic, style, 'API 키 미설정', lang) if topic else \
             JSONResponse(content={"ok": False, "status": "FAILED", "error": "API 키 미설정"})
     lyr, err = _poll_apiframe_job(job_id, max_wait=8.0, interval=2.0)
     if lyr:
