@@ -14295,6 +14295,20 @@ function calcAstro() {
 
   // ✅ NASA 동적 만세력 결과 표시
   (function(){
+    /* cgo-490: 이 줄('🛰️ NASA 동적 만세력 · 태양 황도 … → 丁酉월 · 백로 후 N일 · 달 위상 Npts')을
+       뿌리에서 막는다. 2026.10.03 cgo-463 에서는 index.html 쪽에서 숨기기만 했는데,
+       만드는 자리가 index.html 이 아니라 이 파일이어서 20초 뒤에 다시 살아났다.
+       왜 어쩌다 한 번만 보였는가 — 평소에는 아래 else 로 가서 data-k="7710" 이 붙고,
+       index.html 의 첫 화면 CSS 가 [data-k="7710"] 을 숨긴다. 그런데 NASA 자료가
+       실제로 들어오면 removeAttribute('data-k') 로 그 열쇠를 떼어내므로 CSS 가
+       더는 걸리지 않고, 맨 끝 display='block' 이 그대로 켜 버렸다.
+       위성 계산·역학 점수와는 아무 상관이 없는 표시용 줄이므로 통째로 끈다.
+       이미 화면에 올라가 있던 것도 치운다. (_setNASAStatus 와 같은 방식) */
+    try{
+      var _old = document.getElementById('cgoNasaManseBadge');
+      if (_old && _old.parentNode) _old.parentNode.removeChild(_old);
+    }catch(e){}
+    return;
     var nb = document.getElementById('cgoNasaManseBadge');
     if (!nb) {
       nb = document.createElement('div');
